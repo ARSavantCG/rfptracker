@@ -2,7 +2,6 @@ import { useState } from "react";
 import { StatsCards } from "@/components/stats-cards";
 import { RfpTable } from "@/components/rfp-table";
 import { CreateRfpModal } from "@/components/create-rfp-modal";
-import { RfpDetailModal } from "@/components/rfp-detail-modal";
 import { EditRfpModal } from "@/components/edit-rfp-modal";
 import { ContactManagementModal } from "@/components/contact-management-modal";
 import { Button } from "@/components/ui/button";
@@ -17,15 +16,9 @@ export default function Dashboard() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [selectedRfp, setSelectedRfp] = useState<RfpRequest | null>(null);
-
-  const handleViewRfp = (rfp: RfpRequest) => {
-    setSelectedRfp(rfp);
-    setIsDetailModalOpen(true);
-  };
 
   const handleEditRfp = (rfp: RfpRequest) => {
     setSelectedRfp(rfp);
@@ -85,7 +78,7 @@ export default function Dashboard() {
         </div>
 
         {/* Stats Cards */}
-        <StatsCards onStatusFilter={setStatusFilter} onViewRfp={handleViewRfp} />
+        <StatsCards onStatusFilter={setStatusFilter} />
 
         {/* Compact Filters */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 mb-4">
@@ -184,7 +177,6 @@ export default function Dashboard() {
         <RfpTable 
           searchQuery={searchQuery}
           statusFilter={statusFilter}
-          onViewRfp={handleViewRfp}
           onEditRfp={handleEditRfp}
         />
       </div>
@@ -193,12 +185,6 @@ export default function Dashboard() {
       <CreateRfpModal 
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-      />
-
-      <RfpDetailModal 
-        isOpen={isDetailModalOpen}
-        onClose={() => setIsDetailModalOpen(false)}
-        rfp={selectedRfp}
       />
 
       <EditRfpModal

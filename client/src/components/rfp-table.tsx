@@ -8,7 +8,6 @@ import type { RfpRequest } from "@shared/schema";
 interface RfpTableProps {
   searchQuery: string;
   statusFilter: string;
-  onViewRfp: (rfp: RfpRequest) => void;
   onEditRfp: (rfp: RfpRequest) => void;
 }
 
@@ -228,13 +227,6 @@ export function RfpTable({ searchQuery, statusFilter, onViewRfp, onEditRfp }: Rf
                   </td>
                   <td className="px-3 py-2 whitespace-nowrap text-xs">
                     <div className="flex items-center space-x-1">
-                      <button 
-                        onClick={() => onViewRfp(request)}
-                        className="text-blue-600 hover:text-blue-700 p-1"
-                        title="View details"
-                      >
-                        <i className="fas fa-eye text-xs"></i>
-                      </button>
                       <button 
                         onClick={() => onEditRfp(request)}
                         className="text-green-600 hover:text-green-700 p-1"

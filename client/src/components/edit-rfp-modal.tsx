@@ -120,7 +120,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(updateMutation.mutate)} className="space-y-4">
+          <form onSubmit={form.handleSubmit((data) => updateMutation.mutate(data))} className="space-y-4">
             <FormField
               control={form.control}
               name="rfpNumber"

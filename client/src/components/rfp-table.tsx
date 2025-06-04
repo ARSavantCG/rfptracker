@@ -82,7 +82,7 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
     let bValue: any = b[sortField];
 
     // Handle date sorting
-    if (sortField === "dateReceived") {
+    if (sortField === "sentOn") {
       aValue = new Date(aValue).getTime();
       bValue = new Date(bValue).getTime();
     }

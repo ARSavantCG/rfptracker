@@ -602,8 +602,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // RFP Validation routes
   app.post("/api/rfp-requests/validate", async (req, res) => {
     try {
-      const rfpData = req.body;
-      const validationResult = validateRfpForProgression(rfpData);
+      const { rfpId, ...validationData } = req.body;
+      
+      // Get the existing RFP
+      const rfp = await storage.getRfpRequest(rfpId);
+      if (!rfp) {
+        return res.status(404).json({ message: "RFP request not found" });
+      }
+      
+      // Combine RFP data with validation data
+      const combinedData = { ...rfp, ...validationData };
+      const validationResult = validateRfpForProgression(combinedData);
+      
       res.json(validationResult);
     } catch (error) {
       res.status(500).json({ message: "Failed to validate RFP" });

@@ -44,9 +44,17 @@ export class MemStorage implements IStorage {
     const id = this.currentId++;
     const now = new Date();
     const rfpRequest: RfpRequest = {
-      ...request,
       id,
       rfpNumber: this.generateRfpNumber(),
+      client: request.client,
+      project: request.project,
+      status: request.status,
+      requestTypes: request.requestTypes,
+      contactPerson: request.contactPerson || null,
+      contactEmail: request.contactEmail || null,
+      dateReceived: request.dateReceived,
+      dueDate: request.dueDate || null,
+      notes: request.notes || null,
       files: [],
       createdAt: now,
       updatedAt: now,
@@ -79,7 +87,7 @@ export class MemStorage implements IStorage {
     const rfp = this.rfpRequests.get(rfpId);
     if (!rfp) return undefined;
 
-    const updatedFiles = [...rfp.files, file];
+    const updatedFiles = [...(rfp.files || []), file];
     const updated: RfpRequest = {
       ...rfp,
       files: updatedFiles,
@@ -94,7 +102,7 @@ export class MemStorage implements IStorage {
     const rfp = this.rfpRequests.get(rfpId);
     if (!rfp) return undefined;
 
-    const updatedFiles = rfp.files.filter(f => f.id !== fileId);
+    const updatedFiles = (rfp.files || []).filter(f => f.id !== fileId);
     const updated: RfpRequest = {
       ...rfp,
       files: updatedFiles,

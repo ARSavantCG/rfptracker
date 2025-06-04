@@ -92,7 +92,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create new RFP request
   app.post("/api/rfp-requests", upload.array("files"), async (req, res) => {
     try {
-      const parsed = insertRfpRequestSchema.parse(req.body);
+      // Parse form data properly
+      const formData = { ...req.body };
+      
+      // Parse requestTypes JSON array
+      if (formData.requestTypes && typeof formData.requestTypes === 'string') {
+        try {
+          formData.requestTypes = JSON.parse(formData.requestTypes);
+        } catch {
+          formData.requestTypes = [];
+        }
+      }
+
+      const parsed = insertRfpRequestSchema.parse(formData);
       
       // Handle uploaded files
       const uploadedFiles = (req.files as Express.Multer.File[] || []).map(file => ({
@@ -112,6 +124,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const newRequest = await storage.createRfpRequest(requestWithFiles);
       res.status(201).json(newRequest);
     } catch (error) {
+      console.error('RFP creation error:', error);
       res.status(400).json({ 
         message: error instanceof Error ? error.message : "Invalid request data" 
       });

@@ -14,7 +14,7 @@ export const rfpRequests = pgTable("rfp_requests", {
   dateReceived: timestamp("date_received").notNull(),
   dueDate: timestamp("due_date"),
   notes: text("notes"),
-  files: json("files").$type<{ id: string; name: string; size: number; type: string; uploadedAt: string; }[]>().default([]),
+  files: json("files").$type<RfpFile[]>().notNull().default([]),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -44,4 +44,5 @@ export type RfpFile = {
   size: number;
   type: string;
   uploadedAt: string;
+  path?: string; // For file system storage
 };

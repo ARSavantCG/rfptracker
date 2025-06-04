@@ -209,6 +209,7 @@ export default function Dashboard() {
               <WorkflowStatus 
                 rfp={selectedRfp}
                 onAdvanceToInvitation={handleAdvanceToInvitation}
+                onValidateRfp={handleValidateRfp}
               />
             )}
             {!selectedRfp && (
@@ -246,6 +247,16 @@ export default function Dashboard() {
         isOpen={isInvitationModalOpen}
         onClose={() => setIsInvitationModalOpen(false)}
         rfp={workflowRfp}
+      />
+
+      <RfpValidationModal
+        isOpen={isValidationModalOpen}
+        onClose={() => setIsValidationModalOpen(false)}
+        rfp={validationRfp}
+        onValidationComplete={() => {
+          setIsValidationModalOpen(false);
+          setValidationRfp(null);
+        }}
       />
     </div>
   );

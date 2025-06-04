@@ -13,11 +13,11 @@ interface RfpTableProps {
   selectedRfpId?: number;
 }
 
-type SortField = "rfpNumber" | "client" | "project" | "status" | "dateReceived";
+type SortField = "rfpNumber" | "tenantName" | "projectName" | "status" | "sentOn";
 type SortDirection = "asc" | "desc";
 
 export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, selectedRfpId }: RfpTableProps) {
-  const [sortField, setSortField] = useState<SortField>("dateReceived");
+  const [sortField, setSortField] = useState<SortField>("sentOn");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -139,15 +139,15 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
               </th>
               <th 
                 className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
-                onClick={() => handleSort("client")}
+                onClick={() => handleSort("tenantName")}
               >
-                Client <i className={`${getSortIcon("client")} ml-1`}></i>
+                Tenant <i className={`${getSortIcon("tenantName")} ml-1`}></i>
               </th>
               <th 
                 className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
-                onClick={() => handleSort("project")}
+                onClick={() => handleSort("projectName")}
               >
-                Project <i className={`${getSortIcon("project")} ml-1`}></i>
+                Project <i className={`${getSortIcon("projectName")} ml-1`}></i>
               </th>
               <th 
                 className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
@@ -157,9 +157,9 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
               </th>
               <th 
                 className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
-                onClick={() => handleSort("dateReceived")}
+                onClick={() => handleSort("sentOn")}
               >
-                Received <i className={`${getSortIcon("dateReceived")} ml-1`}></i>
+                Sent On <i className={`${getSortIcon("sentOn")} ml-1`}></i>
               </th>
               <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Files
@@ -191,10 +191,10 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
                     {request.rfpNumber}
                   </td>
                   <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-900">
-                    {request.client}
+                    {request.tenantName}
                   </td>
                   <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-900">
-                    {request.project}
+                    {request.projectName}
                   </td>
                   <td className="px-3 py-2 whitespace-nowrap">
                     <span
@@ -225,7 +225,7 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
                     </span>
                   </td>
                   <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-500">
-                    {formatDate(request.dateReceived)}
+                    {formatDate(request.sentOn)}
                   </td>
                   <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-500">
                     <div className="flex items-center space-x-1">

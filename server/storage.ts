@@ -72,6 +72,7 @@ export class MemStorage implements IStorage {
       ...updates,
       id: existing.id, // Ensure ID doesn't change
       rfpNumber: existing.rfpNumber, // Ensure RFP number doesn't change
+      files: existing.files, // Keep existing files
       updatedAt: new Date(),
     };
 

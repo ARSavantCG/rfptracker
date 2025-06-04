@@ -50,6 +50,25 @@ const upload = multer({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Get RFP statistics (must come before /:id route)
+  app.get("/api/rfp-requests/stats", async (req, res) => {
+    try {
+      const allRequests = await storage.getAllRfpRequests();
+      
+      const stats = {
+        total: allRequests.length,
+        received: allRequests.filter(r => r.status === "received").length,
+        inProgress: allRequests.filter(r => r.status === "in-progress").length,
+        completed: allRequests.filter(r => r.status === "completed").length,
+        onHold: allRequests.filter(r => r.status === "on-hold").length,
+      };
+
+      res.json(stats);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch statistics" });
+    }
+  });
+
   // Get all RFP requests
   app.get("/api/rfp-requests", async (req, res) => {
     try {
@@ -283,24 +302,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get RFP statistics
-  app.get("/api/rfp-requests/stats", async (req, res) => {
-    try {
-      const allRequests = await storage.getAllRfpRequests();
-      
-      const stats = {
-        total: allRequests.length,
-        received: allRequests.filter(r => r.status === "received").length,
-        inProgress: allRequests.filter(r => r.status === "in-progress").length,
-        completed: allRequests.filter(r => r.status === "completed").length,
-        onHold: allRequests.filter(r => r.status === "on-hold").length,
-      };
 
-      res.json(stats);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch statistics" });
-    }
-  });
 
   const httpServer = createServer(app);
   return httpServer;

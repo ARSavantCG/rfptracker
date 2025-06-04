@@ -52,15 +52,6 @@ export function StatsCards({ onStatusFilter, onViewRfp }: StatsCardsProps) {
 
   const cards = [
     {
-      title: "Total RFPs",
-      value: stats.total,
-      icon: "fas fa-file-invoice",
-      bgColor: "bg-blue-100",
-      iconColor: "text-blue-600",
-      change: "+12%",
-      trend: "up"
-    },
-    {
       title: "Received",
       value: stats.received,
       icon: "fas fa-inbox",
@@ -155,17 +146,13 @@ export function StatsCards({ onStatusFilter, onViewRfp }: StatsCardsProps) {
   const handleCardClick = (cardTitle: string) => {
     if (onViewRfp && rfpRequests.length > 0) {
       const statusMap: Record<string, string> = {
-        'Total RFPs': '',
         'Received': 'received',
         'In Progress': 'in-progress',
         'Completed': 'completed'
       };
       
       const targetStatus = statusMap[cardTitle];
-      if (targetStatus === '') {
-        // Show first RFP for "Total RFPs"
-        onViewRfp(rfpRequests[0]);
-      } else {
+      if (targetStatus) {
         // Show first RFP of specific status
         const projects = rfpRequests.filter((rfp: any) => rfp.status === targetStatus);
         if (projects.length > 0) {
@@ -178,7 +165,7 @@ export function StatsCards({ onStatusFilter, onViewRfp }: StatsCardsProps) {
   return (
     <div className="space-y-4 mb-6">
       {/* Compact Stats Row */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-3 gap-3">
         {cards.map((card, index) => (
           <div 
             key={index} 

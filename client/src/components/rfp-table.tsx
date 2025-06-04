@@ -9,12 +9,13 @@ interface RfpTableProps {
   searchQuery: string;
   statusFilter: string;
   onViewRfp: (rfp: RfpRequest) => void;
+  onEditRfp: (rfp: RfpRequest) => void;
 }
 
 type SortField = "rfpNumber" | "client" | "project" | "status" | "dateReceived";
 type SortDirection = "asc" | "desc";
 
-export function RfpTable({ searchQuery, statusFilter, onViewRfp }: RfpTableProps) {
+export function RfpTable({ searchQuery, statusFilter, onViewRfp, onEditRfp }: RfpTableProps) {
   const [sortField, setSortField] = useState<SortField>("dateReceived");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const { toast } = useToast();
@@ -233,6 +234,13 @@ export function RfpTable({ searchQuery, statusFilter, onViewRfp }: RfpTableProps
                         title="View details"
                       >
                         <i className="fas fa-eye text-xs"></i>
+                      </button>
+                      <button 
+                        onClick={() => onEditRfp(request)}
+                        className="text-green-600 hover:text-green-700 p-1"
+                        title="Edit project"
+                      >
+                        <i className="fas fa-edit text-xs"></i>
                       </button>
                       <button 
                         onClick={() => handleDelete(request)}

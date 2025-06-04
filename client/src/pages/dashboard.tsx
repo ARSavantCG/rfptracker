@@ -3,6 +3,7 @@ import { StatsCards } from "@/components/stats-cards";
 import { RfpTable } from "@/components/rfp-table";
 import { CreateRfpModal } from "@/components/create-rfp-modal";
 import { RfpDetailModal } from "@/components/rfp-detail-modal";
+import { EditRfpModal } from "@/components/edit-rfp-modal";
 import { ContactManagementModal } from "@/components/contact-management-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,12 +18,18 @@ export default function Dashboard() {
   const [dateTo, setDateTo] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [selectedRfp, setSelectedRfp] = useState<RfpRequest | null>(null);
 
   const handleViewRfp = (rfp: RfpRequest) => {
     setSelectedRfp(rfp);
     setIsDetailModalOpen(true);
+  };
+
+  const handleEditRfp = (rfp: RfpRequest) => {
+    setSelectedRfp(rfp);
+    setIsEditModalOpen(true);
   };
 
   const clearFilters = () => {
@@ -178,6 +185,7 @@ export default function Dashboard() {
           searchQuery={searchQuery}
           statusFilter={statusFilter}
           onViewRfp={handleViewRfp}
+          onEditRfp={handleEditRfp}
         />
       </div>
 

@@ -29,6 +29,11 @@ export default function Dashboard() {
     setIsEditModalOpen(true);
   };
 
+  const handleAdvanceToInvitation = (rfp: RfpRequest) => {
+    setWorkflowRfp(rfp);
+    setIsInvitationModalOpen(true);
+  };
+
   const clearFilters = () => {
     setSearchQuery("");
     setStatusFilter("");
@@ -177,12 +182,39 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* RFP Table */}
-        <RfpTable 
-          searchQuery={searchQuery}
-          statusFilter={statusFilter}
-          onEditRfp={handleEditRfp}
-        />
+        {/* Main Content Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* RFP Table - Takes up 2/3 of the space */}
+          <div className="lg:col-span-2">
+            <RfpTable 
+              searchQuery={searchQuery}
+              statusFilter={statusFilter}
+              onEditRfp={handleEditRfp}
+              onSelectRfp={setSelectedRfp}
+              selectedRfpId={selectedRfp?.id}
+            />
+          </div>
+
+          {/* Workflow Status Sidebar - Takes up 1/3 of the space */}
+          <div className="lg:col-span-1">
+            {selectedRfp && (
+              <WorkflowStatus 
+                rfp={selectedRfp}
+                onAdvanceToInvitation={handleAdvanceToInvitation}
+              />
+            )}
+            {!selectedRfp && (
+              <div className="bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 p-6 text-center">
+                <div className="text-gray-400 mb-2">
+                  <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                  </svg>
+                </div>
+                <p className="text-sm text-gray-600">Select an RFP to view workflow status</p>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Modals */}
@@ -200,6 +232,12 @@ export default function Dashboard() {
       <ContactManagementModal
         isOpen={isContactModalOpen}
         onClose={() => setIsContactModalOpen(false)}
+      />
+
+      <InvitationToBidModal
+        isOpen={isInvitationModalOpen}
+        onClose={() => setIsInvitationModalOpen(false)}
+        rfp={workflowRfp}
       />
     </div>
   );

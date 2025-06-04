@@ -9,12 +9,14 @@ interface RfpTableProps {
   searchQuery: string;
   statusFilter: string;
   onEditRfp: (rfp: RfpRequest) => void;
+  onSelectRfp?: (rfp: RfpRequest) => void;
+  selectedRfpId?: number;
 }
 
 type SortField = "rfpNumber" | "client" | "project" | "status" | "dateReceived";
 type SortDirection = "asc" | "desc";
 
-export function RfpTable({ searchQuery, statusFilter, onEditRfp }: RfpTableProps) {
+export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, selectedRfpId }: RfpTableProps) {
   const [sortField, setSortField] = useState<SortField>("dateReceived");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const { toast } = useToast();
@@ -178,7 +180,13 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp }: RfpTableProps
               </tr>
             ) : (
               sortedRequests.map((request) => (
-                <tr key={request.id} className="hover:bg-gray-50 transition-colors">
+                <tr 
+                  key={request.id} 
+                  className={`hover:bg-gray-50 transition-colors cursor-pointer ${
+                    selectedRfpId === request.id ? 'bg-blue-50 border-l-4 border-blue-500' : ''
+                  }`}
+                  onClick={() => onSelectRfp?.(request)}
+                >
                   <td className="px-3 py-2 whitespace-nowrap text-xs font-medium text-gray-900">
                     {request.rfpNumber}
                   </td>

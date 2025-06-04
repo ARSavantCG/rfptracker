@@ -1,10 +1,9 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { z } from "zod";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { updateRfpRequestSchema } from "@shared/schema";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,15 +20,15 @@ const editRfpSchema = z.object({
   property: z.string().min(1, "Property is required"),
   tenantName: z.string().min(1, "Tenant name is required"),
   projectName: z.string().min(1, "Project name is required"),
-  confidential: z.boolean().optional(),
+  confidential: z.boolean(),
   sentBy: z.string().min(1, "Sent by is required"),
   sentOn: z.string().min(1, "Sent on date is required"),
-  developmentContact: z.string().optional(),
-  projectArea: z.string().optional(),
+  developmentContact: z.string(),
+  projectArea: z.string(),
   requestTypes: z.array(z.string()).min(1, "At least one request type is required"),
-  notes: z.string().optional(),
+  notes: z.string(),
   status: z.enum(["received", "in-progress", "completed", "on-hold"]),
-  workflowPhase: z.enum(["rfp-entry", "invitation-to-bid", "bid-collection", "evaluation", "award"]).optional(),
+  workflowPhase: z.enum(["rfp-entry", "invitation-to-bid", "bid-collection", "evaluation", "award"]),
 });
 
 type EditRfpFormData = z.infer<typeof editRfpSchema>;
@@ -62,7 +61,6 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
     },
   });
 
-  // Update form values when rfp changes
   useEffect(() => {
     if (rfp && isOpen) {
       form.reset({
@@ -106,10 +104,6 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
     },
   });
 
-  const onSubmit = (data: EditRfpFormData) => {
-    updateMutation.mutate(data);
-  };
-
   if (!rfp) return null;
 
   return (
@@ -121,13 +115,12 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
             Edit RFP Request
           </DialogTitle>
           <DialogDescription>
-            Update the details for this RFP request. All fields are editable.
+            Update the details for this RFP request. All fields are editable including the RFP number.
           </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            {/* RFP Number */}
+          <form onSubmit={form.handleSubmit(updateMutation.mutate)} className="space-y-4">
             <FormField
               control={form.control}
               name="rfpNumber"
@@ -142,7 +135,6 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
               )}
             />
 
-            {/* Property */}
             <FormField
               control={form.control}
               name="property"
@@ -157,7 +149,6 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
               )}
             />
 
-            {/* Tenant Name */}
             <FormField
               control={form.control}
               name="tenantName"
@@ -172,7 +163,6 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
               )}
             />
 
-            {/* Project Name */}
             <FormField
               control={form.control}
               name="projectName"
@@ -187,7 +177,6 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
               )}
             />
 
-            {/* Confidential */}
             <FormField
               control={form.control}
               name="confidential"
@@ -207,7 +196,6 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
             />
 
             <div className="grid grid-cols-2 gap-4">
-              {/* Sent By */}
               <FormField
                 control={form.control}
                 name="sentBy"
@@ -222,7 +210,6 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
                 )}
               />
 
-              {/* Sent On */}
               <FormField
                 control={form.control}
                 name="sentOn"
@@ -239,7 +226,6 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              {/* Development Contact */}
               <FormField
                 control={form.control}
                 name="developmentContact"
@@ -254,7 +240,6 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
                 )}
               />
 
-              {/* Project Area */}
               <FormField
                 control={form.control}
                 name="projectArea"
@@ -270,7 +255,6 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
               />
             </div>
 
-            {/* Request Types */}
             <FormField
               control={form.control}
               name="requestTypes"
@@ -307,7 +291,6 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
             />
 
             <div className="grid grid-cols-2 gap-4">
-              {/* Status */}
               <FormField
                 control={form.control}
                 name="status"
@@ -332,7 +315,6 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
                 )}
               />
 
-              {/* Workflow Phase */}
               <FormField
                 control={form.control}
                 name="workflowPhase"
@@ -346,10 +328,11 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="entry">Entry</SelectItem>
-                        <SelectItem value="validation">Validation</SelectItem>
-                        <SelectItem value="invitation">Invitation</SelectItem>
-                        <SelectItem value="completed">Completed</SelectItem>
+                        <SelectItem value="rfp-entry">RFP Entry</SelectItem>
+                        <SelectItem value="invitation-to-bid">Invitation to Bid</SelectItem>
+                        <SelectItem value="bid-collection">Bid Collection</SelectItem>
+                        <SelectItem value="evaluation">Evaluation</SelectItem>
+                        <SelectItem value="award">Award</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -358,7 +341,6 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
               />
             </div>
 
-            {/* Notes */}
             <FormField
               control={form.control}
               name="notes"

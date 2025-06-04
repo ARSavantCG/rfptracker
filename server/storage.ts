@@ -1,4 +1,6 @@
 import { rfpRequests, type RfpRequest, type InsertRfpRequest, type UpdateRfpRequest, type RfpFile } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 export interface IStorage {
   getRfpRequest(id: number): Promise<RfpRequest | undefined>;
@@ -12,111 +14,99 @@ export interface IStorage {
   filterRfpRequestsByStatus(status: string): Promise<RfpRequest[]>;
 }
 
-export class MemStorage implements IStorage {
-  private rfpRequests: Map<number, RfpRequest>;
-  private currentId: number;
-  private rfpCounter: number;
-
-  constructor() {
-    this.rfpRequests = new Map();
-    this.currentId = 1;
-    this.rfpCounter = 1;
-  }
-
-  private generateRfpNumber(): string {
+export class DatabaseStorage implements IStorage {
+  private async generateRfpNumber(): Promise<string> {
     const year = new Date().getFullYear();
-    const number = this.rfpCounter.toString().padStart(3, '0');
-    this.rfpCounter++;
+    const count = await db.$count(rfpRequests);
+    const number = (count + 1).toString().padStart(3, '0');
     return `RFP-${year}-${number}`;
   }
 
   async getRfpRequest(id: number): Promise<RfpRequest | undefined> {
-    return this.rfpRequests.get(id);
+    const [rfp] = await db.select().from(rfpRequests).where(eq(rfpRequests.id, id));
+    return rfp || undefined;
   }
 
   async getAllRfpRequests(): Promise<RfpRequest[]> {
-    return Array.from(this.rfpRequests.values()).sort((a, b) => 
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
+    return await db.select().from(rfpRequests).orderBy(rfpRequests.createdAt);
   }
 
   async createRfpRequest(request: InsertRfpRequest): Promise<RfpRequest> {
-    const id = this.currentId++;
-    const now = new Date();
-    const rfpRequest: RfpRequest = {
-      id,
-      rfpNumber: this.generateRfpNumber(),
-      client: request.client,
-      project: request.project,
-      status: request.status,
-      requestTypes: request.requestTypes,
-      contactPerson: request.contactPerson || null,
-      contactEmail: request.contactEmail || null,
-      dateReceived: request.dateReceived,
-      dueDate: request.dueDate || null,
-      notes: request.notes || null,
-      files: [],
-      createdAt: now,
-      updatedAt: now,
-    };
-    this.rfpRequests.set(id, rfpRequest);
-    return rfpRequest;
+    const rfpNumber = await this.generateRfpNumber();
+    
+    const [rfp] = await db
+      .insert(rfpRequests)
+      .values({
+        ...request,
+        rfpNumber,
+        files: [],
+      })
+      .returning();
+    
+    return rfp;
   }
 
   async updateRfpRequest(id: number, updates: Partial<UpdateRfpRequest>): Promise<RfpRequest | undefined> {
-    const existing = this.rfpRequests.get(id);
-    if (!existing) return undefined;
-
-    const updated: RfpRequest = {
-      ...existing,
-      ...updates,
-      id: existing.id, // Ensure ID doesn't change
-      rfpNumber: existing.rfpNumber, // Ensure RFP number doesn't change
-      files: existing.files, // Keep existing files
-      updatedAt: new Date(),
-    };
-
-    this.rfpRequests.set(id, updated);
-    return updated;
+    const [updated] = await db
+      .update(rfpRequests)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(rfpRequests.id, id))
+      .returning();
+    
+    return updated || undefined;
   }
 
   async deleteRfpRequest(id: number): Promise<boolean> {
-    return this.rfpRequests.delete(id);
+    const result = await db.delete(rfpRequests).where(eq(rfpRequests.id, id));
+    return result.rowCount > 0;
   }
 
   async addFileToRfp(rfpId: number, file: RfpFile): Promise<RfpRequest | undefined> {
-    const rfp = this.rfpRequests.get(rfpId);
-    if (!rfp) return undefined;
+    const existing = await this.getRfpRequest(rfpId);
+    if (!existing) return undefined;
 
-    const updatedFiles = [...(rfp.files || []), file];
-    const updated: RfpRequest = {
-      ...rfp,
-      files: updatedFiles,
-      updatedAt: new Date(),
-    };
-
-    this.rfpRequests.set(rfpId, updated);
-    return updated;
+    const updatedFiles = [...existing.files, file];
+    
+    const [updated] = await db
+      .update(rfpRequests)
+      .set({
+        files: updatedFiles,
+        updatedAt: new Date(),
+      })
+      .where(eq(rfpRequests.id, rfpId))
+      .returning();
+    
+    return updated || undefined;
   }
 
   async removeFileFromRfp(rfpId: number, fileId: string): Promise<RfpRequest | undefined> {
-    const rfp = this.rfpRequests.get(rfpId);
-    if (!rfp) return undefined;
+    const existing = await this.getRfpRequest(rfpId);
+    if (!existing) return undefined;
 
-    const updatedFiles = (rfp.files || []).filter(f => f.id !== fileId);
-    const updated: RfpRequest = {
-      ...rfp,
-      files: updatedFiles,
-      updatedAt: new Date(),
-    };
-
-    this.rfpRequests.set(rfpId, updated);
-    return updated;
+    const updatedFiles = existing.files.filter(f => f.id !== fileId);
+    
+    const [updated] = await db
+      .update(rfpRequests)
+      .set({
+        files: updatedFiles,
+        updatedAt: new Date(),
+      })
+      .where(eq(rfpRequests.id, rfpId))
+      .returning();
+    
+    return updated || undefined;
   }
 
   async searchRfpRequests(query: string): Promise<RfpRequest[]> {
+    // For now, we'll get all and filter client-side
+    // In production, you'd want to use proper SQL LIKE queries
+    const allRfps = await this.getAllRfpRequests();
     const lowerQuery = query.toLowerCase();
-    return Array.from(this.rfpRequests.values()).filter(rfp => 
+    
+    return allRfps.filter(rfp => 
       rfp.client.toLowerCase().includes(lowerQuery) ||
       rfp.project.toLowerCase().includes(lowerQuery) ||
       rfp.rfpNumber.toLowerCase().includes(lowerQuery) ||
@@ -125,8 +115,8 @@ export class MemStorage implements IStorage {
   }
 
   async filterRfpRequestsByStatus(status: string): Promise<RfpRequest[]> {
-    return Array.from(this.rfpRequests.values()).filter(rfp => rfp.status === status);
+    return await db.select().from(rfpRequests).where(eq(rfpRequests.status, status));
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();

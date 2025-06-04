@@ -111,6 +111,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create new RFP request
   app.post("/api/rfp-requests", upload.array("files"), async (req, res) => {
     try {
+      console.log('Raw req.body:', req.body);
+      console.log('Uploaded files:', req.files);
+      
       // Parse form data properly
       const formData = { ...req.body };
       
@@ -122,6 +125,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           formData.requestTypes = [];
         }
       }
+
+      console.log('Parsed form data:', formData);
 
       const parsed = insertRfpRequestSchema.parse(formData);
       
@@ -144,6 +149,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(newRequest);
     } catch (error) {
       console.error('RFP creation error:', error);
+      console.error('Error details:', error);
       res.status(400).json({ 
         message: error instanceof Error ? error.message : "Invalid request data" 
       });

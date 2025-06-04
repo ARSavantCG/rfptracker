@@ -70,7 +70,17 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
         console.log(key, value);
       }
 
-      const response = await apiRequest("POST", "/api/rfp-requests", formData);
+      // Use direct fetch instead of apiRequest to avoid JSON content-type issues
+      const response = await fetch("/api/rfp-requests", {
+        method: "POST",
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText);
+      }
+      
       return response.json();
     },
     onSuccess: () => {

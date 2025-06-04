@@ -50,6 +50,14 @@ const upload = multer({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Test route to debug multer
+  app.post("/api/test-upload", upload.array("files"), (req, res) => {
+    console.log("Test upload route hit");
+    console.log("Body:", req.body);
+    console.log("Files:", req.files);
+    res.json({ body: req.body, files: req.files });
+  });
+
   // Get RFP statistics (must come before /:id route)
   app.get("/api/rfp-requests/stats", async (req, res) => {
     try {

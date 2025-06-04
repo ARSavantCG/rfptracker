@@ -7,7 +7,9 @@ import {
   insertContactSchema,
   updateContactSchema,
   insertInvitationSchema,
-  updateInvitationSchema
+  updateInvitationSchema,
+  insertInvitationToBidSchema,
+  updateInvitationToBidSchema
 } from "@shared/schema";
 import multer from "multer";
 import path from "path";
@@ -468,6 +470,111 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ message: "Failed to delete invitation" });
+    }
+  });
+
+  // Workflow phase management routes
+  app.patch("/api/rfp-requests/:id/workflow-phase", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid ID" });
+      }
+
+      const { phase } = req.body;
+      if (!phase || !["rfp-entry", "invitation-to-bid", "bid-collection", "evaluation", "award"].includes(phase)) {
+        return res.status(400).json({ message: "Invalid workflow phase" });
+      }
+
+      const updated = await storage.advanceWorkflowPhase(id, phase);
+      if (!updated) {
+        return res.status(404).json({ message: "RFP request not found" });
+      }
+
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update workflow phase" });
+    }
+  });
+
+  app.get("/api/projects/phase/:phase", async (req, res) => {
+    try {
+      const { phase } = req.params;
+      if (!["rfp-entry", "invitation-to-bid", "bid-collection", "evaluation", "award"].includes(phase)) {
+        return res.status(400).json({ message: "Invalid workflow phase" });
+      }
+
+      const projects = await storage.getProjectsByPhase(phase);
+      res.json(projects);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch projects by phase" });
+    }
+  });
+
+  // Invitation to Bid routes
+  app.post("/api/invitation-to-bid", async (req, res) => {
+    try {
+      const parsed = insertInvitationToBidSchema.parse(req.body);
+      const invitation = await storage.createInvitationToBid(parsed);
+      res.status(201).json(invitation);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid invitation to bid data" });
+    }
+  });
+
+  app.get("/api/rfp-requests/:id/invitation-to-bid", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid ID" });
+      }
+
+      const invitation = await storage.getInvitationToBid(id);
+      if (!invitation) {
+        return res.status(404).json({ message: "Invitation to bid not found" });
+      }
+
+      res.json(invitation);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch invitation to bid" });
+    }
+  });
+
+  app.patch("/api/rfp-requests/:id/invitation-to-bid", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid ID" });
+      }
+
+      const parsed = updateInvitationToBidSchema.parse(req.body);
+      const invitation = await storage.updateInvitationToBid(id, parsed);
+      
+      if (!invitation) {
+        return res.status(404).json({ message: "Invitation to bid not found" });
+      }
+
+      res.json(invitation);
+    } catch (error) {
+      res.status(400).json({ message: "Failed to update invitation to bid" });
+    }
+  });
+
+  app.delete("/api/rfp-requests/:id/invitation-to-bid", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid ID" });
+      }
+
+      const deleted = await storage.deleteInvitationToBid(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Invitation to bid not found" });
+      }
+
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete invitation to bid" });
     }
   });
 

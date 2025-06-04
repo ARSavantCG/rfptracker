@@ -201,6 +201,12 @@ export default function Dashboard() {
         rfp={selectedRfp}
       />
 
+      <EditRfpModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        rfp={selectedRfp}
+      />
+
       <ContactManagementModal
         isOpen={isContactModalOpen}
         onClose={() => setIsContactModalOpen(false)}

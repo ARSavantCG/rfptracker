@@ -20,7 +20,7 @@ const editRfpSchema = updateRfpRequestSchema.extend({
   client: z.string().min(1, "Client is required"),
   project: z.string().min(1, "Project is required"),
   requestTypes: z.array(z.string()).min(1, "At least one request type is required"),
-});
+}).omit({ id: true });
 
 type EditRfpFormData = z.infer<typeof editRfpSchema>;
 
@@ -41,8 +41,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
       status: "received",
       requestTypes: [],
       contactPerson: "",
-      phone: "",
-      email: "",
+      contactEmail: "",
       notes: "",
     },
   });
@@ -53,11 +52,10 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
       form.reset({
         client: rfp.client,
         project: rfp.project,
-        status: rfp.status,
+        status: rfp.status as any,
         requestTypes: rfp.requestTypes,
         contactPerson: rfp.contactPerson || "",
-        phone: rfp.phone || "",
-        email: rfp.email || "",
+        contactEmail: rfp.contactEmail || "",
         notes: rfp.notes || "",
       });
     }
@@ -219,7 +217,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
               )}
             />
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="contactPerson"
@@ -236,24 +234,10 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
 
               <FormField
                 control={form.control}
-                name="phone"
+                name="contactEmail"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Phone</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Phone number" {...field} value={field.value || ""} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel>Contact Email</FormLabel>
                     <FormControl>
                       <Input type="email" placeholder="Email address" {...field} value={field.value || ""} />
                     </FormControl>

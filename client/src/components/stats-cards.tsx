@@ -107,58 +107,43 @@ export function StatsCards() {
   };
 
   return (
-    <div className="space-y-8 mb-8">
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+    <div className="space-y-4 mb-6">
+      {/* Compact Stats Row */}
+      <div className="grid grid-cols-4 gap-3">
         {cards.map((card, index) => (
-          <div key={index} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <div className={`w-12 h-12 ${card.bgColor} rounded-xl flex items-center justify-center`}>
-                    <i className={`${card.icon} ${card.iconColor} text-lg`}></i>
-                  </div>
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">{card.title}</p>
-                  <p className="text-3xl font-bold text-gray-900">{card.value}</p>
-                </div>
+          <div key={index} className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
+            <div className="flex items-center space-x-2">
+              <div className={`w-6 h-6 ${card.bgColor} rounded flex items-center justify-center flex-shrink-0`}>
+                <i className={`${card.icon} ${card.iconColor} text-xs`}></i>
               </div>
-              <div className="text-right">
-                <span className="text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded-full">
-                  {card.change}
-                </span>
+              <div className="min-w-0">
+                <p className="text-xs text-gray-600 truncate">{card.title}</p>
+                <p className="text-lg font-bold text-gray-900">{card.value}</p>
               </div>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Charts Section */}
+      {/* Compact Charts Section */}
       {stats.total > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Pie Chart */}
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-gray-900">RFP Status Distribution</h3>
-              <div className="flex items-center space-x-1">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span className="text-xs text-gray-500">Live Data</span>
-              </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Compact Pie Chart */}
+          <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-gray-900">Status Distribution</h3>
+              <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
             </div>
             
-            <div className="h-80">
+            <div className="h-40">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={pieData}
                     cx="50%"
                     cy="50%"
-                    labelLine={false}
-                    label={({ name, value, percent }) => 
-                      value > 0 ? `${name} (${(percent * 100).toFixed(0)}%)` : ''
-                    }
-                    outerRadius={80}
+                    innerRadius={20}
+                    outerRadius={55}
                     fill="#8884d8"
                     dataKey="value"
                   >
@@ -171,59 +156,53 @@ export function StatsCards() {
               </ResponsiveContainer>
             </div>
 
-            {/* Legend */}
-            <div className="grid grid-cols-2 gap-4 mt-4">
+            {/* Compact Legend */}
+            <div className="grid grid-cols-2 gap-1 mt-2">
               {pieData.map((item, index) => (
-                <div key={index} className="flex items-center space-x-2">
+                <div key={index} className="flex items-center space-x-1">
                   <div 
-                    className="w-3 h-3 rounded-full" 
+                    className="w-2 h-2 rounded-full flex-shrink-0" 
                     style={{ backgroundColor: item.color }}
                   ></div>
-                  <span className="text-sm text-gray-600">{item.name}</span>
-                  <span className="text-sm font-semibold text-gray-900">{item.value}</span>
+                  <span className="text-xs text-gray-600 truncate">{item.name}</span>
+                  <span className="text-xs font-medium text-gray-900">{item.value}</span>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Bar Chart */}
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-gray-900">RFP Status Overview</h3>
-              <div className="flex items-center space-x-2">
-                <button className="text-xs px-3 py-1 bg-blue-50 text-blue-600 rounded-full font-medium">
-                  This Month
-                </button>
-              </div>
+          {/* Compact Bar Chart */}
+          <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-gray-900">Status Overview</h3>
+              <span className="text-xs px-2 py-1 bg-blue-50 text-blue-600 rounded font-medium">
+                Live
+              </span>
             </div>
             
-            <div className="h-80">
+            <div className="h-40">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={barData}
-                  margin={{
-                    top: 20,
-                    right: 30,
-                    left: 20,
-                    bottom: 5,
-                  }}
+                  margin={{ top: 10, right: 10, left: 10, bottom: 5 }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <CartesianGrid strokeDasharray="2 2" stroke="#f3f4f6" />
                   <XAxis 
                     dataKey="name" 
-                    tick={{ fontSize: 12 }}
+                    tick={{ fontSize: 10 }}
                     axisLine={false}
                     tickLine={false}
                   />
                   <YAxis 
-                    tick={{ fontSize: 12 }}
+                    tick={{ fontSize: 10 }}
                     axisLine={false}
                     tickLine={false}
+                    width={20}
                   />
                   <Tooltip content={<CustomTooltip />} />
                   <Bar 
                     dataKey="count" 
-                    radius={[4, 4, 0, 0]}
+                    radius={[2, 2, 0, 0]}
                     stroke="none"
                   />
                 </BarChart>

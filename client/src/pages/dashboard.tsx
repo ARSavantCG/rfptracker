@@ -6,6 +6,7 @@ import { EditRfpModal } from "@/components/edit-rfp-modal";
 import { ContactManagementModal } from "@/components/contact-management-modal";
 import { WorkflowStatus } from "@/components/workflow-status";
 import { InvitationToBidModal } from "@/components/invitation-to-bid-modal";
+import { RfpValidationModal } from "@/components/rfp-validation-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -21,8 +22,10 @@ export default function Dashboard() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [isInvitationModalOpen, setIsInvitationModalOpen] = useState(false);
+  const [isValidationModalOpen, setIsValidationModalOpen] = useState(false);
   const [selectedRfp, setSelectedRfp] = useState<RfpRequest | null>(null);
   const [workflowRfp, setWorkflowRfp] = useState<RfpRequest | null>(null);
+  const [validationRfp, setValidationRfp] = useState<RfpRequest | null>(null);
 
   const handleEditRfp = (rfp: RfpRequest) => {
     setSelectedRfp(rfp);
@@ -32,6 +35,11 @@ export default function Dashboard() {
   const handleAdvanceToInvitation = (rfp: RfpRequest) => {
     setWorkflowRfp(rfp);
     setIsInvitationModalOpen(true);
+  };
+
+  const handleValidateRfp = (rfp: RfpRequest) => {
+    setValidationRfp(rfp);
+    setIsValidationModalOpen(true);
   };
 
   const clearFilters = () => {

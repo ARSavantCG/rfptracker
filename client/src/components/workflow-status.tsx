@@ -138,23 +138,32 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onValidateRfp }: Wo
         })}
       </div>
 
-      {nextPhase && (
-        <div className="mt-4 pt-4 border-t border-gray-200">
+      <div className="mt-4 pt-4 border-t border-gray-200 space-y-2">
+        {rfp.workflowPhase === "rfp-entry" && (
+          <Button
+            onClick={() => onValidateRfp?.(rfp)}
+            variant="outline"
+            className="w-full"
+          >
+            <ClipboardCheck className="h-4 w-4 mr-2" />
+            Validate RFP & Generate Documents
+          </Button>
+        )}
+        
+        {nextPhase && (
           <Button
             onClick={handleAdvancePhase}
             disabled={advancePhaseMutation.isPending}
             className="w-full"
           >
-            {advancePhaseMutation.isPending ? (
-              "Advancing..."
-            ) : nextPhase.key === "invitation-to-bid" ? (
-              "Create Invitation to Bid"
-            ) : (
-              `Advance to ${nextPhase.label}`
-            )}
+            {advancePhaseMutation.isPending
+              ? "Advancing..."
+              : nextPhase.key === "invitation-to-bid"
+              ? "Create Invitation to Bid"
+              : `Advance to ${nextPhase.label}`}
           </Button>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

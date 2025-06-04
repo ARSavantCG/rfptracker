@@ -6,6 +6,13 @@ import { z } from "zod";
 import { apiRequest } from "@/lib/queryClient";
 import { FileUpload } from "./file-upload";
 import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { X } from "lucide-react";
 
 const createRfpSchema = z.object({
   property: z.string().min(1, "Property is required"),
@@ -50,298 +57,332 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
 
   const createMutation = useMutation({
     mutationFn: async (data: CreateRfpFormData) => {
-      console.log('Raw form data:', data);
-      console.log('Selected files:', selectedFiles);
-      
       const formData = new FormData();
       
-      // Add form fields with explicit handling
-      formData.append("client", data.client || "");
-      formData.append("project", data.project || "");
-      formData.append("status", data.status || "received");
-      formData.append("requestTypes", JSON.stringify(data.requestTypes || []));
-      formData.append("dateReceived", data.dateReceived || "");
-      
-      if (data.contactPerson) formData.append("contactPerson", data.contactPerson);
-      if (data.contactEmail) formData.append("contactEmail", data.contactEmail);
-      if (data.dueDate) formData.append("dueDate", data.dueDate);
-      if (data.notes) formData.append("notes", data.notes);
+      // Add form fields
+      formData.append('property', data.property);
+      formData.append('tenantName', data.tenantName);
+      formData.append('projectName', data.projectName);
+      formData.append('confidential', data.confidential.toString());
+      formData.append('sentBy', data.sentBy);
+      formData.append('sentOn', data.sentOn);
+      formData.append('developmentContact', data.developmentContact || '');
+      formData.append('projectArea', data.projectArea || '');
+      formData.append('requestTypes', JSON.stringify(data.requestTypes));
+      formData.append('notes', data.notes || '');
 
       // Add files
-      selectedFiles.forEach((file) => {
-        formData.append("files", file);
+      selectedFiles.forEach((file, index) => {
+        formData.append('files', file);
       });
 
-      // Debug FormData contents
-      console.log('FormData contents:');
-      for (let [key, value] of formData.entries()) {
-        console.log(key, value);
-      }
-
-      // Use direct fetch instead of apiRequest to avoid JSON content-type issues
-      const response = await fetch("/api/rfp-requests", {
-        method: "POST",
-        body: formData,
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText);
-      }
-      
-      return response.json();
+      return apiRequest("/api/rfp-requests", "POST", formData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
       toast({
-        title: "Success",
-        description: "RFP request created successfully",
+        title: "RFP Created",
+        description: "The RFP has been created successfully",
       });
       form.reset();
       setSelectedFiles([]);
       onClose();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to create RFP request",
+        description: error.message || "Failed to create RFP",
         variant: "destructive",
       });
     },
   });
 
   const onSubmit = (data: CreateRfpFormData) => {
-    console.log('Form data being submitted:', data);
     createMutation.mutate(data);
   };
 
-  const handleRequestTypeChange = (value: string, checked: boolean) => {
-    const current = form.getValues("requestTypes");
+  const handleRequestTypeChange = (requestType: string, checked: boolean) => {
+    const currentTypes = form.getValues('requestTypes');
     if (checked) {
-      form.setValue("requestTypes", [...current, value]);
+      form.setValue('requestTypes', [...currentTypes, requestType]);
     } else {
-      form.setValue("requestTypes", current.filter(type => type !== value));
+      form.setValue('requestTypes', currentTypes.filter(type => type !== requestType));
     }
   };
 
-  if (!isOpen) return null;
+  const handleClose = () => {
+    form.reset();
+    setSelectedFiles([]);
+    onClose();
+  };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
-      <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div 
-          className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" 
-          onClick={onClose}
-        ></div>
-        
-        <span className="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
-        
-        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
-          <div className="bg-white px-6 pt-6">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-gray-900">Create New RFP Request</h3>
-              <button 
-                onClick={onClose}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <i className="fas fa-times text-xl"></i>
-              </button>
-            </div>
-            
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                <div>
-                  <label htmlFor="client" className="block text-sm font-medium text-gray-700">
-                    Client Name *
-                  </label>
-                  <input
-                    type="text"
-                    id="client"
-                    {...form.register("client")}
-                    className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Enter client name"
-                  />
-                  {form.formState.errors.client && (
-                    <p className="mt-1 text-sm text-red-600">{form.formState.errors.client.message}</p>
-                  )}
-                </div>
-                
-                <div>
-                  <label htmlFor="project" className="block text-sm font-medium text-gray-700">
-                    Project Name *
-                  </label>
-                  <input
-                    type="text"
-                    id="project"
-                    {...form.register("project")}
-                    className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Enter project name"
-                  />
-                  {form.formState.errors.project && (
-                    <p className="mt-1 text-sm text-red-600">{form.formState.errors.project.message}</p>
-                  )}
-                </div>
-              </div>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Create New RFP</DialogTitle>
+          <DialogDescription>
+            Enter the initial RFP information to begin the workflow process
+          </DialogDescription>
+        </DialogHeader>
+
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            {/* Basic Information */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium text-gray-900 border-b pb-2">Basic Information</h3>
               
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                <div>
-                  <label htmlFor="status" className="block text-sm font-medium text-gray-700">
-                    Initial Status
-                  </label>
-                  <select
-                    id="status"
-                    {...form.register("status")}
-                    className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="received">Received</option>
-                    <option value="in-progress">In Progress</option>
-                    <option value="completed">Completed</option>
-                    <option value="on-hold">On Hold</option>
-                  </select>
-                </div>
-                
-                <div>
-                  <label htmlFor="dateReceived" className="block text-sm font-medium text-gray-700">
-                    Date Received *
-                  </label>
-                  <input
-                    type="date"
-                    id="dateReceived"
-                    {...form.register("dateReceived")}
-                    className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                  {form.formState.errors.dateReceived && (
-                    <p className="mt-1 text-sm text-red-600">{form.formState.errors.dateReceived.message}</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="property"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Property *</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="Property name or address"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
                   )}
-                </div>
-              </div>
+                />
 
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                <div>
-                  <label htmlFor="contactPerson" className="block text-sm font-medium text-gray-700">
-                    Contact Person
-                  </label>
-                  <input
-                    type="text"
-                    id="contactPerson"
-                    {...form.register("contactPerson")}
-                    className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Enter contact name"
-                  />
-                </div>
-                
-                <div>
-                  <label htmlFor="contactEmail" className="block text-sm font-medium text-gray-700">
-                    Contact Email
-                  </label>
-                  <input
-                    type="email"
-                    id="contactEmail"
-                    {...form.register("contactEmail")}
-                    className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Enter contact email"
-                  />
-                  {form.formState.errors.contactEmail && (
-                    <p className="mt-1 text-sm text-red-600">{form.formState.errors.contactEmail.message}</p>
+                <FormField
+                  control={form.control}
+                  name="tenantName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tenant Name *</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="Tenant or client name"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
                   )}
-                </div>
-              </div>
-
-              <div>
-                <label htmlFor="dueDate" className="block text-sm font-medium text-gray-700">
-                  Due Date
-                </label>
-                <input
-                  type="date"
-                  id="dueDate"
-                  {...form.register("dueDate")}
-                  className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Request Type *
-                </label>
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="flex items-center">
-                    <input
-                      id="pricing"
-                      type="checkbox"
-                      onChange={(e) => handleRequestTypeChange("pricing", e.target.checked)}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                    <label htmlFor="pricing" className="ml-2 block text-sm text-gray-700">
-                      Pricing
-                    </label>
-                  </div>
-                  <div className="flex items-center">
-                    <input
-                      id="spacePlans"
-                      type="checkbox"
-                      onChange={(e) => handleRequestTypeChange("space-plans", e.target.checked)}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                    <label htmlFor="spacePlans" className="ml-2 block text-sm text-gray-700">
-                      Space Plans
-                    </label>
-                  </div>
-                  <div className="flex items-center">
-                    <input
-                      id="schedule"
-                      type="checkbox"
-                      onChange={(e) => handleRequestTypeChange("schedule", e.target.checked)}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                    <label htmlFor="schedule" className="ml-2 block text-sm text-gray-700">
-                      Schedule
-                    </label>
-                  </div>
-                </div>
-                {form.formState.errors.requestTypes && (
-                  <p className="mt-1 text-sm text-red-600">{form.formState.errors.requestTypes.message}</p>
+
+              <FormField
+                control={form.control}
+                name="projectName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Project Name *</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Descriptive project name"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
                 )}
-              </div>
-              
-              <div>
-                <label htmlFor="notes" className="block text-sm font-medium text-gray-700">
-                  Notes
-                </label>
-                <textarea
-                  id="notes"
-                  rows={3}
-                  {...form.register("notes")}
-                  className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Add any additional details or notes..."
+              />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="sentBy"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Sent By *</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="Person who sent the RFP"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="sentOn"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Sent On *</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="date"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
               </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="developmentContact"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Development Contact</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="Development team contact"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="projectArea"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Project Area</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="e.g., 10,000 sq ft"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name="confidential"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>
+                        Confidential Project
+                      </FormLabel>
+                      <p className="text-sm text-muted-foreground">
+                        Mark this project as confidential
+                      </p>
+                    </div>
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* Request Types */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium text-gray-900 border-b pb-2">Request Type *</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {['Pricing', 'Schedule', 'Space Plan'].map((type) => (
+                  <div key={type} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={type}
+                      checked={form.watch('requestTypes').includes(type.toLowerCase().replace(' ', '-'))}
+                      onCheckedChange={(checked) => 
+                        handleRequestTypeChange(type.toLowerCase().replace(' ', '-'), checked as boolean)
+                      }
+                    />
+                    <label 
+                      htmlFor={type}
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      {type}
+                    </label>
+                  </div>
+                ))}
+              </div>
+              {form.formState.errors.requestTypes && (
+                <p className="text-sm font-medium text-destructive">
+                  {form.formState.errors.requestTypes.message}
+                </p>
+              )}
+            </div>
+
+            {/* Notes */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium text-gray-900 border-b pb-2">Additional Information</h3>
+              
+              <FormField
+                control={form.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Notes</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Any additional notes or special requirements"
+                        rows={3}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* File Upload */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium text-gray-900 border-b pb-2">Files</h3>
               
               <FileUpload
                 onFilesSelected={setSelectedFiles}
-                className="space-y-4"
+                multiple={true}
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
+                maxSize={10 * 1024 * 1024} // 10MB
+                className="w-full"
               />
               
-              <div className="flex justify-end space-x-3 pt-6 pb-6 border-t border-gray-200">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={createMutation.isPending}
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
-                >
-                  {createMutation.isPending ? "Creating..." : "Create RFP Request"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      </div>
-    </div>
+              {selectedFiles.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Selected Files:</p>
+                  <ul className="text-sm text-gray-600 space-y-1">
+                    {selectedFiles.map((file, index) => (
+                      <li key={index} className="flex justify-between items-center">
+                        <span>{file.name}</span>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedFiles(files => files.filter((_, i) => i !== index))}
+                          className="text-red-500 hover:text-red-700"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex justify-end space-x-3 pt-6 border-t">
+              <Button type="button" variant="outline" onClick={handleClose}>
+                Cancel
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={createMutation.isPending}
+              >
+                {createMutation.isPending ? "Creating..." : "Create RFP"}
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
   );
 }

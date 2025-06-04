@@ -250,12 +250,16 @@ function generateRfpHtml(options: PdfGenerationOptions): string {
         <div class="info-grid">
           <div>
             <div class="info-item">
-              <div class="info-label">Client</div>
-              <div class="info-value">${rfp.client}</div>
+              <div class="info-label">Property</div>
+              <div class="info-value">${rfp.property}</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">Tenant Name</div>
+              <div class="info-value">${rfp.tenantName}</div>
             </div>
             <div class="info-item">
               <div class="info-label">Project Name</div>
-              <div class="info-value">${rfp.project}</div>
+              <div class="info-value">${rfp.projectName}</div>
             </div>
             ${rfp.projectAddress ? `
             <div class="info-item">
@@ -266,8 +270,12 @@ function generateRfpHtml(options: PdfGenerationOptions): string {
           </div>
           <div>
             <div class="info-item">
-              <div class="info-label">Date Received</div>
-              <div class="info-value">${formatDate(rfp.dateReceived)}</div>
+              <div class="info-label">Sent On</div>
+              <div class="info-value">${formatDate(rfp.sentOn)}</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">Sent By</div>
+              <div class="info-value">${rfp.sentBy}</div>
             </div>
             ${rfp.dueDate ? `
             <div class="info-item">
@@ -423,6 +431,6 @@ function generateRfpHtml(options: PdfGenerationOptions): string {
 
 export function generatePdfFilename(rfp: RfpRequest, recipientType: string): string {
   const date = new Date().toISOString().split('T')[0];
-  const sanitizedProject = rfp.project.replace(/[^a-zA-Z0-9]/g, '_');
+  const sanitizedProject = rfp.projectName.replace(/[^a-zA-Z0-9]/g, '_');
   return `${rfp.rfpNumber}_${sanitizedProject}_${recipientType}_${date}.pdf`;
 }

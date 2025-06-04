@@ -353,12 +353,20 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
                 <div>
-                  <p className="text-sm font-medium text-gray-700">Client</p>
-                  <p className="text-sm text-gray-600">{rfp.client}</p>
+                  <p className="text-sm font-medium text-gray-700">Property</p>
+                  <p className="text-sm text-gray-600">{rfp.property}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-700">Project</p>
-                  <p className="text-sm text-gray-600">{rfp.project}</p>
+                  <p className="text-sm font-medium text-gray-700">Tenant Name</p>
+                  <p className="text-sm text-gray-600">{rfp.tenantName}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Project Name</p>
+                  <p className="text-sm text-gray-600">{rfp.projectName}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Sent By</p>
+                  <p className="text-sm text-gray-600">{rfp.sentBy}</p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-700">Request Types</p>

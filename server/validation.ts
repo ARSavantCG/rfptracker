@@ -15,15 +15,37 @@ export interface ValidationRule {
 
 const rfpValidationRules: ValidationRule[] = [
   {
-    field: "client",
+    field: "property",
     required: true,
-    message: "Client name is required"
+    message: "Property is required"
   },
   {
-    field: "project",
+    field: "tenantName",
+    required: true,
+    message: "Tenant name is required"
+  },
+  {
+    field: "projectName",
     required: true,
     message: "Project name is required"
   },
+  {
+    field: "sentBy",
+    required: true,
+    message: "Sent by is required"
+  },
+  {
+    field: "sentOn",
+    required: true,
+    message: "Sent on date is required"
+  },
+  {
+    field: "requestTypes",
+    required: true,
+    validator: (types: string[]) => Array.isArray(types) && types.length > 0,
+    message: "At least one request type must be selected"
+  },
+  // Phase 2 validation fields (for workflow progression)
   {
     field: "projectAddress",
     required: true,
@@ -54,12 +76,6 @@ const rfpValidationRules: ValidationRule[] = [
     field: "dueDate",
     required: true,
     message: "Due date must be set"
-  },
-  {
-    field: "requestTypes",
-    required: true,
-    validator: (types: string[]) => Array.isArray(types) && types.length > 0,
-    message: "At least one request type must be selected"
   },
   {
     field: "timelineRequirements",

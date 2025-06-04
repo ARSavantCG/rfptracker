@@ -57,26 +57,35 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
 
   const createMutation = useMutation({
     mutationFn: async (data: CreateRfpFormData) => {
-      const formData = new FormData();
-      
-      // Add form fields
-      formData.append('property', data.property);
-      formData.append('tenantName', data.tenantName);
-      formData.append('projectName', data.projectName);
-      formData.append('confidential', data.confidential.toString());
-      formData.append('sentBy', data.sentBy);
-      formData.append('sentOn', data.sentOn);
-      formData.append('developmentContact', data.developmentContact || '');
-      formData.append('projectArea', data.projectArea || '');
-      formData.append('requestTypes', JSON.stringify(data.requestTypes));
-      formData.append('notes', data.notes || '');
+      if (selectedFiles.length > 0) {
+        // If files are present, use FormData
+        const formData = new FormData();
+        
+        // Add form fields
+        formData.append('property', data.property);
+        formData.append('tenantName', data.tenantName);
+        formData.append('projectName', data.projectName);
+        formData.append('confidential', data.confidential.toString());
+        formData.append('sentBy', data.sentBy);
+        formData.append('sentOn', data.sentOn);
+        formData.append('developmentContact', data.developmentContact || '');
+        formData.append('projectArea', data.projectArea || '');
+        formData.append('requestTypes', JSON.stringify(data.requestTypes));
+        formData.append('notes', data.notes || '');
 
-      // Add files
-      selectedFiles.forEach((file, index) => {
-        formData.append('files', file);
-      });
+        // Add files
+        selectedFiles.forEach((file) => {
+          formData.append('files', file);
+        });
 
-      return apiRequest("/api/rfp-requests", "POST", formData);
+        return apiRequest("/api/rfp-requests", "POST", formData);
+      } else {
+        // No files, send JSON data
+        return apiRequest("/api/rfp-requests", "POST", {
+          ...data,
+          confidential: data.confidential
+        });
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });

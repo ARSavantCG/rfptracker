@@ -1,6 +1,20 @@
-import { rfpRequests, type RfpRequest, type InsertRfpRequest, type UpdateRfpRequest, type RfpFile } from "@shared/schema";
+import { 
+  rfpRequests, 
+  contacts, 
+  invitations,
+  type RfpRequest, 
+  type InsertRfpRequest, 
+  type UpdateRfpRequest,
+  type Contact,
+  type InsertContact,
+  type UpdateContact,
+  type Invitation,
+  type InsertInvitation,
+  type UpdateInvitation,
+  type RfpFile 
+} from "@shared/schema";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, desc, sql, like, or } from "drizzle-orm";
 
 export interface IStorage {
   getRfpRequest(id: number): Promise<RfpRequest | undefined>;
@@ -12,6 +26,22 @@ export interface IStorage {
   removeFileFromRfp(rfpId: number, fileId: string): Promise<RfpRequest | undefined>;
   searchRfpRequests(query: string): Promise<RfpRequest[]>;
   filterRfpRequestsByStatus(status: string): Promise<RfpRequest[]>;
+  
+  // Contact management
+  getAllContacts(): Promise<Contact[]>;
+  getContact(id: number): Promise<Contact | undefined>;
+  createContact(contact: InsertContact): Promise<Contact>;
+  updateContact(id: number, updates: Partial<UpdateContact>): Promise<Contact | undefined>;
+  deleteContact(id: number): Promise<boolean>;
+  getContactsByType(type: string): Promise<Contact[]>;
+  
+  // Invitation management
+  getAllInvitations(): Promise<Invitation[]>;
+  getInvitation(id: number): Promise<Invitation | undefined>;
+  getInvitationsByRfp(rfpId: number): Promise<Invitation[]>;
+  createInvitation(invitation: InsertInvitation): Promise<Invitation>;
+  updateInvitation(id: number, updates: Partial<UpdateInvitation>): Promise<Invitation | undefined>;
+  deleteInvitation(id: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -116,6 +146,72 @@ export class DatabaseStorage implements IStorage {
 
   async filterRfpRequestsByStatus(status: string): Promise<RfpRequest[]> {
     return await db.select().from(rfpRequests).where(eq(rfpRequests.status, status));
+  }
+
+  // Contact management methods
+  async getAllContacts(): Promise<Contact[]> {
+    return await db.select().from(contacts).orderBy(desc(contacts.createdAt));
+  }
+
+  async getContact(id: number): Promise<Contact | undefined> {
+    const [contact] = await db.select().from(contacts).where(eq(contacts.id, id));
+    return contact || undefined;
+  }
+
+  async createContact(contact: InsertContact): Promise<Contact> {
+    const [created] = await db.insert(contacts).values(contact).returning();
+    return created;
+  }
+
+  async updateContact(id: number, updates: Partial<UpdateContact>): Promise<Contact | undefined> {
+    const [updated] = await db
+      .update(contacts)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(contacts.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteContact(id: number): Promise<boolean> {
+    const result = await db.delete(contacts).where(eq(contacts.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  async getContactsByType(type: string): Promise<Contact[]> {
+    return await db.select().from(contacts).where(eq(contacts.type, type));
+  }
+
+  // Invitation management methods
+  async getAllInvitations(): Promise<Invitation[]> {
+    return await db.select().from(invitations).orderBy(desc(invitations.createdAt));
+  }
+
+  async getInvitation(id: number): Promise<Invitation | undefined> {
+    const [invitation] = await db.select().from(invitations).where(eq(invitations.id, id));
+    return invitation || undefined;
+  }
+
+  async getInvitationsByRfp(rfpId: number): Promise<Invitation[]> {
+    return await db.select().from(invitations).where(eq(invitations.rfpId, rfpId));
+  }
+
+  async createInvitation(invitation: InsertInvitation): Promise<Invitation> {
+    const [created] = await db.insert(invitations).values(invitation).returning();
+    return created;
+  }
+
+  async updateInvitation(id: number, updates: Partial<UpdateInvitation>): Promise<Invitation | undefined> {
+    const [updated] = await db
+      .update(invitations)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(invitations.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteInvitation(id: number): Promise<boolean> {
+    const result = await db.delete(invitations).where(eq(invitations.id, id));
+    return (result.rowCount || 0) > 0;
   }
 }
 

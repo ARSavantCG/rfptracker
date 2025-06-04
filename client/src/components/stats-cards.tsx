@@ -123,27 +123,31 @@ export function StatsCards({ onStatusFilter }: StatsCardsProps) {
   };
 
   const handlePieClick = (data: any) => {
-    if (onViewRfp) {
-      const projects = getProjectsByStatus(data.name);
-      if (projects.length > 0) {
-        // Show the first project of this status
-        onViewRfp(projects[0]);
-      }
+    if (onStatusFilter) {
+      const statusMap: Record<string, string> = {
+        'Received': 'received',
+        'In Progress': 'in-progress', 
+        'Completed': 'completed',
+        'On Hold': 'on-hold'
+      };
+      onStatusFilter(statusMap[data.name]);
     }
   };
 
   const handleBarClick = (data: any) => {
-    if (onViewRfp) {
-      const projects = getProjectsByStatus(data.name);
-      if (projects.length > 0) {
-        // Show the first project of this status
-        onViewRfp(projects[0]);
-      }
+    if (onStatusFilter) {
+      const statusMap: Record<string, string> = {
+        'Received': 'received',
+        'In Progress': 'in-progress', 
+        'Completed': 'completed',
+        'On Hold': 'on-hold'
+      };
+      onStatusFilter(statusMap[data.name]);
     }
   };
 
   const handleCardClick = (cardTitle: string) => {
-    if (onViewRfp && rfpRequests.length > 0) {
+    if (onStatusFilter) {
       const statusMap: Record<string, string> = {
         'Received': 'received',
         'In Progress': 'in-progress',
@@ -152,11 +156,7 @@ export function StatsCards({ onStatusFilter }: StatsCardsProps) {
       
       const targetStatus = statusMap[cardTitle];
       if (targetStatus) {
-        // Show first RFP of specific status
-        const projects = rfpRequests.filter((rfp: any) => rfp.status === targetStatus);
-        if (projects.length > 0) {
-          onViewRfp(projects[0]);
-        }
+        onStatusFilter(targetStatus);
       }
     }
   };

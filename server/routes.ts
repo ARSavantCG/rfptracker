@@ -1,7 +1,14 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertRfpRequestSchema, updateRfpRequestSchema } from "@shared/schema";
+import { 
+  insertRfpRequestSchema, 
+  updateRfpRequestSchema,
+  insertContactSchema,
+  updateContactSchema,
+  insertInvitationSchema,
+  updateInvitationSchema
+} from "@shared/schema";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -316,7 +323,153 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Contact routes
+  app.get("/api/contacts", async (req, res) => {
+    try {
+      const contacts = await storage.getAllContacts();
+      res.json(contacts);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch contacts" });
+    }
+  });
 
+  app.get("/api/contacts/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid ID" });
+      }
+
+      const contact = await storage.getContact(id);
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+
+      res.json(contact);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch contact" });
+    }
+  });
+
+  app.post("/api/contacts", async (req, res) => {
+    try {
+      const parsed = insertContactSchema.parse(req.body);
+      const contact = await storage.createContact(parsed);
+      res.status(201).json(contact);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid contact data" });
+    }
+  });
+
+  app.patch("/api/contacts/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid ID" });
+      }
+
+      const parsed = updateContactSchema.parse(req.body);
+      const contact = await storage.updateContact(id, parsed);
+      
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+
+      res.json(contact);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid contact data" });
+    }
+  });
+
+  app.delete("/api/contacts/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid ID" });
+      }
+
+      const deleted = await storage.deleteContact(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete contact" });
+    }
+  });
+
+  // Invitation routes
+  app.get("/api/invitations", async (req, res) => {
+    try {
+      const invitations = await storage.getAllInvitations();
+      res.json(invitations);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch invitations" });
+    }
+  });
+
+  app.get("/api/rfp-requests/:id/invitations", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid ID" });
+      }
+
+      const invitations = await storage.getInvitationsByRfp(id);
+      res.json(invitations);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch invitations" });
+    }
+  });
+
+  app.post("/api/invitations", async (req, res) => {
+    try {
+      const parsed = insertInvitationSchema.parse(req.body);
+      const invitation = await storage.createInvitation(parsed);
+      res.status(201).json(invitation);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid invitation data" });
+    }
+  });
+
+  app.patch("/api/invitations/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid ID" });
+      }
+
+      const parsed = updateInvitationSchema.parse(req.body);
+      const invitation = await storage.updateInvitation(id, parsed);
+      
+      if (!invitation) {
+        return res.status(404).json({ message: "Invitation not found" });
+      }
+
+      res.json(invitation);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid invitation data" });
+    }
+  });
+
+  app.delete("/api/invitations/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid ID" });
+      }
+
+      const deleted = await storage.deleteInvitation(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Invitation not found" });
+      }
+
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete invitation" });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;

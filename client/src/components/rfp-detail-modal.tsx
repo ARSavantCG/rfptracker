@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { formatDate, formatFileSize, getFileIcon, getStatusColor } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { InvitationWorkflowModal } from "./invitation-workflow-modal";
 import type { RfpRequest } from "@shared/schema";
 
 interface RfpDetailModalProps {
@@ -14,6 +15,7 @@ interface RfpDetailModalProps {
 export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editStatus, setEditStatus] = useState("");
+  const [showInvitationModal, setShowInvitationModal] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 

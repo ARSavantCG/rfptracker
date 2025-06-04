@@ -9,7 +9,11 @@ interface Stats {
   onHold: number;
 }
 
-export function StatsCards() {
+interface StatsCardsProps {
+  onStatusFilter?: (status: string) => void;
+}
+
+export function StatsCards({ onStatusFilter }: StatsCardsProps) {
   const { data: stats, isLoading } = useQuery<Stats>({
     queryKey: ["/api/rfp-requests/stats"],
   });
@@ -100,10 +104,35 @@ export function StatsCards() {
           <p className="text-sm text-gray-600">
             Count: <span className="font-semibold text-gray-900">{payload[0].value}</span>
           </p>
+          <p className="text-xs text-blue-600 mt-1">Click to filter</p>
         </div>
       );
     }
     return null;
+  };
+
+  const handlePieClick = (data: any) => {
+    if (onStatusFilter) {
+      const statusMap: Record<string, string> = {
+        'Received': 'received',
+        'In Progress': 'in-progress', 
+        'Completed': 'completed',
+        'On Hold': 'on-hold'
+      };
+      onStatusFilter(statusMap[data.name] || '');
+    }
+  };
+
+  const handleBarClick = (data: any) => {
+    if (onStatusFilter) {
+      const statusMap: Record<string, string> = {
+        'Received': 'received',
+        'In Progress': 'in-progress',
+        'Completed': 'completed', 
+        'On Hold': 'on-hold'
+      };
+      onStatusFilter(statusMap[data.name] || '');
+    }
   };
 
   return (
@@ -111,7 +140,21 @@ export function StatsCards() {
       {/* Compact Stats Row */}
       <div className="grid grid-cols-4 gap-3">
         {cards.map((card, index) => (
-          <div key={index} className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
+          <div 
+            key={index} 
+            className="bg-white p-3 rounded-lg shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition-shadow"
+            onClick={() => {
+              if (onStatusFilter) {
+                const statusMap: Record<string, string> = {
+                  'Total RFPs': '',
+                  'Received': 'received',
+                  'In Progress': 'in-progress',
+                  'Completed': 'completed'
+                };
+                onStatusFilter(statusMap[card.title] || '');
+              }
+            }}
+          >
             <div className="flex items-center space-x-2">
               <div className={`w-6 h-6 ${card.bgColor} rounded flex items-center justify-center flex-shrink-0`}>
                 <i className={`${card.icon} ${card.iconColor} text-xs`}></i>
@@ -129,10 +172,13 @@ export function StatsCards() {
       {stats.total > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Compact Pie Chart */}
-          <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold text-gray-900">Status Distribution</h3>
-              <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+              <div className="flex items-center space-x-1">
+                <span className="text-xs text-gray-500">Click to filter</span>
+                <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+              </div>
             </div>
             
             <div className="h-40">
@@ -146,9 +192,11 @@ export function StatsCards() {
                     outerRadius={55}
                     fill="#8884d8"
                     dataKey="value"
+                    onClick={handlePieClick}
+                    className="cursor-pointer"
                   >
                     {pieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
+                      <Cell key={`cell-${index}`} fill={entry.color} className="hover:opacity-80" />
                     ))}
                   </Pie>
                   <Tooltip content={<CustomTooltip />} />
@@ -156,10 +204,14 @@ export function StatsCards() {
               </ResponsiveContainer>
             </div>
 
-            {/* Compact Legend */}
+            {/* Interactive Compact Legend */}
             <div className="grid grid-cols-2 gap-1 mt-2">
               {pieData.map((item, index) => (
-                <div key={index} className="flex items-center space-x-1">
+                <div 
+                  key={index} 
+                  className="flex items-center space-x-1 cursor-pointer hover:bg-gray-50 rounded px-1 py-0.5 transition-colors"
+                  onClick={() => handlePieClick(item)}
+                >
                   <div 
                     className="w-2 h-2 rounded-full flex-shrink-0" 
                     style={{ backgroundColor: item.color }}
@@ -172,12 +224,15 @@ export function StatsCards() {
           </div>
 
           {/* Compact Bar Chart */}
-          <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold text-gray-900">Status Overview</h3>
-              <span className="text-xs px-2 py-1 bg-blue-50 text-blue-600 rounded font-medium">
-                Live
-              </span>
+              <div className="flex items-center space-x-1">
+                <span className="text-xs text-gray-500">Click to filter</span>
+                <span className="text-xs px-2 py-1 bg-blue-50 text-blue-600 rounded font-medium">
+                  Live
+                </span>
+              </div>
             </div>
             
             <div className="h-40">
@@ -185,6 +240,7 @@ export function StatsCards() {
                 <BarChart
                   data={barData}
                   margin={{ top: 10, right: 10, left: 10, bottom: 5 }}
+                  onClick={handleBarClick}
                 >
                   <CartesianGrid strokeDasharray="2 2" stroke="#f3f4f6" />
                   <XAxis 
@@ -204,6 +260,8 @@ export function StatsCards() {
                     dataKey="count" 
                     radius={[2, 2, 0, 0]}
                     stroke="none"
+                    className="cursor-pointer"
+                    onClick={handleBarClick}
                   />
                 </BarChart>
               </ResponsiveContainer>

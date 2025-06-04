@@ -89,11 +89,11 @@ export function InvitationWorkflowModal({ isOpen, onClose, rfp }: InvitationWork
   };
 
   // Get contact IDs that already have invitations
-  const invitedContactIds = new Set(existingInvitations.map((inv: Invitation) => inv.contactId));
+  const invitedContactIds = new Set((existingInvitations as Invitation[]).map((inv: Invitation) => inv.contactId));
 
   // Filter contacts by type
-  const architects = contacts.filter((contact: Contact) => contact.type === "architect");
-  const contractors = contacts.filter((contact: Contact) => contact.type === "contractor");
+  const architects = (contacts as Contact[]).filter((contact: Contact) => contact.type === "architect");
+  const contractors = (contacts as Contact[]).filter((contact: Contact) => contact.type === "contractor");
 
   const ContactSection = ({ title, contacts, icon: Icon }: { 
     title: string; 

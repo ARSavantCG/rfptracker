@@ -42,21 +42,33 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
 
   const createMutation = useMutation({
     mutationFn: async (data: CreateRfpFormData) => {
+      console.log('Raw form data:', data);
+      console.log('Selected files:', selectedFiles);
+      
       const formData = new FormData();
       
-      // Add form fields
-      Object.entries(data).forEach(([key, value]) => {
-        if (key === "requestTypes") {
-          formData.append(key, JSON.stringify(value));
-        } else if (value !== undefined && value !== "") {
-          formData.append(key, value.toString());
-        }
-      });
+      // Add form fields with explicit handling
+      formData.append("client", data.client || "");
+      formData.append("project", data.project || "");
+      formData.append("status", data.status || "received");
+      formData.append("requestTypes", JSON.stringify(data.requestTypes || []));
+      formData.append("dateReceived", data.dateReceived || "");
+      
+      if (data.contactPerson) formData.append("contactPerson", data.contactPerson);
+      if (data.contactEmail) formData.append("contactEmail", data.contactEmail);
+      if (data.dueDate) formData.append("dueDate", data.dueDate);
+      if (data.notes) formData.append("notes", data.notes);
 
       // Add files
       selectedFiles.forEach((file) => {
         formData.append("files", file);
       });
+
+      // Debug FormData contents
+      console.log('FormData contents:');
+      for (let [key, value] of formData.entries()) {
+        console.log(key, value);
+      }
 
       const response = await apiRequest("POST", "/api/rfp-requests", formData);
       return response.json();
@@ -82,6 +94,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
   });
 
   const onSubmit = (data: CreateRfpFormData) => {
+    console.log('Form data being submitted:', data);
     createMutation.mutate(data);
   };
 

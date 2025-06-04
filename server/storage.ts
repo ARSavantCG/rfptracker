@@ -2,6 +2,7 @@ import {
   rfpRequests, 
   contacts, 
   invitations,
+  invitationToBid,
   type RfpRequest, 
   type InsertRfpRequest, 
   type UpdateRfpRequest,
@@ -11,6 +12,9 @@ import {
   type Invitation,
   type InsertInvitation,
   type UpdateInvitation,
+  type InvitationToBid,
+  type InsertInvitationToBid,
+  type UpdateInvitationToBid,
   type RfpFile 
 } from "@shared/schema";
 import { db } from "./db";
@@ -26,6 +30,16 @@ export interface IStorage {
   removeFileFromRfp(rfpId: number, fileId: string): Promise<RfpRequest | undefined>;
   searchRfpRequests(query: string): Promise<RfpRequest[]>;
   filterRfpRequestsByStatus(status: string): Promise<RfpRequest[]>;
+  
+  // Workflow phase management
+  advanceWorkflowPhase(rfpId: number, newPhase: string): Promise<RfpRequest | undefined>;
+  getProjectsByPhase(phase: string): Promise<RfpRequest[]>;
+  
+  // Invitation to Bid management
+  createInvitationToBid(invitation: InsertInvitationToBid): Promise<InvitationToBid>;
+  getInvitationToBid(rfpId: number): Promise<InvitationToBid | undefined>;
+  updateInvitationToBid(rfpId: number, updates: Partial<UpdateInvitationToBid>): Promise<InvitationToBid | undefined>;
+  deleteInvitationToBid(rfpId: number): Promise<boolean>;
   
   // Contact management
   getAllContacts(): Promise<Contact[]>;
@@ -211,6 +225,45 @@ export class DatabaseStorage implements IStorage {
 
   async deleteInvitation(id: number): Promise<boolean> {
     const result = await db.delete(invitations).where(eq(invitations.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  // Workflow phase management
+  async advanceWorkflowPhase(rfpId: number, newPhase: string): Promise<RfpRequest | undefined> {
+    const [updated] = await db
+      .update(rfpRequests)
+      .set({ workflowPhase: newPhase, updatedAt: new Date() })
+      .where(eq(rfpRequests.id, rfpId))
+      .returning();
+    return updated || undefined;
+  }
+
+  async getProjectsByPhase(phase: string): Promise<RfpRequest[]> {
+    return await db.select().from(rfpRequests).where(eq(rfpRequests.workflowPhase, phase));
+  }
+
+  // Invitation to Bid management
+  async createInvitationToBid(invitation: InsertInvitationToBid): Promise<InvitationToBid> {
+    const [created] = await db.insert(invitationToBid).values(invitation).returning();
+    return created;
+  }
+
+  async getInvitationToBid(rfpId: number): Promise<InvitationToBid | undefined> {
+    const [invitation] = await db.select().from(invitationToBid).where(eq(invitationToBid.rfpId, rfpId));
+    return invitation || undefined;
+  }
+
+  async updateInvitationToBid(rfpId: number, updates: Partial<UpdateInvitationToBid>): Promise<InvitationToBid | undefined> {
+    const [updated] = await db
+      .update(invitationToBid)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(invitationToBid.rfpId, rfpId))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteInvitationToBid(rfpId: number): Promise<boolean> {
+    const result = await db.delete(invitationToBid).where(eq(invitationToBid.rfpId, rfpId));
     return (result.rowCount || 0) > 0;
   }
 }

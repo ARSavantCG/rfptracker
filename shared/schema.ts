@@ -8,6 +8,7 @@ export const rfpRequests = pgTable("rfp_requests", {
   client: text("client").notNull(),
   project: text("project").notNull(),
   status: text("status").notNull(), // received, in-progress, completed, on-hold
+  workflowPhase: text("workflow_phase").notNull().default("rfp-entry"), // rfp-entry, invitation-to-bid, bid-collection, evaluation, award
   requestTypes: json("request_types").$type<string[]>().notNull(), // pricing, space-plans, schedule
   contactPerson: text("contact_person"),
   contactEmail: text("contact_email"),
@@ -27,6 +28,7 @@ export const insertRfpRequestSchema = createInsertSchema(rfpRequests).omit({
 }).extend({
   requestTypes: z.array(z.string()).min(1, "At least one request type is required"),
   status: z.enum(["received", "in-progress", "completed", "on-hold"]),
+  workflowPhase: z.enum(["rfp-entry", "invitation-to-bid", "bid-collection", "evaluation", "award"]).default("rfp-entry"),
   dateReceived: z.string().transform((val) => new Date(val)),
   dueDate: z.string().optional().transform((val) => val ? new Date(val) : undefined),
 });
@@ -104,6 +106,51 @@ export type UpdateContact = z.infer<typeof updateContactSchema>;
 export type Invitation = typeof invitations.$inferSelect;
 export type InsertInvitation = z.infer<typeof insertInvitationSchema>;
 export type UpdateInvitation = z.infer<typeof updateInvitationSchema>;
+
+// Invitation to Bid data table
+export const invitationToBid = pgTable("invitation_to_bid", {
+  id: serial("id").primaryKey(),
+  rfpId: serial("rfp_id").notNull().references(() => rfpRequests.id),
+  projectScope: text("project_scope").notNull(),
+  projectLocation: text("project_location").notNull(),
+  estimatedBudget: text("estimated_budget"),
+  projectTimeline: text("project_timeline"),
+  bidSubmissionDeadline: timestamp("bid_submission_deadline").notNull(),
+  projectStartDate: timestamp("project_start_date"),
+  projectEndDate: timestamp("project_end_date"),
+  specialRequirements: json("special_requirements").$type<string[]>().default([]),
+  technicalSpecifications: text("technical_specifications"),
+  contractTerms: text("contract_terms"),
+  paymentTerms: text("payment_terms"),
+  insuranceRequirements: text("insurance_requirements"),
+  bondingRequirements: text("bonding_requirements"),
+  prequalificationCriteria: json("prequalification_criteria").$type<string[]>().default([]),
+  evaluationCriteria: json("evaluation_criteria").$type<string[]>().default([]),
+  contactForQuestions: text("contact_for_questions"),
+  siteVisitScheduled: timestamp("site_visit_scheduled"),
+  additionalDocuments: json("additional_documents").$type<RfpFile[]>().default([]),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertInvitationToBidSchema = createInsertSchema(invitationToBid).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  bidSubmissionDeadline: z.string().transform((val) => new Date(val)),
+  projectStartDate: z.string().optional().transform((val) => val ? new Date(val) : undefined),
+  projectEndDate: z.string().optional().transform((val) => val ? new Date(val) : undefined),
+  siteVisitScheduled: z.string().optional().transform((val) => val ? new Date(val) : undefined),
+});
+
+export const updateInvitationToBidSchema = insertInvitationToBidSchema.partial().extend({
+  id: z.number(),
+});
+
+export type InvitationToBid = typeof invitationToBid.$inferSelect;
+export type InsertInvitationToBid = z.infer<typeof insertInvitationToBidSchema>;
+export type UpdateInvitationToBid = z.infer<typeof updateInvitationToBidSchema>;
 
 export type RfpFile = {
   id: string;

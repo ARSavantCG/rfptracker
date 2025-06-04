@@ -11,10 +11,9 @@ interface Stats {
 
 interface StatsCardsProps {
   onStatusFilter?: (status: string) => void;
-  onViewRfp?: (rfp: any) => void;
 }
 
-export function StatsCards({ onStatusFilter, onViewRfp }: StatsCardsProps) {
+export function StatsCards({ onStatusFilter }: StatsCardsProps) {
   const { data: stats, isLoading } = useQuery<Stats>({
     queryKey: ["/api/rfp-requests/stats"],
   });

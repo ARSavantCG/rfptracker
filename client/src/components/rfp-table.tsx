@@ -14,7 +14,7 @@ interface RfpTableProps {
 type SortField = "rfpNumber" | "client" | "project" | "status" | "dateReceived";
 type SortDirection = "asc" | "desc";
 
-export function RfpTable({ searchQuery, statusFilter, onViewRfp, onEditRfp }: RfpTableProps) {
+export function RfpTable({ searchQuery, statusFilter, onEditRfp }: RfpTableProps) {
   const [sortField, setSortField] = useState<SortField>("dateReceived");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const { toast } = useToast();

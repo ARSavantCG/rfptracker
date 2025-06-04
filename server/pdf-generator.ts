@@ -1,6 +1,14 @@
 import puppeteer from "puppeteer";
 import type { RfpRequest, InvitationToBid } from "@shared/schema";
-import { formatDate } from "../client/src/lib/utils";
+
+function formatDate(date: string | Date): string {
+  const d = new Date(date);
+  return d.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+}
 
 export interface PdfGenerationOptions {
   rfp: RfpRequest;

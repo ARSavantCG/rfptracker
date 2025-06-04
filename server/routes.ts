@@ -580,6 +580,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // RFP Validation routes
+  app.post("/api/rfp-requests/validate", async (req, res) => {
+    try {
+      const rfpData = req.body;
+      const validationResult = validateRfpForProgression(rfpData);
+      res.json(validationResult);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to validate RFP" });
+    }
+  });
+
+  app.patch("/api/rfp-requests/:id/workflow-phase", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { phase } = req.body;
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid ID" });
+      }
+
+      const rfp = await storage.getRfpRequest(id);
+      if (!rfp) {
+        return res.status(404).json({ message: "RFP request not found" });
+      }
+
+      // Validate if RFP can advance to the target phase
+      if (!canAdvanceToPhase(rfp, phase)) {
+        return res.status(400).json({ 
+          message: "RFP validation failed. Complete all required fields before advancing." 
+        });
+      }
+
+      const updatedRfp = await storage.advanceWorkflowPhase(id, phase);
+      if (!updatedRfp) {
+        return res.status(404).json({ message: "Failed to advance workflow phase" });
+      }
+
+      res.json(updatedRfp);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to advance workflow phase" });
+    }
+  });
+
+  // PDF Generation routes
+  app.post("/api/rfp-requests/:id/generate-pdf", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { recipientType, recipientName, recipientCompany } = req.body;
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid ID" });
+      }
+
+      if (!recipientType || !["architect", "contractor"].includes(recipientType)) {
+        return res.status(400).json({ message: "Valid recipient type (architect/contractor) is required" });
+      }
+
+      const rfp = await storage.getRfpRequest(id);
+      if (!rfp) {
+        return res.status(404).json({ message: "RFP request not found" });
+      }
+
+      // Get invitation to bid data if available
+      const invitationToBid = await storage.getInvitationToBid(id);
+
+      const pdfOptions = {
+        rfp,
+        invitationToBid,
+        recipientType: recipientType as "architect" | "contractor",
+        recipientName,
+        recipientCompany
+      };
+
+      const pdfBuffer = await generateRfpPdf(pdfOptions);
+      const filename = generatePdfFilename(rfp, recipientType);
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.setHeader('Content-Length', pdfBuffer.length);
+      
+      res.send(pdfBuffer);
+    } catch (error) {
+      console.error("PDF generation error:", error);
+      res.status(500).json({ message: "Failed to generate PDF" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

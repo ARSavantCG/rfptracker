@@ -9,6 +9,7 @@ import type { RfpRequest } from "@shared/schema";
 interface WorkflowStatusProps {
   rfp: RfpRequest;
   onAdvanceToInvitation: (rfp: RfpRequest) => void;
+  onValidateRfp?: (rfp: RfpRequest) => void;
 }
 
 const workflowPhases = [
@@ -49,7 +50,7 @@ const workflowPhases = [
   }
 ];
 
-export function WorkflowStatus({ rfp, onAdvanceToInvitation }: WorkflowStatusProps) {
+export function WorkflowStatus({ rfp, onAdvanceToInvitation, onValidateRfp }: WorkflowStatusProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 

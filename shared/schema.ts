@@ -16,6 +16,15 @@ export const rfpRequests = pgTable("rfp_requests", {
   dueDate: timestamp("due_date"),
   notes: text("notes"),
   files: json("files").$type<RfpFile[]>().notNull().default([]),
+  // Validation fields for workflow progression
+  isValidated: json("is_validated").default(false).$type<boolean>(),
+  validationErrors: json("validation_errors").$type<string[]>().default([]),
+  // Additional required fields for progression
+  projectAddress: text("project_address"),
+  projectSize: text("project_size"),
+  estimatedValue: text("estimated_value"),
+  timelineRequirements: text("timeline_requirements"),
+  specialRequirements: text("special_requirements"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

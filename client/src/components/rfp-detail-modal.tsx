@@ -274,18 +274,33 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
                     </button>
                   </>
                 ) : (
-                  <button
-                    onClick={startEditingStatus}
-                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
-                  >
-                    Update Status
-                  </button>
+                  <>
+                    <button
+                      onClick={() => setShowInvitationModal(true)}
+                      className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 flex items-center gap-2"
+                    >
+                      <i className="fas fa-envelope"></i>
+                      Send Invitations
+                    </button>
+                    <button
+                      onClick={startEditingStatus}
+                      className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+                    >
+                      Update Status
+                    </button>
+                  </>
                 )}
               </div>
             </div>
           </div>
         </div>
       </div>
+      
+      <InvitationWorkflowModal
+        isOpen={showInvitationModal}
+        onClose={() => setShowInvitationModal(false)}
+        rfp={rfp}
+      />
     </div>
   );
 }

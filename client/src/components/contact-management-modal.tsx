@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Building, User, Mail, Phone, Trash2 } from "lucide-react";
+import { Plus, Building, User, Mail, Phone, Trash2, Users } from "lucide-react";
 import type { Contact } from "@shared/schema";
 
 const createContactSchema = insertContactSchema.extend({
@@ -109,8 +109,8 @@ export function ContactManagementModal({ isOpen, onClose }: ContactManagementMod
   };
 
   // Filter contacts by type
-  const architects = contacts.filter((contact: Contact) => contact.type === "architect");
-  const contractors = contacts.filter((contact: Contact) => contact.type === "contractor");
+  const architects = (contacts as Contact[]).filter((contact: Contact) => contact.type === "architect");
+  const contractors = (contacts as Contact[]).filter((contact: Contact) => contact.type === "contractor");
 
   const ContactList = ({ contacts, title, icon: Icon }: { 
     contacts: Contact[]; 

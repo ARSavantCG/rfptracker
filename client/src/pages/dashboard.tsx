@@ -3,6 +3,11 @@ import { StatsCards } from "@/components/stats-cards";
 import { RfpTable } from "@/components/rfp-table";
 import { CreateRfpModal } from "@/components/create-rfp-modal";
 import { RfpDetailModal } from "@/components/rfp-detail-modal";
+import { ContactManagementModal } from "@/components/contact-management-modal";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Plus, Search, Users } from "lucide-react";
 import type { RfpRequest } from "@shared/schema";
 
 export default function Dashboard() {
@@ -12,6 +17,7 @@ export default function Dashboard() {
   const [dateTo, setDateTo] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [selectedRfp, setSelectedRfp] = useState<RfpRequest | null>(null);
 
   const handleViewRfp = (rfp: RfpRequest) => {
@@ -37,13 +43,23 @@ export default function Dashboard() {
               <h1 className="text-lg font-semibold text-gray-900">RFP Tracker</h1>
             </div>
             <div className="flex items-center space-x-3">
-              <button 
-                onClick={() => setIsCreateModalOpen(true)}
-                className="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 transition-colors"
+              <Button
+                onClick={() => setIsContactModalOpen(true)}
+                variant="outline"
+                size="sm"
+                className="h-8 px-3 text-xs"
               >
-                <i className="fas fa-plus mr-1 text-xs"></i>
+                <Users className="h-3 w-3 mr-1" />
+                Contacts
+              </Button>
+              <Button 
+                onClick={() => setIsCreateModalOpen(true)}
+                size="sm"
+                className="h-8 px-3 text-xs"
+              >
+                <Plus className="h-3 w-3 mr-1" />
                 New RFP
-              </button>
+              </Button>
               <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
                 <span className="text-white text-xs font-medium">AU</span>
               </div>
@@ -175,6 +191,11 @@ export default function Dashboard() {
         isOpen={isDetailModalOpen}
         onClose={() => setIsDetailModalOpen(false)}
         rfp={selectedRfp}
+      />
+
+      <ContactManagementModal
+        isOpen={isContactModalOpen}
+        onClose={() => setIsContactModalOpen(false)}
       />
     </div>
   );

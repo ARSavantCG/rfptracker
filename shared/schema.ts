@@ -5,26 +5,38 @@ import { z } from "zod";
 export const rfpRequests = pgTable("rfp_requests", {
   id: serial("id").primaryKey(),
   rfpNumber: text("rfp_number").notNull().unique(),
-  client: text("client").notNull(),
-  project: text("project").notNull(),
-  status: text("status").notNull(), // received, in-progress, completed, on-hold
+  
+  // Initial RFP Entry Fields
+  property: text("property").notNull(),
+  tenantName: text("tenant_name").notNull(),
+  projectName: text("project_name").notNull(),
+  confidential: json("confidential").default(false).$type<boolean>(),
+  sentBy: text("sent_by").notNull(),
+  sentOn: timestamp("sent_on").notNull(),
+  developmentContact: text("development_contact"),
+  projectArea: text("project_area"),
+  requestTypes: json("request_types").$type<string[]>().notNull(), // pricing, schedule, space-plan
+  
+  // System fields
+  status: text("status").notNull().default("received"), // received, in-progress, completed, on-hold
   workflowPhase: text("workflow_phase").notNull().default("rfp-entry"), // rfp-entry, invitation-to-bid, bid-collection, evaluation, award
-  requestTypes: json("request_types").$type<string[]>().notNull(), // pricing, space-plans, schedule
-  contactPerson: text("contact_person"),
-  contactEmail: text("contact_email"),
-  dateReceived: timestamp("date_received").notNull(),
-  dueDate: timestamp("due_date"),
   notes: text("notes"),
   files: json("files").$type<RfpFile[]>().notNull().default([]),
+  
   // Validation fields for workflow progression
   isValidated: json("is_validated").default(false).$type<boolean>(),
   validationErrors: json("validation_errors").$type<string[]>().default([]),
-  // Additional required fields for progression
+  
+  // Phase 2: Validation & Progression Fields (populated during validation step)
   projectAddress: text("project_address"),
   projectSize: text("project_size"),
   estimatedValue: text("estimated_value"),
   timelineRequirements: text("timeline_requirements"),
   specialRequirements: text("special_requirements"),
+  contactPerson: text("contact_person"),
+  contactEmail: text("contact_email"),
+  dueDate: timestamp("due_date"),
+  
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -34,11 +46,13 @@ export const insertRfpRequestSchema = createInsertSchema(rfpRequests).omit({
   rfpNumber: true,
   createdAt: true,
   updatedAt: true,
+  isValidated: true,
+  validationErrors: true,
 }).extend({
   requestTypes: z.array(z.string()).min(1, "At least one request type is required"),
-  status: z.enum(["received", "in-progress", "completed", "on-hold"]),
+  status: z.enum(["received", "in-progress", "completed", "on-hold"]).default("received"),
   workflowPhase: z.enum(["rfp-entry", "invitation-to-bid", "bid-collection", "evaluation", "award"]).default("rfp-entry"),
-  dateReceived: z.string().transform((val) => new Date(val)),
+  sentOn: z.string().transform((val) => new Date(val)),
   dueDate: z.string().optional().transform((val) => val ? new Date(val) : undefined),
 });
 

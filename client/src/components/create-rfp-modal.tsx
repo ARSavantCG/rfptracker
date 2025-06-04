@@ -8,14 +8,15 @@ import { FileUpload } from "./file-upload";
 import { useToast } from "@/hooks/use-toast";
 
 const createRfpSchema = z.object({
-  client: z.string().min(1, "Client name is required"),
-  project: z.string().min(1, "Project name is required"),
-  status: z.enum(["received", "in-progress", "completed", "on-hold"]),
+  property: z.string().min(1, "Property is required"),
+  tenantName: z.string().min(1, "Tenant name is required"),
+  projectName: z.string().min(1, "Project name is required"),
+  confidential: z.boolean().default(false),
+  sentBy: z.string().min(1, "Sent by is required"),
+  sentOn: z.string().min(1, "Sent on date is required"),
+  developmentContact: z.string().optional(),
+  projectArea: z.string().optional(),
   requestTypes: z.array(z.string()).min(1, "At least one request type is required"),
-  contactPerson: z.string().optional(),
-  contactEmail: z.string().email("Invalid email address").optional().or(z.literal("")),
-  dateReceived: z.string().min(1, "Date received is required"),
-  dueDate: z.string().optional(),
   notes: z.string().optional(),
 });
 
@@ -34,9 +35,16 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
   const form = useForm<CreateRfpFormData>({
     resolver: zodResolver(createRfpSchema),
     defaultValues: {
-      status: "received",
+      property: "",
+      tenantName: "",
+      projectName: "",
+      confidential: false,
+      sentBy: "",
+      sentOn: new Date().toISOString().split('T')[0],
+      developmentContact: "",
+      projectArea: "",
       requestTypes: [],
-      dateReceived: new Date().toISOString().split('T')[0],
+      notes: "",
     },
   });
 

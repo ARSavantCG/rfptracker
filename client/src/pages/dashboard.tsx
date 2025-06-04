@@ -72,64 +72,124 @@ export default function Dashboard() {
         <StatsCards />
 
         {/* Filters and Search */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0 lg:space-x-4">
-            {/* Search */}
-            <div className="flex-1 max-w-md">
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <i className="fas fa-search text-gray-400"></i>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+          <div className="flex flex-col space-y-6">
+            {/* Search Bar */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
+              <div className="flex-1 max-w-lg">
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <i className="fas fa-search text-gray-400 text-sm"></i>
+                  </div>
+                  <input 
+                    type="text" 
+                    placeholder="Search by client, project, or RFP number..." 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="block w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  />
                 </div>
-                <input 
-                  type="text" 
-                  placeholder="Search by client, project, or ID..." 
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
+              </div>
+
+              <div className="flex items-center space-x-3">
+                <button className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                  <i className="fas fa-download mr-2"></i>
+                  Export
+                </button>
+                <button className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                  <i className="fas fa-bell mr-2"></i>
+                  Alerts
+                </button>
               </div>
             </div>
-            
-            {/* Filters */}
-            <div className="flex flex-wrap items-center space-x-4">
+
+            {/* Status Filter Pills */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
               <div className="flex items-center space-x-2">
-                <label className="text-sm font-medium text-gray-700">Status:</label>
-                <select 
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="">All Statuses</option>
-                  <option value="received">Received</option>
-                  <option value="in-progress">In Progress</option>
-                  <option value="completed">Completed</option>
-                  <option value="on-hold">On Hold</option>
-                </select>
+                <span className="text-sm font-medium text-gray-700">Filter by status:</span>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() => setStatusFilter("")}
+                    className={`px-4 py-2 text-xs font-medium rounded-full transition-all ${
+                      statusFilter === "" 
+                        ? "bg-gray-900 text-white" 
+                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    }`}
+                  >
+                    All
+                  </button>
+                  <button
+                    onClick={() => setStatusFilter("received")}
+                    className={`px-4 py-2 text-xs font-medium rounded-full transition-all ${
+                      statusFilter === "received" 
+                        ? "bg-purple-600 text-white" 
+                        : "bg-purple-100 text-purple-600 hover:bg-purple-200"
+                    }`}
+                  >
+                    <div className="w-2 h-2 bg-current rounded-full inline-block mr-2"></div>
+                    Received
+                  </button>
+                  <button
+                    onClick={() => setStatusFilter("in-progress")}
+                    className={`px-4 py-2 text-xs font-medium rounded-full transition-all ${
+                      statusFilter === "in-progress" 
+                        ? "bg-orange-600 text-white" 
+                        : "bg-orange-100 text-orange-600 hover:bg-orange-200"
+                    }`}
+                  >
+                    <div className="w-2 h-2 bg-current rounded-full inline-block mr-2"></div>
+                    In Progress
+                  </button>
+                  <button
+                    onClick={() => setStatusFilter("completed")}
+                    className={`px-4 py-2 text-xs font-medium rounded-full transition-all ${
+                      statusFilter === "completed" 
+                        ? "bg-green-600 text-white" 
+                        : "bg-green-100 text-green-600 hover:bg-green-200"
+                    }`}
+                  >
+                    <div className="w-2 h-2 bg-current rounded-full inline-block mr-2"></div>
+                    Completed
+                  </button>
+                  <button
+                    onClick={() => setStatusFilter("on-hold")}
+                    className={`px-4 py-2 text-xs font-medium rounded-full transition-all ${
+                      statusFilter === "on-hold" 
+                        ? "bg-red-600 text-white" 
+                        : "bg-red-100 text-red-600 hover:bg-red-200"
+                    }`}
+                  >
+                    <div className="w-2 h-2 bg-current rounded-full inline-block mr-2"></div>
+                    On Hold
+                  </button>
+                </div>
               </div>
-              
+
               <div className="flex items-center space-x-2">
-                <label className="text-sm font-medium text-gray-700">Date Range:</label>
+                <span className="text-sm font-medium text-gray-700">Date range:</span>
                 <input 
                   type="date" 
                   value={dateFrom}
                   onChange={(e) => setDateFrom(e.target.value)}
                   className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
-                <span className="text-gray-400">to</span>
+                <span className="text-gray-400 text-sm">to</span>
                 <input 
                   type="date" 
                   value={dateTo}
                   onChange={(e) => setDateTo(e.target.value)}
                   className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
+                {(searchQuery || statusFilter || dateFrom || dateTo) && (
+                  <button
+                    onClick={clearFilters}
+                    className="px-3 py-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors text-sm"
+                    title="Clear all filters"
+                  >
+                    <i className="fas fa-times"></i>
+                  </button>
+                )}
               </div>
-
-              <button
-                onClick={clearFilters}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm"
-              >
-                <i className="fas fa-times mr-2"></i>Clear
-              </button>
             </div>
           </div>
         </div>

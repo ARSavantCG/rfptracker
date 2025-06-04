@@ -189,9 +189,31 @@ export function RfpTable({ searchQuery, statusFilter, onViewRfp }: RfpTableProps
                     {request.project}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(request.status)}`}>
-                      <i className={`${getStatusIcon(request.status)} w-2 h-2 mr-1`}></i>
-                      {request.status.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                    <span
+                      className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium border ${
+                        request.status === "received" 
+                          ? "bg-purple-100 text-purple-700 border-purple-200" 
+                          : request.status === "in-progress"
+                          ? "bg-orange-100 text-orange-700 border-orange-200"
+                          : request.status === "completed"
+                          ? "bg-green-100 text-green-700 border-green-200"
+                          : "bg-red-100 text-red-700 border-red-200"
+                      }`}
+                    >
+                      <div 
+                        className={`w-2 h-2 rounded-full mr-2 ${
+                          request.status === "received" 
+                            ? "bg-purple-500" 
+                            : request.status === "in-progress"
+                            ? "bg-orange-500"
+                            : request.status === "completed"
+                            ? "bg-green-500"
+                            : "bg-red-500"
+                        }`}
+                      ></div>
+                      {request.status === "in-progress" ? "In Progress" : 
+                       request.status === "on-hold" ? "On Hold" :
+                       request.status.charAt(0).toUpperCase() + request.status.slice(1)}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">

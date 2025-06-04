@@ -128,10 +128,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create new RFP request
-  app.post("/api/rfp-requests", upload.array("files"), async (req, res) => {
+  app.post("/api/rfp-requests", async (req, res) => {
     try {
-      console.log('Raw req.body:', req.body);
-      console.log('Uploaded files:', req.files);
+      console.log('Creating RFP with data:', req.body);
+      
+      const parsed = insertRfpRequestSchema.parse(req.body);
+      
+      // Create RFP without files initially
+      const requestData = {
+        ...parsed,
+        files: [],
+      };
+
+      const newRequest = await storage.createRfpRequest(requestData);
+      res.status(201).json(newRequest);
+    } catch (error) {
+      console.error('RFP creation error:', error);
+      res.status(400).json({ 
+        message: error instanceof Error ? error.message : "Invalid request data" 
+      });
+    }
+  });
+
+  // Create new RFP request with files
+  app.post("/api/rfp-requests/with-files", upload.array("files"), async (req, res) => {
+    try {
+      console.log('Creating RFP with files:', req.body, req.files);
       
       // Parse form data properly
       const formData = { ...req.body };
@@ -145,8 +167,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      console.log('Parsed form data:', formData);
-
       const parsed = insertRfpRequestSchema.parse(formData);
       
       // Handle uploaded files
@@ -156,7 +176,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         size: file.size,
         type: file.mimetype,
         uploadedAt: new Date().toISOString(),
-        path: file.filename, // Store the disk filename for later retrieval
+        path: file.filename,
       }));
 
       const requestWithFiles = {
@@ -168,7 +188,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(newRequest);
     } catch (error) {
       console.error('RFP creation error:', error);
-      console.error('Error details:', error);
       res.status(400).json({ 
         message: error instanceof Error ? error.message : "Invalid request data" 
       });

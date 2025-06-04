@@ -78,7 +78,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
           formData.append('files', file);
         });
 
-        return apiRequest("/api/rfp-requests", "POST", formData);
+        return apiRequest("/api/rfp-requests/with-files", "POST", formData);
       } else {
         // No files, send JSON data
         return apiRequest("/api/rfp-requests", "POST", {

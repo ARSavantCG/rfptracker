@@ -11,11 +11,21 @@ interface Stats {
 
 interface StatsCardsProps {
   onStatusFilter?: (status: string) => void;
+  onViewRfp?: (rfp: any) => void;
 }
 
-export function StatsCards({ onStatusFilter }: StatsCardsProps) {
+export function StatsCards({ onStatusFilter, onViewRfp }: StatsCardsProps) {
   const { data: stats, isLoading } = useQuery<Stats>({
     queryKey: ["/api/rfp-requests/stats"],
+  });
+
+  const { data: rfpRequests = [] } = useQuery({
+    queryKey: ["/api/rfp-requests"],
+    queryFn: async () => {
+      const response = await fetch("/api/rfp-requests");
+      if (!response.ok) throw new Error("Failed to fetch RFP requests");
+      return response.json();
+    },
   });
 
   if (isLoading) {
@@ -104,34 +114,64 @@ export function StatsCards({ onStatusFilter }: StatsCardsProps) {
           <p className="text-sm text-gray-600">
             Count: <span className="font-semibold text-gray-900">{payload[0].value}</span>
           </p>
-          <p className="text-xs text-blue-600 mt-1">Click to filter</p>
+          <p className="text-xs text-blue-600 mt-1">Click to view project</p>
         </div>
       );
     }
     return null;
   };
 
+  const getProjectsByStatus = (status: string) => {
+    const statusMap: Record<string, string> = {
+      'Received': 'received',
+      'In Progress': 'in-progress', 
+      'Completed': 'completed',
+      'On Hold': 'on-hold'
+    };
+    
+    return rfpRequests.filter((rfp: any) => rfp.status === statusMap[status]);
+  };
+
   const handlePieClick = (data: any) => {
-    if (onStatusFilter) {
-      const statusMap: Record<string, string> = {
-        'Received': 'received',
-        'In Progress': 'in-progress', 
-        'Completed': 'completed',
-        'On Hold': 'on-hold'
-      };
-      onStatusFilter(statusMap[data.name] || '');
+    if (onViewRfp) {
+      const projects = getProjectsByStatus(data.name);
+      if (projects.length > 0) {
+        // Show the first project of this status
+        onViewRfp(projects[0]);
+      }
     }
   };
 
   const handleBarClick = (data: any) => {
-    if (onStatusFilter) {
+    if (onViewRfp) {
+      const projects = getProjectsByStatus(data.name);
+      if (projects.length > 0) {
+        // Show the first project of this status
+        onViewRfp(projects[0]);
+      }
+    }
+  };
+
+  const handleCardClick = (cardTitle: string) => {
+    if (onViewRfp && rfpRequests.length > 0) {
       const statusMap: Record<string, string> = {
+        'Total RFPs': '',
         'Received': 'received',
         'In Progress': 'in-progress',
-        'Completed': 'completed', 
-        'On Hold': 'on-hold'
+        'Completed': 'completed'
       };
-      onStatusFilter(statusMap[data.name] || '');
+      
+      const targetStatus = statusMap[cardTitle];
+      if (targetStatus === '') {
+        // Show first RFP for "Total RFPs"
+        onViewRfp(rfpRequests[0]);
+      } else {
+        // Show first RFP of specific status
+        const projects = rfpRequests.filter((rfp: any) => rfp.status === targetStatus);
+        if (projects.length > 0) {
+          onViewRfp(projects[0]);
+        }
+      }
     }
   };
 
@@ -143,17 +183,7 @@ export function StatsCards({ onStatusFilter }: StatsCardsProps) {
           <div 
             key={index} 
             className="bg-white p-3 rounded-lg shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition-shadow"
-            onClick={() => {
-              if (onStatusFilter) {
-                const statusMap: Record<string, string> = {
-                  'Total RFPs': '',
-                  'Received': 'received',
-                  'In Progress': 'in-progress',
-                  'Completed': 'completed'
-                };
-                onStatusFilter(statusMap[card.title] || '');
-              }
-            }}
+            onClick={() => handleCardClick(card.title)}
           >
             <div className="flex items-center space-x-2">
               <div className={`w-6 h-6 ${card.bgColor} rounded flex items-center justify-center flex-shrink-0`}>
@@ -176,7 +206,7 @@ export function StatsCards({ onStatusFilter }: StatsCardsProps) {
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold text-gray-900">Status Distribution</h3>
               <div className="flex items-center space-x-1">
-                <span className="text-xs text-gray-500">Click to filter</span>
+                <span className="text-xs text-gray-500">Click to view project</span>
                 <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
               </div>
             </div>
@@ -228,7 +258,7 @@ export function StatsCards({ onStatusFilter }: StatsCardsProps) {
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold text-gray-900">Status Overview</h3>
               <div className="flex items-center space-x-1">
-                <span className="text-xs text-gray-500">Click to filter</span>
+                <span className="text-xs text-gray-500">Click to view project</span>
                 <span className="text-xs px-2 py-1 bg-blue-50 text-blue-600 rounded font-medium">
                   Live
                 </span>

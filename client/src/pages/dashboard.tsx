@@ -62,7 +62,7 @@ export default function Dashboard() {
         </div>
 
         {/* Stats Cards */}
-        <StatsCards onStatusFilter={setStatusFilter} />
+        <StatsCards onStatusFilter={setStatusFilter} onViewRfp={handleViewRfp} />
 
         {/* Compact Filters */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 mb-4">

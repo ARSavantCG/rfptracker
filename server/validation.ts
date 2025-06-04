@@ -45,42 +45,11 @@ const rfpValidationRules: ValidationRule[] = [
     validator: (types: string[]) => Array.isArray(types) && types.length > 0,
     message: "At least one request type must be selected"
   },
-  // Phase 2 validation fields (for workflow progression)
-  {
-    field: "projectAddress",
-    required: true,
-    message: "Project address is required for workflow progression"
-  },
-  {
-    field: "projectSize",
-    required: true,
-    message: "Project size must be specified"
-  },
-  {
-    field: "estimatedValue",
-    required: true,
-    message: "Estimated project value is required"
-  },
-  {
-    field: "contactPerson",
-    required: true,
-    message: "Contact person must be specified"
-  },
-  {
-    field: "contactEmail",
-    required: true,
-    validator: (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email),
-    message: "Valid contact email is required"
-  },
+  // Phase 2 validation fields (for workflow progression to General Contractor and/or Architect)
   {
     field: "dueDate",
     required: true,
-    message: "Due date must be set"
-  },
-  {
-    field: "timelineRequirements",
-    required: true,
-    message: "Timeline requirements must be specified"
+    message: "Due date is required for validation"
   },
   {
     field: "files",

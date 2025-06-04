@@ -8,17 +8,20 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { CheckCircle, AlertCircle, Download, FileText, ArrowRight, X } from "lucide-react";
 import type { RfpRequest } from "@shared/schema";
 
 const validationFormSchema = z.object({
-  projectAddress: z.string().min(1, "Project address is required"),
-  projectSize: z.string().min(1, "Project size is required"),
-  estimatedValue: z.string().min(1, "Estimated value is required"),
-  timelineRequirements: z.string().min(1, "Timeline requirements are required"),
-  specialRequirements: z.string().optional(),
+  dueDate: z.string().min(1, "Due date is required"),
+  generalContractor: z.string().optional(),
+  architect: z.string().optional(),
+  officeAreaExisting: z.string().optional(),
+  officeAreaNew: z.string().optional(),
+  warehouseArea: z.string().optional(),
+  requestTypes: z.array(z.string()).min(1, "At least one request type is required"),
 });
 
 type ValidationFormData = z.infer<typeof validationFormSchema>;
@@ -45,11 +48,13 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
   const form = useForm<ValidationFormData>({
     resolver: zodResolver(validationFormSchema),
     defaultValues: {
-      projectAddress: "",
-      projectSize: "",
-      estimatedValue: "",
-      timelineRequirements: "",
-      specialRequirements: "",
+      dueDate: "",
+      generalContractor: "",
+      architect: "",
+      officeAreaExisting: "",
+      officeAreaNew: "",
+      warehouseArea: "",
+      requestTypes: ["pricing", "schedule", "space-plan"],
     },
   });
 
@@ -57,289 +62,205 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
   useEffect(() => {
     if (rfp && isOpen) {
       form.reset({
-        projectAddress: rfp.projectAddress || "",
-        projectSize: rfp.projectSize || "",
-        estimatedValue: rfp.estimatedValue || "",
-        timelineRequirements: rfp.timelineRequirements || "",
-        specialRequirements: rfp.specialRequirements || "",
+        dueDate: "",
+        generalContractor: "",
+        architect: "",
+        officeAreaExisting: rfp.projectArea || "",
+        officeAreaNew: "",
+        warehouseArea: "",
+        requestTypes: rfp.requestTypes || ["pricing", "schedule", "space-plan"],
       });
     }
   }, [rfp, isOpen, form]);
 
-  // Validate RFP on form changes
-  useEffect(() => {
-    if (rfp) {
-      validateCurrentData();
-    }
-  }, [rfp, form.watch()]);
-
-  const validateCurrentData = async () => {
-    if (!rfp) return;
-
-    const formData = form.getValues();
-    const updatedRfp = { ...rfp, ...formData };
-
-    try {
-      const response = await fetch("/api/rfp-requests/validate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updatedRfp),
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        setValidationResult(result);
-      }
-    } catch (error) {
-      console.error("Validation failed:", error);
-    }
-  };
-
-  const updateRfpMutation = useMutation({
+  const validateMutation = useMutation({
     mutationFn: async (data: ValidationFormData) => {
       if (!rfp) throw new Error("No RFP selected");
-      
-      return apiRequest(`/api/rfp-requests/${rfp.id}`, "PATCH", {
+      return apiRequest("/api/rfp-requests/validate", "POST", {
+        rfpId: rfp.id,
         ...data,
-        isValidated: validationResult?.isValid || false,
-        validationErrors: validationResult?.errors || [],
       });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
-      toast({
-        title: "RFP Updated",
-        description: "RFP information has been saved successfully",
-      });
-      onValidationComplete();
+    onSuccess: async (response) => {
+      const result = await response.json();
+      setValidationResult(result);
+      
+      if (result.isValid) {
+        // Update the RFP with validation data and advance workflow phase
+        await apiRequest(`/api/rfp-requests/${rfp?.id}`, "PATCH", {
+          workflowPhase: "invitation-to-bid",
+          status: "in-progress",
+          ...form.getValues()
+        });
+        
+        queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
+        
+        toast({
+          title: "Validation Complete",
+          description: "RFP has been validated and advanced to Invitation phase",
+        });
+        onValidationComplete();
+        onClose();
+      } else {
+        toast({
+          title: "Validation Failed",
+          description: `Please complete the required fields: ${result.errors.join(", ")}`,
+          variant: "destructive",
+        });
+      }
     },
-    onError: () => {
+    onError: (error) => {
       toast({
-        title: "Error",
-        description: "Failed to update RFP information",
+        title: "Validation Error",
+        description: error instanceof Error ? error.message : "Failed to validate RFP",
         variant: "destructive",
       });
     },
   });
 
   const generatePdfMutation = useMutation({
-    mutationFn: async ({ recipientType }: { recipientType: "architect" | "contractor" }) => {
+    mutationFn: async (recipientType: "architect" | "contractor") => {
       if (!rfp) throw new Error("No RFP selected");
       
-      setIsGeneratingPdf(true);
-      const response = await fetch(`/api/rfp-requests/${rfp.id}/generate-pdf`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ recipientType }),
+      const response = await apiRequest("/api/rfp-requests/generate-pdf", "POST", {
+        rfpId: rfp.id,
+        recipientType,
+        validationData: form.getValues(),
       });
-
-      if (!response.ok) throw new Error("Failed to generate PDF");
       
-      const blob = await response.blob();
-      return { blob, recipientType };
+      return response.blob();
     },
-    onSuccess: ({ blob, recipientType }) => {
-      // Create download link
+    onSuccess: (blob, recipientType) => {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
+      a.style.display = 'none';
       a.href = url;
-      a.download = `${rfp?.rfpNumber}_${recipientType}_communication.pdf`;
+      a.download = `${rfp?.rfpNumber}-${recipientType}-request.pdf`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-
+      
       toast({
         title: "PDF Generated",
-        description: `Communication document for ${recipientType} has been downloaded`,
+        description: `${recipientType.charAt(0).toUpperCase() + recipientType.slice(1)} request PDF downloaded successfully`,
       });
-      setIsGeneratingPdf(false);
     },
-    onError: () => {
+    onError: (error) => {
       toast({
-        title: "Error",
-        description: "Failed to generate PDF document",
+        title: "PDF Generation Failed",
+        description: error instanceof Error ? error.message : "Failed to generate PDF",
         variant: "destructive",
       });
-      setIsGeneratingPdf(false);
     },
   });
 
   const onSubmit = (data: ValidationFormData) => {
-    updateRfpMutation.mutate(data);
-  };
-
-  const handleAdvanceWorkflow = async () => {
-    if (!rfp || !validationResult?.isValid) return;
-
-    try {
-      await apiRequest(`/api/rfp-requests/${rfp.id}/workflow-phase`, "PATCH", {
-        phase: "invitation-to-bid"
-      });
-      
-      queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
-      toast({
-        title: "Workflow Advanced",
-        description: "RFP has been moved to Invitation to Bid phase",
-      });
-      
-      onClose();
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to advance workflow phase",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleClose = () => {
-    form.reset();
-    setValidationResult(null);
-    onClose();
+    validateMutation.mutate(data);
   };
 
   if (!rfp) return null;
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+    <Dialog open={isOpen} onOpenChange={() => onClose()}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
-            RFP Validation & Progression - {rfp.rfpNumber}
+            Step 2: Issuance to General Contractor and/or Architect
           </DialogTitle>
           <DialogDescription>
-            Complete all required fields to validate the RFP and advance to the next workflow phase
+            Complete the details needed to generate requests for your General Contractor and/or Architect
           </DialogDescription>
         </DialogHeader>
 
-        {/* Validation Status */}
-        {validationResult && (
-          <div className={`p-4 rounded-lg border ${
-            validationResult.isValid 
-              ? 'bg-green-50 border-green-200' 
-              : 'bg-orange-50 border-orange-200'
-          }`}>
-            <div className="flex items-center gap-2 mb-2">
-              {validationResult.isValid ? (
-                <CheckCircle className="h-5 w-5 text-green-600" />
-              ) : (
-                <AlertCircle className="h-5 w-5 text-orange-600" />
-              )}
-              <span className={`font-medium ${
-                validationResult.isValid ? 'text-green-800' : 'text-orange-800'
-              }`}>
-                {validationResult.isValid ? 'RFP is Valid' : 'RFP Validation Required'}
-              </span>
-              <span className="text-sm text-gray-600">
-                ({validationResult.completionPercentage}% complete)
-              </span>
-            </div>
-            
-            {validationResult.errors.length > 0 && (
-              <div className="mt-2">
-                <p className="text-sm font-medium text-orange-800 mb-1">Issues to resolve:</p>
-                <ul className="text-sm text-orange-700 list-disc list-inside">
-                  {validationResult.errors.map((error, index) => (
-                    <li key={index}>{error}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-        )}
-
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {/* Basic Project Information */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium text-gray-900 border-b pb-2">Project Details</h3>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="projectAddress"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Project Address *</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="Complete project address"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            {/* Due Date */}
+            <FormField
+              control={form.control}
+              name="dueDate"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Due Date</FormLabel>
+                  <FormControl>
+                    <Input type="date" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-                <FormField
-                  control={form.control}
-                  name="projectSize"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Project Size *</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="e.g., 25,000 sq ft"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+            {/* General Contractor */}
+            <FormField
+              control={form.control}
+              name="generalContractor"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>General Contractor</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter general contractor name" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="estimatedValue"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Estimated Project Value *</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="e.g., $500,000 - $750,000"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+            {/* Architect */}
+            <FormField
+              control={form.control}
+              name="architect"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Architect</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter architect name" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-                <FormField
-                  control={form.control}
-                  name="timelineRequirements"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Timeline Requirements *</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="e.g., 12-week completion"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
+            <div className="grid grid-cols-3 gap-4">
+              {/* Office Area (Existing) */}
               <FormField
                 control={form.control}
-                name="specialRequirements"
+                name="officeAreaExisting"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Special Requirements</FormLabel>
+                    <FormLabel>Office Area (Existing)</FormLabel>
                     <FormControl>
-                      <Textarea 
-                        placeholder="Any special requirements, constraints, or considerations"
-                        rows={3}
-                        {...field}
-                      />
+                      <Input placeholder="sq ft" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Office Area (New) */}
+              <FormField
+                control={form.control}
+                name="officeAreaNew"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Office Area (New)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="sq ft" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Warehouse Area */}
+              <FormField
+                control={form.control}
+                name="warehouseArea"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Warehouse Area</FormLabel>
+                    <FormControl>
+                      <Input placeholder="sq ft" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -347,84 +268,127 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
               />
             </div>
 
-            {/* Current RFP Information Display */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium text-gray-900 border-b pb-2">Current RFP Information</h3>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
-                <div>
-                  <p className="text-sm font-medium text-gray-700">Property</p>
-                  <p className="text-sm text-gray-600">{rfp.property}</p>
+            {/* Request Types */}
+            <FormField
+              control={form.control}
+              name="requestTypes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Request (Pricing, Schedule, Space Plan)</FormLabel>
+                  <div className="grid grid-cols-3 gap-2 mt-2">
+                    {["pricing", "schedule", "space-plan"].map((type) => (
+                      <div key={type} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={type}
+                          checked={field.value?.includes(type)}
+                          onCheckedChange={(checked) => {
+                            const currentTypes = field.value || [];
+                            if (checked) {
+                              field.onChange([...currentTypes, type]);
+                            } else {
+                              field.onChange(currentTypes.filter((t) => t !== type));
+                            }
+                          }}
+                        />
+                        <label
+                          htmlFor={type}
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 capitalize"
+                        >
+                          {type.replace("-", " ")}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Validation Result */}
+            {validationResult && (
+              <div className={`p-4 rounded-lg border ${
+                validationResult.isValid 
+                  ? "bg-green-50 border-green-200" 
+                  : "bg-red-50 border-red-200"
+              }`}>
+                <div className="flex items-center gap-2 mb-2">
+                  {validationResult.isValid ? (
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                  ) : (
+                    <AlertCircle className="h-5 w-5 text-red-600" />
+                  )}
+                  <span className={`font-medium ${
+                    validationResult.isValid ? "text-green-800" : "text-red-800"
+                  }`}>
+                    {validationResult.isValid ? "Validation Successful" : "Validation Failed"}
+                  </span>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-700">Tenant Name</p>
-                  <p className="text-sm text-gray-600">{rfp.tenantName}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-700">Project Name</p>
-                  <p className="text-sm text-gray-600">{rfp.projectName}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-700">Sent By</p>
-                  <p className="text-sm text-gray-600">{rfp.sentBy}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-700">Request Types</p>
-                  <p className="text-sm text-gray-600">{rfp.requestTypes.join(", ")}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-700">Due Date</p>
-                  <p className="text-sm text-gray-600">
-                    {rfp.dueDate ? new Date(rfp.dueDate).toLocaleDateString() : "Not specified"}
-                  </p>
+                {!validationResult.isValid && validationResult.errors.length > 0 && (
+                  <ul className="text-sm text-red-700 list-disc list-inside">
+                    {validationResult.errors.map((error, index) => (
+                      <li key={index}>{error}</li>
+                    ))}
+                  </ul>
+                )}
+                <div className="mt-2">
+                  <div className="text-sm text-gray-600 mb-1">
+                    Completion: {validationResult.completionPercentage}%
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className={`h-2 rounded-full ${
+                        validationResult.isValid ? "bg-green-600" : "bg-red-600"
+                      }`}
+                      style={{ width: `${validationResult.completionPercentage}%` }}
+                    ></div>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
-            {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row justify-between gap-4 pt-6 border-t">
-              <div className="flex gap-2">
+            <div className="flex justify-between pt-4">
+              <div className="flex space-x-2">
+                {validationResult?.isValid && (
+                  <>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => generatePdfMutation.mutate("architect")}
+                      disabled={generatePdfMutation.isPending}
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Generate Architect PDF
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => generatePdfMutation.mutate("contractor")}
+                      disabled={generatePdfMutation.isPending}
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Generate Contractor PDF
+                    </Button>
+                  </>
+                )}
+              </div>
+
+              <div className="flex space-x-2">
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => generatePdfMutation.mutate({ recipientType: "architect" })}
-                  disabled={isGeneratingPdf}
+                  onClick={onClose}
+                  disabled={validateMutation.isPending}
                 >
-                  <Download className="h-4 w-4 mr-2" />
-                  Generate PDF for Architect
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => generatePdfMutation.mutate({ recipientType: "contractor" })}
-                  disabled={isGeneratingPdf}
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Generate PDF for Contractor
-                </Button>
-              </div>
-
-              <div className="flex gap-3">
-                <Button type="button" variant="outline" onClick={handleClose}>
                   <X className="h-4 w-4 mr-2" />
                   Cancel
                 </Button>
                 <Button 
                   type="submit" 
-                  disabled={updateRfpMutation.isPending}
+                  disabled={validateMutation.isPending}
                 >
-                  Save Information
+                  <ArrowRight className="h-4 w-4 mr-2" />
+                  {validateMutation.isPending ? "Validating..." : "Validate & Advance"}
                 </Button>
-                {validationResult?.isValid && (
-                  <Button 
-                    type="button"
-                    onClick={handleAdvanceWorkflow}
-                    className="bg-green-600 hover:bg-green-700"
-                  >
-                    <ArrowRight className="h-4 w-4 mr-2" />
-                    Advance to Invitation Phase
-                  </Button>
-                )}
               </div>
             </div>
           </form>

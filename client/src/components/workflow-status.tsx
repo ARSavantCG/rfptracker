@@ -161,7 +161,17 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onValidateRfp }: Wo
           </Button>
         )}
         
-        {nextPhase && (
+        {/* Show Create Invitation to Bid button when in invitation-to-bid phase */}
+        {actualWorkflowPhase === "invitation-to-bid" && (
+          <Button
+            onClick={() => onAdvanceToInvitation(rfp)}
+            className="w-full"
+          >
+            Generate Invitation to Bid PDF
+          </Button>
+        )}
+
+        {nextPhase && actualWorkflowPhase !== "invitation-to-bid" && (
           <Button
             onClick={handleAdvancePhase}
             disabled={advancePhaseMutation.isPending || !rfp.isValidated}

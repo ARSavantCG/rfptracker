@@ -231,6 +231,7 @@ export default function Dashboard() {
                 rfp={selectedRfp}
                 onAdvanceToInvitation={handleAdvanceToInvitation}
                 onValidateRfp={handleValidateRfp}
+                onOpenInvitationModal={handleAdvanceToInvitation}
               />
             )}
             {!selectedRfp && (

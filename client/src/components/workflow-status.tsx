@@ -10,6 +10,7 @@ interface WorkflowStatusProps {
   rfp: RfpRequest;
   onAdvanceToInvitation: (rfp: RfpRequest) => void;
   onValidateRfp?: (rfp: RfpRequest) => void;
+  onOpenInvitationModal?: (rfp: RfpRequest) => void;
 }
 
 const workflowPhases = [
@@ -50,7 +51,7 @@ const workflowPhases = [
   }
 ];
 
-export function WorkflowStatus({ rfp, onAdvanceToInvitation, onValidateRfp }: WorkflowStatusProps) {
+export function WorkflowStatus({ rfp, onAdvanceToInvitation, onValidateRfp, onOpenInvitationModal }: WorkflowStatusProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -96,6 +97,14 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onValidateRfp }: Wo
     }
   };
 
+  const handlePhaseClick = (phase: any) => {
+    if (phase.key === "rfp-entry" && onValidateRfp) {
+      onValidateRfp(rfp);
+    } else if (phase.key === "invitation-to-bid" && onOpenInvitationModal) {
+      onOpenInvitationModal(rfp);
+    }
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
       <div className="flex items-center justify-between mb-4">
@@ -112,16 +121,19 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onValidateRfp }: Wo
           const isCompleted = index < currentPhaseIndex;
           const isNext = index === currentPhaseIndex + 1;
 
+          const isClickable = (isActive || isCompleted) && (phase.key === "rfp-entry" || phase.key === "invitation-to-bid");
+          
           return (
             <div
               key={phase.key}
+              onClick={() => isClickable && handlePhaseClick(phase)}
               className={`flex items-center space-x-3 p-3 rounded-lg border transition-colors ${
                 isActive
                   ? phase.color
                   : isCompleted
                   ? "bg-gray-50 text-gray-600 border-gray-200"
                   : "bg-gray-25 text-gray-400 border-gray-100"
-              }`}
+              } ${isClickable ? "cursor-pointer hover:bg-opacity-80" : ""}`}
             >
               <Icon className={`h-5 w-5 ${isCompleted ? "text-green-600" : ""}`} />
               <div className="flex-1">

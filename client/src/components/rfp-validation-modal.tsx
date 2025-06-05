@@ -221,51 +221,87 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
               )}
             />
 
-            <div className="grid grid-cols-3 gap-4">
-              {/* Office Area (Existing) */}
-              <FormField
-                control={form.control}
-                name="officeAreaExisting"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Office Area (Existing)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="sq ft" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            {/* Total Rentable Area */}
+            <FormField
+              control={form.control}
+              name="warehouseArea"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Total Rentable Area (What tenant pays rent on)</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="sq ft" 
+                      {...field} 
+                      className="bg-gray-50 font-medium"
+                      readOnly
+                    />
+                  </FormControl>
+                  <p className="text-sm text-gray-600">This is the total area from Step 1</p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-              {/* Office Area (New) */}
-              <FormField
-                control={form.control}
-                name="officeAreaNew"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Office Area (New)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="sq ft" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            {/* Office Areas within the Rentable Area */}
+            <div className="border rounded-lg p-4 bg-blue-50">
+              <h4 className="font-medium text-blue-900 mb-3">Office Areas (within the total rentable area)</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="officeAreaExisting"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Office Area (Existing)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="sq ft" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              {/* Warehouse Area */}
-              <FormField
-                control={form.control}
-                name="warehouseArea"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Warehouse Area</FormLabel>
-                    <FormControl>
-                      <Input placeholder="sq ft" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                <FormField
+                  control={form.control}
+                  name="officeAreaNew"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Office Area (New Construction)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="sq ft" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              {/* Calculation Display */}
+              <div className="mt-3 p-3 bg-white rounded border text-sm">
+                <div className="flex justify-between">
+                  <span>Total Rentable Area:</span>
+                  <span className="font-medium">{form.watch('warehouseArea') || '0'} sq ft</span>
+                </div>
+                <div className="flex justify-between text-gray-600">
+                  <span>- Office (Existing):</span>
+                  <span>{form.watch('officeAreaExisting') || '0'} sq ft</span>
+                </div>
+                <div className="flex justify-between text-gray-600">
+                  <span>- Office (New):</span>
+                  <span>{form.watch('officeAreaNew') || '0'} sq ft</span>
+                </div>
+                <div className="border-t pt-2 mt-2 flex justify-between font-medium">
+                  <span>Remaining Warehouse Area:</span>
+                  <span>
+                    {(() => {
+                      const total = parseInt(form.watch('warehouseArea')?.replace(/,/g, '') || '0');
+                      const existing = parseInt(form.watch('officeAreaExisting')?.replace(/,/g, '') || '0');
+                      const newOffice = parseInt(form.watch('officeAreaNew')?.replace(/,/g, '') || '0');
+                      const remaining = total - existing - newOffice;
+                      return remaining.toLocaleString();
+                    })()} sq ft
+                  </span>
+                </div>
+              </div>
             </div>
 
             {/* Request Types */}

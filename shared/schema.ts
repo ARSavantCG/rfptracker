@@ -58,6 +58,8 @@ export const insertRfpRequestSchema = createInsertSchema(rfpRequests).omit({
 
 export const updateRfpRequestSchema = insertRfpRequestSchema.partial().extend({
   id: z.number(),
+  workflowPhase: z.enum(["rfp-entry", "invitation-to-bid", "bid-collection", "evaluation", "award"]).optional(),
+  status: z.enum(["received", "in-progress", "completed", "on-hold"]).optional(),
 });
 
 export type InsertRfpRequest = z.infer<typeof insertRfpRequestSchema>;

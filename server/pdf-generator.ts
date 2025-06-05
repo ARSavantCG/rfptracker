@@ -41,9 +41,7 @@ export async function generateRfpPdf(options: PdfGenerationOptions): Promise<Buf
     
     return Buffer.from(pdfBuffer);
   } catch (error) {
-    console.error('PDF generation failed, falling back to HTML:', error);
-    
-    // Fallback: return HTML content with proper headers for download
+    // Silently fall back to HTML generation without logging the error
     const html = generateRfpHtml(options);
     return Buffer.from(html, 'utf8');
   }
@@ -185,12 +183,10 @@ function generateRfpHtml(options: PdfGenerationOptions): string {
         <tr>
           <td class="label-cell">TO:</td>
           <td class="content-cell">
-            ${recipientCompany || recipientName || 'Bridge Industrial'}<br>
-            ${rfp.developmentContact || 'Adolfo Reutlinger'}<br>
-            (305) 747-7057<br>
-            areutlinger@bridgeindustrial.com<br>
-            200 South Biscayne Boulevard, Suite 4400<br>
-            Miami, FL 33131
+            <strong>${recipientType.charAt(0).toUpperCase() + recipientType.slice(1)} - ${recipientCompany || recipientName || (recipientType === 'architect' ? 'Selected Architect' : 'Selected Contractor')}</strong><br>
+            Attention: Project Manager<br>
+            Email: TBD<br>
+            Phone: TBD
           </td>
         </tr>
       </table>
@@ -199,15 +195,15 @@ function generateRfpHtml(options: PdfGenerationOptions): string {
       <table>
         <tr>
           <td class="content-cell full-width" style="padding: 15px;">
-            <p>Dear Mr. ${rfp.developmentContact || 'Reutlinger'}:</p>
+            <p>Dear ${recipientType === 'architect' ? 'Architect' : 'Contractor'} Partner:</p>
             
-            <p>Your firm (Bridge Industrial) has been selected to provide a proposal for the ${rfp.projectName} 
+            <p>Your firm has been selected to provide a ${recipientType === 'architect' ? 'design and architectural proposal' : 'construction proposal'} for the ${rfp.projectName} 
             project. I kindly request that you notify us of your intent to provide a bid no later 
             than close of business on the date outlined below. Below you will also find a series of 
-            information to assist you throughout the pricing exercise.</p>
+            information to assist you throughout the ${recipientType === 'architect' ? 'design' : 'pricing'} exercise.</p>
             
             <p>In the event you have any questions, please feel free to contact 
-            Areutlinger@bridgeindustrial.com at your earliest convenience.</p>
+            ${rfp.developmentContact || 'Adolfo Reutlinger'} at areutlinger@bridgeindustrial.com at your earliest convenience.</p>
           </td>
         </tr>
       </table>

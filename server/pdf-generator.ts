@@ -19,12 +19,25 @@ export interface PdfGenerationOptions {
 }
 
 export async function generateRfpPdf(options: PdfGenerationOptions): Promise<Buffer> {
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
-  });
-
+  let browser;
+  
   try {
+    browser = await puppeteer.launch({
+      headless: true,
+      executablePath: '/nix/store/*/bin/chromium',
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--no-first-run',
+        '--no-zygote',
+        '--single-process',
+        '--disable-gpu',
+        '--disable-web-security'
+      ]
+    });
+
     const page = await browser.newPage();
     const html = generateRfpHtml(options);
     
@@ -43,7 +56,9 @@ export async function generateRfpPdf(options: PdfGenerationOptions): Promise<Buf
 
     return Buffer.from(pdf);
   } finally {
-    await browser.close();
+    if (browser) {
+      await browser.close();
+    }
   }
 }
 

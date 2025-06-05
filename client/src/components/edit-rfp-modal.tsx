@@ -81,6 +81,32 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
     }
   }, [rfp, isOpen, form]);
 
+  // Auto-format project name when tenant name, property, or confidential status changes
+  useEffect(() => {
+    const subscription = form.watch((value, { name, type }) => {
+      if (name === 'tenantName' || name === 'property' || name === 'confidential') {
+        const tenantName = value.tenantName || '';
+        const property = value.property || '';
+        const confidential = value.confidential || false;
+        
+        if (property) {
+          let projectName = '';
+          if (confidential) {
+            projectName = `Confidential @ ${property}`;
+          } else if (tenantName) {
+            projectName = `${tenantName} @ ${property}`;
+          } else {
+            projectName = `@ ${property}`;
+          }
+          
+          form.setValue('projectName', projectName, { shouldValidate: false });
+        }
+      }
+    });
+    
+    return () => subscription.unsubscribe();
+  }, [form]);
+
   const updateMutation = useMutation({
     mutationFn: async (data: EditRfpFormData) => {
       if (!rfp) throw new Error("No RFP selected");

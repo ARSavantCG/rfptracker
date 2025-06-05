@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -54,6 +54,32 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
       notes: "",
     },
   });
+
+  // Auto-format project name when tenant name, property, or confidential status changes
+  useEffect(() => {
+    const subscription = form.watch((value, { name, type }) => {
+      if (name === 'tenantName' || name === 'property' || name === 'confidential') {
+        const tenantName = value.tenantName || '';
+        const property = value.property || '';
+        const confidential = value.confidential || false;
+        
+        if (property) {
+          let projectName = '';
+          if (confidential) {
+            projectName = `Confidential @ ${property}`;
+          } else if (tenantName) {
+            projectName = `${tenantName} @ ${property}`;
+          } else {
+            projectName = `@ ${property}`;
+          }
+          
+          form.setValue('projectName', projectName, { shouldValidate: false });
+        }
+      }
+    });
+    
+    return () => subscription.unsubscribe();
+  }, [form]);
 
   const createMutation = useMutation({
     mutationFn: async (data: CreateRfpFormData) => {

@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { StatsCards } from "@/components/stats-cards";
 import { RfpTable } from "@/components/rfp-table";
 import { CreateRfpModal } from "@/components/create-rfp-modal";
@@ -26,6 +27,26 @@ export default function Dashboard() {
   const [selectedRfp, setSelectedRfp] = useState<RfpRequest | null>(null);
   const [workflowRfp, setWorkflowRfp] = useState<RfpRequest | null>(null);
   const [validationRfp, setValidationRfp] = useState<RfpRequest | null>(null);
+
+  // Fetch all RFPs to keep selected RFP data fresh
+  const { data: allRfps = [] } = useQuery<RfpRequest[]>({
+    queryKey: ["/api/rfp-requests"],
+    queryFn: async () => {
+      const response = await fetch("/api/rfp-requests");
+      if (!response.ok) throw new Error("Failed to fetch RFP requests");
+      return response.json();
+    },
+  });
+
+  // Auto-refresh selected RFP when data changes
+  useEffect(() => {
+    if (selectedRfp && allRfps.length > 0) {
+      const updatedRfp = allRfps.find(rfp => rfp.id === selectedRfp.id);
+      if (updatedRfp && JSON.stringify(updatedRfp) !== JSON.stringify(selectedRfp)) {
+        setSelectedRfp(updatedRfp);
+      }
+    }
+  }, [allRfps, selectedRfp]);
 
   const handleEditRfp = (rfp: RfpRequest) => {
     setSelectedRfp(rfp);

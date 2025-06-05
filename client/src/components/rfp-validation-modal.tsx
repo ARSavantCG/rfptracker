@@ -123,8 +123,7 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
     mutationFn: async (recipientType: "architect" | "contractor") => {
       if (!rfp) throw new Error("No RFP selected");
       
-      const response = await apiRequest("/api/rfp-requests/generate-pdf", "POST", {
-        rfpId: rfp.id,
+      const response = await apiRequest(`/api/rfp-requests/${rfp.id}/generate-pdf`, "POST", {
         recipientType,
         validationData: form.getValues(),
       });

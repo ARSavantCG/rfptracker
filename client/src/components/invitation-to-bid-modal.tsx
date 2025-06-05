@@ -163,8 +163,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
     try {
       setIsGeneratingPdfs(true);
       
-      const response = await apiRequest("/api/rfp-requests/generate-pdf", "POST", {
-        rfpId: rfp?.id,
+      const response = await apiRequest(`/api/rfp-requests/${rfp?.id}/generate-pdf`, "POST", {
         recipientType,
         invitationData: form.getValues(),
       });

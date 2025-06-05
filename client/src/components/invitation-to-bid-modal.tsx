@@ -163,29 +163,58 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
     try {
       setIsGeneratingPdfs(true);
       
-      const response = await apiRequest(`/api/rfp-requests/${rfp?.id}/generate-pdf`, "POST", {
-        recipientType,
-        invitationData: form.getValues(),
+      // Get HTML content from backend
+      const response = await fetch(`/api/rfp-requests/${rfp?.id}/generate-pdf`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          recipientType,
+          invitationData: form.getValues(),
+        }),
       });
       
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.style.display = 'none';
-      a.href = url;
-      a.download = `${rfp?.rfpNumber}-${recipientType}-rfp.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
+      if (!response.ok) {
+        throw new Error('Failed to generate PDF');
+      }
+      
+      const htmlContent = await response.text();
+      
+      // Create a new window/tab with the content for printing
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write(htmlContent);
+        printWindow.document.close();
+        
+        // Add print styles and auto-print
+        printWindow.addEventListener('load', () => {
+          setTimeout(() => {
+            printWindow.print();
+          }, 500);
+        });
+      } else {
+        // Fallback: create downloadable HTML file
+        const blob = new Blob([htmlContent], { type: 'text/html' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = `${rfp?.rfpNumber}-${recipientType}-invitation.html`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }
       
       toast({
-        title: "PDF Generated",
-        description: `${recipientType.charAt(0).toUpperCase() + recipientType.slice(1)} RFP downloaded successfully`,
+        title: "Document Generated",
+        description: `${recipientType.charAt(0).toUpperCase() + recipientType.slice(1)} invitation opened for printing`,
       });
     } catch (error) {
       toast({
-        title: "PDF Generation Failed",
-        description: error instanceof Error ? error.message : `Failed to generate ${recipientType} PDF`,
+        title: "Generation Failed",
+        description: error instanceof Error ? error.message : `Failed to generate ${recipientType} document`,
         variant: "destructive",
       });
     } finally {

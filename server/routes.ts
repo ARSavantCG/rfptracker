@@ -685,8 +685,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const pdfBuffer = await generateRfpPdf(pdfOptions);
       const filename = generatePdfFilename(rfp, recipientType);
 
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      // Check if the buffer contains HTML (fallback) or actual PDF
+      const isHtml = pdfBuffer.toString().startsWith('<!DOCTYPE') || pdfBuffer.toString().includes('<html');
+      
+      if (isHtml) {
+        const htmlFilename = filename.replace('.pdf', '.html');
+        res.setHeader('Content-Type', 'text/html');
+        res.setHeader('Content-Disposition', `attachment; filename="${htmlFilename}"`);
+      } else {
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      }
       res.setHeader('Content-Length', pdfBuffer.length);
       
       res.send(pdfBuffer);

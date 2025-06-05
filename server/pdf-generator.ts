@@ -20,42 +20,33 @@ export interface PdfGenerationOptions {
 }
 
 export async function generateRfpPdf(options: PdfGenerationOptions): Promise<Buffer> {
-  const html = generateRfpHtml(options);
-  
-  // For now, return HTML as text in a buffer for testing
-  // This will allow the download to work while we fix the PDF generation
-  const textContent = `
-INVITATION TO BID
-${options.rfp.projectName}
+  try {
+    const htmlPdf = await import('html-pdf-node');
+    
+    const html = generateRfpHtml(options);
+    
+    const pdfOptions = {
+      format: 'A4',
+      printBackground: true,
+      margin: {
+        top: '1in',
+        right: '1in',
+        bottom: '1in',
+        left: '1in'
+      }
+    };
 
-DATE: ${formatDate(new Date())}
-PROJECT NAME: ${options.rfp.projectName}
-PROJECT LOCATION: ${options.rfp.property}
-
-TO: ${options.recipientCompany || options.recipientName || 'Bridge Industrial'}
-Contact: ${options.rfp.developmentContact || 'Adolfo Reutlinger'}
-Email: areutlinger@bridgeindustrial.com
-Phone: (305) 747-7057
-
-Dear Mr. ${options.rfp.developmentContact || 'Reutlinger'}:
-
-Your firm has been selected to provide a proposal for the ${options.rfp.projectName} project.
-
-PROJECT DESCRIPTION:
-The project consists of ${options.rfp.warehouseArea || options.rfp.projectArea} sq ft of space.
-
-SUBMISSION REQUIREMENTS:
-- Bid Cost Breakdown (Excel File)
-- Preliminary Construction Schedule
-- Affidavit
-
-BID MANAGER:
-${options.rfp.developmentContact || 'Adolfo Reutlinger'}
-areutlinger@bridgeindustrial.com
-(305) 747-7057
-`;
-
-  return Buffer.from(textContent, 'utf8');
+    const file = { content: html };
+    const pdfBuffer = await htmlPdf.generatePdf(file, pdfOptions);
+    
+    return Buffer.from(pdfBuffer);
+  } catch (error) {
+    console.error('PDF generation failed, falling back to HTML:', error);
+    
+    // Fallback: return HTML content with proper headers for download
+    const html = generateRfpHtml(options);
+    return Buffer.from(html, 'utf8');
+  }
 }
 
 function generateRfpHtml(options: PdfGenerationOptions): string {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { formatDate, getStatusColor, getStatusIcon } from "@/lib/utils";
@@ -34,6 +34,19 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
       return response.json();
     },
   });
+
+  // Clear selected RFP if it no longer exists in the list
+  useEffect(() => {
+    if (onSelectRfp && selectedRfpId && rfpRequests.length > 0) {
+      const selectedExists = rfpRequests.some(rfp => rfp.id === selectedRfpId);
+      if (!selectedExists) {
+        onSelectRfp(null as any);
+      }
+    } else if (onSelectRfp && rfpRequests.length === 0) {
+      // Clear selection if no RFPs exist
+      onSelectRfp(null as any);
+    }
+  }, [rfpRequests, selectedRfpId, onSelectRfp]);
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {

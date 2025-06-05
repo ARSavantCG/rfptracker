@@ -152,13 +152,16 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onValidateRfp }: Wo
             onClick={() => onValidateRfp?.(rfp)}
             variant="outline"
             className="w-full"
+            disabled={!!rfp.isValidated && rfp.status === "in-progress"}
           >
             <ClipboardCheck className="h-4 w-4 mr-2" />
-            Validate RFP & Generate Documents
+            {!!rfp.isValidated && rfp.status === "in-progress" 
+              ? "RFP Validated ✓" 
+              : "Validate RFP & Generate Documents"}
           </Button>
         )}
         
-        {nextPhase && (
+        {nextPhase && rfp.isValidated && (
           <Button
             onClick={handleAdvancePhase}
             disabled={advancePhaseMutation.isPending}

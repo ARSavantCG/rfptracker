@@ -65,9 +65,9 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
         dueDate: "",
         generalContractor: "",
         architect: "",
-        officeAreaExisting: rfp.projectArea || "",
+        officeAreaExisting: "",
         officeAreaNew: "",
-        warehouseArea: "",
+        warehouseArea: rfp.projectArea || "",
         requestTypes: rfp.requestTypes || ["pricing", "schedule", "space-plan"],
       });
     }

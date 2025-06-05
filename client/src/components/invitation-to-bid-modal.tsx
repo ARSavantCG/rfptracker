@@ -141,8 +141,8 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
       
       // Update RFP status
       await apiRequest(`/api/rfp-requests/${rfp?.id}`, "PATCH", {
-        status: "completed",
-        workflowPhase: "completed"
+        status: "in-progress",
+        workflowPhase: "bid-collection"
       });
       
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });

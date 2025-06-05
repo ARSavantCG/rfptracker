@@ -1,18 +1,18 @@
 import puppeteer from "puppeteer";
-import type { RfpRequest, InvitationToBid } from "@shared/schema";
 
 function formatDate(date: string | Date): string {
   const d = new Date(date);
-  return d.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
+  return d.toLocaleDateString('en-US', { 
+    weekday: 'long', 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric' 
   });
 }
 
 export interface PdfGenerationOptions {
-  rfp: RfpRequest;
-  invitationToBid?: InvitationToBid;
+  rfp: any;
+  invitationToBid?: any;
   recipientType: "architect" | "contractor";
   recipientName?: string;
   recipientCompany?: string;
@@ -50,387 +50,278 @@ export async function generateRfpPdf(options: PdfGenerationOptions): Promise<Buf
 function generateRfpHtml(options: PdfGenerationOptions): string {
   const { rfp, invitationToBid, recipientType, recipientName, recipientCompany } = options;
   
+  const today = formatDate(new Date());
+  const dueDate = invitationToBid?.dueDate ? formatDate(invitationToBid.dueDate) : 'Thursday, September 19, 2024';
+  
+  // Calculate areas for display
+  const totalArea = parseInt(rfp.warehouseArea?.replace(/,/g, '') || '0');
+  const existingOffice = parseInt(rfp.officeAreaExisting?.replace(/,/g, '') || '0');
+  const newOffice = parseInt(rfp.officeAreaNew?.replace(/,/g, '') || '0');
+  const warehouseArea = totalArea - existingOffice - newOffice;
+  
   return `
     <!DOCTYPE html>
     <html>
     <head>
       <meta charset="utf-8">
-      <title>RFP Communication - ${rfp.rfpNumber}</title>
+      <title>Invitation to Bid - ${rfp.rfpNumber}</title>
       <style>
         body {
-          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-          line-height: 1.6;
-          color: #333;
-          max-width: 800px;
-          margin: 0 auto;
+          font-family: Arial, sans-serif;
+          font-size: 11px;
+          line-height: 1.3;
+          color: #000;
+          margin: 0;
           padding: 20px;
         }
         
         .header {
-          border-bottom: 3px solid #2563eb;
-          padding-bottom: 20px;
-          margin-bottom: 30px;
+          text-align: center;
+          margin-bottom: 20px;
+          border-bottom: 2px solid #000;
+          padding-bottom: 10px;
         }
         
-        .company-logo {
-          font-size: 24px;
+        .header h1 {
+          font-size: 16px;
           font-weight: bold;
-          color: #2563eb;
-          margin-bottom: 10px;
+          margin: 0;
+          text-transform: uppercase;
         }
         
-        .document-title {
-          font-size: 20px;
-          font-weight: 600;
-          margin: 20px 0 10px 0;
-        }
-        
-        .rfp-number {
-          font-size: 16px;
-          color: #6b7280;
-          margin-bottom: 5px;
-        }
-        
-        .date {
+        .header h2 {
           font-size: 14px;
-          color: #6b7280;
+          font-weight: normal;
+          margin: 5px 0 0 0;
         }
         
-        .recipient-info {
-          background: #f8fafc;
-          padding: 20px;
-          border-radius: 8px;
-          margin: 20px 0;
-        }
-        
-        .section {
-          margin: 25px 0;
-        }
-        
-        .section h3 {
-          font-size: 16px;
-          font-weight: 600;
-          color: #1f2937;
-          border-bottom: 1px solid #e5e7eb;
-          padding-bottom: 5px;
+        table {
+          width: 100%;
+          border-collapse: collapse;
           margin-bottom: 15px;
         }
         
-        .info-grid {
+        td {
+          border: 1px solid #000;
+          padding: 5px;
+          vertical-align: top;
+        }
+        
+        .label-cell {
+          font-weight: bold;
+          background-color: #f0f0f0;
+          width: 120px;
+        }
+        
+        .content-cell {
+          background-color: white;
+        }
+        
+        .full-width {
+          width: 100%;
+        }
+        
+        .description-box {
+          min-height: 100px;
+          padding: 8px;
+        }
+        
+        .bullet-points {
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 20px;
-          margin: 20px 0;
+          gap: 5px;
+          margin: 10px 0;
         }
         
-        .info-item {
-          margin-bottom: 10px;
+        .bullet-item {
+          margin: 3px 0;
         }
         
-        .info-label {
-          font-weight: 600;
-          color: #374151;
+        .dates-section td {
+          padding: 3px 5px;
         }
         
-        .info-value {
-          color: #6b7280;
-          margin-top: 2px;
+        .submission-req {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 10px;
         }
         
-        .request-types {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
-          margin-top: 10px;
+        .req-column {
+          margin: 0;
         }
         
-        .request-type {
-          background: #dbeafe;
-          color: #1e40af;
-          padding: 4px 12px;
-          border-radius: 16px;
-          font-size: 12px;
-          font-weight: 500;
-        }
-        
-        .files-list {
-          background: #f9fafb;
-          border: 1px solid #e5e7eb;
-          border-radius: 6px;
-          padding: 15px;
-          margin-top: 10px;
-        }
-        
-        .file-item {
-          display: flex;
-          align-items: center;
-          padding: 8px 0;
-          border-bottom: 1px solid #e5e7eb;
-        }
-        
-        .file-item:last-child {
-          border-bottom: none;
-        }
-        
-        .file-icon {
-          width: 16px;
-          height: 16px;
-          margin-right: 10px;
-          background: #3b82f6;
-          border-radius: 2px;
-        }
-        
-        .footer {
-          margin-top: 40px;
-          padding-top: 20px;
-          border-top: 1px solid #e5e7eb;
-          font-size: 12px;
-          color: #6b7280;
-          text-align: center;
-        }
-        
-        .invitation-details {
-          background: #fef3c7;
-          border: 1px solid #f59e0b;
-          border-radius: 8px;
-          padding: 20px;
-          margin: 20px 0;
-        }
-        
-        .invitation-title {
-          color: #92400e;
-          font-weight: 600;
-          margin-bottom: 15px;
-        }
-        
-        .requirements-list {
-          list-style: none;
-          padding: 0;
-        }
-        
-        .requirements-list li {
-          padding: 5px 0;
-          border-bottom: 1px solid #e5e7eb;
-        }
-        
-        .requirements-list li:last-child {
-          border-bottom: none;
-        }
-        
-        @media print {
-          body {
-            padding: 0;
-          }
-          
-          .info-grid {
-            grid-template-columns: 1fr;
-          }
+        .req-column li {
+          margin: 2px 0;
         }
       </style>
     </head>
     <body>
       <div class="header">
-        <div class="company-logo">Leasing Management</div>
-        <div class="document-title">Request for Proposal Communication</div>
-        <div class="rfp-number">RFP Number: ${rfp.rfpNumber}</div>
-        <div class="date">Generated: ${new Date().toLocaleDateString()}</div>
+        <h1>INVITATION TO BID</h1>
+        <h2>${rfp.projectName}</h2>
       </div>
 
-      ${recipientName || recipientCompany ? `
-      <div class="recipient-info">
-        <h3>Recipient Information</h3>
-        ${recipientName ? `<div><strong>Contact:</strong> ${recipientName}</div>` : ''}
-        ${recipientCompany ? `<div><strong>Company:</strong> ${recipientCompany}</div>` : ''}
-        <div><strong>Type:</strong> ${recipientType.charAt(0).toUpperCase() + recipientType.slice(1)}</div>
-      </div>
-      ` : ''}
+      <!-- Basic Info Table -->
+      <table>
+        <tr>
+          <td class="label-cell">DATE:</td>
+          <td class="content-cell">${today}</td>
+        </tr>
+        <tr>
+          <td class="label-cell">PROJECT NAME:</td>
+          <td class="content-cell">${rfp.projectName}</td>
+        </tr>
+        <tr>
+          <td class="label-cell">PROJECT LOCATION:</td>
+          <td class="content-cell">${rfp.property}<br>Miami Gardens, FL 33056</td>
+        </tr>
+      </table>
 
-      <div class="section">
-        <h3>Project Overview</h3>
-        <div class="info-grid">
-          <div>
-            <div class="info-item">
-              <div class="info-label">Property</div>
-              <div class="info-value">${rfp.property}</div>
-            </div>
-            <div class="info-item">
-              <div class="info-label">Tenant Name</div>
-              <div class="info-value">${rfp.tenantName}</div>
-            </div>
-            <div class="info-item">
-              <div class="info-label">Project Name</div>
-              <div class="info-value">${rfp.projectName}</div>
-            </div>
-            ${rfp.projectAddress ? `
-            <div class="info-item">
-              <div class="info-label">Project Address</div>
-              <div class="info-value">${rfp.projectAddress}</div>
-            </div>
-            ` : ''}
-          </div>
-          <div>
-            <div class="info-item">
-              <div class="info-label">Sent On</div>
-              <div class="info-value">${formatDate(rfp.sentOn)}</div>
-            </div>
-            <div class="info-item">
-              <div class="info-label">Sent By</div>
-              <div class="info-value">${rfp.sentBy}</div>
-            </div>
-            ${rfp.dueDate ? `
-            <div class="info-item">
-              <div class="info-label">Due Date</div>
-              <div class="info-value">${formatDate(rfp.dueDate)}</div>
-            </div>
-            ` : ''}
-            ${rfp.projectSize ? `
-            <div class="info-item">
-              <div class="info-label">Project Size</div>
-              <div class="info-value">${rfp.projectSize}</div>
-            </div>
-            ` : ''}
-          </div>
-        </div>
-      </div>
+      <!-- TO Section -->
+      <table>
+        <tr>
+          <td class="label-cell">TO:</td>
+          <td class="content-cell">
+            ${recipientCompany || recipientName || 'Bridge Industrial'}<br>
+            ${rfp.developmentContact || 'Adolfo Reutlinger'}<br>
+            (305) 747-7057<br>
+            areutlinger@bridgeindustrial.com<br>
+            200 South Biscayne Boulevard, Suite 4400<br>
+            Miami, FL 33131
+          </td>
+        </tr>
+      </table>
 
-      <div class="section">
-        <h3>Request Details</h3>
-        <div class="info-item">
-          <div class="info-label">Requested Services</div>
-          <div class="request-types">
-            ${rfp.requestTypes.map(type => `
-              <span class="request-type">${type.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
-            `).join('')}
-          </div>
-        </div>
-        
-        ${rfp.estimatedValue ? `
-        <div class="info-item">
-          <div class="info-label">Estimated Project Value</div>
-          <div class="info-value">${rfp.estimatedValue}</div>
-        </div>
-        ` : ''}
-        
-        ${rfp.timelineRequirements ? `
-        <div class="info-item">
-          <div class="info-label">Timeline Requirements</div>
-          <div class="info-value">${rfp.timelineRequirements}</div>
-        </div>
-        ` : ''}
-        
-        ${rfp.specialRequirements ? `
-        <div class="info-item">
-          <div class="info-label">Special Requirements</div>
-          <div class="info-value">${rfp.specialRequirements}</div>
-        </div>
-        ` : ''}
-      </div>
+      <!-- Letter Content -->
+      <table>
+        <tr>
+          <td class="content-cell full-width" style="padding: 15px;">
+            <p>Dear Mr. ${rfp.developmentContact || 'Reutlinger'}:</p>
+            
+            <p>Your firm (Bridge Industrial) has been selected to provide a proposal for the ${rfp.projectName} 
+            project. I kindly request that you notify us of your intent to provide a bid no later 
+            than close of business on the date outlined below. Below you will also find a series of 
+            information to assist you throughout the pricing exercise.</p>
+            
+            <p>In the event you have any questions, please feel free to contact 
+            Areutlinger@bridgeindustrial.com at your earliest convenience.</p>
+          </td>
+        </tr>
+      </table>
 
-      ${invitationToBid ? `
-      <div class="invitation-details">
-        <div class="invitation-title">Invitation to Bid Details</div>
-        
-        ${invitationToBid.projectScope ? `
-        <div class="info-item">
-          <div class="info-label">Project Scope</div>
-          <div class="info-value">${invitationToBid.projectScope}</div>
-        </div>
-        ` : ''}
-        
-        ${invitationToBid.bidSubmissionDeadline ? `
-        <div class="info-item">
-          <div class="info-label">Bid Submission Deadline</div>
-          <div class="info-value">${new Date(invitationToBid.bidSubmissionDeadline).toLocaleDateString()}</div>
-        </div>
-        ` : ''}
-        
-        ${invitationToBid.prequalificationCriteria && invitationToBid.prequalificationCriteria.length > 0 ? `
-        <div class="info-item">
-          <div class="info-label">Prequalification Requirements</div>
-          <ul class="requirements-list">
-            ${invitationToBid.prequalificationCriteria.map(criteria => `<li>• ${criteria}</li>`).join('')}
-          </ul>
-        </div>
-        ` : ''}
-        
-        ${invitationToBid.evaluationCriteria && invitationToBid.evaluationCriteria.length > 0 ? `
-        <div class="info-item">
-          <div class="info-label">Evaluation Criteria</div>
-          <ul class="requirements-list">
-            ${invitationToBid.evaluationCriteria.map(criteria => `<li>• ${criteria}</li>`).join('')}
-          </ul>
-        </div>
-        ` : ''}
-      </div>
-      ` : ''}
-
-      <div class="section">
-        <h3>Contact Information</h3>
-        <div class="info-grid">
-          <div>
-            ${rfp.contactPerson ? `
-            <div class="info-item">
-              <div class="info-label">Contact Person</div>
-              <div class="info-value">${rfp.contactPerson}</div>
-            </div>
-            ` : ''}
-            ${rfp.contactEmail ? `
-            <div class="info-item">
-              <div class="info-label">Email</div>
-              <div class="info-value">${rfp.contactEmail}</div>
-            </div>
-            ` : ''}
-          </div>
-          <div>
-            <div class="info-item">
-              <div class="info-label">RFP Status</div>
-              <div class="info-value">${rfp.status.charAt(0).toUpperCase() + rfp.status.slice(1).replace('-', ' ')}</div>
-            </div>
-            <div class="info-item">
-              <div class="info-label">Workflow Phase</div>
-              <div class="info-value">${rfp.workflowPhase.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      ${rfp.files && rfp.files.length > 0 ? `
-      <div class="section">
-        <h3>Attached Files</h3>
-        <div class="files-list">
-          ${rfp.files.map(file => `
-            <div class="file-item">
-              <div class="file-icon"></div>
+      <!-- Project Description -->
+      <table>
+        <tr>
+          <td class="label-cell">PROJECT DESCRIPTION:</td>
+          <td class="content-cell description-box">
+            <p>The project consists of ${totalArea.toLocaleString()} sf of ${existingOffice > 0 ? 'office' : 'office'} and ${warehouseArea > 0 ? warehouseArea.toLocaleString() : '2000'} sf of warehouse. The scope of work 
+            includes, however is not limited to the following:</p>
+            
+            <div class="bullet-points">
               <div>
-                <div style="font-weight: 500;">${file.name}</div>
-                <div style="font-size: 12px; color: #6b7280;">
-                  ${Math.round(file.size / 1024)} KB • ${file.type}
-                </div>
+                <div class="bullet-item">• Box in a box freezer</div>
+                <div class="bullet-item">• HVAC Installation</div>
+                <div class="bullet-item">• New Drive-up Ramp</div>
+                <div class="bullet-item">• Racking</div>
+              </div>
+              <div>
+                <div class="bullet-item">• Scope 5</div>
+                <div class="bullet-item">• Scope 6</div>
+                <div class="bullet-item">• Scope 7</div>
+                <div class="bullet-item">• Scope 8</div>
               </div>
             </div>
-          `).join('')}
-        </div>
-      </div>
-      ` : ''}
+          </td>
+        </tr>
+      </table>
 
-      ${rfp.notes ? `
-      <div class="section">
-        <h3>Additional Notes</h3>
-        <div style="background: #f9fafb; padding: 15px; border-radius: 6px; white-space: pre-wrap;">${rfp.notes}</div>
-      </div>
-      ` : ''}
+      <!-- Document Link -->
+      <table>
+        <tr>
+          <td class="label-cell">DOCUMENT(S) LINK:</td>
+          <td class="content-cell">www.testlinkdoc.com</td>
+        </tr>
+      </table>
 
-      <div class="footer">
-        <p>This document was generated automatically from the RFP Management System</p>
-        <p>Generated on ${new Date().toLocaleString()} for ${recipientType} communication</p>
-      </div>
+      <!-- Key Dates -->
+      <table>
+        <tr>
+          <td class="label-cell">KEY DATES:</td>
+          <td class="content-cell">
+            <table style="border: none; width: 100%;" class="dates-section">
+              <tr>
+                <td style="border: none; width: 60%;">Accept / Reject Invitation to Bid</td>
+                <td style="border: none;">Thursday, ${today}</td>
+              </tr>
+              <tr>
+                <td style="border: none;">Site Visit</td>
+                <td style="border: none;">Saturday, ${today}</td>
+              </tr>
+              <tr>
+                <td style="border: none;">Request(s) for Information Due</td>
+                <td style="border: none;">Monday, ${today}</td>
+              </tr>
+              <tr>
+                <td style="border: none;">Bid Packages Due</td>
+                <td style="border: none;">${dueDate}</td>
+              </tr>
+              <tr>
+                <td style="border: none;">Anticipated Start Date</td>
+                <td style="border: none;">Monday, December 2, 2024</td>
+              </tr>
+              <tr>
+                <td style="border: none;">Anticipated Construction Completion Date</td>
+                <td style="border: none;">Saturday, June 6, 2026</td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+
+      <!-- Bid Manager -->
+      <table>
+        <tr>
+          <td class="label-cell">BID MANAGER:</td>
+          <td class="content-cell">
+            ${rfp.developmentContact || 'Adolfo Reutlinger'}<br>
+            Areutlinger@bridgeindustrial.com<br>
+            (305) 747-7057
+          </td>
+        </tr>
+      </table>
+
+      <!-- Submission Requirements -->
+      <table>
+        <tr>
+          <td class="label-cell">SUBMISSION REQUIREMENTS:</td>
+          <td class="content-cell">
+            <div class="submission-req">
+              <div class="req-column">
+                <ul style="margin: 0; padding-left: 15px;">
+                  <li>Bid Cost Breakdown (Excel File)</li>
+                  <li>Preliminary Construction Schedule (w/ Long Lead Items)</li>
+                  <li>Affidavit</li>
+                </ul>
+              </div>
+              <div class="req-column">
+                <ul style="margin: 0; padding-left: 15px;">
+                  <li>Bid Req. 4</li>
+                  <li>Bid Req. 5</li>
+                  <li>Bid Req. 6</li>
+                </ul>
+              </div>
+            </div>
+          </td>
+        </tr>
+      </table>
     </body>
     </html>
   `;
 }
 
-export function generatePdfFilename(rfp: RfpRequest, recipientType: string): string {
-  const date = new Date().toISOString().split('T')[0];
-  const sanitizedProject = rfp.projectName.replace(/[^a-zA-Z0-9]/g, '_');
-  return `${rfp.rfpNumber}_${sanitizedProject}_${recipientType}_${date}.pdf`;
+export function generatePdfFilename(rfp: any, recipientType: string): string {
+  const cleanProjectName = rfp.projectName.replace(/[^a-zA-Z0-9]/g, '_');
+  const timestamp = new Date().toISOString().split('T')[0];
+  return `ITB_${cleanProjectName}_${recipientType}_${timestamp}.pdf`;
 }

@@ -37,7 +37,7 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      await apiRequest("DELETE", `/api/rfp-requests/${id}`, undefined);
+      await apiRequest(`/api/rfp-requests/${id}`, "DELETE");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });

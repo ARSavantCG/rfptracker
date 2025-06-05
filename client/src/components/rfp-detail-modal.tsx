@@ -48,7 +48,7 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
   const deleteFileMutation = useMutation({
     mutationFn: async (fileId: string) => {
       if (!rfp) return;
-      const response = await apiRequest("DELETE", `/api/rfp-requests/${rfp.id}/files/${fileId}`, undefined);
+      const response = await apiRequest(`/api/rfp-requests/${rfp.id}/files/${fileId}`, "DELETE");
       return response.json();
     },
     onSuccess: () => {

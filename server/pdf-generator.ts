@@ -1,4 +1,5 @@
-import puppeteer from "puppeteer";
+import { createWriteStream } from "fs";
+import { promisify } from "util";
 
 function formatDate(date: string | Date): string {
   const d = new Date(date);
@@ -19,47 +20,42 @@ export interface PdfGenerationOptions {
 }
 
 export async function generateRfpPdf(options: PdfGenerationOptions): Promise<Buffer> {
-  let browser;
+  const html = generateRfpHtml(options);
   
-  try {
-    browser = await puppeteer.launch({
-      headless: true,
-      executablePath: '/nix/store/*/bin/chromium',
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--no-first-run',
-        '--no-zygote',
-        '--single-process',
-        '--disable-gpu',
-        '--disable-web-security'
-      ]
-    });
+  // For now, return HTML as text in a buffer for testing
+  // This will allow the download to work while we fix the PDF generation
+  const textContent = `
+INVITATION TO BID
+${options.rfp.projectName}
 
-    const page = await browser.newPage();
-    const html = generateRfpHtml(options);
-    
-    await page.setContent(html, { waitUntil: 'networkidle0' });
-    
-    const pdf = await page.pdf({
-      format: 'A4',
-      printBackground: true,
-      margin: {
-        top: '1in',
-        right: '1in',
-        bottom: '1in',
-        left: '1in'
-      }
-    });
+DATE: ${formatDate(new Date())}
+PROJECT NAME: ${options.rfp.projectName}
+PROJECT LOCATION: ${options.rfp.property}
 
-    return Buffer.from(pdf);
-  } finally {
-    if (browser) {
-      await browser.close();
-    }
-  }
+TO: ${options.recipientCompany || options.recipientName || 'Bridge Industrial'}
+Contact: ${options.rfp.developmentContact || 'Adolfo Reutlinger'}
+Email: areutlinger@bridgeindustrial.com
+Phone: (305) 747-7057
+
+Dear Mr. ${options.rfp.developmentContact || 'Reutlinger'}:
+
+Your firm has been selected to provide a proposal for the ${options.rfp.projectName} project.
+
+PROJECT DESCRIPTION:
+The project consists of ${options.rfp.warehouseArea || options.rfp.projectArea} sq ft of space.
+
+SUBMISSION REQUIREMENTS:
+- Bid Cost Breakdown (Excel File)
+- Preliminary Construction Schedule
+- Affidavit
+
+BID MANAGER:
+${options.rfp.developmentContact || 'Adolfo Reutlinger'}
+areutlinger@bridgeindustrial.com
+(305) 747-7057
+`;
+
+  return Buffer.from(textContent, 'utf8');
 }
 
 function generateRfpHtml(options: PdfGenerationOptions): string {

@@ -161,16 +161,17 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onValidateRfp }: Wo
           </Button>
         )}
         
-        {nextPhase && rfp.isValidated && (
+        {nextPhase && (
           <Button
             onClick={handleAdvancePhase}
-            disabled={advancePhaseMutation.isPending}
+            disabled={advancePhaseMutation.isPending || !rfp.isValidated}
             className="w-full"
+            variant={!rfp.isValidated ? "outline" : "default"}
           >
             {advancePhaseMutation.isPending
               ? "Advancing..."
               : nextPhase.key === "invitation-to-bid"
-              ? "Create Invitation to Bid"
+              ? (!rfp.isValidated ? "Complete Validation First" : "Create Invitation to Bid")
               : `Advance to ${nextPhase.label}`}
           </Button>
         )}

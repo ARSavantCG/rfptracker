@@ -74,7 +74,15 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onValidateRfp }: Wo
     },
   });
 
-  const currentPhaseIndex = workflowPhases.findIndex(phase => phase.key === rfp.workflowPhase);
+  // Map RFP status to workflow phase to ensure sync
+  const getWorkflowPhaseFromStatus = (status: string, workflowPhase: string) => {
+    if (status === "received") return "rfp-entry";
+    if (status === "in-progress" && workflowPhase === "rfp-entry") return "rfp-entry";
+    return workflowPhase;
+  };
+
+  const actualWorkflowPhase = getWorkflowPhaseFromStatus(rfp.status, rfp.workflowPhase);
+  const currentPhaseIndex = workflowPhases.findIndex(phase => phase.key === actualWorkflowPhase);
   const nextPhase = workflowPhases[currentPhaseIndex + 1];
 
   const handleAdvancePhase = () => {
@@ -100,7 +108,7 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onValidateRfp }: Wo
       <div className="space-y-3">
         {workflowPhases.map((phase, index) => {
           const Icon = phase.icon;
-          const isActive = phase.key === rfp.workflowPhase;
+          const isActive = phase.key === actualWorkflowPhase;
           const isCompleted = index < currentPhaseIndex;
           const isNext = index === currentPhaseIndex + 1;
 
@@ -139,7 +147,7 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onValidateRfp }: Wo
       </div>
 
       <div className="mt-4 pt-4 border-t border-gray-200 space-y-2">
-        {rfp.workflowPhase === "rfp-entry" && (
+        {actualWorkflowPhase === "rfp-entry" && (
           <Button
             onClick={() => onValidateRfp?.(rfp)}
             variant="outline"

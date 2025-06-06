@@ -333,25 +333,28 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
               description: "Broker-contractor invitation opened in new tab",
             });
           } else {
-            // Fallback: create a blob URL and try again
+            // Fallback: create a download link that automatically triggers
+            console.log("Data URL blocked, using download approach");
             const blob = new Blob([htmlContent], { type: 'text/html' });
             const blobUrl = window.URL.createObjectURL(blob);
-            const fallbackWindow = window.open(blobUrl, '_blank');
             
-            if (fallbackWindow) {
-              fallbackWindow.focus();
-              setTimeout(() => window.URL.revokeObjectURL(blobUrl), 5000);
-              toast({
-                title: "Document Generated",
-                description: "Broker-contractor invitation opened in new tab",
-              });
-            } else {
-              toast({
-                title: "Popup Blocked",
-                description: "Please allow popups and try again",
-                variant: "destructive",
-              });
-            }
+            // Create temporary download link
+            const downloadLink = document.createElement('a');
+            downloadLink.href = blobUrl;
+            downloadLink.download = `${rfp?.rfpNumber}-broker-contractor-rfp.html`;
+            downloadLink.style.display = 'none';
+            
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+            
+            // Clean up the blob URL
+            setTimeout(() => window.URL.revokeObjectURL(blobUrl), 1000);
+            
+            toast({
+              title: "Document Downloaded",
+              description: "Broker-contractor RFP saved to your downloads folder. Open the file to view.",
+            });
           }
         }
       }

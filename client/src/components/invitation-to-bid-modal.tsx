@@ -793,14 +793,14 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
             <div className="border-t pt-4">
               <h3 className="font-medium mb-3">Key Project Dates</h3>
               <div className="space-y-3">
-                {form.watch("keyDates").map((keyDate, index) => (
+                {(form.watch("keyDates") || []).map((keyDate, index) => (
                   <div key={index} className="flex gap-2 items-end">
                     <div className="flex-1">
                       <Input
                         placeholder="Date description (e.g., Design completion)"
                         value={keyDate.label}
                         onChange={(e) => {
-                          const keyDates = form.getValues("keyDates");
+                          const keyDates = form.getValues("keyDates") || [];
                           keyDates[index].label = e.target.value;
                           form.setValue("keyDates", keyDates);
                         }}
@@ -811,7 +811,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                         type="date"
                         value={keyDate.date}
                         onChange={(e) => {
-                          const keyDates = form.getValues("keyDates");
+                          const keyDates = form.getValues("keyDates") || [];
                           keyDates[index].date = e.target.value;
                           form.setValue("keyDates", keyDates);
                         }}
@@ -822,7 +822,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        const keyDates = form.getValues("keyDates");
+                        const keyDates = form.getValues("keyDates") || [];
                         keyDates.splice(index, 1);
                         form.setValue("keyDates", keyDates);
                       }}
@@ -835,7 +835,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                   type="button"
                   variant="outline"
                   onClick={() => {
-                    const keyDates = form.getValues("keyDates");
+                    const keyDates = form.getValues("keyDates") || [];
                     keyDates.push({ label: "", date: "" });
                     form.setValue("keyDates", keyDates);
                   }}

@@ -302,13 +302,30 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
         console.log("Generating preliminary architect RFP...");
         if (delay > 0) await new Promise(resolve => setTimeout(resolve, delay));
         await generatePdf("broker-architect");
-        delay += 3000; // Longer delay to prevent popup blocking
+        delay += 1000;
       }
       
       if (formData.generateBrokerContractorRfp) {
         console.log("Generating preliminary contractor RFP...");
         if (delay > 0) await new Promise(resolve => setTimeout(resolve, delay));
-        await generatePdf("broker-contractor");
+        
+        // For the second broker document, create a data URL to avoid popup blocking
+        const response = await fetch(`/api/rfp-requests/${rfp?.id}/generate-pdf`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ recipientType: "broker-contractor" }),
+        });
+        
+        if (response.ok) {
+          const htmlContent = await response.text();
+          const dataUrl = `data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`;
+          window.open(dataUrl, '_blank');
+          
+          toast({
+            title: "Document Generated",
+            description: "Broker-contractor invitation opened in new tab",
+          });
+        }
       }
       
         // Update RFP status

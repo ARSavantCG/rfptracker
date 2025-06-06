@@ -266,12 +266,19 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
     },
     onSuccess: async (invitationToBid) => {
       toast({
-        title: "Invitation to Bid Created",
+        title: "Invitation to Bid Created", 
         description: "RFP details saved successfully. Ready to generate PDFs.",
       });
       
       // Generate PDFs based on selections
       const formData = form.getValues();
+      console.log("Starting PDF generation with form data:", formData);
+      console.log("Boolean values:", {
+        generateArchitectRfp: formData.generateArchitectRfp,
+        generateContractorRfp: formData.generateContractorRfp, 
+        generateBrokerArchitectRfp: formData.generateBrokerArchitectRfp,
+        generateBrokerContractorRfp: formData.generateBrokerContractorRfp
+      });
       
       let delay = 0;
       
@@ -325,6 +332,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
     try {
       setIsGeneratingPdfs(true);
       console.log(`Starting PDF generation for ${recipientType}`);
+      console.log(`Making request to: /api/rfp-requests/${rfp?.id}/generate-pdf`);
       
       // Get HTML content from backend
       const response = await fetch(`/api/rfp-requests/${rfp?.id}/generate-pdf`, {
@@ -393,6 +401,9 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
   };
 
   const onSubmit = (data: InvitationFormData) => {
+    console.log("Form submission data:", data);
+    console.log("Broker architect selected:", data.generateBrokerArchitectRfp);
+    console.log("Broker contractor selected:", data.generateBrokerContractorRfp);
     createInvitationMutation.mutate(data);
   };
 

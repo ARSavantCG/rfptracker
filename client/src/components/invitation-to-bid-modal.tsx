@@ -275,41 +275,47 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
       try {
         // Generate PDFs based on selections
         const formData = form.getValues();
-        console.log("Starting PDF generation with form data:", formData);
-        console.log("Boolean values:", {
-          generateArchitectRfp: formData.generateArchitectRfp,
-          generateContractorRfp: formData.generateContractorRfp, 
-          generateBrokerArchitectRfp: formData.generateBrokerArchitectRfp,
-          generateBrokerContractorRfp: formData.generateBrokerContractorRfp
-        });
-      
-        let delay = 0;
-      
-      if (formData.generateArchitectRfp) {
-        console.log("Generating formal architect RFP...");
-        await generatePdf("architect");
-        delay += 1000;
-      }
-      
-      if (formData.generateContractorRfp) {
-        console.log("Generating formal contractor ITB...");
-        if (delay > 0) await new Promise(resolve => setTimeout(resolve, delay));
-        await generatePdf("contractor");
-        delay += 1000;
-      }
-      
-      if (formData.generateBrokerArchitectRfp) {
-        console.log("Generating preliminary architect RFP...");
-        if (delay > 0) await new Promise(resolve => setTimeout(resolve, delay));
-        await generatePdf("broker-architect");
-        delay += 1000;
-      }
-      
-      if (formData.generateBrokerContractorRfp) {
-        console.log("Generating preliminary contractor RFP...");
-        if (delay > 0) await new Promise(resolve => setTimeout(resolve, delay));
-        await generatePdf("broker-contractor");
-      }
+        setIsGeneratingPdfs(true);
+        
+        // Collect all document types to generate
+        const documentsToGenerate = [];
+        if (formData.generateArchitectRfp) documentsToGenerate.push({ type: "architect", label: "Formal Architect RFP" });
+        if (formData.generateContractorRfp) documentsToGenerate.push({ type: "contractor", label: "Formal Contractor ITB" });
+        if (formData.generateBrokerArchitectRfp) documentsToGenerate.push({ type: "broker-architect", label: "Broker Architect RFP" });
+        if (formData.generateBrokerContractorRfp) documentsToGenerate.push({ type: "broker-contractor", label: "Broker Contractor RFP" });
+        
+        if (documentsToGenerate.length === 0) {
+          toast({
+            title: "No Documents Selected",
+            description: "Please select at least one document type to generate.",
+            variant: "destructive",
+          });
+          setIsGeneratingPdfs(false);
+          return;
+        }
+        
+        // Generate the first document immediately
+        await generatePdf(documentsToGenerate[0].type);
+        
+        // If there are additional documents, show interactive buttons to avoid popup blocking
+        if (documentsToGenerate.length > 1) {
+          const remainingDocs = documentsToGenerate.slice(1);
+          
+          for (let i = 0; i < remainingDocs.length; i++) {
+            const doc = remainingDocs[i];
+            setTimeout(() => {
+              toast({
+                title: `${doc.label} Ready`,
+                description: "Click to open document",
+                action: {
+                  altText: "Open Document",
+                  onClick: () => generatePdf(doc.type),
+                  children: "Open"
+                }
+              });
+            }, (i + 1) * 500);
+          }
+        }
       
         // Update RFP status
         await apiRequest(`/api/rfp-requests/${rfp?.id}`, "PATCH", {

@@ -680,8 +680,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid ID" });
       }
 
-      if (!recipientType || !["architect", "contractor"].includes(recipientType)) {
-        return res.status(400).json({ message: "Valid recipient type (architect/contractor) is required" });
+      if (!recipientType || !["architect", "contractor", "broker-architect", "broker-contractor"].includes(recipientType)) {
+        return res.status(400).json({ message: "Valid recipient type is required" });
       }
 
       const rfp = await storage.getRfpRequest(id);

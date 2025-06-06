@@ -17,6 +17,8 @@ import type { RfpRequest } from "@shared/schema";
 const invitationFormSchema = z.object({
   generateArchitectRfp: z.boolean().default(false),
   generateContractorRfp: z.boolean().default(false),
+  generateBrokerArchitectRfp: z.boolean().default(false),
+  generateBrokerContractorRfp: z.boolean().default(false),
   projectScope: z.string().min(1, "Project scope is required"),
   projectLocation: z.string().min(1, "Project location is required"),
   estimatedBudget: z.string().optional(),
@@ -42,9 +44,9 @@ const invitationFormSchema = z.object({
     date: z.string()
   })).default([]),
 }).refine(
-  (data) => data.generateArchitectRfp || data.generateContractorRfp,
+  (data) => data.generateArchitectRfp || data.generateContractorRfp || data.generateBrokerArchitectRfp || data.generateBrokerContractorRfp,
   {
-    message: "Select at least one RFP type to generate (Architect or Contractor)",
+    message: "Select at least one RFP type to generate",
     path: ["generateArchitectRfp"],
   }
 );
@@ -68,6 +70,8 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
     defaultValues: {
       generateArchitectRfp: false,
       generateContractorRfp: false,
+      generateBrokerArchitectRfp: false,
+      generateBrokerContractorRfp: false,
       projectScope: "",
       projectLocation: "",
       estimatedBudget: "",
@@ -269,18 +273,32 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
       // Generate PDFs based on selections
       const formData = form.getValues();
       
+      let delay = 0;
+      
       if (formData.generateArchitectRfp) {
-        console.log("Generating architect PDF...");
+        console.log("Generating formal architect RFP...");
         await generatePdf("architect");
+        delay += 1000;
       }
       
       if (formData.generateContractorRfp) {
-        console.log("Generating contractor PDF...");
-        // Small delay to prevent popup blocking
-        if (formData.generateArchitectRfp) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
+        console.log("Generating formal contractor ITB...");
+        if (delay > 0) await new Promise(resolve => setTimeout(resolve, delay));
         await generatePdf("contractor");
+        delay += 1000;
+      }
+      
+      if (formData.generateBrokerArchitectRfp) {
+        console.log("Generating preliminary architect RFP...");
+        if (delay > 0) await new Promise(resolve => setTimeout(resolve, delay));
+        await generatePdf("broker-architect");
+        delay += 1000;
+      }
+      
+      if (formData.generateBrokerContractorRfp) {
+        console.log("Generating preliminary contractor RFP...");
+        if (delay > 0) await new Promise(resolve => setTimeout(resolve, delay));
+        await generatePdf("broker-contractor");
       }
       
       // Update RFP status
@@ -303,7 +321,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
     },
   });
 
-  const generatePdf = async (recipientType: "architect" | "contractor") => {
+  const generatePdf = async (recipientType: "architect" | "contractor" | "broker-architect" | "broker-contractor") => {
     try {
       setIsGeneratingPdfs(true);
       console.log(`Starting PDF generation for ${recipientType}`);
@@ -398,49 +416,102 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
             
             {/* RFP Type Selection */}
             <div className="border p-4 rounded-lg bg-gray-50">
-              <h3 className="font-medium mb-3">Select RFP Types to Generate</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="generateArchitectRfp"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel>Generate Architect RFP</FormLabel>
-                        <p className="text-sm text-muted-foreground">
-                          Create RFP for architectural services
-                        </p>
-                      </div>
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="generateContractorRfp"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel>Generate General Contractor RFP</FormLabel>
-                        <p className="text-sm text-muted-foreground">
-                          Create RFP for general contractor services
-                        </p>
-                      </div>
-                    </FormItem>
-                  )}
-                />
+              <h3 className="font-medium mb-4">Select RFP Types to Generate</h3>
+              
+              {/* Formal Bids Section */}
+              <div className="mb-6">
+                <h4 className="font-medium text-sm text-blue-700 mb-3">Formal Project Bids (Existing Tenants)</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="generateArchitectRfp"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>Architect RFP (Formal)</FormLabel>
+                          <p className="text-sm text-muted-foreground">
+                            Complete RFP for confirmed tenant project
+                          </p>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="generateContractorRfp"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>Contractor ITB (Formal)</FormLabel>
+                          <p className="text-sm text-muted-foreground">
+                            Formal invitation to bid for confirmed project
+                          </p>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+
+              {/* Broker Response Section */}
+              <div className="border-t pt-4">
+                <h4 className="font-medium text-sm text-green-700 mb-3">Broker Response RFPs (Prospective Tenants)</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="generateBrokerArchitectRfp"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>Architect RFP (Preliminary)</FormLabel>
+                          <p className="text-sm text-muted-foreground">
+                            Space planning & preliminary pricing for prospects
+                          </p>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="generateBrokerContractorRfp"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>Contractor RFP (Preliminary)</FormLabel>
+                          <p className="text-sm text-muted-foreground">
+                            Preliminary pricing & scheduling for prospects
+                          </p>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                </div>
               </div>
               <FormMessage />
             </div>

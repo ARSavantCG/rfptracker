@@ -318,13 +318,41 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
         
         if (response.ok) {
           const htmlContent = await response.text();
-          const dataUrl = `data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`;
-          window.open(dataUrl, '_blank');
+          console.log("Contractor RFP HTML length:", htmlContent.length);
           
-          toast({
-            title: "Document Generated",
-            description: "Broker-contractor invitation opened in new tab",
-          });
+          // Try multiple approaches to ensure the document opens
+          const dataUrl = `data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`;
+          const newWindow = window.open(dataUrl, '_blank');
+          
+          console.log("Contractor window opened:", !!newWindow);
+          
+          if (newWindow) {
+            newWindow.focus();
+            toast({
+              title: "Document Generated",
+              description: "Broker-contractor invitation opened in new tab",
+            });
+          } else {
+            // Fallback: create a blob URL and try again
+            const blob = new Blob([htmlContent], { type: 'text/html' });
+            const blobUrl = window.URL.createObjectURL(blob);
+            const fallbackWindow = window.open(blobUrl, '_blank');
+            
+            if (fallbackWindow) {
+              fallbackWindow.focus();
+              setTimeout(() => window.URL.revokeObjectURL(blobUrl), 5000);
+              toast({
+                title: "Document Generated",
+                description: "Broker-contractor invitation opened in new tab",
+              });
+            } else {
+              toast({
+                title: "Popup Blocked",
+                description: "Please allow popups and try again",
+                variant: "destructive",
+              });
+            }
+          }
         }
       }
       

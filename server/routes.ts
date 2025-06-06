@@ -61,6 +61,20 @@ const upload = multer({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Test route for debugging preview issues
+  app.get("/test", (req, res) => {
+    res.send(`
+      <!DOCTYPE html>
+      <html>
+      <head><title>Test</title></head>
+      <body>
+        <h1>Server is working!</h1>
+        <p>Time: ${new Date().toISOString()}</p>
+        <a href="/">Go to main app</a>
+      </body>
+      </html>
+    `);
+  });
   // Test route to debug multer
   app.post("/api/test-upload", upload.array("files"), (req, res) => {
     console.log("Test upload route hit");

@@ -149,14 +149,34 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
     mutationFn: async (data: InvitationFormData) => {
       if (!rfp) throw new Error("No RFP selected");
       
+      // Transform form data to match database schema
+      const transformedData = {
+        projectScope: data.projectScope,
+        projectLocation: data.projectLocation,
+        estimatedBudget: data.estimatedBudget,
+        projectTimeline: data.projectTimeline,
+        bidSubmissionDeadline: data.bidSubmissionDeadline,
+        projectStartDate: data.projectStartDate,
+        projectEndDate: data.projectEndDate,
+        specialRequirements: data.specialRequirements ? [data.specialRequirements] : [],
+        technicalSpecifications: data.technicalSpecifications,
+        contractTerms: data.contractTerms,
+        paymentTerms: data.paymentTerms,
+        insuranceRequirements: data.insuranceRequirements,
+        bondingRequirements: data.bondingRequirements,
+        prequalificationCriteria: data.prequalificationCriteria ? [data.prequalificationCriteria] : [],
+        evaluationCriteria: data.evaluationCriteria ? [data.evaluationCriteria] : [],
+        contactForQuestions: `${data.contactPerson} - ${data.contactEmail}${data.contactPhone ? ' - ' + data.contactPhone : ''}`,
+      };
+      
       // Save or update invitation to bid record
       if (existingInvitation) {
-        const response = await apiRequest(`/api/rfp-requests/${rfp.id}/invitation-to-bid`, "PATCH", data);
+        const response = await apiRequest(`/api/rfp-requests/${rfp.id}/invitation-to-bid`, "PATCH", transformedData);
         return response.json();
       } else {
         const response = await apiRequest("/api/invitation-to-bid", "POST", {
           rfpId: rfp.id,
-          ...data,
+          ...transformedData,
         });
         return response.json();
       }
@@ -181,14 +201,34 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
     mutationFn: async (data: InvitationFormData) => {
       if (!rfp) throw new Error("No RFP selected");
       
+      // Transform form data to match database schema
+      const transformedData = {
+        projectScope: data.projectScope,
+        projectLocation: data.projectLocation,
+        estimatedBudget: data.estimatedBudget,
+        projectTimeline: data.projectTimeline,
+        bidSubmissionDeadline: data.bidSubmissionDeadline,
+        projectStartDate: data.projectStartDate,
+        projectEndDate: data.projectEndDate,
+        specialRequirements: data.specialRequirements ? [data.specialRequirements] : [],
+        technicalSpecifications: data.technicalSpecifications,
+        contractTerms: data.contractTerms,
+        paymentTerms: data.paymentTerms,
+        insuranceRequirements: data.insuranceRequirements,
+        bondingRequirements: data.bondingRequirements,
+        prequalificationCriteria: data.prequalificationCriteria ? [data.prequalificationCriteria] : [],
+        evaluationCriteria: data.evaluationCriteria ? [data.evaluationCriteria] : [],
+        contactForQuestions: `${data.contactPerson} - ${data.contactEmail}${data.contactPhone ? ' - ' + data.contactPhone : ''}`,
+      };
+      
       // First save the invitation data
       if (existingInvitation) {
-        const response = await apiRequest(`/api/rfp-requests/${rfp.id}/invitation-to-bid`, "PATCH", data);
+        const response = await apiRequest(`/api/rfp-requests/${rfp.id}/invitation-to-bid`, "PATCH", transformedData);
         return response.json();
       } else {
         const response = await apiRequest("/api/invitation-to-bid", "POST", {
           rfpId: rfp.id,
-          ...data,
+          ...transformedData,
         });
         return response.json();
       }
@@ -698,7 +738,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                   ) : (
                     <>
                       <Save className="h-4 w-4 mr-2" />
-                      Save Draft
+                      Save
                     </>
                   )}
                 </Button>

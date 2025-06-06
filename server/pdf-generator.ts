@@ -51,7 +51,9 @@ function generateRfpHtml(options: PdfGenerationOptions): string {
   const { rfp, invitationToBid, recipientType, recipientName, recipientCompany } = options;
   
   const today = formatDate(new Date());
-  const dueDate = invitationToBid?.dueDate ? formatDate(invitationToBid.dueDate) : 'Thursday, September 19, 2024';
+  const bidDeadline = invitationToBid?.bidSubmissionDeadline ? formatDate(invitationToBid.bidSubmissionDeadline) : formatDate(new Date());
+  const projectStart = invitationToBid?.projectStartDate ? formatDate(invitationToBid.projectStartDate) : '';
+  const projectEnd = invitationToBid?.projectEndDate ? formatDate(invitationToBid.projectEndDate) : '';
   
   // Calculate areas for display
   const totalArea = parseInt(rfp.warehouseArea?.replace(/,/g, '') || '0');
@@ -59,17 +61,35 @@ function generateRfpHtml(options: PdfGenerationOptions): string {
   const newOffice = parseInt(rfp.officeAreaNew?.replace(/,/g, '') || '0');
   const warehouseArea = totalArea - existingOffice - newOffice;
   
+  // Generate different content based on recipient type
+  if (recipientType === "contractor") {
+    return generateContractorRfpHtml(options, { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea });
+  } else {
+    return generateArchitectRfpHtml(options, { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea });
+  }
+}
+
+function generateContractorRfpHtml(options: PdfGenerationOptions, dates: any): string {
+  const { rfp, invitationToBid, recipientName, recipientCompany } = options;
+  const { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea } = dates;
+  
+  const projectName = rfp.confidential ? `Confidential @ ${rfp.property}` : `${rfp.tenantName} @ ${rfp.property}`;
+  const contactInfo = invitationToBid?.contactForQuestions?.split(' - ') || [];
+  const contactPerson = contactInfo[0] || 'Development Contact';
+  const contactEmail = contactInfo[1] || '';
+  const contactPhone = contactInfo[2] || '';
+  
   return `
     <!DOCTYPE html>
     <html>
     <head>
       <meta charset="utf-8">
-      <title>Invitation to Bid - ${rfp.rfpNumber}</title>
+      <title>Invitation to Bid - ${projectName}</title>
       <style>
         body {
           font-family: Arial, sans-serif;
           font-size: 11px;
-          line-height: 1.3;
+          line-height: 1.4;
           color: #000;
           margin: 0;
           padding: 20px;
@@ -77,22 +97,36 @@ function generateRfpHtml(options: PdfGenerationOptions): string {
         
         .header {
           text-align: center;
-          margin-bottom: 20px;
+          margin-bottom: 30px;
           border-bottom: 2px solid #000;
-          padding-bottom: 10px;
+          padding-bottom: 15px;
         }
         
         .header h1 {
-          font-size: 16px;
+          font-size: 18px;
           font-weight: bold;
           margin: 0;
           text-transform: uppercase;
+          letter-spacing: 2px;
         }
         
         .header h2 {
           font-size: 14px;
           font-weight: normal;
-          margin: 5px 0 0 0;
+          margin: 10px 0 0 0;
+        }
+        
+        .section {
+          margin-bottom: 25px;
+        }
+        
+        .section-title {
+          font-weight: bold;
+          font-size: 12px;
+          text-transform: uppercase;
+          margin-bottom: 8px;
+          border-bottom: 1px solid #ccc;
+          padding-bottom: 3px;
         }
         
         table {
@@ -101,225 +135,448 @@ function generateRfpHtml(options: PdfGenerationOptions): string {
           margin-bottom: 15px;
         }
         
-        td {
+        .info-table td {
+          padding: 5px 8px;
           border: 1px solid #000;
-          padding: 5px;
           vertical-align: top;
         }
         
-        .label-cell {
+        .info-table .label {
+          background-color: #f5f5f5;
           font-weight: bold;
-          background-color: #f0f0f0;
-          width: 120px;
-        }
-        
-        .content-cell {
-          background-color: white;
-        }
-        
-        .full-width {
-          width: 100%;
+          width: 25%;
         }
         
         .description-box {
-          min-height: 100px;
-          padding: 8px;
-        }
-        
-        .bullet-points {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 5px;
+          border: 1px solid #000;
+          padding: 15px;
           margin: 10px 0;
+          background-color: #fafafa;
         }
         
-        .bullet-item {
-          margin: 3px 0;
+        .requirements-list {
+          margin: 10px 0;
+          padding-left: 20px;
         }
         
-        .dates-section td {
-          padding: 3px 5px;
+        .requirements-list li {
+          margin-bottom: 5px;
         }
         
-        .submission-req {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 10px;
-        }
-        
-        .req-column {
-          margin: 0;
-        }
-        
-        .req-column li {
-          margin: 2px 0;
+        .footer {
+          margin-top: 40px;
+          text-align: center;
+          font-size: 10px;
+          color: #666;
         }
       </style>
     </head>
     <body>
       <div class="header">
         <h1>INVITATION TO BID</h1>
-        <h2>${rfp.projectName}</h2>
+        <h2>${projectName}</h2>
       </div>
+      
+      <div class="section">
+        <table class="info-table">
+          <tr>
+            <td class="label">DATE:</td>
+            <td>${today}</td>
+          </tr>
+          <tr>
+            <td class="label">PROJECT NAME:</td>
+            <td>${projectName}</td>
+          </tr>
+          <tr>
+            <td class="label">PROJECT LOCATION:</td>
+            <td>${invitationToBid?.projectLocation || rfp.property}<br>
+                ${rfp.propertyAddress || ''}</td>
+          </tr>
+          <tr>
+            <td class="label">TO:</td>
+            <td>
+              ${recipientCompany || 'General Contractor'}<br>
+              ${recipientName || ''}<br>
+              ${contactPhone}<br>
+              ${contactEmail}
+            </td>
+          </tr>
+        </table>
+      </div>
+      
+      <div class="description-box">
+        <p><strong>Dear ${recipientName || 'Contractor'},</strong></p>
+        <p>Your firm has been selected to provide a proposal for the ${projectName} project. 
+        We kindly request that you notify us of your intent to provide a bid no later than 
+        close of business on the date outlined below. Below, you will also find a series of 
+        information to assist you throughout the pricing exercise.</p>
+        <p>In the event you have any questions, please feel free to contact 
+        ${contactPerson} at ${contactEmail} at your earliest convenience.</p>
+      </div>
+      
+      <div class="section">
+        <div class="section-title">PROJECT DESCRIPTION:</div>
+        <div class="description-box">
+          <p>The project consists of ${totalArea.toLocaleString()} sf of total rentable area. The scope of work includes, however is not limited to the following:</p>
+          <ul class="requirements-list">
+            ${warehouseArea > 0 ? `<li>Warehouse Space: ${warehouseArea.toLocaleString()} sf</li>` : ''}
+            ${existingOffice > 0 ? `<li>Existing Office: ${existingOffice.toLocaleString()} sf</li>` : ''}
+            ${newOffice > 0 ? `<li>New Office Build-out: ${newOffice.toLocaleString()} sf</li>` : ''}
+            ${invitationToBid?.specialRequirements ? 
+              (Array.isArray(invitationToBid.specialRequirements) ? 
+                invitationToBid.specialRequirements.map(req => `<li>${req}</li>`).join('') :
+                `<li>${invitationToBid.specialRequirements}</li>`) : ''}
+          </ul>
+        </div>
+      </div>
+      
+      <div class="section">
+        <table class="info-table">
+          <tr>
+            <td class="label">DOCUMENT(S) LINK:</td>
+            <td>${rfp.documentLink || 'www.testlinkdoc.com'}</td>
+          </tr>
+        </table>
+      </div>
+      
+      <div class="section">
+        <div class="section-title">KEY DATES:</div>
+        <table class="info-table">
+          <tr>
+            <td class="label">Accept / Reject Invitation to Bid</td>
+            <td>${bidDeadline}</td>
+          </tr>
+          <tr>
+            <td class="label">Site Visit</td>
+            <td>${invitationToBid?.siteVisitScheduled ? formatDate(invitationToBid.siteVisitScheduled) : 'TBD'}</td>
+          </tr>
+          <tr>
+            <td class="label">Requests for Information Due</td>
+            <td>3 business days before bid due</td>
+          </tr>
+          <tr>
+            <td class="label">Bid Packages Due</td>
+            <td>${bidDeadline}</td>
+          </tr>
+          <tr>
+            <td class="label">Anticipated Start Date</td>
+            <td>${projectStart}</td>
+          </tr>
+          <tr>
+            <td class="label">Anticipated Construction Completion Date</td>
+            <td>${projectEnd}</td>
+          </tr>
+        </table>
+      </div>
+      
+      <div class="section">
+        <div class="section-title">BID MANAGER:</div>
+        <table class="info-table">
+          <tr>
+            <td class="label">Name:</td>
+            <td>${contactPerson}</td>
+          </tr>
+          <tr>
+            <td class="label">Email:</td>
+            <td>${contactEmail}</td>
+          </tr>
+          <tr>
+            <td class="label">Phone:</td>
+            <td>${contactPhone}</td>
+          </tr>
+        </table>
+      </div>
+      
+      <div class="section">
+        <div class="section-title">SUBMISSION REQUIREMENTS:</div>
+        <div class="description-box">
+          <ul class="requirements-list">
+            <li>Bid Cost Breakdown (Excel File)</li>
+            <li>Detailed Construction Schedule (w/ Long Lead Items)</li>
+            <li>Affidavit</li>
+            ${invitationToBid?.prequalificationCriteria ? 
+              (Array.isArray(invitationToBid.prequalificationCriteria) ? 
+                invitationToBid.prequalificationCriteria.map(req => `<li>${req}</li>`).join('') :
+                `<li>${invitationToBid.prequalificationCriteria}</li>`) : ''}
+          </ul>
+        </div>
+      </div>
+      
+      ${invitationToBid?.contractTerms || invitationToBid?.paymentTerms || invitationToBid?.insuranceRequirements ? `
+      <div class="section">
+        <div class="section-title">CONTRACT TERMS & CONDITIONS:</div>
+        <div class="description-box">
+          ${invitationToBid?.contractTerms ? `<p><strong>Contract Terms:</strong> ${invitationToBid.contractTerms}</p>` : ''}
+          ${invitationToBid?.paymentTerms ? `<p><strong>Payment Terms:</strong> ${invitationToBid.paymentTerms}</p>` : ''}
+          ${invitationToBid?.insuranceRequirements ? `<p><strong>Insurance Requirements:</strong> ${invitationToBid.insuranceRequirements}</p>` : ''}
+          ${invitationToBid?.bondingRequirements ? `<p><strong>Bonding Requirements:</strong> ${invitationToBid.bondingRequirements}</p>` : ''}
+        </div>
+      </div>
+      ` : ''}
+      
+      <div class="footer">
+        <p>This invitation to bid is confidential and proprietary. Please do not distribute without authorization.</p>
+      </div>
+    </body>
+    </html>
+  `;
+}
 
-      <!-- Basic Info Table -->
-      <table>
-        <tr>
-          <td class="label-cell">DATE:</td>
-          <td class="content-cell">${today}</td>
-        </tr>
-        <tr>
-          <td class="label-cell">PROJECT NAME:</td>
-          <td class="content-cell">${rfp.projectName}</td>
-        </tr>
-        <tr>
-          <td class="label-cell">PROJECT LOCATION:</td>
-          <td class="content-cell">${rfp.property}<br>Miami Gardens, FL 33056</td>
-        </tr>
-      </table>
-
-      <!-- TO Section -->
-      <table>
-        <tr>
-          <td class="label-cell">TO:</td>
-          <td class="content-cell">
-            <strong>${recipientType.charAt(0).toUpperCase() + recipientType.slice(1)} - ${recipientCompany || recipientName || (recipientType === 'architect' ? 'Selected Architect' : 'Selected Contractor')}</strong><br>
-            Attention: Project Manager<br>
-            Email: TBD<br>
-            Phone: TBD
-          </td>
-        </tr>
-      </table>
-
-      <!-- Letter Content -->
-      <table>
-        <tr>
-          <td class="content-cell full-width" style="padding: 15px;">
-            <p>Dear ${recipientType === 'architect' ? 'Architect' : 'Contractor'} Partner:</p>
-            
-            <p>Your firm has been selected to provide a ${recipientType === 'architect' ? 'design and architectural proposal' : 'construction proposal'} for the ${rfp.projectName} 
-            project. I kindly request that you notify us of your intent to provide a bid no later 
-            than close of business on the date outlined below. Below you will also find a series of 
-            information to assist you throughout the ${recipientType === 'architect' ? 'design' : 'pricing'} exercise.</p>
-            
-            <p>In the event you have any questions, please feel free to contact 
-            ${rfp.developmentContact || 'Adolfo Reutlinger'} at areutlinger@bridgeindustrial.com at your earliest convenience.</p>
-          </td>
-        </tr>
-      </table>
-
-      <!-- Project Description -->
-      <table>
-        <tr>
-          <td class="label-cell">PROJECT DESCRIPTION:</td>
-          <td class="content-cell description-box">
-            <p>The project consists of ${totalArea.toLocaleString()} sf of ${existingOffice > 0 ? 'office' : 'office'} and ${warehouseArea > 0 ? warehouseArea.toLocaleString() : '2000'} sf of warehouse. The scope of work 
-            includes, however is not limited to the following:</p>
-            
-            <div class="bullet-points">
-              <div>
-                <div class="bullet-item">• Box in a box freezer</div>
-                <div class="bullet-item">• HVAC Installation</div>
-                <div class="bullet-item">• New Drive-up Ramp</div>
-                <div class="bullet-item">• Racking</div>
-              </div>
-              <div>
-                <div class="bullet-item">• Scope 5</div>
-                <div class="bullet-item">• Scope 6</div>
-                <div class="bullet-item">• Scope 7</div>
-                <div class="bullet-item">• Scope 8</div>
-              </div>
-            </div>
-          </td>
-        </tr>
-      </table>
-
-      <!-- Document Link -->
-      <table>
-        <tr>
-          <td class="label-cell">DOCUMENT(S) LINK:</td>
-          <td class="content-cell">www.testlinkdoc.com</td>
-        </tr>
-      </table>
-
-      <!-- Key Dates -->
-      <table>
-        <tr>
-          <td class="label-cell">KEY DATES:</td>
-          <td class="content-cell">
-            <table style="border: none; width: 100%;" class="dates-section">
-              <tr>
-                <td style="border: none; width: 60%;">Accept / Reject Invitation to Bid</td>
-                <td style="border: none;">Thursday, ${today}</td>
-              </tr>
-              <tr>
-                <td style="border: none;">Site Visit</td>
-                <td style="border: none;">Saturday, ${today}</td>
-              </tr>
-              <tr>
-                <td style="border: none;">Request(s) for Information Due</td>
-                <td style="border: none;">Monday, ${today}</td>
-              </tr>
-              <tr>
-                <td style="border: none;">Bid Packages Due</td>
-                <td style="border: none;">${dueDate}</td>
-              </tr>
-              <tr>
-                <td style="border: none;">Anticipated Start Date</td>
-                <td style="border: none;">Monday, December 2, 2024</td>
-              </tr>
-              <tr>
-                <td style="border: none;">Anticipated Construction Completion Date</td>
-                <td style="border: none;">Saturday, June 6, 2026</td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-      </table>
-
-      <!-- Bid Manager -->
-      <table>
-        <tr>
-          <td class="label-cell">BID MANAGER:</td>
-          <td class="content-cell">
-            ${rfp.developmentContact || 'Adolfo Reutlinger'}<br>
-            Areutlinger@bridgeindustrial.com<br>
-            (305) 747-7057
-          </td>
-        </tr>
-      </table>
-
-      <!-- Submission Requirements -->
-      <table>
-        <tr>
-          <td class="label-cell">SUBMISSION REQUIREMENTS:</td>
-          <td class="content-cell">
-            <div class="submission-req">
-              <div class="req-column">
-                <ul style="margin: 0; padding-left: 15px;">
-                  <li>Bid Cost Breakdown (Excel File)</li>
-                  <li>Preliminary Construction Schedule (w/ Long Lead Items)</li>
-                  <li>Affidavit</li>
-                </ul>
-              </div>
-              <div class="req-column">
-                <ul style="margin: 0; padding-left: 15px;">
-                  <li>Bid Req. 4</li>
-                  <li>Bid Req. 5</li>
-                  <li>Bid Req. 6</li>
-                </ul>
-              </div>
-            </div>
-          </td>
-        </tr>
-      </table>
+function generateArchitectRfpHtml(options: PdfGenerationOptions, dates: any): string {
+  const { rfp, invitationToBid, recipientName, recipientCompany } = options;
+  const { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea } = dates;
+  
+  const projectName = rfp.confidential ? `Confidential @ ${rfp.property}` : `${rfp.tenantName} @ ${rfp.property}`;
+  const contactInfo = invitationToBid?.contactForQuestions?.split(' - ') || [];
+  const contactPerson = contactInfo[0] || 'Development Contact';
+  const contactEmail = contactInfo[1] || '';
+  const contactPhone = contactInfo[2] || '';
+  
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>Architect RFP - ${projectName}</title>
+      <style>
+        body {
+          font-family: Arial, sans-serif;
+          font-size: 11px;
+          line-height: 1.4;
+          color: #000;
+          margin: 0;
+          padding: 20px;
+        }
+        
+        .header {
+          text-align: center;
+          margin-bottom: 30px;
+          border-bottom: 2px solid #000;
+          padding-bottom: 15px;
+        }
+        
+        .header h1 {
+          font-size: 18px;
+          font-weight: bold;
+          margin: 0;
+          text-transform: uppercase;
+          letter-spacing: 2px;
+        }
+        
+        .header h2 {
+          font-size: 14px;
+          font-weight: normal;
+          margin: 10px 0 0 0;
+        }
+        
+        .section {
+          margin-bottom: 25px;
+        }
+        
+        .section-title {
+          font-weight: bold;
+          font-size: 12px;
+          text-transform: uppercase;
+          margin-bottom: 8px;
+          border-bottom: 1px solid #ccc;
+          padding-bottom: 3px;
+        }
+        
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-bottom: 15px;
+        }
+        
+        .info-table td {
+          padding: 5px 8px;
+          border: 1px solid #000;
+          vertical-align: top;
+        }
+        
+        .info-table .label {
+          background-color: #f5f5f5;
+          font-weight: bold;
+          width: 25%;
+        }
+        
+        .description-box {
+          border: 1px solid #000;
+          padding: 15px;
+          margin: 10px 0;
+          background-color: #fafafa;
+        }
+        
+        .requirements-list {
+          margin: 10px 0;
+          padding-left: 20px;
+        }
+        
+        .requirements-list li {
+          margin-bottom: 5px;
+        }
+        
+        .footer {
+          margin-top: 40px;
+          text-align: center;
+          font-size: 10px;
+          color: #666;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <h1>REQUEST FOR PROPOSAL</h1>
+        <h2>Architectural Services - ${projectName}</h2>
+      </div>
+      
+      <div class="section">
+        <table class="info-table">
+          <tr>
+            <td class="label">DATE:</td>
+            <td>${today}</td>
+          </tr>
+          <tr>
+            <td class="label">PROJECT NAME:</td>
+            <td>${projectName}</td>
+          </tr>
+          <tr>
+            <td class="label">PROJECT LOCATION:</td>
+            <td>${invitationToBid?.projectLocation || rfp.property}<br>
+                ${rfp.propertyAddress || ''}</td>
+          </tr>
+          <tr>
+            <td class="label">TO:</td>
+            <td>
+              ${recipientCompany || 'Architectural Firm'}<br>
+              ${recipientName || ''}<br>
+              ${contactPhone}<br>
+              ${contactEmail}
+            </td>
+          </tr>
+        </table>
+      </div>
+      
+      <div class="description-box">
+        <p><strong>Dear ${recipientName || 'Architect'},</strong></p>
+        <p>We are seeking architectural design services for the ${projectName} project. 
+        Your firm has been selected based on your expertise and portfolio. We kindly request 
+        a comprehensive proposal outlining your approach, timeline, and fee structure for 
+        this project.</p>
+        <p>For any questions regarding this RFP, please contact 
+        ${contactPerson} at ${contactEmail} at your earliest convenience.</p>
+      </div>
+      
+      <div class="section">
+        <div class="section-title">PROJECT SCOPE:</div>
+        <div class="description-box">
+          <p>We require architectural design services for ${totalArea.toLocaleString()} sf of total rentable area. The project scope includes:</p>
+          <ul class="requirements-list">
+            ${warehouseArea > 0 ? `<li>Warehouse/Industrial Space: ${warehouseArea.toLocaleString()} sf</li>` : ''}
+            ${existingOffice > 0 ? `<li>Existing Office Renovation: ${existingOffice.toLocaleString()} sf</li>` : ''}
+            ${newOffice > 0 ? `<li>New Office Design: ${newOffice.toLocaleString()} sf</li>` : ''}
+            <li>Schematic Design</li>
+            <li>Design Development</li>
+            <li>Construction Documents</li>
+            <li>Permitting Assistance</li>
+            <li>Construction Administration</li>
+            ${invitationToBid?.technicalSpecifications ? `<li>Technical Specifications: ${invitationToBid.technicalSpecifications}</li>` : ''}
+          </ul>
+        </div>
+      </div>
+      
+      <div class="section">
+        <div class="section-title">PROPOSAL REQUIREMENTS:</div>
+        <div class="description-box">
+          <p>Please include the following in your proposal:</p>
+          <ul class="requirements-list">
+            <li>Project understanding and approach</li>
+            <li>Detailed scope of services</li>
+            <li>Project timeline and milestones</li>
+            <li>Fee proposal (lump sum or hourly breakdown)</li>
+            <li>Team qualifications and relevant project experience</li>
+            <li>Three references from similar projects</li>
+            <li>Insurance certificates (Professional Liability, General Liability)</li>
+            ${invitationToBid?.prequalificationCriteria ? 
+              (Array.isArray(invitationToBid.prequalificationCriteria) ? 
+                invitationToBid.prequalificationCriteria.map(req => `<li>${req}</li>`).join('') :
+                `<li>${invitationToBid.prequalificationCriteria}</li>`) : ''}
+          </ul>
+        </div>
+      </div>
+      
+      <div class="section">
+        <div class="section-title">KEY DATES:</div>
+        <table class="info-table">
+          <tr>
+            <td class="label">RFP Issued</td>
+            <td>${today}</td>
+          </tr>
+          <tr>
+            <td class="label">Questions Due</td>
+            <td>5 business days before proposal due</td>
+          </tr>
+          <tr>
+            <td class="label">Proposals Due</td>
+            <td>${bidDeadline}</td>
+          </tr>
+          <tr>
+            <td class="label">Selection Notification</td>
+            <td>Within 2 weeks of proposal deadline</td>
+          </tr>
+          <tr>
+            <td class="label">Anticipated Project Start</td>
+            <td>${projectStart}</td>
+          </tr>
+          <tr>
+            <td class="label">Target Completion</td>
+            <td>${projectEnd}</td>
+          </tr>
+        </table>
+      </div>
+      
+      <div class="section">
+        <div class="section-title">PROJECT CONTACT:</div>
+        <table class="info-table">
+          <tr>
+            <td class="label">Name:</td>
+            <td>${contactPerson}</td>
+          </tr>
+          <tr>
+            <td class="label">Email:</td>
+            <td>${contactEmail}</td>
+          </tr>
+          <tr>
+            <td class="label">Phone:</td>
+            <td>${contactPhone}</td>
+          </tr>
+        </table>
+      </div>
+      
+      ${invitationToBid?.evaluationCriteria ? `
+      <div class="section">
+        <div class="section-title">EVALUATION CRITERIA:</div>
+        <div class="description-box">
+          <ul class="requirements-list">
+            ${Array.isArray(invitationToBid.evaluationCriteria) ? 
+              invitationToBid.evaluationCriteria.map(criteria => `<li>${criteria}</li>`).join('') :
+              `<li>${invitationToBid.evaluationCriteria}</li>`}
+          </ul>
+        </div>
+      </div>
+      ` : ''}
+      
+      <div class="footer">
+        <p>This RFP is confidential and proprietary. Please do not distribute without authorization.</p>
+      </div>
     </body>
     </html>
   `;
 }
 
 export function generatePdfFilename(rfp: any, recipientType: string): string {
-  const cleanProjectName = rfp.projectName.replace(/[^a-zA-Z0-9]/g, '_');
+  const projectName = rfp.confidential ? `Confidential_${rfp.property}` : `${rfp.tenantName}_${rfp.property}`;
+  const cleanProjectName = projectName.replace(/[^a-zA-Z0-9]/g, '_');
   const timestamp = new Date().toISOString().split('T')[0];
-  return `ITB_${cleanProjectName}_${recipientType}_${timestamp}.pdf`;
+  return `${recipientType === 'contractor' ? 'ITB' : 'RFP'}_${cleanProjectName}_${recipientType}_${timestamp}.pdf`;
 }

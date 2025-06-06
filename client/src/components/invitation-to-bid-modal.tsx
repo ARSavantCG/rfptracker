@@ -308,55 +308,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
       if (formData.generateBrokerContractorRfp) {
         console.log("Generating preliminary contractor RFP...");
         if (delay > 0) await new Promise(resolve => setTimeout(resolve, delay));
-        
-        // For the second broker document, create a data URL to avoid popup blocking
-        const response = await fetch(`/api/rfp-requests/${rfp?.id}/generate-pdf`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ recipientType: "broker-contractor" }),
-        });
-        
-        if (response.ok) {
-          const htmlContent = await response.text();
-          console.log("Contractor RFP HTML length:", htmlContent.length);
-          
-          // Try multiple approaches to ensure the document opens
-          const dataUrl = `data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`;
-          const newWindow = window.open(dataUrl, '_blank');
-          
-          console.log("Contractor window opened:", !!newWindow);
-          
-          if (newWindow) {
-            newWindow.focus();
-            toast({
-              title: "Document Generated",
-              description: "Broker-contractor invitation opened in new tab",
-            });
-          } else {
-            // Fallback: create a download link that automatically triggers
-            console.log("Data URL blocked, using download approach");
-            const blob = new Blob([htmlContent], { type: 'text/html' });
-            const blobUrl = window.URL.createObjectURL(blob);
-            
-            // Create temporary download link
-            const downloadLink = document.createElement('a');
-            downloadLink.href = blobUrl;
-            downloadLink.download = `${rfp?.rfpNumber}-broker-contractor-rfp.html`;
-            downloadLink.style.display = 'none';
-            
-            document.body.appendChild(downloadLink);
-            downloadLink.click();
-            document.body.removeChild(downloadLink);
-            
-            // Clean up the blob URL
-            setTimeout(() => window.URL.revokeObjectURL(blobUrl), 1000);
-            
-            toast({
-              title: "Document Downloaded",
-              description: "Broker-contractor RFP saved to your downloads folder. Open the file to view.",
-            });
-          }
-        }
+        await generatePdf("broker-contractor");
       }
       
         // Update RFP status

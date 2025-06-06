@@ -73,11 +73,26 @@ function generateContractorRfpHtml(options: PdfGenerationOptions, dates: any): s
   const { rfp, invitationToBid, recipientName, recipientCompany } = options;
   const { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea } = dates;
   
-  const projectName = rfp.confidential ? `Confidential @ ${rfp.property}` : `${rfp.tenantName} @ ${rfp.property}`;
+  // Use Step 1 Project Name
+  const projectName = rfp.projectName;
+  
+  // Use Project Address from RFP data
+  const projectAddress = rfp.projectAddress || invitationToBid?.projectLocation || rfp.property;
+  
+  // Use contact info from invitation
   const contactInfo = invitationToBid?.contactForQuestions?.split(' - ') || [];
   const contactPerson = contactInfo[0] || 'Development Contact';
   const contactEmail = contactInfo[1] || '';
   const contactPhone = contactInfo[2] || '';
+  
+  // Use Project Description from invitation data
+  const projectDescription = invitationToBid?.projectDescription || 'Project description to be provided';
+  
+  // Use Documents Link from invitation data
+  const documentsLink = invitationToBid?.documentsLink || 'www.testlinkdoc.com';
+  
+  // Use dynamic Key Dates from invitation data
+  const keyDates = invitationToBid?.keyDates || [];
   
   return `
     <!DOCTYPE html>
@@ -189,23 +204,22 @@ function generateContractorRfpHtml(options: PdfGenerationOptions, dates: any): s
           </tr>
           <tr>
             <td class="label">PROJECT LOCATION:</td>
-            <td>${invitationToBid?.projectLocation || rfp.property}<br>
-                ${rfp.propertyAddress || ''}</td>
+            <td>${projectAddress}</td>
           </tr>
           <tr>
             <td class="label">TO:</td>
             <td>
               ${recipientCompany || 'General Contractor'}<br>
               ${recipientName || ''}<br>
-              ${contactPhone}<br>
-              ${contactEmail}
+              ${contactEmail}<br>
+              ${contactPhone}
             </td>
           </tr>
         </table>
       </div>
       
       <div class="description-box">
-        <p><strong>Dear ${recipientName || 'Contractor'},</strong></p>
+        <p><strong>Dear ${recipientCompany || recipientName || 'Contractor'},</strong></p>
         <p>Your firm has been selected to provide a proposal for the ${projectName} project. 
         We kindly request that you notify us of your intent to provide a bid no later than 
         close of business on the date outlined below. Below, you will also find a series of 
@@ -217,16 +231,7 @@ function generateContractorRfpHtml(options: PdfGenerationOptions, dates: any): s
       <div class="section">
         <div class="section-title">PROJECT DESCRIPTION:</div>
         <div class="description-box">
-          <p>The project consists of ${totalArea.toLocaleString()} sf of total rentable area. The scope of work includes, however is not limited to the following:</p>
-          <ul class="requirements-list">
-            ${warehouseArea > 0 ? `<li>Warehouse Space: ${warehouseArea.toLocaleString()} sf</li>` : ''}
-            ${existingOffice > 0 ? `<li>Existing Office: ${existingOffice.toLocaleString()} sf</li>` : ''}
-            ${newOffice > 0 ? `<li>New Office Build-out: ${newOffice.toLocaleString()} sf</li>` : ''}
-            ${invitationToBid?.specialRequirements ? 
-              (Array.isArray(invitationToBid.specialRequirements) ? 
-                invitationToBid.specialRequirements.map(req => `<li>${req}</li>`).join('') :
-                `<li>${invitationToBid.specialRequirements}</li>`) : ''}
-          </ul>
+          <p>${projectDescription}</p>
         </div>
       </div>
       
@@ -234,40 +239,24 @@ function generateContractorRfpHtml(options: PdfGenerationOptions, dates: any): s
         <table class="info-table">
           <tr>
             <td class="label">DOCUMENT(S) LINK:</td>
-            <td>${rfp.documentLink || 'www.testlinkdoc.com'}</td>
+            <td>${documentsLink}</td>
           </tr>
         </table>
       </div>
       
+      ${keyDates.length > 0 ? `
       <div class="section">
         <div class="section-title">KEY DATES:</div>
         <table class="info-table">
+          ${keyDates.map(keyDate => `
           <tr>
-            <td class="label">Accept / Reject Invitation to Bid</td>
-            <td>${bidDeadline}</td>
+            <td class="label">${keyDate.label}</td>
+            <td>${keyDate.date}</td>
           </tr>
-          <tr>
-            <td class="label">Site Visit</td>
-            <td>${invitationToBid?.siteVisitScheduled ? formatDate(invitationToBid.siteVisitScheduled) : 'TBD'}</td>
-          </tr>
-          <tr>
-            <td class="label">Requests for Information Due</td>
-            <td>3 business days before bid due</td>
-          </tr>
-          <tr>
-            <td class="label">Bid Packages Due</td>
-            <td>${bidDeadline}</td>
-          </tr>
-          <tr>
-            <td class="label">Anticipated Start Date</td>
-            <td>${projectStart}</td>
-          </tr>
-          <tr>
-            <td class="label">Anticipated Construction Completion Date</td>
-            <td>${projectEnd}</td>
-          </tr>
+          `).join('')}
         </table>
       </div>
+      ` : ''}
       
       <div class="section">
         <div class="section-title">BID MANAGER:</div>

@@ -35,6 +35,12 @@ const invitationFormSchema = z.object({
   contactPerson: z.string().min(1, "Contact person is required"),
   contactEmail: z.string().email("Valid email is required"),
   contactPhone: z.string().optional(),
+  projectDescription: z.string().optional(),
+  documentsLink: z.string().optional(),
+  keyDates: z.array(z.object({
+    label: z.string(),
+    date: z.string()
+  })).default([]),
 }).refine(
   (data) => data.generateArchitectRfp || data.generateContractorRfp,
   {

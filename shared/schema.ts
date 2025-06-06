@@ -154,6 +154,9 @@ export const invitationToBid = pgTable("invitation_to_bid", {
   contactForQuestions: text("contact_for_questions"),
   siteVisitScheduled: timestamp("site_visit_scheduled"),
   additionalDocuments: json("additional_documents").$type<RfpFile[]>().default([]),
+  projectDescription: text("project_description"),
+  documentsLink: text("documents_link"),
+  keyDates: json("key_dates").$type<{label: string, date: string}[]>().default([]),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

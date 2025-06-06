@@ -254,12 +254,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateInvitationToBid(rfpId: number, updates: Partial<UpdateInvitationToBid>): Promise<InvitationToBid | undefined> {
-    const [updated] = await db
-      .update(invitationToBid)
-      .set({ ...updates, updatedAt: new Date() })
-      .where(eq(invitationToBid.rfpId, rfpId))
-      .returning();
-    return updated || undefined;
+    try {
+      console.log("Updating invitation with data:", updates);
+      const [updated] = await db
+        .update(invitationToBid)
+        .set({ ...updates, updatedAt: new Date() })
+        .where(eq(invitationToBid.rfpId, rfpId))
+        .returning();
+      return updated || undefined;
+    } catch (error) {
+      console.error("Database update error:", error);
+      throw error;
+    }
   }
 
   async deleteInvitationToBid(rfpId: number): Promise<boolean> {

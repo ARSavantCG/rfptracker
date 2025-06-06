@@ -577,7 +577,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(invitation);
     } catch (error) {
-      res.status(400).json({ message: "Failed to update invitation to bid" });
+      console.error("Update invitation error:", error);
+      res.status(400).json({ 
+        message: "Failed to update invitation to bid",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
     }
   });
 

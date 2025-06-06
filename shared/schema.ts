@@ -169,9 +169,7 @@ export const insertInvitationToBidSchema = createInsertSchema(invitationToBid).o
   siteVisitScheduled: z.string().optional().transform((val) => val ? new Date(val) : undefined),
 });
 
-export const updateInvitationToBidSchema = insertInvitationToBidSchema.partial().extend({
-  id: z.number(),
-});
+export const updateInvitationToBidSchema = insertInvitationToBidSchema.partial();
 
 export type InvitationToBid = typeof invitationToBid.$inferSelect;
 export type InsertInvitationToBid = z.infer<typeof insertInvitationToBidSchema>;

@@ -111,6 +111,8 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
       const defaultValues = {
         generateArchitectRfp: false,
         generateContractorRfp: false,
+        generateBrokerArchitectRfp: false,
+        generateBrokerContractorRfp: false,
         projectScope: `${rfp.projectName} - ${rfp.tenantName}`,
         projectLocation: rfp.projectAddress || rfp.property || "",
         estimatedBudget: "",

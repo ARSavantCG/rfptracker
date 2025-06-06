@@ -418,56 +418,8 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
             <div className="border p-4 rounded-lg bg-gray-50">
               <h3 className="font-medium mb-4">Select RFP Types to Generate</h3>
               
-              {/* Formal Bids Section */}
-              <div className="mb-6">
-                <h4 className="font-medium text-sm text-blue-700 mb-3">Formal Project Bids (Existing Tenants)</h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="generateArchitectRfp"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                        <div className="space-y-1 leading-none">
-                          <FormLabel>Architect RFP (Formal)</FormLabel>
-                          <p className="text-sm text-muted-foreground">
-                            Complete RFP for confirmed tenant project
-                          </p>
-                        </div>
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="generateContractorRfp"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                        <div className="space-y-1 leading-none">
-                          <FormLabel>Contractor ITB (Formal)</FormLabel>
-                          <p className="text-sm text-muted-foreground">
-                            Formal invitation to bid for confirmed project
-                          </p>
-                        </div>
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </div>
-
               {/* Broker Response Section */}
-              <div className="border-t pt-4">
+              <div className="mb-6">
                 <h4 className="font-medium text-sm text-green-700 mb-3">Broker Response RFPs (Prospective Tenants)</h4>
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
@@ -506,6 +458,54 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                           <FormLabel>Contractor RFP (Preliminary)</FormLabel>
                           <p className="text-sm text-muted-foreground">
                             Preliminary pricing & scheduling for prospects
+                          </p>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+
+              {/* Formal Bids Section */}
+              <div className="border-t pt-4">
+                <h4 className="font-medium text-sm text-blue-700 mb-3">Formal Project Bids (Existing Tenants)</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="generateArchitectRfp"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>Architect RFP (Formal)</FormLabel>
+                          <p className="text-sm text-muted-foreground">
+                            Complete RFP for confirmed tenant project
+                          </p>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="generateContractorRfp"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>Contractor ITB (Formal)</FormLabel>
+                          <p className="text-sm text-muted-foreground">
+                            Formal invitation to bid for confirmed project
                           </p>
                         </div>
                       </FormItem>

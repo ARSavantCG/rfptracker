@@ -107,7 +107,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
         generateArchitectRfp: false,
         generateContractorRfp: false,
         projectScope: `${rfp.projectName} - ${rfp.tenantName}`,
-        projectLocation: rfp.property || "",
+        projectLocation: rfp.projectAddress || rfp.property || "",
         estimatedBudget: "",
         projectTimeline: "",
         bidSubmissionDeadline: "",
@@ -124,8 +124,8 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
         contactPerson: rfp.developmentContact || "",
         contactEmail: "",
         contactPhone: "",
-        projectDescription: "",
-        documentsLink: "",
+        projectDescription: rfp.projectDescription || "",
+        documentsLink: rfp.documentsLink || "",
         keyDates: [],
       };
 
@@ -160,7 +160,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
           existingInvitation.contactForQuestions.split(' - ')[2] || "" : "",
         projectDescription: existingInvitation.projectDescription || "",
         documentsLink: existingInvitation.documentsLink || "",
-        keyDates: existingInvitation.keyDates || [],
+        keyDates: Array.isArray(existingInvitation.keyDates) ? existingInvitation.keyDates : [],
       } : defaultValues;
 
       form.reset(formValues);
@@ -787,6 +787,62 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                   </FormItem>
                 )}
               />
+            </div>
+
+            {/* Key Dates Management */}
+            <div className="border-t pt-4">
+              <h3 className="font-medium mb-3">Key Project Dates</h3>
+              <div className="space-y-3">
+                {form.watch("keyDates").map((keyDate, index) => (
+                  <div key={index} className="flex gap-2 items-end">
+                    <div className="flex-1">
+                      <Input
+                        placeholder="Date description (e.g., Design completion)"
+                        value={keyDate.label}
+                        onChange={(e) => {
+                          const keyDates = form.getValues("keyDates");
+                          keyDates[index].label = e.target.value;
+                          form.setValue("keyDates", keyDates);
+                        }}
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <Input
+                        type="date"
+                        value={keyDate.date}
+                        onChange={(e) => {
+                          const keyDates = form.getValues("keyDates");
+                          keyDates[index].date = e.target.value;
+                          form.setValue("keyDates", keyDates);
+                        }}
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const keyDates = form.getValues("keyDates");
+                        keyDates.splice(index, 1);
+                        form.setValue("keyDates", keyDates);
+                      }}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    const keyDates = form.getValues("keyDates");
+                    keyDates.push({ label: "", date: "" });
+                    form.setValue("keyDates", keyDates);
+                  }}
+                >
+                  Add Key Date
+                </Button>
+              </div>
             </div>
 
             {/* Contact Information */}

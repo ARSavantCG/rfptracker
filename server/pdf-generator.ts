@@ -316,6 +316,7 @@ function generateArchitectRfpHtml(options: PdfGenerationOptions, dates: any): st
   const { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea } = dates;
   
   const projectName = rfp.confidential ? `Confidential @ ${rfp.property}` : `${rfp.tenantName} @ ${rfp.property}`;
+  const projectLocation = rfp.projectAddress || rfp.property;
   const contactInfo = invitationToBid?.contactForQuestions?.split(' - ') || [];
   const contactPerson = contactInfo[0] || 'Development Contact';
   const contactEmail = contactInfo[1] || '';

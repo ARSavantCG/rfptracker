@@ -557,7 +557,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                 </Button>
               </div>
               
-              {form.watch("keyDates").map((_, index) => (
+              {keyDates.map((_, index) => (
                 <div key={index} className="flex gap-4 items-end">
                   <div className="flex-1">
                     <FormField
@@ -596,8 +596,9 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                     variant="ghost"
                     size="sm"
                     onClick={() => {
-                      const currentKeyDates = form.getValues("keyDates");
-                      form.setValue("keyDates", currentKeyDates.filter((_, i) => i !== index));
+                      const updatedKeyDates = keyDates.filter((_, i) => i !== index);
+                      setKeyDates(updatedKeyDates);
+                      form.setValue("keyDates", updatedKeyDates);
                     }}
                   >
                     <X className="h-4 w-4" />

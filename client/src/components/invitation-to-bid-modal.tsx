@@ -270,10 +270,12 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
       const formData = form.getValues();
       
       if (formData.generateArchitectRfp) {
+        console.log("Generating architect PDF...");
         await generatePdf("architect");
       }
       
       if (formData.generateContractorRfp) {
+        console.log("Generating contractor PDF...");
         await generatePdf("contractor");
       }
       
@@ -300,6 +302,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
   const generatePdf = async (recipientType: "architect" | "contractor") => {
     try {
       setIsGeneratingPdfs(true);
+      console.log(`Starting PDF generation for ${recipientType}`);
       
       // Get HTML content from backend
       const response = await fetch(`/api/rfp-requests/${rfp?.id}/generate-pdf`, {
@@ -313,25 +316,31 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
         }),
       });
       
+      console.log(`Response status for ${recipientType}:`, response.status);
+      
       if (!response.ok) {
-        throw new Error('Failed to generate PDF');
+        throw new Error(`Failed to generate PDF: ${response.status} ${response.statusText}`);
       }
       
       const htmlContent = await response.text();
+      console.log(`HTML content length for ${recipientType}:`, htmlContent.length);
       
       // Create a new window/tab with the content for printing
       const printWindow = window.open('', '_blank');
       if (printWindow) {
+        console.log(`Opening print window for ${recipientType}`);
         printWindow.document.write(htmlContent);
         printWindow.document.close();
         
         // Add print styles and auto-print
         printWindow.addEventListener('load', () => {
           setTimeout(() => {
+            console.log(`Triggering print for ${recipientType}`);
             printWindow.print();
           }, 500);
         });
       } else {
+        console.log(`Print window blocked, using fallback download for ${recipientType}`);
         // Fallback: create downloadable HTML file
         const blob = new Blob([htmlContent], { type: 'text/html' });
         const url = window.URL.createObjectURL(blob);
@@ -350,6 +359,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
         description: `${recipientType.charAt(0).toUpperCase() + recipientType.slice(1)} invitation opened for printing`,
       });
     } catch (error) {
+      console.error(`Error generating ${recipientType} PDF:`, error);
       toast({
         title: "Generation Failed",
         description: error instanceof Error ? error.message : `Failed to generate ${recipientType} document`,

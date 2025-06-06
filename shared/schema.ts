@@ -10,7 +10,7 @@ export const rfpRequests = pgTable("rfp_requests", {
   property: text("property").notNull(),
   tenantName: text("tenant_name").notNull(),
   projectName: text("project_name").notNull(),
-  confidential: json("confidential").default(false).$type<boolean>(),
+  confidential: boolean("confidential").default(false),
   sentBy: text("sent_by").notNull(),
   sentOn: timestamp("sent_on").notNull(),
   developmentContact: text("development_contact"),

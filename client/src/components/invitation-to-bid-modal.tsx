@@ -125,20 +125,30 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
         ...defaultValues,
         estimatedBudget: existingInvitation.estimatedBudget || "",
         projectTimeline: existingInvitation.projectTimeline || "",
-        bidSubmissionDeadline: existingInvitation.bidSubmissionDeadline || "",
-        projectStartDate: existingInvitation.projectStartDate || "",
-        projectEndDate: existingInvitation.projectEndDate || "",
-        specialRequirements: existingInvitation.specialRequirements || "",
+        bidSubmissionDeadline: existingInvitation.bidSubmissionDeadline ? 
+          new Date(existingInvitation.bidSubmissionDeadline).toISOString().split('T')[0] : "",
+        projectStartDate: existingInvitation.projectStartDate ? 
+          new Date(existingInvitation.projectStartDate).toISOString().split('T')[0] : "",
+        projectEndDate: existingInvitation.projectEndDate ? 
+          new Date(existingInvitation.projectEndDate).toISOString().split('T')[0] : "",
+        specialRequirements: Array.isArray(existingInvitation.specialRequirements) ? 
+          existingInvitation.specialRequirements.join(", ") : (existingInvitation.specialRequirements || ""),
         technicalSpecifications: existingInvitation.technicalSpecifications || "",
         contractTerms: existingInvitation.contractTerms || "",
         paymentTerms: existingInvitation.paymentTerms || "",
         insuranceRequirements: existingInvitation.insuranceRequirements || "",
         bondingRequirements: existingInvitation.bondingRequirements || "",
-        prequalificationCriteria: existingInvitation.prequalificationCriteria || "",
-        evaluationCriteria: existingInvitation.evaluationCriteria || "",
-        contactPerson: existingInvitation.contactPerson || rfp.developmentContact || "",
-        contactEmail: existingInvitation.contactEmail || "",
-        contactPhone: existingInvitation.contactPhone || "",
+        prequalificationCriteria: Array.isArray(existingInvitation.prequalificationCriteria) ? 
+          existingInvitation.prequalificationCriteria.join(", ") : (existingInvitation.prequalificationCriteria || ""),
+        evaluationCriteria: Array.isArray(existingInvitation.evaluationCriteria) ? 
+          existingInvitation.evaluationCriteria.join(", ") : (existingInvitation.evaluationCriteria || ""),
+        // Parse contact information from combined field
+        contactPerson: existingInvitation.contactForQuestions ? 
+          existingInvitation.contactForQuestions.split(' - ')[0] : (rfp.developmentContact || ""),
+        contactEmail: existingInvitation.contactForQuestions ? 
+          existingInvitation.contactForQuestions.split(' - ')[1] || "" : "",
+        contactPhone: existingInvitation.contactForQuestions ? 
+          existingInvitation.contactForQuestions.split(' - ')[2] || "" : "",
       } : defaultValues;
 
       form.reset(formValues);

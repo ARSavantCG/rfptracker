@@ -265,7 +265,10 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
       }
     },
     onSuccess: async (invitationToBid) => {
+      console.log("===== MUTATION SUCCESS CALLBACK =====");
       console.log("Invitation created successfully, starting PDF generation...");
+      console.log("Invitation data received:", invitationToBid);
+      
       toast({
         title: "Invitation to Bid Created", 
         description: "RFP details saved successfully. Ready to generate PDFs.",
@@ -330,6 +333,8 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
       }
     },
     onError: (error) => {
+      console.log("===== MUTATION ERROR CALLBACK =====");
+      console.error("Mutation error:", error);
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to create invitation to bid",
@@ -412,8 +417,24 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
 
   const onSubmit = (data: InvitationFormData) => {
     console.log("Form submission data:", data);
-    console.log("Broker architect selected:", data.generateBrokerArchitectRfp);
-    console.log("Broker contractor selected:", data.generateBrokerContractorRfp);
+    console.log("All checkbox values:", {
+      generateArchitectRfp: data.generateArchitectRfp,
+      generateContractorRfp: data.generateContractorRfp,
+      generateBrokerArchitectRfp: data.generateBrokerArchitectRfp,
+      generateBrokerContractorRfp: data.generateBrokerContractorRfp
+    });
+    
+    // Check if at least one option is selected
+    const hasSelection = data.generateArchitectRfp || data.generateContractorRfp || 
+                        data.generateBrokerArchitectRfp || data.generateBrokerContractorRfp;
+    console.log("Has at least one selection:", hasSelection);
+    
+    if (!hasSelection) {
+      console.warn("No RFP types selected!");
+      return;
+    }
+    
+    console.log("Submitting form mutation...");
     createInvitationMutation.mutate(data);
   };
 

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { apiRequest } from "@/lib/queryClient";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -82,10 +82,22 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
     },
   });
 
-  // Pre-populate form with existing RFP data
+  // Fetch existing invitation data
+  const { data: existingInvitation } = useQuery({
+    queryKey: ["/api/rfp-requests", rfp?.id, "invitation-to-bid"],
+    queryFn: async () => {
+      if (!rfp?.id) return null;
+      const response = await fetch(`/api/rfp-requests/${rfp.id}/invitation-to-bid`);
+      if (!response.ok) return null;
+      return response.json();
+    },
+    enabled: !!rfp?.id && isOpen,
+  });
+
+  // Pre-populate form with existing data
   useEffect(() => {
     if (rfp && isOpen) {
-      form.reset({
+      const defaultValues = {
         generateArchitectRfp: false,
         generateContractorRfp: false,
         projectScope: `${rfp.projectName} - ${rfp.tenantName}`,
@@ -106,21 +118,80 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
         contactPerson: rfp.developmentContact || "",
         contactEmail: "",
         contactPhone: "",
-      });
+      };
+
+      // Merge with existing invitation data if available
+      const formValues = existingInvitation ? {
+        ...defaultValues,
+        estimatedBudget: existingInvitation.estimatedBudget || "",
+        projectTimeline: existingInvitation.projectTimeline || "",
+        bidSubmissionDeadline: existingInvitation.bidSubmissionDeadline || "",
+        projectStartDate: existingInvitation.projectStartDate || "",
+        projectEndDate: existingInvitation.projectEndDate || "",
+        specialRequirements: existingInvitation.specialRequirements || "",
+        technicalSpecifications: existingInvitation.technicalSpecifications || "",
+        contractTerms: existingInvitation.contractTerms || "",
+        paymentTerms: existingInvitation.paymentTerms || "",
+        insuranceRequirements: existingInvitation.insuranceRequirements || "",
+        bondingRequirements: existingInvitation.bondingRequirements || "",
+        prequalificationCriteria: existingInvitation.prequalificationCriteria || "",
+        evaluationCriteria: existingInvitation.evaluationCriteria || "",
+        contactPerson: existingInvitation.contactPerson || rfp.developmentContact || "",
+        contactEmail: existingInvitation.contactEmail || "",
+        contactPhone: existingInvitation.contactPhone || "",
+      } : defaultValues;
+
+      form.reset(formValues);
     }
-  }, [rfp, isOpen, form]);
+  }, [rfp, isOpen, existingInvitation, form]);
+
+  const saveInvitationMutation = useMutation({
+    mutationFn: async (data: InvitationFormData) => {
+      if (!rfp) throw new Error("No RFP selected");
+      
+      // Save or update invitation to bid record
+      if (existingInvitation) {
+        const response = await apiRequest(`/api/rfp-requests/${rfp.id}/invitation-to-bid`, "PATCH", data);
+        return response.json();
+      } else {
+        const response = await apiRequest("/api/invitation-to-bid", "POST", {
+          rfpId: rfp.id,
+          ...data,
+        });
+        return response.json();
+      }
+    },
+    onSuccess: () => {
+      toast({
+        title: "Invitation Saved",
+        description: "Your invitation details have been saved successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests", rfp?.id, "invitation-to-bid"] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Save Failed",
+        description: error instanceof Error ? error.message : "Failed to save invitation",
+        variant: "destructive",
+      });
+    },
+  });
 
   const createInvitationMutation = useMutation({
     mutationFn: async (data: InvitationFormData) => {
       if (!rfp) throw new Error("No RFP selected");
       
-      // Create invitation to bid record
-      const response = await apiRequest("/api/invitation-to-bid", "POST", {
-        rfpId: rfp.id,
-        ...data,
-      });
-      
-      return response.json();
+      // First save the invitation data
+      if (existingInvitation) {
+        const response = await apiRequest(`/api/rfp-requests/${rfp.id}/invitation-to-bid`, "PATCH", data);
+        return response.json();
+      } else {
+        const response = await apiRequest("/api/invitation-to-bid", "POST", {
+          rfpId: rfp.id,
+          ...data,
+        });
+        return response.json();
+      }
     },
     onSuccess: async (invitationToBid) => {
       toast({
@@ -606,28 +677,49 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                 type="button"
                 variant="outline"
                 onClick={onClose}
-                disabled={createInvitationMutation.isPending || isGeneratingPdfs}
+                disabled={createInvitationMutation.isPending || isGeneratingPdfs || saveInvitationMutation.isPending}
               >
                 <X className="h-4 w-4 mr-2" />
                 Cancel
               </Button>
               
-              <Button 
-                type="submit" 
-                disabled={createInvitationMutation.isPending || isGeneratingPdfs}
-              >
-                {isGeneratingPdfs ? (
-                  <>
-                    <Download className="h-4 w-4 mr-2" />
-                    Generating PDFs...
-                  </>
-                ) : (
-                  <>
-                    <FileText className="h-4 w-4 mr-2" />
-                    Generate Selected RFPs
-                  </>
-                )}
-              </Button>
+              <div className="flex space-x-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => saveInvitationMutation.mutate(form.getValues())}
+                  disabled={createInvitationMutation.isPending || isGeneratingPdfs || saveInvitationMutation.isPending}
+                >
+                  {saveInvitationMutation.isPending ? (
+                    <>
+                      <Download className="h-4 w-4 mr-2" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4 mr-2" />
+                      Save Draft
+                    </>
+                  )}
+                </Button>
+                
+                <Button 
+                  type="submit" 
+                  disabled={createInvitationMutation.isPending || isGeneratingPdfs || saveInvitationMutation.isPending}
+                >
+                  {isGeneratingPdfs ? (
+                    <>
+                      <Download className="h-4 w-4 mr-2" />
+                      Generating PDFs...
+                    </>
+                  ) : (
+                    <>
+                      <FileText className="h-4 w-4 mr-2" />
+                      Generate Selected RFPs
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           </form>
         </Form>

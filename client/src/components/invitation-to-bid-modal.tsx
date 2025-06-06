@@ -416,7 +416,10 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
   };
 
   const onSubmit = (data: InvitationFormData) => {
+    console.log("===== FORM SUBMISSION =====");
     console.log("Form submission data:", data);
+    console.log("Form errors:", form.formState.errors);
+    console.log("Form is valid:", form.formState.isValid);
     console.log("All checkbox values:", {
       generateArchitectRfp: data.generateArchitectRfp,
       generateContractorRfp: data.generateContractorRfp,
@@ -1055,6 +1058,20 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                       Save
                     </>
                   )}
+                </Button>
+                
+                <Button 
+                  type="button" 
+                  variant="outline"
+                  onClick={() => {
+                    console.log("===== DEBUG FORM STATE =====");
+                    console.log("Current form values:", form.getValues());
+                    console.log("Form errors:", form.formState.errors);
+                    console.log("Form is valid:", form.formState.isValid);
+                  }}
+                  disabled={createInvitationMutation.isPending || isGeneratingPdfs || saveInvitationMutation.isPending}
+                >
+                  Debug
                 </Button>
                 
                 <Button 

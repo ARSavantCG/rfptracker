@@ -267,10 +267,6 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
       }
     },
     onSuccess: async (invitationToBid) => {
-      console.log("===== MUTATION SUCCESS CALLBACK =====");
-      console.log("Invitation created successfully, starting PDF generation...");
-      console.log("Invitation data received:", invitationToBid);
-      
       toast({
         title: "Invitation to Bid Created", 
         description: "RFP details saved successfully. Ready to generate PDFs.",
@@ -372,33 +368,26 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
       const htmlContent = await response.text();
       console.log(`HTML content length for ${recipientType}:`, htmlContent.length);
       
-      // Create a new window/tab with the content for printing
+      // Create a new window/tab with the content
       const printWindow = window.open('', '_blank');
       if (printWindow) {
         console.log(`Opening print window for ${recipientType}`);
         printWindow.document.write(htmlContent);
         printWindow.document.close();
         
-        // Add print styles and auto-print
+        // Let user manually print if they want to
         printWindow.addEventListener('load', () => {
-          setTimeout(() => {
-            console.log(`Triggering print for ${recipientType}`);
-            printWindow.print();
-          }, 500);
+          // Focus the window to ensure it's visible
+          printWindow.focus();
         });
       } else {
-        console.log(`Print window blocked, using fallback download for ${recipientType}`);
-        // Fallback: create downloadable HTML file
-        const blob = new Blob([htmlContent], { type: 'text/html' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.style.display = 'none';
-        a.href = url;
-        a.download = `${rfp?.rfpNumber}-${recipientType}-invitation.html`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
+        console.log(`Print window blocked for ${recipientType}. User needs to allow popups.`);
+        toast({
+          title: "Popup Blocked",
+          description: `Please allow popups for this site to open the ${recipientType.charAt(0).toUpperCase() + recipientType.slice(1)} RFP in a new window`,
+          variant: "destructive",
+        });
+        return;
       }
       
       toast({
@@ -418,28 +407,14 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
   };
 
   const onSubmit = (data: InvitationFormData) => {
-    console.log("===== FORM SUBMISSION =====");
-    console.log("Form submission data:", data);
-    console.log("Form errors:", form.formState.errors);
-    console.log("Form is valid:", form.formState.isValid);
-    console.log("All checkbox values:", {
-      generateArchitectRfp: data.generateArchitectRfp,
-      generateContractorRfp: data.generateContractorRfp,
-      generateBrokerArchitectRfp: data.generateBrokerArchitectRfp,
-      generateBrokerContractorRfp: data.generateBrokerContractorRfp
-    });
-    
     // Check if at least one option is selected
     const hasSelection = data.generateArchitectRfp || data.generateContractorRfp || 
                         data.generateBrokerArchitectRfp || data.generateBrokerContractorRfp;
-    console.log("Has at least one selection:", hasSelection);
     
     if (!hasSelection) {
-      console.warn("No RFP types selected!");
       return;
     }
     
-    console.log("Submitting form mutation...");
     createInvitationMutation.mutate(data);
   };
 
@@ -1060,20 +1035,6 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                       Save
                     </>
                   )}
-                </Button>
-                
-                <Button 
-                  type="button" 
-                  variant="outline"
-                  onClick={() => {
-                    console.log("===== DEBUG FORM STATE =====");
-                    console.log("Current form values:", form.getValues());
-                    console.log("Form errors:", form.formState.errors);
-                    console.log("Form is valid:", form.formState.isValid);
-                  }}
-                  disabled={createInvitationMutation.isPending || isGeneratingPdfs || saveInvitationMutation.isPending}
-                >
-                  Debug
                 </Button>
                 
                 <Button 

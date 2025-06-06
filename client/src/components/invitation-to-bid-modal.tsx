@@ -189,6 +189,9 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
         prequalificationCriteria: data.prequalificationCriteria ? [data.prequalificationCriteria] : [],
         evaluationCriteria: data.evaluationCriteria ? [data.evaluationCriteria] : [],
         contactForQuestions: `${data.contactPerson} - ${data.contactEmail}${data.contactPhone ? ' - ' + data.contactPhone : ''}`,
+        projectDescription: data.projectDescription,
+        documentsLink: data.documentsLink,
+        keyDates: data.keyDates,
       };
       
       // Save or update invitation to bid record

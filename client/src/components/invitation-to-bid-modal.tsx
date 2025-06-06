@@ -276,6 +276,10 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
       
       if (formData.generateContractorRfp) {
         console.log("Generating contractor PDF...");
+        // Small delay to prevent popup blocking
+        if (formData.generateArchitectRfp) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
         await generatePdf("contractor");
       }
       

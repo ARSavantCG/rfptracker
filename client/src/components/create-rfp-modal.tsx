@@ -18,6 +18,7 @@ const createRfpSchema = z.object({
   property: z.string().min(1, "Property is required"),
   tenantName: z.string().min(1, "Tenant name is required"),
   projectName: z.string().min(1, "Project name is required"),
+  projectAddress: z.string().optional(),
   confidential: z.boolean().default(false),
   sentBy: z.string().min(1, "Sent by is required"),
   sentOn: z.string().min(1, "Sent on date is required"),
@@ -45,6 +46,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
       property: "",
       tenantName: "",
       projectName: "",
+      projectAddress: "",
       confidential: false,
       sentBy: "",
       sentOn: new Date().toISOString().split('T')[0],
@@ -213,6 +215,23 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                     <FormControl>
                       <Input 
                         placeholder="Descriptive project name"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="projectAddress"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Project Address</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Complete street address of the project"
                         {...field}
                       />
                     </FormControl>

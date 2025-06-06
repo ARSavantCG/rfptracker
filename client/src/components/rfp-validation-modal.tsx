@@ -22,6 +22,8 @@ const validationFormSchema = z.object({
   officeAreaNew: z.string().optional(),
   warehouseArea: z.string().optional(),
   requestTypes: z.array(z.string()).min(1, "At least one request type is required"),
+  projectDescription: z.string().optional(),
+  documentsLink: z.string().optional(),
 });
 
 type ValidationFormData = z.infer<typeof validationFormSchema>;
@@ -55,6 +57,8 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
       officeAreaNew: "",
       warehouseArea: "",
       requestTypes: ["pricing", "schedule", "space-plan"],
+      projectDescription: "",
+      documentsLink: "",
     },
   });
 
@@ -69,6 +73,8 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
         officeAreaNew: "",
         warehouseArea: rfp.projectArea || "",
         requestTypes: rfp.requestTypes || ["pricing", "schedule", "space-plan"],
+        projectDescription: "",
+        documentsLink: "",
       });
     }
   }, [rfp, isOpen, form]);

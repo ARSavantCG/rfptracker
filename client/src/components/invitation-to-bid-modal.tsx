@@ -61,6 +61,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isGeneratingPdfs, setIsGeneratingPdfs] = useState(false);
+  const [keyDates, setKeyDates] = useState<Array<{label: string, date: string}>>([]);
 
   const form = useForm<InvitationFormData>({
     resolver: zodResolver(invitationFormSchema),
@@ -164,6 +165,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
       } : defaultValues;
 
       form.reset(formValues);
+      setKeyDates(formValues.keyDates);
     }
   }, [rfp, isOpen, existingInvitation, form]);
 
@@ -793,16 +795,17 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
             <div className="border-t pt-4">
               <h3 className="font-medium mb-3">Key Project Dates</h3>
               <div className="space-y-3">
-                {(form.watch("keyDates") || []).map((keyDate, index) => (
+                {keyDates.map((keyDate, index) => (
                   <div key={index} className="flex gap-2 items-end">
                     <div className="flex-1">
                       <Input
                         placeholder="Date description (e.g., Design completion)"
                         value={keyDate.label}
                         onChange={(e) => {
-                          const keyDates = form.getValues("keyDates") || [];
-                          keyDates[index].label = e.target.value;
-                          form.setValue("keyDates", keyDates);
+                          const updatedKeyDates = [...keyDates];
+                          updatedKeyDates[index].label = e.target.value;
+                          setKeyDates(updatedKeyDates);
+                          form.setValue("keyDates", updatedKeyDates);
                         }}
                       />
                     </div>
@@ -811,9 +814,10 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                         type="date"
                         value={keyDate.date}
                         onChange={(e) => {
-                          const keyDates = form.getValues("keyDates") || [];
-                          keyDates[index].date = e.target.value;
-                          form.setValue("keyDates", keyDates);
+                          const updatedKeyDates = [...keyDates];
+                          updatedKeyDates[index].date = e.target.value;
+                          setKeyDates(updatedKeyDates);
+                          form.setValue("keyDates", updatedKeyDates);
                         }}
                       />
                     </div>
@@ -822,9 +826,10 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        const keyDates = form.getValues("keyDates") || [];
-                        keyDates.splice(index, 1);
-                        form.setValue("keyDates", keyDates);
+                        const updatedKeyDates = [...keyDates];
+                        updatedKeyDates.splice(index, 1);
+                        setKeyDates(updatedKeyDates);
+                        form.setValue("keyDates", updatedKeyDates);
                       }}
                     >
                       <X className="h-4 w-4" />
@@ -835,9 +840,9 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                   type="button"
                   variant="outline"
                   onClick={() => {
-                    const keyDates = form.getValues("keyDates") || [];
-                    keyDates.push({ label: "", date: "" });
-                    form.setValue("keyDates", keyDates);
+                    const updatedKeyDates = [...keyDates, { label: "", date: "" }];
+                    setKeyDates(updatedKeyDates);
+                    form.setValue("keyDates", updatedKeyDates);
                   }}
                 >
                   Add Key Date

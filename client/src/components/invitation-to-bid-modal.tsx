@@ -124,6 +124,9 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
         contactPerson: rfp.developmentContact || "",
         contactEmail: "",
         contactPhone: "",
+        projectDescription: "",
+        documentsLink: "",
+        keyDates: [],
       };
 
       // Merge with existing invitation data if available
@@ -155,6 +158,9 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
           existingInvitation.contactForQuestions.split(' - ')[1] || "" : "",
         contactPhone: existingInvitation.contactForQuestions ? 
           existingInvitation.contactForQuestions.split(' - ')[2] || "" : "",
+        projectDescription: existingInvitation.projectDescription || "",
+        documentsLink: existingInvitation.documentsLink || "",
+        keyDates: existingInvitation.keyDates || [],
       } : defaultValues;
 
       form.reset(formValues);
@@ -493,6 +499,106 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                   </FormItem>
                 )}
               />
+            </div>
+
+            {/* Project Description */}
+            <FormField
+              control={form.control}
+              name="projectDescription"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Project Description</FormLabel>
+                  <FormControl>
+                    <Textarea 
+                      placeholder="Detailed description of the project scope and requirements" 
+                      className="min-h-[100px]" 
+                      {...field} 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Documents Link */}
+            <FormField
+              control={form.control}
+              name="documentsLink"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Documents Link</FormLabel>
+                  <FormControl>
+                    <Input placeholder="https://example.com/project-documents" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Key Dates */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <FormLabel>Key Dates</FormLabel>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const currentKeyDates = form.getValues("keyDates");
+                    form.setValue("keyDates", [...currentKeyDates, { label: "", date: "" }]);
+                  }}
+                >
+                  Add Key Date
+                </Button>
+              </div>
+              
+              {form.watch("keyDates").map((_, index) => (
+                <div key={index} className="flex gap-4 items-end">
+                  <div className="flex-1">
+                    <FormField
+                      control={form.control}
+                      name={`keyDates.${index}.label`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Date Label</FormLabel>
+                          <FormControl>
+                            <Input placeholder="e.g., Bid Due Date" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <div className="flex-1">
+                    <FormField
+                      control={form.control}
+                      name={`keyDates.${index}.date`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Date</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      const currentKeyDates = form.getValues("keyDates");
+                      form.setValue("keyDates", currentKeyDates.filter((_, i) => i !== index));
+                    }}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
             </div>
 
             <div className="grid grid-cols-2 gap-4">

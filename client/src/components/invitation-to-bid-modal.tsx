@@ -265,22 +265,24 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
       }
     },
     onSuccess: async (invitationToBid) => {
+      console.log("Invitation created successfully, starting PDF generation...");
       toast({
         title: "Invitation to Bid Created", 
         description: "RFP details saved successfully. Ready to generate PDFs.",
       });
       
-      // Generate PDFs based on selections
-      const formData = form.getValues();
-      console.log("Starting PDF generation with form data:", formData);
-      console.log("Boolean values:", {
-        generateArchitectRfp: formData.generateArchitectRfp,
-        generateContractorRfp: formData.generateContractorRfp, 
-        generateBrokerArchitectRfp: formData.generateBrokerArchitectRfp,
-        generateBrokerContractorRfp: formData.generateBrokerContractorRfp
-      });
+      try {
+        // Generate PDFs based on selections
+        const formData = form.getValues();
+        console.log("Starting PDF generation with form data:", formData);
+        console.log("Boolean values:", {
+          generateArchitectRfp: formData.generateArchitectRfp,
+          generateContractorRfp: formData.generateContractorRfp, 
+          generateBrokerArchitectRfp: formData.generateBrokerArchitectRfp,
+          generateBrokerContractorRfp: formData.generateBrokerContractorRfp
+        });
       
-      let delay = 0;
+        let delay = 0;
       
       if (formData.generateArchitectRfp) {
         console.log("Generating formal architect RFP...");
@@ -308,16 +310,24 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
         await generatePdf("broker-contractor");
       }
       
-      // Update RFP status
-      await apiRequest(`/api/rfp-requests/${rfp?.id}`, "PATCH", {
-        status: "in-progress",
-        workflowPhase: "bid-collection"
-      });
-      
-      queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
-      
-      onClose();
+        // Update RFP status
+        await apiRequest(`/api/rfp-requests/${rfp?.id}`, "PATCH", {
+          status: "in-progress",
+          workflowPhase: "bid-collection"
+        });
+        
+        queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
+        
+        onClose();
+      } catch (error) {
+        console.error("PDF generation error:", error);
+        toast({
+          title: "PDF Generation Error",
+          description: error instanceof Error ? error.message : "Failed to generate PDFs",
+          variant: "destructive",
+        });
+      }
     },
     onError: (error) => {
       toast({

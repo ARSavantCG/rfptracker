@@ -302,7 +302,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
         console.log("Generating preliminary architect RFP...");
         if (delay > 0) await new Promise(resolve => setTimeout(resolve, delay));
         await generatePdf("broker-architect");
-        delay += 1000;
+        delay += 3000; // Longer delay to prevent popup blocking
       }
       
       if (formData.generateBrokerContractorRfp) {
@@ -382,11 +382,29 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
         });
       } else {
         console.log(`Print window blocked for ${recipientType}. User needs to allow popups.`);
+        
+        // Create a manual link for the blocked popup
+        const blob = new Blob([htmlContent], { type: 'text/html' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.target = '_blank';
+        a.download = `${rfp?.rfpNumber}-${recipientType}-invitation.html`;
+        a.textContent = `Open ${recipientType.charAt(0).toUpperCase() + recipientType.slice(1)} RFP`;
+        a.style.color = '#007bff';
+        a.style.textDecoration = 'underline';
+        
         toast({
           title: "Popup Blocked",
-          description: `Please allow popups for this site to open the ${recipientType.charAt(0).toUpperCase() + recipientType.slice(1)} RFP in a new window`,
+          description: `The ${recipientType.charAt(0).toUpperCase() + recipientType.slice(1)} RFP was blocked. Please allow popups or try again.`,
           variant: "destructive",
         });
+        
+        // Cleanup the blob URL after a delay
+        setTimeout(() => {
+          window.URL.revokeObjectURL(url);
+        }, 60000);
+        
         return;
       }
       

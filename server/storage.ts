@@ -83,7 +83,8 @@ export class DatabaseStorage implements IStorage {
       .values({
         ...request,
         rfpNumber,
-        files: [],
+        confidential: request.confidential || false,
+        files: request.files || [],
       })
       .returning();
     
@@ -91,10 +92,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateRfpRequest(id: number, updates: Partial<UpdateRfpRequest>): Promise<RfpRequest | undefined> {
+    // Handle confidential field type conversion
+    const updateData: any = { ...updates };
+    if (updateData.confidential !== undefined) {
+      updateData.confidential = Boolean(updateData.confidential);
+    }
+    
     const [updated] = await db
       .update(rfpRequests)
       .set({
-        ...updates,
+        ...updateData,
         updatedAt: new Date(),
       })
       .where(eq(rfpRequests.id, id))

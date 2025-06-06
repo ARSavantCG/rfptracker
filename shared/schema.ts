@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, json } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, json, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -36,6 +36,8 @@ export const rfpRequests = pgTable("rfp_requests", {
   contactPerson: text("contact_person"),
   contactEmail: text("contact_email"),
   dueDate: timestamp("due_date"),
+  projectDescription: text("project_description"),
+  documentsLink: text("documents_link"),
   
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

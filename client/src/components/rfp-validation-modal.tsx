@@ -345,6 +345,45 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
               )}
             />
 
+            {/* Project Description */}
+            <FormField
+              control={form.control}
+              name="projectDescription"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Project Description</FormLabel>
+                  <FormControl>
+                    <Textarea 
+                      placeholder="Detailed description of the project scope, requirements, and deliverables" 
+                      className="min-h-[100px]" 
+                      {...field} 
+                    />
+                  </FormControl>
+                  <p className="text-sm text-gray-600">This description will be used in contractor and architect invitations</p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Documents Link */}
+            <FormField
+              control={form.control}
+              name="documentsLink"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Documents Link</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="https://sharepoint.com/project-documents or similar link" 
+                      {...field} 
+                    />
+                  </FormControl>
+                  <p className="text-sm text-gray-600">Link to project drawings, specifications, and related documents</p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             {/* Validation Result */}
             {validationResult && (
               <div className={`p-4 rounded-lg border ${

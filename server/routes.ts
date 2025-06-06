@@ -695,7 +695,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const pdfOptions = {
         rfp,
         invitationToBid,
-        recipientType: recipientType as "architect" | "contractor",
+        recipientType: recipientType as "architect" | "contractor" | "broker-architect" | "broker-contractor",
         recipientName,
         recipientCompany
       };

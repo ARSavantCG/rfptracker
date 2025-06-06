@@ -14,7 +14,7 @@ function formatDate(date: string | Date): string {
 export interface PdfGenerationOptions {
   rfp: any;
   invitationToBid?: any;
-  recipientType: "architect" | "contractor";
+  recipientType: "architect" | "contractor" | "broker-architect" | "broker-contractor";
   recipientName?: string;
   recipientCompany?: string;
 }
@@ -64,6 +64,10 @@ function generateRfpHtml(options: PdfGenerationOptions): string {
   // Generate different content based on recipient type
   if (recipientType === "contractor") {
     return generateContractorRfpHtml(options, { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea });
+  } else if (recipientType === "broker-contractor") {
+    return generateBrokerContractorRfpHtml(options, { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea });
+  } else if (recipientType === "broker-architect") {
+    return generateBrokerArchitectRfpHtml(options, { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea });
   } else {
     return generateArchitectRfpHtml(options, { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea });
   }
@@ -564,9 +568,266 @@ function generateArchitectRfpHtml(options: PdfGenerationOptions, dates: any): st
   `;
 }
 
+function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dates: any): string {
+  const { rfp, invitationToBid, recipientName, recipientCompany } = options;
+  const { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea } = dates;
+
+  const projectName = rfp.confidential ? `Confidential @ ${rfp.property}` : `${rfp.tenantName} @ ${rfp.property}`;
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>Broker Response RFP - Architect Services</title>
+      <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; line-height: 1.4; color: #333; }
+        .header { border-bottom: 3px solid #2563eb; padding-bottom: 20px; margin-bottom: 30px; }
+        .company-info { text-align: right; margin-bottom: 20px; }
+        .document-title { font-size: 24px; font-weight: bold; color: #2563eb; margin-bottom: 10px; }
+        .project-title { font-size: 18px; color: #666; margin-bottom: 20px; }
+        .section { margin-bottom: 25px; }
+        .section-title { font-size: 16px; font-weight: bold; color: #2563eb; margin-bottom: 10px; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; }
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+        .info-item { margin-bottom: 10px; }
+        .label { font-weight: bold; color: #666; }
+        .value { margin-left: 10px; }
+        .requirements { background-color: #fef3c7; padding: 15px; border-left: 4px solid #f59e0b; margin: 15px 0; }
+        .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #666; }
+        .preliminary-notice { background-color: #dbeafe; padding: 15px; border-left: 4px solid #3b82f6; margin: 20px 0; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        th, td { border: 1px solid #e5e7eb; padding: 8px; text-align: left; }
+        th { background-color: #f9fafb; font-weight: bold; }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <div class="company-info">
+          <div><strong>Development Team</strong></div>
+          <div>${rfp.developmentContact || 'Development Contact'}</div>
+          <div>Email: ${rfp.contactEmail || 'contact@company.com'}</div>
+          <div>Date: ${today}</div>
+        </div>
+        <div class="document-title">PRELIMINARY REQUEST FOR PROPOSAL</div>
+        <div class="project-title">Architectural Services - ${projectName}</div>
+        <div style="font-size: 14px; color: #666;">RFP Number: ${rfp.rfpNumber}</div>
+      </div>
+
+      <div class="preliminary-notice">
+        <strong>PRELIMINARY BROKER RESPONSE RFP</strong><br>
+        This is a preliminary request for space planning and conceptual pricing to support broker discussions with a prospective tenant. This is not a formal project commitment.
+      </div>
+
+      <div class="section">
+        <div class="section-title">Project Overview</div>
+        <div class="info-grid">
+          <div>
+            <div class="info-item"><span class="label">Property:</span><span class="value">${rfp.property}</span></div>
+            <div class="info-item"><span class="label">Prospective Tenant:</span><span class="value">${rfp.confidential ? 'Confidential' : rfp.tenantName}</span></div>
+            <div class="info-item"><span class="label">Total Area:</span><span class="value">${rfp.warehouseArea || 'TBD'} sq ft</span></div>
+          </div>
+          <div>
+            <div class="info-item"><span class="label">Requested Response:</span><span class="value">${bidDeadline}</span></div>
+            <div class="info-item"><span class="label">Project Type:</span><span class="value">Preliminary Assessment</span></div>
+            <div class="info-item"><span class="label">Budget Range:</span><span class="value">${invitationToBid?.estimatedBudget || 'To be determined'}</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Preliminary Scope of Work</div>
+        <p><strong>Phase 1 - Initial Assessment (Requested):</strong></p>
+        <ul>
+          <li>Review existing building conditions and space requirements</li>
+          <li>Develop preliminary space planning concepts</li>
+          <li>Provide conceptual floor plans showing potential layout options</li>
+          <li>Identify major building system impacts and requirements</li>
+          <li>Preliminary cost estimation for tenant improvements</li>
+        </ul>
+        
+        <p><strong>Future Phases (If Project Proceeds):</strong></p>
+        <ul>
+          <li>Detailed design development</li>
+          <li>Construction documents</li>
+          <li>Permitting support</li>
+          <li>Construction administration</li>
+        </ul>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Space Requirements</div>
+        <table>
+          <tr><th>Space Type</th><th>Area (sq ft)</th><th>Notes</th></tr>
+          <tr><td>Warehouse/Industrial</td><td>${warehouseArea.toLocaleString()}</td><td>Clear height requirements TBD</td></tr>
+          <tr><td>Existing Office</td><td>${existingOffice.toLocaleString()}</td><td>Renovation level TBD</td></tr>
+          <tr><td>New Office Space</td><td>${newOffice.toLocaleString()}</td><td>New construction</td></tr>
+          <tr><td><strong>Total</strong></td><td><strong>${totalArea.toLocaleString()}</strong></td><td></td></tr>
+        </table>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Requested Deliverables</div>
+        <ul>
+          <li>Preliminary space planning concepts (2-3 options preferred)</li>
+          <li>Basic floor plans showing proposed layout</li>
+          <li>Conceptual cost estimate for tenant improvements</li>
+          <li>Timeline estimate for design and construction phases</li>
+          <li>Fee proposal for full architectural services (if project proceeds)</li>
+        </ul>
+      </div>
+
+      <div class="requirements">
+        <strong>Important Note:</strong> This preliminary RFP is issued to support ongoing lease negotiations with a prospective tenant. 
+        The project may not proceed, and this request does not constitute a commitment to engage architectural services. 
+        Please provide conceptual-level information suitable for initial tenant discussions.
+      </div>
+
+      <div class="footer">
+        <p>This preliminary RFP was generated on ${today} for broker response purposes. 
+        For questions, please contact ${rfp.developmentContact || 'Development Team'}.</p>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
+function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, dates: any): string {
+  const { rfp, invitationToBid, recipientName, recipientCompany } = options;
+  const { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea } = dates;
+
+  const projectName = rfp.confidential ? `Confidential @ ${rfp.property}` : `${rfp.tenantName} @ ${rfp.property}`;
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>Broker Response RFP - General Contractor Services</title>
+      <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; line-height: 1.4; color: #333; }
+        .header { border-bottom: 3px solid #059669; padding-bottom: 20px; margin-bottom: 30px; }
+        .company-info { text-align: right; margin-bottom: 20px; }
+        .document-title { font-size: 24px; font-weight: bold; color: #059669; margin-bottom: 10px; }
+        .project-title { font-size: 18px; color: #666; margin-bottom: 20px; }
+        .section { margin-bottom: 25px; }
+        .section-title { font-size: 16px; font-weight: bold; color: #059669; margin-bottom: 10px; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; }
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+        .info-item { margin-bottom: 10px; }
+        .label { font-weight: bold; color: #666; }
+        .value { margin-left: 10px; }
+        .requirements { background-color: #fef3c7; padding: 15px; border-left: 4px solid #f59e0b; margin: 15px 0; }
+        .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #666; }
+        .preliminary-notice { background-color: #d1fae5; padding: 15px; border-left: 4px solid #10b981; margin: 20px 0; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        th, td { border: 1px solid #e5e7eb; padding: 8px; text-align: left; }
+        th { background-color: #f9fafb; font-weight: bold; }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <div class="company-info">
+          <div><strong>Development Team</strong></div>
+          <div>${rfp.developmentContact || 'Development Contact'}</div>
+          <div>Email: ${rfp.contactEmail || 'contact@company.com'}</div>
+          <div>Date: ${today}</div>
+        </div>
+        <div class="document-title">PRELIMINARY REQUEST FOR PROPOSAL</div>
+        <div class="project-title">General Contractor Services - ${projectName}</div>
+        <div style="font-size: 14px; color: #666;">RFP Number: ${rfp.rfpNumber}</div>
+      </div>
+
+      <div class="preliminary-notice">
+        <strong>PRELIMINARY BROKER RESPONSE RFP</strong><br>
+        This is a preliminary request for conceptual pricing and scheduling to support broker discussions with a prospective tenant. This is not a formal project commitment.
+      </div>
+
+      <div class="section">
+        <div class="section-title">Project Overview</div>
+        <div class="info-grid">
+          <div>
+            <div class="info-item"><span class="label">Property:</span><span class="value">${rfp.property}</span></div>
+            <div class="info-item"><span class="label">Prospective Tenant:</span><span class="value">${rfp.confidential ? 'Confidential' : rfp.tenantName}</span></div>
+            <div class="info-item"><span class="label">Total Area:</span><span class="value">${rfp.warehouseArea || 'TBD'} sq ft</span></div>
+          </div>
+          <div>
+            <div class="info-item"><span class="label">Requested Response:</span><span class="value">${bidDeadline}</span></div>
+            <div class="info-item"><span class="label">Project Type:</span><span class="value">Preliminary Pricing</span></div>
+            <div class="info-item"><span class="label">Budget Range:</span><span class="value">${invitationToBid?.estimatedBudget || 'To be determined'}</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Preliminary Scope of Work</div>
+        <p><strong>Conceptual Phase (Requested):</strong></p>
+        <ul>
+          <li>Review tenant improvement requirements and building conditions</li>
+          <li>Provide conceptual cost estimates for typical build-out scenarios</li>
+          <li>Preliminary scheduling for design and construction phases</li>
+          <li>Identify potential challenges or special requirements</li>
+          <li>Unit cost guidance for common improvement types</li>
+        </ul>
+        
+        <p><strong>Future Phases (If Project Proceeds):</strong></p>
+        <ul>
+          <li>Detailed cost estimation based on final plans</li>
+          <li>Value engineering recommendations</li>
+          <li>Construction execution</li>
+          <li>Project management and coordination</li>
+        </ul>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Space Breakdown</div>
+        <table>
+          <tr><th>Space Type</th><th>Area (sq ft)</th><th>Typical Improvement Level</th></tr>
+          <tr><td>Warehouse/Industrial</td><td>${warehouseArea.toLocaleString()}</td><td>Minimal - painting, basic utilities</td></tr>
+          <tr><td>Existing Office Renovation</td><td>${existingOffice.toLocaleString()}</td><td>Moderate - updated finishes, HVAC</td></tr>
+          <tr><td>New Office Construction</td><td>${newOffice.toLocaleString()}</td><td>Full build-out</td></tr>
+          <tr><td><strong>Total Project Area</strong></td><td><strong>${totalArea.toLocaleString()}</strong></td><td></td></tr>
+        </table>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Requested Pricing Information</div>
+        <ul>
+          <li>Conceptual cost per square foot by space type</li>
+          <li>Total project cost range (low/medium/high scenarios)</li>
+          <li>Timeline estimate for construction (assuming plans available)</li>
+          <li>Key factors that could impact pricing</li>
+          <li>Preliminary schedule including permitting considerations</li>
+        </ul>
+      </div>
+
+      <div class="requirements">
+        <strong>Important Note:</strong> This preliminary RFP is issued to support ongoing lease negotiations with a prospective tenant. 
+        The project may not proceed, and this request does not constitute a commitment to construction services. 
+        Please provide conceptual-level pricing suitable for initial tenant discussions.
+      </div>
+
+      <div class="footer">
+        <p>This preliminary RFP was generated on ${today} for broker response purposes. 
+        For questions, please contact ${rfp.developmentContact || 'Development Team'}.</p>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
 export function generatePdfFilename(rfp: any, recipientType: string): string {
   const projectName = rfp.confidential ? `Confidential_${rfp.property}` : `${rfp.tenantName}_${rfp.property}`;
   const cleanProjectName = projectName.replace(/[^a-zA-Z0-9]/g, '_');
   const timestamp = new Date().toISOString().split('T')[0];
-  return `${recipientType === 'contractor' ? 'ITB' : 'RFP'}_${cleanProjectName}_${recipientType}_${timestamp}.pdf`;
+  
+  // Determine document type prefix
+  let prefix = 'RFP';
+  if (recipientType === 'contractor') {
+    prefix = 'ITB';
+  } else if (recipientType === 'broker-architect') {
+    prefix = 'Preliminary_Architect_RFP';
+  } else if (recipientType === 'broker-contractor') {
+    prefix = 'Preliminary_Contractor_RFP';
+  }
+  
+  return `${prefix}_${cleanProjectName}_${timestamp}.pdf`;
 }

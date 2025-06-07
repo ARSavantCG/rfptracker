@@ -893,6 +893,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch("/api/properties/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid ID" });
+      }
+
+      const result = updatePropertySchema.safeParse({ ...req.body, id });
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid input", errors: result.error.issues });
+      }
+
+      const property = await storage.updateProperty(id, result.data);
+      if (!property) {
+        return res.status(404).json({ message: "Property not found" });
+      }
+
+      res.json(property);
+    } catch (error) {
+      console.error('Property update error:', error);
+      res.status(500).json({ message: "Failed to update property" });
+    }
+  });
+
   app.delete("/api/properties/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);

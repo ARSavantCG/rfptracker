@@ -40,9 +40,10 @@ export function PropertySelector({ value, onChange, className }: PropertySelecto
     },
   });
 
-  const createMutation = useMutation({
+  const createMutation = useMutation<Property, Error, CreatePropertyFormData>({
     mutationFn: async (data: CreatePropertyFormData) => {
-      return await apiRequest("/api/properties", "POST", data);
+      const response = await apiRequest("/api/properties", "POST", data);
+      return await response.json();
     },
     onSuccess: (newProperty: Property) => {
       queryClient.invalidateQueries({ queryKey: ["/api/properties"] });

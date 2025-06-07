@@ -169,7 +169,10 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
                 <FormItem>
                   <FormLabel>Property</FormLabel>
                   <FormControl>
-                    <Input placeholder="Property name" {...field} />
+                    <PropertySelector
+                      value={field.value}
+                      onChange={field.onChange}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

@@ -402,7 +402,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createProperty(property: InsertProperty): Promise<Property> {
-    const displayName = `${property.streetAddress}, ${property.city}, ${property.state} ${property.zip}`;
+    const displayName = `${property.propertyName} - Building ${property.building}, ${property.streetAddress}, ${property.city}, ${property.state} ${property.zip}`;
     
     const [created] = await db
       .insert(properties)
@@ -419,15 +419,17 @@ export class DatabaseStorage implements IStorage {
   async updateProperty(id: number, updates: Partial<UpdateProperty>): Promise<Property | undefined> {
     const updateData: any = { ...updates, updatedAt: new Date() };
     
-    // Regenerate display name if any address fields changed
-    if (updates.streetAddress || updates.city || updates.state || updates.zip) {
+    // Regenerate display name if any fields changed
+    if (updates.propertyName || updates.building || updates.streetAddress || updates.city || updates.state || updates.zip) {
       const current = await this.getProperty(id);
       if (current) {
+        const propertyName = updates.propertyName || current.propertyName;
+        const building = updates.building || current.building;
         const streetAddress = updates.streetAddress || current.streetAddress;
         const city = updates.city || current.city;
         const state = updates.state || current.state;
         const zip = updates.zip || current.zip;
-        updateData.displayName = `${streetAddress}, ${city}, ${state} ${zip}`;
+        updateData.displayName = `${propertyName} - Building ${building}, ${streetAddress}, ${city}, ${state} ${zip}`;
       }
     }
 

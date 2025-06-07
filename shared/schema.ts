@@ -254,11 +254,13 @@ export type UpdateBidLineItem = z.infer<typeof updateBidLineItemSchema>;
 // Properties table
 export const properties = pgTable("properties", {
   id: serial("id").primaryKey(),
+  propertyName: text("property_name").notNull(),
+  building: text("building").notNull(), // A, B, 1, 2, etc.
   streetAddress: text("street_address").notNull(),
   city: text("city").notNull(),
   state: text("state").notNull(),
   zip: text("zip").notNull(),
-  displayName: text("display_name").notNull(), // Computed field like "123 Main St, New York, NY 10001"
+  displayName: text("display_name").notNull(), // Computed field like "Property Name - Building A, 123 Main St, New York, NY 10001"
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

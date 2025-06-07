@@ -185,7 +185,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
       form.reset(formValues);
       setKeyDates(formValues.keyDates);
     }
-  }, [rfp, isOpen, existingInvitation, form]);
+  }, [rfp, isOpen, existingInvitation, form, properties]);
 
   const saveInvitationMutation = useMutation({
     mutationFn: async (data: InvitationFormData) => {

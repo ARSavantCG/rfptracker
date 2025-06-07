@@ -301,7 +301,35 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
         
         if (formData.generateBrokerContractorRfp) {
           if (delay > 0) await new Promise(resolve => setTimeout(resolve, delay));
-          await generatePdf("broker-contractor");
+          
+          // For the second broker document, use download approach to avoid popup blocking
+          const response = await fetch(`/api/rfp-requests/${rfp?.id}/generate-pdf`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              recipientType: "broker-contractor",
+              invitationData: form.getValues() 
+            }),
+          });
+          
+          if (response.ok) {
+            const htmlContent = await response.text();
+            const blob = new Blob([htmlContent], { type: 'text/html' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${rfp?.rfpNumber}-broker-contractor-rfp.html`;
+            a.style.display = 'none';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+            
+            toast({
+              title: "Documents Generated",
+              description: "Architect RFP opened in new tab. Contractor RFP downloaded to your files.",
+            });
+          }
         }
       
         // Update RFP status

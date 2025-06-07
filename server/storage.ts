@@ -64,6 +64,19 @@ export interface IStorage {
   createInvitation(invitation: InsertInvitation): Promise<Invitation>;
   updateInvitation(id: number, updates: Partial<UpdateInvitation>): Promise<Invitation | undefined>;
   deleteInvitation(id: number): Promise<boolean>;
+
+  // Bid Collection management
+  getBidCollectionsByRfp(rfpId: number): Promise<BidCollection[]>;
+  getBidCollection(id: number): Promise<BidCollection | undefined>;
+  createBidCollection(bidCollection: InsertBidCollection): Promise<BidCollection>;
+  updateBidCollection(id: number, updates: Partial<UpdateBidCollection>): Promise<BidCollection | undefined>;
+  deleteBidCollection(id: number): Promise<boolean>;
+  
+  // Bid Line Item management
+  getBidLineItemsByBid(bidCollectionId: number): Promise<BidLineItem[]>;
+  createBidLineItem(lineItem: InsertBidLineItem): Promise<BidLineItem>;
+  updateBidLineItem(id: number, updates: Partial<UpdateBidLineItem>): Promise<BidLineItem | undefined>;
+  deleteBidLineItem(id: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -307,6 +320,63 @@ export class DatabaseStorage implements IStorage {
 
   async deleteInvitationToBid(rfpId: number): Promise<boolean> {
     const result = await db.delete(invitationToBid).where(eq(invitationToBid.rfpId, rfpId));
+    return (result.rowCount || 0) > 0;
+  }
+
+  // Bid Collection methods
+  async getBidCollectionsByRfp(rfpId: number): Promise<BidCollection[]> {
+    return await db.select().from(bidCollections).where(eq(bidCollections.rfpId, rfpId));
+  }
+
+  async getBidCollection(id: number): Promise<BidCollection | undefined> {
+    const [bidCollection] = await db.select().from(bidCollections).where(eq(bidCollections.id, id));
+    return bidCollection || undefined;
+  }
+
+  async createBidCollection(bidCollection: InsertBidCollection): Promise<BidCollection> {
+    const [created] = await db.insert(bidCollections).values(bidCollection).returning();
+    return created;
+  }
+
+  async updateBidCollection(id: number, updates: Partial<UpdateBidCollection>): Promise<BidCollection | undefined> {
+    const [updated] = await db
+      .update(bidCollections)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(bidCollections.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteBidCollection(id: number): Promise<boolean> {
+    // First delete related line items
+    await db.delete(bidLineItems).where(eq(bidLineItems.bidCollectionId, id));
+    
+    // Then delete the bid collection
+    const result = await db.delete(bidCollections).where(eq(bidCollections.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  // Bid Line Item methods
+  async getBidLineItemsByBid(bidCollectionId: number): Promise<BidLineItem[]> {
+    return await db.select().from(bidLineItems).where(eq(bidLineItems.bidCollectionId, bidCollectionId));
+  }
+
+  async createBidLineItem(lineItem: InsertBidLineItem): Promise<BidLineItem> {
+    const [created] = await db.insert(bidLineItems).values(lineItem).returning();
+    return created;
+  }
+
+  async updateBidLineItem(id: number, updates: Partial<UpdateBidLineItem>): Promise<BidLineItem | undefined> {
+    const [updated] = await db
+      .update(bidLineItems)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(bidLineItems.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteBidLineItem(id: number): Promise<boolean> {
+    const result = await db.delete(bidLineItems).where(eq(bidLineItems.id, id));
     return (result.rowCount || 0) > 0;
   }
 }

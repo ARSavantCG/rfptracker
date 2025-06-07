@@ -33,6 +33,8 @@ export function PropertySelector({ value, onChange, className }: PropertySelecto
   const form = useForm<CreatePropertyFormData>({
     resolver: zodResolver(insertPropertySchema),
     defaultValues: {
+      propertyName: "",
+      building: "",
       streetAddress: "",
       city: "",
       state: "",

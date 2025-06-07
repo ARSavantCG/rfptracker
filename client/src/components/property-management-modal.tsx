@@ -364,17 +364,49 @@ export function PropertyManagementModal({ isOpen, onClose }: PropertyManagementM
             <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4">
               <FormField
                 control={editForm.control}
-                name="streetAddress"
+                name="propertyName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Street Address</FormLabel>
+                    <FormLabel>Property Name</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="123 Main Street" />
+                      <Input {...field} placeholder="e.g., Corporate Plaza, Metro Center" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+
+              <FormField
+                control={editForm.control}
+                name="building"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Building</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="e.g., A, B, 1, 2" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="border-t pt-4">
+                <h4 className="text-sm font-medium text-gray-900 mb-3">Property Address</h4>
+                
+                <FormField
+                  control={editForm.control}
+                  name="streetAddress"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Street Address</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="123 Main Street" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <FormField

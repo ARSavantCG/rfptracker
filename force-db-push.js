@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 // Temporary script to force database push without interactive prompts
-const { exec } = require('child_process');
+import { exec } from 'child_process';
 
 console.log('Force pushing database schema changes...');
 

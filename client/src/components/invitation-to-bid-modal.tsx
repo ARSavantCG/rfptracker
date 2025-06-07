@@ -1096,9 +1096,24 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                   onClick={async () => {
                     if (!rfp) return;
                     
+                    // Validate at least one checkbox is selected
+                    const formData = form.getValues();
+                    const hasSelectedDocuments = formData.generateArchitectRfp || 
+                                               formData.generateContractorRfp || 
+                                               formData.generateBrokerArchitectRfp || 
+                                               formData.generateBrokerContractorRfp;
+                    
+                    if (!hasSelectedDocuments) {
+                      toast({
+                        title: "Validation Error",
+                        description: "Please select at least one document type before completing the invitation.",
+                        variant: "destructive",
+                      });
+                      return;
+                    }
+                    
                     try {
                       // First save the current form data
-                      const formData = form.getValues();
                       await saveInvitationMutation.mutateAsync(formData);
                       
                       // Then advance the workflow to bid-collection phase

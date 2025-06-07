@@ -13,7 +13,7 @@ import { BidCollectionTable } from "@/components/bid-collection-table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Users, Building2 } from "lucide-react";
+import { Plus, Search, Users, Building2, X } from "lucide-react";
 import type { RfpRequest } from "@shared/schema";
 
 export default function Dashboard() {

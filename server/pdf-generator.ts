@@ -59,7 +59,7 @@ function generateContractorRfpHtml(options: PdfGenerationOptions, dates: any): s
   const projectName = rfp.projectName;
   
   // Use Project Address from RFP data
-  const projectAddress = rfp.projectAddress || invitationToBid?.projectLocation || rfp.property;
+  const projectAddress = rfp.propertyAddress || invitationToBid?.projectLocation || rfp.property;
   
   // Use contact info from invitation
   const contactInfo = invitationToBid?.contactForQuestions?.split(' - ') || [];

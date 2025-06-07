@@ -674,7 +674,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/rfp-requests/:id/generate-pdf", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const { recipientType, recipientName, recipientCompany } = req.body;
+      const { recipientType, recipientName, recipientCompany, returnType = "html" } = req.body;
       
       if (isNaN(id)) {
         return res.status(400).json({ message: "Invalid ID" });
@@ -700,23 +700,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         recipientCompany
       };
 
-      const pdfBuffer = await generateRfpPdf(pdfOptions);
-      const filename = generatePdfFilename(rfp, recipientType);
-
-      // Check if the buffer contains HTML (fallback) or actual PDF
-      const isHtml = pdfBuffer.toString().startsWith('<!DOCTYPE') || pdfBuffer.toString().includes('<html');
-      
-      if (isHtml) {
-        const htmlFilename = filename.replace('.pdf', '.html');
-        res.setHeader('Content-Type', 'text/html');
-        res.setHeader('Content-Disposition', `attachment; filename="${htmlFilename}"`);
-      } else {
+      if (returnType === "pdf") {
+        // Generate actual PDF for download
+        const pdfBuffer = await generateRfpPdf(pdfOptions);
+        const filename = generatePdfFilename(rfp, recipientType);
+        
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        res.setHeader('Content-Length', pdfBuffer.length);
+        
+        res.send(pdfBuffer);
+      } else {
+        // Return HTML for preview/printing (existing behavior)
+        const htmlContent = await generateRfpPdf(pdfOptions);
+        res.setHeader('Content-Type', 'text/html');
+        res.send(htmlContent);
       }
-      res.setHeader('Content-Length', pdfBuffer.length);
-      
-      res.send(pdfBuffer);
     } catch (error) {
       console.error("PDF generation error:", error);
       res.status(500).json({ message: "Failed to generate PDF" });

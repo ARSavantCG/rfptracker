@@ -302,23 +302,23 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
         if (formData.generateBrokerContractorRfp) {
           if (delay > 0) await new Promise(resolve => setTimeout(resolve, delay));
           
-          // For the second broker document, use download approach to avoid popup blocking
+          // Generate PDF for direct download to avoid conversion step
           const response = await fetch(`/api/rfp-requests/${rfp?.id}/generate-pdf`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
               recipientType: "broker-contractor",
-              invitationData: form.getValues() 
+              invitationData: form.getValues(),
+              returnType: "pdf"
             }),
           });
           
           if (response.ok) {
-            const htmlContent = await response.text();
-            const blob = new Blob([htmlContent], { type: 'text/html' });
-            const url = window.URL.createObjectURL(blob);
+            const pdfBlob = await response.blob();
+            const url = window.URL.createObjectURL(pdfBlob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `${rfp?.rfpNumber}-broker-contractor-rfp.html`;
+            a.download = `${rfp?.rfpNumber}-broker-contractor-rfp.pdf`;
             a.style.display = 'none';
             document.body.appendChild(a);
             a.click();
@@ -327,7 +327,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
             
             toast({
               title: "Documents Generated",
-              description: "Architect RFP opened in new tab. Contractor RFP downloaded to your files.",
+              description: "Architect RFP opened in new tab. Contractor PDF downloaded and ready for distribution.",
             });
           }
         }
@@ -1083,14 +1083,78 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                   {isGeneratingPdfs ? (
                     <>
                       <Download className="h-4 w-4 mr-2" />
-                      Generating PDFs...
+                      Generating Documents...
                     </>
                   ) : (
                     <>
                       <FileText className="h-4 w-4 mr-2" />
-                      Generate Selected RFPs
+                      Generate Selected Documents
                     </>
                   )}
+                </Button>
+                
+                <Button 
+                  type="button"
+                  variant="outline"
+                  onClick={async () => {
+                    if (!rfp) return;
+                    
+                    const formData = form.getValues();
+                    const documentsToDownload = [];
+                    
+                    if (formData.generateArchitectRfp) documentsToDownload.push({ type: "architect", label: "Formal Architect RFP" });
+                    if (formData.generateContractorRfp) documentsToDownload.push({ type: "contractor", label: "Formal Contractor ITB" });
+                    if (formData.generateBrokerArchitectRfp) documentsToDownload.push({ type: "broker-architect", label: "Broker Architect RFP" });
+                    if (formData.generateBrokerContractorRfp) documentsToDownload.push({ type: "broker-contractor", label: "Broker Contractor RFP" });
+                    
+                    if (documentsToDownload.length === 0) {
+                      toast({
+                        title: "No Documents Selected",
+                        description: "Please select at least one document type to download.",
+                        variant: "destructive",
+                      });
+                      return;
+                    }
+                    
+                    // Download all selected documents as PDFs
+                    for (const doc of documentsToDownload) {
+                      try {
+                        const response = await fetch(`/api/rfp-requests/${rfp.id}/generate-pdf`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ 
+                            recipientType: doc.type,
+                            invitationData: formData,
+                            returnType: "pdf"
+                          }),
+                        });
+                        
+                        if (response.ok) {
+                          const pdfBlob = await response.blob();
+                          const url = window.URL.createObjectURL(pdfBlob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `${rfp.rfpNumber}-${doc.type}-rfp.pdf`;
+                          a.style.display = 'none';
+                          document.body.appendChild(a);
+                          a.click();
+                          document.body.removeChild(a);
+                          setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+                        }
+                      } catch (error) {
+                        console.error(`Failed to download ${doc.type} PDF:`, error);
+                      }
+                    }
+                    
+                    toast({
+                      title: "PDFs Downloaded",
+                      description: `${documentsToDownload.length} PDF(s) ready for email distribution.`,
+                    });
+                  }}
+                  disabled={createInvitationMutation.isPending || isGeneratingPdfs || saveInvitationMutation.isPending}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Download PDFs for Email
                 </Button>
               </div>
             </div>

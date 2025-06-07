@@ -107,7 +107,7 @@ export class DatabaseStorage implements IStorage {
     }
 
     // Format property name with building (like in the property selector)
-    const propertyDisplay = `${property.name} - ${property.buildings[0]?.name || 'Building 1'}`;
+    const propertyDisplay = `${property.propertyName} - ${property.building}`;
     
     if (confidential) {
       return `Confidential @ ${propertyDisplay}`;
@@ -127,14 +127,28 @@ export class DatabaseStorage implements IStorage {
 
   async createRfpRequest(request: InsertRfpRequest): Promise<RfpRequest> {
     const rfpNumber = await this.generateRfpNumber();
+    const projectName = await this.generateProjectName(
+      request.property, 
+      request.tenantName, 
+      request.confidential || false
+    );
     
     const [rfp] = await db
       .insert(rfpRequests)
       .values({
-        ...request,
-        rfpNumber,
+        property: request.property,
+        tenantName: request.tenantName,
+        projectName,
         confidential: request.confidential || false,
+        sentBy: request.sentBy,
+        sentOn: new Date(request.sentOn),
+        developmentContact: request.developmentContact || null,
+        projectArea: request.projectArea || null,
+        requestTypes: request.requestTypes,
+        notes: request.notes || null,
         files: request.files || [],
+        status: "received",
+        workflowPhase: "rfp-entry",
       })
       .returning();
     

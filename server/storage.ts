@@ -5,6 +5,7 @@ import {
   invitationToBid,
   bidCollections,
   bidLineItems,
+  properties,
   type RfpRequest, 
   type InsertRfpRequest, 
   type UpdateRfpRequest,
@@ -23,6 +24,9 @@ import {
   type BidLineItem,
   type InsertBidLineItem,
   type UpdateBidLineItem,
+  type Property,
+  type InsertProperty,
+  type UpdateProperty,
   type RfpFile 
 } from "@shared/schema";
 import { db } from "./db";
@@ -77,6 +81,13 @@ export interface IStorage {
   createBidLineItem(lineItem: InsertBidLineItem): Promise<BidLineItem>;
   updateBidLineItem(id: number, updates: Partial<UpdateBidLineItem>): Promise<BidLineItem | undefined>;
   deleteBidLineItem(id: number): Promise<boolean>;
+
+  // Property management
+  getAllProperties(): Promise<Property[]>;
+  getProperty(id: number): Promise<Property | undefined>;
+  createProperty(property: InsertProperty): Promise<Property>;
+  updateProperty(id: number, updates: Partial<UpdateProperty>): Promise<Property | undefined>;
+  deleteProperty(id: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -377,6 +388,59 @@ export class DatabaseStorage implements IStorage {
 
   async deleteBidLineItem(id: number): Promise<boolean> {
     const result = await db.delete(bidLineItems).where(eq(bidLineItems.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  // Property management methods
+  async getAllProperties(): Promise<Property[]> {
+    return await db.select().from(properties).orderBy(properties.displayName);
+  }
+
+  async getProperty(id: number): Promise<Property | undefined> {
+    const [property] = await db.select().from(properties).where(eq(properties.id, id));
+    return property || undefined;
+  }
+
+  async createProperty(property: InsertProperty): Promise<Property> {
+    const displayName = `${property.streetAddress}, ${property.city}, ${property.state} ${property.zip}`;
+    
+    const [created] = await db
+      .insert(properties)
+      .values({
+        ...property,
+        displayName,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning();
+    return created;
+  }
+
+  async updateProperty(id: number, updates: Partial<UpdateProperty>): Promise<Property | undefined> {
+    const updateData: any = { ...updates, updatedAt: new Date() };
+    
+    // Regenerate display name if any address fields changed
+    if (updates.streetAddress || updates.city || updates.state || updates.zip) {
+      const current = await this.getProperty(id);
+      if (current) {
+        const streetAddress = updates.streetAddress || current.streetAddress;
+        const city = updates.city || current.city;
+        const state = updates.state || current.state;
+        const zip = updates.zip || current.zip;
+        updateData.displayName = `${streetAddress}, ${city}, ${state} ${zip}`;
+      }
+    }
+
+    const [updated] = await db
+      .update(properties)
+      .set(updateData)
+      .where(eq(properties.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteProperty(id: number): Promise<boolean> {
+    const result = await db.delete(properties).where(eq(properties.id, id));
     return (result.rowCount || 0) > 0;
   }
 }

@@ -250,3 +250,30 @@ export type UpdateBidCollection = z.infer<typeof updateBidCollectionSchema>;
 export type BidLineItem = typeof bidLineItems.$inferSelect;
 export type InsertBidLineItem = z.infer<typeof insertBidLineItemSchema>;
 export type UpdateBidLineItem = z.infer<typeof updateBidLineItemSchema>;
+
+// Properties table
+export const properties = pgTable("properties", {
+  id: serial("id").primaryKey(),
+  streetAddress: text("street_address").notNull(),
+  city: text("city").notNull(),
+  state: text("state").notNull(),
+  zip: text("zip").notNull(),
+  displayName: text("display_name").notNull(), // Computed field like "123 Main St, New York, NY 10001"
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertPropertySchema = createInsertSchema(properties).omit({
+  id: true,
+  displayName: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updatePropertySchema = insertPropertySchema.partial().extend({
+  id: z.number(),
+});
+
+export type Property = typeof properties.$inferSelect;
+export type InsertProperty = z.infer<typeof insertPropertySchema>;
+export type UpdateProperty = z.infer<typeof updatePropertySchema>;

@@ -1117,10 +1117,13 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                     }
                     
                     // Open all selected documents in new tabs
+                    console.log(`Total documents to open: ${documentsToOpen.length}`, documentsToOpen);
+                    
                     for (let i = 0; i < documentsToOpen.length; i++) {
                       const doc = documentsToOpen[i];
                       try {
-                        console.log(`Opening ${doc.type} document...`);
+                        console.log(`[${i + 1}/${documentsToOpen.length}] Opening ${doc.type} document (${doc.label})...`);
+                        
                         const response = await fetch(`/api/rfp-requests/${rfp.id}/generate-pdf`, {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
@@ -1131,33 +1134,51 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                           }),
                         });
                         
+                        console.log(`Response status for ${doc.type}:`, response.status);
+                        
                         if (response.ok) {
                           const htmlText = await response.text();
+                          console.log(`HTML content length for ${doc.type}:`, htmlText.length);
+                          
                           const blob = new Blob([htmlText], { type: 'text/html' });
                           const url = URL.createObjectURL(blob);
+                          
+                          console.log(`Opening window for ${doc.type}...`);
                           const newWindow = window.open(url, '_blank');
                           
-                          if (!newWindow) {
+                          if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
+                            console.error(`Failed to open window for ${doc.type}`);
                             toast({
-                              title: "Popup Still Blocked",
-                              description: "Please ensure popups are fully enabled for this site.",
+                              title: "Window Blocked",
+                              description: `${doc.type} document window was blocked. Check popup settings.`,
                               variant: "destructive",
                             });
                           } else {
-                            console.log(`Successfully opened ${doc.type} document`);
+                            console.log(`✓ Successfully opened ${doc.type} document in new tab`);
                           }
                           
-                          setTimeout(() => URL.revokeObjectURL(url), 3000);
+                          setTimeout(() => URL.revokeObjectURL(url), 5000);
                           
-                          // Small delay between opening tabs
+                          // Increased delay between opening tabs
                           if (i < documentsToOpen.length - 1) {
-                            await new Promise(resolve => setTimeout(resolve, 300));
+                            console.log(`Waiting 500ms before opening next document...`);
+                            await new Promise(resolve => setTimeout(resolve, 500));
                           }
                         } else {
-                          console.error(`Failed to generate ${doc.type} document: ${response.status}`);
+                          console.error(`Failed to generate ${doc.type} document: ${response.status} ${response.statusText}`);
+                          toast({
+                            title: "Generation Failed",
+                            description: `Failed to generate ${doc.type} document.`,
+                            variant: "destructive",
+                          });
                         }
                       } catch (error) {
-                        console.error(`Failed to open ${doc.type} document:`, error);
+                        console.error(`Error opening ${doc.type} document:`, error);
+                        toast({
+                          title: "Error",
+                          description: `Error opening ${doc.type} document: ${error.message}`,
+                          variant: "destructive",
+                        });
                       }
                     }
                     

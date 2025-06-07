@@ -46,7 +46,6 @@ export const rfpRequests = pgTable("rfp_requests", {
 export const insertRfpRequestSchema = createInsertSchema(rfpRequests).omit({
   id: true,
   rfpNumber: true,
-  projectName: true,
   createdAt: true,
   updatedAt: true,
   isValidated: true,

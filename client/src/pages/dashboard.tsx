@@ -5,6 +5,7 @@ import { RfpTable } from "@/components/rfp-table";
 import { CreateRfpModal } from "@/components/create-rfp-modal";
 import { EditRfpModal } from "@/components/edit-rfp-modal";
 import { ContactManagementModal } from "@/components/contact-management-modal";
+import { PropertyManagementModal } from "@/components/property-management-modal";
 import { WorkflowStatus } from "@/components/workflow-status";
 import { InvitationToBidModal } from "@/components/invitation-to-bid-modal";
 import { RfpValidationModal } from "@/components/rfp-validation-modal";
@@ -12,7 +13,7 @@ import { BidCollectionTable } from "@/components/bid-collection-table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Users } from "lucide-react";
+import { Plus, Search, Users, Building2 } from "lucide-react";
 import type { RfpRequest } from "@shared/schema";
 
 export default function Dashboard() {
@@ -23,6 +24,7 @@ export default function Dashboard() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
+  const [isPropertyModalOpen, setIsPropertyModalOpen] = useState(false);
   const [isInvitationModalOpen, setIsInvitationModalOpen] = useState(false);
   const [isValidationModalOpen, setIsValidationModalOpen] = useState(false);
   const [showBidCollection, setShowBidCollection] = useState(false);
@@ -96,6 +98,15 @@ export default function Dashboard() {
               >
                 <Users className="h-3 w-3 mr-1" />
                 Contacts
+              </Button>
+              <Button
+                onClick={() => setIsPropertyModalOpen(true)}
+                variant="outline"
+                size="sm"
+                className="h-8 px-3 text-xs"
+              >
+                <Building2 className="h-3 w-3 mr-1" />
+                Properties
               </Button>
               <Button 
                 onClick={() => setIsCreateModalOpen(true)}
@@ -286,6 +297,11 @@ export default function Dashboard() {
       <ContactManagementModal
         isOpen={isContactModalOpen}
         onClose={() => setIsContactModalOpen(false)}
+      />
+
+      <PropertyManagementModal
+        isOpen={isPropertyModalOpen}
+        onClose={() => setIsPropertyModalOpen(false)}
       />
 
       <InvitationToBidModal

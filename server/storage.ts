@@ -3,8 +3,8 @@ import {
   contacts, 
   invitations,
   invitationToBid,
-  bidCollections,
-  bidLineItems,
+  // bidCollections, // Temporarily commented until DB schema syncs
+  // bidLineItems, // Temporarily commented until DB schema syncs
   type RfpRequest, 
   type InsertRfpRequest, 
   type UpdateRfpRequest,
@@ -123,8 +123,8 @@ export class DatabaseStorage implements IStorage {
       console.log(`Attempting to delete RFP with ID: ${id}`);
       
       // Delete related data first to avoid foreign key constraints
-      console.log('Deleting bid collections...');
-      await db.delete(bidCollections).where(eq(bidCollections.rfpId, id));
+      // Note: Bid collections deletion temporarily disabled until DB schema is synced
+      console.log('Skipping bid collections deletion (table not yet created)...');
       
       console.log('Deleting invitations...');
       await db.delete(invitations).where(eq(invitations.rfpId, id));
@@ -141,7 +141,7 @@ export class DatabaseStorage implements IStorage {
       return success;
     } catch (error) {
       console.error('Error deleting RFP:', error);
-      throw error; // Re-throw to see the actual error in the API response
+      throw error;
     }
   }
 

@@ -556,6 +556,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Advance workflow phase route
+  app.post("/api/rfp-requests/:id/advance-workflow", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid ID" });
+      }
+
+      const { newPhase } = req.body;
+      if (!newPhase || !["rfp-entry", "invitation-to-bid", "bid-collection", "evaluation", "award"].includes(newPhase)) {
+        return res.status(400).json({ message: "Invalid workflow phase" });
+      }
+
+      const updated = await storage.advanceWorkflowPhase(id, newPhase);
+      if (!updated) {
+        return res.status(404).json({ message: "RFP request not found" });
+      }
+
+      res.json(updated);
+    } catch (error) {
+      console.error('Error advancing workflow:', error);
+      res.status(500).json({ message: "Failed to advance workflow phase" });
+    }
+  });
+
   // Invitation to Bid routes
   app.post("/api/invitation-to-bid", async (req, res) => {
     try {

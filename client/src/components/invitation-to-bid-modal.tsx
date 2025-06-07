@@ -12,7 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
-import { FileText, Download, Users, Save, X } from "lucide-react";
+import { FileText, Download, Users, Save, X, CheckCircle } from "lucide-react";
 import type { RfpRequest, Property } from "@shared/schema";
 
 const invitationFormSchema = z.object({
@@ -1089,6 +1089,48 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                       Save
                     </>
                   )}
+                </Button>
+
+                <Button
+                  type="button"
+                  onClick={async () => {
+                    if (!rfp) return;
+                    
+                    try {
+                      // First save the current form data
+                      const formData = form.getValues();
+                      await saveInvitationMutation.mutateAsync(formData);
+                      
+                      // Then advance the workflow to bid-collection phase
+                      const response = await fetch(`/api/rfp-requests/${rfp.id}/advance-workflow`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ newPhase: 'bid-collection' })
+                      });
+                      
+                      if (response.ok) {
+                        toast({
+                          title: "Phase Complete",
+                          description: "Invitation to Bid completed. Moving to Bid Collection phase.",
+                        });
+                        queryClient.invalidateQueries({ queryKey: ['/api/rfp-requests'] });
+                        onClose();
+                      } else {
+                        throw new Error('Failed to advance workflow');
+                      }
+                    } catch (error) {
+                      toast({
+                        title: "Error",
+                        description: "Failed to complete invitation phase.",
+                        variant: "destructive",
+                      });
+                    }
+                  }}
+                  disabled={createInvitationMutation.isPending || isGeneratingPdfs || saveInvitationMutation.isPending}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Complete Invitation to Bid
                 </Button>
                 
                 <Button 

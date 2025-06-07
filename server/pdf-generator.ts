@@ -414,8 +414,7 @@ function generateArchitectRfpHtml(options: PdfGenerationOptions, dates: any): st
           </tr>
           <tr>
             <td class="label">PROJECT LOCATION:</td>
-            <td>${invitationToBid?.projectLocation || rfp.property}<br>
-                ${rfp.propertyAddress || ''}</td>
+            <td>${projectLocation}</td>
           </tr>
           <tr>
             <td class="label">TO:</td>

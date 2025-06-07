@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -7,6 +7,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { FileUpload } from "./file-upload";
 import { PropertySelector } from "./property-selector";
 import { useToast } from "@/hooks/use-toast";
+import { type Property } from "@shared/schema";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,8 +19,6 @@ import { X } from "lucide-react";
 const createRfpSchema = z.object({
   property: z.string().min(1, "Property is required"),
   tenantName: z.string().min(1, "Tenant name is required"),
-  projectName: z.string().min(1, "Project name is required"),
-  projectAddress: z.string().optional(),
   confidential: z.boolean().default(false),
   sentBy: z.string().min(1, "Sent by is required"),
   sentOn: z.string().min(1, "Sent on date is required"),
@@ -41,13 +40,16 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Fetch properties to get property details for project name generation
+  const { data: properties = [] } = useQuery<Property[]>({
+    queryKey: ["/api/properties"],
+  });
+
   const form = useForm<CreateRfpFormData>({
     resolver: zodResolver(createRfpSchema),
     defaultValues: {
       property: "",
       tenantName: "",
-      projectName: "",
-      projectAddress: "",
       confidential: false,
       sentBy: "",
       sentOn: new Date().toISOString().split('T')[0],
@@ -58,32 +60,6 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
     },
   });
 
-  // Auto-format project name when tenant name, property, or confidential status changes
-  useEffect(() => {
-    const subscription = form.watch((value, { name, type }) => {
-      if (name === 'tenantName' || name === 'property' || name === 'confidential') {
-        const tenantName = value.tenantName || '';
-        const property = value.property || '';
-        const confidential = value.confidential || false;
-        
-        if (property) {
-          let projectName = '';
-          if (confidential) {
-            projectName = `Confidential @ ${property}`;
-          } else if (tenantName) {
-            projectName = `${tenantName} @ ${property}`;
-          } else {
-            projectName = `@ ${property}`;
-          }
-          
-          form.setValue('projectName', projectName, { shouldValidate: false });
-        }
-      }
-    });
-    
-    return () => subscription.unsubscribe();
-  }, [form]);
-
   const createMutation = useMutation({
     mutationFn: async (data: CreateRfpFormData) => {
       if (selectedFiles.length > 0) {
@@ -93,7 +69,6 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
         // Add form fields
         formData.append('property', data.property);
         formData.append('tenantName', data.tenantName);
-        formData.append('projectName', data.projectName);
         formData.append('confidential', data.confidential.toString());
         formData.append('sentBy', data.sentBy);
         formData.append('sentOn', data.sentOn);
@@ -110,10 +85,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
         return apiRequest("/api/rfp-requests/with-files", "POST", formData);
       } else {
         // No files, send JSON data
-        return apiRequest("/api/rfp-requests", "POST", {
-          ...data,
-          confidential: data.confidential
-        });
+        return apiRequest("/api/rfp-requests", "POST", data);
       }
     },
     onSuccess: () => {
@@ -207,39 +179,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                 />
               </div>
 
-              <FormField
-                control={form.control}
-                name="projectName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Project Name *</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="Descriptive project name"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
 
-              <FormField
-                control={form.control}
-                name="projectAddress"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Project Address</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="Complete street address of the project"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField

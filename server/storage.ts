@@ -98,6 +98,24 @@ export class DatabaseStorage implements IStorage {
     return `RFP-${year}-${number}`;
   }
 
+  private async generateProjectName(propertyId: string, tenantName: string, confidential: boolean): Promise<string> {
+    // Get property details to build the project name
+    const [property] = await db.select().from(properties).where(eq(properties.id, parseInt(propertyId)));
+    
+    if (!property) {
+      throw new Error('Property not found');
+    }
+
+    // Format property name with building (like in the property selector)
+    const propertyDisplay = `${property.name} - ${property.buildings[0]?.name || 'Building 1'}`;
+    
+    if (confidential) {
+      return `Confidential @ ${propertyDisplay}`;
+    } else {
+      return `${tenantName} @ ${propertyDisplay}`;
+    }
+  }
+
   async getRfpRequest(id: number): Promise<RfpRequest | undefined> {
     const [rfp] = await db.select().from(rfpRequests).where(eq(rfpRequests.id, id));
     return rfp || undefined;

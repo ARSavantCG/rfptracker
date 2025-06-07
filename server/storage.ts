@@ -119,8 +119,30 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteRfpRequest(id: number): Promise<boolean> {
-    const result = await db.delete(rfpRequests).where(eq(rfpRequests.id, id));
-    return result.rowCount > 0;
+    try {
+      console.log(`Attempting to delete RFP with ID: ${id}`);
+      
+      // Delete related data first to avoid foreign key constraints
+      console.log('Deleting bid collections...');
+      await db.delete(bidCollections).where(eq(bidCollections.rfpId, id));
+      
+      console.log('Deleting invitations...');
+      await db.delete(invitations).where(eq(invitations.rfpId, id));
+      
+      console.log('Deleting invitation to bid...');
+      await db.delete(invitationToBid).where(eq(invitationToBid.rfpId, id));
+      
+      // Now delete the RFP
+      console.log('Deleting RFP...');
+      const result = await db.delete(rfpRequests).where(eq(rfpRequests.id, id));
+      
+      const success = (result.rowCount || 0) > 0;
+      console.log(`Delete result: rowCount=${result.rowCount}, success=${success}`);
+      return success;
+    } catch (error) {
+      console.error('Error deleting RFP:', error);
+      throw error; // Re-throw to see the actual error in the API response
+    }
   }
 
   async addFileToRfp(rfpId: number, file: RfpFile): Promise<RfpRequest | undefined> {

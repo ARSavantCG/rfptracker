@@ -314,38 +314,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
               />
             </div>
 
-            {/* File Attachments */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">Attachments</h3>
-              <FileUpload
-                onFilesSelected={setAttachments}
-                multiple={true}
-                accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
-                className="border-2 border-dashed border-gray-300 rounded-lg p-6"
-              />
-              {attachments.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-sm text-gray-600">{attachments.length} file(s) selected:</p>
-                  {attachments.map((file, index) => (
-                    <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                      <div className="flex items-center gap-2">
-                        <FileText className="h-4 w-4" />
-                        <span className="text-sm">{file.name}</span>
-                        <span className="text-xs text-gray-500">({(file.size / 1024).toFixed(1)} KB)</span>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setAttachments(attachments.filter((_, i) => i !== index))}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+
 
             {/* Line Items Table */}
             <div className="space-y-4">
@@ -486,6 +455,41 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                 </FormItem>
               )}
             />
+
+            {/* File Attachments - Compact */}
+            <div className="space-y-2">
+              <h4 className="text-sm font-medium">Attachments</h4>
+              <FileUpload
+                onFilesSelected={setAttachments}
+                multiple={true}
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
+                className="border border-gray-300 rounded p-3 text-sm"
+              />
+              {attachments.length > 0 && (
+                <div className="space-y-1">
+                  <p className="text-xs text-gray-600">{attachments.length} file(s) selected:</p>
+                  <div className="grid grid-cols-2 gap-1">
+                    {attachments.map((file, index) => (
+                      <div key={index} className="flex items-center justify-between p-1 bg-gray-50 rounded text-xs">
+                        <div className="flex items-center gap-1 truncate">
+                          <FileText className="h-3 w-3 flex-shrink-0" />
+                          <span className="truncate">{file.name}</span>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setAttachments(attachments.filter((_, i) => i !== index))}
+                          className="h-4 w-4 p-0"
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Form Actions */}
             <div className="flex justify-end gap-3">

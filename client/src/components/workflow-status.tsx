@@ -124,7 +124,7 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onValidateRfp, onOp
           const isCompleted = index < currentPhaseIndex;
           const isNext = index === currentPhaseIndex + 1;
 
-          const isClickable = (isActive || isCompleted) && (phase.key === "rfp-entry" || phase.key === "invitation-to-bid");
+          const isClickable = (isActive || isCompleted) && (phase.key === "rfp-entry" || phase.key === "invitation-to-bid" || phase.key === "bid-collection");
           
           return (
             <div
@@ -178,12 +178,24 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onValidateRfp, onOp
         
         {/* Show Create Invitation to Bid button when in invitation-to-bid phase */}
         {actualWorkflowPhase === "invitation-to-bid" && (
-          <Button
-            onClick={() => onAdvanceToInvitation(rfp)}
-            className="w-full"
-          >
-            Generate Invitation to Bid PDF
-          </Button>
+          <div className="space-y-2">
+            <Button
+              onClick={() => onAdvanceToInvitation(rfp)}
+              className="w-full"
+            >
+              Generate Invitation to Bid PDF
+            </Button>
+            <Button
+              onClick={handleAdvancePhase}
+              disabled={advancePhaseMutation.isPending}
+              variant="outline"
+              className="w-full"
+            >
+              {advancePhaseMutation.isPending
+                ? "Advancing..."
+                : "Begin Bid Collection"}
+            </Button>
+          </div>
         )}
 
         {nextPhase && actualWorkflowPhase !== "invitation-to-bid" && (

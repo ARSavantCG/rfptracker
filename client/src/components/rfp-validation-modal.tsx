@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import { apiRequest } from "@/lib/queryClient";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -9,10 +9,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { CheckCircle, AlertCircle, Download, FileText, ArrowRight, X } from "lucide-react";
-import type { RfpRequest } from "@shared/schema";
+import type { RfpRequest, Contact } from "@shared/schema";
 
 const validationFormSchema = z.object({
   dueDate: z.string().min(1, "Due date is required"),
@@ -46,6 +47,15 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
   const queryClient = useQueryClient();
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+
+  // Fetch contacts for dropdowns
+  const { data: contacts = [] } = useQuery<Contact[]>({
+    queryKey: ["/api/contacts"],
+  });
+
+  // Filter contacts by type
+  const contractors = contacts.filter(contact => contact.type === "contractor");
+  const architects = contacts.filter(contact => contact.type === "architect");
 
   const form = useForm<ValidationFormData>({
     resolver: zodResolver(validationFormSchema),
@@ -203,9 +213,20 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>General Contractor</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter general contractor name" {...field} />
-                  </FormControl>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select general contractor" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {contractors.map((contractor) => (
+                        <SelectItem key={contractor.id} value={`${contractor.name} - ${contractor.company}`}>
+                          {contractor.name} - {contractor.company}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
@@ -218,9 +239,20 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Architect</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter architect name" {...field} />
-                  </FormControl>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select architect" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {architects.map((architect) => (
+                        <SelectItem key={architect.id} value={`${architect.name} - ${architect.company}`}>
+                          {architect.name} - {architect.company}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}

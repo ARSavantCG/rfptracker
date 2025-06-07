@@ -37,6 +37,7 @@ interface CreateRfpModalProps {
 
 export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [generatedProjectName, setGeneratedProjectName] = useState<string>("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -59,6 +60,30 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
       notes: "",
     },
   });
+
+  // Watch form values to generate project name in real-time
+  const watchedValues = form.watch();
+  
+  useEffect(() => {
+    const { property, tenantName, confidential } = watchedValues;
+    
+    if (property && properties.length > 0) {
+      const selectedProperty = properties.find(p => p.id.toString() === property);
+      if (selectedProperty) {
+        const propertyDisplay = `${selectedProperty.propertyName} - ${selectedProperty.building}`;
+        
+        if (confidential) {
+          setGeneratedProjectName(`Confidential @ ${propertyDisplay}`);
+        } else if (tenantName?.trim()) {
+          setGeneratedProjectName(`${tenantName.trim()} @ ${propertyDisplay}`);
+        } else {
+          setGeneratedProjectName(`@ ${propertyDisplay}`);
+        }
+      }
+    } else {
+      setGeneratedProjectName("");
+    }
+  }, [watchedValues.property, watchedValues.tenantName, watchedValues.confidential, properties]);
 
   const createMutation = useMutation({
     mutationFn: async (data: CreateRfpFormData) => {
@@ -179,7 +204,13 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                 />
               </div>
 
-
+              {/* Auto-generated Project Name Display */}
+              <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Project Name (Auto-generated)</label>
+                <div className="mt-1 text-sm text-gray-900 dark:text-gray-100 font-medium">
+                  {generatedProjectName || "Select property and enter tenant name to generate project name"}
+                </div>
+              </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField

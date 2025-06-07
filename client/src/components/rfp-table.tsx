@@ -40,10 +40,10 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
     queryKey: ["/api/properties"],
   });
 
-  // Helper function to get property display name
-  const getPropertyDisplayName = (propertyId: string) => {
+  // Helper function to get property name only (without building)
+  const getPropertyName = (propertyId: string) => {
     const property = properties.find(p => p.id.toString() === propertyId);
-    return property ? property.displayName : propertyId;
+    return property ? property.propertyName : propertyId;
   };
 
   // Clear selected RFP if it no longer exists in the list
@@ -218,7 +218,7 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
                     {request.tenantName}
                   </td>
                   <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-900">
-                    {getPropertyDisplayName(request.property)}
+                    {getPropertyName(request.property)}
                   </td>
                   <td className="px-3 py-2 whitespace-nowrap">
                     <span

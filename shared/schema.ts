@@ -168,7 +168,9 @@ export const insertInvitationToBidSchema = createInsertSchema(invitationToBid).o
   createdAt: true,
   updatedAt: true,
 }).extend({
-  bidSubmissionDeadline: z.string().min(1, "Bid submission deadline is required").transform((val) => new Date(val)),
+  projectScope: z.string().default(""),
+  projectLocation: z.string().default(""),
+  bidSubmissionDeadline: z.string().optional().transform((val) => val && val.trim() ? new Date(val) : new Date()),
   projectStartDate: z.string().optional().transform((val) => val && val.trim() ? new Date(val) : undefined),
   projectEndDate: z.string().optional().transform((val) => val && val.trim() ? new Date(val) : undefined),
   siteVisitScheduled: z.string().optional().transform((val) => val && val.trim() ? new Date(val) : undefined),

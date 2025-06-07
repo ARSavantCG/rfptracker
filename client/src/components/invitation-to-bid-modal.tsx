@@ -1071,7 +1071,11 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                 <Button
                   type="button"
                   variant="secondary"
-                  onClick={() => saveInvitationMutation.mutate(form.getValues())}
+                  onClick={() => {
+                    // Save without validation - allow saving partial data as draft
+                    const formData = form.getValues();
+                    saveInvitationMutation.mutate(formData);
+                  }}
                   disabled={createInvitationMutation.isPending || isGeneratingPdfs || saveInvitationMutation.isPending}
                 >
                   {saveInvitationMutation.isPending ? (

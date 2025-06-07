@@ -1100,27 +1100,26 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                     if (!rfp) return;
                     
                     const formData = form.getValues();
-                    const documentsToOpen = [];
+                    const documentsToDownload = [];
                     
-                    if (formData.generateArchitectRfp) documentsToOpen.push({ type: "architect", label: "Formal Architect RFP" });
-                    if (formData.generateContractorRfp) documentsToOpen.push({ type: "contractor", label: "Formal Contractor ITB" });
-                    if (formData.generateBrokerArchitectRfp) documentsToOpen.push({ type: "broker-architect", label: "Broker Architect RFP" });
-                    if (formData.generateBrokerContractorRfp) documentsToOpen.push({ type: "broker-contractor", label: "Broker Contractor RFP" });
+                    if (formData.generateArchitectRfp) documentsToDownload.push({ type: "architect", label: "Formal Architect RFP" });
+                    if (formData.generateContractorRfp) documentsToDownload.push({ type: "contractor", label: "Formal Contractor ITB" });
+                    if (formData.generateBrokerArchitectRfp) documentsToDownload.push({ type: "broker-architect", label: "Broker Architect RFP" });
+                    if (formData.generateBrokerContractorRfp) documentsToDownload.push({ type: "broker-contractor", label: "Broker Contractor RFP" });
                     
-                    if (documentsToOpen.length === 0) {
+                    if (documentsToDownload.length === 0) {
                       toast({
                         title: "No Documents Selected",
-                        description: "Please select at least one document type to open.",
+                        description: "Please select at least one document type to download.",
                         variant: "destructive",
                       });
                       return;
                     }
                     
-                    // Open all selected documents in new tabs for PDF saving
-                    for (let i = 0; i < documentsToOpen.length; i++) {
-                      const doc = documentsToOpen[i];
+                    // Download all selected documents as HTML files
+                    for (const doc of documentsToDownload) {
                       try {
-                        console.log(`Opening ${doc.type} document...`);
+                        console.log(`Downloading ${doc.type} document...`);
                         const response = await fetch(`/api/rfp-requests/${rfp.id}/generate-pdf`, {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
@@ -1135,42 +1134,33 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                           const htmlText = await response.text();
                           const blob = new Blob([htmlText], { type: 'text/html' });
                           const url = URL.createObjectURL(blob);
-                          const newWindow = window.open(url, '_blank');
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `${rfp.rfpNumber}-${doc.type}-rfp.html`;
+                          a.style.display = 'none';
+                          document.body.appendChild(a);
+                          a.click();
+                          document.body.removeChild(a);
+                          setTimeout(() => URL.revokeObjectURL(url), 1000);
                           
-                          if (!newWindow) {
-                            console.warn(`Popup blocked for ${doc.type}. Please allow popups and try again.`);
-                            toast({
-                              title: "Popup Blocked",
-                              description: `${doc.type} document was blocked. Please allow popups and try again.`,
-                              variant: "destructive",
-                            });
-                          } else {
-                            console.log(`Successfully opened ${doc.type} document`);
-                          }
-                          
-                          setTimeout(() => URL.revokeObjectURL(url), 3000);
-                          
-                          // Add delay between opening windows to avoid popup blocker
-                          if (i < documentsToOpen.length - 1) {
-                            await new Promise(resolve => setTimeout(resolve, 500));
-                          }
+                          console.log(`Successfully downloaded ${doc.type} document`);
                         } else {
                           console.error(`Failed to generate ${doc.type} document: ${response.status}`);
                         }
                       } catch (error) {
-                        console.error(`Failed to open ${doc.type} document:`, error);
+                        console.error(`Failed to download ${doc.type} document:`, error);
                       }
                     }
                     
                     toast({
-                      title: "Documents Opened",
-                      description: `${documentsToOpen.length} document(s) opened in new tabs. Use Ctrl+P to save as PDF.`,
+                      title: "Documents Downloaded",
+                      description: `${documentsToDownload.length} HTML file(s) downloaded. Open each file and print to PDF.`,
                     });
                   }}
                   disabled={createInvitationMutation.isPending || isGeneratingPdfs || saveInvitationMutation.isPending}
                 >
-                  <FileText className="h-4 w-4 mr-2" />
-                  Open for PDF Saving
+                  <Download className="h-4 w-4 mr-2" />
+                  Download HTML Files
                 </Button>
               </div>
             </div>

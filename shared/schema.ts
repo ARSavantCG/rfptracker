@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, json, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, timestamp, json, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -192,8 +192,8 @@ export type RfpFile = {
 // Bid Collection tables
 export const bidCollections = pgTable("bid_collections", {
   id: serial("id").primaryKey(),
-  rfpId: serial("rfp_id").notNull().references(() => rfpRequests.id),
-  contractorId: serial("contractor_id").notNull().references(() => contacts.id),
+  rfpId: integer("rfp_id").notNull().references(() => rfpRequests.id),
+  contractorId: integer("contractor_id").notNull().references(() => contacts.id),
   contractorName: text("contractor_name").notNull(),
   contractorCompany: text("contractor_company").notNull(),
   contractorEmail: text("contractor_email").notNull(),
@@ -208,7 +208,7 @@ export const bidCollections = pgTable("bid_collections", {
 
 export const bidLineItems = pgTable("bid_line_items", {
   id: serial("id").primaryKey(),
-  bidCollectionId: serial("bid_collection_id").notNull().references(() => bidCollections.id),
+  bidCollectionId: integer("bid_collection_id").notNull().references(() => bidCollections.id),
   category: text("category").notNull(), // e.g., "Labor", "Materials", "Equipment"
   description: text("description").notNull(),
   quantity: text("quantity"),
@@ -216,7 +216,7 @@ export const bidLineItems = pgTable("bid_line_items", {
   unitPrice: text("unit_price"),
   totalPrice: text("total_price").notNull(),
   notes: text("notes"),
-  sortOrder: serial("sort_order").notNull().default(0),
+  sortOrder: integer("sort_order").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

@@ -158,8 +158,8 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
     if (contractor) {
       form.setValue('contractorId', contractor.id);
       form.setValue('contractorName', contractor.name);
-      form.setValue('contractorCompany', contractor.company);
-      form.setValue('contractorEmail', contractor.email);
+      form.setValue('contractorCompany', contractor.company || '');
+      form.setValue('contractorEmail', contractor.email || '');
     }
   };
 

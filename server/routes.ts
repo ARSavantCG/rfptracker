@@ -726,6 +726,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bid Collection routes
+  app.get("/api/rfp-requests/:id/bid-collections", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid ID" });
+      }
+
+      const bidCollections = await storage.getBidCollectionsByRfp(id);
+      res.json(bidCollections);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch bid collections" });
+    }
+  });
+
+  app.post("/api/rfp-requests/:id/bid-collections", upload.array("attachments"), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid ID" });
+      }
+
+      const bidData = JSON.parse(req.body.bidData || '{}');
+      const lineItems = JSON.parse(req.body.lineItems || '[]');
+      
+      // Handle file attachments
+      const attachments = (req.files as Express.Multer.File[] || []).map(file => ({
+        id: nanoid(),
+        name: file.originalname,
+        size: file.size,
+        type: file.mimetype,
+        uploadedAt: new Date().toISOString(),
+        path: file.filename,
+      }));
+
+      const bidCollection = await storage.createBidCollection({
+        ...bidData,
+        rfpId: id,
+        attachments
+      });
+
+      // Create line items if provided
+      if (lineItems.length > 0) {
+        for (const item of lineItems) {
+          await storage.createBidLineItem({
+            ...item,
+            bidCollectionId: bidCollection.id
+          });
+        }
+      }
+
+      res.status(201).json(bidCollection);
+    } catch (error) {
+      console.error("Bid collection creation error:", error);
+      res.status(400).json({ message: "Failed to create bid collection" });
+    }
+  });
+
+  app.patch("/api/rfp-requests/:rfpId/bid-collections/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid ID" });
+      }
+
+      const updates = req.body;
+      const bidCollection = await storage.updateBidCollection(id, updates);
+      
+      if (!bidCollection) {
+        return res.status(404).json({ message: "Bid collection not found" });
+      }
+
+      res.json(bidCollection);
+    } catch (error) {
+      res.status(400).json({ message: "Failed to update bid collection" });
+    }
+  });
+
+  app.delete("/api/rfp-requests/:rfpId/bid-collections/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid ID" });
+      }
+
+      const deleted = await storage.deleteBidCollection(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Bid collection not found" });
+      }
+
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete bid collection" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

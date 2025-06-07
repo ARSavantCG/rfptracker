@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { formatDate, getStatusColor, getStatusIcon } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import type { RfpRequest } from "@shared/schema";
+import type { RfpRequest, Property } from "@shared/schema";
 
 interface RfpTableProps {
   searchQuery: string;
@@ -13,7 +13,7 @@ interface RfpTableProps {
   selectedRfpId?: number;
 }
 
-type SortField = "rfpNumber" | "tenantName" | "projectName" | "property" | "status" | "sentOn";
+type SortField = "rfpNumber" | "tenantName" | "property" | "status" | "sentOn";
 type SortDirection = "asc" | "desc";
 
 export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, selectedRfpId }: RfpTableProps) {
@@ -34,6 +34,17 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
       return response.json();
     },
   });
+
+  // Fetch properties to display property names instead of IDs
+  const { data: properties = [] } = useQuery<Property[]>({
+    queryKey: ["/api/properties"],
+  });
+
+  // Helper function to get property display name
+  const getPropertyDisplayName = (propertyId: string) => {
+    const property = properties.find(p => p.id.toString() === propertyId);
+    return property ? property.displayName : propertyId;
+  };
 
   // Clear selected RFP if it no longer exists in the list
   useEffect(() => {
@@ -152,9 +163,9 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
               </th>
               <th 
                 className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
-                onClick={() => handleSort("projectName")}
+                onClick={() => handleSort("tenantName")}
               >
-                Project Name <i className={`${getSortIcon("projectName")} ml-1`}></i>
+                Tenant <i className={`${getSortIcon("tenantName")} ml-1`}></i>
               </th>
               <th 
                 className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
@@ -204,10 +215,10 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
                     {request.rfpNumber}
                   </td>
                   <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-900">
-                    {request.projectName}
+                    {request.tenantName}
                   </td>
                   <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-900">
-                    {request.property}
+                    {getPropertyDisplayName(request.property)}
                   </td>
                   <td className="px-3 py-2 whitespace-nowrap">
                     <span

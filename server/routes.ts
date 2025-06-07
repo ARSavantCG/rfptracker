@@ -559,11 +559,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Invitation to Bid routes
   app.post("/api/invitation-to-bid", async (req, res) => {
     try {
+      console.log('Invitation to bid request body:', JSON.stringify(req.body, null, 2));
       const parsed = insertInvitationToBidSchema.parse(req.body);
       const invitation = await storage.createInvitationToBid(parsed);
       res.status(201).json(invitation);
     } catch (error) {
-      res.status(400).json({ message: "Invalid invitation to bid data" });
+      console.error('Invitation to bid validation error:', error);
+      res.status(400).json({ 
+        message: "Invalid invitation to bid data",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
     }
   });
 

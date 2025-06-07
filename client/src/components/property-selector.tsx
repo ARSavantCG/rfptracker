@@ -88,7 +88,7 @@ export function PropertySelector({ value, onChange, className }: PropertySelecto
               <SelectItem value="empty" disabled>No properties available</SelectItem>
             ) : (
               properties.map((property) => (
-                <SelectItem key={property.id} value={property.displayName}>
+                <SelectItem key={property.id} value={property.id.toString()}>
                   {property.displayName}
                 </SelectItem>
               ))

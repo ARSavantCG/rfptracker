@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 import { FileText, Download, Users, Save, X } from "lucide-react";
 import type { RfpRequest } from "@shared/schema";
 
@@ -307,11 +308,14 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
               toast({
                 title: `${doc.label} Ready`,
                 description: "Click to open document",
-                action: {
-                  altText: "Open Document",
-                  onClick: () => generatePdf(doc.type),
-                  children: "Open"
-                }
+                action: (
+                  <ToastAction 
+                    altText="Open Document" 
+                    onClick={() => generatePdf(doc.type)}
+                  >
+                    Open
+                  </ToastAction>
+                )
               });
             }, (i + 1) * 500);
           }

@@ -8,6 +8,7 @@ import { ContactManagementModal } from "@/components/contact-management-modal";
 import { WorkflowStatus } from "@/components/workflow-status";
 import { InvitationToBidModal } from "@/components/invitation-to-bid-modal";
 import { RfpValidationModal } from "@/components/rfp-validation-modal";
+import { BidCollectionTable } from "@/components/bid-collection-table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -24,6 +25,7 @@ export default function Dashboard() {
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [isInvitationModalOpen, setIsInvitationModalOpen] = useState(false);
   const [isValidationModalOpen, setIsValidationModalOpen] = useState(false);
+  const [showBidCollection, setShowBidCollection] = useState(false);
   const [selectedRfp, setSelectedRfp] = useState<RfpRequest | null>(null);
   const [workflowRfp, setWorkflowRfp] = useState<RfpRequest | null>(null);
   const [validationRfp, setValidationRfp] = useState<RfpRequest | null>(null);
@@ -61,6 +63,11 @@ export default function Dashboard() {
   const handleValidateRfp = (rfp: RfpRequest) => {
     setValidationRfp(rfp);
     setIsValidationModalOpen(true);
+  };
+
+  const handleOpenBidCollection = (rfp: RfpRequest) => {
+    setSelectedRfp(rfp);
+    setShowBidCollection(true);
   };
 
   const clearFilters = () => {
@@ -213,15 +220,30 @@ export default function Dashboard() {
 
         {/* Main Content Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* RFP Table - Takes up 2/3 of the space */}
+          {/* RFP Table or Bid Collection - Takes up 2/3 of the space */}
           <div className="lg:col-span-2">
-            <RfpTable 
-              searchQuery={searchQuery}
-              statusFilter={statusFilter}
-              onEditRfp={handleEditRfp}
-              onSelectRfp={setSelectedRfp}
-              selectedRfpId={selectedRfp?.id}
-            />
+            {showBidCollection ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowBidCollection(false)}
+                    className="mb-4"
+                  >
+                    ← Back to RFP List
+                  </Button>
+                </div>
+                <BidCollectionTable rfp={selectedRfp} />
+              </div>
+            ) : (
+              <RfpTable 
+                searchQuery={searchQuery}
+                statusFilter={statusFilter}
+                onEditRfp={handleEditRfp}
+                onSelectRfp={setSelectedRfp}
+                selectedRfpId={selectedRfp?.id}
+              />
+            )}
           </div>
 
           {/* Workflow Status Sidebar - Takes up 1/3 of the space */}
@@ -232,6 +254,7 @@ export default function Dashboard() {
                 onAdvanceToInvitation={handleAdvanceToInvitation}
                 onValidateRfp={handleValidateRfp}
                 onOpenInvitationModal={handleAdvanceToInvitation}
+                onOpenBidCollection={handleOpenBidCollection}
               />
             )}
             {!selectedRfp && (

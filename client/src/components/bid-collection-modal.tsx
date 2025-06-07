@@ -456,37 +456,31 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
               )}
             />
 
-            {/* File Attachments - Compact */}
-            <div className="space-y-2">
-              <h4 className="text-sm font-medium">Attachments</h4>
+            {/* File Attachments - Ultra Compact */}
+            <div className="space-y-1">
+              <h4 className="text-xs font-medium text-gray-600">Attachments</h4>
               <FileUpload
                 onFilesSelected={setAttachments}
                 multiple={true}
                 accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
-                className="border border-gray-300 rounded p-3 text-sm"
+                className="border border-gray-200 rounded px-2 py-1 text-xs bg-gray-50"
               />
               {attachments.length > 0 && (
-                <div className="space-y-1">
-                  <p className="text-xs text-gray-600">{attachments.length} file(s) selected:</p>
-                  <div className="grid grid-cols-2 gap-1">
-                    {attachments.map((file, index) => (
-                      <div key={index} className="flex items-center justify-between p-1 bg-gray-50 rounded text-xs">
-                        <div className="flex items-center gap-1 truncate">
-                          <FileText className="h-3 w-3 flex-shrink-0" />
-                          <span className="truncate">{file.name}</span>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setAttachments(attachments.filter((_, i) => i !== index))}
-                          className="h-4 w-4 p-0"
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
+                <div className="flex flex-wrap gap-1">
+                  {attachments.map((file, index) => (
+                    <div key={index} className="flex items-center gap-1 px-1 py-0.5 bg-blue-50 border border-blue-200 rounded text-xs">
+                      <FileText className="h-2 w-2" />
+                      <span className="max-w-[100px] truncate">{file.name}</span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => setAttachments(attachments.filter((_, i) => i !== index))}
+                        className="h-3 w-3 p-0 hover:bg-red-100"
+                      >
+                        <X className="h-2 w-2" />
+                      </Button>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>

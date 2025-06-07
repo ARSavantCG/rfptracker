@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { apiRequest } from "@/lib/queryClient";
 import { FileUpload } from "./file-upload";
+import { PropertySelector } from "./property-selector";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -178,9 +179,9 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                     <FormItem>
                       <FormLabel>Property *</FormLabel>
                       <FormControl>
-                        <Input 
-                          placeholder="Property name or address"
-                          {...field}
+                        <PropertySelector
+                          value={field.value}
+                          onChange={field.onChange}
                         />
                       </FormControl>
                       <FormMessage />

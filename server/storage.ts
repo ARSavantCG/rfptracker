@@ -126,9 +126,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createRfpRequest(request: InsertRfpRequest): Promise<RfpRequest> {
+    const rfpNumber = await this.generateRfpNumber();
+    
     const [rfp] = await db
       .insert(rfpRequests)
       .values({
+        rfpNumber,
         property: request.property,
         tenantName: request.tenantName,
         projectName: request.projectName,

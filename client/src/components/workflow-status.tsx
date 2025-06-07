@@ -11,6 +11,7 @@ interface WorkflowStatusProps {
   onAdvanceToInvitation: (rfp: RfpRequest) => void;
   onValidateRfp?: (rfp: RfpRequest) => void;
   onOpenInvitationModal?: (rfp: RfpRequest) => void;
+  onOpenBidCollection?: (rfp: RfpRequest) => void;
 }
 
 const workflowPhases = [

@@ -3,6 +3,8 @@ import {
   contacts, 
   invitations,
   invitationToBid,
+  bidCollections,
+  bidLineItems,
   type RfpRequest, 
   type InsertRfpRequest, 
   type UpdateRfpRequest,
@@ -15,6 +17,12 @@ import {
   type InvitationToBid,
   type InsertInvitationToBid,
   type UpdateInvitationToBid,
+  type BidCollection,
+  type InsertBidCollection,
+  type UpdateBidCollection,
+  type BidLineItem,
+  type InsertBidLineItem,
+  type UpdateBidLineItem,
   type RfpFile 
 } from "@shared/schema";
 import { db } from "./db";

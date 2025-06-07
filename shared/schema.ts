@@ -188,3 +188,65 @@ export type RfpFile = {
   uploadedAt: string;
   path?: string; // For file system storage
 };
+
+// Bid Collection tables
+export const bidCollections = pgTable("bid_collections", {
+  id: serial("id").primaryKey(),
+  rfpId: serial("rfp_id").notNull().references(() => rfpRequests.id),
+  contractorId: serial("contractor_id").notNull().references(() => contacts.id),
+  contractorName: text("contractor_name").notNull(),
+  contractorCompany: text("contractor_company").notNull(),
+  contractorEmail: text("contractor_email").notNull(),
+  submissionDate: timestamp("submission_date").defaultNow().notNull(),
+  totalAmount: text("total_amount"),
+  status: text("status").notNull().default("received"), // received, under-review, shortlisted, rejected, awarded
+  notes: text("notes"),
+  attachments: json("attachments").$type<RfpFile[]>().default([]),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const bidLineItems = pgTable("bid_line_items", {
+  id: serial("id").primaryKey(),
+  bidCollectionId: serial("bid_collection_id").notNull().references(() => bidCollections.id),
+  category: text("category").notNull(), // e.g., "Labor", "Materials", "Equipment"
+  description: text("description").notNull(),
+  quantity: text("quantity"),
+  unit: text("unit"), // e.g., "sq ft", "lf", "ea"
+  unitPrice: text("unit_price"),
+  totalPrice: text("total_price").notNull(),
+  notes: text("notes"),
+  sortOrder: serial("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertBidCollectionSchema = createInsertSchema(bidCollections).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  submissionDate: z.string().optional().transform((val) => val ? new Date(val) : new Date()),
+});
+
+export const updateBidCollectionSchema = insertBidCollectionSchema.partial().extend({
+  id: z.number(),
+});
+
+export const insertBidLineItemSchema = createInsertSchema(bidLineItems).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateBidLineItemSchema = insertBidLineItemSchema.partial().extend({
+  id: z.number(),
+});
+
+export type BidCollection = typeof bidCollections.$inferSelect;
+export type InsertBidCollection = z.infer<typeof insertBidCollectionSchema>;
+export type UpdateBidCollection = z.infer<typeof updateBidCollectionSchema>;
+
+export type BidLineItem = typeof bidLineItems.$inferSelect;
+export type InsertBidLineItem = z.infer<typeof insertBidLineItemSchema>;
+export type UpdateBidLineItem = z.infer<typeof updateBidLineItemSchema>;

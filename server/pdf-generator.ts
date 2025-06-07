@@ -297,8 +297,8 @@ function generateArchitectRfpHtml(options: PdfGenerationOptions, dates: any): st
   const { rfp, invitationToBid, recipientName, recipientCompany } = options;
   const { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea } = dates;
   
-  const projectName = rfp.confidential ? `Confidential @ ${rfp.property}` : `${rfp.tenantName} @ ${rfp.property}`;
-  const projectLocation = rfp.projectAddress || rfp.property;
+  const projectName = rfp.confidential ? `Confidential @ ${rfp.propertyAddress || rfp.property}` : `${rfp.tenantName} @ ${rfp.propertyAddress || rfp.property}`;
+  const projectLocation = rfp.propertyAddress || invitationToBid?.projectLocation || rfp.property;
   const contactInfo = invitationToBid?.contactForQuestions?.split(' - ') || [];
   const contactPerson = contactInfo[0] || 'Development Contact';
   const contactEmail = contactInfo[1] || '';
@@ -550,7 +550,7 @@ function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dates: an
   const { rfp, invitationToBid, recipientName, recipientCompany } = options;
   const { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea } = dates;
 
-  const projectName = rfp.confidential ? `Confidential @ ${rfp.property}` : `${rfp.tenantName} @ ${rfp.property}`;
+  const projectName = rfp.confidential ? `Confidential @ ${rfp.propertyAddress || rfp.property}` : `${rfp.tenantName} @ ${rfp.propertyAddress || rfp.property}`;
 
   return `
     <!DOCTYPE html>
@@ -673,7 +673,7 @@ function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, dates: a
   const { rfp, invitationToBid, recipientName, recipientCompany } = options;
   const { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea } = dates;
 
-  const projectName = rfp.confidential ? `Confidential @ ${rfp.property}` : `${rfp.tenantName} @ ${rfp.property}`;
+  const projectName = rfp.confidential ? `Confidential @ ${rfp.propertyAddress || rfp.property}` : `${rfp.tenantName} @ ${rfp.propertyAddress || rfp.property}`;
 
   return `
     <!DOCTYPE html>

@@ -699,11 +699,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "RFP request not found" });
       }
 
+      // Get property data to include full address
+      const property = await storage.getProperty(parseInt(rfp.property));
+      const rfpWithAddress = {
+        ...rfp,
+        propertyAddress: property ? `${property.streetAddress}, ${property.city}, ${property.state} ${property.zip}` : rfp.property
+      };
+
       // Get invitation to bid data if available
       const invitationToBid = await storage.getInvitationToBid(id);
 
       const pdfOptions = {
-        rfp,
+        rfp: rfpWithAddress,
         invitationToBid,
         recipientType: recipientType as "architect" | "contractor" | "broker-architect" | "broker-contractor",
         recipientName,

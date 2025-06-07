@@ -278,47 +278,30 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
         const formData = form.getValues();
         setIsGeneratingPdfs(true);
         
-        // Collect all document types to generate
-        const documentsToGenerate = [];
-        if (formData.generateArchitectRfp) documentsToGenerate.push({ type: "architect", label: "Formal Architect RFP" });
-        if (formData.generateContractorRfp) documentsToGenerate.push({ type: "contractor", label: "Formal Contractor ITB" });
-        if (formData.generateBrokerArchitectRfp) documentsToGenerate.push({ type: "broker-architect", label: "Broker Architect RFP" });
-        if (formData.generateBrokerContractorRfp) documentsToGenerate.push({ type: "broker-contractor", label: "Broker Contractor RFP" });
+        // Generate documents sequentially in the same user action context to avoid popup blocking
+        let delay = 0;
         
-        if (documentsToGenerate.length === 0) {
-          toast({
-            title: "No Documents Selected",
-            description: "Please select at least one document type to generate.",
-            variant: "destructive",
-          });
-          setIsGeneratingPdfs(false);
-          return;
+        if (formData.generateArchitectRfp) {
+          if (delay > 0) await new Promise(resolve => setTimeout(resolve, delay));
+          await generatePdf("architect");
+          delay += 500;
         }
         
-        // Generate the first document immediately
-        await generatePdf(documentsToGenerate[0].type);
+        if (formData.generateContractorRfp) {
+          if (delay > 0) await new Promise(resolve => setTimeout(resolve, delay));
+          await generatePdf("contractor");
+          delay += 500;
+        }
         
-        // If there are additional documents, show interactive buttons to avoid popup blocking
-        if (documentsToGenerate.length > 1) {
-          const remainingDocs = documentsToGenerate.slice(1);
-          
-          for (let i = 0; i < remainingDocs.length; i++) {
-            const doc = remainingDocs[i];
-            setTimeout(() => {
-              toast({
-                title: `${doc.label} Ready`,
-                description: "Click to open document",
-                action: (
-                  <ToastAction 
-                    altText="Open Document" 
-                    onClick={() => generatePdf(doc.type)}
-                  >
-                    Open
-                  </ToastAction>
-                )
-              });
-            }, (i + 1) * 500);
-          }
+        if (formData.generateBrokerArchitectRfp) {
+          if (delay > 0) await new Promise(resolve => setTimeout(resolve, delay));
+          await generatePdf("broker-architect");
+          delay += 500;
+        }
+        
+        if (formData.generateBrokerContractorRfp) {
+          if (delay > 0) await new Promise(resolve => setTimeout(resolve, delay));
+          await generatePdf("broker-contractor");
         }
       
         // Update RFP status

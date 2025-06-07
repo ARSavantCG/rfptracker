@@ -1117,8 +1117,10 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                     }
                     
                     // Open all selected documents in new tabs for PDF saving
-                    for (const doc of documentsToOpen) {
+                    for (let i = 0; i < documentsToOpen.length; i++) {
+                      const doc = documentsToOpen[i];
                       try {
+                        console.log(`Opening ${doc.type} document...`);
                         const response = await fetch(`/api/rfp-requests/${rfp.id}/generate-pdf`, {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
@@ -1133,8 +1135,27 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                           const htmlText = await response.text();
                           const blob = new Blob([htmlText], { type: 'text/html' });
                           const url = URL.createObjectURL(blob);
-                          window.open(url, '_blank');
-                          setTimeout(() => URL.revokeObjectURL(url), 1000);
+                          const newWindow = window.open(url, '_blank');
+                          
+                          if (!newWindow) {
+                            console.warn(`Popup blocked for ${doc.type}. Please allow popups and try again.`);
+                            toast({
+                              title: "Popup Blocked",
+                              description: `${doc.type} document was blocked. Please allow popups and try again.`,
+                              variant: "destructive",
+                            });
+                          } else {
+                            console.log(`Successfully opened ${doc.type} document`);
+                          }
+                          
+                          setTimeout(() => URL.revokeObjectURL(url), 3000);
+                          
+                          // Add delay between opening windows to avoid popup blocker
+                          if (i < documentsToOpen.length - 1) {
+                            await new Promise(resolve => setTimeout(resolve, 500));
+                          }
+                        } else {
+                          console.error(`Failed to generate ${doc.type} document: ${response.status}`);
                         }
                       } catch (error) {
                         console.error(`Failed to open ${doc.type} document:`, error);

@@ -1088,23 +1088,6 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                 </Button>
                 
                 <Button 
-                  type="submit" 
-                  disabled={createInvitationMutation.isPending || isGeneratingPdfs || saveInvitationMutation.isPending}
-                >
-                  {isGeneratingPdfs ? (
-                    <>
-                      <Download className="h-4 w-4 mr-2" />
-                      Generating Documents...
-                    </>
-                  ) : (
-                    <>
-                      <FileText className="h-4 w-4 mr-2" />
-                      Generate Selected Documents
-                    </>
-                  )}
-                </Button>
-                
-                <Button 
                   type="button"
                   variant="outline"
                   onClick={async () => {

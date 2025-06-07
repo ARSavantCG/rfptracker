@@ -294,7 +294,7 @@ export function PropertyManagementModal({ isOpen, onClose }: PropertyManagementM
                   <div key={property.id} className="p-4 hover:bg-gray-50">
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
-                        <h3 className="font-medium text-gray-900">{property.displayName}</h3>
+                        <h3 className="font-bold text-gray-900">{property.propertyName} - Building {property.building}</h3>
                         <div className="text-sm text-gray-500 mt-1">
                           <div>{property.streetAddress}</div>
                           <div>{property.city}, {property.state} {property.zip}</div>

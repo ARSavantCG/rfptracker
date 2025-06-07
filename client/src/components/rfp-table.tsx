@@ -13,7 +13,7 @@ interface RfpTableProps {
   selectedRfpId?: number;
 }
 
-type SortField = "rfpNumber" | "tenantName" | "projectName" | "status" | "sentOn";
+type SortField = "rfpNumber" | "tenantName" | "projectName" | "property" | "status" | "sentOn";
 type SortDirection = "asc" | "desc";
 
 export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, selectedRfpId }: RfpTableProps) {
@@ -152,15 +152,15 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
               </th>
               <th 
                 className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
-                onClick={() => handleSort("tenantName")}
+                onClick={() => handleSort("projectName")}
               >
-                Tenant <i className={`${getSortIcon("tenantName")} ml-1`}></i>
+                Project Name <i className={`${getSortIcon("projectName")} ml-1`}></i>
               </th>
               <th 
                 className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
-                onClick={() => handleSort("projectName")}
+                onClick={() => handleSort("property")}
               >
-                Project <i className={`${getSortIcon("projectName")} ml-1`}></i>
+                Property <i className={`${getSortIcon("property")} ml-1`}></i>
               </th>
               <th 
                 className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
@@ -172,7 +172,7 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
                 className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
                 onClick={() => handleSort("sentOn")}
               >
-                Sent On <i className={`${getSortIcon("sentOn")} ml-1`}></i>
+                Received On <i className={`${getSortIcon("sentOn")} ml-1`}></i>
               </th>
               <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Files
@@ -204,10 +204,10 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
                     {request.rfpNumber}
                   </td>
                   <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-900">
-                    {request.tenantName}
+                    {request.projectName}
                   </td>
                   <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-900">
-                    {request.projectName}
+                    {request.property}
                   </td>
                   <td className="px-3 py-2 whitespace-nowrap">
                     <span

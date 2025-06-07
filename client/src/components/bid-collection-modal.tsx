@@ -68,13 +68,24 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
     },
   });
 
-  // Fetch contractors
+  // Fetch invited contractors for this RFP
+  const { data: invitations } = useQuery({
+    queryKey: ["/api/rfp-requests", rfp?.id, "invitations"],
+    enabled: isOpen && !!rfp?.id,
+  });
+
+  // Fetch all contacts to get contractor details
   const { data: contacts } = useQuery({
     queryKey: ["/api/contacts"],
     enabled: isOpen,
   });
 
-  const contractors = (contacts as Contact[])?.filter(contact => contact.type === "contractor") || [];
+  // Get contractors who were invited to this RFP
+  const invitedContractors = invitations && contacts 
+    ? (invitations as any[])
+        .map(inv => (contacts as Contact[]).find(c => c.id === inv.contactId && c.type === "contractor"))
+        .filter(Boolean) as Contact[]
+    : [];
 
   // Create/Update bid collection mutation
   const saveBidMutation = useMutation({
@@ -142,7 +153,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
   };
 
   const handleContractorSelect = (contractorId: string) => {
-    const contractor = contractors.find(c => c.id === parseInt(contractorId));
+    const contractor = invitedContractors.find(c => c.id === parseInt(contractorId));
     if (contractor) {
       form.setValue('contractorId', contractor.id);
       form.setValue('contractorName', contractor.name);
@@ -223,11 +234,17 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {contractors.map((contractor) => (
-                          <SelectItem key={contractor.id} value={contractor.id.toString()}>
-                            {contractor.name} - {contractor.company}
+                        {invitedContractors.length > 0 ? (
+                          invitedContractors.map((contractor) => (
+                            <SelectItem key={contractor.id} value={contractor.id.toString()}>
+                              {contractor.name} - {contractor.company}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="" disabled>
+                            No contractors invited yet - Please send invitations first
                           </SelectItem>
-                        ))}
+                        )}
                       </SelectContent>
                     </Select>
                     <FormMessage />

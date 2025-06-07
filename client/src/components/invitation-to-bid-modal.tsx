@@ -13,7 +13,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 import { FileText, Download, Users, Save, X } from "lucide-react";
-import type { RfpRequest } from "@shared/schema";
+import type { RfpRequest, Property } from "@shared/schema";
 
 const invitationFormSchema = z.object({
   generateArchitectRfp: z.boolean().default(false),
@@ -66,6 +66,17 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
   const [isGeneratingPdfs, setIsGeneratingPdfs] = useState(false);
   const [keyDates, setKeyDates] = useState<Array<{label: string, date: string}>>([]);
 
+  // Fetch properties for project location
+  const { data: properties = [] } = useQuery<Property[]>({
+    queryKey: ["/api/properties"],
+  });
+
+  // Helper function to get property address
+  const getPropertyAddress = (propertyId: string) => {
+    const property = properties.find(p => p.id.toString() === propertyId);
+    return property ? `${property.streetAddress}, ${property.city}, ${property.state} ${property.zip}` : "";
+  };
+
   const form = useForm<InvitationFormData>({
     resolver: zodResolver(invitationFormSchema),
     defaultValues: {
@@ -108,14 +119,14 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
 
   // Pre-populate form with existing data
   useEffect(() => {
-    if (rfp && isOpen) {
+    if (rfp && isOpen && properties.length > 0) {
       const defaultValues = {
         generateArchitectRfp: false,
         generateContractorRfp: false,
         generateBrokerArchitectRfp: false,
         generateBrokerContractorRfp: false,
         projectScope: `${rfp.projectName} - ${rfp.tenantName}`,
-        projectLocation: rfp.projectAddress || rfp.property || "",
+        projectLocation: getPropertyAddress(rfp.property) || "",
         estimatedBudget: "",
         projectTimeline: "",
         bidSubmissionDeadline: "",

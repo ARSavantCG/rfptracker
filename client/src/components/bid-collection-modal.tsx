@@ -80,12 +80,13 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
     enabled: isOpen,
   });
 
-  // Get contractors who were invited to this RFP
-  const invitedContractors = invitations && contacts 
+  // Get contractors who were invited to this RFP, or all contractors if no invitations sent yet
+  const allContractors = (contacts as Contact[])?.filter(contact => contact.type === "contractor") || [];
+  const invitedContractors = invitations && contacts && (invitations as any[]).length > 0
     ? (invitations as any[])
         .map(inv => (contacts as Contact[]).find(c => c.id === inv.contactId && c.type === "contractor"))
         .filter(Boolean) as Contact[]
-    : [];
+    : allContractors; // Show all contractors if no invitations sent yet
 
   // Create/Update bid collection mutation
   const saveBidMutation = useMutation({
@@ -242,7 +243,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                           ))
                         ) : (
                           <div className="px-2 py-1 text-sm text-gray-500">
-                            No contractors invited yet - Please send invitations first
+                            No contractors available
                           </div>
                         )}
                       </SelectContent>

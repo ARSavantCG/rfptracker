@@ -241,9 +241,9 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                             </SelectItem>
                           ))
                         ) : (
-                          <SelectItem value="" disabled>
+                          <div className="px-2 py-1 text-sm text-gray-500">
                             No contractors invited yet - Please send invitations first
-                          </SelectItem>
+                          </div>
                         )}
                       </SelectContent>
                     </Select>

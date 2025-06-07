@@ -21,41 +21,8 @@ export interface PdfGenerationOptions {
 
 export async function generateRfpPdf(options: PdfGenerationOptions): Promise<Buffer> {
   const html = generateRfpHtml(options);
-  
-  try {
-    const puppeteer = require('puppeteer');
-    
-    console.log('Attempting PDF generation with Puppeteer...');
-    
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
-    });
-    
-    const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'networkidle0' });
-    
-    const pdfBuffer = await page.pdf({
-      format: 'A4',
-      printBackground: true,
-      margin: {
-        top: '1in',
-        right: '1in',
-        bottom: '1in',
-        left: '1in'
-      }
-    });
-    
-    await browser.close();
-    
-    console.log('PDF generated successfully, buffer length:', pdfBuffer.length);
-    return pdfBuffer;
-    
-  } catch (error: any) {
-    console.error('PDF generation failed, returning HTML:', error?.message || error);
-    // Return HTML when PDF generation fails
-    return Buffer.from(html, 'utf8');
-  }
+  // Always return HTML for browser-based PDF generation
+  return Buffer.from(html, 'utf8');
 }
 
 function generateRfpHtml(options: PdfGenerationOptions): string {

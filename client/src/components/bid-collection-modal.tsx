@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -74,10 +74,61 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
     enabled: isOpen,
   });
 
+  // Fetch existing line items when editing
+  const { data: existingLineItems } = useQuery({
+    queryKey: [`/api/bid-collections/${bidCollection?.id}/line-items`],
+    enabled: isOpen && !!bidCollection,
+  });
+
   // Get all contractors and architects for bid collection
   const availableContractors = (contacts as Contact[])?.filter(contact => contact.type === "contractor") || [];
   const availableArchitects = (contacts as Contact[])?.filter(contact => contact.type === "architect") || [];
   const allBidders = [...availableContractors, ...availableArchitects];
+
+  // Initialize form with existing bid collection data when editing
+  useEffect(() => {
+    if (bidCollection && isOpen) {
+      form.reset({
+        contractorId: bidCollection.contractorId,
+        contractorName: bidCollection.contractorName,
+        contractorCompany: bidCollection.contractorCompany,
+        contractorEmail: bidCollection.contractorEmail,
+        submissionDate: new Date(bidCollection.submissionDate).toISOString().split('T')[0],
+        totalAmount: bidCollection.totalAmount || "",
+        status: bidCollection.status,
+        notes: bidCollection.notes || "",
+      });
+      
+      // Load existing line items if available
+      if (existingLineItems && Array.isArray(existingLineItems)) {
+        const formattedLineItems = existingLineItems.map((item: any) => ({
+          category: item.category || "Labor",
+          description: item.description || "",
+          quantity: item.quantity?.toString() || "",
+          unit: item.unit || "",
+          unitPrice: item.unitPrice || "",
+          totalPrice: item.totalPrice || "",
+          notes: item.notes || ""
+        }));
+        setLineItems(formattedLineItems);
+      }
+    } else if (!bidCollection && isOpen) {
+      // Reset to defaults for new bid collection
+      form.reset({
+        contractorId: 0,
+        contractorName: "",
+        contractorCompany: "",
+        contractorEmail: "",
+        submissionDate: new Date().toISOString().split('T')[0],
+        totalAmount: "",
+        status: "received",
+        notes: "",
+      });
+      setLineItems([
+        { category: "Labor", description: "", quantity: "", unit: "", unitPrice: "", totalPrice: "", notes: "" }
+      ]);
+    }
+  }, [bidCollection, isOpen, form, existingLineItems]);
 
   // Create/Update bid collection mutation
   const saveBidMutation = useMutation({
@@ -96,26 +147,42 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
         notes: data.notes,
       };
       
-      // Add bid collection data as JSON string
-      formData.append('bidData', JSON.stringify(bidData));
-      
-      // Add line items as JSON string
-      formData.append('lineItems', JSON.stringify(data.lineItems));
-      
-      // Add attachments
-      data.attachments.forEach((file, index) => {
-        formData.append(`attachment_${index}`, file);
-      });
-
       const method = bidCollection ? 'PUT' : 'POST';
       const url = bidCollection 
         ? `/api/rfp-requests/${rfp?.id}/bid-collections/${bidCollection.id}`
         : `/api/rfp-requests/${rfp?.id}/bid-collections`;
 
-      const response = await fetch(url, {
-        method,
-        body: formData,
-      });
+      let response;
+
+      if (bidCollection) {
+        // For updates, send JSON data
+        response = await fetch(url, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(bidData),
+        });
+      } else {
+        // For creation, use FormData for file uploads
+        const formData = new FormData();
+        
+        // Add bid collection data as JSON string
+        formData.append('bidData', JSON.stringify(bidData));
+        
+        // Add line items as JSON string
+        formData.append('lineItems', JSON.stringify(data.lineItems));
+        
+        // Add attachments
+        data.attachments.forEach((file, index) => {
+          formData.append(`attachment_${index}`, file);
+        });
+
+        response = await fetch(url, {
+          method: 'POST',
+          body: formData,
+        });
+      }
 
       if (!response.ok) {
         throw new Error(`Failed to ${bidCollection ? 'update' : 'create'} bid collection`);

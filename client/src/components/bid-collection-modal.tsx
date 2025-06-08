@@ -224,7 +224,13 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Contractor</FormLabel>
-                    <Select onValueChange={handleContractorSelect}>
+                    <Select 
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        handleContractorSelect(value);
+                      }}
+                      value={field.value?.toString()}
+                    >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select contractor" />
@@ -311,7 +317,65 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
               />
             </div>
 
+            {/* Contractor Details */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <FormField
+                control={form.control}
+                name="contractorName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Contractor Name</FormLabel>
+                    <FormControl>
+                      <Input {...field} readOnly className="bg-gray-50" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
+              <FormField
+                control={form.control}
+                name="contractorCompany"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Company</FormLabel>
+                    <FormControl>
+                      <Input {...field} readOnly className="bg-gray-50" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="contractorEmail"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input {...field} readOnly className="bg-gray-50" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* Notes */}
+            <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Notes</FormLabel>
+                  <FormControl>
+                    <Textarea {...field} placeholder="Additional notes about this bid..." />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             {/* Line Items Table */}
             <div className="space-y-4">

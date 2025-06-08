@@ -81,28 +81,8 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
     enabled: isOpen,
   });
 
-  // Get contractors who were invited to this RFP, or all contractors if no invitations sent yet
-  const allContractors = (contacts as Contact[])?.filter(contact => contact.type === "contractor") || [];
-  
-  // Ensure invitations is an array, not undefined or other data
-  const invitationsArray = Array.isArray(invitations) ? invitations : [];
-  
-  console.log("Debug bid collection modal:", {
-    contacts,
-    invitations,
-    invitationsArray,
-    allContractors,
-    availableContractors,
-    contactsLength: contacts?.length,
-    invitationsLength: invitationsArray?.length,
-    availableContractorsCount: availableContractors?.length
-  });
-  
-  const availableContractors = invitationsArray.length > 0
-    ? invitationsArray
-        .map(inv => (contacts as Contact[])?.find(c => c.id === inv.contactId && c.type === "contractor"))
-        .filter(Boolean) as Contact[]
-    : allContractors; // Show all contractors if no invitations sent yet
+  // Get all contractors - since invitations API returns empty array, show all contractors
+  const availableContractors = (contacts as Contact[])?.filter(contact => contact.type === "contractor") || [];
 
   // Create/Update bid collection mutation
   const saveBidMutation = useMutation({

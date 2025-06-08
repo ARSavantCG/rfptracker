@@ -82,9 +82,11 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
 
   // Get contractors who were invited to this RFP, or all contractors if no invitations sent yet
   const allContractors = (contacts as Contact[])?.filter(contact => contact.type === "contractor") || [];
-  const invitedContractors = invitations && contacts && (invitations as any[]).length > 0
+  const invitedContractorIds = (invitations as any[])?.map(inv => inv.contactId) || [];
+  
+  const availableContractors = invitations && (invitations as any[]).length > 0
     ? (invitations as any[])
-        .map(inv => (contacts as Contact[]).find(c => c.id === inv.contactId && c.type === "contractor"))
+        .map(inv => (contacts as Contact[])?.find(c => c.id === inv.contactId && c.type === "contractor"))
         .filter(Boolean) as Contact[]
     : allContractors; // Show all contractors if no invitations sent yet
 
@@ -154,7 +156,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
   };
 
   const handleContractorSelect = (contractorId: string) => {
-    const contractor = invitedContractors.find(c => c.id === parseInt(contractorId));
+    const contractor = availableContractors.find(c => c.id === parseInt(contractorId));
     if (contractor) {
       form.setValue('contractorId', contractor.id);
       form.setValue('contractorName', contractor.name);
@@ -235,8 +237,8 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {invitedContractors.length > 0 ? (
-                          invitedContractors.map((contractor) => (
+                        {availableContractors.length > 0 ? (
+                          availableContractors.map((contractor) => (
                             <SelectItem key={contractor.id} value={contractor.id.toString()}>
                               {contractor.name} - {contractor.company}
                             </SelectItem>

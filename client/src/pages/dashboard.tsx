@@ -53,6 +53,17 @@ export default function Dashboard() {
     }
   }, [allRfps, selectedRfp]);
 
+  // Auto-open bid collection/evaluation when RFP is selected based on workflow phase
+  useEffect(() => {
+    if (selectedRfp) {
+      if (selectedRfp.workflowPhase === 'bid-collection' || selectedRfp.workflowPhase === 'evaluation') {
+        setShowBidCollection(true);
+      } else {
+        setShowBidCollection(false);
+      }
+    }
+  }, [selectedRfp]);
+
   const handleEditRfp = (rfp: RfpRequest) => {
     setSelectedRfp(rfp);
     setIsEditModalOpen(true);

@@ -234,7 +234,7 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* RFP Table or Bid Collection - Takes up 2/3 of the space */}
           <div className="lg:col-span-2">
-            {showBidCollection ? (
+            {showBidCollection && selectedRfp?.workflowPhase === 'bid-collection' ? (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <Button
@@ -246,6 +246,19 @@ export default function Dashboard() {
                   </Button>
                 </div>
                 <BidCollectionTable rfp={selectedRfp} />
+              </div>
+            ) : showBidCollection && selectedRfp?.workflowPhase === 'evaluation' ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowBidCollection(false)}
+                    className="mb-4"
+                  >
+                    ← Back to RFP List
+                  </Button>
+                </div>
+                <EvaluationBudget rfp={selectedRfp} />
               </div>
             ) : (
               <RfpTable 

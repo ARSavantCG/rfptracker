@@ -869,6 +869,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updates = req.body;
       console.log("Updating bid collection with data:", updates);
       
+      // Convert submissionDate string to Date object if present
+      if (updates.submissionDate && typeof updates.submissionDate === 'string') {
+        updates.submissionDate = new Date(updates.submissionDate);
+      }
+      
       const bidCollection = await storage.updateBidCollection(id, updates);
       
       if (!bidCollection) {

@@ -72,6 +72,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
   const { data: invitations } = useQuery({
     queryKey: ["/api/rfp-requests", rfp?.id, "invitations"],
     enabled: isOpen && !!rfp?.id,
+    select: (data) => Array.isArray(data) ? data : [],
   });
 
   // Fetch all contacts to get contractor details
@@ -82,10 +83,23 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
 
   // Get contractors who were invited to this RFP, or all contractors if no invitations sent yet
   const allContractors = (contacts as Contact[])?.filter(contact => contact.type === "contractor") || [];
-  const invitedContractorIds = (invitations as any[])?.map(inv => inv.contactId) || [];
   
-  const availableContractors = invitations && (invitations as any[]).length > 0
-    ? (invitations as any[])
+  // Ensure invitations is an array, not undefined or other data
+  const invitationsArray = Array.isArray(invitations) ? invitations : [];
+  
+  console.log("Debug bid collection modal:", {
+    contacts,
+    invitations,
+    invitationsArray,
+    allContractors,
+    availableContractors,
+    contactsLength: contacts?.length,
+    invitationsLength: invitationsArray?.length,
+    availableContractorsCount: availableContractors?.length
+  });
+  
+  const availableContractors = invitationsArray.length > 0
+    ? invitationsArray
         .map(inv => (contacts as Contact[])?.find(c => c.id === inv.contactId && c.type === "contractor"))
         .filter(Boolean) as Contact[]
     : allContractors; // Show all contractors if no invitations sent yet

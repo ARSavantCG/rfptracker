@@ -237,6 +237,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Advance workflow phase
+  app.post("/api/rfp-requests/:id/advance-phase", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid ID" });
+      }
+
+      const { newPhase } = req.body;
+      if (!newPhase) {
+        return res.status(400).json({ message: "New phase is required" });
+      }
+
+      const updatedRequest = await storage.advanceWorkflowPhase(id, newPhase);
+      
+      if (!updatedRequest) {
+        return res.status(404).json({ message: "RFP request not found" });
+      }
+
+      res.json(updatedRequest);
+    } catch (error) {
+      res.status(400).json({ 
+        message: error instanceof Error ? error.message : "Failed to advance workflow phase" 
+      });
+    }
+  });
+
   // Delete RFP request
   app.delete("/api/rfp-requests/:id", async (req, res) => {
     try {

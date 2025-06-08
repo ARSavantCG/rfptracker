@@ -253,6 +253,12 @@ export function BidCollectionTable({ rfp }: BidCollectionTableProps) {
         rfp={rfp}
         bidCollection={selectedBid}
       />
+
+      <BidViewModal
+        isOpen={isViewModalOpen}
+        onClose={() => setIsViewModalOpen(false)}
+        bid={selectedBid}
+      />
     </>
   );
 }

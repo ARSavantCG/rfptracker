@@ -89,17 +89,22 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
     mutationFn: async (data: BidCollectionFormData & { lineItems: LineItemFormData[], attachments: File[] }) => {
       const formData = new FormData();
       
-      // Add bid collection data
-      Object.entries(data).forEach(([key, value]) => {
-        if (key !== 'lineItems' && key !== 'attachments') {
-          formData.append(key, String(value));
-        }
-      });
+      // Prepare bid data object (excluding lineItems and attachments)
+      const bidData = {
+        contractorId: data.contractorId,
+        contractorName: data.contractorName,
+        contractorCompany: data.contractorCompany,
+        contractorEmail: data.contractorEmail,
+        submissionDate: data.submissionDate,
+        totalAmount: data.totalAmount,
+        status: data.status,
+        notes: data.notes,
+      };
       
-      // Add RFP ID
-      formData.append('rfpId', String(rfp?.id));
+      // Add bid collection data as JSON string
+      formData.append('bidData', JSON.stringify(bidData));
       
-      // Add line items
+      // Add line items as JSON string
       formData.append('lineItems', JSON.stringify(data.lineItems));
       
       // Add attachments
@@ -142,11 +147,15 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
   });
 
   const onSubmit = (data: BidCollectionFormData) => {
-    saveBidMutation.mutate({
+    // Ensure contractorId is a number
+    const submissionData = {
       ...data,
+      contractorId: parseInt(data.contractorId.toString()),
       lineItems,
       attachments,
-    });
+    };
+    
+    saveBidMutation.mutate(submissionData);
   };
 
   const handleContractorSelect = (contractorId: string) => {

@@ -157,7 +157,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
       if (bidCollection) {
         // For updates, send JSON data
         response = await fetch(url, {
-          method: 'PUT',
+          method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
           },

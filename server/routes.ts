@@ -867,6 +867,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const updates = req.body;
+      console.log("Updating bid collection with data:", updates);
+      
       const bidCollection = await storage.updateBidCollection(id, updates);
       
       if (!bidCollection) {
@@ -875,7 +877,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(bidCollection);
     } catch (error) {
-      res.status(400).json({ message: "Failed to update bid collection" });
+      console.error("Error updating bid collection:", error);
+      res.status(400).json({ message: "Failed to update bid collection", error: error.message });
     }
   });
 

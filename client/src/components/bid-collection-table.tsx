@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, Edit, Eye, FileText, Download } from "lucide-react";
 import { BidCollectionModal } from "./bid-collection-modal";
-import type { RfpRequest, BidCollection } from "@shared/schema";
+import type { RfpRequest, BidCollection, Contact } from "@shared/schema";
 
 interface BidCollectionTableProps {
   rfp: RfpRequest | null;
@@ -19,6 +19,12 @@ export function BidCollectionTable({ rfp }: BidCollectionTableProps) {
   // Fetch bid collections for this RFP
   const { data: bidCollections, isLoading } = useQuery({
     queryKey: [`/api/rfp-requests/${rfp?.id}/bid-collections`],
+    enabled: !!rfp?.id,
+  });
+
+  // Fetch contacts to determine bidder types
+  const { data: contacts } = useQuery({
+    queryKey: ["/api/contacts"],
     enabled: !!rfp?.id,
   });
 
@@ -53,6 +59,12 @@ export function BidCollectionTable({ rfp }: BidCollectionTableProps) {
       month: 'short',
       day: 'numeric',
     });
+  };
+
+  const getBidderType = (contractorId: number) => {
+    if (!contacts) return "Unknown";
+    const contact = (contacts as Contact[]).find(c => c.id === contractorId);
+    return contact?.type === "architect" ? "Architect" : "Contractor";
   };
 
   const handleNewBid = () => {
@@ -111,6 +123,7 @@ export function BidCollectionTable({ rfp }: BidCollectionTableProps) {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Type</TableHead>
                     <TableHead>Bidder</TableHead>
                     <TableHead>Company</TableHead>
                     <TableHead>Submission Date</TableHead>
@@ -123,6 +136,11 @@ export function BidCollectionTable({ rfp }: BidCollectionTableProps) {
                 <TableBody>
                   {(bidCollections as BidCollection[]).map((bid) => (
                     <TableRow key={bid.id}>
+                      <TableCell>
+                        <Badge variant="outline" className={getBidderType(bid.contractorId) === "Architect" ? "border-purple-200 text-purple-700" : "border-blue-200 text-blue-700"}>
+                          {getBidderType(bid.contractorId)}
+                        </Badge>
+                      </TableCell>
                       <TableCell className="font-medium">
                         {bid.contractorName}
                       </TableCell>
@@ -174,40 +192,6 @@ export function BidCollectionTable({ rfp }: BidCollectionTableProps) {
                   ))}
                 </TableBody>
               </Table>
-            </div>
-          )}
-
-          {/* Summary Statistics */}
-          {bidCollections && (bidCollections as BidCollection[]).length > 0 && (
-            <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4 pt-4 border-t">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">
-                  {(bidCollections as BidCollection[]).length}
-                </div>
-                <div className="text-sm text-gray-600">Total Bids</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">
-                  {(bidCollections as BidCollection[]).filter(b => b.status === 'shortlisted').length}
-                </div>
-                <div className="text-sm text-gray-600">Shortlisted</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-yellow-600">
-                  {(bidCollections as BidCollection[]).filter(b => b.status === 'under-review').length}
-                </div>
-                <div className="text-sm text-gray-600">Under Review</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-purple-600">
-                  {formatCurrency(
-                    Math.min(...(bidCollections as BidCollection[])
-                      .filter(b => b.totalAmount)
-                      .map(b => parseFloat(b.totalAmount!))).toString()
-                  )}
-                </div>
-                <div className="text-sm text-gray-600">Lowest Bid</div>
-              </div>
             </div>
           )}
         </CardContent>

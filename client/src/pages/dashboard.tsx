@@ -258,12 +258,12 @@ export default function Dashboard() {
                 </div>
                 <BidCollectionTable rfp={selectedRfp} />
               </div>
-            ) : showBidCollection && selectedRfp?.workflowPhase === 'evaluation' ? (
+            ) : selectedRfp?.workflowPhase === 'evaluation' ? (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <Button
                     variant="outline"
-                    onClick={() => setShowBidCollection(false)}
+                    onClick={() => setSelectedRfp(null)}
                     className="mb-4"
                   >
                     ← Back to RFP List

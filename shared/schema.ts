@@ -281,3 +281,45 @@ export const updatePropertySchema = insertPropertySchema.partial().extend({
 export type Property = typeof properties.$inferSelect;
 export type InsertProperty = z.infer<typeof insertPropertySchema>;
 export type UpdateProperty = z.infer<typeof updatePropertySchema>;
+
+// Evaluation Budget table
+export const evaluationBudgets = pgTable("evaluation_budgets", {
+  id: serial("id").primaryKey(),
+  rfpId: integer("rfp_id").references(() => rfpRequests.id, { onDelete: "cascade" }).notNull(),
+  tenantImprovements: json("tenant_improvements").$type<EvaluationLineItem[]>().default([]),
+  designSoftCosts: json("design_soft_costs").$type<EvaluationLineItem[]>().default([]),
+  existingImprovements: json("existing_improvements").$type<EvaluationLineItem[]>().default([]),
+  hasExistingImprovements: boolean("has_existing_improvements").default(false),
+  totalTenantImprovements: text("total_tenant_improvements"),
+  totalDesignSoftCosts: text("total_design_soft_costs"),
+  totalExistingImprovements: text("total_existing_improvements"),
+  grandTotal: text("grand_total"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type EvaluationLineItem = {
+  id: string;
+  description: string;
+  category: string;
+  quantity: number;
+  unitPrice: string;
+  totalPrice: string;
+  source: "contractor" | "architect" | "internal"; // Track if from bid or internal addition
+  bidCollectionId?: number; // Reference to original bid if applicable
+};
+
+export const insertEvaluationBudgetSchema = createInsertSchema(evaluationBudgets).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateEvaluationBudgetSchema = insertEvaluationBudgetSchema.partial().extend({
+  id: z.number(),
+});
+
+export type EvaluationBudget = typeof evaluationBudgets.$inferSelect;
+export type InsertEvaluationBudget = z.infer<typeof insertEvaluationBudgetSchema>;
+export type UpdateEvaluationBudget = z.infer<typeof updateEvaluationBudgetSchema>;

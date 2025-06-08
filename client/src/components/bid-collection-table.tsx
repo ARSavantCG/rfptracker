@@ -103,7 +103,7 @@ export function BidCollectionTable({ rfp }: BidCollectionTableProps) {
               <FileText className="h-12 w-12 mx-auto text-gray-400 mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No Bids Submitted</h3>
               <p className="text-gray-500">
-                Start collecting bids from contractors for this project using the "Add New Bid" button above.
+                Start collecting bids from contractors and architects for this project using the "Add New Bid" button above.
               </p>
             </div>
           ) : (
@@ -111,7 +111,7 @@ export function BidCollectionTable({ rfp }: BidCollectionTableProps) {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Contractor</TableHead>
+                    <TableHead>Bidder</TableHead>
                     <TableHead>Company</TableHead>
                     <TableHead>Submission Date</TableHead>
                     <TableHead>Total Amount</TableHead>

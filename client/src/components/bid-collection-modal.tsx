@@ -68,21 +68,16 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
     },
   });
 
-  // Fetch invited contractors for this RFP
-  const { data: invitations } = useQuery({
-    queryKey: ["/api/rfp-requests", rfp?.id, "invitations"],
-    enabled: isOpen && !!rfp?.id,
-    select: (data) => Array.isArray(data) ? data : [],
-  });
-
   // Fetch all contacts to get contractor details
   const { data: contacts } = useQuery({
     queryKey: ["/api/contacts"],
     enabled: isOpen,
   });
 
-  // Get all contractors - since invitations API returns empty array, show all contractors
+  // Get all contractors and architects for bid collection
   const availableContractors = (contacts as Contact[])?.filter(contact => contact.type === "contractor") || [];
+  const availableArchitects = (contacts as Contact[])?.filter(contact => contact.type === "architect") || [];
+  const allBidders = [...availableContractors, ...availableArchitects];
 
   // Create/Update bid collection mutation
   const saveBidMutation = useMutation({
@@ -158,13 +153,13 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
     saveBidMutation.mutate(submissionData);
   };
 
-  const handleContractorSelect = (contractorId: string) => {
-    const contractor = availableContractors.find(c => c.id === parseInt(contractorId));
-    if (contractor) {
-      form.setValue('contractorId', contractor.id);
-      form.setValue('contractorName', contractor.name);
-      form.setValue('contractorCompany', contractor.company || '');
-      form.setValue('contractorEmail', contractor.email || '');
+  const handleContractorSelect = (bidderId: string) => {
+    const bidder = allBidders.find(c => c.id === parseInt(bidderId));
+    if (bidder) {
+      form.setValue('contractorId', bidder.id);
+      form.setValue('contractorName', bidder.name);
+      form.setValue('contractorCompany', bidder.company || '');
+      form.setValue('contractorEmail', bidder.email || '');
     }
   };
 
@@ -232,7 +227,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                 name="contractorId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Contractor</FormLabel>
+                    <FormLabel>Bidder (Contractor/Architect)</FormLabel>
                     <Select 
                       onValueChange={(value) => {
                         field.onChange(value);
@@ -242,19 +237,19 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                     >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select contractor" />
+                          <SelectValue placeholder="Select bidder (contractor or architect)" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {availableContractors.length > 0 ? (
-                          availableContractors.map((contractor) => (
-                            <SelectItem key={contractor.id} value={contractor.id.toString()}>
-                              {contractor.name} - {contractor.company}
+                        {allBidders.length > 0 ? (
+                          allBidders.map((bidder) => (
+                            <SelectItem key={bidder.id} value={bidder.id.toString()}>
+                              {bidder.name} - {bidder.company} ({bidder.type})
                             </SelectItem>
                           ))
                         ) : (
                           <div className="px-2 py-1 text-sm text-gray-500">
-                            No contractors available
+                            No bidders available
                           </div>
                         )}
                       </SelectContent>

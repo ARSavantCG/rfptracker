@@ -1,11 +1,13 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Edit, Eye, FileText, Download } from "lucide-react";
+import { Plus, Edit, Eye, FileText, Download, ArrowRight } from "lucide-react";
 import { BidCollectionModal } from "./bid-collection-modal";
+import { BidViewModal } from "./bid-view-modal";
+import { useToast } from "@/hooks/use-toast";
 import type { RfpRequest, BidCollection, Contact } from "@shared/schema";
 
 interface BidCollectionTableProps {
@@ -14,7 +16,10 @@ interface BidCollectionTableProps {
 
 export function BidCollectionTable({ rfp }: BidCollectionTableProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedBid, setSelectedBid] = useState<BidCollection | null>(null);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   // Fetch bid collections for this RFP
   const { data: bidCollections, isLoading } = useQuery({
@@ -67,6 +72,33 @@ export function BidCollectionTable({ rfp }: BidCollectionTableProps) {
     return contact?.type === "architect" ? "Architect" : "Contractor";
   };
 
+  // Workflow advancement mutation
+  const advanceToEvaluationMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(`/api/rfp-requests/${rfp?.id}/advance-phase`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newPhase: 'evaluation' }),
+      });
+      if (!response.ok) throw new Error('Failed to advance workflow');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
+      toast({
+        title: "Success",
+        description: "Workflow advanced to evaluation stage.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to advance workflow. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleNewBid = () => {
     setSelectedBid(null);
     setIsModalOpen(true);
@@ -78,8 +110,14 @@ export function BidCollectionTable({ rfp }: BidCollectionTableProps) {
   };
 
   const handleViewBid = (bid: BidCollection) => {
-    // TODO: Implement bid detail view modal
-    console.log("View bid:", bid);
+    setSelectedBid(bid);
+    setIsViewModalOpen(true);
+  };
+
+  const handleAdvanceToEvaluation = () => {
+    if (bidCollections && (bidCollections as BidCollection[]).length > 0) {
+      advanceToEvaluationMutation.mutate();
+    }
   };
 
   if (!rfp) {
@@ -100,10 +138,22 @@ export function BidCollectionTable({ rfp }: BidCollectionTableProps) {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Bid Collection - {rfp.projectName}</CardTitle>
-          <Button onClick={handleNewBid}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add New Bid
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={handleNewBid}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add New Bid
+            </Button>
+            {rfp.workflowPhase === 'bid-collection' && bidCollections && (bidCollections as BidCollection[]).length > 0 && (
+              <Button 
+                onClick={handleAdvanceToEvaluation}
+                disabled={advanceToEvaluationMutation.isPending}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                <ArrowRight className="h-4 w-4 mr-2" />
+                {advanceToEvaluationMutation.isPending ? 'Advancing...' : 'Advance to Evaluation'}
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (

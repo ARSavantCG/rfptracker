@@ -870,6 +870,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get line items for a bid collection
+  app.get("/api/bid-collections/:id/line-items", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid ID" });
+      }
+
+      const lineItems = await storage.getBidLineItemsByBid(id);
+      res.json(lineItems);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch line items" });
+    }
+  });
+
   // Property routes
   app.get("/api/properties", async (req, res) => {
     try {

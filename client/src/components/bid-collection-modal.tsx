@@ -95,7 +95,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
         contractorName: data.contractorName,
         contractorCompany: data.contractorCompany,
         contractorEmail: data.contractorEmail,
-        submissionDate: data.submissionDate,
+        submissionDate: new Date(data.submissionDate),
         totalAmount: data.totalAmount,
         status: data.status,
         notes: data.notes,

@@ -794,6 +794,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bidData = JSON.parse(req.body.bidData || '{}');
       const lineItems = JSON.parse(req.body.lineItems || '[]');
       
+      // Convert date string back to Date object
+      if (bidData.submissionDate) {
+        bidData.submissionDate = new Date(bidData.submissionDate);
+      }
+      
       // Handle file attachments
       const attachments = (req.files as Express.Multer.File[] || []).map(file => ({
         id: nanoid(),

@@ -288,33 +288,124 @@ export function FinancialSummary({ rfp }: FinancialSummaryProps) {
 
       {/* Financial Summary */}
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-lg">Cost Breakdown Summary</CardTitle>
+          <div className="flex gap-2">
+            {!isEditing ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsEditing(true)}
+              >
+                <Edit className="h-4 w-4 mr-2" />
+                Edit Totals
+              </Button>
+            ) : (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setIsEditing(false);
+                    setEditedTotals({
+                      tenantImprovements: calculatedTenantImprovements,
+                      designSoftCosts: calculatedDesignSoftCosts,
+                      existingImprovements: calculatedExistingImprovements
+                    });
+                  }}
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setIsEditing(false);
+                    toast({
+                      title: "Totals Updated",
+                      description: "Cost breakdown has been saved with your custom values.",
+                    });
+                  }}
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  Save
+                </Button>
+              </>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             <div className="flex justify-between items-center py-3 border-b">
               <span className="font-medium">Tenant Improvements</span>
-              <span className="text-lg font-bold text-green-600">
-                {formatCurrency(tenantImprovementsTotal)}
-              </span>
+              {isEditing ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-500">$</span>
+                  <Input
+                    type="number"
+                    value={editedTotals.tenantImprovements}
+                    onChange={(e) => setEditedTotals(prev => ({
+                      ...prev,
+                      tenantImprovements: parseFloat(e.target.value) || 0
+                    }))}
+                    className="w-32 text-right"
+                    step="0.01"
+                  />
+                </div>
+              ) : (
+                <span className="text-lg font-bold text-green-600">
+                  {formatCurrency(tenantImprovementsTotal)}
+                </span>
+              )}
             </div>
             
             <div className="flex justify-between items-center py-3 border-b">
               <span className="font-medium">Design / Soft Costs / Other Fees</span>
-              <span className="text-lg font-bold text-blue-600">
-                {formatCurrency(designSoftCostsTotal)}
-              </span>
+              {isEditing ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-500">$</span>
+                  <Input
+                    type="number"
+                    value={editedTotals.designSoftCosts}
+                    onChange={(e) => setEditedTotals(prev => ({
+                      ...prev,
+                      designSoftCosts: parseFloat(e.target.value) || 0
+                    }))}
+                    className="w-32 text-right"
+                    step="0.01"
+                  />
+                </div>
+              ) : (
+                <span className="text-lg font-bold text-blue-600">
+                  {formatCurrency(designSoftCostsTotal)}
+                </span>
+              )}
             </div>
             
-            {existingImprovementsTotal > 0 && (
-              <div className="flex justify-between items-center py-3 border-b">
-                <span className="font-medium">Existing Improvements</span>
-                <span className="text-lg font-bold text-orange-600">
-                  {formatCurrency(existingImprovementsTotal)}
-                </span>
-              </div>
-            )}
+            <div className="flex justify-between items-center py-3 border-b">
+              <span className="font-medium">Existing Improvements</span>
+              {isEditing ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-500">$</span>
+                  <Input
+                    type="number"
+                    value={editedTotals.existingImprovements}
+                    onChange={(e) => setEditedTotals(prev => ({
+                      ...prev,
+                      existingImprovements: parseFloat(e.target.value) || 0
+                    }))}
+                    className="w-32 text-right"
+                    step="0.01"
+                  />
+                </div>
+              ) : (
+                existingImprovementsTotal > 0 && (
+                  <span className="text-lg font-bold text-orange-600">
+                    {formatCurrency(existingImprovementsTotal)}
+                  </span>
+                )
+              )}
+            </div>
             
             <div className="flex justify-between items-center py-4 border-t-2 border-gray-300">
               <span className="text-xl font-bold">Total Project Cost</span>

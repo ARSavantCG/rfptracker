@@ -173,7 +173,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create new RFP request with files
   app.post("/api/rfp-requests/with-files", upload.array("files"), async (req, res) => {
     try {
-      console.log('Creating RFP with files:', req.body, req.files);
+      console.log('Creating RFP with files - body:', req.body);
+      console.log('Creating RFP with files - projectArea specifically:', req.body.projectArea);
       
       // Parse form data properly
       const formData = { ...req.body };

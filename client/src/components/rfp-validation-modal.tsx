@@ -75,20 +75,27 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
   // Pre-populate form with existing RFP data
   useEffect(() => {
     if (rfp && isOpen) {
-      console.log('Populating form with RFP data:', { projectArea: rfp.projectArea });
+      const projectAreaValue = rfp.projectArea?.trim() || "";
+      console.log('Populating form with RFP data:', { 
+        projectArea: rfp.projectArea, 
+        trimmed: projectAreaValue,
+        isEmpty: !projectAreaValue 
+      });
+      
       form.reset({
         dueDate: "",
         generalContractor: "",
         architect: "",
         officeAreaExisting: "",
         officeAreaNew: "",
-        warehouseArea: rfp.projectArea || "",
+        warehouseArea: projectAreaValue,
         requestTypes: rfp.requestTypes || ["pricing", "schedule", "space-plan"],
         projectDescription: "",
         documentsLink: "",
       });
-      // Ensure the field is explicitly set
-      form.setValue('warehouseArea', rfp.projectArea || "");
+      
+      // Ensure the field is explicitly set with trimmed value
+      form.setValue('warehouseArea', projectAreaValue);
     }
   }, [rfp, isOpen, form]);
 
@@ -276,9 +283,9 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                     />
                   </FormControl>
                   <p className="text-sm text-gray-600">
-                    {rfp?.projectArea ? 
-                      "Value pulled from Step 1 - you can edit if needed" : 
-                      "Enter the total rentable square footage"
+                    {rfp?.projectArea?.trim() ? 
+                      `From Step 1: ${rfp.projectArea} - you can edit if needed` : 
+                      "Enter the total rentable square footage from Step 1"
                     }
                   </p>
                   <FormMessage />

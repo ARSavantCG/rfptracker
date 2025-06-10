@@ -307,6 +307,17 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         <CardTitle className="text-lg">{title}</CardTitle>
         <div className="flex items-center gap-2">
           <span className="text-lg font-bold text-green-600">{formatCurrency(total)}</span>
+          {selectedItems.size > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowBulkEdit(true)}
+              className="h-8"
+            >
+              <Edit className="h-4 w-4 mr-1" />
+              Bulk Edit ({selectedItems.size})
+            </Button>
+          )}
           <Button
             size="sm"
             onClick={() => setNewItemCategory(category)}
@@ -563,6 +574,59 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                   className="h-9"
                 >
                   <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Bulk Edit Modal */}
+        {showBulkEdit && selectedItems.size > 0 && (
+          <div className="mt-4 p-4 border rounded-lg bg-blue-50 border-blue-200">
+            <h4 className="font-medium mb-3">Bulk Edit Selected Items ({selectedItems.size})</h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <Label>Price Multiplier</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={bulkEditMultiplier}
+                  onChange={(e) => setBulkEditMultiplier(e.target.value)}
+                  placeholder="1.0"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Enter 1.1 for 10% increase, 0.9 for 10% decrease
+                </p>
+              </div>
+              <div>
+                <Label>Change Category (Optional)</Label>
+                <Input
+                  value={bulkEditCategory}
+                  onChange={(e) => setBulkEditCategory(e.target.value)}
+                  placeholder="Leave blank to keep current"
+                />
+              </div>
+              <div className="flex items-end gap-2">
+                <Button
+                  size="sm"
+                  onClick={() => applyBulkEdit(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements')}
+                  className="h-9"
+                >
+                  <Save className="h-4 w-4 mr-1" />
+                  Apply Changes
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setShowBulkEdit(false);
+                    setBulkEditCategory("");
+                    setBulkEditMultiplier("1.0");
+                  }}
+                  className="h-9"
+                >
+                  <X className="h-4 w-4 mr-1" />
+                  Cancel
                 </Button>
               </div>
             </div>

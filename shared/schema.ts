@@ -19,7 +19,7 @@ export const rfpRequests = pgTable("rfp_requests", {
   
   // System fields
   status: text("status").notNull().default("received"), // received, in-progress, completed, on-hold
-  workflowPhase: text("workflow_phase").notNull().default("rfp-entry"), // rfp-entry, invitation-to-bid, bid-collection, evaluation, award
+  workflowPhase: text("workflow_phase").notNull().default("rfp-entry"), // rfp-entry, invitation-to-bid, bid-collection, evaluation, award, publish
   notes: text("notes"),
   files: json("files").$type<RfpFile[]>().notNull().default([]),
   

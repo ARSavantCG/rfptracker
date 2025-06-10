@@ -103,6 +103,8 @@ export function getRequiredFieldsForPhase(phase: string): string[] {
       return ["projectAddress", "projectSize", "estimatedValue", "timelineRequirements", "specialRequirements"];
     case "award":
       return ["projectAddress", "projectSize", "estimatedValue", "timelineRequirements", "specialRequirements"];
+    case "publish":
+      return ["projectAddress", "projectSize", "estimatedValue", "timelineRequirements", "specialRequirements"];
     default:
       return [];
   }

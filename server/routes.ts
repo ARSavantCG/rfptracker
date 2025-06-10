@@ -554,7 +554,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { phase } = req.body;
-      if (!phase || !["rfp-entry", "invitation-to-bid", "bid-collection", "evaluation", "award"].includes(phase)) {
+      if (!phase || !["rfp-entry", "invitation-to-bid", "bid-collection", "evaluation", "award", "publish"].includes(phase)) {
         return res.status(400).json({ message: "Invalid workflow phase" });
       }
 

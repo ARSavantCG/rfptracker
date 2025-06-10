@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileDown, Printer } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { FileDown, Printer, Edit, Save, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { RfpRequest, BidCollection, BidLineItem } from "@shared/schema";
 
@@ -35,6 +37,12 @@ interface EvaluationBudgetData {
 
 export function FinancialSummary({ rfp }: FinancialSummaryProps) {
   const { toast } = useToast();
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedTotals, setEditedTotals] = useState({
+    tenantImprovements: 0,
+    designSoftCosts: 0,
+    existingImprovements: 0
+  });
   const [budgetData] = useState<EvaluationBudgetData>({
     tenantImprovements: [],
     designSoftCosts: [],
@@ -205,9 +213,25 @@ export function FinancialSummary({ rfp }: FinancialSummaryProps) {
     }, 0);
   };
 
-  const tenantImprovementsTotal = calculateCategoryTotal("tenant improvements");
-  const designSoftCostsTotal = calculateCategoryTotal("design/soft costs");
-  const existingImprovementsTotal = calculateCategoryTotal("existing improvements");
+  const calculatedTenantImprovements = calculateCategoryTotal("tenant improvements");
+  const calculatedDesignSoftCosts = calculateCategoryTotal("design/soft costs");
+  const calculatedExistingImprovements = calculateCategoryTotal("existing improvements");
+
+  // Initialize edited totals with calculated values
+  useEffect(() => {
+    if (calculatedTenantImprovements || calculatedDesignSoftCosts || calculatedExistingImprovements) {
+      setEditedTotals({
+        tenantImprovements: calculatedTenantImprovements,
+        designSoftCosts: calculatedDesignSoftCosts,
+        existingImprovements: calculatedExistingImprovements
+      });
+    }
+  }, [calculatedTenantImprovements, calculatedDesignSoftCosts, calculatedExistingImprovements]);
+
+  // Use edited values if editing, otherwise use calculated values
+  const tenantImprovementsTotal = isEditing ? editedTotals.tenantImprovements : calculatedTenantImprovements;
+  const designSoftCostsTotal = isEditing ? editedTotals.designSoftCosts : calculatedDesignSoftCosts;
+  const existingImprovementsTotal = isEditing ? editedTotals.existingImprovements : calculatedExistingImprovements;
   const grandTotal = tenantImprovementsTotal + designSoftCostsTotal + existingImprovementsTotal;
 
   return (

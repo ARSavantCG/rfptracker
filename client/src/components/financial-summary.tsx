@@ -91,27 +91,73 @@ export function FinancialSummary({ rfp }: FinancialSummaryProps) {
 
       const htmlContent = await response.text();
       
-      // Create a new window with the HTML content for printing
-      const printWindow = window.open('', '_blank');
-      if (!printWindow) {
-        throw new Error('Please allow popups to generate PDF');
-      }
+      // Create a blob URL and trigger download
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Financial_Summary_${rfp.rfpNumber}_${rfp.projectName.replace(/[^a-zA-Z0-9]/g, '_')}.html`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
       
-      printWindow.document.write(htmlContent);
-      printWindow.document.close();
+      // Also show in same window for immediate viewing/printing
+      const printFrame = document.createElement('iframe');
+      printFrame.style.position = 'fixed';
+      printFrame.style.top = '0';
+      printFrame.style.left = '0';
+      printFrame.style.width = '100%';
+      printFrame.style.height = '100%';
+      printFrame.style.zIndex = '9999';
+      printFrame.style.backgroundColor = 'white';
       
-      // Wait for content to load then trigger print
-      printWindow.onload = () => {
-        setTimeout(() => {
-          printWindow.print();
-          printWindow.close();
-        }, 500);
+      document.body.appendChild(printFrame);
+      printFrame.contentDocument?.write(htmlContent);
+      printFrame.contentDocument?.close();
+      
+      // Add control buttons
+      const buttonContainer = document.createElement('div');
+      buttonContainer.style.position = 'fixed';
+      buttonContainer.style.top = '10px';
+      buttonContainer.style.right = '10px';
+      buttonContainer.style.zIndex = '10000';
+      buttonContainer.style.display = 'flex';
+      buttonContainer.style.gap = '10px';
+      
+      const printBtn = document.createElement('button');
+      printBtn.innerHTML = 'Print / Save as PDF';
+      printBtn.style.padding = '10px 20px';
+      printBtn.style.backgroundColor = '#2563eb';
+      printBtn.style.color = 'white';
+      printBtn.style.border = 'none';
+      printBtn.style.borderRadius = '5px';
+      printBtn.style.cursor = 'pointer';
+      printBtn.onclick = () => {
+        printFrame.contentWindow?.print();
       };
+      
+      const closeBtn = document.createElement('button');
+      closeBtn.innerHTML = 'Close Preview';
+      closeBtn.style.padding = '10px 20px';
+      closeBtn.style.backgroundColor = '#ef4444';
+      closeBtn.style.color = 'white';
+      closeBtn.style.border = 'none';
+      closeBtn.style.borderRadius = '5px';
+      closeBtn.style.cursor = 'pointer';
+      closeBtn.onclick = () => {
+        document.body.removeChild(printFrame);
+        document.body.removeChild(buttonContainer);
+      };
+      
+      buttonContainer.appendChild(printBtn);
+      buttonContainer.appendChild(closeBtn);
+      document.body.appendChild(buttonContainer);
     },
     onSuccess: () => {
       toast({
         title: "Financial Summary Generated",
-        description: "Print dialog opened. Save as PDF to download the financial summary.",
+        description: "HTML file downloaded and preview opened. Use the Print button to save as PDF.",
       });
     },
     onError: (error) => {

@@ -190,38 +190,9 @@ function generateFinancialSummaryHtml(options: PdfGenerationOptions, dates: any)
 export async function generateRfpPdf(options: PdfGenerationOptions): Promise<Buffer> {
   const html = generateRfpHtml(options);
   
-  try {
-    console.log('Starting PDF generation with Puppeteer...');
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
-    });
-    
-    try {
-      const page = await browser.newPage();
-      await page.setContent(html, { waitUntil: 'networkidle0' });
-      
-      const pdfBuffer = await page.pdf({
-        format: 'A4',
-        printBackground: true,
-        margin: {
-          top: '0.5in',
-          right: '0.5in',
-          bottom: '0.5in',
-          left: '0.5in'
-        }
-      });
-      
-      console.log('PDF generation successful, buffer size:', pdfBuffer.length);
-      return Buffer.from(pdfBuffer);
-    } finally {
-      await browser.close();
-    }
-  } catch (error) {
-    console.error('PDF generation failed, falling back to HTML:', error);
-    // Fallback: return HTML wrapped in buffer for debugging
-    return Buffer.from(html, 'utf8');
-  }
+  // For now, return optimized HTML that browsers can convert to PDF
+  // This allows the client-side print functionality to work properly
+  return Buffer.from(html, 'utf8');
 }
 
 function generateRfpHtml(options: PdfGenerationOptions): string {

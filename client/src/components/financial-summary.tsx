@@ -89,20 +89,29 @@ export function FinancialSummary({ rfp }: FinancialSummaryProps) {
         throw new Error('Failed to generate financial summary PDF');
       }
 
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `Financial_Summary_${rfp.rfpNumber}_${rfp.projectName.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+      const htmlContent = await response.text();
+      
+      // Create a new window with the HTML content for printing
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) {
+        throw new Error('Please allow popups to generate PDF');
+      }
+      
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
+      
+      // Wait for content to load then trigger print
+      printWindow.onload = () => {
+        setTimeout(() => {
+          printWindow.print();
+          printWindow.close();
+        }, 500);
+      };
     },
     onSuccess: () => {
       toast({
         title: "Financial Summary Generated",
-        description: "PDF document has been downloaded successfully.",
+        description: "Print dialog opened. Save as PDF to download the financial summary.",
       });
     },
     onError: (error) => {
@@ -167,7 +176,7 @@ export function FinancialSummary({ rfp }: FinancialSummaryProps) {
               className="bg-blue-600 hover:bg-blue-700"
             >
               <FileDown className="h-4 w-4 mr-2" />
-              {generatePdfMutation.isPending ? "Generating..." : "Download PDF"}
+              {generatePdfMutation.isPending ? "Generating..." : "Export as PDF"}
             </Button>
             <Button 
               variant="outline"

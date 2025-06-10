@@ -19,6 +19,173 @@ export interface PdfGenerationOptions {
   recipientCompany?: string;
 }
 
+function generateFinancialSummaryHtml(options: PdfGenerationOptions, dates: any): string {
+  const { rfp } = options;
+  const { today } = dates;
+  
+  // Calculate totals from bid collections and line items
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(value);
+  };
+
+  // Calculate category totals from all line items
+  const calculateCategoryTotal = (category: string) => {
+    if (!rfp.allLineItems) return 0;
+    return rfp.allLineItems.reduce((sum: number, item: any) => {
+      if (item.category?.toLowerCase() === category.toLowerCase()) {
+        return sum + (parseFloat(item.totalPrice) || 0);
+      }
+      return sum;
+    }, 0);
+  };
+
+  const tenantImprovementsTotal = calculateCategoryTotal("tenant improvements");
+  const designSoftCostsTotal = calculateCategoryTotal("design/soft costs");
+  const existingImprovementsTotal = calculateCategoryTotal("existing improvements");
+  const grandTotal = tenantImprovementsTotal + designSoftCostsTotal + existingImprovementsTotal;
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>Financial Summary - ${rfp.projectName}</title>
+      <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; color: #333; line-height: 1.4; }
+        .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #2563eb; padding-bottom: 20px; }
+        .company-info { text-align: left; margin-bottom: 20px; }
+        .document-title { font-size: 24px; font-weight: bold; color: #2563eb; margin: 10px 0; }
+        .project-title { font-size: 18px; font-weight: bold; margin: 5px 0; }
+        .section { margin: 20px 0; }
+        .section-title { font-size: 16px; font-weight: bold; color: #2563eb; margin-bottom: 10px; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; }
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 15px 0; }
+        .info-item { display: flex; margin: 5px 0; }
+        .label { font-weight: bold; min-width: 120px; }
+        .value { margin-left: 10px; }
+        .cost-summary { background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0; }
+        .cost-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #e5e7eb; }
+        .cost-item:last-child { border-bottom: none; }
+        .cost-label { font-weight: bold; }
+        .cost-value { font-size: 18px; font-weight: bold; }
+        .total-row { background-color: #2563eb; color: white; padding: 15px; border-radius: 5px; margin-top: 10px; }
+        .bid-summary { margin: 20px 0; }
+        .bid-item { background-color: #f9fafb; padding: 15px; margin: 10px 0; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; }
+        .export-info { background-color: #dbeafe; padding: 15px; border-radius: 8px; margin: 20px 0; }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        th, td { border: 1px solid #e5e7eb; padding: 12px; text-align: left; }
+        th { background-color: #f9fafb; font-weight: bold; }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <div class="company-info">
+          <div><strong>Financial Summary Report</strong></div>
+          <div>Generated: ${today}</div>
+          <div>RFP Number: ${rfp.rfpNumber}</div>
+        </div>
+        <div class="document-title">PROJECT FINANCIAL SUMMARY</div>
+        <div class="project-title">${rfp.projectName}</div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Project Overview</div>
+        <div class="info-grid">
+          <div>
+            <div class="info-item"><span class="label">RFP Number:</span><span class="value">${rfp.rfpNumber}</span></div>
+            <div class="info-item"><span class="label">Project Name:</span><span class="value">${rfp.projectName}</span></div>
+            <div class="info-item"><span class="label">Tenant:</span><span class="value">${rfp.tenantName}</span></div>
+          </div>
+          <div>
+            <div class="info-item"><span class="label">Project Area:</span><span class="value">${rfp.projectArea} sq ft</span></div>
+            <div class="info-item"><span class="label">Development Contact:</span><span class="value">${rfp.developmentContact}</span></div>
+            <div class="info-item"><span class="label">Report Date:</span><span class="value">${today}</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Cost Breakdown Summary</div>
+        <div class="cost-summary">
+          <div class="cost-item">
+            <span class="cost-label">Tenant Improvements</span>
+            <span class="cost-value" style="color: #16a34a;">${formatCurrency(tenantImprovementsTotal)}</span>
+          </div>
+          <div class="cost-item">
+            <span class="cost-label">Design / Soft Costs / Other Fees</span>
+            <span class="cost-value" style="color: #2563eb;">${formatCurrency(designSoftCostsTotal)}</span>
+          </div>
+          ${existingImprovementsTotal > 0 ? `
+          <div class="cost-item">
+            <span class="cost-label">Existing Improvements</span>
+            <span class="cost-value" style="color: #ea580c;">${formatCurrency(existingImprovementsTotal)}</span>
+          </div>
+          ` : ''}
+          <div class="cost-item total-row">
+            <span class="cost-label" style="font-size: 20px;">Total Project Cost</span>
+            <span class="cost-value" style="font-size: 24px;">${formatCurrency(grandTotal)}</span>
+          </div>
+        </div>
+      </div>
+
+      ${rfp.bidCollections && rfp.bidCollections.length > 0 ? `
+      <div class="section">
+        <div class="section-title">Submitted Bids Overview</div>
+        <div class="bid-summary">
+          ${rfp.bidCollections.map((bid: any) => `
+            <div class="bid-item">
+              <div>
+                <div style="font-weight: bold; font-size: 16px;">${bid.contractorName}</div>
+                <div style="color: #666; font-size: 14px;">Submitted: ${new Date(bid.submissionDate).toLocaleDateString()}</div>
+              </div>
+              <div style="text-align: right;">
+                <div style="font-size: 18px; font-weight: bold;">${formatCurrency(parseFloat(bid.totalAmount) || 0)}</div>
+                <div style="color: #666; font-size: 14px;">Status: ${bid.status}</div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+      ` : ''}
+
+      <div class="section">
+        <div class="section-title">Financial Analysis Notes</div>
+        <div class="export-info">
+          <p><strong>Purpose:</strong> This financial summary provides a comprehensive breakdown of project costs for integration into internal financial modeling systems.</p>
+          
+          <p><strong>Cost Categories:</strong></p>
+          <ul>
+            <li><strong>Tenant Improvements:</strong> Direct construction and improvement costs</li>
+            <li><strong>Design / Soft Costs:</strong> Architectural, engineering, and project management fees</li>
+            ${existingImprovementsTotal > 0 ? '<li><strong>Existing Improvements:</strong> Costs related to existing facility modifications</li>' : ''}
+          </ul>
+          
+          <p><strong>Data Source:</strong> Compiled from evaluated bids and internal cost assessments during the RFP evaluation phase.</p>
+          
+          <p><strong>Next Steps:</strong> Use these figures for lease negotiation modeling, budget approval processes, and project financial planning.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Document Information</div>
+        <table>
+          <tr><th>Field</th><th>Value</th></tr>
+          <tr><td>Document Type</td><td>Financial Summary Report</td></tr>
+          <tr><td>Generated By</td><td>RFP Management System</td></tr>
+          <tr><td>Generation Date</td><td>${today}</td></tr>
+          <tr><td>Project Phase</td><td>Evaluation Complete</td></tr>
+          <tr><td>Status</td><td>Ready for Financial Modeling</td></tr>
+        </table>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
 export async function generateRfpPdf(options: PdfGenerationOptions): Promise<Buffer> {
   const html = generateRfpHtml(options);
   // Always return HTML for browser-based PDF generation
@@ -46,6 +213,8 @@ function generateRfpHtml(options: PdfGenerationOptions): string {
     return generateBrokerContractorRfpHtml(options, { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea });
   } else if (recipientType === "broker-architect") {
     return generateBrokerArchitectRfpHtml(options, { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea });
+  } else if (recipientType === "financial-summary") {
+    return generateFinancialSummaryHtml(options, { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea });
   } else {
     return generateArchitectRfpHtml(options, { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea });
   }
@@ -808,3 +977,168 @@ export function generatePdfFilename(rfp: any, recipientType: string): string {
   
   return `${prefix}_${cleanProjectName}_${timestamp}.pdf`;
 }
+  const { today } = dates;
+  
+  // Calculate totals from bid collections and line items
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(value);
+  };
+
+  // Calculate category totals from all line items
+  const calculateCategoryTotal = (category: string) => {
+    if (!rfp.allLineItems) return 0;
+    return rfp.allLineItems.reduce((sum: number, item: any) => {
+      if (item.category?.toLowerCase() === category.toLowerCase()) {
+        return sum + (parseFloat(item.totalPrice) || 0);
+      }
+      return sum;
+    }, 0);
+  };
+
+  const tenantImprovementsTotal = calculateCategoryTotal("tenant improvements");
+  const designSoftCostsTotal = calculateCategoryTotal("design/soft costs");
+  const existingImprovementsTotal = calculateCategoryTotal("existing improvements");
+  const grandTotal = tenantImprovementsTotal + designSoftCostsTotal + existingImprovementsTotal;
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>Financial Summary - ${rfp.projectName}</title>
+      <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; color: #333; line-height: 1.4; }
+        .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #2563eb; padding-bottom: 20px; }
+        .company-info { text-align: left; margin-bottom: 20px; }
+        .document-title { font-size: 24px; font-weight: bold; color: #2563eb; margin: 10px 0; }
+        .project-title { font-size: 18px; font-weight: bold; margin: 5px 0; }
+        .section { margin: 20px 0; }
+        .section-title { font-size: 16px; font-weight: bold; color: #2563eb; margin-bottom: 10px; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; }
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 15px 0; }
+        .info-item { display: flex; margin: 5px 0; }
+        .label { font-weight: bold; min-width: 120px; }
+        .value { margin-left: 10px; }
+        .cost-summary { background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0; }
+        .cost-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #e5e7eb; }
+        .cost-item:last-child { border-bottom: none; }
+        .cost-label { font-weight: bold; }
+        .cost-value { font-size: 18px; font-weight: bold; }
+        .total-row { background-color: #2563eb; color: white; padding: 15px; border-radius: 5px; margin-top: 10px; }
+        .bid-summary { margin: 20px 0; }
+        .bid-item { background-color: #f9fafb; padding: 15px; margin: 10px 0; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; }
+        .export-info { background-color: #dbeafe; padding: 15px; border-radius: 8px; margin: 20px 0; }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        th, td { border: 1px solid #e5e7eb; padding: 12px; text-align: left; }
+        th { background-color: #f9fafb; font-weight: bold; }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <div class="company-info">
+          <div><strong>Financial Summary Report</strong></div>
+          <div>Generated: ${today}</div>
+          <div>RFP Number: ${rfp.rfpNumber}</div>
+        </div>
+        <div class="document-title">PROJECT FINANCIAL SUMMARY</div>
+        <div class="project-title">${rfp.projectName}</div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Project Overview</div>
+        <div class="info-grid">
+          <div>
+            <div class="info-item"><span class="label">RFP Number:</span><span class="value">${rfp.rfpNumber}</span></div>
+            <div class="info-item"><span class="label">Project Name:</span><span class="value">${rfp.projectName}</span></div>
+            <div class="info-item"><span class="label">Tenant:</span><span class="value">${rfp.tenantName}</span></div>
+          </div>
+          <div>
+            <div class="info-item"><span class="label">Project Area:</span><span class="value">${rfp.projectArea} sq ft</span></div>
+            <div class="info-item"><span class="label">Development Contact:</span><span class="value">${rfp.developmentContact}</span></div>
+            <div class="info-item"><span class="label">Report Date:</span><span class="value">${today}</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Cost Breakdown Summary</div>
+        <div class="cost-summary">
+          <div class="cost-item">
+            <span class="cost-label">Tenant Improvements</span>
+            <span class="cost-value" style="color: #16a34a;">${formatCurrency(tenantImprovementsTotal)}</span>
+          </div>
+          <div class="cost-item">
+            <span class="cost-label">Design / Soft Costs / Other Fees</span>
+            <span class="cost-value" style="color: #2563eb;">${formatCurrency(designSoftCostsTotal)}</span>
+          </div>
+          ${existingImprovementsTotal > 0 ? `
+          <div class="cost-item">
+            <span class="cost-label">Existing Improvements</span>
+            <span class="cost-value" style="color: #ea580c;">${formatCurrency(existingImprovementsTotal)}</span>
+          </div>
+          ` : ''}
+          <div class="cost-item total-row">
+            <span class="cost-label" style="font-size: 20px;">Total Project Cost</span>
+            <span class="cost-value" style="font-size: 24px;">${formatCurrency(grandTotal)}</span>
+          </div>
+        </div>
+      </div>
+
+      ${rfp.bidCollections && rfp.bidCollections.length > 0 ? `
+      <div class="section">
+        <div class="section-title">Submitted Bids Overview</div>
+        <div class="bid-summary">
+          ${rfp.bidCollections.map((bid: any) => `
+            <div class="bid-item">
+              <div>
+                <div style="font-weight: bold; font-size: 16px;">${bid.contractorName}</div>
+                <div style="color: #666; font-size: 14px;">Submitted: ${new Date(bid.submissionDate).toLocaleDateString()}</div>
+              </div>
+              <div style="text-align: right;">
+                <div style="font-size: 18px; font-weight: bold;">${formatCurrency(parseFloat(bid.totalAmount) || 0)}</div>
+                <div style="color: #666; font-size: 14px;">Status: ${bid.status}</div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+      ` : ''}
+
+      <div class="section">
+        <div class="section-title">Financial Analysis Notes</div>
+        <div class="export-info">
+          <p><strong>Purpose:</strong> This financial summary provides a comprehensive breakdown of project costs for integration into internal financial modeling systems.</p>
+          
+          <p><strong>Cost Categories:</strong></p>
+          <ul>
+            <li><strong>Tenant Improvements:</strong> Direct construction and improvement costs</li>
+            <li><strong>Design / Soft Costs:</strong> Architectural, engineering, and project management fees</li>
+            ${existingImprovementsTotal > 0 ? '<li><strong>Existing Improvements:</strong> Costs related to existing facility modifications</li>' : ''}
+          </ul>
+          
+          <p><strong>Data Source:</strong> Compiled from evaluated bids and internal cost assessments during the RFP evaluation phase.</p>
+          
+          <p><strong>Next Steps:</strong> Use these figures for lease negotiation modeling, budget approval processes, and project financial planning.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Document Information</div>
+        <table>
+          <tr><th>Field</th><th>Value</th></tr>
+          <tr><td>Document Type</td><td>Financial Summary Report</td></tr>
+          <tr><td>Generated By</td><td>RFP Management System</td></tr>
+          <tr><td>Generation Date</td><td>${today}</td></tr>
+          <tr><td>Project Phase</td><td>Evaluation Complete</td></tr>
+          <tr><td>Status</td><td>Ready for Financial Modeling</td></tr>
+        </table>
+      </div>
+    </body>
+    </html>
+  `;
+}
+

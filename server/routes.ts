@@ -1049,6 +1049,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Financial Summary PDF generation
+  app.post("/api/rfp-requests/:rfpId/financial-summary-pdf", async (req, res) => {
+    try {
+      const rfpId = parseInt(req.params.rfpId);
+      if (isNaN(rfpId)) {
+        return res.status(400).json({ message: "Invalid RFP ID" });
+      }
+
+      const rfp = await storage.getRfpRequest(rfpId);
+      if (!rfp) {
+        return res.status(404).json({ message: "RFP not found" });
+      }
+
+      const bidCollections = await storage.getBidCollectionsByRfp(rfpId);
+      
+      // Collect all line items from bid collections
+      const allLineItems = [];
+      for (const bid of bidCollections) {
+        const lineItems = await storage.getBidLineItemsByBid(bid.id);
+        allLineItems.push(...lineItems.map(item => ({ ...item, bidCollection: bid })));
+      }
+
+      // Generate PDF using existing PDF generator
+      const { generateRfpPdf } = await import("./pdf-generator");
+      
+      const pdfBuffer = await generateRfpPdf({
+        rfp: {
+          ...rfp,
+          bidCollections,
+          allLineItems
+        },
+        recipientType: "financial-summary",
+        recipientName: "Financial Team",
+        recipientCompany: "Internal"
+      });
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="Financial_Summary_${rfp.rfpNumber}_${rfp.projectName.replace(/[^a-zA-Z0-9]/g, '_')}.pdf"`);
+      res.send(pdfBuffer);
+    } catch (error) {
+      console.error("Error generating financial summary PDF:", error);
+      res.status(500).json({ message: "Failed to generate financial summary PDF" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

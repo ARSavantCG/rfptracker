@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FileDown, Printer } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import type { RfpRequest, BidCollection } from "@shared/schema";
+import type { RfpRequest, BidCollection, BidLineItem } from "@shared/schema";
 
 interface FinancialSummaryProps {
   rfp: RfpRequest | null;
@@ -51,6 +51,24 @@ export function FinancialSummary({ rfp }: FinancialSummaryProps) {
   const { data: bidCollections = [] } = useQuery<BidCollection[]>({
     queryKey: [`/api/rfp-requests/${rfp?.id}/bid-collections`],
     enabled: !!rfp?.id,
+  });
+
+  // Fetch all bid line items for calculations
+  const { data: allBidLineItems = [] } = useQuery<BidLineItem[]>({
+    queryKey: [`/api/rfp-requests/${rfp?.id}/all-bid-line-items`],
+    queryFn: async () => {
+      if (!rfp?.id) return [];
+      const items: BidLineItem[] = [];
+      for (const bid of bidCollections) {
+        const response = await fetch(`/api/rfp-requests/${rfp.id}/bid-collections/${bid.id}/line-items`);
+        if (response.ok) {
+          const bidItems = await response.json();
+          items.push(...bidItems);
+        }
+      }
+      return items;
+    },
+    enabled: !!rfp?.id && bidCollections.length > 0,
   });
 
   const generatePdfMutation = useMutation({
@@ -116,22 +134,19 @@ export function FinancialSummary({ rfp }: FinancialSummaryProps) {
   };
 
   const calculateBidTotal = (bidCollection: BidCollection) => {
-    if (!bidCollection.lineItems) return 0;
-    return bidCollection.lineItems.reduce((sum, item) => {
+    const bidItems = allBidLineItems.filter(item => item.bidCollectionId === bidCollection.id);
+    return bidItems.reduce((sum, item) => {
       const total = parseFloat(item.totalPrice) || 0;
       return sum + total;
     }, 0);
   };
 
   const calculateCategoryTotal = (category: string) => {
-    return bidCollections.reduce((sum, bid) => {
-      if (!bid.lineItems) return sum;
-      const categoryItems = bid.lineItems.filter(item => 
-        item.category?.toLowerCase() === category.toLowerCase()
-      );
-      return sum + categoryItems.reduce((itemSum, item) => {
-        return itemSum + (parseFloat(item.totalPrice) || 0);
-      }, 0);
+    return allBidLineItems.reduce((sum, item) => {
+      if (item.category?.toLowerCase() === category.toLowerCase()) {
+        return sum + (parseFloat(item.totalPrice) || 0);
+      }
+      return sum;
     }, 0);
   };
 
@@ -244,7 +259,7 @@ export function FinancialSummary({ rfp }: FinancialSummaryProps) {
                 <div>
                   <p className="font-medium">{bid.contractorName}</p>
                   <p className="text-sm text-gray-600">
-                    Submitted: {new Date(bid.submittedAt).toLocaleDateString()}
+                    Submitted: {new Date(bid.submissionDate).toLocaleDateString()}
                   </p>
                 </div>
                 <div className="text-right">
@@ -252,7 +267,7 @@ export function FinancialSummary({ rfp }: FinancialSummaryProps) {
                     {formatCurrency(calculateBidTotal(bid))}
                   </p>
                   <p className="text-sm text-gray-600">
-                    {bid.lineItems?.length || 0} line items
+                    {allBidLineItems.filter(item => item.bidCollectionId === bid.id).length} line items
                   </p>
                 </div>
               </div>

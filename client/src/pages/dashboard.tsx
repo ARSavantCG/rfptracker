@@ -272,6 +272,19 @@ export default function Dashboard() {
                 </div>
                 <EvaluationBudget rfp={selectedRfp} />
               </div>
+            ) : selectedRfp?.workflowPhase === 'publish' ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Button
+                    variant="outline"
+                    onClick={() => setSelectedRfp(null)}
+                    className="mb-4"
+                  >
+                    ← Back to RFP List
+                  </Button>
+                </div>
+                <FinancialSummary rfp={selectedRfp} />
+              </div>
             ) : (
               <RfpTable 
                 searchQuery={searchQuery}

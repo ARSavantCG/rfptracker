@@ -14,7 +14,7 @@ function formatDate(date: string | Date): string {
 export interface PdfGenerationOptions {
   rfp: any;
   invitationToBid?: any;
-  recipientType: "architect" | "contractor" | "broker-architect" | "broker-contractor";
+  recipientType: "architect" | "contractor" | "broker-architect" | "broker-contractor" | "financial-summary";
   recipientName?: string;
   recipientCompany?: string;
 }

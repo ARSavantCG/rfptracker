@@ -186,13 +186,13 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         body: JSON.stringify(budgetPayload),
       });
 
-      // Advance workflow to award phase
+      // Advance workflow to publish phase
       await fetch(`/api/rfp-requests/${rfp.id}/workflow-phase`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ phase: 'award' }),
+        body: JSON.stringify({ phase: 'publish' }),
       });
     },
     onSuccess: () => {

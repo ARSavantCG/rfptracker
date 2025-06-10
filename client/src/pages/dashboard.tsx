@@ -11,6 +11,7 @@ import { InvitationToBidModal } from "@/components/invitation-to-bid-modal";
 import { RfpValidationModal } from "@/components/rfp-validation-modal";
 import { BidCollectionTable } from "@/components/bid-collection-table";
 import { EvaluationBudget } from "@/components/evaluation-budget";
+import { FinancialSummary } from "@/components/financial-summary";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";

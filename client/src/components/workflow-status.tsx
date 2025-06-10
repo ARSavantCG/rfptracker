@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronRight, FileText, Users, ClipboardCheck, Award, CheckCircle } from "lucide-react";
+import { ChevronRight, FileText, Users, ClipboardCheck, Award, FileOutput } from "lucide-react";
 import type { RfpRequest } from "@shared/schema";
 
 interface WorkflowStatusProps {
@@ -44,11 +44,11 @@ const workflowPhases = [
     description: "Evaluate and compare bids"
   },
   { 
-    key: "award", 
-    label: "Award", 
-    icon: CheckCircle, 
+    key: "publish", 
+    label: "Publish", 
+    icon: FileOutput, 
     color: "bg-green-100 text-green-700 border-green-300",
-    description: "Select winner and award contract"
+    description: "Generate financial summary report"
   }
 ];
 
@@ -144,7 +144,7 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onValidateRfp, onOp
                   <span className={`font-medium text-sm ${isActive ? "text-gray-900" : ""}`}>
                     {phase.label}
                   </span>
-                  {isCompleted && <CheckCircle className="h-4 w-4 text-green-600" />}
+                  {isCompleted && <FileOutput className="h-4 w-4 text-green-600" />}
                   {isActive && (
                     <Badge variant="secondary" className="text-xs px-2 py-0.5">
                       Current

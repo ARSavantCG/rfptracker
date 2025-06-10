@@ -8,7 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
-import { Plus, Edit, Trash2, Save, X, ArrowRight } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Plus, Edit, Trash2, Save, X, ArrowRight, Copy, FileDown, Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { RfpRequest, BidCollection, BidLineItem } from "@shared/schema";
 
@@ -43,6 +44,10 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
   const [editingItem, setEditingItem] = useState<string | null>(null);
   const [newItemCategory, setNewItemCategory] = useState<string>("");
   const [newItem, setNewItem] = useState<Partial<EvaluationLineItem>>({});
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [bulkEditCategory, setBulkEditCategory] = useState<string>("");
+  const [bulkEditMultiplier, setBulkEditMultiplier] = useState<string>("1.0");
+  const [showBulkEdit, setShowBulkEdit] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -159,6 +164,72 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     }));
   };
 
+  const duplicateItem = (category: 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', item: EvaluationLineItem) => {
+    const duplicatedItem: EvaluationLineItem = {
+      ...item,
+      id: `${category}-${Date.now()}`,
+      description: `${item.description} (Copy)`,
+      source: "internal"
+    };
+    
+    setBudgetData(prev => ({
+      ...prev,
+      [category]: [...prev[category], duplicatedItem],
+    }));
+  };
+
+  const applyBulkEdit = (category: 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements') => {
+    const multiplier = parseFloat(bulkEditMultiplier) || 1.0;
+    
+    setBudgetData(prev => ({
+      ...prev,
+      [category]: prev[category].map((item: EvaluationLineItem) => {
+        if (selectedItems.has(item.id)) {
+          const newUnitPrice = (parseFloat(item.unitPrice) * multiplier).toFixed(2);
+          const newTotalPrice = (item.quantity * parseFloat(newUnitPrice)).toFixed(2);
+          return {
+            ...item,
+            unitPrice: newUnitPrice,
+            totalPrice: newTotalPrice,
+            ...(bulkEditCategory && { category: bulkEditCategory })
+          };
+        }
+        return item;
+      }),
+    }));
+    
+    setSelectedItems(new Set());
+    setShowBulkEdit(false);
+    setBulkEditCategory("");
+    setBulkEditMultiplier("1.0");
+    
+    toast({
+      title: "Bulk Edit Applied",
+      description: `Updated ${selectedItems.size} items successfully.`,
+    });
+  };
+
+  const toggleItemSelection = (itemId: string) => {
+    setSelectedItems(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(itemId)) {
+        newSet.delete(itemId);
+      } else {
+        newSet.add(itemId);
+      }
+      return newSet;
+    });
+  };
+
+  const selectAllItems = (items: EvaluationLineItem[]) => {
+    const allIds = items.map(item => item.id);
+    setSelectedItems(new Set(allIds));
+  };
+
+  const clearSelection = () => {
+    setSelectedItems(new Set());
+  };
+
   const saveAndAdvanceMutation = useMutation({
     mutationFn: async () => {
       if (!rfp) throw new Error("No RFP selected");
@@ -253,36 +324,156 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-12">
+                  <Checkbox
+                    checked={items.length > 0 && items.every(item => selectedItems.has(item.id))}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        selectAllItems(items);
+                      } else {
+                        clearSelection();
+                      }
+                    }}
+                  />
+                </TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead>Category</TableHead>
                 <TableHead className="w-20">Qty</TableHead>
                 <TableHead className="w-24">Unit Price</TableHead>
                 <TableHead className="w-24">Total</TableHead>
                 <TableHead className="w-16">Source</TableHead>
-                <TableHead className="w-20">Actions</TableHead>
+                <TableHead className="w-24">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {items.map((item) => (
                 <TableRow key={item.id}>
-                  <TableCell>{item.description}</TableCell>
-                  <TableCell>{item.category}</TableCell>
-                  <TableCell>{item.quantity}</TableCell>
-                  <TableCell>{formatCurrency(item.unitPrice)}</TableCell>
-                  <TableCell className="font-medium">{formatCurrency(item.totalPrice)}</TableCell>
-                  <TableCell>
-                    <span className={`px-2 py-1 text-xs rounded ${
-                      item.source === 'contractor' ? 'bg-blue-100 text-blue-700' :
-                      item.source === 'architect' ? 'bg-purple-100 text-purple-700' :
-                      'bg-gray-100 text-gray-700'
-                    }`}>
-                      {item.source.charAt(0).toUpperCase() + item.source.slice(1)}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-1">
-                      {item.source === 'internal' && (
-                        <>
+                  {editingItem === item.id ? (
+                    // Editing mode for all items
+                    <>
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedItems.has(item.id)}
+                          onCheckedChange={() => toggleItemSelection(item.id)}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Input
+                          value={item.description}
+                          onChange={(e) => updateItem(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', item.id, { description: e.target.value })}
+                          className="text-sm"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Input
+                          value={item.category}
+                          onChange={(e) => updateItem(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', item.id, { category: e.target.value })}
+                          className="text-sm"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Input
+                          type="number"
+                          value={item.quantity}
+                          onChange={(e) => {
+                            const quantity = parseInt(e.target.value) || 1;
+                            const unitPrice = parseFloat(item.unitPrice) || 0;
+                            const totalPrice = (quantity * unitPrice).toFixed(2);
+                            updateItem(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', item.id, { 
+                              quantity, 
+                              totalPrice 
+                            });
+                          }}
+                          className="text-sm w-16"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={item.unitPrice}
+                          onChange={(e) => {
+                            const unitPrice = e.target.value;
+                            const quantity = item.quantity || 1;
+                            const totalPrice = (quantity * parseFloat(unitPrice || "0")).toFixed(2);
+                            updateItem(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', item.id, { 
+                              unitPrice, 
+                              totalPrice 
+                            });
+                          }}
+                          className="text-sm w-20"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={item.totalPrice}
+                          onChange={(e) => {
+                            const totalPrice = e.target.value;
+                            const quantity = item.quantity || 1;
+                            const unitPrice = quantity > 0 ? (parseFloat(totalPrice || "0") / quantity).toFixed(2) : "0.00";
+                            updateItem(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', item.id, { 
+                              totalPrice, 
+                              unitPrice 
+                            });
+                          }}
+                          className="text-sm w-20 font-medium"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <span className={`px-2 py-1 text-xs rounded ${
+                          item.source === 'contractor' ? 'bg-blue-100 text-blue-700' :
+                          item.source === 'architect' ? 'bg-purple-100 text-purple-700' :
+                          'bg-gray-100 text-gray-700'
+                        }`}>
+                          {item.source.charAt(0).toUpperCase() + item.source.slice(1)}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setEditingItem(null)}
+                          >
+                            <Save className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setEditingItem(null)}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </>
+                  ) : (
+                    // Display mode
+                    <>
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedItems.has(item.id)}
+                          onCheckedChange={() => toggleItemSelection(item.id)}
+                        />
+                      </TableCell>
+                      <TableCell>{item.description}</TableCell>
+                      <TableCell>{item.category}</TableCell>
+                      <TableCell>{item.quantity}</TableCell>
+                      <TableCell>{formatCurrency(item.unitPrice)}</TableCell>
+                      <TableCell className="font-medium">{formatCurrency(item.totalPrice)}</TableCell>
+                      <TableCell>
+                        <span className={`px-2 py-1 text-xs rounded ${
+                          item.source === 'contractor' ? 'bg-blue-100 text-blue-700' :
+                          item.source === 'architect' ? 'bg-purple-100 text-purple-700' :
+                          'bg-gray-100 text-gray-700'
+                        }`}>
+                          {item.source.charAt(0).toUpperCase() + item.source.slice(1)}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
                           <Button
                             variant="ghost"
                             size="sm"
@@ -293,14 +484,23 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => deleteItem(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', item.id)}
+                            onClick={() => duplicateItem(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', item)}
                           >
-                            <Trash2 className="h-3 w-3" />
+                            <Copy className="h-3 w-3" />
                           </Button>
-                        </>
-                      )}
-                    </div>
-                  </TableCell>
+                          {item.source === 'internal' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => deleteItem(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', item.id)}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </>
+                  )}
                 </TableRow>
               ))}
             </TableBody>

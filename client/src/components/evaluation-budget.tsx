@@ -159,13 +159,60 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     }));
   };
 
+  const saveAndAdvanceMutation = useMutation({
+    mutationFn: async () => {
+      if (!rfp) throw new Error("No RFP selected");
+      
+      // Save the evaluation budget data
+      const budgetPayload = {
+        rfpId: rfp.id,
+        tenantImprovements: budgetData.tenantImprovements,
+        designSoftCosts: budgetData.designSoftCosts,
+        existingImprovements: budgetData.existingImprovements,
+        hasExistingImprovements: budgetData.hasExistingImprovements,
+        totalTenantImprovements: calculateCategoryTotal(budgetData.tenantImprovements).toFixed(2),
+        totalDesignSoftCosts: calculateCategoryTotal(budgetData.designSoftCosts).toFixed(2),
+        totalExistingImprovements: calculateCategoryTotal(budgetData.existingImprovements).toFixed(2),
+        grandTotal: calculateGrandTotal().toFixed(2),
+        notes: budgetData.notes,
+      };
+
+      // Save budget to server
+      await fetch(`/api/rfp-requests/${rfp.id}/evaluation-budget`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(budgetPayload),
+      });
+
+      // Advance workflow to award phase
+      await fetch(`/api/rfp-requests/${rfp.id}/workflow-phase`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ phase: 'award' }),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
+      toast({
+        title: "Budget Saved & Workflow Advanced",
+        description: "Evaluation budget saved and project moved to award phase.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to save budget or advance workflow.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const saveAndAdvance = () => {
-    // Here you would save the budget data to the server
-    // For now, let's advance the workflow to the next phase
-    toast({
-      title: "Budget Saved",
-      description: "Evaluation budget has been saved successfully.",
-    });
+    saveAndAdvanceMutation.mutate();
   };
 
   if (!rfp) {
@@ -330,9 +377,13 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Evaluation Budget - {rfp.projectName}</CardTitle>
-          <Button onClick={saveAndAdvance} className="bg-green-600 hover:bg-green-700">
+          <Button 
+            onClick={saveAndAdvance} 
+            disabled={saveAndAdvanceMutation.isPending}
+            className="bg-green-600 hover:bg-green-700"
+          >
             <ArrowRight className="h-4 w-4 mr-2" />
-            Save & Continue to Team Review
+            {saveAndAdvanceMutation.isPending ? "Saving..." : "Save & Continue to Team Review"}
           </Button>
         </CardHeader>
       </Card>

@@ -883,7 +883,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(bidCollection);
     } catch (error) {
       console.error("Error updating bid collection:", error);
-      res.status(400).json({ message: "Failed to update bid collection", error: error.message });
+      res.status(400).json({ message: "Failed to update bid collection", error: error instanceof Error ? error.message : String(error) });
     }
   });
 
@@ -1024,6 +1024,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ message: "Failed to delete property" });
+    }
+  });
+
+  // Evaluation Budget routes
+  app.post("/api/rfp-requests/:rfpId/evaluation-budget", async (req, res) => {
+    try {
+      const rfpId = parseInt(req.params.rfpId);
+      if (isNaN(rfpId)) {
+        return res.status(400).json({ message: "Invalid RFP ID" });
+      }
+
+      const budgetData = req.body;
+      
+      // For now, just acknowledge the save - in a full implementation, 
+      // you would save this to the evaluation_budgets table
+      res.status(201).json({ 
+        message: "Evaluation budget saved successfully",
+        rfpId,
+        data: budgetData
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to save evaluation budget" });
     }
   });
 

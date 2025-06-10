@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { X } from "lucide-react";
 
 const createRfpSchema = z.object({
@@ -285,13 +285,16 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                   name="projectArea"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Project Area</FormLabel>
+                      <FormLabel>Rentable Square Footage</FormLabel>
                       <FormControl>
                         <Input 
                           placeholder="e.g., 10,000 sq ft"
                           {...field}
                         />
                       </FormControl>
+                      <p className="text-sm text-muted-foreground">
+                        Total area that tenant will pay rent on
+                      </p>
                       <FormMessage />
                     </FormItem>
                   )}

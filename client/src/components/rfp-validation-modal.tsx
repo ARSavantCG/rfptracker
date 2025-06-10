@@ -75,6 +75,7 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
   // Pre-populate form with existing RFP data
   useEffect(() => {
     if (rfp && isOpen) {
+      console.log('Populating form with RFP data:', { projectArea: rfp.projectArea });
       form.reset({
         dueDate: "",
         generalContractor: "",
@@ -86,6 +87,8 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
         projectDescription: "",
         documentsLink: "",
       });
+      // Ensure the field is explicitly set
+      form.setValue('warehouseArea', rfp.projectArea || "");
     }
   }, [rfp, isOpen, form]);
 
@@ -267,13 +270,17 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                   <FormLabel>Total Rentable Area (What tenant pays rent on)</FormLabel>
                   <FormControl>
                     <Input 
-                      placeholder="sq ft" 
+                      placeholder="e.g., 10,000 sq ft" 
                       {...field} 
-                      className="bg-gray-50 font-medium"
-                      readOnly
+                      className="font-medium"
                     />
                   </FormControl>
-                  <p className="text-sm text-gray-600">This is the total area from Step 1</p>
+                  <p className="text-sm text-gray-600">
+                    {rfp?.projectArea ? 
+                      "Value pulled from Step 1 - you can edit if needed" : 
+                      "Enter the total rentable square footage"
+                    }
+                  </p>
                   <FormMessage />
                 </FormItem>
               )}

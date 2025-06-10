@@ -133,25 +133,7 @@ function generateFinancialSummaryHtml(options: PdfGenerationOptions, dates: any)
         </div>
       </div>
 
-      ${rfp.bidCollections && rfp.bidCollections.length > 0 ? `
-      <div class="section">
-        <div class="section-title">Submitted Bids Overview</div>
-        <div class="bid-summary">
-          ${rfp.bidCollections.map((bid: any) => `
-            <div class="bid-item">
-              <div>
-                <div style="font-weight: bold; font-size: 16px;">${bid.contractorName}</div>
-                <div style="color: #666; font-size: 14px;">Submitted: ${new Date(bid.submissionDate).toLocaleDateString()}</div>
-              </div>
-              <div style="text-align: right;">
-                <div style="font-size: 18px; font-weight: bold;">${formatCurrency(parseFloat(bid.totalAmount) || 0)}</div>
-                <div style="color: #666; font-size: 14px;">Status: ${bid.status}</div>
-              </div>
-            </div>
-          `).join('')}
-        </div>
-      </div>
-      ` : ''}
+
 
       <div class="section">
         <div class="section-title">Financial Analysis Notes</div>

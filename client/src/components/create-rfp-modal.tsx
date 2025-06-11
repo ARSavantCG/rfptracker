@@ -86,10 +86,16 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
         formData.append('files', file);
       });
       
-      return apiRequest('/api/rfp-requests', {
+      const response = await fetch('/api/rfp-requests', {
         method: 'POST',
         body: formData,
       });
+      
+      if (!response.ok) {
+        throw new Error('Failed to create RFP request');
+      }
+      
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
@@ -170,8 +176,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                       <FormLabel>Property *</FormLabel>
                       <PropertySelector
                         value={field.value}
-                        onValueChange={field.onChange}
-                        properties={properties}
+                        onChange={field.onChange}
                       />
                       <FormMessage />
                     </FormItem>

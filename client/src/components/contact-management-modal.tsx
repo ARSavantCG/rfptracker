@@ -35,6 +35,7 @@ interface ContactManagementModalProps {
 
 export function ContactManagementModal({ isOpen, onClose }: ContactManagementModalProps) {
   const [activeTab, setActiveTab] = useState("add");
+  const [editingContact, setEditingContact] = useState<Contact | null>(null);
   const { toast } = useToast();
 
   const form = useForm<CreateContactFormData>({
@@ -160,10 +161,6 @@ export function ContactManagementModal({ isOpen, onClose }: ContactManagementMod
   const others = (contacts as Contact[]).filter((contact: Contact) => contact.type === "other");
 
   const [expandedContact, setExpandedContact] = useState<number | null>(null);
-  const [editingContact, setEditingContact] = useState<Contact | null>(null);
-  const editForm = useForm<CreateContactFormData>({
-    resolver: zodResolver(createContactSchema),
-  });
 
   const ContactList = ({ contacts, title, icon: Icon }: { 
     contacts: Contact[]; 

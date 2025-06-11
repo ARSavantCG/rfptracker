@@ -154,6 +154,17 @@ export function ContactManagementModal({ isOpen, onClose }: ContactManagementMod
     editForm.reset();
   };
 
+  const editForm = useForm<CreateContactFormData>({
+    resolver: zodResolver(createContactSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      company: "",
+      phone: "",
+      type: undefined,
+    },
+  });
+
   // Filter contacts by type
   const architects = (contacts as Contact[]).filter((contact: Contact) => contact.type === "architect");
   const contractors = (contacts as Contact[]).filter((contact: Contact) => contact.type === "contractor");
@@ -407,6 +418,126 @@ export function ContactManagementModal({ isOpen, onClose }: ContactManagementMod
             )}
           </TabsContent>
         </Tabs>
+
+        {/* Edit Contact Modal */}
+        {editingContact && (
+          <Dialog open={!!editingContact} onOpenChange={() => setEditingContact(null)}>
+            <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle>Edit Contact</DialogTitle>
+                <DialogDescription>
+                  Update contact information for {editingContact.name}
+                </DialogDescription>
+              </DialogHeader>
+
+              <Form {...editForm}>
+                <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <FormField
+                      control={editForm.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-sm">Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Full name" {...field} className="h-8 text-sm" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={editForm.control}
+                      name="company"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-sm">Company</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Company name" {...field} className="h-8 text-sm" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <FormField
+                      control={editForm.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-sm">Email</FormLabel>
+                          <FormControl>
+                            <Input type="email" placeholder="email@company.com" {...field} className="h-8 text-sm" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={editForm.control}
+                      name="phone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-sm">Phone (Optional)</FormLabel>
+                          <FormControl>
+                            <Input placeholder="(555) 123-4567" {...field} value={field.value || ""} className="h-8 text-sm" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <FormField
+                    control={editForm.control}
+                    name="type"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm">Contact Type</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="h-8 text-sm">
+                              <SelectValue placeholder="Select contact type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="architect">Architect</SelectItem>
+                            <SelectItem value="contractor">General Contractor</SelectItem>
+                            <SelectItem value="owner">Owner</SelectItem>
+                            <SelectItem value="other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="flex justify-end space-x-2 pt-4">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={cancelEdit}
+                      className="h-8 px-3 text-sm"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={updateContactMutation.isPending}
+                      className="h-8 px-3 text-sm"
+                    >
+                      {updateContactMutation.isPending ? "Updating..." : "Update Contact"}
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+        )}
 
         <div className="flex justify-end pt-4">
           <Button variant="outline" onClick={onClose} className="h-8 px-3 text-sm">

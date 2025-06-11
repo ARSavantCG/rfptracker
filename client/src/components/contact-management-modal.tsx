@@ -175,7 +175,7 @@ export function ContactManagementModal({ isOpen, onClose }: ContactManagementMod
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
@@ -199,11 +199,11 @@ export function ContactManagementModal({ isOpen, onClose }: ContactManagementMod
           </TabsList>
 
           <TabsContent value="add" className="mt-6 flex-1 overflow-auto">
-            <div className="max-h-[60vh] overflow-y-auto pr-2">
+            <div className="max-h-[50vh] overflow-y-auto pr-2 pb-4">
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
-                  <FormField
+                    <FormField
                     control={form.control}
                     name="name"
                     render={({ field }) => (

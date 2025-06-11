@@ -202,12 +202,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         formData.sentBy = formData.rfpRequest;
       }
 
-      // Convert date strings to Date objects
-      if (formData.receivedOn && typeof formData.receivedOn === 'string') {
-        formData.receivedOn = new Date(formData.receivedOn);
+      // Ensure date fields remain as strings for schema validation
+      console.log('Before date conversion - receivedOn type:', typeof formData.receivedOn, formData.receivedOn);
+      console.log('Before date conversion - dueOn type:', typeof formData.dueOn, formData.dueOn);
+      
+      if (formData.receivedOn instanceof Date) {
+        formData.receivedOn = formData.receivedOn.toISOString().split('T')[0];
+        console.log('Converted receivedOn to:', formData.receivedOn);
       }
-      if (formData.dueOn && typeof formData.dueOn === 'string') {
-        formData.dueOn = new Date(formData.dueOn);
+      if (formData.dueOn instanceof Date) {
+        formData.dueOn = formData.dueOn.toISOString().split('T')[0];
+        console.log('Converted dueOn to:', formData.dueOn);
       }
 
       console.log('Transformed form data:', formData);

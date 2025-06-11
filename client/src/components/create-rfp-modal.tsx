@@ -7,13 +7,14 @@ import { apiRequest } from "@/lib/queryClient";
 import { FileUpload } from "./file-upload";
 import { PropertySelector } from "./property-selector";
 import { useToast } from "@/hooks/use-toast";
-import { type Property } from "@shared/schema";
+import { type Property, type Contact } from "@shared/schema";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { X } from "lucide-react";
 
 const createRfpSchema = z.object({
@@ -22,7 +23,8 @@ const createRfpSchema = z.object({
   projectName: z.string().min(1, "Project name is required"),
   confidential: z.boolean().default(false),
   sentBy: z.string().min(1, "Sent by is required"),
-  sentOn: z.string().min(1, "Sent on date is required"),
+  receivedOn: z.string().min(1, "Received on date is required"),
+  dueOn: z.string().min(1, "Due on date is required"),
   developmentContact: z.string().optional(),
   projectArea: z.string().optional(),
   requestTypes: z.array(z.string()).min(1, "At least one request type is required"),
@@ -41,9 +43,13 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch properties to get property details for project name generation
+  // Fetch properties and contacts for dropdowns
   const { data: properties = [] } = useQuery<Property[]>({
     queryKey: ["/api/properties"],
+  });
+
+  const { data: contacts = [] } = useQuery<Contact[]>({
+    queryKey: ["/api/contacts"],
   });
 
   const form = useForm<CreateRfpFormData>({
@@ -54,7 +60,8 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
       projectName: "",
       confidential: false,
       sentBy: "",
-      sentOn: new Date().toISOString().split('T')[0],
+      receivedOn: new Date().toISOString().split('T')[0],
+      dueOn: "",
       developmentContact: "",
       projectArea: "",
       requestTypes: [],
@@ -101,7 +108,8 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
         formData.append('projectName', data.projectName);
         formData.append('confidential', data.confidential.toString());
         formData.append('sentBy', data.sentBy);
-        formData.append('sentOn', data.sentOn);
+        formData.append('receivedOn', data.receivedOn);
+        formData.append('dueOn', data.dueOn);
         formData.append('developmentContact', data.developmentContact || '');
         formData.append('projectArea', data.projectArea || '');
         formData.append('requestTypes', JSON.stringify(data.requestTypes));
@@ -233,12 +241,20 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Sent By *</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="Person who sent the RFP"
-                          {...field}
-                        />
-                      </FormControl>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select person who sent the RFP" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {contacts.map((contact) => (
+                            <SelectItem key={contact.id} value={`${contact.name} - ${contact.company}`}>
+                              {contact.name} - {contact.company}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -246,10 +262,10 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
 
                 <FormField
                   control={form.control}
-                  name="sentOn"
+                  name="receivedOn"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Sent On *</FormLabel>
+                      <FormLabel>Received On *</FormLabel>
                       <FormControl>
                         <Input 
                           type="date"

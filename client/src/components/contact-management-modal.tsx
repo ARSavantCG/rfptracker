@@ -175,7 +175,7 @@ export function ContactManagementModal({ isOpen, onClose }: ContactManagementMod
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl max-h-[80vh]">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
@@ -186,8 +186,8 @@ export function ContactManagementModal({ isOpen, onClose }: ContactManagementMod
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex-1 flex flex-col min-h-0">
+          <TabsList className="grid w-full grid-cols-2 shrink-0">
             <TabsTrigger value="add" className="flex items-center gap-2">
               <Plus className="h-4 w-4" />
               Add Contact
@@ -198,10 +198,11 @@ export function ContactManagementModal({ isOpen, onClose }: ContactManagementMod
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="add" className="mt-6">
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+          <TabsContent value="add" className="mt-6 flex-1 overflow-auto">
+            <div className="max-h-[60vh] overflow-y-auto pr-2">
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
                     name="name"
@@ -295,8 +296,9 @@ export function ContactManagementModal({ isOpen, onClose }: ContactManagementMod
                     {createContactMutation.isPending ? "Adding..." : "Add Contact"}
                   </Button>
                 </div>
-              </form>
-            </Form>
+                </form>
+              </Form>
+            </div>
           </TabsContent>
 
           <TabsContent value="manage" className="mt-6">

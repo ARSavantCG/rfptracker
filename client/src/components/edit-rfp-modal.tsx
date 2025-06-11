@@ -545,7 +545,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
               <Button
                 type="button"
                 variant="outline"
-                onClick={onClose}
+                onClick={handleClose}
                 disabled={updateMutation.isPending}
               >
                 <X className="h-4 w-4 mr-2" />

@@ -420,6 +420,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update RFP request with files
+  app.patch("/api/rfp-requests/:id/update-with-files", upload.array("files"), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid ID" });
+      }
+
+      // Parse form data properly
+      const formData = { ...req.body };
+      
+      // Parse requestTypes JSON array
+      if (formData.requestTypes && typeof formData.requestTypes === 'string') {
+        try {
+          formData.requestTypes = JSON.parse(formData.requestTypes);
+        } catch {
+          formData.requestTypes = [];
+        }
+      }
+
+      // Convert string boolean to actual boolean
+      if (formData.confidential === 'true') {
+        formData.confidential = true;
+      } else if (formData.confidential === 'false') {
+        formData.confidential = false;
+      } else {
+        formData.confidential = Boolean(formData.confidential);
+      }
+
+      // Ensure date fields remain as strings for schema validation
+      if (formData.receivedOn instanceof Date) {
+        formData.receivedOn = formData.receivedOn.toISOString().split('T')[0];
+      }
+      if (formData.dueOn instanceof Date) {
+        formData.dueOn = formData.dueOn.toISOString().split('T')[0];
+      }
+
+      console.log('Updating RFP with files - processed data:', formData);
+
+      // Update the RFP request first
+      const updatedRequest = await storage.updateRfpRequest(id, formData);
+      if (!updatedRequest) {
+        return res.status(404).json({ message: "RFP request not found" });
+      }
+
+      // Handle file uploads if any
+      const files = req.files as Express.Multer.File[];
+      if (files && files.length > 0) {
+        for (const file of files) {
+          const rfpFile = {
+            id: nanoid(),
+            name: file.originalname,
+            size: file.size,
+            type: file.mimetype,
+            uploadedAt: new Date().toISOString(),
+            path: file.filename,
+          };
+
+          await storage.addFileToRfp(id, rfpFile);
+        }
+      }
+
+      // Get the updated request with files
+      const finalRequest = await storage.getRfpRequest(id);
+      res.json(finalRequest);
+    } catch (error) {
+      console.error('Update RFP with files error:', error);
+      res.status(400).json({ 
+        message: error instanceof Error ? error.message : "Failed to update RFP request" 
+      });
+    }
+  });
+
   // Contact routes
   app.get("/api/contacts", async (req, res) => {
     try {

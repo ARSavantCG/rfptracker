@@ -48,6 +48,10 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
   const [bulkEditCategory, setBulkEditCategory] = useState<string>("");
   const [bulkEditMultiplier, setBulkEditMultiplier] = useState<string>("1.0");
   const [showBulkEdit, setShowBulkEdit] = useState(false);
+  const [showAdvancedEdit, setShowAdvancedEdit] = useState(false);
+  const [itemHistory, setItemHistory] = useState<Record<string, EvaluationLineItem[]>>({});
+  const [customCategories, setCustomCategories] = useState<string[]>([]);
+  const [showCategoryManager, setShowCategoryManager] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -139,6 +143,12 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
       source: "internal",
     };
 
+    // Save to history before adding
+    setItemHistory(prev => ({
+      ...prev,
+      [item.id]: [item]
+    }));
+
     setBudgetData(prev => ({
       ...prev,
       [category]: [...prev[category], item],
@@ -148,9 +158,100 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     setNewItemCategory("");
   };
 
-  const updateItem = (category: 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', itemId: string, updates: Partial<EvaluationLineItem>) => {
-    setBudgetData(prev => ({
-      ...prev,
+  const updateItem = (itemId: string, updates: Partial<EvaluationLineItem>) => {
+    const categories = ['tenantImprovements', 'designSoftCosts', 'existingImprovements'] as const;
+    
+    setBudgetData(prev => {
+      const newData = { ...prev };
+      
+      for (const category of categories) {
+        const itemIndex = newData[category].findIndex(item => item.id === itemId);
+        if (itemIndex !== -1) {
+          const currentItem = newData[category][itemIndex];
+          
+          // Save current version to history
+          setItemHistory(prevHistory => ({
+            ...prevHistory,
+            [itemId]: [...(prevHistory[itemId] || []), currentItem]
+          }));
+
+          // Calculate new total if quantity or unit price changed
+          const newQuantity = updates.quantity !== undefined ? updates.quantity : currentItem.quantity;
+          const newUnitPrice = updates.unitPrice !== undefined ? parseFloat(updates.unitPrice) : parseFloat(currentItem.unitPrice);
+          const newTotalPrice = updates.totalPrice || (newQuantity * newUnitPrice).toFixed(2);
+
+          newData[category][itemIndex] = {
+            ...currentItem,
+            ...updates,
+            quantity: newQuantity,
+            unitPrice: newUnitPrice.toFixed(2),
+            totalPrice: newTotalPrice,
+          };
+          break;
+        }
+      }
+      
+      return newData;
+    });
+  };
+
+  const duplicateItem = (itemId: string) => {
+    const categories = ['tenantImprovements', 'designSoftCosts', 'existingImprovements'] as const;
+    
+    setBudgetData(prev => {
+      const newData = { ...prev };
+      
+      for (const category of categories) {
+        const item = newData[category].find(item => item.id === itemId);
+        if (item) {
+          const duplicatedItem = {
+            ...item,
+            id: `${category}-${Date.now()}`,
+            description: `${item.description} (Copy)`,
+          };
+          newData[category].push(duplicatedItem);
+          break;
+        }
+      }
+      
+      return newData;
+    });
+  };
+
+  const bulkUpdateItems = () => {
+    if (selectedItems.size === 0) return;
+
+    const multiplier = parseFloat(bulkEditMultiplier) || 1;
+    const categories = ['tenantImprovements', 'designSoftCosts', 'existingImprovements'] as const;
+
+    setBudgetData(prev => {
+      const newData = { ...prev };
+      
+      for (const category of categories) {
+        newData[category] = newData[category].map(item => {
+          if (selectedItems.has(item.id)) {
+            const newUnitPrice = parseFloat(item.unitPrice) * multiplier;
+            const newTotalPrice = (item.quantity * newUnitPrice).toFixed(2);
+            
+            return {
+              ...item,
+              unitPrice: newUnitPrice.toFixed(2),
+              totalPrice: newTotalPrice,
+              category: bulkEditCategory || item.category,
+            };
+          }
+          return item;
+        });
+      }
+      
+      return newData;
+    });
+
+    setSelectedItems(new Set());
+    setShowBulkEdit(false);
+    setBulkEditMultiplier("1.0");
+    setBulkEditCategory("");
+  };
       [category]: prev[category].map((item: EvaluationLineItem) =>
         item.id === itemId ? { ...item, ...updates } : item
       ),

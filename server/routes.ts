@@ -203,21 +203,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Ensure date fields remain as strings for schema validation
-      console.log('Before date conversion - receivedOn type:', typeof formData.receivedOn, formData.receivedOn);
-      console.log('Before date conversion - dueOn type:', typeof formData.dueOn, formData.dueOn);
-      
       if (formData.receivedOn instanceof Date) {
         formData.receivedOn = formData.receivedOn.toISOString().split('T')[0];
-        console.log('Converted receivedOn to:', formData.receivedOn);
       }
       if (formData.dueOn instanceof Date) {
         formData.dueOn = formData.dueOn.toISOString().split('T')[0];
-        console.log('Converted dueOn to:', formData.dueOn);
       }
 
-      console.log('Transformed form data:', formData);
-
-      const parsed = insertRfpRequestSchema.parse(formData);
+      let parsed;
+      try {
+        parsed = insertRfpRequestSchema.parse(formData);
+        console.log('Parsed data after schema validation:', parsed);
+        console.log('Parsed receivedOn:', parsed.receivedOn, 'type:', typeof parsed.receivedOn);
+        console.log('Parsed dueOn:', parsed.dueOn, 'type:', typeof parsed.dueOn);
+      } catch (parseError) {
+        console.log('Schema parsing failed:', parseError);
+        throw parseError;
+      }
       
       // Handle uploaded files
       const uploadedFiles = (req.files as Express.Multer.File[] || []).map(file => ({

@@ -98,6 +98,29 @@ export function ContactManagementModal({ isOpen, onClose }: ContactManagementMod
     },
   });
 
+  // Update contact mutation
+  const updateContactMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: CreateContactFormData }) => {
+      return apiRequest(`/api/contacts/${id}`, "PATCH", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
+      toast({
+        title: "Contact updated",
+        description: "Contact has been updated successfully",
+      });
+      setEditingContact(null);
+      editForm.reset();
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update contact. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const onSubmit = (data: CreateContactFormData) => {
     createContactMutation.mutate(data);
   };
@@ -115,6 +138,10 @@ export function ContactManagementModal({ isOpen, onClose }: ContactManagementMod
   const others = (contacts as Contact[]).filter((contact: Contact) => contact.type === "other");
 
   const [expandedContact, setExpandedContact] = useState<number | null>(null);
+  const [editingContact, setEditingContact] = useState<Contact | null>(null);
+  const editForm = useForm<CreateContactFormData>({
+    resolver: zodResolver(createContactSchema),
+  });
 
   const ContactList = ({ contacts, title, icon: Icon }: { 
     contacts: Contact[]; 

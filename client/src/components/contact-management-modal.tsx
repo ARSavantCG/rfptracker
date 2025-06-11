@@ -21,7 +21,7 @@ const createContactSchema = insertContactSchema.extend({
   name: z.string().min(1, "Name is required"),
   email: z.string().email("Valid email is required"),
   company: z.string().min(1, "Company is required"),
-  type: z.enum(["architect", "contractor"], { 
+  type: z.enum(["architect", "contractor", "owner", "other"], { 
     required_error: "Please select a contact type" 
   }),
 });
@@ -111,6 +111,8 @@ export function ContactManagementModal({ isOpen, onClose }: ContactManagementMod
   // Filter contacts by type
   const architects = (contacts as Contact[]).filter((contact: Contact) => contact.type === "architect");
   const contractors = (contacts as Contact[]).filter((contact: Contact) => contact.type === "contractor");
+  const owners = (contacts as Contact[]).filter((contact: Contact) => contact.type === "owner");
+  const others = (contacts as Contact[]).filter((contact: Contact) => contact.type === "other");
 
   const ContactList = ({ contacts, title, icon: Icon }: { 
     contacts: Contact[]; 
@@ -180,7 +182,7 @@ export function ContactManagementModal({ isOpen, onClose }: ContactManagementMod
             Contact Management
           </DialogTitle>
           <DialogDescription>
-            Add and manage your architect and contractor contacts for RFP invitations
+            Add and manage your contacts including architects, contractors, owners, and other stakeholders
           </DialogDescription>
         </DialogHeader>
 
@@ -274,6 +276,8 @@ export function ContactManagementModal({ isOpen, onClose }: ContactManagementMod
                         <SelectContent>
                           <SelectItem value="architect">Architect</SelectItem>
                           <SelectItem value="contractor">General Contractor</SelectItem>
+                          <SelectItem value="owner">Owner</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -312,6 +316,18 @@ export function ContactManagementModal({ isOpen, onClose }: ContactManagementMod
                   <ContactList 
                     contacts={contractors} 
                     title="General Contractors" 
+                    icon={User}
+                  />
+                  
+                  <ContactList 
+                    contacts={owners} 
+                    title="Owners" 
+                    icon={Users}
+                  />
+                  
+                  <ContactList 
+                    contacts={others} 
+                    title="Other Contacts" 
                     icon={User}
                   />
                 </div>

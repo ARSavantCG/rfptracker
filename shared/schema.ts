@@ -104,7 +104,7 @@ export const insertContactSchema = createInsertSchema(contacts).omit({
   createdAt: true,
   updatedAt: true,
 }).extend({
-  type: z.enum(["architect", "contractor", "consultant"]),
+  type: z.enum(["architect", "contractor", "owner", "other"]),
   specialties: z.array(z.string()).default([]),
 });
 

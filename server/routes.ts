@@ -210,16 +210,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         formData.dueOn = formData.dueOn.toISOString().split('T')[0];
       }
 
-      let parsed;
-      try {
-        parsed = insertRfpRequestSchema.parse(formData);
-        console.log('Parsed data after schema validation:', parsed);
-        console.log('Parsed receivedOn:', parsed.receivedOn, 'type:', typeof parsed.receivedOn);
-        console.log('Parsed dueOn:', parsed.dueOn, 'type:', typeof parsed.dueOn);
-      } catch (parseError) {
-        console.log('Schema parsing failed:', parseError);
-        throw parseError;
-      }
+      const parsed = insertRfpRequestSchema.parse(formData);
       
       // Handle uploaded files
       const uploadedFiles = (req.files as Express.Multer.File[] || []).map(file => ({

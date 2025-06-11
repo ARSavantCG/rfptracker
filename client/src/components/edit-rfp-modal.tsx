@@ -46,6 +46,50 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
   const { toast } = useToast();
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
+  // File management functions
+  const deleteFileMutation = useMutation({
+    mutationFn: async (fileId: string) => {
+      if (!rfp) return;
+      const response = await apiRequest(`/api/rfp-requests/${rfp.id}/files/${fileId}`, "DELETE");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
+      toast({
+        title: "Success",
+        description: "File deleted successfully",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to delete file",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDownloadFile = (fileId: string, fileName: string) => {
+    if (!rfp) return;
+    const link = document.createElement('a');
+    link.href = `/api/rfp-requests/${rfp.id}/files/${fileId}`;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleDeleteFile = (fileId: string, fileName: string) => {
+    if (confirm(`Are you sure you want to delete "${fileName}"?`)) {
+      deleteFileMutation.mutate(fileId);
+    }
+  };
+
+  const handleClose = () => {
+    setSelectedFiles([]);
+    onClose();
+  };
+
   const form = useForm<EditRfpFormData>({
     resolver: zodResolver(editRfpSchema),
     defaultValues: {
@@ -116,7 +160,33 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
   const updateMutation = useMutation({
     mutationFn: async (data: EditRfpFormData) => {
       if (!rfp) throw new Error("No RFP selected");
-      return apiRequest(`/api/rfp-requests/${rfp.id}`, "PATCH", data);
+      
+      const formData = new FormData();
+      
+      // Append form fields
+      Object.entries(data).forEach(([key, value]) => {
+        if (Array.isArray(value)) {
+          formData.append(key, JSON.stringify(value));
+        } else {
+          formData.append(key, value.toString());
+        }
+      });
+      
+      // Append new files
+      selectedFiles.forEach((file) => {
+        formData.append('files', file);
+      });
+      
+      const response = await fetch(`/api/rfp-requests/${rfp.id}/update-with-files`, {
+        method: 'PATCH',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to update RFP request');
+      }
+      
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
@@ -247,10 +317,10 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
 
               <FormField
                 control={form.control}
-                name="sentOn"
+                name="receivedOn"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Sent On</FormLabel>
+                    <FormLabel>Received On</FormLabel>
                     <FormControl>
                       <Input type="date" {...field} />
                     </FormControl>
@@ -259,6 +329,20 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
                 )}
               />
             </div>
+
+            <FormField
+              control={form.control}
+              name="dueOn"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Due On</FormLabel>
+                  <FormControl>
+                    <Input type="date" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <div className="grid grid-cols-2 gap-4">
               <FormField
@@ -394,6 +478,68 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
                 </FormItem>
               )}
             />
+
+            {/* File Upload Section */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-medium">Attached Files</h4>
+              </div>
+              
+              {/* Existing Files */}
+              {rfp?.files && rfp.files.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Current files:</p>
+                  <div className="grid gap-2">
+                    {rfp.files.map((file: RfpFile) => (
+                      <div key={file.id} className="flex items-center justify-between p-2 border rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium">{file.name}</span>
+                          <span className="text-xs text-muted-foreground">
+                            ({(file.size / 1024).toFixed(1)} KB)
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDownloadFile(file.id, file.name)}
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteFile(file.id, file.name)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* File Upload Component */}
+              <div>
+                <p className="text-sm text-muted-foreground mb-2">Add new files:</p>
+                <FileUpload
+                  onFilesSelected={setSelectedFiles}
+                />
+                {selectedFiles.length > 0 && (
+                  <div className="mt-2 space-y-1">
+                    <p className="text-sm text-muted-foreground">Selected files to upload:</p>
+                    {selectedFiles.map((file, index) => (
+                      <div key={index} className="text-sm text-gray-600">
+                        {file.name} ({(file.size / 1024).toFixed(1)} KB)
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
 
             <div className="flex justify-end space-x-2 pt-4">
               <Button

@@ -86,7 +86,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
         formData.append('files', file);
       });
       
-      const response = await fetch('/api/rfp-requests', {
+      const response = await fetch('/api/rfp-requests/with-files', {
         method: 'POST',
         body: formData,
       });

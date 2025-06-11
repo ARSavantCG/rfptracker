@@ -198,104 +198,104 @@ export function ContactManagementModal({ isOpen, onClose }: ContactManagementMod
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="add" className="mt-6 flex-1 overflow-auto">
-            <div className="max-h-[50vh] overflow-y-auto pr-2 pb-4">
+          <TabsContent value="add" className="mt-4 flex-1">
+            <div className="space-y-3">
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
                     <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Contact name" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-sm">Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Contact name" {...field} className="h-8 text-sm" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="company"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-sm">Company</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Company name" {...field} className="h-8 text-sm" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <FormField
+                      control={form.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-sm">Email</FormLabel>
+                          <FormControl>
+                            <Input type="email" placeholder="email@company.com" {...field} className="h-8 text-sm" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="phone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-sm">Phone (Optional)</FormLabel>
+                          <FormControl>
+                            <Input placeholder="(555) 123-4567" {...field} value={field.value || ""} className="h-8 text-sm" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
 
                   <FormField
                     control={form.control}
-                    name="company"
+                    name="type"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Company</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Company name" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                          <Input type="email" placeholder="email@company.com" {...field} />
-                        </FormControl>
+                        <FormLabel className="text-sm">Contact Type</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="h-8 text-sm">
+                              <SelectValue placeholder="Select contact type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="architect">Architect</SelectItem>
+                            <SelectItem value="contractor">General Contractor</SelectItem>
+                            <SelectItem value="owner">Owner</SelectItem>
+                            <SelectItem value="other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
 
-                  <FormField
-                    control={form.control}
-                    name="phone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Phone (Optional)</FormLabel>
-                        <FormControl>
-                          <Input placeholder="(555) 123-4567" {...field} value={field.value || ""} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <FormField
-                  control={form.control}
-                  name="type"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Contact Type</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select contact type" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="architect">Architect</SelectItem>
-                          <SelectItem value="contractor">General Contractor</SelectItem>
-                          <SelectItem value="owner">Owner</SelectItem>
-                          <SelectItem value="other">Other</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <div className="flex justify-end gap-2 pt-4">
-                  <Button 
-                    type="submit" 
-                    disabled={createContactMutation.isPending}
-                    className="w-full sm:w-auto"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    {createContactMutation.isPending ? "Adding..." : "Add Contact"}
-                  </Button>
-                </div>
+                  <div className="flex justify-end gap-2 pt-3">
+                    <Button 
+                      type="submit" 
+                      disabled={createContactMutation.isPending}
+                      className="h-8 px-3 text-sm"
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      {createContactMutation.isPending ? "Adding..." : "Add Contact"}
+                    </Button>
+                  </div>
                 </form>
               </Form>
             </div>

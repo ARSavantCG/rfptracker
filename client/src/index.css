@@ -30,6 +30,53 @@
   --chart-5: 27 87% 67%;
 }
 
+/* Global app sizing adjustments */
+* {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+*::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, and Opera */
+}
+
+/* Compact text sizing */
+html {
+  font-size: 14px; /* Reduce base font size from 16px to 14px */
+}
+
+/* Compact form elements */
+.compact-input input {
+  height: 2rem !important;
+  font-size: 0.875rem !important;
+}
+
+.compact-button {
+  height: 2rem !important;
+  padding: 0.25rem 0.75rem !important;
+  font-size: 0.875rem !important;
+}
+
+.compact-select [role="combobox"] {
+  height: 2rem !important;
+  font-size: 0.875rem !important;
+}
+
+/* Compact card spacing */
+.compact-card {
+  padding: 0.75rem !important;
+}
+
+.compact-card-header {
+  padding: 0.75rem !important;
+  padding-bottom: 0.5rem !important;
+}
+
+.compact-card-content {
+  padding: 0.75rem !important;
+  padding-top: 0 !important;
+}
+
 .dark {
   --background: 222.2 84% 4.9%;
   --foreground: 210 40% 98%;

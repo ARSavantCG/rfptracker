@@ -12,7 +12,8 @@ export const rfpRequests = pgTable("rfp_requests", {
   projectName: text("project_name").notNull(),
   confidential: boolean("confidential").default(false),
   sentBy: text("sent_by").notNull(),
-  sentOn: timestamp("sent_on").notNull(),
+  receivedOn: timestamp("received_on").notNull(),
+  dueOn: timestamp("due_on").notNull(),
   developmentContact: text("development_contact"),
   projectArea: text("project_area"),
   requestTypes: json("request_types").$type<string[]>().notNull(), // pricing, schedule, space-plan
@@ -54,7 +55,8 @@ export const insertRfpRequestSchema = createInsertSchema(rfpRequests).omit({
   requestTypes: z.array(z.string()).min(1, "At least one request type is required"),
   status: z.enum(["received", "in-progress", "completed", "on-hold"]).default("received"),
   workflowPhase: z.enum(["rfp-entry", "invitation-to-bid", "bid-collection", "evaluation", "award"]).default("rfp-entry"),
-  sentOn: z.string().transform((val) => new Date(val)),
+  receivedOn: z.string().transform((val) => new Date(val)),
+  dueOn: z.string().transform((val) => new Date(val)),
   dueDate: z.string().optional().transform((val) => val ? new Date(val) : undefined),
 });
 

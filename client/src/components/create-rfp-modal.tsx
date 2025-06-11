@@ -281,16 +281,44 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
+                  name="dueOn"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Due On *</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="date"
+                          {...field}
+                        />
+                      </FormControl>
+                      <p className="text-sm text-muted-foreground">
+                        Internal deadline to provide RFP response
+                      </p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
                   name="developmentContact"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Development Contact</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="Development team contact"
-                          {...field}
-                        />
-                      </FormControl>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select development contact" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {contacts.map((contact) => (
+                            <SelectItem key={contact.id} value={`${contact.name} - ${contact.company}`}>
+                              {contact.name} - {contact.company}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}

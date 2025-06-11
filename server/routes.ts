@@ -193,12 +193,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         formData.confidential = true;
       } else if (formData.confidential === 'false') {
         formData.confidential = false;
+      } else {
+        formData.confidential = false; // default to false
       }
 
       // Map rfpRequest to sentBy (the field name changed)
       if (formData.rfpRequest && !formData.sentBy) {
         formData.sentBy = formData.rfpRequest;
       }
+
+      // Convert date strings to Date objects
+      if (formData.receivedOn && typeof formData.receivedOn === 'string') {
+        formData.receivedOn = new Date(formData.receivedOn);
+      }
+      if (formData.dueOn && typeof formData.dueOn === 'string') {
+        formData.dueOn = new Date(formData.dueOn);
+      }
+
+      console.log('Transformed form data:', formData);
 
       const parsed = insertRfpRequestSchema.parse(formData);
       

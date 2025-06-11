@@ -146,7 +146,9 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
     if (propertyId && tenantName && properties.length > 0) {
       // Find the selected property by ID
       const selectedProperty = properties.find(p => p.id.toString() === propertyId);
-      const propertyName = selectedProperty ? selectedProperty.displayName : propertyId;
+      const propertyName = selectedProperty 
+        ? `${selectedProperty.propertyName} - ${selectedProperty.building}`
+        : propertyId;
       
       const projectName = confidential 
         ? `${propertyName} - Confidential Project`

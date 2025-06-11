@@ -195,28 +195,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     });
   };
 
-  const duplicateItem = (itemId: string) => {
-    const categories = ['tenantImprovements', 'designSoftCosts', 'existingImprovements'] as const;
-    
-    setBudgetData(prev => {
-      const newData = { ...prev };
-      
-      for (const category of categories) {
-        const item = newData[category].find(item => item.id === itemId);
-        if (item) {
-          const duplicatedItem = {
-            ...item,
-            id: `${category}-${Date.now()}`,
-            description: `${item.description} (Copy)`,
-          };
-          newData[category].push(duplicatedItem);
-          break;
-        }
-      }
-      
-      return newData;
-    });
-  };
+
 
   const bulkUpdateItems = () => {
     if (selectedItems.size === 0) return;
@@ -252,11 +231,6 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     setBulkEditMultiplier("1.0");
     setBulkEditCategory("");
   };
-      [category]: prev[category].map((item: EvaluationLineItem) =>
-        item.id === itemId ? { ...item, ...updates } : item
-      ),
-    }));
-  };
 
   const deleteItem = (category: 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', itemId: string) => {
     setBudgetData(prev => ({
@@ -265,19 +239,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     }));
   };
 
-  const duplicateItem = (category: 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', item: EvaluationLineItem) => {
-    const duplicatedItem: EvaluationLineItem = {
-      ...item,
-      id: `${category}-${Date.now()}`,
-      description: `${item.description} (Copy)`,
-      source: "internal"
-    };
-    
-    setBudgetData(prev => ({
-      ...prev,
-      [category]: [...prev[category], duplicatedItem],
-    }));
-  };
+
 
   const applyBulkEdit = (category: 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements') => {
     const multiplier = parseFloat(bulkEditMultiplier) || 1.0;
@@ -596,7 +558,19 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => duplicateItem(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', item)}
+                            onClick={() => {
+                              const categoryType = category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements';
+                              const duplicatedItem: EvaluationLineItem = {
+                                ...item,
+                                id: `${categoryType}-${Date.now()}`,
+                                description: `${item.description} (Copy)`,
+                                source: "internal"
+                              };
+                              setBudgetData(prev => ({
+                                ...prev,
+                                [categoryType]: [...prev[categoryType], duplicatedItem],
+                              }));
+                            }}
                           >
                             <Copy className="h-3 w-3" />
                           </Button>

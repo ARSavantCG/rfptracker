@@ -188,6 +188,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // Convert string boolean to actual boolean
+      if (formData.confidential === 'true') {
+        formData.confidential = true;
+      } else if (formData.confidential === 'false') {
+        formData.confidential = false;
+      }
+
+      // Map rfpRequest to sentBy (the field name changed)
+      if (formData.rfpRequest && !formData.sentBy) {
+        formData.sentBy = formData.rfpRequest;
+      }
+
       const parsed = insertRfpRequestSchema.parse(formData);
       
       // Handle uploaded files

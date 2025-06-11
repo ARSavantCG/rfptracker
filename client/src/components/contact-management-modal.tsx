@@ -338,8 +338,8 @@ export function ContactManagementModal({ isOpen, onClose }: ContactManagementMod
           </TabsContent>
         </Tabs>
 
-        <div className="flex justify-end pt-4 border-t">
-          <Button variant="outline" onClick={onClose}>
+        <div className="flex justify-end pt-4">
+          <Button variant="outline" onClick={onClose} className="h-8 px-3 text-sm">
             Close
           </Button>
         </div>

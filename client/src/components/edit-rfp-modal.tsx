@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
@@ -13,8 +13,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { PropertySelector } from "./property-selector";
-import { Edit, Save, X } from "lucide-react";
-import type { RfpRequest } from "@shared/schema";
+import { FileUpload } from "./file-upload";
+import { Edit, Save, X, Download, Trash2 } from "lucide-react";
+import type { RfpRequest, RfpFile } from "@shared/schema";
 
 const editRfpSchema = z.object({
   rfpNumber: z.string().min(1, "RFP number is required"),
@@ -23,13 +24,14 @@ const editRfpSchema = z.object({
   projectName: z.string().min(1, "Project name is required"),
   confidential: z.boolean(),
   sentBy: z.string().min(1, "Sent by is required"),
-  sentOn: z.string().min(1, "Sent on date is required"),
+  receivedOn: z.string().min(1, "Received on date is required"),
+  dueOn: z.string().min(1, "Due on date is required"),
   developmentContact: z.string(),
   projectArea: z.string(),
   requestTypes: z.array(z.string()).min(1, "At least one request type is required"),
   notes: z.string(),
   status: z.enum(["received", "in-progress", "completed", "on-hold"]),
-  workflowPhase: z.enum(["rfp-entry", "invitation-to-bid", "bid-collection", "evaluation", "award"]),
+  workflowPhase: z.enum(["rfp-entry", "invitation-to-bid", "bid-collection", "evaluation", "award", "publish"]),
 });
 
 type EditRfpFormData = z.infer<typeof editRfpSchema>;
@@ -42,6 +44,7 @@ interface EditRfpModalProps {
 
 export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
   const { toast } = useToast();
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
   const form = useForm<EditRfpFormData>({
     resolver: zodResolver(editRfpSchema),
@@ -52,7 +55,8 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
       projectName: "",
       confidential: false,
       sentBy: "",
-      sentOn: "",
+      receivedOn: "",
+      dueOn: "",
       developmentContact: "",
       projectArea: "",
       requestTypes: [],
@@ -71,7 +75,8 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
         projectName: rfp.projectName || "",
         confidential: Boolean(rfp.confidential),
         sentBy: rfp.sentBy || "",
-        sentOn: rfp.sentOn ? new Date(rfp.sentOn).toISOString().split('T')[0] : "",
+        receivedOn: rfp.receivedOn ? new Date(rfp.receivedOn).toISOString().split('T')[0] : "",
+        dueOn: rfp.dueOn ? new Date(rfp.dueOn).toISOString().split('T')[0] : "",
         developmentContact: rfp.developmentContact || "",
         projectArea: rfp.projectArea || "",
         requestTypes: rfp.requestTypes || [],

@@ -13,11 +13,11 @@ interface RfpTableProps {
   selectedRfpId?: number;
 }
 
-type SortField = "rfpNumber" | "tenantName" | "property" | "status" | "sentOn";
+type SortField = "rfpNumber" | "tenantName" | "property" | "status" | "receivedOn";
 type SortDirection = "asc" | "desc";
 
 export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, selectedRfpId }: RfpTableProps) {
-  const [sortField, setSortField] = useState<SortField>("sentOn");
+  const [sortField, setSortField] = useState<SortField>("receivedOn");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -106,7 +106,7 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
     let bValue: any = b[sortField];
 
     // Handle date sorting
-    if (sortField === "sentOn") {
+    if (sortField === "receivedOn") {
       aValue = new Date(aValue).getTime();
       bValue = new Date(bValue).getTime();
     }
@@ -181,9 +181,9 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
               </th>
               <th 
                 className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
-                onClick={() => handleSort("sentOn")}
+                onClick={() => handleSort("receivedOn")}
               >
-                Received On <i className={`${getSortIcon("sentOn")} ml-1`}></i>
+                Received On <i className={`${getSortIcon("receivedOn")} ml-1`}></i>
               </th>
               <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Files
@@ -249,7 +249,7 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
                     </span>
                   </td>
                   <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-500">
-                    {formatDate(request.sentOn)}
+                    {formatDate(request.receivedOn)}
                   </td>
                   <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-500">
                     <div className="flex items-center space-x-1">

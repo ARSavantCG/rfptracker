@@ -181,7 +181,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
             <div className="space-y-4">
               <h3 className="text-lg font-medium text-gray-900 border-b pb-2">Basic Information</h3>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="property"

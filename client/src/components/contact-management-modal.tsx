@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Building, User, Mail, Phone, Trash2, Users } from "lucide-react";
+import { Plus, Building, User, Mail, Phone, Trash2, Users, Edit, Save, X } from "lucide-react";
 import type { Contact } from "@shared/schema";
 
 const createContactSchema = insertContactSchema.extend({
@@ -131,6 +131,28 @@ export function ContactManagementModal({ isOpen, onClose }: ContactManagementMod
     }
   };
 
+  const handleEditContact = (contact: Contact) => {
+    setEditingContact(contact);
+    editForm.reset({
+      name: contact.name,
+      email: contact.email,
+      company: contact.company || "",
+      phone: contact.phone || "",
+      type: contact.type as "architect" | "contractor" | "owner" | "other",
+    });
+  };
+
+  const onEditSubmit = (data: CreateContactFormData) => {
+    if (editingContact) {
+      updateContactMutation.mutate({ id: editingContact.id, data });
+    }
+  };
+
+  const cancelEdit = () => {
+    setEditingContact(null);
+    editForm.reset();
+  };
+
   // Filter contacts by type
   const architects = (contacts as Contact[]).filter((contact: Contact) => contact.type === "architect");
   const contractors = (contacts as Contact[]).filter((contact: Contact) => contact.type === "contractor");
@@ -177,6 +199,17 @@ export function ContactManagementModal({ isOpen, onClose }: ContactManagementMod
                   </div>
                 </div>
                 <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleEditContact(contact);
+                    }}
+                    className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700"
+                  >
+                    <Edit className="h-3 w-3" />
+                  </Button>
                   <Button
                     variant="ghost"
                     size="sm"

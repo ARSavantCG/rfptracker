@@ -139,17 +139,21 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
 
   // Auto-generate project name when property and tenant change
   useEffect(() => {
-    const property = form.watch('property');
+    const propertyId = form.watch('property');
     const tenantName = form.watch('tenantName');
     const confidential = form.watch('confidential');
     
-    if (property && tenantName) {
+    if (propertyId && tenantName && properties.length > 0) {
+      // Find the selected property by ID
+      const selectedProperty = properties.find(p => p.id.toString() === propertyId);
+      const propertyName = selectedProperty ? selectedProperty.displayName : propertyId;
+      
       const projectName = confidential 
-        ? `${property} - Confidential Project`
-        : `${property} - ${tenantName}`;
+        ? `${propertyName} - Confidential Project`
+        : `${tenantName} @ ${propertyName}`;
       form.setValue('projectName', projectName);
     }
-  }, [form.watch('property'), form.watch('tenantName'), form.watch('confidential')]);
+  }, [form.watch('property'), form.watch('tenantName'), form.watch('confidential'), properties]);
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>

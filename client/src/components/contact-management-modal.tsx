@@ -114,58 +114,73 @@ export function ContactManagementModal({ isOpen, onClose }: ContactManagementMod
   const owners = (contacts as Contact[]).filter((contact: Contact) => contact.type === "owner");
   const others = (contacts as Contact[]).filter((contact: Contact) => contact.type === "other");
 
+  const [expandedContact, setExpandedContact] = useState<number | null>(null);
+
   const ContactList = ({ contacts, title, icon: Icon }: { 
     contacts: Contact[]; 
     title: string; 
     icon: any;
   }) => (
-    <div className="space-y-3">
+    <div className="space-y-2">
       <div className="flex items-center gap-2">
-        <Icon className="h-4 w-4 text-muted-foreground" />
-        <h4 className="font-medium">{title}</h4>
-        <Badge variant="secondary" className="ml-auto">
+        <Icon className="h-3 w-3 text-muted-foreground" />
+        <h4 className="font-medium text-sm">{title}</h4>
+        <Badge variant="secondary" className="ml-auto text-xs px-1.5 py-0.5">
           {contacts.length}
         </Badge>
       </div>
       
       {contacts.length === 0 ? (
-        <p className="text-sm text-muted-foreground py-4 text-center border rounded-lg">
+        <p className="text-xs text-muted-foreground py-2 text-center border rounded border-dashed">
           No {title.toLowerCase()} added yet
         </p>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-1">
           {contacts.map((contact) => (
-            <div
-              key={contact.id}
-              className="flex items-center justify-between p-3 border rounded-lg bg-background"
-            >
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="font-medium text-sm">{contact.name}</p>
-                </div>
-                <p className="text-sm text-muted-foreground">{contact.company}</p>
-                <div className="flex items-center gap-4 mt-1">
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <Mail className="h-3 w-3" />
-                    {contact.email}
+            <div key={contact.id} className="border rounded">
+              <div
+                className="flex items-center justify-between p-2 hover:bg-muted/50 cursor-pointer"
+                onClick={() => setExpandedContact(expandedContact === contact.id ? null : contact.id)}
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium text-sm truncate">{contact.name}</p>
+                    <span className="text-xs text-muted-foreground">•</span>
+                    <p className="text-xs text-muted-foreground truncate">{contact.company}</p>
                   </div>
-                  {contact.phone && (
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <Phone className="h-3 w-3" />
-                      {contact.phone}
-                    </div>
-                  )}
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteContact(contact);
+                    }}
+                    disabled={deleteContactMutation.isPending}
+                    className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
                 </div>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleDeleteContact(contact)}
-                disabled={deleteContactMutation.isPending}
-                className="text-destructive hover:text-destructive"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              
+              {expandedContact === contact.id && (
+                <div className="px-2 pb-2 border-t bg-muted/20">
+                  <div className="flex items-center gap-4 mt-2">
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <Mail className="h-3 w-3" />
+                      {contact.email}
+                    </div>
+                    {contact.phone && (
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <Phone className="h-3 w-3" />
+                        {contact.phone}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -301,39 +316,37 @@ export function ContactManagementModal({ isOpen, onClose }: ContactManagementMod
             </div>
           </TabsContent>
 
-          <TabsContent value="manage" className="mt-6">
+          <TabsContent value="manage" className="mt-4 flex-1 min-h-0">
             {contactsLoading ? (
               <div className="flex items-center justify-center py-8">
                 <div className="text-sm text-muted-foreground">Loading contacts...</div>
               </div>
             ) : (
-              <ScrollArea className="max-h-[400px] pr-4">
-                <div className="space-y-6">
-                  <ContactList 
-                    contacts={architects} 
-                    title="Architects" 
-                    icon={Building}
-                  />
-                  
-                  <ContactList 
-                    contacts={contractors} 
-                    title="General Contractors" 
-                    icon={User}
-                  />
-                  
-                  <ContactList 
-                    contacts={owners} 
-                    title="Owners" 
-                    icon={Users}
-                  />
-                  
-                  <ContactList 
-                    contacts={others} 
-                    title="Other Contacts" 
-                    icon={User}
-                  />
-                </div>
-              </ScrollArea>
+              <div className="h-[50vh] overflow-y-auto space-y-4">
+                <ContactList 
+                  contacts={architects} 
+                  title="Architects" 
+                  icon={Building}
+                />
+                
+                <ContactList 
+                  contacts={contractors} 
+                  title="General Contractors" 
+                  icon={User}
+                />
+                
+                <ContactList 
+                  contacts={owners} 
+                  title="Owners" 
+                  icon={Users}
+                />
+                
+                <ContactList 
+                  contacts={others} 
+                  title="Other Contacts" 
+                  icon={User}
+                />
+              </div>
             )}
           </TabsContent>
         </Tabs>

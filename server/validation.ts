@@ -35,9 +35,9 @@ const rfpValidationRules: ValidationRule[] = [
     message: "Sent by is required"
   },
   {
-    field: "sentOn",
+    field: "receivedOn",
     required: true,
-    message: "Sent on date is required"
+    message: "Received on date is required"
   },
   {
     field: "requestTypes",

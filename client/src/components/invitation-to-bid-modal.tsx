@@ -223,7 +223,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
       form.reset(formValues);
       setKeyDates(formValues.keyDates);
     }
-  }, [rfp, isOpen, existingInvitation, form, properties]);
+  }, [rfp, isOpen, existingInvitation, form, properties, contacts]);
 
   const saveInvitationMutation = useMutation({
     mutationFn: async (data: InvitationFormData) => {
@@ -1269,7 +1269,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                         console.error(`Error opening ${doc.type} document:`, error);
                         toast({
                           title: "Error",
-                          description: `Error opening ${doc.type} document: ${error.message}`,
+                          description: `Error opening ${doc.type} document: ${(error as Error)?.message || 'Unknown error'}`,
                           variant: "destructive",
                         });
                       }

@@ -158,6 +158,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const requestData = {
         ...parsed,
         files: [],
+        dueDate: parsed.dueOn, // Map dueOn to dueDate for validation
       };
 
       const newRequest = await storage.createRfpRequest(requestData);

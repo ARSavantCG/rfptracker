@@ -283,12 +283,29 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
         return response.json();
       }
     },
-    onSuccess: () => {
+    onSuccess: (updatedInvitation, variables) => {
       toast({
         title: "Invitation Saved",
         description: "Your invitation details have been saved successfully.",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests", rfp?.id, "invitation-to-bid"] });
+      
+      // Preserve checkbox state after save
+      const currentFormValues = form.getValues();
+      const preservedCheckboxes = {
+        generateArchitectRfp: currentFormValues.generateArchitectRfp,
+        generateContractorRfp: currentFormValues.generateContractorRfp,
+        generateBrokerArchitectRfp: currentFormValues.generateBrokerArchitectRfp,
+        generateBrokerContractorRfp: currentFormValues.generateBrokerContractorRfp,
+      };
+      
+      // Update form with preserved checkbox state after a brief delay to allow data to refresh
+      setTimeout(() => {
+        form.setValue('generateArchitectRfp', preservedCheckboxes.generateArchitectRfp);
+        form.setValue('generateContractorRfp', preservedCheckboxes.generateContractorRfp);
+        form.setValue('generateBrokerArchitectRfp', preservedCheckboxes.generateBrokerArchitectRfp);
+        form.setValue('generateBrokerContractorRfp', preservedCheckboxes.generateBrokerContractorRfp);
+      }, 100);
     },
     onError: (error) => {
       toast({

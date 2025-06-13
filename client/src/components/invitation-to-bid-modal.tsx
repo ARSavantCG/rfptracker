@@ -201,12 +201,30 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
         ...(() => {
           if (existingInvitation.contactForQuestions) {
             const parts = existingInvitation.contactForQuestions.split(' - ');
-            // Format is: "Name - Company - Email - Phone" 
-            return {
-              contactPerson: parts[0] || "",
-              contactEmail: parts[2] || "", // Email is at index 2
-              contactPhone: parts[3] || "", // Phone is at index 3
-            };
+            // Handle both old format "Name - Company - Email - Phone" and new format "Name - Email - Phone"
+            if (parts.length >= 4) {
+              // Old format: "Name - Company - Email - Phone"
+              return {
+                contactPerson: parts[0] || "",
+                contactEmail: parts[2] || "",
+                contactPhone: parts[3] || "",
+              };
+            } else if (parts.length >= 3) {
+              // New format: "Name - Email - Phone"
+              return {
+                contactPerson: parts[0] || "",
+                contactEmail: parts[1] || "",
+                contactPhone: parts[2] || "",
+              };
+            } else {
+              // Fallback to development contact
+              const contactDetails = getDevelopmentContactDetails(rfp.developmentContact || "");
+              return {
+                contactPerson: contactDetails.name,
+                contactEmail: contactDetails.email,
+                contactPhone: contactDetails.phone,
+              };
+            }
           } else {
             const contactDetails = getDevelopmentContactDetails(rfp.developmentContact || "");
             return {
@@ -247,7 +265,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
         bondingRequirements: data.bondingRequirements,
         prequalificationCriteria: data.prequalificationCriteria ? [data.prequalificationCriteria] : [],
         evaluationCriteria: data.evaluationCriteria ? [data.evaluationCriteria] : [],
-        contactForQuestions: `${data.contactPerson} - ${data.contactEmail}${data.contactPhone ? ' - ' + data.contactPhone : ''}`,
+        contactForQuestions: `${data.contactPerson} - ${data.contactEmail || ''} - ${data.contactPhone || ''}`,
         projectDescription: data.projectDescription,
         documentsLink: data.documentsLink,
         keyDates: data.keyDates,
@@ -302,7 +320,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
         bondingRequirements: data.bondingRequirements,
         prequalificationCriteria: data.prequalificationCriteria ? [data.prequalificationCriteria] : [],
         evaluationCriteria: data.evaluationCriteria ? [data.evaluationCriteria] : [],
-        contactForQuestions: `${data.contactPerson} - ${data.contactEmail}${data.contactPhone ? ' - ' + data.contactPhone : ''}`,
+        contactForQuestions: `${data.contactPerson} - ${data.contactEmail || ''} - ${data.contactPhone || ''}`,
       };
       
       // First save the invitation data

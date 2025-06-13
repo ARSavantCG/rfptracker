@@ -201,10 +201,11 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
         ...(() => {
           if (existingInvitation.contactForQuestions) {
             const parts = existingInvitation.contactForQuestions.split(' - ');
+            // Format is: "Name - Company - Email - Phone" 
             return {
               contactPerson: parts[0] || "",
-              contactEmail: parts[1] || "",
-              contactPhone: parts[2] || "",
+              contactEmail: parts[2] || "", // Email is at index 2
+              contactPhone: parts[3] || "", // Phone is at index 3
             };
           } else {
             const contactDetails = getDevelopmentContactDetails(rfp.developmentContact || "");

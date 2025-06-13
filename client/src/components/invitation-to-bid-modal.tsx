@@ -13,7 +13,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 import { FileText, Download, Users, Save, X, CheckCircle } from "lucide-react";
-import type { RfpRequest, Property } from "@shared/schema";
+import type { RfpRequest, Property, Contact } from "@shared/schema";
 
 const invitationFormSchema = z.object({
   generateArchitectRfp: z.boolean().default(false),
@@ -71,10 +71,32 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
     queryKey: ["/api/properties"],
   });
 
+  // Fetch contacts to get full contact details
+  const { data: contacts = [] } = useQuery<Contact[]>({
+    queryKey: ["/api/contacts"],
+  });
+
   // Helper function to get property address
   const getPropertyAddress = (propertyId: string) => {
     const property = properties.find(p => p.id.toString() === propertyId);
     return property ? `${property.streetAddress}, ${property.city}, ${property.state} ${property.zip}` : "";
+  };
+
+  // Helper function to get development contact details
+  const getDevelopmentContactDetails = (developmentContact: string) => {
+    if (!developmentContact) return { name: "", email: "", phone: "" };
+    
+    // Extract just the name part (before " - " if it exists)
+    const contactName = developmentContact.split(' - ')[0].trim();
+    
+    // Find matching contact in the database
+    const contact = contacts.find(c => c.name.toLowerCase() === contactName.toLowerCase());
+    
+    return {
+      name: contact?.name || contactName,
+      email: contact?.email || "",
+      phone: contact?.phone || ""
+    };
   };
 
   const form = useForm<InvitationFormData>({
@@ -119,7 +141,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
 
   // Pre-populate form with existing data
   useEffect(() => {
-    if (rfp && isOpen && properties.length > 0) {
+    if (rfp && isOpen && properties.length > 0 && contacts.length > 0) {
       const defaultValues = {
         generateArchitectRfp: false,
         generateContractorRfp: false,
@@ -140,9 +162,14 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
         bondingRequirements: "",
         prequalificationCriteria: "",
         evaluationCriteria: "",
-        contactPerson: rfp.developmentContact || "",
-        contactEmail: "",
-        contactPhone: "",
+        ...(() => {
+          const contactDetails = getDevelopmentContactDetails(rfp.developmentContact || "");
+          return {
+            contactPerson: contactDetails.name,
+            contactEmail: contactDetails.email,
+            contactPhone: contactDetails.phone,
+          };
+        })(),
         projectDescription: rfp.projectDescription || "",
         documentsLink: rfp.documentsLink || "",
         keyDates: [],
@@ -170,13 +197,24 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
           existingInvitation.prequalificationCriteria.join(", ") : (existingInvitation.prequalificationCriteria || ""),
         evaluationCriteria: Array.isArray(existingInvitation.evaluationCriteria) ? 
           existingInvitation.evaluationCriteria.join(", ") : (existingInvitation.evaluationCriteria || ""),
-        // Parse contact information from combined field
-        contactPerson: existingInvitation.contactForQuestions ? 
-          existingInvitation.contactForQuestions.split(' - ')[0] : (rfp.developmentContact || ""),
-        contactEmail: existingInvitation.contactForQuestions ? 
-          existingInvitation.contactForQuestions.split(' - ')[1] || "" : "",
-        contactPhone: existingInvitation.contactForQuestions ? 
-          existingInvitation.contactForQuestions.split(' - ')[2] || "" : "",
+        // Parse contact information from combined field or use development contact
+        ...(() => {
+          if (existingInvitation.contactForQuestions) {
+            const parts = existingInvitation.contactForQuestions.split(' - ');
+            return {
+              contactPerson: parts[0] || "",
+              contactEmail: parts[1] || "",
+              contactPhone: parts[2] || "",
+            };
+          } else {
+            const contactDetails = getDevelopmentContactDetails(rfp.developmentContact || "");
+            return {
+              contactPerson: contactDetails.name,
+              contactEmail: contactDetails.email,
+              contactPhone: contactDetails.phone,
+            };
+          }
+        })(),
         projectDescription: existingInvitation.projectDescription || "",
         documentsLink: existingInvitation.documentsLink || "",
         keyDates: Array.isArray(existingInvitation.keyDates) ? existingInvitation.keyDates : [],

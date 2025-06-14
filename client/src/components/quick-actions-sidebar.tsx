@@ -207,33 +207,6 @@ export function QuickActionsSidebar({
 
           <Separator />
 
-          {/* Status Filters */}
-          <div>
-            <h3 className="text-sm font-medium text-gray-700 mb-3">Filter by Status</h3>
-            <div className="space-y-1">
-              {[
-                { status: "received", label: "Received", count: stats?.received ?? 0 },
-                { status: "in-progress", label: "In Progress", count: stats?.inProgress ?? 0 },
-                { status: "completed", label: "Completed", count: stats?.completed ?? 0 },
-                { status: "on-hold", label: "On Hold", count: stats?.onHold ?? 0 },
-              ].map((item) => (
-                <Button
-                  key={item.status}
-                  variant="ghost"
-                  onClick={() => handleStatusFilter(item.status)}
-                  className="w-full justify-between text-left h-8"
-                >
-                  <span className="text-sm">{item.label}</span>
-                  <Badge variant="secondary" className="text-xs">
-                    {item.count}
-                  </Badge>
-                </Button>
-              ))}
-            </div>
-          </div>
-
-          <Separator />
-
           {/* Recent RFPs */}
           <div>
             <h3 className="text-sm font-medium text-gray-700 mb-3">Recent RFPs</h3>

@@ -1221,18 +1221,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const pdfBuffer = await generateExecutiveReportPdf(reportData);
       const filename = generateReportFilename("executive-summary");
-
-      // Clear any existing headers and send raw binary data
-      res.removeHeader('Content-Type');
-      res.removeHeader('X-Powered-By');
       
-      res.writeHead(200, {
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="${filename}"`,
-        'Content-Length': pdfBuffer.length
+      // Write to temporary file to avoid Express JSON serialization
+      const tempPath = path.join(process.cwd(), 'temp-' + Date.now() + '.pdf');
+      fs.writeFileSync(tempPath, pdfBuffer);
+      
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      
+      // Stream the file and clean up
+      const fileStream = fs.createReadStream(tempPath);
+      fileStream.pipe(res);
+      
+      fileStream.on('end', () => {
+        fs.unlinkSync(tempPath);
       });
-      
-      res.end(pdfBuffer);
     } catch (error) {
       console.error("Error generating executive summary PDF:", error);
       res.status(500).json({ message: "Failed to generate executive summary PDF" });

@@ -13,11 +13,11 @@ interface RfpTableProps {
   selectedRfpId?: number;
 }
 
-type SortField = "rfpNumber" | "tenantName" | "property" | "status" | "receivedOn";
+type SortField = "id" | "rfpNumber" | "tenantName" | "property" | "status" | "receivedOn";
 type SortDirection = "asc" | "desc";
 
 export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, selectedRfpId }: RfpTableProps) {
-  const [sortField, setSortField] = useState<SortField>("receivedOn");
+  const [sortField, setSortField] = useState<SortField>("id");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const { toast } = useToast();
   const queryClient = useQueryClient();

@@ -48,23 +48,7 @@ function getPriorityColor(priority: string) {
 function generateExecutiveReportHtml(data: ReportData): string {
   const { rfps, generatedAt } = data;
   
-  // Calculate metrics
-  const metrics = {
-    total: rfps.length,
-    received: rfps.filter(rfp => rfp.status === "received").length,
-    inProgress: rfps.filter(rfp => rfp.status === "in-progress").length,
-    completed: rfps.filter(rfp => rfp.status === "completed").length,
-    onHold: rfps.filter(rfp => rfp.status === "on-hold").length,
-    dueSoon: rfps.filter(rfp => {
-      const dueDate = parseISO(rfp.dueOn.toString());
-      const sevenDaysFromNow = addDays(new Date(), 7);
-      return isBefore(dueDate, sevenDaysFromNow) && rfp.status !== "completed";
-    }).length,
-    overdue: rfps.filter(rfp => {
-      const dueDate = parseISO(rfp.dueOn.toString());
-      return isBefore(dueDate, new Date()) && rfp.status !== "completed";
-    }).length
-  };
+
 
   return `
     <!DOCTYPE html>
@@ -231,36 +215,7 @@ function generateExecutiveReportHtml(data: ReportData): string {
         <p class="subtitle">Generated on ${format(new Date(generatedAt), 'MMMM dd, yyyy \'at\' h:mm a')}</p>
       </div>
       
-      <div class="metrics">
-        <div class="metric">
-          <div class="metric-value total">${metrics.total}</div>
-          <div class="metric-label">Total RFPs</div>
-        </div>
-        <div class="metric">
-          <div class="metric-value received">${metrics.received}</div>
-          <div class="metric-label">Received</div>
-        </div>
-        <div class="metric">
-          <div class="metric-value in-progress">${metrics.inProgress}</div>
-          <div class="metric-label">In Progress</div>
-        </div>
-        <div class="metric">
-          <div class="metric-value completed">${metrics.completed}</div>
-          <div class="metric-label">Completed</div>
-        </div>
-        <div class="metric">
-          <div class="metric-value on-hold">${metrics.onHold}</div>
-          <div class="metric-label">On Hold</div>
-        </div>
-        <div class="metric">
-          <div class="metric-value due-soon">${metrics.dueSoon}</div>
-          <div class="metric-label">Due Soon</div>
-        </div>
-        <div class="metric">
-          <div class="metric-value overdue">${metrics.overdue}</div>
-          <div class="metric-label">Overdue</div>
-        </div>
-      </div>
+
       
       <table>
         <thead>

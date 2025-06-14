@@ -274,6 +274,8 @@ export function StatsCards({ onStatusFilter }: StatsCardsProps) {
                     axisLine={false}
                     tickLine={false}
                     width={25}
+                    allowDecimals={false}
+                    domain={[0, 'dataMax']}
                   />
                   <Tooltip content={<CustomTooltip />} />
                   <Bar 

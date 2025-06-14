@@ -205,7 +205,7 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onValidateRfp, onOp
               onClick={() => onAdvanceToInvitation(rfp)}
               className="w-auto px-3 py-1 text-sm"
             >
-              Generate Invitation to Bid PDF
+              Generate ITB PDF
             </Button>
             <Button
               onClick={handleAdvancePhase}
@@ -233,17 +233,16 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onValidateRfp, onOp
           </Button>
         )}
 
-        {nextPhase && actualWorkflowPhase !== "invitation-to-bid" && actualWorkflowPhase !== "publish" && (
+        {nextPhase && actualWorkflowPhase !== "invitation-to-bid" && actualWorkflowPhase !== "publish" && rfp.isValidated && (
           <Button
             onClick={handleAdvancePhase}
-            disabled={advancePhaseMutation.isPending || !rfp.isValidated}
+            disabled={advancePhaseMutation.isPending}
             className="w-auto px-3 py-1 text-sm"
-            variant={!rfp.isValidated ? "outline" : "default"}
           >
             {advancePhaseMutation.isPending
               ? "Advancing..."
               : nextPhase.key === "invitation-to-bid"
-              ? (!rfp.isValidated ? "Complete Validation First" : "Create Invitation to Bid")
+              ? "Create Invitation to Bid"
               : `Advance to ${nextPhase.label}`}
           </Button>
         )}

@@ -12,6 +12,7 @@ import { RfpValidationModal } from "@/components/rfp-validation-modal";
 import { BidCollectionTable } from "@/components/bid-collection-table";
 import { EvaluationBudget } from "@/components/evaluation-budget";
 import { FinancialSummary } from "@/components/financial-summary";
+import { QuickActionsSidebar } from "@/components/quick-actions-sidebar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -103,32 +104,6 @@ export default function Dashboard() {
               <h1 className="text-lg font-semibold text-gray-900">RFP Tracker</h1>
             </div>
             <div className="flex items-center space-x-3">
-              <Button
-                onClick={() => setIsContactModalOpen(true)}
-                variant="outline"
-                size="sm"
-                className="h-8 px-3 text-xs"
-              >
-                <Users className="h-3 w-3 mr-1" />
-                Contacts
-              </Button>
-              <Button
-                onClick={() => setIsPropertyModalOpen(true)}
-                variant="outline"
-                size="sm"
-                className="h-8 px-3 text-xs"
-              >
-                <Building2 className="h-3 w-3 mr-1" />
-                Properties
-              </Button>
-              <Button 
-                onClick={() => setIsCreateModalOpen(true)}
-                size="sm"
-                className="h-8 px-3 text-xs"
-              >
-                <Plus className="h-3 w-3 mr-1" />
-                New RFP
-              </Button>
               <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
                 <span className="text-white text-xs font-medium">AU</span>
               </div>
@@ -137,14 +112,27 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 py-4">
-        {/* Compact Page Header */}
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-lg font-bold text-gray-900">Request for Proposals</h2>
-            <p className="text-xs text-gray-600">Track and manage RFP requests</p>
-          </div>
-        </div>
+      <div className="flex h-[calc(100vh-48px)]">
+        {/* Quick Actions Sidebar */}
+        <QuickActionsSidebar
+          onCreateRfp={() => setIsCreateModalOpen(true)}
+          onCreateContact={() => setIsContactModalOpen(true)}
+          onCreateProperty={() => setIsPropertyModalOpen(true)}
+          onStatusFilter={setStatusFilter}
+          onSearch={setSearchQuery}
+          className="flex-shrink-0"
+        />
+
+        {/* Main Content */}
+        <div className="flex-1 overflow-auto">
+          <div className="max-w-7xl mx-auto px-4 py-4">
+            {/* Compact Page Header */}
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">Request for Proposals</h2>
+                <p className="text-xs text-gray-600">Track and manage RFP requests</p>
+              </div>
+            </div>
 
         {/* Stats Cards */}
         <StatsCards onStatusFilter={setStatusFilter} />
@@ -386,6 +374,9 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

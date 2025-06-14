@@ -176,6 +176,17 @@ export class DatabaseStorage implements IStorage {
       console.log(`Attempting to delete RFP with ID: ${id}`);
       
       // Delete related data first to avoid foreign key constraints
+      // First get all bid collections for this RFP
+      const bidCollectionsToDelete = await db.select({ id: bidCollections.id })
+        .from(bidCollections)
+        .where(eq(bidCollections.rfpId, id));
+      
+      // Delete bid line items for each bid collection
+      console.log('Deleting bid line items...');
+      for (const bidCollection of bidCollectionsToDelete) {
+        await db.delete(bidLineItems).where(eq(bidLineItems.bidCollectionId, bidCollection.id));
+      }
+      
       console.log('Deleting bid collections...');
       await db.delete(bidCollections).where(eq(bidCollections.rfpId, id));
       

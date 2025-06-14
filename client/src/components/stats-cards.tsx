@@ -96,22 +96,10 @@ export function StatsCards({ onStatusFilter }: StatsCardsProps) {
 
   const COLORS = ["#8B5CF6", "#F59E0B", "#10B981", "#EF4444"];
 
-  const CustomTooltip = ({ active, payload, coordinate }: any) => {
+  const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
-      // Position tooltip to the right side of the distribution box
-      const tooltipStyle = {
-        position: 'fixed' as const,
-        left: coordinate ? coordinate.x + 20 : 'auto',
-        top: coordinate ? coordinate.y - 10 : 'auto',
-        zIndex: 1000,
-        pointerEvents: 'none' as const,
-      };
-      
       return (
-        <div 
-          className="bg-white p-2 rounded-lg shadow-lg border text-xs max-w-xs"
-          style={tooltipStyle}
-        >
+        <div className="bg-white p-2 rounded-lg shadow-lg border text-xs">
           <p className="font-medium">{payload[0].name}</p>
           <p className="text-gray-600">
             Count: <span className="font-semibold text-gray-900">{payload[0].value}</span>
@@ -226,7 +214,12 @@ export function StatsCards({ onStatusFilter }: StatsCardsProps) {
                       <Cell key={`cell-${index}`} fill={entry.color} className="hover:opacity-80" />
                     ))}
                   </Pie>
-                  <Tooltip content={<CustomTooltip />} />
+                  <Tooltip 
+                    content={<CustomTooltip />} 
+                    offset={15}
+                    position={{ x: 100, y: 40 }}
+                    allowEscapeViewBox={{ x: false, y: false }}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             </div>

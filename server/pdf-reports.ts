@@ -158,10 +158,11 @@ function generateExecutiveReportHtml(data: ReportData): string {
           display: inline-block;
           padding: 2px 6px;
           border-radius: 3px;
-          font-size: 8px;
+          font-size: 7px;
           font-weight: 500;
           color: white;
           text-transform: capitalize;
+          white-space: nowrap;
         }
         
         .priority-badge {

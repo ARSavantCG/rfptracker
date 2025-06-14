@@ -274,7 +274,7 @@ export default function Reports() {
                           <td className="py-3 px-2 whitespace-nowrap">{rfp.projectName}</td>
                           <td className="py-3 px-2 whitespace-nowrap">{format(dueDate, 'MMM dd, yyyy')}</td>
                           <td className="py-3 px-2">
-                            <Badge className={getStatusBadgeColor(rfp.status)}>
+                            <Badge className={`${getStatusBadgeColor(rfp.status)} text-xs whitespace-nowrap`}>
                               {rfp.status.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
                             </Badge>
                           </td>

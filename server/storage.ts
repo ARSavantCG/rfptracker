@@ -122,7 +122,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllRfpRequests(): Promise<RfpRequest[]> {
-    return await db.select().from(rfpRequests).orderBy(desc(rfpRequests.createdAt));
+    return await db.select().from(rfpRequests).orderBy(desc(rfpRequests.id));
   }
 
   async createRfpRequest(request: InsertRfpRequest): Promise<RfpRequest> {
@@ -262,7 +262,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async filterRfpRequestsByStatus(status: string): Promise<RfpRequest[]> {
-    return await db.select().from(rfpRequests).where(eq(rfpRequests.status, status)).orderBy(desc(rfpRequests.createdAt));
+    return await db.select().from(rfpRequests).where(eq(rfpRequests.status, status)).orderBy(desc(rfpRequests.id));
   }
 
   // Contact management methods

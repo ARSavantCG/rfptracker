@@ -163,24 +163,24 @@ export function StatsCards({ onStatusFilter }: StatsCardsProps) {
 
   return (
     <div className="mb-6">
-      {/* Compact Side-by-Side Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      {/* Force All Three Boxes Side by Side */}
+      <div className="grid grid-cols-3 gap-3">
         
-        {/* Project Status - Compact */}
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">Project Status</h3>
-          <div className="space-y-2">
+        {/* Project Status - Ultra Compact */}
+        <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
+          <h3 className="text-xs font-semibold text-gray-900 mb-2">Status</h3>
+          <div className="space-y-1">
             {cards.map((card, index) => (
               <div 
                 key={index} 
-                className="flex items-center justify-between cursor-pointer hover:bg-gray-50 p-1.5 rounded transition-colors"
+                className="flex items-center justify-between cursor-pointer hover:bg-gray-50 p-1 rounded transition-colors"
                 onClick={() => handleCardClick(card.title)}
               >
-                <div className="flex items-center space-x-2">
-                  <div className={`w-6 h-6 ${card.bgColor} rounded flex items-center justify-center flex-shrink-0`}>
+                <div className="flex items-center space-x-1">
+                  <div className={`w-4 h-4 ${card.bgColor} rounded flex items-center justify-center flex-shrink-0`}>
                     <i className={`${card.icon} ${card.iconColor} text-xs`}></i>
                   </div>
-                  <span className="text-xs font-medium text-gray-700">{card.title}</span>
+                  <span className="text-xs font-medium text-gray-700 truncate">{card.title}</span>
                 </div>
                 <span className="text-sm font-bold text-gray-900">{card.value}</span>
               </div>
@@ -188,23 +188,23 @@ export function StatsCards({ onStatusFilter }: StatsCardsProps) {
           </div>
         </div>
 
-        {/* Status Distribution - Compact */}
+        {/* Status Distribution - Ultra Compact */}
         {stats.total > 0 && (
-          <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-semibold text-gray-900">Status Distribution</h3>
+          <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="text-xs font-semibold text-gray-900">Distribution</h3>
               <div className="w-1 h-1 bg-green-500 rounded-full"></div>
             </div>
             
-            <div className="h-24">
+            <div className="h-16">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={pieData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={15}
-                    outerRadius={35}
+                    innerRadius={8}
+                    outerRadius={25}
                     fill="#8884d8"
                     dataKey="value"
                     onClick={handlePieClick}
@@ -219,19 +219,19 @@ export function StatsCards({ onStatusFilter }: StatsCardsProps) {
               </ResponsiveContainer>
             </div>
 
-            {/* Compact Legend */}
-            <div className="space-y-1 mt-2">
-              {pieData.map((item, index) => (
+            {/* Ultra Compact Legend */}
+            <div className="space-y-0.5 mt-1">
+              {pieData.slice(0, 2).map((item, index) => (
                 <div 
                   key={index} 
                   className="flex items-center space-x-1 cursor-pointer hover:bg-gray-50 rounded px-1 py-0.5 transition-colors"
                   onClick={() => handlePieClick(item)}
                 >
                   <div 
-                    className="w-2 h-2 rounded-full flex-shrink-0" 
+                    className="w-1.5 h-1.5 rounded-full flex-shrink-0" 
                     style={{ backgroundColor: item.color }}
                   ></div>
-                  <span className="text-xs text-gray-600 truncate flex-1">{item.name}</span>
+                  <span className="text-xs text-gray-600 truncate flex-1">{item.name.split(' ')[0]}</span>
                   <span className="text-xs font-medium text-gray-900">{item.value}</span>
                 </div>
               ))}
@@ -239,46 +239,46 @@ export function StatsCards({ onStatusFilter }: StatsCardsProps) {
           </div>
         )}
 
-        {/* Status Overview - Compact */}
+        {/* Status Overview - Ultra Compact */}
         {stats.total > 0 && (
-          <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-semibold text-gray-900">Status Overview</h3>
-              <span className="text-xs px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded font-medium">
+          <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="text-xs font-semibold text-gray-900">Overview</h3>
+              <span className="text-xs px-1 py-0.5 bg-blue-50 text-blue-600 rounded font-medium">
                 Live
               </span>
             </div>
             
-            <div className="h-24">
+            <div className="h-16">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={barData}
-                  margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
+                  margin={{ top: 2, right: 2, left: 2, bottom: 2 }}
                   onClick={handleBarClick}
                 >
-                  <CartesianGrid strokeDasharray="2 2" stroke="#f3f4f6" />
+                  <CartesianGrid strokeDasharray="1 1" stroke="#f3f4f6" />
                   <XAxis 
                     dataKey="name" 
-                    tick={{ fontSize: 9 }}
+                    tick={{ fontSize: 8 }}
                     axisLine={false}
                     tickLine={false}
                     interval={0}
-                    angle={-45}
+                    angle={-90}
                     textAnchor="end"
-                    height={40}
+                    height={20}
                   />
                   <YAxis 
-                    tick={{ fontSize: 9 }}
+                    tick={{ fontSize: 8 }}
                     axisLine={false}
                     tickLine={false}
-                    width={20}
+                    width={15}
                     allowDecimals={false}
                     domain={[0, 'dataMax']}
                   />
                   <Tooltip content={<CustomTooltip />} />
                   <Bar 
                     dataKey="count" 
-                    radius={[2, 2, 0, 0]}
+                    radius={[1, 1, 0, 0]}
                     stroke="none"
                     className="cursor-pointer"
                     onClick={handleBarClick}

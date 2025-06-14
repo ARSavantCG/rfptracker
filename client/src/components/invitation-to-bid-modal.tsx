@@ -25,7 +25,6 @@ const invitationFormSchema = z.object({
   estimatedBudget: z.string().optional(),
   projectTimeline: z.string().min(1, "Project timeline is required"),
   bidSubmissionDeadline: z.string().min(1, "Bid submission deadline is required"),
-
   specialRequirements: z.string().optional(),
   technicalSpecifications: z.string().optional(),
   contractTerms: z.string().optional(),
@@ -41,15 +40,9 @@ const invitationFormSchema = z.object({
   documentsLink: z.string().optional(),
   keyDates: z.array(z.object({
     label: z.string(),
-    date: z.string()
+    date: z.string(),
   })).default([]),
-}).refine(
-  (data) => data.generateArchitectRfp || data.generateContractorRfp || data.generateBrokerArchitectRfp || data.generateBrokerContractorRfp,
-  {
-    message: "Select at least one RFP type to generate",
-    path: ["generateArchitectRfp"],
-  }
-);
+});
 
 type InvitationFormData = z.infer<typeof invitationFormSchema>;
 
@@ -177,10 +170,6 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
         projectTimeline: existingInvitation.projectTimeline || "",
         bidSubmissionDeadline: existingInvitation.bidSubmissionDeadline ? 
           new Date(existingInvitation.bidSubmissionDeadline).toISOString().split('T')[0] : "",
-        projectStartDate: existingInvitation.projectStartDate ? 
-          new Date(existingInvitation.projectStartDate).toISOString().split('T')[0] : "",
-        projectEndDate: existingInvitation.projectEndDate ? 
-          new Date(existingInvitation.projectEndDate).toISOString().split('T')[0] : "",
         specialRequirements: Array.isArray(existingInvitation.specialRequirements) ? 
           existingInvitation.specialRequirements.join(", ") : (existingInvitation.specialRequirements || ""),
         technicalSpecifications: existingInvitation.technicalSpecifications || "",
@@ -250,8 +239,6 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
         estimatedBudget: data.estimatedBudget,
         projectTimeline: data.projectTimeline,
         bidSubmissionDeadline: data.bidSubmissionDeadline,
-        projectStartDate: data.projectStartDate,
-        projectEndDate: data.projectEndDate,
         specialRequirements: data.specialRequirements ? [data.specialRequirements] : [],
         technicalSpecifications: data.technicalSpecifications,
         contractTerms: data.contractTerms,
@@ -322,8 +309,6 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
         estimatedBudget: data.estimatedBudget,
         projectTimeline: data.projectTimeline,
         bidSubmissionDeadline: data.bidSubmissionDeadline,
-        projectStartDate: data.projectStartDate,
-        projectEndDate: data.projectEndDate,
         specialRequirements: data.specialRequirements ? [data.specialRequirements] : [],
         technicalSpecifications: data.technicalSpecifications,
         contractTerms: data.contractTerms,
@@ -347,183 +332,133 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
         return response.json();
       }
     },
-    onSuccess: async (invitationToBid) => {
-      toast({
-        title: "Invitation to Bid Created", 
-        description: "RFP details saved successfully. Ready to generate PDFs.",
-      });
+    onSuccess: async (updatedInvitation, variables) => {
+      const formData = variables;
       
-      try {
-        // Generate PDFs based on selections
-        const formData = form.getValues();
+      // Generate PDFs based on selected options
+      const documentsToOpen = [];
+      
+      if (formData.generateArchitectRfp) {
+        documentsToOpen.push({ type: "architect", label: "Architect RFP" });
+      }
+      if (formData.generateContractorRfp) {
+        documentsToOpen.push({ type: "contractor", label: "Contractor RFP" });
+      }
+      if (formData.generateBrokerArchitectRfp) {
+        documentsToOpen.push({ type: "broker-architect", label: "Broker Architect RFP" });
+      }
+      if (formData.generateBrokerContractorRfp) {
+        documentsToOpen.push({ type: "broker-contractor", label: "Broker Contractor RFP" });
+      }
+      
+      if (documentsToOpen.length > 0) {
         setIsGeneratingPdfs(true);
         
-        // Generate documents sequentially in the same user action context to avoid popup blocking
-        let delay = 0;
+        // Generate and open each document
+        console.log(`Total documents to open: ${documentsToOpen.length}`, documentsToOpen);
         
-        if (formData.generateArchitectRfp) {
-          if (delay > 0) await new Promise(resolve => setTimeout(resolve, delay));
-          await generatePdf("architect");
-          delay += 500;
-        }
-        
-        if (formData.generateContractorRfp) {
-          if (delay > 0) await new Promise(resolve => setTimeout(resolve, delay));
-          await generatePdf("contractor");
-          delay += 500;
-        }
-        
-        if (formData.generateBrokerArchitectRfp) {
-          if (delay > 0) await new Promise(resolve => setTimeout(resolve, delay));
-          await generatePdf("broker-architect");
-          delay += 500;
-        }
-        
-        if (formData.generateBrokerContractorRfp) {
-          if (delay > 0) await new Promise(resolve => setTimeout(resolve, delay));
+        for (let i = 0; i < documentsToOpen.length; i++) {
+          const doc = documentsToOpen[i];
+          console.log(`[${i + 1}/${documentsToOpen.length}] Opening ${doc.type} document (${doc.label})...`);
           
-          // Generate PDF for direct download to avoid conversion step
-          const response = await fetch(`/api/rfp-requests/${rfp?.id}/generate-pdf`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              recipientType: "broker-contractor",
-              invitationData: form.getValues(),
-              returnType: "pdf"
-            }),
-          });
-          
-          if (response.ok) {
-            const pdfBlob = await response.blob();
-            const url = window.URL.createObjectURL(pdfBlob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${rfp?.rfpNumber}-broker-contractor-rfp.pdf`;
-            a.style.display = 'none';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+          try {
+            const response = await fetch(`/api/rfp-requests/${rfp.id}/generate-pdf`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ recipientType: doc.type })
+            });
             
+            console.log(`Response status for ${doc.type}:`, response.status);
+            
+            if (response.ok) {
+              const htmlContent = await response.text();
+              console.log(`HTML content length for ${doc.type}:`, htmlContent.length);
+              
+              // Open in new window for manual saving
+              console.log(`Opening window for ${doc.type}...`);
+              const newWindow = window.open('', '_blank');
+              if (newWindow) {
+                newWindow.document.write(htmlContent);
+                newWindow.document.close();
+              } else {
+                console.error(`Failed to open window for ${doc.type}`);
+              }
+            } else {
+              console.error(`Failed to generate ${doc.type} document: ${response.status} ${response.statusText}`);
+              toast({
+                title: "Generation Failed",
+                description: `Failed to generate ${doc.type} document.`,
+                variant: "destructive",
+              });
+            }
+          } catch (error) {
+            console.error(`Error opening ${doc.type} document:`, error);
             toast({
-              title: "Documents Generated",
-              description: "Architect RFP opened in new tab. Contractor PDF downloaded and ready for distribution.",
+              title: "Error",
+              description: `Error opening ${doc.type} document: ${(error as Error)?.message || 'Unknown error'}`,
+              variant: "destructive",
             });
           }
+          
+          // Add a small delay between documents to avoid overwhelming the browser
+          if (i < documentsToOpen.length - 1) {
+            console.log("Waiting 500ms before opening next document...");
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
         }
-      
-        // Update RFP status
-        await apiRequest(`/api/rfp-requests/${rfp?.id}`, "PATCH", {
-          status: "in-progress",
-          workflowPhase: "bid-collection"
-        });
         
-        queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
-        
-        onClose();
-      } catch (error) {
-        console.error("PDF generation error:", error);
         toast({
-          title: "PDF Generation Error",
-          description: error instanceof Error ? error.message : "Failed to generate PDFs",
-          variant: "destructive",
+          title: "Documents Opened",
+          description: `${documentsToOpen.length} document(s) opened in new tabs. Use Ctrl+P to save as PDF.`,
+          action: (
+            <ToastAction
+              altText="Complete Phase"
+              onClick={async () => {
+                try {
+                  const response = await fetch(`/api/rfp-requests/${rfp.id}/advance-phase`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ newPhase: 'bid-collection' })
+                  });
+                  
+                  if (response.ok) {
+                    toast({
+                      title: "Phase Complete",
+                      description: "Invitation to Bid completed. Moving to Bid Collection phase.",
+                    });
+                    queryClient.invalidateQueries({ queryKey: ['/api/rfp-requests'] });
+                    onClose();
+                  } else {
+                    throw new Error('Failed to advance workflow');
+                  }
+                } catch (error) {
+                  toast({
+                    title: "Error",
+                    description: "Failed to complete invitation phase.",
+                    variant: "destructive",
+                  });
+                }
+              }}
+            >
+              Complete Phase
+            </ToastAction>
+          ),
         });
+        
+        setIsGeneratingPdfs(false);
       }
+      
+      queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests", rfp?.id, "invitation-to-bid"] });
     },
     onError: (error) => {
-      console.log("===== MUTATION ERROR CALLBACK =====");
-      console.error("Mutation error:", error);
+      setIsGeneratingPdfs(false);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to create invitation to bid",
+        description: error instanceof Error ? error.message : "Failed to create invitation",
         variant: "destructive",
       });
     },
   });
-
-  const generatePdf = async (recipientType: "architect" | "contractor" | "broker-architect" | "broker-contractor") => {
-    try {
-      setIsGeneratingPdfs(true);
-      console.log(`Starting PDF generation for ${recipientType}`);
-      console.log(`Making request to: /api/rfp-requests/${rfp?.id}/generate-pdf`);
-      
-      // Get HTML content from backend
-      const response = await fetch(`/api/rfp-requests/${rfp?.id}/generate-pdf`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          recipientType,
-          invitationData: form.getValues(),
-        }),
-      });
-      
-      console.log(`Response status for ${recipientType}:`, response.status);
-      
-      if (!response.ok) {
-        throw new Error(`Failed to generate PDF: ${response.status} ${response.statusText}`);
-      }
-      
-      const htmlContent = await response.text();
-      console.log(`HTML content length for ${recipientType}:`, htmlContent.length);
-      
-      // Create a new window/tab with the content
-      const printWindow = window.open('', '_blank');
-      if (printWindow) {
-        console.log(`Opening print window for ${recipientType}`);
-        printWindow.document.write(htmlContent);
-        printWindow.document.close();
-        
-        // Let user manually print if they want to
-        printWindow.addEventListener('load', () => {
-          // Focus the window to ensure it's visible
-          printWindow.focus();
-        });
-      } else {
-        console.log(`Print window blocked for ${recipientType}. User needs to allow popups.`);
-        
-        // Create a manual link for the blocked popup
-        const blob = new Blob([htmlContent], { type: 'text/html' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.target = '_blank';
-        a.download = `${rfp?.rfpNumber}-${recipientType}-invitation.html`;
-        a.textContent = `Open ${recipientType.charAt(0).toUpperCase() + recipientType.slice(1)} RFP`;
-        a.style.color = '#007bff';
-        a.style.textDecoration = 'underline';
-        
-        toast({
-          title: "Popup Blocked",
-          description: `The ${recipientType.charAt(0).toUpperCase() + recipientType.slice(1)} RFP was blocked. Please allow popups or try again.`,
-          variant: "destructive",
-        });
-        
-        // Cleanup the blob URL after a delay
-        setTimeout(() => {
-          window.URL.revokeObjectURL(url);
-        }, 60000);
-        
-        return;
-      }
-      
-      toast({
-        title: "Document Generated",
-        description: `${recipientType.charAt(0).toUpperCase() + recipientType.slice(1)} invitation opened for printing`,
-      });
-    } catch (error) {
-      console.error(`Error generating ${recipientType} PDF:`, error);
-      toast({
-        title: "Generation Failed",
-        description: error instanceof Error ? error.message : `Failed to generate ${recipientType} document`,
-        variant: "destructive",
-      });
-    } finally {
-      setIsGeneratingPdfs(false);
-    }
-  };
 
   const onSubmit = (data: InvitationFormData) => {
     // Check if at least one option is selected
@@ -554,532 +489,163 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            
             {/* RFP Type Selection */}
-            <div className="border p-4 rounded-lg bg-gray-50">
-              <h3 className="font-medium mb-4">Select RFP Types to Generate</h3>
-              
-              {/* Broker Response Section */}
-              <div className="mb-6">
-                <h4 className="font-medium text-sm text-green-700 mb-3">Broker Response RFPs (Prospective Tenants)</h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="generateBrokerArchitectRfp"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                        <div className="space-y-1 leading-none">
-                          <FormLabel>Architect RFP (Preliminary)</FormLabel>
-                          <p className="text-sm text-muted-foreground">
-                            Space planning & preliminary pricing for prospects
-                          </p>
-                        </div>
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="generateBrokerContractorRfp"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                        <div className="space-y-1 leading-none">
-                          <FormLabel>Contractor RFP (Preliminary)</FormLabel>
-                          <p className="text-sm text-muted-foreground">
-                            Preliminary pricing & scheduling for prospects
-                          </p>
-                        </div>
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </div>
-
-              {/* Formal Bids Section */}
-              <div className="border-t pt-4">
-                <h4 className="font-medium text-sm text-blue-700 mb-3">Formal Project Bids (Existing Tenants)</h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="generateArchitectRfp"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                        <div className="space-y-1 leading-none">
-                          <FormLabel>Architect RFP (Formal)</FormLabel>
-                          <p className="text-sm text-muted-foreground">
-                            Complete RFP for confirmed tenant project
-                          </p>
-                        </div>
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="generateContractorRfp"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                        <div className="space-y-1 leading-none">
-                          <FormLabel>Contractor ITB (Formal)</FormLabel>
-                          <p className="text-sm text-muted-foreground">
-                            Formal invitation to bid for confirmed project
-                          </p>
-                        </div>
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </div>
-              <FormMessage />
-            </div>
-
-            {/* Basic Project Information */}
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="projectScope"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Project Scope</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Brief description of project scope" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="projectLocation"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Project Location</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Complete project address" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              <FormField
-                control={form.control}
-                name="estimatedBudget"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Estimated Budget</FormLabel>
-                    <FormControl>
-                      <Input placeholder="$0.00" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="projectTimeline"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Project Timeline</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., 6 months" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="bidSubmissionDeadline"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Bid Submission Deadline</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            {/* Project Description */}
-            <FormField
-              control={form.control}
-              name="projectDescription"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Project Description</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="Detailed description of the project scope and requirements" 
-                      className="min-h-[100px]" 
-                      {...field} 
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Documents Link */}
-            <FormField
-              control={form.control}
-              name="documentsLink"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Documents Link</FormLabel>
-                  <FormControl>
-                    <Input placeholder="https://example.com/project-documents" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Key Dates */}
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <FormLabel>Key Dates</FormLabel>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    const currentKeyDates = form.getValues("keyDates");
-                    form.setValue("keyDates", [...currentKeyDates, { label: "", date: "" }]);
-                  }}
-                >
-                  Add Key Date
-                </Button>
+              <h3 className="text-lg font-medium">Select RFP Types to Generate</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="generateArchitectRfp"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>Architect RFP</FormLabel>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="generateContractorRfp"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>Contractor RFP</FormLabel>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="generateBrokerArchitectRfp"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>Broker Architect RFP</FormLabel>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="generateBrokerContractorRfp"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>Broker Contractor RFP</FormLabel>
+                      </div>
+                    </FormItem>
+                  )}
+                />
               </div>
-              
-              {keyDates.map((_, index) => (
-                <div key={index} className="flex gap-4 items-end">
-                  <div className="flex-1">
-                    <FormField
-                      control={form.control}
-                      name={`keyDates.${index}.label`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Date Label</FormLabel>
-                          <FormControl>
-                            <Input placeholder="e.g., Bid Due Date" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  
-                  <div className="flex-1">
-                    <FormField
-                      control={form.control}
-                      name={`keyDates.${index}.date`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Date</FormLabel>
-                          <FormControl>
-                            <Input type="date" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      const updatedKeyDates = keyDates.filter((_, i) => i !== index);
-                      setKeyDates(updatedKeyDates);
-                      form.setValue("keyDates", updatedKeyDates);
-                    }}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="projectStartDate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Anticipated Start Date</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="projectEndDate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Anticipated End Date</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            {/* Detailed Requirements */}
+            {/* Project Information */}
             <div className="space-y-4">
-              <FormField
-                control={form.control}
-                name="specialRequirements"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Special Requirements</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Any special requirements, certifications, or qualifications needed"
-                        className="min-h-[100px]"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <h3 className="text-lg font-medium">Project Information</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="projectScope"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Project Scope</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              <FormField
-                control={form.control}
-                name="technicalSpecifications"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Technical Specifications</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Detailed technical specifications and requirements"
-                        className="min-h-[100px]"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+                <FormField
+                  control={form.control}
+                  name="projectLocation"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Project Location</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-            {/* Contract Terms */}
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="contractTerms"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Contract Terms</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="General contract terms and conditions"
-                        className="min-h-[80px]"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                <FormField
+                  control={form.control}
+                  name="estimatedBudget"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Estimated Budget</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="$" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              <FormField
-                control={form.control}
-                name="paymentTerms"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Payment Terms</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Payment schedule and terms"
-                        className="min-h-[80px]"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+                <FormField
+                  control={form.control}
+                  name="projectTimeline"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Project Timeline</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="e.g., 6 months" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="insuranceRequirements"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Insurance Requirements</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Required insurance coverage and limits"
-                        className="min-h-[80px]"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="bondingRequirements"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Bonding Requirements</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Performance and payment bond requirements"
-                        className="min-h-[80px]"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            {/* Evaluation Criteria */}
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="prequalificationCriteria"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Prequalification Criteria</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Minimum qualifications and experience requirements"
-                        className="min-h-[80px]"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="evaluationCriteria"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Evaluation Criteria</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="How bids will be evaluated and scored"
-                        className="min-h-[80px]"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            {/* Key Dates Management */}
-            <div className="border-t pt-4">
-              <h3 className="font-medium mb-3">Key Project Dates</h3>
-              <div className="space-y-3">
-                {keyDates.map((keyDate, index) => (
-                  <div key={index} className="flex gap-2 items-end">
-                    <div className="flex-1">
-                      <Input
-                        placeholder="Date description (e.g., Design completion)"
-                        value={keyDate.label}
-                        onChange={(e) => {
-                          const updatedKeyDates = [...keyDates];
-                          updatedKeyDates[index].label = e.target.value;
-                          setKeyDates(updatedKeyDates);
-                          form.setValue("keyDates", updatedKeyDates);
-                        }}
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <Input
-                        type="date"
-                        value={keyDate.date}
-                        onChange={(e) => {
-                          const updatedKeyDates = [...keyDates];
-                          updatedKeyDates[index].date = e.target.value;
-                          setKeyDates(updatedKeyDates);
-                          form.setValue("keyDates", updatedKeyDates);
-                        }}
-                      />
-                    </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const updatedKeyDates = [...keyDates];
-                        updatedKeyDates.splice(index, 1);
-                        setKeyDates(updatedKeyDates);
-                        form.setValue("keyDates", updatedKeyDates);
-                      }}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    const updatedKeyDates = [...keyDates, { label: "", date: "" }];
-                    setKeyDates(updatedKeyDates);
-                    form.setValue("keyDates", updatedKeyDates);
-                  }}
-                >
-                  Add Key Date
-                </Button>
+                <FormField
+                  control={form.control}
+                  name="bidSubmissionDeadline"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Bid Submission Deadline</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
             </div>
 
             {/* Contact Information */}
-            <div className="border-t pt-4">
-              <h3 className="font-medium mb-3">Contact Information</h3>
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium">Contact Information</h3>
               <div className="grid grid-cols-3 gap-4">
                 <FormField
                   control={form.control}
@@ -1088,7 +654,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                     <FormItem>
                       <FormLabel>Contact Person</FormLabel>
                       <FormControl>
-                        <Input placeholder="Primary contact name" {...field} />
+                        <Input {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -1102,7 +668,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                     <FormItem>
                       <FormLabel>Contact Email</FormLabel>
                       <FormControl>
-                        <Input type="email" placeholder="contact@company.com" {...field} />
+                        <Input type="email" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -1116,7 +682,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                     <FormItem>
                       <FormLabel>Contact Phone</FormLabel>
                       <FormControl>
-                        <Input placeholder="(555) 123-4567" {...field} />
+                        <Input {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -1125,8 +691,146 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
               </div>
             </div>
 
-            <div className="flex justify-between pt-4 border-t">
-              <Button
+            {/* Additional Requirements */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium">Additional Requirements</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="specialRequirements"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Special Requirements</FormLabel>
+                      <FormControl>
+                        <Textarea {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="technicalSpecifications"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Technical Specifications</FormLabel>
+                      <FormControl>
+                        <Textarea {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="contractTerms"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Contract Terms</FormLabel>
+                      <FormControl>
+                        <Textarea {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="paymentTerms"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Payment Terms</FormLabel>
+                      <FormControl>
+                        <Textarea {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="insuranceRequirements"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Insurance Requirements</FormLabel>
+                      <FormControl>
+                        <Textarea {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="bondingRequirements"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Bonding Requirements</FormLabel>
+                      <FormControl>
+                        <Textarea {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="prequalificationCriteria"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Prequalification Criteria</FormLabel>
+                      <FormControl>
+                        <Textarea {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="evaluationCriteria"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Evaluation Criteria</FormLabel>
+                      <FormControl>
+                        <Textarea {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3 pt-4">
+              <Button 
+                type="button"
+                variant="outline"
+                onClick={() => saveInvitationMutation.mutate(form.getValues())}
+                disabled={saveInvitationMutation.isPending}
+              >
+                <Save className="h-4 w-4 mr-2" />
+                Save
+              </Button>
+              
+              <Button 
+                type="submit"
+                disabled={createInvitationMutation.isPending || isGeneratingPdfs || saveInvitationMutation.isPending}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                {isGeneratingPdfs ? "Generating..." : "Generate & Open RFPs"}
+              </Button>
+              
+              <Button 
                 type="button"
                 variant="outline"
                 onClick={onClose}
@@ -1135,188 +839,6 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                 <X className="h-4 w-4 mr-2" />
                 Cancel
               </Button>
-              
-              <div className="flex space-x-2">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => {
-                    // Save without validation - allow saving partial data as draft
-                    const formData = form.getValues();
-                    saveInvitationMutation.mutate(formData);
-                  }}
-                  disabled={createInvitationMutation.isPending || isGeneratingPdfs || saveInvitationMutation.isPending}
-                >
-                  {saveInvitationMutation.isPending ? (
-                    <>
-                      <Download className="h-4 w-4 mr-2" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="h-4 w-4 mr-2" />
-                      Save
-                    </>
-                  )}
-                </Button>
-
-                <Button
-                  type="button"
-                  onClick={async () => {
-                    if (!rfp) return;
-                    
-                    // Validate at least one checkbox is selected
-                    const formData = form.getValues();
-                    const hasSelectedDocuments = formData.generateArchitectRfp || 
-                                               formData.generateContractorRfp || 
-                                               formData.generateBrokerArchitectRfp || 
-                                               formData.generateBrokerContractorRfp;
-                    
-                    if (!hasSelectedDocuments) {
-                      toast({
-                        title: "Validation Error",
-                        description: "Please select at least one document type before completing the invitation.",
-                        variant: "destructive",
-                      });
-                      return;
-                    }
-                    
-                    try {
-                      // First save the current form data
-                      await saveInvitationMutation.mutateAsync(formData);
-                      
-                      // Then advance the workflow to bid-collection phase
-                      const response = await fetch(`/api/rfp-requests/${rfp.id}/advance-workflow`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ newPhase: 'bid-collection' })
-                      });
-                      
-                      if (response.ok) {
-                        toast({
-                          title: "Phase Complete",
-                          description: "Invitation to Bid completed. Moving to Bid Collection phase.",
-                        });
-                        queryClient.invalidateQueries({ queryKey: ['/api/rfp-requests'] });
-                        onClose();
-                      } else {
-                        throw new Error('Failed to advance workflow');
-                      }
-                    } catch (error) {
-                      toast({
-                        title: "Error",
-                        description: "Failed to complete invitation phase.",
-                        variant: "destructive",
-                      });
-                    }
-                  }}
-                  disabled={createInvitationMutation.isPending || isGeneratingPdfs || saveInvitationMutation.isPending}
-                  className="bg-green-600 hover:bg-green-700 text-white"
-                >
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Complete Invitation to Bid
-                </Button>
-                
-                <Button 
-                  type="button"
-                  variant="outline"
-                  onClick={async () => {
-                    if (!rfp) return;
-                    
-                    const formData = form.getValues();
-                    const documentsToOpen = [];
-                    
-                    if (formData.generateArchitectRfp) documentsToOpen.push({ type: "architect", label: "Formal Architect RFP" });
-                    if (formData.generateContractorRfp) documentsToOpen.push({ type: "contractor", label: "Formal Contractor ITB" });
-                    if (formData.generateBrokerArchitectRfp) documentsToOpen.push({ type: "broker-architect", label: "Broker Architect RFP" });
-                    if (formData.generateBrokerContractorRfp) documentsToOpen.push({ type: "broker-contractor", label: "Broker Contractor RFP" });
-                    
-                    if (documentsToOpen.length === 0) {
-                      toast({
-                        title: "No Documents Selected",
-                        description: "Please select at least one document type to open.",
-                        variant: "destructive",
-                      });
-                      return;
-                    }
-                    
-                    // Open all selected documents in new tabs
-                    console.log(`Total documents to open: ${documentsToOpen.length}`, documentsToOpen);
-                    
-                    for (let i = 0; i < documentsToOpen.length; i++) {
-                      const doc = documentsToOpen[i];
-                      try {
-                        console.log(`[${i + 1}/${documentsToOpen.length}] Opening ${doc.type} document (${doc.label})...`);
-                        
-                        const response = await fetch(`/api/rfp-requests/${rfp.id}/generate-pdf`, {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ 
-                            recipientType: doc.type,
-                            invitationData: formData,
-                            returnType: "html"
-                          }),
-                        });
-                        
-                        console.log(`Response status for ${doc.type}:`, response.status);
-                        
-                        if (response.ok) {
-                          const htmlText = await response.text();
-                          console.log(`HTML content length for ${doc.type}:`, htmlText.length);
-                          
-                          const blob = new Blob([htmlText], { type: 'text/html' });
-                          const url = URL.createObjectURL(blob);
-                          
-                          console.log(`Opening window for ${doc.type}...`);
-                          const newWindow = window.open(url, '_blank');
-                          
-                          if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
-                            console.error(`Failed to open window for ${doc.type}`);
-                            toast({
-                              title: "Window Blocked",
-                              description: `${doc.type} document window was blocked. Check popup settings.`,
-                              variant: "destructive",
-                            });
-                          } else {
-                            console.log(`✓ Successfully opened ${doc.type} document in new tab`);
-                          }
-                          
-                          setTimeout(() => URL.revokeObjectURL(url), 5000);
-                          
-                          // Increased delay between opening tabs
-                          if (i < documentsToOpen.length - 1) {
-                            console.log(`Waiting 500ms before opening next document...`);
-                            await new Promise(resolve => setTimeout(resolve, 500));
-                          }
-                        } else {
-                          console.error(`Failed to generate ${doc.type} document: ${response.status} ${response.statusText}`);
-                          toast({
-                            title: "Generation Failed",
-                            description: `Failed to generate ${doc.type} document.`,
-                            variant: "destructive",
-                          });
-                        }
-                      } catch (error) {
-                        console.error(`Error opening ${doc.type} document:`, error);
-                        toast({
-                          title: "Error",
-                          description: `Error opening ${doc.type} document: ${(error as Error)?.message || 'Unknown error'}`,
-                          variant: "destructive",
-                        });
-                      }
-                    }
-                    
-                    toast({
-                      title: "Documents Opened",
-                      description: `${documentsToOpen.length} document(s) opened in new tabs. Use Ctrl+P to save as PDF.`,
-                    });
-                  }}
-                  disabled={createInvitationMutation.isPending || isGeneratingPdfs || saveInvitationMutation.isPending}
-                >
-                  <FileText className="h-4 w-4 mr-2" />
-                  Open for PDF Saving
-                </Button>
-              </div>
             </div>
           </form>
         </Form>

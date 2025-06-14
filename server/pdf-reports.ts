@@ -240,10 +240,10 @@ function generateExecutiveReportHtml(data: ReportData): string {
               <tr>
                 <td><span class="rfp-number">${rfp.rfpNumber}</span></td>
                 <td class="project-name">${rfp.projectName}</td>
-                <td>${isValidDate ? format(dueDate, 'MMM dd, yyyy') : 'Invalid Date'}</td>
+                <td style="white-space: nowrap;">${isValidDate ? format(dueDate, 'MMM dd, yyyy') : 'Invalid Date'}</td>
                 <td>
                   <span class="status-badge" style="background-color: ${statusColor};">
-                    ${rfp.status.replace('-', ' ')}
+                    ${rfp.status.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
                   </span>
                 </td>
                 <td class="days-column">

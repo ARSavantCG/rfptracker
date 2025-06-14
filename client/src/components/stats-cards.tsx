@@ -196,15 +196,15 @@ export function StatsCards({ onStatusFilter }: StatsCardsProps) {
               <div className="w-1 h-1 bg-green-500 rounded-full"></div>
             </div>
             
-            <div className="h-16">
+            <div className="h-12">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={pieData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={8}
-                    outerRadius={25}
+                    innerRadius={6}
+                    outerRadius={20}
                     fill="#8884d8"
                     dataKey="value"
                     onClick={handlePieClick}
@@ -219,9 +219,9 @@ export function StatsCards({ onStatusFilter }: StatsCardsProps) {
               </ResponsiveContainer>
             </div>
 
-            {/* Ultra Compact Legend */}
+            {/* Ultra Compact Legend - Show All Items */}
             <div className="space-y-0.5 mt-1">
-              {pieData.slice(0, 2).map((item, index) => (
+              {pieData.map((item, index) => (
                 <div 
                   key={index} 
                   className="flex items-center space-x-1 cursor-pointer hover:bg-gray-50 rounded px-1 py-0.5 transition-colors"

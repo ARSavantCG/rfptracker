@@ -13,7 +13,9 @@ export const rfpRequests = pgTable("rfp_requests", {
   confidential: boolean("confidential").default(false),
   sentBy: text("sent_by").notNull(),
   receivedOn: timestamp("received_on").notNull(),
-  dueOn: timestamp("due_on").notNull(),
+  internalDueDate: timestamp("internal_due_date").notNull(),
+  contractorDueDate: timestamp("contractor_due_date"),
+  architectDueDate: timestamp("architect_due_date"),
   developmentContact: text("development_contact"),
   projectArea: text("project_area"),
   requestTypes: json("request_types").$type<string[]>().notNull(), // pricing, schedule, space-plan

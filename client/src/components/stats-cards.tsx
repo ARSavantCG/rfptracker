@@ -249,29 +249,29 @@ export function StatsCards({ onStatusFilter }: StatsCardsProps) {
               </span>
             </div>
             
-            <div className="h-16">
+            <div className="h-20">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={barData}
-                  margin={{ top: 2, right: 2, left: 2, bottom: 2 }}
+                  margin={{ top: 2, right: 2, left: 2, bottom: 30 }}
                   onClick={handleBarClick}
                 >
                   <CartesianGrid strokeDasharray="1 1" stroke="#f3f4f6" />
                   <XAxis 
                     dataKey="name" 
-                    tick={{ fontSize: 8 }}
+                    tick={{ fontSize: 6 }}
                     axisLine={false}
                     tickLine={false}
                     interval={0}
-                    angle={-90}
+                    angle={-45}
                     textAnchor="end"
-                    height={20}
+                    height={30}
                   />
                   <YAxis 
-                    tick={{ fontSize: 8 }}
+                    tick={{ fontSize: 6 }}
                     axisLine={false}
                     tickLine={false}
-                    width={15}
+                    width={12}
                     allowDecimals={false}
                     domain={[0, 'dataMax']}
                   />

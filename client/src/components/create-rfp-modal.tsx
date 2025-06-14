@@ -99,6 +99,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
       toast({
         title: "Success",
         description: "RFP request created successfully",

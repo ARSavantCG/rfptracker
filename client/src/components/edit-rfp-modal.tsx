@@ -55,6 +55,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
       toast({
         title: "Success",
         description: "File deleted successfully",

@@ -156,14 +156,14 @@ export default function Reports() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <Label htmlFor="status-filter">Status</Label>
-              <Select value={filters.status || ""} onValueChange={(value) => 
-                setFilters({...filters, status: value || undefined})
+              <Select value={filters.status || "all"} onValueChange={(value) => 
+                setFilters({...filters, status: value === "all" ? undefined : value})
               }>
                 <SelectTrigger>
                   <SelectValue placeholder="All statuses" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Statuses</SelectItem>
+                  <SelectItem value="all">All Statuses</SelectItem>
                   <SelectItem value="received">Received</SelectItem>
                   <SelectItem value="in-progress">In Progress</SelectItem>
                   <SelectItem value="completed">Completed</SelectItem>
@@ -174,14 +174,14 @@ export default function Reports() {
             
             <div>
               <Label htmlFor="property-filter">Property</Label>
-              <Select value={filters.property || ""} onValueChange={(value) => 
-                setFilters({...filters, property: value || undefined})
+              <Select value={filters.property || "all"} onValueChange={(value) => 
+                setFilters({...filters, property: value === "all" ? undefined : value})
               }>
                 <SelectTrigger>
                   <SelectValue placeholder="All properties" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Properties</SelectItem>
+                  <SelectItem value="all">All Properties</SelectItem>
                   {properties.map((property: any) => (
                     <SelectItem key={property.id} value={property.propertyName}>
                       {property.propertyName}
@@ -200,7 +200,7 @@ export default function Reports() {
                   <SelectValue placeholder="All dates" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Dates</SelectItem>
+                  <SelectItem value="all">All Dates</SelectItem>
                   <SelectItem value="3">3 Days</SelectItem>
                   <SelectItem value="7">7 Days</SelectItem>
                   <SelectItem value="14">14 Days</SelectItem>

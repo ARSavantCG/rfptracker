@@ -19,8 +19,10 @@ import {
   Filter,
   Calendar,
   Download,
-  Settings
+  Settings,
+  BarChart3
 } from "lucide-react";
+import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import type { RfpRequest, Contact, Property } from "@shared/schema";
 
@@ -203,6 +205,22 @@ export function QuickActionsSidebar({
                 New Property
               </Button>
             </div>
+          </div>
+
+          <Separator />
+
+          {/* Reports */}
+          <div>
+            <h3 className="text-sm font-medium text-gray-700 mb-3">Reports</h3>
+            <Link href="/reports">
+              <Button 
+                variant="outline" 
+                className="w-full justify-start"
+              >
+                <BarChart3 className="h-4 w-4 mr-2" />
+                Executive Summary
+              </Button>
+            </Link>
           </div>
 
           <Separator />

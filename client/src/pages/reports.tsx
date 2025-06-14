@@ -354,14 +354,22 @@ export default function Reports() {
                             </Badge>
                           </td>
                           <td className="py-3 px-2">
-                            <Badge className={getPriorityColor(priority)}>
-                              {priority}
-                            </Badge>
+                            {rfp.status === "completed" ? (
+                              <span className="text-gray-400">—</span>
+                            ) : (
+                              <Badge className={getPriorityColor(priority)}>
+                                {priority}
+                              </Badge>
+                            )}
                           </td>
                           <td className="py-3 px-2">
-                            <span className={daysUntilDue < 0 ? "text-red-600 font-semibold" : daysUntilDue <= 3 ? "text-yellow-600 font-semibold" : ""}>
-                              {daysUntilDue < 0 ? `${Math.abs(daysUntilDue)} days overdue` : `${daysUntilDue} days`}
-                            </span>
+                            {rfp.status === "completed" ? (
+                              <span className="text-gray-400">—</span>
+                            ) : (
+                              <span className={daysUntilDue < 0 ? "text-red-600 font-semibold" : daysUntilDue <= 3 ? "text-yellow-600 font-semibold" : ""}>
+                                {daysUntilDue < 0 ? `${Math.abs(daysUntilDue)} days overdue` : `${daysUntilDue} days`}
+                              </span>
+                            )}
                           </td>
                         </tr>
                       );

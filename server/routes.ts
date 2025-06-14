@@ -19,6 +19,7 @@ import {
 } from "@shared/schema";
 import { validateRfpForProgression, canAdvanceToPhase } from "./validation";
 import { generateRfpPdf, generatePdfFilename } from "./pdf-generator";
+import { generateExecutiveReportPdf, generateReportFilename } from "./pdf-reports";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -1189,6 +1190,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error generating financial summary PDF:", error);
       res.status(500).json({ message: "Failed to generate financial summary PDF" });
+    }
+  });
+
+  // Reports PDF generation
+  app.post("/api/reports/executive-summary-pdf", async (req, res) => {
+    try {
+      const { filters } = req.body;
+      
+      // Get all RFPs and apply filters
+      let rfps = await storage.getAllRfpRequests();
+      
+      if (filters?.status) {
+        rfps = rfps.filter(rfp => rfp.status === filters.status);
+      }
+      if (filters?.property) {
+        rfps = rfps.filter(rfp => rfp.property === filters.property);
+      }
+      if (filters?.dueInDays) {
+        const targetDate = new Date();
+        targetDate.setDate(targetDate.getDate() + filters.dueInDays);
+        rfps = rfps.filter(rfp => new Date(rfp.dueOn) <= targetDate);
+      }
+
+      const reportData = {
+        rfps,
+        filters,
+        generatedAt: new Date().toISOString()
+      };
+
+      const pdfBuffer = await generateExecutiveReportPdf(reportData);
+      const filename = generateReportFilename("executive-summary");
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.send(pdfBuffer);
+    } catch (error) {
+      console.error("Error generating executive summary PDF:", error);
+      res.status(500).json({ message: "Failed to generate executive summary PDF" });
     }
   });
 

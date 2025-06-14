@@ -209,28 +209,7 @@ export function QuickActionsSidebar({
 
 
 
-          {/* Quick Links */}
-          <div>
-            <h3 className="text-sm font-medium text-gray-700 mb-3">Quick Links</h3>
-            <div className="space-y-1">
-              <Button variant="ghost" className="w-full justify-start h-8">
-                <Calendar className="h-4 w-4 mr-2" />
-                <span className="text-sm">Due This Week</span>
-              </Button>
-              <Button variant="ghost" className="w-full justify-start h-8">
-                <AlertCircle className="h-4 w-4 mr-2" />
-                <span className="text-sm">Needs Attention</span>
-              </Button>
-              <Button variant="ghost" className="w-full justify-start h-8">
-                <Download className="h-4 w-4 mr-2" />
-                <span className="text-sm">Export Data</span>
-              </Button>
-              <Button variant="ghost" className="w-full justify-start h-8">
-                <Settings className="h-4 w-4 mr-2" />
-                <span className="text-sm">Settings</span>
-              </Button>
-            </div>
-          </div>
+
         </div>
       </ScrollArea>
     </div>

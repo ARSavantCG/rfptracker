@@ -103,7 +103,9 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
       confidential: false,
       sentBy: "",
       receivedOn: "",
-      dueOn: "",
+      internalDueDate: "",
+      contractorDueDate: "",
+      architectDueDate: "",
       developmentContact: "",
       projectArea: "",
       requestTypes: [],
@@ -123,7 +125,9 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
         confidential: Boolean(rfp.confidential),
         sentBy: rfp.sentBy || "",
         receivedOn: rfp.receivedOn ? new Date(rfp.receivedOn).toISOString().split('T')[0] : "",
-        dueOn: rfp.dueOn ? new Date(rfp.dueOn).toISOString().split('T')[0] : "",
+        internalDueDate: rfp.internalDueDate ? new Date(rfp.internalDueDate).toISOString().split('T')[0] : "",
+        contractorDueDate: rfp.contractorDueDate ? new Date(rfp.contractorDueDate).toISOString().split('T')[0] : "",
+        architectDueDate: rfp.architectDueDate ? new Date(rfp.architectDueDate).toISOString().split('T')[0] : "",
         developmentContact: rfp.developmentContact || "",
         projectArea: rfp.projectArea || "",
         requestTypes: rfp.requestTypes || [],
@@ -335,10 +339,10 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
 
             <FormField
               control={form.control}
-              name="dueOn"
+              name="internalDueDate"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Due On</FormLabel>
+                  <FormLabel>Internal Due Date *</FormLabel>
                   <FormControl>
                     <Input type="date" {...field} />
                   </FormControl>
@@ -346,6 +350,36 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
                 </FormItem>
               )}
             />
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="contractorDueDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Contractor Due Date</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="architectDueDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Architect Due Date</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <div className="grid grid-cols-2 gap-4">
               <FormField

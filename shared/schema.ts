@@ -58,7 +58,9 @@ export const insertRfpRequestSchema = createInsertSchema(rfpRequests).omit({
   status: z.enum(["received", "in-progress", "completed", "on-hold"]).default("received"),
   workflowPhase: z.enum(["rfp-entry", "invitation-to-bid", "bid-collection", "evaluation", "award"]).default("rfp-entry"),
   receivedOn: z.string().transform((val) => new Date(val)),
-  dueOn: z.string().transform((val) => new Date(val)),
+  internalDueDate: z.string().transform((val) => new Date(val)),
+  contractorDueDate: z.string().optional().transform((val) => val ? new Date(val) : null),
+  architectDueDate: z.string().optional().transform((val) => val ? new Date(val) : null),
   dueDate: z.string().optional().transform((val) => val ? new Date(val) : undefined),
 });
 

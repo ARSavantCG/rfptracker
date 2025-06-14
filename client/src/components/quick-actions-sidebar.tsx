@@ -207,45 +207,7 @@ export function QuickActionsSidebar({
 
           <Separator />
 
-          {/* Recent RFPs */}
-          <div>
-            <h3 className="text-sm font-medium text-gray-700 mb-3">Recent RFPs</h3>
-            <div className="space-y-2">
-              {recentRfps.length > 0 ? (
-                recentRfps.map((rfp) => (
-                  <div 
-                    key={rfp.id}
-                    className="p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium text-gray-900 truncate">
-                          {rfp.rfpNumber}
-                        </div>
-                        <div className="text-xs text-gray-600 truncate">
-                          {rfp.tenantName} - {rfp.property}
-                        </div>
-                        <div className="mt-1">
-                          <Badge 
-                            variant="secondary" 
-                            className={`text-xs ${getStatusBadgeColor(rfp.status)}`}
-                          >
-                            {rfp.status.replace('-', ' ')}
-                          </Badge>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-sm text-gray-500 text-center py-4">
-                  No RFPs found
-                </div>
-              )}
-            </div>
-          </div>
 
-          <Separator />
 
           {/* Quick Links */}
           <div>

@@ -96,15 +96,27 @@ export function StatsCards({ onStatusFilter }: StatsCardsProps) {
 
   const COLORS = ["#8B5CF6", "#F59E0B", "#10B981", "#EF4444"];
 
-  const CustomTooltip = ({ active, payload }: any) => {
+  const CustomTooltip = ({ active, payload, coordinate }: any) => {
     if (active && payload && payload.length) {
+      // Position tooltip to the right side of the distribution box
+      const tooltipStyle = {
+        position: 'fixed' as const,
+        left: coordinate ? coordinate.x + 20 : 'auto',
+        top: coordinate ? coordinate.y - 10 : 'auto',
+        zIndex: 1000,
+        pointerEvents: 'none' as const,
+      };
+      
       return (
-        <div className="bg-white p-3 rounded-lg shadow-lg border">
+        <div 
+          className="bg-white p-2 rounded-lg shadow-lg border text-xs max-w-xs"
+          style={tooltipStyle}
+        >
           <p className="font-medium">{payload[0].name}</p>
-          <p className="text-sm text-gray-600">
+          <p className="text-gray-600">
             Count: <span className="font-semibold text-gray-900">{payload[0].value}</span>
           </p>
-          <p className="text-xs text-blue-600 mt-1">Click to view project</p>
+          <p className="text-blue-600 mt-1">Click to filter</p>
         </div>
       );
     }

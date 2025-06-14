@@ -71,7 +71,7 @@ function generateExecutiveReportHtml(data: ReportData): string {
     <html>
     <head>
       <meta charset="utf-8">
-      <title>RFP Executive Summary Report</title>
+      <title>RFP Detailed Report</title>
       <style>
         @page {
           size: A4 landscape;
@@ -227,7 +227,7 @@ function generateExecutiveReportHtml(data: ReportData): string {
     </head>
     <body>
       <div class="header">
-        <h1>RFP Executive Summary Report</h1>
+        <h1>RFP Detailed Report</h1>
         <p class="subtitle">Generated on ${format(new Date(generatedAt), 'MMMM dd, yyyy \'at\' h:mm a')}</p>
       </div>
       
@@ -314,7 +314,7 @@ function generateExecutiveReportHtml(data: ReportData): string {
   `;
 }
 
-export async function generateExecutiveReportPdf(data: ReportData): Promise<Buffer> {
+export async function generateDetailedReportPdf(data: ReportData): Promise<Buffer> {
   const browser = await puppeteer.launch({
     headless: true,
     executablePath: '/nix/store/zi4f80l169xlmivz8vja8wlphq74qqk0-chromium-125.0.6422.141/bin/chromium',

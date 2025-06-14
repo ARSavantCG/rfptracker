@@ -19,7 +19,7 @@ import {
 } from "@shared/schema";
 import { validateRfpForProgression, canAdvanceToPhase } from "./validation";
 import { generateRfpPdf, generatePdfFilename } from "./pdf-generator";
-import { generateExecutiveReportPdf, generateReportFilename } from "./pdf-reports";
+import { generateDetailedReportPdf, generateReportFilename } from "./pdf-reports";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -1194,7 +1194,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Reports PDF generation
-  app.post("/api/reports/executive-summary-pdf", async (req, res) => {
+  app.post("/api/reports/detailed-report-pdf", async (req, res) => {
     try {
       const { filters } = req.body;
       
@@ -1219,8 +1219,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         generatedAt: new Date().toISOString()
       };
 
-      const pdfBuffer = await generateExecutiveReportPdf(reportData);
-      const filename = generateReportFilename("executive-summary");
+      const pdfBuffer = await generateDetailedReportPdf(reportData);
+      const filename = generateReportFilename("detailed-report");
       
       // Write to temporary file to avoid Express JSON serialization
       const tempPath = path.join(process.cwd(), 'temp-' + Date.now() + '.pdf');

@@ -95,9 +95,9 @@ export default function Reports() {
     }
   };
 
-  const handleExport = async (type: "executive" | "detailed") => {
+  const handleExport = async (type: "detailed") => {
     try {
-      const response = await fetch('/api/reports/executive-summary-pdf', {
+      const response = await fetch('/api/reports/detailed-report-pdf', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -139,7 +139,7 @@ export default function Reports() {
           <BarChart3 className="h-8 w-8 text-blue-600" />
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Reports</h1>
-            <p className="text-gray-600">Executive summaries and detailed analytics</p>
+            <p className="text-gray-600">Detailed project reports and analytics</p>
           </div>
         </div>
       </div>
@@ -235,13 +235,12 @@ export default function Reports() {
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="executive" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="executive">Executive Summary</TabsTrigger>
+      <Tabs defaultValue="detailed" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-1">
           <TabsTrigger value="detailed">Detailed Report</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="executive" className="space-y-6">
+        <TabsContent value="detailed" className="space-y-6">
           {/* Key Metrics */}
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
             <Card>
@@ -315,11 +314,11 @@ export default function Reports() {
             </Card>
           </div>
 
-          {/* Executive Summary Table */}
+          {/* Detailed Report Table */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Executive Summary - Current RFP Status</CardTitle>
-              <Button onClick={() => handleExport("executive")} className="flex items-center space-x-2">
+              <CardTitle>Detailed Report - Current RFP Status</CardTitle>
+              <Button onClick={() => handleExport("detailed")} className="flex items-center space-x-2">
                 <Download className="h-4 w-4" />
                 <span>Export Report</span>
               </Button>
@@ -376,57 +375,7 @@ export default function Reports() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="detailed" className="space-y-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Detailed RFP Report</CardTitle>
-              <Button onClick={() => handleExport("detailed")} className="flex items-center space-x-2">
-                <Download className="h-4 w-4" />
-                <span>Export Detailed Report</span>
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left py-3 px-2 font-medium">RFP Number</th>
-                      <th className="text-left py-3 px-2 font-medium">Project</th>
-                      <th className="text-left py-3 px-2 font-medium">Tenant</th>
-                      <th className="text-left py-3 px-2 font-medium">Property</th>
-                      <th className="text-left py-3 px-2 font-medium">Sent By</th>
-                      <th className="text-left py-3 px-2 font-medium">Received</th>
-                      <th className="text-left py-3 px-2 font-medium">Due Date</th>
-                      <th className="text-left py-3 px-2 font-medium">Status</th>
-                      <th className="text-left py-3 px-2 font-medium">Phase</th>
-                      <th className="text-left py-3 px-2 font-medium">Budget</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredRfps.map((rfp: RfpRequest) => (
-                      <tr key={rfp.id} className="border-b hover:bg-gray-50">
-                        <td className="py-3 px-2 font-medium">{rfp.rfpNumber}</td>
-                        <td className="py-3 px-2">{rfp.projectName}</td>
-                        <td className="py-3 px-2">{rfp.tenantName}</td>
-                        <td className="py-3 px-2">{rfp.property}</td>
-                        <td className="py-3 px-2">{rfp.sentBy}</td>
-                        <td className="py-3 px-2">{format(parseISO(rfp.receivedOn.toString()), 'MMM dd, yyyy')}</td>
-                        <td className="py-3 px-2">{format(parseISO(rfp.dueOn.toString()), 'MMM dd, yyyy')}</td>
-                        <td className="py-3 px-2">
-                          <Badge className={getStatusBadgeColor(rfp.status)}>
-                            {rfp.status.replace('-', ' ')}
-                          </Badge>
-                        </td>
-                        <td className="py-3 px-2">{rfp.workflowPhase}</td>
-                        <td className="py-3 px-2">TBD</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+
       </Tabs>
       </div>
     </div>

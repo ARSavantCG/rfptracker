@@ -231,7 +231,9 @@ export function StatsCards({ onStatusFilter }: StatsCardsProps) {
                     className="w-1.5 h-1.5 rounded-full flex-shrink-0" 
                     style={{ backgroundColor: item.color }}
                   ></div>
-                  <span className="text-xs text-gray-600 truncate flex-1">{item.name.split(' ')[0]}</span>
+                  <span className="text-xs text-gray-600 truncate flex-1">
+                    {item.name === 'In Progress' ? 'In Progress' : item.name.split(' ')[0]}
+                  </span>
                   <span className="text-xs font-medium text-gray-900">{item.value}</span>
                 </div>
               ))}

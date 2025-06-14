@@ -273,7 +273,7 @@ export function StatsCards({ onStatusFilter }: StatsCardsProps) {
                     tickLine={false}
                     width={12}
                     allowDecimals={false}
-                    domain={[0, 'dataMax']}
+                    domain={[0, (dataMax: number) => Math.max(2, dataMax + 1)]}
                   />
                   <Tooltip content={<CustomTooltip />} />
                   <Bar 

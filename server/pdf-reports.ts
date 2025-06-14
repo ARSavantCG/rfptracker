@@ -18,10 +18,12 @@ function getStatusBadgeColor(status: string) {
   }
 }
 
-function getPriorityLabel(dueDate: string, status: string) {
+function getPriorityLabel(dueDate: string | Date, status: string) {
   if (status === "completed") return "Completed";
   
-  const due = parseISO(dueDate);
+  const due = dueDate instanceof Date ? dueDate : new Date(dueDate);
+  if (isNaN(due.getTime())) return "Unknown";
+  
   const now = new Date();
   const threeDaysFromNow = addDays(now, 3);
   const sevenDaysFromNow = addDays(now, 7);
@@ -272,9 +274,10 @@ function generateExecutiveReportHtml(data: ReportData): string {
         </thead>
         <tbody>
           ${rfps.map(rfp => {
-            const dueDate = parseISO(rfp.dueOn.toString());
-            const daysUntilDue = Math.ceil((dueDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-            const priority = getPriorityLabel(rfp.dueOn.toString(), rfp.status);
+            const dueDate = new Date(rfp.dueOn);
+            const isValidDate = !isNaN(dueDate.getTime());
+            const daysUntilDue = isValidDate ? Math.ceil((dueDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : 0;
+            const priority = getPriorityLabel(rfp.dueOn, rfp.status);
             const statusColor = getStatusBadgeColor(rfp.status);
             const priorityColor = getPriorityColor(priority);
             
@@ -282,7 +285,7 @@ function generateExecutiveReportHtml(data: ReportData): string {
               <tr>
                 <td><span class="rfp-number">${rfp.rfpNumber}</span></td>
                 <td class="project-name">${rfp.projectName}</td>
-                <td>${format(dueDate, 'MMM dd, yyyy')}</td>
+                <td>${isValidDate ? format(dueDate, 'MMM dd, yyyy') : 'Invalid Date'}</td>
                 <td>
                   <span class="status-badge" style="background-color: ${statusColor};">
                     ${rfp.status.replace('-', ' ')}

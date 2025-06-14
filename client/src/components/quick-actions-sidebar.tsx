@@ -57,7 +57,13 @@ export function QuickActionsSidebar({
     queryKey: ["/api/properties"],
   });
 
-  const { data: stats } = useQuery({
+  const { data: stats } = useQuery<{
+    total: number;
+    received: number;
+    inProgress: number;
+    completed: number;
+    onHold: number;
+  }>({
     queryKey: ["/api/rfp-requests/stats"],
   });
 
@@ -66,10 +72,10 @@ export function QuickActionsSidebar({
 
   // Quick stats for overview
   const quickStats = [
-    { label: "Total", value: stats?.total || 0, color: "bg-blue-500", icon: FileText },
-    { label: "In Progress", value: stats?.inProgress || 0, color: "bg-orange-500", icon: Clock },
-    { label: "Completed", value: stats?.completed || 0, color: "bg-green-500", icon: CheckCircle },
-    { label: "On Hold", value: stats?.onHold || 0, color: "bg-red-500", icon: PauseCircle },
+    { label: "Total", value: stats?.total ?? 0, color: "bg-blue-500", icon: FileText },
+    { label: "In Progress", value: stats?.inProgress ?? 0, color: "bg-orange-500", icon: Clock },
+    { label: "Completed", value: stats?.completed ?? 0, color: "bg-green-500", icon: CheckCircle },
+    { label: "On Hold", value: stats?.onHold ?? 0, color: "bg-red-500", icon: PauseCircle },
   ];
 
   const handleSearch = (e: React.FormEvent) => {
@@ -238,10 +244,10 @@ export function QuickActionsSidebar({
             <h3 className="text-sm font-medium text-gray-700 mb-3">Filter by Status</h3>
             <div className="space-y-1">
               {[
-                { status: "received", label: "Received", count: stats?.received || 0 },
-                { status: "in-progress", label: "In Progress", count: stats?.inProgress || 0 },
-                { status: "completed", label: "Completed", count: stats?.completed || 0 },
-                { status: "on-hold", label: "On Hold", count: stats?.onHold || 0 },
+                { status: "received", label: "Received", count: stats?.received ?? 0 },
+                { status: "in-progress", label: "In Progress", count: stats?.inProgress ?? 0 },
+                { status: "completed", label: "Completed", count: stats?.completed ?? 0 },
+                { status: "on-hold", label: "On Hold", count: stats?.onHold ?? 0 },
               ].map((item) => (
                 <Button
                   key={item.status}

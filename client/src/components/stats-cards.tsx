@@ -253,7 +253,7 @@ export function StatsCards({ onStatusFilter }: StatsCardsProps) {
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={barData}
-                  margin={{ top: 2, right: 2, left: 2, bottom: 30 }}
+                  margin={{ top: 2, right: 2, left: 2, bottom: 35 }}
                   onClick={handleBarClick}
                 >
                   <CartesianGrid strokeDasharray="1 1" stroke="#f3f4f6" />

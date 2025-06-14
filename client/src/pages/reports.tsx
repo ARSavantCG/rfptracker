@@ -331,11 +331,8 @@ export default function Reports() {
                     <tr className="border-b">
                       <th className="text-left py-3 px-2 font-medium">RFP Number</th>
                       <th className="text-left py-3 px-2 font-medium">Project Name</th>
-                      <th className="text-left py-3 px-2 font-medium">Tenant</th>
-                      <th className="text-left py-3 px-2 font-medium">Property</th>
                       <th className="text-left py-3 px-2 font-medium">Due Date</th>
                       <th className="text-left py-3 px-2 font-medium">Status</th>
-                      <th className="text-left py-3 px-2 font-medium">Priority</th>
                       <th className="text-left py-3 px-2 font-medium">Days Until Due</th>
                     </tr>
                   </thead>
@@ -347,24 +344,13 @@ export default function Reports() {
                       
                       return (
                         <tr key={rfp.id} className="border-b hover:bg-gray-50">
-                          <td className="py-3 px-2 font-medium">{rfp.rfpNumber}</td>
-                          <td className="py-3 px-2">{rfp.projectName}</td>
-                          <td className="py-3 px-2">{rfp.tenantName}</td>
-                          <td className="py-3 px-2">{rfp.property}</td>
+                          <td className="py-3 px-2 font-medium whitespace-nowrap">{rfp.rfpNumber}</td>
+                          <td className="py-3 px-2 whitespace-nowrap">{rfp.projectName}</td>
                           <td className="py-3 px-2">{format(dueDate, 'MMM dd, yyyy')}</td>
                           <td className="py-3 px-2">
                             <Badge className={getStatusBadgeColor(rfp.status)}>
                               {rfp.status.replace('-', ' ')}
                             </Badge>
-                          </td>
-                          <td className="py-3 px-2">
-                            {rfp.status === "completed" ? (
-                              <span className="text-gray-400">—</span>
-                            ) : (
-                              <Badge className={getPriorityColor(priority)}>
-                                {priority}
-                              </Badge>
-                            )}
                           </td>
                           <td className="py-3 px-2">
                             {rfp.status === "completed" ? (

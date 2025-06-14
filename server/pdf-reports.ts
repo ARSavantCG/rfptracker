@@ -263,15 +263,11 @@ function generateExecutiveReportHtml(data: ReportData): string {
       <table>
         <thead>
           <tr>
-            <th style="width: 10%;">RFP Number</th>
-            <th style="width: 18%;">Project Name</th>
-            <th style="width: 12%;">Tenant</th>
-            <th style="width: 12%;">Property</th>
-            <th style="width: 10%;">Due Date</th>
-            <th style="width: 8%;">Status</th>
-            <th style="width: 8%;">Priority</th>
-            <th style="width: 10%;">Days Until Due</th>
-            <th style="width: 12%;">Workflow Phase</th>
+            <th style="width: 15%;">RFP Number</th>
+            <th style="width: 35%;">Project Name</th>
+            <th style="width: 15%;">Due Date</th>
+            <th style="width: 15%;">Status</th>
+            <th style="width: 20%;">Days Until Due</th>
           </tr>
         </thead>
         <tbody>
@@ -285,20 +281,12 @@ function generateExecutiveReportHtml(data: ReportData): string {
             return `
               <tr>
                 <td><span class="rfp-number">${rfp.rfpNumber}</span></td>
-                <td class="project-name" title="${rfp.projectName}">${rfp.projectName}</td>
-                <td>${rfp.tenantName}</td>
-                <td>${rfp.property}</td>
+                <td class="project-name">${rfp.projectName}</td>
                 <td>${format(dueDate, 'MMM dd, yyyy')}</td>
                 <td>
                   <span class="status-badge" style="background-color: ${statusColor};">
                     ${rfp.status.replace('-', ' ')}
                   </span>
-                </td>
-                <td>
-                  ${rfp.status === 'completed' ? 
-                    '<span style="color: #6b7280;">—</span>' : 
-                    `<span class="priority-badge" style="background-color: ${priorityColor};">${priority}</span>`
-                  }
                 </td>
                 <td class="days-column">
                   ${rfp.status === 'completed' ? 
@@ -306,7 +294,6 @@ function generateExecutiveReportHtml(data: ReportData): string {
                     `<span class="${daysUntilDue < 0 ? 'overdue-text' : daysUntilDue <= 3 ? 'critical-text' : ''}">${daysUntilDue < 0 ? `${Math.abs(daysUntilDue)} days overdue` : `${daysUntilDue} days`}</span>`
                   }
                 </td>
-                <td>${rfp.workflowPhase}</td>
               </tr>
             `;
           }).join('')}
@@ -324,7 +311,17 @@ function generateExecutiveReportHtml(data: ReportData): string {
 export async function generateExecutiveReportPdf(data: ReportData): Promise<Buffer> {
   const browser = await puppeteer.launch({
     headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
+    executablePath: '/nix/store/*/bin/chromium',
+    args: [
+      '--no-sandbox', 
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-accelerated-2d-canvas',
+      '--no-first-run',
+      '--no-zygote',
+      '--single-process',
+      '--disable-gpu'
+    ]
   });
 
   try {

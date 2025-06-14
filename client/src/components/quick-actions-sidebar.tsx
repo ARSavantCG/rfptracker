@@ -143,11 +143,11 @@ export function QuickActionsSidebar({
   }
 
   return (
-    <div className={`w-80 bg-white border-r border-gray-200 flex flex-col ${className}`}>
+    <div className={`w-56 bg-white border-r border-gray-200 flex flex-col ${className}`}>
       {/* Header */}
-      <div className="p-4 border-b border-gray-200">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Quick Actions</h2>
+      <div className="p-3 border-b border-gray-200">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-base font-semibold text-gray-900">Quick Actions</h2>
           <Button
             variant="ghost"
             size="sm"
@@ -202,38 +202,6 @@ export function QuickActionsSidebar({
                 <Building2 className="h-4 w-4 mr-2" />
                 New Property
               </Button>
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* Quick Stats */}
-          <div>
-            <h3 className="text-sm font-medium text-gray-700 mb-3">Overview</h3>
-            <div className="grid grid-cols-2 gap-3">
-              {quickStats.map((stat) => {
-                const Icon = stat.icon;
-                return (
-                  <div 
-                    key={stat.label}
-                    className="bg-gray-50 rounded-lg p-3 cursor-pointer hover:bg-gray-100 transition-colors"
-                    onClick={() => {
-                      if (stat.label === "In Progress") handleStatusFilter("in-progress");
-                      else if (stat.label === "Completed") handleStatusFilter("completed");
-                      else if (stat.label === "On Hold") handleStatusFilter("on-hold");
-                    }}
-                  >
-                    <div className="flex items-center space-x-2">
-                      <div className={`w-2 h-2 rounded-full ${stat.color}`} />
-                      <Icon className="h-4 w-4 text-gray-600" />
-                    </div>
-                    <div className="mt-1">
-                      <div className="text-lg font-semibold text-gray-900">{stat.value}</div>
-                      <div className="text-xs text-gray-600">{stat.label}</div>
-                    </div>
-                  </div>
-                );
-              })}
             </div>
           </div>
 

@@ -77,6 +77,27 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onValidateRfp, onOp
     },
   });
 
+  const completeProjectMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest(`/api/rfp-requests/${rfp.id}`, "PATCH", { status: "completed" });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
+      toast({
+        title: "Project Completed",
+        description: "RFP has been marked as completed successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to mark project as completed",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Map RFP status to workflow phase to ensure sync
   const getWorkflowPhaseFromStatus = (status: string, workflowPhase: string) => {
     if (status === "received") return "rfp-entry";
@@ -199,7 +220,20 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onValidateRfp, onOp
           </div>
         )}
 
-        {nextPhase && actualWorkflowPhase !== "invitation-to-bid" && (
+        {/* Show Mark as Complete button when in publish phase */}
+        {actualWorkflowPhase === "publish" && rfp.status !== "completed" && (
+          <Button
+            onClick={() => completeProjectMutation.mutate()}
+            disabled={completeProjectMutation.isPending}
+            className="w-full bg-green-600 hover:bg-green-700 text-white"
+          >
+            {completeProjectMutation.isPending
+              ? "Marking Complete..."
+              : "Mark as Complete"}
+          </Button>
+        )}
+
+        {nextPhase && actualWorkflowPhase !== "invitation-to-bid" && actualWorkflowPhase !== "publish" && (
           <Button
             onClick={handleAdvancePhase}
             disabled={advancePhaseMutation.isPending || !rfp.isValidated}

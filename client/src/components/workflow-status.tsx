@@ -188,7 +188,7 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onValidateRfp, onOp
           <Button
             onClick={() => onValidateRfp?.(rfp)}
             variant="outline"
-            className="w-full"
+            className="w-auto px-3 py-1 text-sm"
             disabled={!!rfp.isValidated && rfp.status === "in-progress"}
           >
             <ClipboardCheck className="h-4 w-4 mr-2" />
@@ -200,10 +200,10 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onValidateRfp, onOp
         
         {/* Show Create Invitation to Bid button when in invitation-to-bid phase */}
         {actualWorkflowPhase === "invitation-to-bid" && (
-          <div className="space-y-2">
+          <div className="space-y-2 flex flex-col items-start">
             <Button
               onClick={() => onAdvanceToInvitation(rfp)}
-              className="w-full"
+              className="w-auto px-3 py-1 text-sm"
             >
               Generate Invitation to Bid PDF
             </Button>
@@ -211,7 +211,7 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onValidateRfp, onOp
               onClick={handleAdvancePhase}
               disabled={advancePhaseMutation.isPending}
               variant="outline"
-              className="w-full"
+              className="w-auto px-3 py-1 text-sm"
             >
               {advancePhaseMutation.isPending
                 ? "Advancing..."
@@ -225,7 +225,7 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onValidateRfp, onOp
           <Button
             onClick={() => completeProjectMutation.mutate()}
             disabled={completeProjectMutation.isPending}
-            className="w-full bg-green-600 hover:bg-green-700 text-white"
+            className="w-auto px-3 py-1 text-sm bg-green-600 hover:bg-green-700 text-white"
           >
             {completeProjectMutation.isPending
               ? "Marking Complete..."
@@ -237,7 +237,7 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onValidateRfp, onOp
           <Button
             onClick={handleAdvancePhase}
             disabled={advancePhaseMutation.isPending || !rfp.isValidated}
-            className="w-full"
+            className="w-auto px-3 py-1 text-sm"
             variant={!rfp.isValidated ? "outline" : "default"}
           >
             {advancePhaseMutation.isPending

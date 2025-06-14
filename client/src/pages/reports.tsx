@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Download, FileText, Calendar, TrendingUp, Clock, CheckCircle, AlertTriangle } from "lucide-react";
+import { Download, FileText, Calendar, TrendingUp, Clock, CheckCircle, AlertTriangle, BarChart3 } from "lucide-react";
 import { format, parseISO, isAfter, isBefore, addDays } from "date-fns";
 import type { RfpRequest } from "@shared/schema";
 
@@ -128,24 +128,33 @@ export default function Reports() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Reports</h1>
-          <p className="text-gray-600 mt-1">Executive summaries and detailed analytics</p>
-        </div>
-        <div className="flex items-center space-x-4">
-          <Select value={exportFormat} onValueChange={(value: "pdf" | "excel") => setExportFormat(value)}>
-            <SelectTrigger className="w-32">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="pdf">PDF</SelectItem>
-              <SelectItem value="excel">Excel</SelectItem>
-            </SelectContent>
-          </Select>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200 px-6 py-4">
+        <div className="flex items-center space-x-3">
+          <BarChart3 className="h-8 w-8 text-blue-600" />
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Reports</h1>
+            <p className="text-gray-600">Executive summaries and detailed analytics</p>
+          </div>
         </div>
       </div>
+
+      <div className="container mx-auto p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div></div>
+          <div className="flex items-center space-x-4">
+            <Select value={exportFormat} onValueChange={(value: "pdf" | "excel") => setExportFormat(value)}>
+              <SelectTrigger className="w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pdf">PDF</SelectItem>
+                <SelectItem value="excel">Excel</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
 
       {/* Filters */}
       <Card>
@@ -193,8 +202,8 @@ export default function Reports() {
 
             <div>
               <Label htmlFor="due-filter">Due Within</Label>
-              <Select value={filters.dueInDays?.toString() || ""} onValueChange={(value) => 
-                setFilters({...filters, dueInDays: value ? parseInt(value) : undefined})
+              <Select value={filters.dueInDays?.toString() || "all"} onValueChange={(value) => 
+                setFilters({...filters, dueInDays: value === "all" ? undefined : parseInt(value)})
               }>
                 <SelectTrigger>
                   <SelectValue placeholder="All dates" />
@@ -421,6 +430,7 @@ export default function Reports() {
           </Card>
         </TabsContent>
       </Tabs>
+      </div>
     </div>
   );
 }

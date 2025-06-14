@@ -576,7 +576,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                   name="projectScope"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Project Scope</FormLabel>
+                      <FormLabel>Project Name</FormLabel>
                       <FormControl>
                         <Input {...field} />
                       </FormControl>

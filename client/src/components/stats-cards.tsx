@@ -162,50 +162,52 @@ export function StatsCards({ onStatusFilter }: StatsCardsProps) {
   };
 
   return (
-    <div className="space-y-4 mb-6">
-      {/* Compact Stats Row */}
-      <div className="grid grid-cols-3 gap-3">
-        {cards.map((card, index) => (
-          <div 
-            key={index} 
-            className="bg-white p-3 rounded-lg shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition-shadow"
-            onClick={() => handleCardClick(card.title)}
-          >
-            <div className="flex items-center space-x-2">
-              <div className={`w-6 h-6 ${card.bgColor} rounded flex items-center justify-center flex-shrink-0`}>
-                <i className={`${card.icon} ${card.iconColor} text-xs`}></i>
+    <div className="mb-6">
+      {/* Single Row Layout: Combined Stats + Status Distribution + Status Overview */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {/* Left Box: Combined Stats */}
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Project Status</h3>
+          <div className="space-y-3">
+            {cards.map((card, index) => (
+              <div 
+                key={index} 
+                className="flex items-center justify-between cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors"
+                onClick={() => handleCardClick(card.title)}
+              >
+                <div className="flex items-center space-x-3">
+                  <div className={`w-8 h-8 ${card.bgColor} rounded-lg flex items-center justify-center flex-shrink-0`}>
+                    <i className={`${card.icon} ${card.iconColor} text-sm`}></i>
+                  </div>
+                  <span className="text-sm font-medium text-gray-700">{card.title}</span>
+                </div>
+                <span className="text-xl font-bold text-gray-900">{card.value}</span>
               </div>
-              <div className="min-w-0">
-                <p className="text-xs text-gray-600 truncate">{card.title}</p>
-                <p className="text-lg font-bold text-gray-900">{card.value}</p>
-              </div>
-            </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </div>
 
-      {/* Compact Charts Section */}
-      {stats.total > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* Compact Pie Chart */}
-          <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-gray-900">Status Distribution</h3>
+        {/* Middle Box: Status Distribution Chart */}
+        {stats.total > 0 && (
+          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Status Distribution</h3>
               <div className="flex items-center space-x-1">
                 <span className="text-xs text-gray-500">Click to view project</span>
                 <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
               </div>
             </div>
             
-            <div className="h-40">
+            <div className="h-48">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={pieData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={20}
-                    outerRadius={55}
+                    innerRadius={30}
+                    outerRadius={80}
                     fill="#8884d8"
                     dataKey="value"
                     onClick={handlePieClick}
@@ -220,29 +222,31 @@ export function StatsCards({ onStatusFilter }: StatsCardsProps) {
               </ResponsiveContainer>
             </div>
 
-            {/* Interactive Compact Legend */}
-            <div className="grid grid-cols-2 gap-1 mt-2">
+            {/* Interactive Legend */}
+            <div className="grid grid-cols-2 gap-2 mt-4">
               {pieData.map((item, index) => (
                 <div 
                   key={index} 
-                  className="flex items-center space-x-1 cursor-pointer hover:bg-gray-50 rounded px-1 py-0.5 transition-colors"
+                  className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 rounded p-1 transition-colors"
                   onClick={() => handlePieClick(item)}
                 >
                   <div 
-                    className="w-2 h-2 rounded-full flex-shrink-0" 
+                    className="w-3 h-3 rounded-full flex-shrink-0" 
                     style={{ backgroundColor: item.color }}
                   ></div>
                   <span className="text-xs text-gray-600 truncate">{item.name}</span>
-                  <span className="text-xs font-medium text-gray-900">{item.value}</span>
+                  <span className="text-xs font-medium text-gray-900 ml-auto">{item.value}</span>
                 </div>
               ))}
             </div>
           </div>
+        )}
 
-          {/* Compact Bar Chart */}
-          <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-gray-900">Status Overview</h3>
+        {/* Right Box: Status Overview Chart */}
+        {stats.total > 0 && (
+          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Status Overview</h3>
               <div className="flex items-center space-x-1">
                 <span className="text-xs text-gray-500">Click to view project</span>
                 <span className="text-xs px-2 py-1 bg-blue-50 text-blue-600 rounded font-medium">
@@ -251,30 +255,30 @@ export function StatsCards({ onStatusFilter }: StatsCardsProps) {
               </div>
             </div>
             
-            <div className="h-40">
+            <div className="h-48">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={barData}
-                  margin={{ top: 10, right: 10, left: 10, bottom: 5 }}
+                  margin={{ top: 20, right: 20, left: 20, bottom: 5 }}
                   onClick={handleBarClick}
                 >
-                  <CartesianGrid strokeDasharray="2 2" stroke="#f3f4f6" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
                   <XAxis 
                     dataKey="name" 
-                    tick={{ fontSize: 10 }}
+                    tick={{ fontSize: 11 }}
                     axisLine={false}
                     tickLine={false}
                   />
                   <YAxis 
-                    tick={{ fontSize: 10 }}
+                    tick={{ fontSize: 11 }}
                     axisLine={false}
                     tickLine={false}
-                    width={20}
+                    width={25}
                   />
                   <Tooltip content={<CustomTooltip />} />
                   <Bar 
                     dataKey="count" 
-                    radius={[2, 2, 0, 0]}
+                    radius={[4, 4, 0, 0]}
                     stroke="none"
                     className="cursor-pointer"
                     onClick={handleBarClick}
@@ -283,8 +287,8 @@ export function StatsCards({ onStatusFilter }: StatsCardsProps) {
               </ResponsiveContainer>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

@@ -95,28 +95,32 @@ export default function Reports() {
     }
   };
 
-  const handleExport = (type: "executive" | "detailed") => {
-    const exportData = {
-      type,
-      format: exportFormat,
-      filters,
-      data: filteredRfps,
-      metrics,
-      generatedAt: new Date().toISOString()
-    };
+  const handleExport = async (type: "executive" | "detailed") => {
+    try {
+      const response = await fetch('/api/reports/executive-summary-pdf', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ filters }),
+      });
 
-    // Create and download JSON file (can be extended to PDF/Excel)
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { 
-      type: 'application/json' 
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `rfp-${type}-report-${format(new Date(), 'yyyy-MM-dd')}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+      if (!response.ok) {
+        throw new Error('Failed to generate PDF');
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `rfp-${type}-report-${format(new Date(), 'yyyy-MM-dd')}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+    }
   };
 
   if (isLoading) {

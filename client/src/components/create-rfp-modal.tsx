@@ -53,7 +53,9 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
       projectName: "",
       rfpRequest: "",
       receivedOn: "",
-      dueOn: "",
+      internalDueDate: "",
+      contractorDueDate: "",
+      architectDueDate: "",
       developmentContact: "",
       projectArea: "",
       confidential: false,
@@ -279,10 +281,10 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
 
                 <FormField
                   control={form.control}
-                  name="dueOn"
+                  name="internalDueDate"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Due On *</FormLabel>
+                      <FormLabel>Internal Due Date *</FormLabel>
                       <FormControl>
                         <Input 
                           type="date"
@@ -291,6 +293,48 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                       </FormControl>
                       <p className="text-sm text-muted-foreground">
                         Internal deadline to provide RFP response
+                      </p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="contractorDueDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Contractor Due Date</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="date"
+                          {...field}
+                        />
+                      </FormControl>
+                      <p className="text-sm text-muted-foreground">
+                        Due date for contractor submissions
+                      </p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="architectDueDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Architect Due Date</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="date"
+                          {...field}
+                        />
+                      </FormControl>
+                      <p className="text-sm text-muted-foreground">
+                        Due date for architect submissions
                       </p>
                       <FormMessage />
                     </FormItem>

@@ -36,7 +36,7 @@ export default function Reports() {
     if (filters.status && rfp.status !== filters.status) return false;
     if (filters.property && rfp.property !== filters.property) return false;
     if (filters.dueInDays) {
-      const dueDate = parseISO(rfp.dueOn.toString());
+      const dueDate = parseISO(rfp.internalDueDate.toString());
       const targetDate = addDays(new Date(), filters.dueInDays);
       if (isAfter(dueDate, targetDate)) return false;
     }
@@ -51,12 +51,12 @@ export default function Reports() {
     completed: filteredRfps.filter((rfp: RfpRequest) => rfp.status === "completed").length,
     onHold: filteredRfps.filter((rfp: RfpRequest) => rfp.status === "on-hold").length,
     dueSoon: filteredRfps.filter((rfp: RfpRequest) => {
-      const dueDate = parseISO(rfp.dueOn.toString());
+      const dueDate = parseISO(rfp.internalDueDate.toString());
       const sevenDaysFromNow = addDays(new Date(), 7);
       return isBefore(dueDate, sevenDaysFromNow) && rfp.status !== "completed";
     }).length,
     overdue: filteredRfps.filter((rfp: RfpRequest) => {
-      const dueDate = parseISO(rfp.dueOn.toString());
+      const dueDate = parseISO(rfp.internalDueDate.toString());
       return isBefore(dueDate, new Date()) && rfp.status !== "completed";
     }).length
   };
@@ -274,9 +274,9 @@ export default function Reports() {
                   </thead>
                   <tbody>
                     {filteredRfps.map((rfp: RfpRequest) => {
-                      const dueDate = parseISO(rfp.dueOn.toString());
+                      const dueDate = parseISO(rfp.internalDueDate.toString());
                       const daysUntilDue = Math.ceil((dueDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-                      const priority = getPriorityLabel(rfp.dueOn.toString(), rfp.status);
+                      const priority = getPriorityLabel(rfp.internalDueDate.toString(), rfp.status);
                       
                       return (
                         <tr key={rfp.id} className="border-b hover:bg-gray-50">

@@ -159,7 +159,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const requestData = {
         ...parsed,
         files: [],
-        dueDate: parsed.dueOn, // Map dueOn to dueDate for validation
+        dueDate: parsed.internalDueDate, // Map internalDueDate to dueDate for validation
       };
 
       const newRequest = await storage.createRfpRequest(requestData);
@@ -227,7 +227,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const requestWithFiles = {
         ...parsed,
         files: uploadedFiles,
-        dueDate: parsed.dueOn, // Map dueOn to dueDate for validation
+        dueDate: parsed.internalDueDate, // Map internalDueDate to dueDate for validation
       };
 
       const newRequest = await storage.createRfpRequest(requestWithFiles);
@@ -1210,7 +1210,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (filters?.dueInDays) {
         const targetDate = new Date();
         targetDate.setDate(targetDate.getDate() + filters.dueInDays);
-        rfps = rfps.filter(rfp => new Date(rfp.dueOn) <= targetDate);
+        rfps = rfps.filter(rfp => new Date(rfp.internalDueDate) <= targetDate);
       }
 
       const reportData = {

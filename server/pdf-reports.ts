@@ -230,10 +230,10 @@ function generateExecutiveReportHtml(data: ReportData): string {
         </thead>
         <tbody>
           ${rfps.map(rfp => {
-            const dueDate = new Date(rfp.dueOn);
+            const dueDate = new Date(rfp.internalDueDate);
             const isValidDate = !isNaN(dueDate.getTime());
             const daysUntilDue = isValidDate ? Math.ceil((dueDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : 0;
-            const priority = getPriorityLabel(rfp.dueOn, rfp.status);
+            const priority = getPriorityLabel(rfp.internalDueDate, rfp.status);
             const statusColor = getStatusBadgeColor(rfp.status);
             const priorityColor = getPriorityColor(priority);
             

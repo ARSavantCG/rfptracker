@@ -294,7 +294,10 @@ function generateExecutiveReportHtml(data: ReportData): string {
                 <td class="days-column">
                   ${rfp.status === 'completed' ? 
                     '<span style="color: #6b7280;">—</span>' : 
-                    `<span class="${daysUntilDue < 0 ? 'overdue-text' : daysUntilDue <= 3 ? 'critical-text' : ''}">${daysUntilDue < 0 ? `${Math.abs(daysUntilDue)} days overdue` : `${daysUntilDue} days`}</span>`
+                    (isValidDate ? 
+                      `<span class="${daysUntilDue < 0 ? 'overdue-text' : daysUntilDue <= 3 ? 'critical-text' : ''}">${daysUntilDue < 0 ? `${Math.abs(daysUntilDue)} days overdue` : `${daysUntilDue} days`}</span>` :
+                      '<span style="color: #6b7280;">—</span>'
+                    )
                   }
                 </td>
               </tr>

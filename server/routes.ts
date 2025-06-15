@@ -20,6 +20,7 @@ import {
 import { validateRfpForProgression, canAdvanceToPhase } from "./validation";
 import { generateRfpPdf, generatePdfFilename } from "./pdf-generator";
 import { generateDetailedReportPdf, generateReportFilename } from "./pdf-reports";
+import { generateHistoricalPricingPdf, generateHistoricalPricingFilename } from "./historical-pricing-reports";
 import multer from "multer";
 import path from "path";
 import fs from "fs";

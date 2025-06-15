@@ -45,7 +45,7 @@ function getPriorityColor(priority: string) {
   }
 }
 
-function generateExecutiveReportHtml(data: ReportData): string {
+export function generateExecutiveReportHtml(data: ReportData): string {
   const { rfps, generatedAt } = data;
   
 
@@ -60,6 +60,17 @@ function generateExecutiveReportHtml(data: ReportData): string {
         @page {
           size: A4 landscape;
           margin: 0.5in;
+        }
+        
+        @media print {
+          .no-print {
+            display: none !important;
+          }
+          
+          body {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
         }
         
         body {
@@ -211,9 +222,14 @@ function generateExecutiveReportHtml(data: ReportData): string {
       </style>
     </head>
     <body>
+      <div class="no-print" style="background: #3b82f6; color: white; padding: 15px; text-align: center; margin-bottom: 20px; border-radius: 8px;">
+        <strong>📄 Save as PDF:</strong> Press Ctrl+P (Windows/Linux) or Cmd+P (Mac), then select "Save as PDF" as your destination.
+        <br><small>This banner will not appear in the printed version.</small>
+      </div>
+      
       <div class="header">
-        <h1>RFP Detailed Report</h1>
-        <p class="subtitle">Generated on ${format(new Date(generatedAt), 'MMMM dd, yyyy \'at\' h:mm a')}</p>
+        <h1>Executive Summary Report</h1>
+        <p class="subtitle">RFP Status Overview - Generated on ${format(new Date(generatedAt), 'MMMM dd, yyyy \'at\' h:mm a')}</p>
       </div>
       
 

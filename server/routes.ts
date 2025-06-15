@@ -1194,6 +1194,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Executive Summary Report route
+  app.post("/api/reports/detailed", async (req, res) => {
+    try {
+      const { filters, rfps } = req.body;
+      
+      const reportData = {
+        rfps: rfps || [],
+        filters,
+        generatedAt: new Date().toISOString()
+      };
+
+      // Try puppeteer first, fall back to HTML if it fails
+      try {
+        const pdfBuffer = await generateDetailedReportPdf(reportData);
+        const filename = generateReportFilename("executive-summary");
+        
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        res.send(pdfBuffer);
+      } catch (puppeteerError: any) {
+        console.log("Puppeteer failed for detailed report, falling back to HTML:", puppeteerError?.message || 'Unknown error');
+        
+        // Generate HTML version of the report
+        const { generateExecutiveReportHtml } = await import("./pdf-reports");
+        const html = generateExecutiveReportHtml(reportData);
+        
+        res.setHeader('Content-Type', 'text/html');
+        res.setHeader('Content-Disposition', `inline; filename="executive-summary-report.html"`);
+        res.send(html);
+      }
+    } catch (error) {
+      console.error("Error generating executive summary report:", error);
+      res.status(500).json({ message: "Failed to generate executive summary report" });
+    }
+  });
+
   // Reports PDF generation
   app.post("/api/reports/detailed-report-pdf", async (req, res) => {
     try {

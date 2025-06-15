@@ -479,33 +479,46 @@ function generateHistoricalPricingHtml(data: HistoricalPricingData): string {
 }
 
 export async function generateHistoricalPricingPdf(): Promise<Buffer> {
-  const data = await getHistoricalPricingData();
-  const html = generateHistoricalPricingHtml(data);
-
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
-  });
-
   try {
-    const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'networkidle0' });
+    console.log("Starting historical pricing PDF generation...");
+    const data = await getHistoricalPricingData();
+    console.log("Historical pricing data retrieved:", { 
+      totalProjects: data.totalProjects, 
+      totalBids: data.totalBids 
+    });
     
-    const pdf = await page.pdf({
-      format: 'A4',
-      landscape: true,
-      margin: {
-        top: '0.5in',
-        right: '0.5in',
-        bottom: '0.5in',
-        left: '0.5in'
-      },
-      printBackground: true
+    const html = generateHistoricalPricingHtml(data);
+    console.log("HTML generated, length:", html.length);
+
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
     });
 
-    return Buffer.from(pdf);
-  } finally {
-    await browser.close();
+    try {
+      const page = await browser.newPage();
+      await page.setContent(html, { waitUntil: 'networkidle0' });
+      
+      const pdf = await page.pdf({
+        format: 'A4',
+        landscape: true,
+        margin: {
+          top: '0.5in',
+          right: '0.5in',
+          bottom: '0.5in',
+          left: '0.5in'
+        },
+        printBackground: true
+      });
+
+      console.log("PDF generated successfully, size:", pdf.length);
+      return Buffer.from(pdf);
+    } finally {
+      await browser.close();
+    }
+  } catch (error) {
+    console.error("Error in generateHistoricalPricingPdf:", error);
+    throw error;
   }
 }
 

@@ -1227,10 +1227,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             table { width: 100%; border-collapse: collapse; margin-top: 20px; }
             th, td { border: 1px solid #e5e7eb; padding: 8px; text-align: left; }
             th { background: #f9fafb; font-weight: 600; }
-            .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; color: white; }
+            .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; color: white; display: inline-block; }
             .status-received { background: #8B5CF6; }
-            .status-in-progress { background: #F59E0B; }
+            .status-inprogress { background: #F59E0B; }
             .status-completed { background: #10B981; }
+            .status-onhold { background: #EF4444; }
+            .status-in-progress { background: #F59E0B; }
             .status-on-hold { background: #EF4444; }
           </style>
         </head>

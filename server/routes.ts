@@ -1207,6 +1207,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log("Fetched", rfpData.length, "RFPs from storage");
       }
       
+      // Debug logging to check status values
+      rfpData.forEach((rfp: any) => {
+        console.log(`RFP ${rfp.rfpNumber}: status="${rfp.status}"`);
+      });
+      
       // Generate simple HTML report
       const html = `
         <!DOCTYPE html>
@@ -1257,26 +1262,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
               ${(rfpData || []).map((rfp: any) => {
                 const dueDate = new Date(rfp.internalDueDate);
                 const daysUntil = Math.ceil((dueDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-                const statusClass = `status-${rfp.status.replace('-', '')}`;
+                const statusClass = `status-${(rfp.status || '').replace('-', '')}`;
                 
                 let dayDisplay;
                 if (rfp.status === 'completed') {
-                  dayDisplay = 'Completed';
+                  dayDisplay = '-';
                 } else if (daysUntil < 0) {
-                  dayDisplay = `${Math.abs(daysUntil)} days overdue`;
+                  dayDisplay = Math.abs(daysUntil) + ' days overdue';
                 } else {
-                  dayDisplay = `${daysUntil} days`;
+                  dayDisplay = daysUntil + ' days';
                 }
                 
-                return `
-                  <tr>
-                    <td><strong>${rfp.rfpNumber || 'N/A'}</strong></td>
-                    <td>${rfp.projectName || 'N/A'}</td>
-                    <td>${dueDate.toLocaleDateString()}</td>
-                    <td><span class="status-badge ${statusClass}">${rfp.status.replace('-', ' ').toUpperCase()}</span></td>
-                    <td>${dayDisplay}</td>
-                  </tr>
-                `;
+                // Handle status display - ensure we have a status or show as blank
+                const statusText = rfp.status ? rfp.status.replace('-', ' ').toUpperCase() : '';
+                const statusDisplay = statusText ? '<span class="status-badge ' + statusClass + '">' + statusText + '</span>' : '';
+                
+                return '<tr>' +
+                  '<td><strong>' + (rfp.rfpNumber || 'N/A') + '</strong></td>' +
+                  '<td>' + (rfp.projectName || 'N/A') + '</td>' +
+                  '<td>' + dueDate.toLocaleDateString() + '</td>' +
+                  '<td>' + statusDisplay + '</td>' +
+                  '<td>' + dayDisplay + '</td>' +
+                  '</tr>';
               }).join('')}
             </tbody>
           </table>

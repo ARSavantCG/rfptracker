@@ -1198,32 +1198,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/reports/detailed", async (req, res) => {
     try {
       const { filters, rfps } = req.body;
+      console.log("Generating executive summary with", rfps?.length || 0, "RFPs");
       
-      const reportData = {
-        rfps: rfps || [],
-        filters,
-        generatedAt: new Date().toISOString()
-      };
-
-      // Try puppeteer first, fall back to HTML if it fails
-      try {
-        const pdfBuffer = await generateDetailedReportPdf(reportData);
-        const filename = generateReportFilename("executive-summary");
-        
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-        res.send(pdfBuffer);
-      } catch (puppeteerError: any) {
-        console.log("Puppeteer failed for detailed report, falling back to HTML:", puppeteerError?.message || 'Unknown error');
-        
-        // Generate HTML version of the report
-        const { generateExecutiveReportHtml } = await import("./pdf-reports");
-        const html = generateExecutiveReportHtml(reportData);
-        
-        res.setHeader('Content-Type', 'text/html');
-        res.setHeader('Content-Disposition', `inline; filename="executive-summary-report.html"`);
-        res.send(html);
-      }
+      // Generate simple HTML report
+      const html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Executive Summary Report</title>
+          <style>
+            @page { size: A4 landscape; margin: 0.5in; }
+            @media print { .no-print { display: none !important; } }
+            body { font-family: 'Segoe UI', sans-serif; font-size: 12px; margin: 0; }
+            .no-print { background: #3b82f6; color: white; padding: 15px; text-align: center; margin-bottom: 20px; border-radius: 8px; }
+            .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #e5e7eb; padding-bottom: 15px; }
+            .header h1 { font-size: 24px; margin: 0; color: #1f2937; }
+            .header .subtitle { font-size: 14px; color: #6b7280; margin: 5px 0; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { border: 1px solid #e5e7eb; padding: 8px; text-align: left; }
+            th { background: #f9fafb; font-weight: 600; }
+            .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; color: white; }
+            .status-received { background: #8B5CF6; }
+            .status-in-progress { background: #F59E0B; }
+            .status-completed { background: #10B981; }
+            .status-on-hold { background: #EF4444; }
+          </style>
+        </head>
+        <body>
+          <div class="no-print">
+            <strong>📄 Save as PDF:</strong> Press Ctrl+P (Windows/Linux) or Cmd+P (Mac), then select "Save as PDF" as your destination.
+            <br><small>This banner will not appear in the printed version.</small>
+          </div>
+          
+          <div class="header">
+            <h1>Executive Summary Report</h1>
+            <div class="subtitle">RFP Status Overview - Generated on ${new Date().toLocaleDateString()}</div>
+          </div>
+          
+          <table>
+            <thead>
+              <tr>
+                <th>RFP Number</th>
+                <th>Project Name</th>
+                <th>Property</th>
+                <th>Due Date</th>
+                <th>Status</th>
+                <th>Days Until Due</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${(rfps || []).map(rfp => {
+                const dueDate = new Date(rfp.internalDueDate);
+                const daysUntil = Math.ceil((dueDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+                const statusClass = `status-${rfp.status.replace('-', '')}`;
+                
+                return `
+                  <tr>
+                    <td><strong>${rfp.rfpNumber}</strong></td>
+                    <td>${rfp.projectName}</td>
+                    <td>${rfp.property}</td>
+                    <td>${dueDate.toLocaleDateString()}</td>
+                    <td><span class="status-badge ${statusClass}">${rfp.status.replace('-', ' ').toUpperCase()}</span></td>
+                    <td>${daysUntil < 0 ? `${Math.abs(daysUntil)} days overdue` : `${daysUntil} days`}</td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+          
+          ${(rfps || []).length === 0 ? '<p style="text-align: center; margin-top: 40px; color: #6b7280;">No RFPs found matching the current filters.</p>' : ''}
+        </body>
+        </html>
+      `;
+      
+      res.setHeader('Content-Type', 'text/html');
+      res.setHeader('Content-Disposition', 'inline; filename="executive-summary-report.html"');
+      res.send(html);
     } catch (error) {
       console.error("Error generating executive summary report:", error);
       res.status(500).json({ message: "Failed to generate executive summary report" });

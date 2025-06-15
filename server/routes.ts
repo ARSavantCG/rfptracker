@@ -1249,9 +1249,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const pdfBuffer = await generateHistoricalPricingPdf();
       const filename = generateHistoricalPricingFilename();
       
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-      res.send(pdfBuffer);
+      // Check if it's HTML (fallback) or actual PDF
+      const content = pdfBuffer.toString('utf8', 0, 50);
+      if (content.includes('<!DOCTYPE html>')) {
+        // Return HTML for browser-based PDF generation
+        res.setHeader('Content-Type', 'text/html');
+        res.setHeader('Content-Disposition', `inline; filename="${filename.replace('.pdf', '.html')}"`);
+        res.send(pdfBuffer);
+      } else {
+        // Return actual PDF
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        res.send(pdfBuffer);
+      }
     } catch (error) {
       console.error("Error generating historical pricing PDF:", error);
       res.status(500).json({ message: "Failed to generate historical pricing PDF" });

@@ -490,12 +490,13 @@ export async function generateHistoricalPricingPdf(): Promise<Buffer> {
     const html = generateHistoricalPricingHtml(data);
     console.log("HTML generated, length:", html.length);
 
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
-    });
-
+    // Try puppeteer first, fall back to HTML if it fails
     try {
+      const browser = await puppeteer.launch({
+        headless: true,
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--disable-web-security']
+      });
+
       const page = await browser.newPage();
       await page.setContent(html, { waitUntil: 'networkidle0' });
       
@@ -511,10 +512,13 @@ export async function generateHistoricalPricingPdf(): Promise<Buffer> {
         printBackground: true
       });
 
+      await browser.close();
       console.log("PDF generated successfully, size:", pdf.length);
       return Buffer.from(pdf);
-    } finally {
-      await browser.close();
+    } catch (puppeteerError) {
+      console.log("Puppeteer failed, falling back to HTML:", puppeteerError.message);
+      // Return HTML as buffer for browser-based PDF generation
+      return Buffer.from(html, 'utf8');
     }
   } catch (error) {
     console.error("Error in generateHistoricalPricingPdf:", error);

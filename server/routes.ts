@@ -1243,6 +1243,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Historical Pricing Report route
+  app.post("/api/reports/historical-pricing-pdf", async (req, res) => {
+    try {
+      const pdfBuffer = await generateHistoricalPricingPdf();
+      const filename = generateHistoricalPricingFilename();
+      
+      // Write to temporary file to avoid Express JSON serialization
+      const tempPath = path.join(process.cwd(), 'temp-' + Date.now() + '.pdf');
+      fs.writeFileSync(tempPath, pdfBuffer);
+      
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      
+      // Stream the file and clean up
+      const fileStream = fs.createReadStream(tempPath);
+      fileStream.pipe(res);
+      
+      fileStream.on('end', () => {
+        fs.unlinkSync(tempPath);
+      });
+    } catch (error) {
+      console.error("Error generating historical pricing PDF:", error);
+      res.status(500).json({ message: "Failed to generate historical pricing PDF" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

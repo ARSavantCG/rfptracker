@@ -96,9 +96,13 @@ export default function Reports() {
     }
   };
 
-  const handleExport = async (type: "detailed") => {
+  const handleExport = async (type: "detailed" | "historical-pricing") => {
     try {
-      const response = await fetch('/api/reports/detailed-report-pdf', {
+      const endpoint = type === "detailed" 
+        ? '/api/reports/detailed-report-pdf' 
+        : '/api/reports/historical-pricing-pdf';
+      
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -246,8 +250,9 @@ export default function Reports() {
       </Card>
 
       <Tabs defaultValue="detailed" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-1">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="detailed">Detailed Report</TabsTrigger>
+          <TabsTrigger value="historical-pricing">Historical Pricing</TabsTrigger>
         </TabsList>
 
         <TabsContent value="detailed" className="space-y-6">
@@ -312,6 +317,98 @@ export default function Reports() {
           </Card>
         </TabsContent>
 
+        <TabsContent value="historical-pricing" className="space-y-6">
+          {/* Historical Pricing Report */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center space-x-2">
+                  <TrendingUp className="h-5 w-5" />
+                  <span>Historical Pricing Report</span>
+                </CardTitle>
+                <p className="text-sm text-gray-600 mt-1">
+                  Comprehensive pricing analysis from completed RFP projects
+                </p>
+              </div>
+              <Button onClick={() => handleExport("historical-pricing")} className="flex items-center space-x-2">
+                <Download className="h-4 w-4" />
+                <span>Export Report</span>
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                    <div className="flex items-center space-x-2">
+                      <CheckCircle className="h-5 w-5 text-blue-600" />
+                      <span className="font-medium text-blue-900">Completed Projects</span>
+                    </div>
+                    <p className="text-2xl font-bold text-blue-900 mt-1">
+                      {filteredRfps.filter(rfp => rfp.status === 'completed').length}
+                    </p>
+                    <p className="text-sm text-blue-600">Projects with pricing data</p>
+                  </div>
+                  
+                  <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                    <div className="flex items-center space-x-2">
+                      <BarChart3 className="h-5 w-5 text-green-600" />
+                      <span className="font-medium text-green-900">Bid Collection</span>
+                    </div>
+                    <p className="text-2xl font-bold text-green-900 mt-1">
+                      {metrics.completed}
+                    </p>
+                    <p className="text-sm text-green-600">Ready for analysis</p>
+                  </div>
+                  
+                  <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                    <div className="flex items-center space-x-2">
+                      <FileText className="h-5 w-5 text-purple-600" />
+                      <span className="font-medium text-purple-900">Report Format</span>
+                    </div>
+                    <p className="text-lg font-bold text-purple-900 mt-1">
+                      Landscape PDF
+                    </p>
+                    <p className="text-sm text-purple-600">Detailed breakdown by project</p>
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 p-6 rounded-lg border">
+                  <h3 className="font-medium text-gray-900 mb-3">Report Contents</h3>
+                  <ul className="space-y-2 text-sm text-gray-600">
+                    <li className="flex items-center space-x-2">
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      <span>Project-by-project pricing breakdown</span>
+                    </li>
+                    <li className="flex items-center space-x-2">
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      <span>Contractor bid comparisons with lowest, highest, and average amounts</span>
+                    </li>
+                    <li className="flex items-center space-x-2">
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      <span>Detailed line items by category (Construction, Electrical, Plumbing, etc.)</span>
+                    </li>
+                    <li className="flex items-center space-x-2">
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      <span>Unit pricing and quantity analysis</span>
+                    </li>
+                    <li className="flex items-center space-x-2">
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      <span>Completion dates and project timelines</span>
+                    </li>
+                  </ul>
+                </div>
+
+                {filteredRfps.filter(rfp => rfp.status === 'completed').length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    <AlertTriangle className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                    <p className="font-medium">No completed projects found</p>
+                    <p className="text-sm">Historical pricing data will be available once RFP projects are completed.</p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         </Tabs>
       </div>

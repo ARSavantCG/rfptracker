@@ -1207,10 +1207,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log("Fetched", rfpData.length, "RFPs from storage");
       }
       
-      // Debug logging to check status values
-      rfpData.forEach((rfp: any) => {
-        console.log(`RFP ${rfp.rfpNumber}: status="${rfp.status}"`);
-      });
+
       
       // Generate simple HTML report
       const html = `

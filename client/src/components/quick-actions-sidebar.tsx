@@ -218,7 +218,7 @@ export function QuickActionsSidebar({
                 className="w-full justify-start"
               >
                 <BarChart3 className="h-4 w-4 mr-2" />
-                Executive Summary
+                Custom Reports
               </Button>
             </Link>
           </div>

@@ -159,6 +159,17 @@ function generateHistoricalPricingHtml(data: HistoricalPricingData): string {
           margin: 0.5in;
         }
         
+        @media print {
+          .no-print {
+            display: none !important;
+          }
+          
+          body {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+        }
+        
         body {
           font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
           font-size: 11px;
@@ -367,6 +378,11 @@ function generateHistoricalPricingHtml(data: HistoricalPricingData): string {
       </style>
     </head>
     <body>
+      <div class="no-print" style="background: #3b82f6; color: white; padding: 15px; text-align: center; margin-bottom: 20px; border-radius: 8px;">
+        <strong>📄 Save as PDF:</strong> Press Ctrl+P (Windows/Linux) or Cmd+P (Mac), then select "Save as PDF" as your destination.
+        <br><small>This banner will not appear in the printed version.</small>
+      </div>
+      
       <div class="header">
         <h1>Historical Pricing Report</h1>
         <div class="subtitle">Completed RFP Projects - Pricing Analysis</div>

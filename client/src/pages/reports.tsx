@@ -79,16 +79,32 @@ export default function Reports() {
         throw new Error("Failed to generate report");
       }
 
+      const contentType = response.headers.get("content-type");
       const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.style.display = "none";
-      a.href = url;
-      a.download = `${reportType}-report-${format(new Date(), "yyyy-MM-dd")}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      
+      if (contentType?.includes("text/html")) {
+        // Open HTML report in new window for viewing/printing as PDF
+        const url = window.URL.createObjectURL(blob);
+        const newWindow = window.open(url, '_blank');
+        if (newWindow) {
+          newWindow.onload = () => {
+            setTimeout(() => {
+              window.URL.revokeObjectURL(url);
+            }, 1000);
+          };
+        }
+      } else {
+        // Download as PDF file
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.style.display = "none";
+        a.href = url;
+        a.download = `${reportType}-report-${format(new Date(), "yyyy-MM-dd")}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }
     } catch (error) {
       console.error("Error generating report:", error);
     }

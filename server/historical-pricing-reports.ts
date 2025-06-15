@@ -515,8 +515,8 @@ export async function generateHistoricalPricingPdf(): Promise<Buffer> {
       await browser.close();
       console.log("PDF generated successfully, size:", pdf.length);
       return Buffer.from(pdf);
-    } catch (puppeteerError) {
-      console.log("Puppeteer failed, falling back to HTML:", puppeteerError.message);
+    } catch (puppeteerError: any) {
+      console.log("Puppeteer failed, falling back to HTML:", puppeteerError?.message || 'Unknown error');
       // Return HTML as buffer for browser-based PDF generation
       return Buffer.from(html, 'utf8');
     }

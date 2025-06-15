@@ -1200,6 +1200,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { filters, rfps } = req.body;
       console.log("Generating executive summary with", rfps?.length || 0, "RFPs");
       
+      // If no RFPs provided in request, fetch all RFPs from storage
+      let rfpData = rfps;
+      if (!rfpData || rfpData.length === 0) {
+        rfpData = await storage.getAllRfpRequests();
+        console.log("Fetched", rfpData.length, "RFPs from storage");
+      }
+      
       // Generate simple HTML report
       const html = `
         <!DOCTYPE html>
@@ -1241,33 +1248,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
               <tr>
                 <th>RFP Number</th>
                 <th>Project Name</th>
-                <th>Property</th>
                 <th>Due Date</th>
                 <th>Status</th>
                 <th>Days Until Due</th>
               </tr>
             </thead>
             <tbody>
-              ${(rfps || []).map(rfp => {
+              ${(rfpData || []).map((rfp: any) => {
                 const dueDate = new Date(rfp.internalDueDate);
                 const daysUntil = Math.ceil((dueDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
                 const statusClass = `status-${rfp.status.replace('-', '')}`;
                 
+                let dayDisplay;
+                if (rfp.status === 'completed') {
+                  dayDisplay = 'Completed';
+                } else if (daysUntil < 0) {
+                  dayDisplay = `${Math.abs(daysUntil)} days overdue`;
+                } else {
+                  dayDisplay = `${daysUntil} days`;
+                }
+                
                 return `
                   <tr>
-                    <td><strong>${rfp.rfpNumber}</strong></td>
-                    <td>${rfp.projectName}</td>
-                    <td>${rfp.property}</td>
+                    <td><strong>${rfp.rfpNumber || 'N/A'}</strong></td>
+                    <td>${rfp.projectName || 'N/A'}</td>
                     <td>${dueDate.toLocaleDateString()}</td>
                     <td><span class="status-badge ${statusClass}">${rfp.status.replace('-', ' ').toUpperCase()}</span></td>
-                    <td>${daysUntil < 0 ? `${Math.abs(daysUntil)} days overdue` : `${daysUntil} days`}</td>
+                    <td>${dayDisplay}</td>
                   </tr>
                 `;
               }).join('')}
             </tbody>
           </table>
           
-          ${(rfps || []).length === 0 ? '<p style="text-align: center; margin-top: 40px; color: #6b7280;">No RFPs found matching the current filters.</p>' : ''}
+          ${(rfpData || []).length === 0 ? '<p style="text-align: center; margin-top: 40px; color: #6b7280;">No RFPs found matching the current filters.</p>' : ''}
         </body>
         </html>
       `;

@@ -32,9 +32,9 @@ export default function Reports() {
 
   // Filter RFPs based on current filters
   const filteredRfps = rfpRequests.filter((rfp) => {
-    if (filters.status && rfp.status !== filters.status) return false;
-    if (filters.property && rfp.property !== filters.property) return false;
-    if (filters.dueInDays) {
+    if (filters.status && filters.status !== "all" && rfp.status !== filters.status) return false;
+    if (filters.property && filters.property !== "all" && rfp.property !== filters.property) return false;
+    if (filters.dueInDays && filters.dueInDays.toString() !== "all") {
       const dueDate = parseISO(rfp.internalDueDate.toString());
       const targetDate = addDays(new Date(), filters.dueInDays);
       if (isAfter(dueDate, targetDate)) return false;
@@ -175,7 +175,7 @@ export default function Reports() {
                   <SelectValue placeholder="All statuses" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All statuses</SelectItem>
+                  <SelectItem value="all">All statuses</SelectItem>
                   <SelectItem value="received">Received</SelectItem>
                   <SelectItem value="in-progress">In Progress</SelectItem>
                   <SelectItem value="completed">Completed</SelectItem>
@@ -194,7 +194,7 @@ export default function Reports() {
                   <SelectValue placeholder="All properties" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All properties</SelectItem>
+                  <SelectItem value="all">All properties</SelectItem>
                   {properties.map((property) => (
                     <SelectItem key={property.id} value={property.propertyName}>
                       {property.propertyName}
@@ -214,7 +214,7 @@ export default function Reports() {
                   <SelectValue placeholder="Any time" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Any time</SelectItem>
+                  <SelectItem value="all">Any time</SelectItem>
                   <SelectItem value="1">1 day</SelectItem>
                   <SelectItem value="3">3 days</SelectItem>
                   <SelectItem value="7">1 week</SelectItem>

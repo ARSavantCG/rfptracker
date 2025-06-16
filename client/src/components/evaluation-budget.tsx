@@ -244,6 +244,50 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
 
 
 
+  // Save progress without advancing workflow
+  const saveProgressMutation = useMutation({
+    mutationFn: async () => {
+      if (!rfp) throw new Error("No RFP selected");
+      
+      const budgetPayload = {
+        rfpId: rfp.id,
+        tenantImprovements: budgetData.tenantImprovements,
+        designSoftCosts: budgetData.designSoftCosts,
+        existingImprovements: budgetData.existingImprovements,
+        hasExistingImprovements: budgetData.hasExistingImprovements,
+        includeExistingInTotal: budgetData.includeExistingInTotal,
+        totalTenantImprovements: calculateCategoryTotal(budgetData.tenantImprovements).toFixed(2),
+        totalDesignSoftCosts: calculateCategoryTotal(budgetData.designSoftCosts).toFixed(2),
+        totalExistingImprovements: calculateCategoryTotal(budgetData.existingImprovements).toFixed(2),
+        grandTotal: calculateGrandTotal().toFixed(2),
+        notes: budgetData.notes,
+      };
+
+      // Save budget to server only - no workflow advancement
+      await fetch(`/api/rfp-requests/${rfp.id}/evaluation-budget`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(budgetPayload),
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Progress Saved",
+        description: "Your evaluation has been saved. You can continue editing or proceed to team review when ready.",
+      });
+    },
+    onError: (error) => {
+      console.error('Save progress error:', error);
+      toast({
+        title: "Save Failed",
+        description: "There was an error saving your progress. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const saveAndAdvanceMutation = useMutation({
     mutationFn: async () => {
       if (!rfp) throw new Error("No RFP selected");
@@ -255,6 +299,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         designSoftCosts: budgetData.designSoftCosts,
         existingImprovements: budgetData.existingImprovements,
         hasExistingImprovements: budgetData.hasExistingImprovements,
+        includeExistingInTotal: budgetData.includeExistingInTotal,
         totalTenantImprovements: calculateCategoryTotal(budgetData.tenantImprovements).toFixed(2),
         totalDesignSoftCosts: calculateCategoryTotal(budgetData.designSoftCosts).toFixed(2),
         totalExistingImprovements: calculateCategoryTotal(budgetData.existingImprovements).toFixed(2),
@@ -562,14 +607,25 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Evaluation Budget - {rfp.projectName}</CardTitle>
-          <Button 
-            onClick={saveAndAdvance} 
-            disabled={saveAndAdvanceMutation.isPending}
-            className="bg-green-600 hover:bg-green-700"
-          >
-            <ArrowRight className="h-4 w-4 mr-2" />
-            {saveAndAdvanceMutation.isPending ? "Saving..." : "Save & Continue to Team Review"}
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              onClick={() => saveProgressMutation.mutate()}
+              disabled={saveProgressMutation.isPending}
+              variant="outline"
+              className="border-blue-500 text-blue-600 hover:bg-blue-50"
+            >
+              <Save className="h-4 w-4 mr-2" />
+              {saveProgressMutation.isPending ? "Saving..." : "Save Progress"}
+            </Button>
+            <Button 
+              onClick={saveAndAdvance} 
+              disabled={saveAndAdvanceMutation.isPending}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              <ArrowRight className="h-4 w-4 mr-2" />
+              {saveAndAdvanceMutation.isPending ? "Saving..." : "Save & Continue to Team Review"}
+            </Button>
+          </div>
         </CardHeader>
       </Card>
 

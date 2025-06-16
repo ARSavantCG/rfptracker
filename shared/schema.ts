@@ -313,6 +313,7 @@ export const evaluationBudgets = pgTable("evaluation_budgets", {
   designSoftCosts: json("design_soft_costs").$type<EvaluationLineItem[]>().default([]),
   existingImprovements: json("existing_improvements").$type<EvaluationLineItem[]>().default([]),
   hasExistingImprovements: boolean("has_existing_improvements").default(false),
+  includeExistingInTotal: boolean("include_existing_in_total").default(false),
   totalTenantImprovements: text("total_tenant_improvements"),
   totalDesignSoftCosts: text("total_design_soft_costs"),
   totalExistingImprovements: text("total_existing_improvements"),

@@ -288,13 +288,14 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
         const doc = documentsToOpen[i];
         try {
           console.log(`Opening ${doc.title} document...`);
-          const response = await fetch(`/api/rfp-requests/${rfp.id}/generate-pdf-html`, {
+          const response = await fetch(`/api/rfp-requests/${rfp.id}/generate-pdf`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               recipientType: doc.type,
               recipientName: "",
-              recipientCompany: ""
+              recipientCompany: "",
+              returnType: "html"
             })
           });
           

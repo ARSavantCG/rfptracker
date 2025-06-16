@@ -703,7 +703,17 @@ function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dates: an
   const { rfp, invitationToBid, recipientName, recipientCompany } = options;
   const { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea } = dates;
 
-  const projectName = rfp.confidential ? `Confidential @ ${rfp.propertyAddress || rfp.property}` : `${rfp.tenantName} @ ${rfp.propertyAddress || rfp.property}`;
+  // Extract contact information from invitation to bid
+  const contactInfo = invitationToBid?.contactForQuestions || '';
+  const contactParts = contactInfo.split(' - ');
+  const contactPerson = contactParts[0] || 'Development Team';
+  const contactEmail = contactParts[1] || 'contact@company.com';
+  const contactPhone = contactParts[2] || '';
+
+  const projectName = rfp.confidential ? `Confidential @ ${invitationToBid?.projectLocation || rfp.propertyAddress || rfp.property}` : `${rfp.tenantName} @ ${invitationToBid?.projectLocation || rfp.propertyAddress || rfp.property}`;
+
+  // Format bid deadline with E.O.B.
+  const formattedDeadline = bidDeadline.replace(/(\d{4})$/, '$1 E.O.B.');
 
   return `
     <!DOCTYPE html>
@@ -729,14 +739,15 @@ function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dates: an
         table { width: 100%; border-collapse: collapse; margin: 15px 0; }
         th, td { border: 1px solid #e5e7eb; padding: 8px; text-align: left; }
         th { background-color: #f9fafb; font-weight: bold; }
+        .project-description { background-color: #f9fafb; padding: 15px; border-radius: 5px; margin: 15px 0; }
       </style>
     </head>
     <body>
       <div class="header">
         <div class="company-info">
           <div><strong>Development Team</strong></div>
-          <div>${rfp.developmentContact || 'Development Contact'}</div>
-          <div>Email: ${rfp.contactEmail || 'contact@company.com'}</div>
+          <div>${contactPerson}</div>
+          <div>Email: ${contactEmail}</div>
           <div>Date: ${today}</div>
         </div>
         <div class="document-title">PRELIMINARY REQUEST FOR PROPOSAL</div>
@@ -753,16 +764,29 @@ function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dates: an
         <div class="section-title">Project Overview</div>
         <div class="info-grid">
           <div>
-            <div class="info-item"><span class="label">Property:</span><span class="value">${rfp.property}</span></div>
+            <div class="info-item"><span class="label">Property:</span><span class="value">${invitationToBid?.projectScope || rfp.tenantName}</span></div>
             <div class="info-item"><span class="label">Prospective Tenant:</span><span class="value">${rfp.confidential ? 'Confidential' : rfp.tenantName}</span></div>
-            <div class="info-item"><span class="label">Total Area:</span><span class="value">${rfp.warehouseArea || 'TBD'} sq ft</span></div>
+            ${totalArea > 0 ? `<div class="info-item"><span class="label">Total Area:</span><span class="value">${totalArea.toLocaleString()} sq ft</span></div>` : ''}
           </div>
           <div>
-            <div class="info-item"><span class="label">Requested Response:</span><span class="value">${bidDeadline}</span></div>
+            <div class="info-item"><span class="label">Requested Response:</span><span class="value">${formattedDeadline}</span></div>
             <div class="info-item"><span class="label">Project Type:</span><span class="value">Preliminary Assessment</span></div>
-            <div class="info-item"><span class="label">Budget Range:</span><span class="value">${invitationToBid?.estimatedBudget || 'To be determined'}</span></div>
           </div>
         </div>
+
+        ${invitationToBid?.projectDescription ? `
+        <div class="project-description">
+          <strong>Project Description:</strong><br>
+          ${invitationToBid.projectDescription}
+        </div>
+        ` : ''}
+
+        ${invitationToBid?.documentsLink ? `
+        <div class="info-item" style="margin-top: 15px;">
+          <span class="label">Project Documents:</span>
+          <span class="value"><a href="${invitationToBid.documentsLink}" target="_blank">${invitationToBid.documentsLink}</a></span>
+        </div>
+        ` : ''}
       </div>
 
       <div class="section">
@@ -785,16 +809,18 @@ function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dates: an
         </ul>
       </div>
 
+      ${totalArea > 0 ? `
       <div class="section">
         <div class="section-title">Space Requirements</div>
         <table>
           <tr><th>Space Type</th><th>Area (sq ft)</th><th>Notes</th></tr>
-          <tr><td>Warehouse/Industrial</td><td>${warehouseArea.toLocaleString()}</td><td>Clear height requirements TBD</td></tr>
-          <tr><td>Existing Office</td><td>${existingOffice.toLocaleString()}</td><td>Renovation level TBD</td></tr>
-          <tr><td>New Office Space</td><td>${newOffice.toLocaleString()}</td><td>New construction</td></tr>
+          ${warehouseArea > 0 ? `<tr><td>Warehouse/Industrial</td><td>${warehouseArea.toLocaleString()}</td><td>Clear height requirements TBD</td></tr>` : ''}
+          ${existingOffice > 0 ? `<tr><td>Existing Office</td><td>${existingOffice.toLocaleString()}</td><td>Renovation level TBD</td></tr>` : ''}
+          ${newOffice > 0 ? `<tr><td>New Office Space</td><td>${newOffice.toLocaleString()}</td><td>New construction</td></tr>` : ''}
           <tr><td><strong>Total</strong></td><td><strong>${totalArea.toLocaleString()}</strong></td><td></td></tr>
         </table>
       </div>
+      ` : ''}
 
       <div class="section">
         <div class="section-title">Requested Deliverables</div>
@@ -809,13 +835,13 @@ function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dates: an
 
       <div class="requirements">
         <strong>Important Note:</strong> This preliminary RFP is issued to support ongoing lease negotiations with a prospective tenant. 
-        The project may not proceed, and this request does not constitute a commitment to engage architectural services. 
-        Please provide conceptual-level information suitable for initial tenant discussions.
+        The project may not proceed, and this request does not constitute a commitment to architectural services. 
+        Please provide conceptual-level pricing suitable for initial tenant discussions.
       </div>
 
       <div class="footer">
         <p>This preliminary RFP was generated on ${today} for broker response purposes. 
-        For questions, please contact ${rfp.developmentContact || 'Development Team'}.</p>
+        For questions, please contact ${contactPerson}.</p>
       </div>
     </body>
     </html>
@@ -826,7 +852,17 @@ function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, dates: a
   const { rfp, invitationToBid, recipientName, recipientCompany } = options;
   const { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea } = dates;
 
-  const projectName = rfp.confidential ? `Confidential @ ${rfp.propertyAddress || rfp.property}` : `${rfp.tenantName} @ ${rfp.propertyAddress || rfp.property}`;
+  // Extract contact information from invitation to bid
+  const contactInfo = invitationToBid?.contactForQuestions || '';
+  const contactParts = contactInfo.split(' - ');
+  const contactPerson = contactParts[0] || 'Development Team';
+  const contactEmail = contactParts[1] || 'contact@company.com';
+  const contactPhone = contactParts[2] || '';
+
+  const projectName = rfp.confidential ? `Confidential @ ${invitationToBid?.projectLocation || rfp.propertyAddress || rfp.property}` : `${rfp.tenantName} @ ${invitationToBid?.projectLocation || rfp.propertyAddress || rfp.property}`;
+
+  // Format bid deadline with E.O.B.
+  const formattedDeadline = bidDeadline.replace(/(\d{4})$/, '$1 E.O.B.');
 
   return `
     <!DOCTYPE html>
@@ -852,14 +888,15 @@ function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, dates: a
         table { width: 100%; border-collapse: collapse; margin: 15px 0; }
         th, td { border: 1px solid #e5e7eb; padding: 8px; text-align: left; }
         th { background-color: #f9fafb; font-weight: bold; }
+        .project-description { background-color: #f9fafb; padding: 15px; border-radius: 5px; margin: 15px 0; }
       </style>
     </head>
     <body>
       <div class="header">
         <div class="company-info">
           <div><strong>Development Team</strong></div>
-          <div>${rfp.developmentContact || 'Development Contact'}</div>
-          <div>Email: ${rfp.contactEmail || 'contact@company.com'}</div>
+          <div>${contactPerson}</div>
+          <div>Email: ${contactEmail}</div>
           <div>Date: ${today}</div>
         </div>
         <div class="document-title">PRELIMINARY REQUEST FOR PROPOSAL</div>
@@ -876,16 +913,29 @@ function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, dates: a
         <div class="section-title">Project Overview</div>
         <div class="info-grid">
           <div>
-            <div class="info-item"><span class="label">Property:</span><span class="value">${rfp.property}</span></div>
+            <div class="info-item"><span class="label">Property:</span><span class="value">${invitationToBid?.projectScope || rfp.tenantName}</span></div>
             <div class="info-item"><span class="label">Prospective Tenant:</span><span class="value">${rfp.confidential ? 'Confidential' : rfp.tenantName}</span></div>
-            <div class="info-item"><span class="label">Total Area:</span><span class="value">${rfp.warehouseArea || 'TBD'} sq ft</span></div>
+            ${totalArea > 0 ? `<div class="info-item"><span class="label">Total Area:</span><span class="value">${totalArea.toLocaleString()} sq ft</span></div>` : ''}
           </div>
           <div>
-            <div class="info-item"><span class="label">Requested Response:</span><span class="value">${bidDeadline}</span></div>
+            <div class="info-item"><span class="label">Requested Response:</span><span class="value">${formattedDeadline}</span></div>
             <div class="info-item"><span class="label">Project Type:</span><span class="value">Preliminary Pricing</span></div>
-            <div class="info-item"><span class="label">Budget Range:</span><span class="value">${invitationToBid?.estimatedBudget || 'To be determined'}</span></div>
           </div>
         </div>
+
+        ${invitationToBid?.projectDescription ? `
+        <div class="project-description">
+          <strong>Project Description:</strong><br>
+          ${invitationToBid.projectDescription}
+        </div>
+        ` : ''}
+
+        ${invitationToBid?.documentsLink ? `
+        <div class="info-item" style="margin-top: 15px;">
+          <span class="label">Project Documents:</span>
+          <span class="value"><a href="${invitationToBid.documentsLink}" target="_blank">${invitationToBid.documentsLink}</a></span>
+        </div>
+        ` : ''}
       </div>
 
       <div class="section">

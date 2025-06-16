@@ -764,8 +764,7 @@ function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dates: an
         <div class="section-title">Project Overview</div>
         <div class="info-grid">
           <div>
-            <div class="info-item"><span class="label">Property:</span><span class="value">${invitationToBid?.projectScope || rfp.tenantName}</span></div>
-            <div class="info-item"><span class="label">Prospective Tenant:</span><span class="value">${rfp.confidential ? 'Confidential' : rfp.tenantName}</span></div>
+            <div class="info-item"><span class="label">Project:</span><span class="value">${invitationToBid?.projectScope || rfp.tenantName}</span></div>
             <div class="info-item"><span class="label">Property Address:</span><span class="value">${invitationToBid?.projectLocation || rfp.propertyAddress || rfp.property}</span></div>
           </div>
           <div>
@@ -778,6 +777,17 @@ function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dates: an
         <div class="project-description">
           <strong>Project Description:</strong><br>
           ${invitationToBid.projectDescription}
+        </div>
+        ` : ''}
+
+        ${invitationToBid?.scopeOfWork && Array.isArray(invitationToBid.scopeOfWork) && invitationToBid.scopeOfWork.length > 0 ? `
+        <div class="scope-of-work">
+          <strong>Scope of Work:</strong>
+          <ul>
+            ${invitationToBid.scopeOfWork.map(item => `
+              <li>${item.description}${item.quantity ? ` - ${item.quantity.toLocaleString()} ${item.unit || ''}` : ''}</li>
+            `).join('')}
+          </ul>
         </div>
         ` : ''}
 

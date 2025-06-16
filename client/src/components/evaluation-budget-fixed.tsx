@@ -46,10 +46,6 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
   const [newItemCategory, setNewItemCategory] = useState<string>("");
   const [newItem, setNewItem] = useState<Partial<EvaluationLineItem>>({});
 
-  const [showAdvancedEdit, setShowAdvancedEdit] = useState(false);
-  const [itemHistory, setItemHistory] = useState<Record<string, EvaluationLineItem[]>>({});
-  const [customCategories, setCustomCategories] = useState<string[]>([]);
-  const [showCategoryManager, setShowCategoryManager] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -95,40 +91,16 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
   // Initialize budget with bid line items data
   useEffect(() => {
     if (allBidLineItems && Array.isArray(allBidLineItems) && allBidLineItems.length > 0) {
-      const initialItems: EvaluationLineItem[] = [];
-      
-      allBidLineItems.forEach((lineItem: BidLineItem & { bidCollectionId: number }) => {
-        const bid = (bidCollections as BidCollection[])?.find((b: BidCollection) => b.id === lineItem.bidCollectionId);
-        if (bid) {
-          initialItems.push({
-            id: `lineitem-${lineItem.id}`,
-            description: lineItem.description,
-            quantity: parseInt(lineItem.quantity || '1'),
-            unit: lineItem.unit || 'ea',
-            unitPrice: lineItem.unitPrice || '0.00',
-            totalPrice: lineItem.totalPrice,
-            bidCollectionId: lineItem.bidCollectionId,
-            bidLineItemId: lineItem.id,
-          });
-        }
-      });
-
-      // If no line items, fall back to bid totals
-      if (initialItems.length === 0 && bidCollections && Array.isArray(bidCollections)) {
-        (bidCollections as BidCollection[]).forEach(bid => {
-          if (bid.totalAmount) {
-            initialItems.push({
-              id: `bid-${bid.id}`,
-              description: `${bid.contractorName} - ${bid.contractorCompany}`,
-              quantity: 1,
-              unit: 'ls', // lump sum
-              unitPrice: bid.totalAmount,
-              totalPrice: bid.totalAmount,
-              bidCollectionId: bid.id,
-            });
-          }
-        });
-      }
+      const initialItems = allBidLineItems.map((item: BidLineItem & { bidCollectionId: number }) => ({
+        id: `tenant-${item.id}`,
+        description: item.description,
+        quantity: item.quantity,
+        unit: item.unit || "ea",
+        unitPrice: item.unitPrice?.toString() || "0.00",
+        totalPrice: item.totalPrice?.toString() || "0.00",
+        bidCollectionId: item.bidCollectionId,
+        bidLineItemId: item.id,
+      }));
 
       setBudgetData(prev => ({
         ...prev,
@@ -166,6 +138,88 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     
     const currentDate = new Date().toLocaleDateString();
     const grandTotal = calculateGrandTotal();
+    
+    const renderCategorySection = (title: string, items: EvaluationLineItem[]) => {
+      if (items.length === 0) return '';
+      const total = calculateCategoryTotal(items);
+      return `
+      <div class="section">
+          <div class="section-header">
+              <h2 class="section-title">
+                  ${title}
+                  <span class="section-total">${formatCurrency(total)}</span>
+              </h2>
+          </div>
+          <div class="table-container">
+              <table>
+                  <thead>
+                      <tr>
+                          <th>Description</th>
+                          <th>Quantity</th>
+                          <th>Unit</th>
+                          <th>Unit Price</th>
+                          <th>Total Price</th>
+                      </tr>
+                  </thead>
+                  <tbody>
+                      ${items.map(item => `
+                      <tr>
+                          <td>${item.description}</td>
+                          <td>${item.quantity}</td>
+                          <td>${item.unit}</td>
+                          <td class="currency">${formatCurrency(parseFloat(item.unitPrice) || 0)}</td>
+                          <td class="currency">${formatCurrency(parseFloat(item.totalPrice) || 0)}</td>
+                      </tr>
+                      `).join('')}
+                  </tbody>
+              </table>
+          </div>
+      </div>`;
+    };
+
+    const renderExistingImprovementsSection = () => {
+      const total = calculateCategoryTotal(budgetData.existingImprovements);
+      return `
+      <div class="section">
+          <div class="section-header">
+              <h2 class="section-title">
+                  Existing Improvements
+                  <span class="section-total">${formatCurrency(total)}</span>
+              </h2>
+          </div>
+          <div class="table-container">
+              ${budgetData.existingImprovements.length > 0 ? `
+              <table>
+                  <thead>
+                      <tr>
+                          <th>Description</th>
+                          <th>Quantity</th>
+                          <th>Unit</th>
+                          <th>Unit Price</th>
+                          <th>Total Price</th>
+                      </tr>
+                  </thead>
+                  <tbody>
+                      ${budgetData.existingImprovements.map(item => `
+                      <tr>
+                          <td>${item.description}</td>
+                          <td>${item.quantity}</td>
+                          <td>${item.unit}</td>
+                          <td class="currency">${formatCurrency(parseFloat(item.unitPrice) || 0)}</td>
+                          <td class="currency">${formatCurrency(parseFloat(item.totalPrice) || 0)}</td>
+                      </tr>
+                      `).join('')}
+                  </tbody>
+              </table>
+              ` : '<p style="text-align: center; color: #6c757d; padding: 20px;">No existing improvements added yet</p>'}
+              
+              <div class="existing-improvements-note">
+                  <strong>Note:</strong> These existing improvements are ${budgetData.includeExistingInTotal ? 'included in' : 'excluded from'} the Grand Total calculation.
+                  ${!budgetData.includeExistingInTotal ? ' They are tracked separately for financial modeling purposes.' : ''}
+              </div>
+          </div>
+      </div>`;
+    };
     
     const reportHtml = `
 <!DOCTYPE html>
@@ -302,92 +356,6 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     }
   };
 
-  const renderCategorySection = (title: string, items: EvaluationLineItem[]) => {
-    if (items.length === 0) return '';
-    const total = calculateCategoryTotal(items);
-    return `
-    <div class="section">
-        <div class="section-header">
-            <h2 class="section-title">
-                ${title}
-                <span class="section-total">${formatCurrency(total)}</span>
-            </h2>
-        </div>
-        <div class="table-container">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Description</th>
-                        <th>Quantity</th>
-                        <th>Unit</th>
-                        <th>Unit Price</th>
-                        <th>Total Price</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${items.map(item => `
-                    <tr>
-                        <td>${item.description}</td>
-                        <td>${item.quantity}</td>
-                        <td>${item.unit}</td>
-                        <td class="currency">${formatCurrency(parseFloat(item.unitPrice) || 0)}</td>
-                        <td class="currency">${formatCurrency(parseFloat(item.totalPrice) || 0)}</td>
-                    </tr>
-                    `).join('')}
-                </tbody>
-            </table>
-        </div>
-    </div>`;
-  };
-
-  const renderExistingImprovementsSection = () => {
-    const total = calculateCategoryTotal(budgetData.existingImprovements);
-    return `
-    <div class="section">
-        <div class="section-header">
-            <h2 class="section-title">
-                Existing Improvements
-                <span class="section-total">${formatCurrency(total)}</span>
-            </h2>
-        </div>
-        <div class="table-container">
-            ${budgetData.existingImprovements.length > 0 ? `
-            <table>
-                <thead>
-                    <tr>
-                        <th>Description</th>
-                        <th>Quantity</th>
-                        <th>Unit</th>
-                        <th>Unit Price</th>
-                        <th>Total Price</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${budgetData.existingImprovements.map(item => `
-                    <tr>
-                        <td>${item.description}</td>
-                        <td>${item.quantity}</td>
-                        <td>${item.unit}</td>
-                        <td class="currency">${formatCurrency(parseFloat(item.unitPrice) || 0)}</td>
-                        <td class="currency">${formatCurrency(parseFloat(item.totalPrice) || 0)}</td>
-                    </tr>
-                    `).join('')}
-                </tbody>
-            </table>
-            ` : '<p style="text-align: center; color: #6c757d; padding: 20px;">No existing improvements added yet</p>'}
-            
-            <div class="existing-improvements-note">
-                <strong>Note:</strong> These existing improvements are ${budgetData.includeExistingInTotal ? 'included in' : 'excluded from'} the Grand Total calculation.
-                ${!budgetData.includeExistingInTotal ? ' They are tracked separately for financial modeling purposes.' : ''}
-            </div>
-        </div>
-    </div>`;
-  };
-
-  const saveAndAdvance = () => {
-    saveAndAdvanceMutation.mutate();
-  };
-
   const addNewItem = (category: 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements') => {
     if (!newItem.description || !newItem.unitPrice) return;
 
@@ -397,18 +365,12 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
 
     const item: EvaluationLineItem = {
       id: `${category}-${Date.now()}`,
-      description: newItem.description || "",
+      description: newItem.description,
       quantity,
       unit: newItem.unit || "ea",
       unitPrice: unitPrice.toFixed(2),
       totalPrice,
     };
-
-    // Save to history before adding
-    setItemHistory(prev => ({
-      ...prev,
-      [item.id]: [item]
-    }));
 
     setBudgetData(prev => ({
       ...prev,
@@ -420,56 +382,32 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
   };
 
   const updateItem = (category: 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', itemId: string, updates: Partial<EvaluationLineItem>) => {
-    const categories = ['tenantImprovements', 'designSoftCosts', 'existingImprovements'] as const;
-    
-    setBudgetData(prev => {
-      const newData = { ...prev };
-      
-      for (const category of categories) {
-        const itemIndex = newData[category].findIndex(item => item.id === itemId);
-        if (itemIndex !== -1) {
-          const currentItem = newData[category][itemIndex];
+    setBudgetData(prev => ({
+      ...prev,
+      [category]: prev[category].map(item => {
+        if (item.id === itemId) {
+          const updatedItem = { ...item, ...updates };
           
-          // Save current version to history
-          setItemHistory(prevHistory => ({
-            ...prevHistory,
-            [itemId]: [...(prevHistory[itemId] || []), currentItem]
-          }));
-
-          // Calculate new total if quantity or unit price changed
-          const newQuantity = updates.quantity !== undefined ? updates.quantity : currentItem.quantity;
-          const newUnitPrice = updates.unitPrice !== undefined ? parseFloat(updates.unitPrice) : parseFloat(currentItem.unitPrice);
-          const newTotalPrice = updates.totalPrice || (newQuantity * newUnitPrice).toFixed(2);
-
-          newData[category][itemIndex] = {
-            ...currentItem,
-            ...updates,
-            quantity: newQuantity,
-            unitPrice: newUnitPrice.toFixed(2),
-            totalPrice: newTotalPrice,
-          };
-          break;
+          // Recalculate total if quantity or unit price changed
+          if (updates.quantity !== undefined || updates.unitPrice !== undefined) {
+            const quantity = updatedItem.quantity;
+            const unitPrice = parseFloat(updatedItem.unitPrice) || 0;
+            updatedItem.totalPrice = (quantity * unitPrice).toFixed(2);
+          }
+          
+          return updatedItem;
         }
-      }
-      
-      return newData;
-    });
+        return item;
+      }),
+    }));
   };
-
-
-
-
 
   const deleteItem = (category: 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', itemId: string) => {
     setBudgetData(prev => ({
       ...prev,
-      [category]: prev[category].filter((item: EvaluationLineItem) => item.id !== itemId),
+      [category]: prev[category].filter(item => item.id !== itemId),
     }));
   };
-
-
-
-
 
   // Save progress without advancing workflow
   const saveProgressMutation = useMutation({
@@ -490,7 +428,6 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         notes: budgetData.notes,
       };
 
-      // Save budget to server only - no workflow advancement
       await fetch(`/api/rfp-requests/${rfp.id}/evaluation-budget`, {
         method: 'POST',
         headers: {
@@ -519,7 +456,6 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     mutationFn: async () => {
       if (!rfp) throw new Error("No RFP selected");
       
-      // Save the evaluation budget data
       const budgetPayload = {
         rfpId: rfp.id,
         tenantImprovements: budgetData.tenantImprovements,
@@ -534,7 +470,6 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         notes: budgetData.notes,
       };
 
-      // Save budget to server
       await fetch(`/api/rfp-requests/${rfp.id}/evaluation-budget`, {
         method: 'POST',
         headers: {
@@ -543,7 +478,6 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         body: JSON.stringify(budgetPayload),
       });
 
-      // Advance workflow to publish phase
       await fetch(`/api/rfp-requests/${rfp.id}/workflow-phase`, {
         method: 'PATCH',
         headers: {
@@ -569,30 +503,16 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     },
   });
 
+  const saveAndAdvance = () => {
+    saveAndAdvanceMutation.mutate();
+  };
 
-
-  if (!rfp) {
-    return (
-      <Card>
-        <CardContent className="text-center py-8">
-          <p className="text-gray-500">No RFP selected for evaluation.</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  const renderCategoryTable = (
-    title: string,
-    items: EvaluationLineItem[],
-    category: 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements',
-    total: number
-  ) => (
+  const renderCategoryTable = (title: string, items: EvaluationLineItem[], category: string, total: number) => (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-lg">{title}</CardTitle>
         <div className="flex items-center gap-2">
           <span className="text-lg font-bold text-green-600">{formatCurrency(total)}</span>
-
           <Button
             size="sm"
             onClick={() => setNewItemCategory(category)}
@@ -621,7 +541,6 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
               {items.map((item) => (
                 <TableRow key={item.id}>
                   {editingItem === item.id ? (
-                    // Editing mode for all items
                     <>
                       <TableCell>
                         <Input
@@ -637,19 +556,14 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                             value={item.quantity}
                             onChange={(e) => {
                               const quantity = parseInt(e.target.value) || 1;
-                              const unitPrice = parseFloat(item.unitPrice) || 0;
-                              const totalPrice = (quantity * unitPrice).toFixed(2);
-                              updateItem(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', item.id, { 
-                                quantity, 
-                                totalPrice 
-                              });
+                              updateItem(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', item.id, { quantity });
                             }}
-                            className="text-sm w-16"
+                            className="w-16 text-sm"
                           />
                           <Input
                             value={item.unit}
                             onChange={(e) => updateItem(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', item.id, { unit: e.target.value })}
-                            className="text-sm w-16"
+                            className="w-16 text-sm"
                             placeholder="Unit"
                           />
                         </div>
@@ -659,35 +573,11 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                           type="number"
                           step="0.01"
                           value={item.unitPrice}
-                          onChange={(e) => {
-                            const unitPrice = e.target.value;
-                            const quantity = item.quantity || 1;
-                            const totalPrice = (quantity * parseFloat(unitPrice || "0")).toFixed(2);
-                            updateItem(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', item.id, { 
-                              unitPrice, 
-                              totalPrice 
-                            });
-                          }}
-                          className="text-sm w-20"
+                          onChange={(e) => updateItem(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', item.id, { unitPrice: e.target.value })}
+                          className="text-sm"
                         />
                       </TableCell>
-                      <TableCell>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={item.totalPrice}
-                          onChange={(e) => {
-                            const totalPrice = e.target.value;
-                            const quantity = item.quantity || 1;
-                            const unitPrice = quantity > 0 ? (parseFloat(totalPrice || "0") / quantity).toFixed(2) : "0.00";
-                            updateItem(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', item.id, { 
-                              totalPrice, 
-                              unitPrice 
-                            });
-                          }}
-                          className="text-sm w-20 font-medium"
-                        />
-                      </TableCell>
+                      <TableCell className="font-medium">{formatCurrency(item.totalPrice)}</TableCell>
                       <TableCell>
                         <div className="flex gap-1">
                           <Button
@@ -708,7 +598,6 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                       </TableCell>
                     </>
                   ) : (
-                    // Display mode
                     <>
                       <TableCell>{item.description}</TableCell>
                       <TableCell>{item.quantity} {item.unit}</TableCell>
@@ -821,11 +710,19 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
             </div>
           </div>
         )}
-
-
       </CardContent>
     </Card>
   );
+
+  if (!rfp) {
+    return (
+      <Card>
+        <CardContent className="text-center py-8">
+          <p className="text-gray-500">No RFP selected for evaluation.</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-6">

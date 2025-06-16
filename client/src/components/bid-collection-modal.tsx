@@ -610,21 +610,6 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
               )}
             </div>
 
-            {/* Notes */}
-            <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Notes</FormLabel>
-                  <FormControl>
-                    <Textarea {...field} placeholder="Additional notes about this bid..." />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
             {/* Form Actions */}
             <div className="flex justify-end gap-3">
               <Button type="button" variant="outline" onClick={onClose}>

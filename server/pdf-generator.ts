@@ -802,11 +802,9 @@ function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dates: an
       <div class="section">
         <div class="section-title">Requested Deliverables</div>
         <ul>
-          <li>Preliminary space planning concepts (2-3 options preferred)</li>
-          <li>Basic floor plans showing proposed layout</li>
-          <li>Conceptual cost estimate for tenant improvements</li>
-          <li>Timeline estimate for design and construction phases</li>
-          <li>Fee proposal for full architectural services (if project proceeds)</li>
+          <li>Preliminary space plan</li>
+          <li>Timeline estimate for design phases</li>
+          <li>Fee proposal for full architectural services</li>
         </ul>
       </div>
 

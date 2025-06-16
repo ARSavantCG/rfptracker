@@ -106,7 +106,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
     },
   });
 
-  const { fields: scopeFields, append: appendScope, remove: removeScope } = useFieldArray({
+  const { fields: scopeFields, append: appendScope, remove: removeScope, replace: replaceScope } = useFieldArray({
     control: form.control,
     name: "scopeOfWork",
   });
@@ -184,8 +184,10 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
       // Force update scope of work fields after form reset
       if (formValues.scopeOfWork && formValues.scopeOfWork.length > 0) {
         setTimeout(() => {
-          form.setValue('scopeOfWork', formValues.scopeOfWork);
-        }, 50);
+          replaceScope(formValues.scopeOfWork);
+        }, 100);
+      } else {
+        replaceScope([]);
       }
     }
   }, [rfp, isOpen, existingInvitation, form, properties, contacts]);
@@ -232,9 +234,9 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
       // Restore form state after a brief delay to allow data to refresh
       setTimeout(() => {
         if (updatedInvitation?.scopeOfWork) {
-          form.setValue('scopeOfWork', updatedInvitation.scopeOfWork);
+          replaceScope(updatedInvitation.scopeOfWork);
         } else if (currentFormValues.scopeOfWork) {
-          form.setValue('scopeOfWork', currentFormValues.scopeOfWork);
+          replaceScope(currentFormValues.scopeOfWork);
         }
       }, 100);
     },

@@ -544,7 +544,6 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                             variant="ghost"
                             size="sm"
                             onClick={() => removeLineItem(index)}
-                            disabled={lineItems.length === 1}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>

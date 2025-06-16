@@ -152,6 +152,7 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
           generalContractor: formData.generalContractor,
           architect: formData.architect,
           warehouseArea: formData.warehouseArea,
+          warehouseNotes: formData.warehouseNotes,
           areaBreakdown: formData.areaBreakdown,
           requestTypes: formData.requestTypes,
           projectDescription: formData.projectDescription,

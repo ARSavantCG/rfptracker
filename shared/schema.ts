@@ -325,12 +325,12 @@ export const evaluationBudgets = pgTable("evaluation_budgets", {
 export type EvaluationLineItem = {
   id: string;
   description: string;
-  category: string;
   quantity: number;
+  unit: string; // e.g., "sq ft", "lf", "ea"
   unitPrice: string;
   totalPrice: string;
-  source: "contractor" | "architect" | "internal"; // Track if from bid or internal addition
   bidCollectionId?: number; // Reference to original bid if applicable
+  bidLineItemId?: number; // Reference to original bid line item if applicable
 };
 
 export const insertEvaluationBudgetSchema = createInsertSchema(evaluationBudgets).omit({

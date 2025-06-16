@@ -16,12 +16,12 @@ import type { RfpRequest, BidCollection, BidLineItem } from "@shared/schema";
 interface EvaluationLineItem {
   id: string;
   description: string;
-  category: string;
   quantity: number;
+  unit: string;
   unitPrice: string;
   totalPrice: string;
-  source: "contractor" | "architect" | "internal";
   bidCollectionId?: number;
+  bidLineItemId?: number;
 }
 
 interface EvaluationBudgetData {
@@ -61,6 +61,25 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     enabled: !!rfp?.id,
   });
 
+  // Load bid line items for each bid collection
+  const { data: allBidLineItems } = useQuery({
+    queryKey: [`/api/bid-line-items`, rfp?.id],
+    queryFn: async () => {
+      if (!bidCollections || !Array.isArray(bidCollections)) return [];
+      
+      const lineItemPromises = bidCollections.map(async (bid: BidCollection) => {
+        const response = await fetch(`/api/bid-collections/${bid.id}/line-items`);
+        if (!response.ok) return [];
+        const lineItems = await response.json();
+        return lineItems.map((item: BidLineItem) => ({ ...item, bidCollectionId: bid.id }));
+      });
+      
+      const results = await Promise.all(lineItemPromises);
+      return results.flat();
+    },
+    enabled: !!bidCollections && Array.isArray(bidCollections) && bidCollections.length > 0,
+  });
+
   // State for budget data
   const [budgetData, setBudgetData] = useState<EvaluationBudgetData>({
     tenantImprovements: [],
@@ -74,26 +93,43 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     notes: "",
   });
 
-  // Initialize budget with bid collection data
+  // Initialize budget with bid line items data
   useState(() => {
-    if (bidCollections && (bidCollections as BidCollection[]).length > 0) {
+    if (allBidLineItems && Array.isArray(allBidLineItems) && allBidLineItems.length > 0) {
       const initialItems: EvaluationLineItem[] = [];
       
-      (bidCollections as BidCollection[]).forEach(bid => {
-        // Add main bid as a line item
-        if (bid.totalAmount) {
+      allBidLineItems.forEach((lineItem: BidLineItem & { bidCollectionId: number }) => {
+        const bid = bidCollections?.find((b: BidCollection) => b.id === lineItem.bidCollectionId);
+        if (bid) {
           initialItems.push({
-            id: `bid-${bid.id}`,
-            description: `${bid.contractorName} - ${bid.contractorCompany}`,
-            category: "Base Construction",
-            quantity: 1,
-            unitPrice: bid.totalAmount,
-            totalPrice: bid.totalAmount,
-            source: bid.contractorName.includes("Architecture") ? "architect" : "contractor",
-            bidCollectionId: bid.id,
+            id: `lineitem-${lineItem.id}`,
+            description: lineItem.description,
+            quantity: parseInt(lineItem.quantity || '1'),
+            unit: lineItem.unit || 'ea',
+            unitPrice: lineItem.unitPrice || '0.00',
+            totalPrice: lineItem.totalPrice,
+            bidCollectionId: lineItem.bidCollectionId,
+            bidLineItemId: lineItem.id,
           });
         }
       });
+
+      // If no line items, fall back to bid totals
+      if (initialItems.length === 0 && bidCollections && Array.isArray(bidCollections)) {
+        (bidCollections as BidCollection[]).forEach(bid => {
+          if (bid.totalAmount) {
+            initialItems.push({
+              id: `bid-${bid.id}`,
+              description: `${bid.contractorName} - ${bid.contractorCompany}`,
+              quantity: 1,
+              unit: 'ls', // lump sum
+              unitPrice: bid.totalAmount,
+              totalPrice: bid.totalAmount,
+              bidCollectionId: bid.id,
+            });
+          }
+        });
+      }
 
       setBudgetData(prev => ({
         ...prev,
@@ -136,11 +172,10 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     const item: EvaluationLineItem = {
       id: `${category}-${Date.now()}`,
       description: newItem.description || "",
-      category: newItem.category || "Miscellaneous",
       quantity,
+      unit: newItem.unit || "ea",
       unitPrice: unitPrice.toFixed(2),
       totalPrice,
-      source: "internal",
     };
 
     // Save to history before adding
@@ -158,7 +193,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     setNewItemCategory("");
   };
 
-  const updateItem = (itemId: string, updates: Partial<EvaluationLineItem>) => {
+  const updateItem = (category: 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', itemId: string, updates: Partial<EvaluationLineItem>) => {
     const categories = ['tenantImprovements', 'designSoftCosts', 'existingImprovements'] as const;
     
     setBudgetData(prev => {

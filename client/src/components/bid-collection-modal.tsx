@@ -293,7 +293,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
       notes: "",
     }));
     
-    setLineItems([...lineItems, ...scopeItems]);
+    setLineItems([...scopeItems, ...lineItems]);
   };
 
   if (!rfp) return null;

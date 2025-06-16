@@ -649,8 +649,8 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
 
         {newItemCategory === category && (
           <div className="mt-4 p-4 border rounded-lg bg-gray-50">
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-              <div>
+            <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+              <div className="md:col-span-2">
                 <Label>Description</Label>
                 <Input
                   value={newItem.description || ""}

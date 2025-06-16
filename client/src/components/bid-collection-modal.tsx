@@ -50,9 +50,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [attachments, setAttachments] = useState<File[]>([]);
-  const [lineItems, setLineItems] = useState<LineItemFormData[]>([
-    { category: "General", description: "", quantity: "", unit: "", unitPrice: "", totalPrice: "", notes: "" }
-  ]);
+  const [lineItems, setLineItems] = useState<LineItemFormData[]>([]);
 
   const form = useForm<BidCollectionFormData>({
     resolver: zodResolver(bidCollectionSchema),
@@ -130,9 +128,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
         status: "received",
         notes: "",
       });
-      setLineItems([
-        { category: "General", description: "", quantity: "", unit: "", unitPrice: "", totalPrice: "", notes: "" }
-      ]);
+      setLineItems([]);
     }
   }, [bidCollection, isOpen, form, existingLineItems]);
 

@@ -965,7 +965,7 @@ function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, dates: a
 
       <div class="preliminary-notice">
         <strong>PRELIMINARY BROKER RESPONSE RFP</strong><br>
-        This is a preliminary request for architectural input in order to support early-stage discussions with a prospective tenant. It does not represent a formal project commitment.
+        This is a preliminary request for conceptual pricing and scheduling to support broker discussions with a prospective tenant. This is not a formal project commitment.
       </div>
 
       <div class="section">

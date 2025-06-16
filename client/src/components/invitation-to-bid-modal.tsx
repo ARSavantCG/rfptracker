@@ -22,7 +22,8 @@ const invitationFormSchema = z.object({
   generateBrokerContractorRfp: z.boolean().default(false),
   projectScope: z.string().min(1, "Project scope is required"),
   projectLocation: z.string().min(1, "Project location is required"),
-  bidSubmissionDeadline: z.string().min(1, "Bid submission deadline is required"),
+  contractorDueDate: z.string().min(1, "Contractor due date is required"),
+  architectDueDate: z.string().min(1, "Architect due date is required"),
   contactPerson: z.string().min(1, "Contact person is required"),
   contactEmail: z.string().email("Valid email is required"),
   contactPhone: z.string().optional(),
@@ -95,7 +96,8 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
       generateBrokerContractorRfp: false,
       projectScope: "",
       projectLocation: "",
-      bidSubmissionDeadline: "",
+      contractorDueDate: "",
+      architectDueDate: "",
       contactPerson: "",
       contactEmail: "",
       contactPhone: "",
@@ -143,7 +145,8 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
         generateBrokerContractorRfp: false,
         projectScope: rfp.projectName,
         projectLocation: getPropertyAddress(rfp.property) || "",
-        bidSubmissionDeadline: "",
+        contractorDueDate: rfp.contractorDueDate ? new Date(rfp.contractorDueDate).toISOString().split('T')[0] : "",
+        architectDueDate: rfp.architectDueDate ? new Date(rfp.architectDueDate).toISOString().split('T')[0] : "",
         ...(() => {
           const contactDetails = getDevelopmentContactDetails(rfp.developmentContact || "");
           return {
@@ -161,8 +164,10 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
       // Merge with existing invitation data if available
       const formValues = existingInvitation ? {
         ...defaultValues,
-        bidSubmissionDeadline: existingInvitation.bidSubmissionDeadline ? 
-          new Date(existingInvitation.bidSubmissionDeadline).toISOString().split('T')[0] : "",
+        contractorDueDate: existingInvitation.contractorDueDate ? 
+          new Date(existingInvitation.contractorDueDate).toISOString().split('T')[0] : defaultValues.contractorDueDate,
+        architectDueDate: existingInvitation.architectDueDate ? 
+          new Date(existingInvitation.architectDueDate).toISOString().split('T')[0] : defaultValues.architectDueDate,
         // Parse contact information from combined field or use development contact
         ...(() => {
           if (existingInvitation.contactForQuestions) {
@@ -210,7 +215,9 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
       const transformedData = {
         projectScope: data.projectScope,
         projectLocation: data.projectLocation,
-        bidSubmissionDeadline: data.bidSubmissionDeadline,
+        bidSubmissionDeadline: new Date(data.contractorDueDate), // Use contractor due date as default
+        contractorDueDate: new Date(data.contractorDueDate),
+        architectDueDate: new Date(data.architectDueDate),
         contactForQuestions: `${data.contactPerson} - ${data.contactEmail || ''} - ${data.contactPhone || ''}`,
         projectDescription: data.projectDescription,
         documentsLink: data.documentsLink,
@@ -524,10 +531,24 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
 
                 <FormField
                   control={form.control}
-                  name="bidSubmissionDeadline"
+                  name="contractorDueDate"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Due Date (Consultant)</FormLabel>
+                      <FormLabel>Contractor Due Date</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="architectDueDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Architect Due Date</FormLabel>
                       <FormControl>
                         <Input type="date" {...field} />
                       </FormControl>

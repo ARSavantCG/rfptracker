@@ -29,6 +29,7 @@ interface EvaluationBudgetData {
   designSoftCosts: EvaluationLineItem[];
   existingImprovements: EvaluationLineItem[];
   hasExistingImprovements: boolean;
+  includeExistingInTotal: boolean;
   totalTenantImprovements: string;
   totalDesignSoftCosts: string;
   totalExistingImprovements: string;
@@ -83,6 +84,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     designSoftCosts: [],
     existingImprovements: [],
     hasExistingImprovements: false,
+    includeExistingInTotal: false,
     totalTenantImprovements: "0.00",
     totalDesignSoftCosts: "0.00", 
     totalExistingImprovements: "0.00",
@@ -153,7 +155,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
   const calculateGrandTotal = () => {
     const tiTotal = calculateCategoryTotal(budgetData.tenantImprovements);
     const designTotal = calculateCategoryTotal(budgetData.designSoftCosts);
-    const existingTotal = budgetData.hasExistingImprovements 
+    const existingTotal = (budgetData.hasExistingImprovements && budgetData.includeExistingInTotal)
       ? calculateCategoryTotal(budgetData.existingImprovements) 
       : 0;
     return tiTotal + designTotal + existingTotal;
@@ -609,6 +611,25 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         </CardHeader>
         {budgetData.hasExistingImprovements && (
           <CardContent>
+            <div className="mb-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="includeExistingInTotal"
+                  checked={budgetData.includeExistingInTotal}
+                  onCheckedChange={(checked) => setBudgetData(prev => ({ 
+                    ...prev, 
+                    includeExistingInTotal: !!checked 
+                  }))}
+                />
+                <Label htmlFor="includeExistingInTotal" className="text-sm font-medium">
+                  Include in Grand Total
+                </Label>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Check this box to include existing improvements in the project's Grand Total. 
+                Leave unchecked to track for financial modeling only.
+              </p>
+            </div>
             {renderCategoryTable(
               "",
               budgetData.existingImprovements,

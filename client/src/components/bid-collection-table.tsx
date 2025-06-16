@@ -8,7 +8,7 @@ import { Plus, Edit, Eye, FileText, Download, ArrowRight } from "lucide-react";
 import { BidCollectionModal } from "./bid-collection-modal";
 import { BidViewModal } from "./bid-view-modal";
 import { useToast } from "@/hooks/use-toast";
-import type { RfpRequest, BidCollection, Contact } from "@shared/schema";
+import type { RfpRequest, BidCollection } from "@shared/schema";
 
 interface BidCollectionTableProps {
   rfp: RfpRequest | null;
@@ -24,12 +24,6 @@ export function BidCollectionTable({ rfp }: BidCollectionTableProps) {
   // Fetch bid collections for this RFP
   const { data: bidCollections, isLoading } = useQuery({
     queryKey: [`/api/rfp-requests/${rfp?.id}/bid-collections`],
-    enabled: !!rfp?.id,
-  });
-
-  // Fetch contacts to determine bidder types
-  const { data: contacts } = useQuery({
-    queryKey: ["/api/contacts"],
     enabled: !!rfp?.id,
   });
 
@@ -64,12 +58,6 @@ export function BidCollectionTable({ rfp }: BidCollectionTableProps) {
       month: 'short',
       day: 'numeric',
     });
-  };
-
-  const getBidderType = (contractorId: number) => {
-    if (!contacts) return "Unknown";
-    const contact = (contacts as Contact[]).find(c => c.id === contractorId);
-    return contact?.type === "architect" ? "Architect" : "Contractor";
   };
 
   // Workflow advancement mutation
@@ -173,7 +161,6 @@ export function BidCollectionTable({ rfp }: BidCollectionTableProps) {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Type</TableHead>
                     <TableHead>Bidder</TableHead>
                     <TableHead>Company</TableHead>
                     <TableHead>Submission Date</TableHead>
@@ -186,11 +173,6 @@ export function BidCollectionTable({ rfp }: BidCollectionTableProps) {
                 <TableBody>
                   {(bidCollections as BidCollection[]).map((bid) => (
                     <TableRow key={bid.id}>
-                      <TableCell>
-                        <Badge variant="outline" className={getBidderType(bid.contractorId) === "Architect" ? "border-purple-200 text-purple-700" : "border-blue-200 text-blue-700"}>
-                          {getBidderType(bid.contractorId)}
-                        </Badge>
-                      </TableCell>
                       <TableCell className="font-medium">
                         {bid.contractorName}
                       </TableCell>

@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,7 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
-import { FileText, Download, Users, Save, X, CheckCircle } from "lucide-react";
+import { FileText, Download, Users, Save, X, CheckCircle, Plus, Trash2 } from "lucide-react";
 import type { RfpRequest, Property, Contact } from "@shared/schema";
 
 const invitationFormSchema = z.object({
@@ -22,17 +22,7 @@ const invitationFormSchema = z.object({
   generateBrokerContractorRfp: z.boolean().default(false),
   projectScope: z.string().min(1, "Project scope is required"),
   projectLocation: z.string().min(1, "Project location is required"),
-  estimatedBudget: z.string().optional(),
-  projectTimeline: z.string().min(1, "Project timeline is required"),
   bidSubmissionDeadline: z.string().min(1, "Bid submission deadline is required"),
-  specialRequirements: z.string().optional(),
-  technicalSpecifications: z.string().optional(),
-  contractTerms: z.string().optional(),
-  paymentTerms: z.string().optional(),
-  insuranceRequirements: z.string().optional(),
-  bondingRequirements: z.string().optional(),
-  prequalificationCriteria: z.string().optional(),
-  evaluationCriteria: z.string().optional(),
   contactPerson: z.string().min(1, "Contact person is required"),
   contactEmail: z.string().email("Valid email is required"),
   contactPhone: z.string().optional(),
@@ -41,6 +31,11 @@ const invitationFormSchema = z.object({
   keyDates: z.array(z.object({
     label: z.string(),
     date: z.string(),
+  })).default([]),
+  scopeOfWork: z.array(z.object({
+    description: z.string(),
+    quantity: z.number(),
+    unit: z.string(),
   })).default([]),
 });
 
@@ -100,21 +95,20 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
       generateBrokerContractorRfp: false,
       projectScope: "",
       projectLocation: "",
-      estimatedBudget: "",
-      projectTimeline: "",
       bidSubmissionDeadline: "",
-      specialRequirements: "",
-      technicalSpecifications: "",
-      contractTerms: "",
-      paymentTerms: "",
-      insuranceRequirements: "",
-      bondingRequirements: "",
-      prequalificationCriteria: "",
-      evaluationCriteria: "",
       contactPerson: "",
       contactEmail: "",
       contactPhone: "",
+      projectDescription: "",
+      documentsLink: "",
+      keyDates: [],
+      scopeOfWork: [],
     },
+  });
+
+  const { fields: scopeFields, append: appendScope, remove: removeScope } = useFieldArray({
+    control: form.control,
+    name: "scopeOfWork",
   });
 
   // Fetch existing invitation data
@@ -137,19 +131,9 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
         generateContractorRfp: false,
         generateBrokerArchitectRfp: false,
         generateBrokerContractorRfp: false,
-        projectScope: `${rfp.projectName} - ${rfp.tenantName}`,
+        projectScope: rfp.projectName,
         projectLocation: getPropertyAddress(rfp.property) || "",
-        estimatedBudget: "",
-        projectTimeline: "",
         bidSubmissionDeadline: "",
-        specialRequirements: "",
-        technicalSpecifications: "",
-        contractTerms: "",
-        paymentTerms: "",
-        insuranceRequirements: "",
-        bondingRequirements: "",
-        prequalificationCriteria: "",
-        evaluationCriteria: "",
         ...(() => {
           const contactDetails = getDevelopmentContactDetails(rfp.developmentContact || "");
           return {
@@ -161,66 +145,37 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
         projectDescription: rfp.projectDescription || "",
         documentsLink: rfp.documentsLink || "",
         keyDates: [],
+        scopeOfWork: [],
       };
 
       // Merge with existing invitation data if available
       const formValues = existingInvitation ? {
         ...defaultValues,
-        estimatedBudget: existingInvitation.estimatedBudget || "",
-        projectTimeline: existingInvitation.projectTimeline || "",
         bidSubmissionDeadline: existingInvitation.bidSubmissionDeadline ? 
           new Date(existingInvitation.bidSubmissionDeadline).toISOString().split('T')[0] : "",
-        specialRequirements: Array.isArray(existingInvitation.specialRequirements) ? 
-          existingInvitation.specialRequirements.join(", ") : (existingInvitation.specialRequirements || ""),
-        technicalSpecifications: existingInvitation.technicalSpecifications || "",
-        contractTerms: existingInvitation.contractTerms || "",
-        paymentTerms: existingInvitation.paymentTerms || "",
-        insuranceRequirements: existingInvitation.insuranceRequirements || "",
-        bondingRequirements: existingInvitation.bondingRequirements || "",
-        prequalificationCriteria: Array.isArray(existingInvitation.prequalificationCriteria) ? 
-          existingInvitation.prequalificationCriteria.join(", ") : (existingInvitation.prequalificationCriteria || ""),
-        evaluationCriteria: Array.isArray(existingInvitation.evaluationCriteria) ? 
-          existingInvitation.evaluationCriteria.join(", ") : (existingInvitation.evaluationCriteria || ""),
         // Parse contact information from combined field or use development contact
         ...(() => {
           if (existingInvitation.contactForQuestions) {
             const parts = existingInvitation.contactForQuestions.split(' - ');
-            // Handle both old format "Name - Company - Email - Phone" and new format "Name - Email - Phone"
-            if (parts.length >= 4) {
-              // Old format: "Name - Company - Email - Phone"
-              return {
-                contactPerson: parts[0] || "",
-                contactEmail: parts[2] || "",
-                contactPhone: parts[3] || "",
-              };
-            } else if (parts.length >= 3) {
-              // New format: "Name - Email - Phone"
+            if (parts.length >= 3) {
               return {
                 contactPerson: parts[0] || "",
                 contactEmail: parts[1] || "",
                 contactPhone: parts[2] || "",
               };
-            } else {
-              // Fallback to development contact
-              const contactDetails = getDevelopmentContactDetails(rfp.developmentContact || "");
-              return {
-                contactPerson: contactDetails.name,
-                contactEmail: contactDetails.email,
-                contactPhone: contactDetails.phone,
-              };
             }
-          } else {
-            const contactDetails = getDevelopmentContactDetails(rfp.developmentContact || "");
-            return {
-              contactPerson: contactDetails.name,
-              contactEmail: contactDetails.email,
-              contactPhone: contactDetails.phone,
-            };
           }
+          const contactDetails = getDevelopmentContactDetails(rfp.developmentContact || "");
+          return {
+            contactPerson: contactDetails.name,
+            contactEmail: contactDetails.email,
+            contactPhone: contactDetails.phone,
+          };
         })(),
         projectDescription: existingInvitation.projectDescription || "",
         documentsLink: existingInvitation.documentsLink || "",
         keyDates: Array.isArray(existingInvitation.keyDates) ? existingInvitation.keyDates : [],
+        scopeOfWork: Array.isArray(existingInvitation.scopeOfWork) ? existingInvitation.scopeOfWork : [],
       } : defaultValues;
 
       form.reset(formValues);
@@ -236,21 +191,12 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
       const transformedData = {
         projectScope: data.projectScope,
         projectLocation: data.projectLocation,
-        estimatedBudget: data.estimatedBudget,
-        projectTimeline: data.projectTimeline,
         bidSubmissionDeadline: data.bidSubmissionDeadline,
-        specialRequirements: data.specialRequirements ? [data.specialRequirements] : [],
-        technicalSpecifications: data.technicalSpecifications,
-        contractTerms: data.contractTerms,
-        paymentTerms: data.paymentTerms,
-        insuranceRequirements: data.insuranceRequirements,
-        bondingRequirements: data.bondingRequirements,
-        prequalificationCriteria: data.prequalificationCriteria ? [data.prequalificationCriteria] : [],
-        evaluationCriteria: data.evaluationCriteria ? [data.evaluationCriteria] : [],
         contactForQuestions: `${data.contactPerson} - ${data.contactEmail || ''} - ${data.contactPhone || ''}`,
         projectDescription: data.projectDescription,
         documentsLink: data.documentsLink,
         keyDates: data.keyDates,
+        scopeOfWork: data.scopeOfWork,
       };
       
       // Save or update invitation to bid record
@@ -265,29 +211,12 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
         return response.json();
       }
     },
-    onSuccess: (updatedInvitation, variables) => {
+    onSuccess: () => {
       toast({
         title: "Invitation Saved",
         description: "Your invitation details have been saved successfully.",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests", rfp?.id, "invitation-to-bid"] });
-      
-      // Preserve checkbox state after save
-      const currentFormValues = form.getValues();
-      const preservedCheckboxes = {
-        generateArchitectRfp: currentFormValues.generateArchitectRfp,
-        generateContractorRfp: currentFormValues.generateContractorRfp,
-        generateBrokerArchitectRfp: currentFormValues.generateBrokerArchitectRfp,
-        generateBrokerContractorRfp: currentFormValues.generateBrokerContractorRfp,
-      };
-      
-      // Update form with preserved checkbox state after a brief delay to allow data to refresh
-      setTimeout(() => {
-        form.setValue('generateArchitectRfp', preservedCheckboxes.generateArchitectRfp);
-        form.setValue('generateContractorRfp', preservedCheckboxes.generateContractorRfp);
-        form.setValue('generateBrokerArchitectRfp', preservedCheckboxes.generateBrokerArchitectRfp);
-        form.setValue('generateBrokerContractorRfp', preservedCheckboxes.generateBrokerContractorRfp);
-      }, 100);
     },
     onError: (error) => {
       toast({
@@ -302,102 +231,48 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
     mutationFn: async (data: InvitationFormData) => {
       if (!rfp) throw new Error("No RFP selected");
       
-      // Transform form data to match database schema
-      const transformedData = {
-        projectScope: data.projectScope,
-        projectLocation: data.projectLocation,
-        estimatedBudget: data.estimatedBudget,
-        projectTimeline: data.projectTimeline,
-        bidSubmissionDeadline: data.bidSubmissionDeadline,
-        specialRequirements: data.specialRequirements ? [data.specialRequirements] : [],
-        technicalSpecifications: data.technicalSpecifications,
-        contractTerms: data.contractTerms,
-        paymentTerms: data.paymentTerms,
-        insuranceRequirements: data.insuranceRequirements,
-        bondingRequirements: data.bondingRequirements,
-        prequalificationCriteria: data.prequalificationCriteria ? [data.prequalificationCriteria] : [],
-        evaluationCriteria: data.evaluationCriteria ? [data.evaluationCriteria] : [],
-        contactForQuestions: `${data.contactPerson} - ${data.contactEmail || ''} - ${data.contactPhone || ''}`,
-      };
+      setIsGeneratingPdfs(true);
       
-      // First save the invitation data
-      if (existingInvitation) {
-        const response = await apiRequest(`/api/rfp-requests/${rfp.id}/invitation-to-bid`, "PATCH", transformedData);
-        return response.json();
-      } else {
-        const response = await apiRequest("/api/invitation-to-bid", "POST", {
-          rfpId: rfp.id,
-          ...transformedData,
-        });
-        return response.json();
-      }
-    },
-    onSuccess: async (updatedInvitation, variables) => {
-      const formData = variables;
-      
-      // Generate PDFs based on selected options
       const documentsToOpen = [];
       
-      if (formData.generateArchitectRfp) {
-        documentsToOpen.push({ type: "architect", label: "Architect RFP" });
+      if (data.generateArchitectRfp) {
+        documentsToOpen.push({ type: "architect", title: "Architect RFP" });
       }
-      if (formData.generateContractorRfp) {
-        documentsToOpen.push({ type: "contractor", label: "Contractor RFP" });
+      if (data.generateContractorRfp) {
+        documentsToOpen.push({ type: "contractor", title: "Contractor RFP" });
       }
-      if (formData.generateBrokerArchitectRfp) {
-        documentsToOpen.push({ type: "broker-architect", label: "Broker Architect RFP" });
+      if (data.generateBrokerArchitectRfp) {
+        documentsToOpen.push({ type: "broker-architect", title: "Broker Architect RFP" });
       }
-      if (formData.generateBrokerContractorRfp) {
-        documentsToOpen.push({ type: "broker-contractor", label: "Broker Contractor RFP" });
+      if (data.generateBrokerContractorRfp) {
+        documentsToOpen.push({ type: "broker-contractor", title: "Broker Contractor RFP" });
       }
       
-      if (documentsToOpen.length > 0) {
-        setIsGeneratingPdfs(true);
-        
-        // Generate and open each document
-        console.log(`Total documents to open: ${documentsToOpen.length}`, documentsToOpen);
-        
-        for (let i = 0; i < documentsToOpen.length; i++) {
-          const doc = documentsToOpen[i];
-          console.log(`[${i + 1}/${documentsToOpen.length}] Opening ${doc.type} document (${doc.label})...`);
+      // Save invitation data first
+      await saveInvitationMutation.mutateAsync(data);
+      
+      // Generate and open documents
+      for (let i = 0; i < documentsToOpen.length; i++) {
+        const doc = documentsToOpen[i];
+        try {
+          console.log(`Opening ${doc.title} document...`);
+          const response = await fetch(`/api/rfp-requests/${rfp.id}/generate-pdf-html`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              recipientType: doc.type,
+              recipientName: "",
+              recipientCompany: ""
+            })
+          });
           
-          try {
-            const response = await fetch(`/api/rfp-requests/${rfp.id}/generate-pdf`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ recipientType: doc.type })
-            });
-            
-            console.log(`Response status for ${doc.type}:`, response.status);
-            
-            if (response.ok) {
-              const htmlContent = await response.text();
-              console.log(`HTML content length for ${doc.type}:`, htmlContent.length);
-              
-              // Open in new window for manual saving
-              console.log(`Opening window for ${doc.type}...`);
-              const newWindow = window.open('', '_blank');
-              if (newWindow) {
-                newWindow.document.write(htmlContent);
-                newWindow.document.close();
-              } else {
-                console.error(`Failed to open window for ${doc.type}`);
-              }
-            } else {
-              console.error(`Failed to generate ${doc.type} document: ${response.status} ${response.statusText}`);
-              toast({
-                title: "Generation Failed",
-                description: `Failed to generate ${doc.type} document.`,
-                variant: "destructive",
-              });
+          if (response.ok) {
+            const htmlContent = await response.text();
+            const newWindow = window.open('', '_blank');
+            if (newWindow) {
+              newWindow.document.write(htmlContent);
+              newWindow.document.close();
             }
-          } catch (error) {
-            console.error(`Error opening ${doc.type} document:`, error);
-            toast({
-              title: "Error",
-              description: `Error opening ${doc.type} document: ${(error as Error)?.message || 'Unknown error'}`,
-              variant: "destructive",
-            });
           }
           
           // Add a small delay between documents to avoid overwhelming the browser
@@ -405,50 +280,55 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
             console.log("Waiting 500ms before opening next document...");
             await new Promise(resolve => setTimeout(resolve, 500));
           }
+        } catch (error) {
+          console.error(`Failed to open ${doc.title}:`, error);
+          toast({
+            title: "Document Error",
+            description: `Failed to open ${doc.title}. ${error instanceof Error ? error.message : 'Unknown error'}`,
+            variant: "destructive",
+          });
         }
-        
-        toast({
-          title: "Documents Opened",
-          description: `${documentsToOpen.length} document(s) opened in new tabs. Use Ctrl+P to save as PDF.`,
-          action: (
-            <ToastAction
-              altText="Complete Phase"
-              onClick={async () => {
-                try {
-                  const response = await fetch(`/api/rfp-requests/${rfp.id}/advance-phase`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ newPhase: 'bid-collection' })
-                  });
-                  
-                  if (response.ok) {
-                    toast({
-                      title: "Phase Complete",
-                      description: "Invitation to Bid completed. Moving to Bid Collection phase.",
-                    });
-                    queryClient.invalidateQueries({ queryKey: ['/api/rfp-requests'] });
-                    onClose();
-                  } else {
-                    throw new Error('Failed to advance workflow');
-                  }
-                } catch (error) {
-                  toast({
-                    title: "Error",
-                    description: "Failed to complete invitation phase.",
-                    variant: "destructive",
-                  });
-                }
-              }}
-            >
-              Complete Phase
-            </ToastAction>
-          ),
-        });
-        
-        setIsGeneratingPdfs(false);
       }
       
-      queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests", rfp?.id, "invitation-to-bid"] });
+      toast({
+        title: "Documents Opened",
+        description: `${documentsToOpen.length} document(s) opened in new tabs. Use Ctrl+P to save as PDF.`,
+        action: (
+          <ToastAction
+            altText="Complete Phase"
+            onClick={async () => {
+              try {
+                const response = await fetch(`/api/rfp-requests/${rfp.id}/advance-phase`, {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ newPhase: 'bid-collection' })
+                });
+                
+                if (response.ok) {
+                  toast({
+                    title: "Phase Complete",
+                    description: "Invitation to Bid completed. Moving to Bid Collection phase.",
+                  });
+                  queryClient.invalidateQueries({ queryKey: ['/api/rfp-requests'] });
+                  onClose();
+                } else {
+                  throw new Error('Failed to advance workflow');
+                }
+              } catch (error) {
+                toast({
+                  title: "Error",
+                  description: "Failed to complete invitation phase.",
+                  variant: "destructive",
+                });
+              }
+            }}
+          >
+            Complete Phase
+          </ToastAction>
+        ),
+      });
+      
+      setIsGeneratingPdfs(false);
     },
     onError: (error) => {
       setIsGeneratingPdfs(false);
@@ -510,7 +390,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={form.control}
                   name="generateContractorRfp"
@@ -528,7 +408,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={form.control}
                   name="generateBrokerArchitectRfp"
@@ -546,7 +426,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={form.control}
                   name="generateBrokerContractorRfp"
@@ -578,7 +458,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                     <FormItem>
                       <FormLabel>Project Name</FormLabel>
                       <FormControl>
-                        <Input {...field} />
+                        <Input {...field} placeholder="Project scope" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -592,35 +472,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                     <FormItem>
                       <FormLabel>Project Location</FormLabel>
                       <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="estimatedBudget"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Estimated Budget</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="$" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="projectTimeline"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Project Timeline</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="e.g., 6 months" />
+                        <Input {...field} placeholder="Project location" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -632,7 +484,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                   name="bidSubmissionDeadline"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Due Date (Internal or Consultant)</FormLabel>
+                      <FormLabel>Due Date (Consultant)</FormLabel>
                       <FormControl>
                         <Input type="date" {...field} />
                       </FormControl>
@@ -691,16 +543,106 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
               </div>
             </div>
 
-            {/* Additional Requirements */}
+            {/* Scope of Work */}
             <div className="space-y-4">
-              <h3 className="text-lg font-medium">Additional Requirements</h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-medium">Scope of Work</h3>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => appendScope({ description: "", quantity: 1, unit: "" })}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Line Item
+                </Button>
+              </div>
+              
+              {scopeFields.length === 0 && (
+                <div className="text-center text-gray-500 py-4">
+                  No scope items added yet. Click "Add Line Item" to get started.
+                </div>
+              )}
+
+              {scopeFields.map((field, index) => (
+                <div key={field.id} className="grid grid-cols-12 gap-4 items-end">
+                  <div className="col-span-6">
+                    <FormField
+                      control={form.control}
+                      name={`scopeOfWork.${index}.description`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Description</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="Work description" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <div className="col-span-2">
+                    <FormField
+                      control={form.control}
+                      name={`scopeOfWork.${index}.quantity`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Quantity</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              {...field} 
+                              onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                              placeholder="1" 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="col-span-3">
+                    <FormField
+                      control={form.control}
+                      name={`scopeOfWork.${index}.unit`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Unit</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="sq ft, each, etc." />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="col-span-1">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => removeScope(index)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Additional Information */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium">Additional Information</h3>
+              <div className="grid grid-cols-1 gap-4">
                 <FormField
                   control={form.control}
-                  name="specialRequirements"
+                  name="projectDescription"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Special Requirements</FormLabel>
+                      <FormLabel>Project Description</FormLabel>
                       <FormControl>
                         <Textarea {...field} />
                       </FormControl>
@@ -711,96 +653,12 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
 
                 <FormField
                   control={form.control}
-                  name="technicalSpecifications"
+                  name="documentsLink"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Technical Specifications</FormLabel>
+                      <FormLabel>Documents Link</FormLabel>
                       <FormControl>
-                        <Textarea {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="contractTerms"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Contract Terms</FormLabel>
-                      <FormControl>
-                        <Textarea {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="paymentTerms"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Payment Terms</FormLabel>
-                      <FormControl>
-                        <Textarea {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="insuranceRequirements"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Insurance Requirements</FormLabel>
-                      <FormControl>
-                        <Textarea {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="bondingRequirements"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Bonding Requirements</FormLabel>
-                      <FormControl>
-                        <Textarea {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="prequalificationCriteria"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Prequalification Criteria</FormLabel>
-                      <FormControl>
-                        <Textarea {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="evaluationCriteria"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Evaluation Criteria</FormLabel>
-                      <FormControl>
-                        <Textarea {...field} />
+                        <Input {...field} placeholder="Link to project documents" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -810,35 +668,41 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
             </div>
 
             {/* Action Buttons */}
-            <div className="flex gap-3 pt-4">
+            <div className="flex justify-between items-center pt-6 border-t">
               <Button 
                 type="button"
                 variant="outline"
-                onClick={() => saveInvitationMutation.mutate(form.getValues())}
+                onClick={async () => {
+                  if (!rfp) return;
+                  
+                  const formData = form.getValues();
+                  await saveInvitationMutation.mutateAsync(formData);
+                }}
                 disabled={saveInvitationMutation.isPending}
               >
                 <Save className="h-4 w-4 mr-2" />
-                Save
+                Save Progress
               </Button>
               
-              <Button 
-                type="submit"
-                disabled={createInvitationMutation.isPending || isGeneratingPdfs || saveInvitationMutation.isPending}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                <FileText className="h-4 w-4 mr-2" />
-                {isGeneratingPdfs ? "Generating..." : "Generate & Open RFPs"}
-              </Button>
-              
-              <Button 
-                type="button"
-                variant="outline"
-                onClick={onClose}
-                disabled={createInvitationMutation.isPending || isGeneratingPdfs || saveInvitationMutation.isPending}
-              >
-                <X className="h-4 w-4 mr-2" />
-                Cancel
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  type="button"
+                  variant="outline"
+                  onClick={onClose}
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Cancel
+                </Button>
+                
+                <Button 
+                  type="submit"
+                  disabled={createInvitationMutation.isPending || isGeneratingPdfs || saveInvitationMutation.isPending}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  Generate RFPs
+                </Button>
+              </div>
             </div>
           </form>
         </Form>

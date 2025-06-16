@@ -291,13 +291,23 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         }
         .section-total { font-weight: bold; color: #28a745; font-size: 18px; }
         .table-container { padding: 20px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #dee2e6; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; table-layout: fixed; }
+        th, td { padding: 12px; border-bottom: 1px solid #dee2e6; vertical-align: top; }
         th {
             background-color: #f8f9fa;
             font-weight: 600;
             color: #495057;
             text-transform: uppercase;
+        }
+        
+        /* Consistent column widths for alignment */
+        th:nth-child(1), td:nth-child(1) { width: 40%; text-align: left; }    /* Description */
+        th:nth-child(2), td:nth-child(2) { width: 12%; text-align: center; }  /* Quantity */
+        th:nth-child(3), td:nth-child(3) { width: 8%; text-align: center; }   /* Unit */
+        th:nth-child(4), td:nth-child(4) { width: 20%; text-align: right; }   /* Unit Price */
+        th:nth-child(5), td:nth-child(5) { width: 20%; text-align: right; }   /* Total Price */
+        
+        th {
             font-size: 12px;
             letter-spacing: 0.5px;
         }

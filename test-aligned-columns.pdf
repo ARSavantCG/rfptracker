@@ -1,0 +1,276 @@
+
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>Financial Summary - Oakley & Sons 3 @ MG Westside - A</title>
+      <style>
+        body { 
+          font-family: Arial, sans-serif; 
+          margin: 0; 
+          padding: 20px; 
+          color: #333; 
+          line-height: 1.4; 
+        }
+        .header { 
+          text-align: center; 
+          margin-bottom: 30px; 
+          border-bottom: 2px solid #2563eb; 
+          padding-bottom: 20px; 
+        }
+        .company-info { text-align: left; margin-bottom: 20px; }
+        .document-title { font-size: 18px; font-weight: bold; color: #2563eb; margin: 10px 0; }
+        .project-title { font-size: 16px; font-weight: bold; margin: 5px 0; }
+        
+        .section {
+          background: white;
+          margin: 20px 0;
+          padding: 20px;
+          border-radius: 8px;
+          box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .section-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 15px;
+          padding-bottom: 10px;
+          border-bottom: 2px solid #e9ecef;
+        }
+        
+        .section-title {
+          font-size: 16px;
+          font-weight: bold;
+          color: #495057;
+          margin: 0;
+        }
+        
+        .section-total {
+          font-size: 18px;
+          font-weight: bold;
+          color: #28a745;
+        }
+        
+        .table-container {
+          overflow-x: auto;
+        }
+        
+        .line-items-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 0;
+        }
+        
+        .line-items-table th {
+          background-color: #f8f9fa;
+          border: 1px solid #dee2e6;
+          padding: 12px 8px;
+          text-align: left;
+          font-weight: bold;
+          font-size: 11px;
+          color: #495057;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+        
+        .line-items-table td {
+          border: 1px solid #dee2e6;
+          padding: 10px 8px;
+          vertical-align: top;
+          font-size: 12px;
+        }
+        
+        .line-items-table tbody tr:nth-child(even) {
+          background-color: #f8f9fa;
+        }
+        
+        /* Column-specific styling for consistent alignment */
+        .description-col { 
+          width: 40%; 
+          text-align: left; 
+        }
+        .quantity-col { 
+          width: 12%; 
+          text-align: center; 
+        }
+        .unit-col { 
+          width: 8%; 
+          text-align: center; 
+        }
+        .unit-price-col { 
+          width: 20%; 
+          text-align: right; 
+        }
+        .total-price-col { 
+          width: 20%; 
+          text-align: right; 
+        }
+        
+        .grand-total {
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+          padding: 20px;
+          border-radius: 8px;
+          text-align: center;
+          margin: 30px 0;
+          box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        .grand-total h2 {
+          margin: 0;
+          font-size: 24px;
+          font-weight: 600;
+        }
+        
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 15px 0; }
+        .info-item { display: flex; margin: 5px 0; }
+        .label { font-weight: bold; min-width: 120px; }
+        .value { margin-left: 10px; }
+        .export-info { background-color: #dbeafe; padding: 15px; border-radius: 8px; margin: 20px 0; }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        th, td { border: 1px solid #e5e7eb; padding: 12px; text-align: left; }
+        th { background-color: #f9fafb; font-weight: bold; }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <div class="company-info">
+          <div><strong>Financial Summary Report</strong></div>
+          <div>Generated: Monday, June 16, 2025</div>
+          <div>RFP Number: RFP-2025-005</div>
+        </div>
+        <div class="document-title">PROJECT FINANCIAL SUMMARY</div>
+        <div class="project-title">Oakley & Sons 3 @ MG Westside - A</div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Project Overview</div>
+        <div class="info-grid">
+          <div>
+            <div class="info-item"><span class="label">RFP Number:</span><span class="value">RFP-2025-005</span></div>
+            <div class="info-item"><span class="label">Project Name:</span><span class="value">Oakley & Sons 3 @ MG Westside - A</span></div>
+            <div class="info-item"><span class="label">Tenant:</span><span class="value">Oakley & Sons 3</span></div>
+          </div>
+          <div>
+            <div class="info-item"><span class="label">Property:</span><span class="value">5</span></div>
+            <div class="info-item"><span class="label">Development Contact:</span><span class="value">Adolfo Reutlinger - Bridge Industrial</span></div>
+            <div class="info-item"><span class="label">Report Date:</span><span class="value">Monday, June 16, 2025</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Detailed Line Item Tables -->
+      
+      <div class="section">
+        <div class="section-header">
+          <h2 class="section-title">Tenant Improvements</h2>
+          <span class="section-total">$325,000.00</span>
+        </div>
+        <div class="table-container">
+          <table class="line-items-table">
+            <thead>
+              <tr>
+                <th class="description-col">DESCRIPTION</th>
+                <th class="quantity-col">QUANTITY</th>
+                <th class="unit-col">UNIT</th>
+                <th class="unit-price-col">UNIT PRICE</th>
+                <th class="total-price-col">TOTAL PRICE</th>
+              </tr>
+            </thead>
+            <tbody>
+              
+                <tr>
+                  <td class="description-col">Pit Levelers</td>
+                  <td class="quantity-col">25</td>
+                  <td class="unit-col">ea</td>
+                  <td class="unit-price-col">$10,000.00</td>
+                  <td class="total-price-col">$250,000.00</td>
+                </tr>
+              
+                <tr>
+                  <td class="description-col">Electrical Service Upgrade (800 Amps)</td>
+                  <td class="quantity-col">1</td>
+                  <td class="unit-col">ls</td>
+                  <td class="unit-price-col">$75,000.00</td>
+                  <td class="total-price-col">$75,000.00</td>
+                </tr>
+              
+            </tbody>
+          </table>
+        </div>
+      </div>
+    
+      
+      <div class="section">
+        <div class="section-header">
+          <h2 class="section-title">Design / Soft Costs / Other Fees</h2>
+          <span class="section-total">$50,000.00</span>
+        </div>
+        <div class="table-container">
+          <table class="line-items-table">
+            <thead>
+              <tr>
+                <th class="description-col">DESCRIPTION</th>
+                <th class="quantity-col">QUANTITY</th>
+                <th class="unit-col">UNIT</th>
+                <th class="unit-price-col">UNIT PRICE</th>
+                <th class="total-price-col">TOTAL PRICE</th>
+              </tr>
+            </thead>
+            <tbody>
+              
+                <tr>
+                  <td class="description-col">MEP Design</td>
+                  <td class="quantity-col">1</td>
+                  <td class="unit-col">ls</td>
+                  <td class="unit-price-col">$50,000.00</td>
+                  <td class="total-price-col">$50,000.00</td>
+                </tr>
+              
+            </tbody>
+          </table>
+        </div>
+      </div>
+    
+      
+
+      <div class="grand-total">
+        <h2>Grand Total: $375,000.00</h2>
+        
+      </div>
+
+
+
+      <div class="section">
+        <div class="section-title">Financial Analysis Notes</div>
+        <div class="export-info">
+          <p><strong>Purpose:</strong> This financial summary provides a comprehensive breakdown of project costs for integration into internal financial modeling systems.</p>
+          
+          <p><strong>Cost Categories:</strong></p>
+          <ul>
+            <li><strong>Tenant Improvements:</strong> Direct construction and improvement costs</li>
+            <li><strong>Design / Soft Costs:</strong> Architectural, engineering, and project management fees</li>
+            
+          </ul>
+          
+          <p><strong>Data Source:</strong> Compiled from evaluated bids and internal cost assessments during the RFP evaluation phase.</p>
+          
+          <p><strong>Next Steps:</strong> Use these figures for lease negotiation modeling, budget approval processes, and project financial planning.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Document Information</div>
+        <table>
+          <tr><th>Field</th><th>Value</th></tr>
+          <tr><td>Document Type</td><td>Financial Summary Report</td></tr>
+          <tr><td>Generated By</td><td>RFP Management System</td></tr>
+          <tr><td>Generation Date</td><td>Monday, June 16, 2025</td></tr>
+          <tr><td>Project Phase</td><td>Evaluation Complete</td></tr>
+          <tr><td>Status</td><td>Ready for Financial Modeling</td></tr>
+        </table>
+      </div>
+    </body>
+    </html>
+  

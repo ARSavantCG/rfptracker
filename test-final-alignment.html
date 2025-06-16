@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Fixed Column Alignment Test</title>
+  <style>
+    body { 
+      font-family: Arial, sans-serif; 
+      margin: 0; 
+      padding: 20px; 
+      color: #333; 
+      line-height: 1.4; 
+    }
+    
+    .section {
+      background: white;
+      margin: 20px 0;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #e9ecef;
+    }
+    
+    .section-title {
+      font-size: 16px;
+      font-weight: bold;
+      color: #495057;
+      margin: 0;
+    }
+    
+    .section-total {
+      font-size: 18px;
+      font-weight: bold;
+      color: #28a745;
+    }
+    
+    table { 
+      width: 100%; 
+      border-collapse: collapse; 
+      margin-top: 10px; 
+      table-layout: fixed; 
+    }
+    
+    th, td { 
+      padding: 12px; 
+      border-bottom: 1px solid #dee2e6; 
+      vertical-align: top; 
+    }
+    
+    th {
+      background-color: #f8f9fa;
+      font-weight: 600;
+      color: #495057;
+      text-transform: uppercase;
+      font-size: 12px;
+      letter-spacing: 0.5px;
+    }
+    
+    /* Consistent column widths for perfect alignment */
+    th:nth-child(1), td:nth-child(1) { width: 40%; text-align: left; }    /* Description */
+    th:nth-child(2), td:nth-child(2) { width: 12%; text-align: center; }  /* Quantity */
+    th:nth-child(3), td:nth-child(3) { width: 8%; text-align: center; }   /* Unit */
+    th:nth-child(4), td:nth-child(4) { width: 20%; text-align: right; }   /* Unit Price */
+    th:nth-child(5), td:nth-child(5) { width: 20%; text-align: right; }   /* Total Price */
+    
+    tr:hover { background-color: #f8f9fa; }
+  </style>
+</head>
+<body>
+
+<div class="section">
+  <div class="section-header">
+    <h2 class="section-title">Tenant Improvements</h2>
+    <span class="section-total">$325,000.00</span>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>Description</th>
+        <th>Quantity</th>
+        <th>Unit</th>
+        <th>Unit Price</th>
+        <th>Total Price</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Pit Levelers</td>
+        <td>25</td>
+        <td>ea</td>
+        <td>$10,000.00</td>
+        <td>$250,000.00</td>
+      </tr>
+      <tr>
+        <td>Electrical Service Upgrade (800 Amps)</td>
+        <td>1</td>
+        <td>ls</td>
+        <td>$75,000.00</td>
+        <td>$75,000.00</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="section">
+  <div class="section-header">
+    <h2 class="section-title">Design / Soft Costs / Other Fees</h2>
+    <span class="section-total">$50,000.00</span>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>Description</th>
+        <th>Quantity</th>
+        <th>Unit</th>
+        <th>Unit Price</th>
+        <th>Total Price</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>MEP Design</td>
+        <td>1</td>
+        <td>ls</td>
+        <td>$50,000.00</td>
+        <td>$50,000.00</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+</body>
+</html>

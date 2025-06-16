@@ -116,6 +116,7 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
         generalContractor: rfp.generalContractor || "",
         architect: rfp.architect || "",
         warehouseArea: rfp.warehouseArea || projectAreaValue,
+        warehouseNotes: (rfp as any).warehouseNotes || "",
         areaBreakdown: (rfp as any).areaBreakdown || areaBreakdown,
         requestTypes: rfp.requestTypes || ["pricing", "schedule", "space-plan"],
         projectDescription: rfp.projectDescription || "",

@@ -916,9 +916,8 @@ function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, dates: a
         <div class="section-title">Project Overview</div>
         <div class="info-grid">
           <div>
-            <div class="info-item"><span class="label">Property:</span><span class="value">${invitationToBid?.projectScope || rfp.tenantName}</span></div>
-            <div class="info-item"><span class="label">Prospective Tenant:</span><span class="value">${rfp.confidential ? 'Confidential' : rfp.tenantName}</span></div>
-            ${totalArea > 0 ? `<div class="info-item"><span class="label">Total Area:</span><span class="value">${totalArea.toLocaleString()} sq ft</span></div>` : ''}
+            <div class="info-item"><span class="label">Project:</span><span class="value">${invitationToBid?.projectScope || rfp.tenantName}</span></div>
+            <div class="info-item"><span class="label">Property Address:</span><span class="value">${invitationToBid?.projectLocation || rfp.propertyAddress || rfp.property}</span></div>
           </div>
           <div>
             <div class="info-item"><span class="label">Requested Response:</span><span class="value">${formattedDeadline}</span></div>
@@ -933,6 +932,17 @@ function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, dates: a
         </div>
         ` : ''}
 
+        ${invitationToBid?.scopeOfWork && Array.isArray(invitationToBid.scopeOfWork) && invitationToBid.scopeOfWork.length > 0 ? `
+        <div class="scope-of-work">
+          <strong>Scope of Work:</strong>
+          <ul>
+            ${invitationToBid.scopeOfWork.map(item => `
+              <li>${item.description}${item.quantity ? ` - ${item.quantity.toLocaleString()} ${item.unit || ''}` : ''}</li>
+            `).join('')}
+          </ul>
+        </div>
+        ` : ''}
+
         ${invitationToBid?.documentsLink ? `
         <div class="info-item" style="margin-top: 15px;">
           <span class="label">Project Documents:</span>
@@ -942,46 +952,38 @@ function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, dates: a
       </div>
 
       <div class="section">
-        <div class="section-title">Preliminary Scope of Work</div>
-        <p><strong>Conceptual Phase (Requested):</strong></p>
+        <div class="section-title">Requested Deliverables</div>
+        <ul>
+          <li>Preliminary cost estimate</li>
+          <li>Timeline estimate for construction phases</li>
+          <li>Pricing proposal for full construction services</li>
+        </ul>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Pricing Considerations</div>
         <ul>
           <li>Review tenant improvement requirements and building conditions</li>
           <li>Provide conceptual cost estimates for typical build-out scenarios</li>
-          <li>Preliminary scheduling for design and construction phases</li>
           <li>Identify potential challenges or special requirements</li>
           <li>Unit cost guidance for common improvement types</li>
-        </ul>
-        
-        <p><strong>Future Phases (If Project Proceeds):</strong></p>
-        <ul>
-          <li>Detailed cost estimation based on final plans</li>
-          <li>Value engineering recommendations</li>
-          <li>Construction execution</li>
-          <li>Project management and coordination</li>
+          <li>Preliminary construction scheduling</li>
+          <li>Assessment of existing building systems and access requirements</li>
         </ul>
       </div>
 
+      ${totalArea > 0 ? `
       <div class="section">
-        <div class="section-title">Space Breakdown</div>
+        <div class="section-title">Space Requirements</div>
         <table>
-          <tr><th>Space Type</th><th>Area (sq ft)</th><th>Typical Improvement Level</th></tr>
-          <tr><td>Warehouse/Industrial</td><td>${warehouseArea.toLocaleString()}</td><td>Minimal - painting, basic utilities</td></tr>
-          <tr><td>Existing Office Renovation</td><td>${existingOffice.toLocaleString()}</td><td>Moderate - updated finishes, HVAC</td></tr>
-          <tr><td>New Office Construction</td><td>${newOffice.toLocaleString()}</td><td>Full build-out</td></tr>
-          <tr><td><strong>Total Project Area</strong></td><td><strong>${totalArea.toLocaleString()}</strong></td><td></td></tr>
+          <tr><th>Space Type</th><th>Area (sq ft)</th><th>Notes</th></tr>
+          ${warehouseArea > 0 ? `<tr><td>Warehouse/Industrial</td><td>${warehouseArea.toLocaleString()}</td><td>Basic improvements - painting, utilities</td></tr>` : ''}
+          ${existingOffice > 0 ? `<tr><td>Existing Office</td><td>${existingOffice.toLocaleString()}</td><td>Renovation level TBD</td></tr>` : ''}
+          ${newOffice > 0 ? `<tr><td>New Office Space</td><td>${newOffice.toLocaleString()}</td><td>New construction</td></tr>` : ''}
+          <tr><td><strong>Total</strong></td><td><strong>${totalArea.toLocaleString()}</strong></td><td></td></tr>
         </table>
       </div>
-
-      <div class="section">
-        <div class="section-title">Requested Pricing Information</div>
-        <ul>
-          <li>Conceptual cost per square foot by space type</li>
-          <li>Total project cost range (low/medium/high scenarios)</li>
-          <li>Timeline estimate for construction (assuming plans available)</li>
-          <li>Key factors that could impact pricing</li>
-          <li>Preliminary schedule including permitting considerations</li>
-        </ul>
-      </div>
+      ` : ''}
 
       <div class="requirements">
         <strong>Important Note:</strong> This preliminary RFP is issued to support ongoing lease negotiations with a prospective tenant. 

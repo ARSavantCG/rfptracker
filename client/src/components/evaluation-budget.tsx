@@ -99,7 +99,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
       const initialItems: EvaluationLineItem[] = [];
       
       allBidLineItems.forEach((lineItem: BidLineItem & { bidCollectionId: number }) => {
-        const bid = bidCollections?.find((b: BidCollection) => b.id === lineItem.bidCollectionId);
+        const bid = (bidCollections as BidCollection[])?.find((b: BidCollection) => b.id === lineItem.bidCollectionId);
         if (bid) {
           initialItems.push({
             id: `lineitem-${lineItem.id}`,
@@ -251,7 +251,6 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
               ...item,
               unitPrice: newUnitPrice.toFixed(2),
               totalPrice: newTotalPrice,
-              category: bulkEditCategory || item.category,
             };
           }
           return item;
@@ -289,7 +288,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
             ...item,
             unitPrice: newUnitPrice,
             totalPrice: newTotalPrice,
-            ...(bulkEditCategory && { category: bulkEditCategory })
+
           };
         }
         return item;
@@ -447,11 +446,9 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                   />
                 </TableHead>
                 <TableHead>Description</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead className="w-20">Qty</TableHead>
+                <TableHead className="w-32">Quantity (Unit)</TableHead>
                 <TableHead className="w-24">Unit Price</TableHead>
                 <TableHead className="w-24">Total</TableHead>
-                <TableHead className="w-16">Source</TableHead>
                 <TableHead className="w-24">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -475,27 +472,28 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                         />
                       </TableCell>
                       <TableCell>
-                        <Input
-                          value={item.category}
-                          onChange={(e) => updateItem(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', item.id, { category: e.target.value })}
-                          className="text-sm"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Input
-                          type="number"
-                          value={item.quantity}
-                          onChange={(e) => {
-                            const quantity = parseInt(e.target.value) || 1;
-                            const unitPrice = parseFloat(item.unitPrice) || 0;
-                            const totalPrice = (quantity * unitPrice).toFixed(2);
-                            updateItem(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', item.id, { 
-                              quantity, 
-                              totalPrice 
-                            });
-                          }}
-                          className="text-sm w-16"
-                        />
+                        <div className="flex gap-1">
+                          <Input
+                            type="number"
+                            value={item.quantity}
+                            onChange={(e) => {
+                              const quantity = parseInt(e.target.value) || 1;
+                              const unitPrice = parseFloat(item.unitPrice) || 0;
+                              const totalPrice = (quantity * unitPrice).toFixed(2);
+                              updateItem(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', item.id, { 
+                                quantity, 
+                                totalPrice 
+                              });
+                            }}
+                            className="text-sm w-16"
+                          />
+                          <Input
+                            value={item.unit}
+                            onChange={(e) => updateItem(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', item.id, { unit: e.target.value })}
+                            className="text-sm w-16"
+                            placeholder="Unit"
+                          />
+                        </div>
                       </TableCell>
                       <TableCell>
                         <Input
@@ -532,15 +530,6 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                         />
                       </TableCell>
                       <TableCell>
-                        <span className={`px-2 py-1 text-xs rounded ${
-                          item.source === 'contractor' ? 'bg-blue-100 text-blue-700' :
-                          item.source === 'architect' ? 'bg-purple-100 text-purple-700' :
-                          'bg-gray-100 text-gray-700'
-                        }`}>
-                          {item.source.charAt(0).toUpperCase() + item.source.slice(1)}
-                        </span>
-                      </TableCell>
-                      <TableCell>
                         <div className="flex gap-1">
                           <Button
                             variant="ghost"
@@ -569,19 +558,9 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                         />
                       </TableCell>
                       <TableCell>{item.description}</TableCell>
-                      <TableCell>{item.category}</TableCell>
-                      <TableCell>{item.quantity}</TableCell>
+                      <TableCell>{item.quantity} {item.unit}</TableCell>
                       <TableCell>{formatCurrency(item.unitPrice)}</TableCell>
                       <TableCell className="font-medium">{formatCurrency(item.totalPrice)}</TableCell>
-                      <TableCell>
-                        <span className={`px-2 py-1 text-xs rounded ${
-                          item.source === 'contractor' ? 'bg-blue-100 text-blue-700' :
-                          item.source === 'architect' ? 'bg-purple-100 text-purple-700' :
-                          'bg-gray-100 text-gray-700'
-                        }`}>
-                          {item.source.charAt(0).toUpperCase() + item.source.slice(1)}
-                        </span>
-                      </TableCell>
                       <TableCell>
                         <div className="flex gap-1">
                           <Button
@@ -599,8 +578,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                               const duplicatedItem: EvaluationLineItem = {
                                 ...item,
                                 id: `${categoryType}-${Date.now()}`,
-                                description: `${item.description} (Copy)`,
-                                source: "internal"
+                                description: `${item.description} (Copy)`
                               };
                               setBudgetData(prev => ({
                                 ...prev,
@@ -610,15 +588,13 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                           >
                             <Copy className="h-3 w-3" />
                           </Button>
-                          {item.source === 'internal' && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => deleteItem(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', item.id)}
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => deleteItem(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', item.id)}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
                         </div>
                       </TableCell>
                     </>

@@ -111,6 +111,16 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
     name: "scopeOfWork",
   });
 
+  // Watch checkbox values to enable/disable Generate RFPs button
+  const watchedValues = form.watch([
+    "generateArchitectRfp",
+    "generateContractorRfp", 
+    "generateBrokerArchitectRfp",
+    "generateBrokerContractorRfp"
+  ]);
+  
+  const hasSelectedRfpType = watchedValues.some(value => value === true);
+
   // Fetch existing invitation data
   const { data: existingInvitation } = useQuery({
     queryKey: ["/api/rfp-requests", rfp?.id, "invitation-to-bid"],
@@ -728,8 +738,8 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                 
                 <Button 
                   type="submit"
-                  disabled={createInvitationMutation.isPending || isGeneratingPdfs || saveInvitationMutation.isPending}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  disabled={!hasSelectedRfpType || createInvitationMutation.isPending || isGeneratingPdfs || saveInvitationMutation.isPending}
+                  className="bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
                 >
                   <FileText className="h-4 w-4 mr-2" />
                   Generate RFPs

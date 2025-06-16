@@ -31,6 +31,11 @@ export const rfpRequests = pgTable("rfp_requests", {
   validationErrors: json("validation_errors").$type<string[]>().default([]),
   
   // Phase 2: Validation & Progression Fields (populated during validation step)
+  generalContractor: text("general_contractor"),
+  architect: text("architect"),
+  officeAreaExisting: text("office_area_existing"),
+  officeAreaNew: text("office_area_new"),
+  warehouseArea: text("warehouse_area"),
   projectAddress: text("project_address"),
   projectSize: text("project_size"),
   estimatedValue: text("estimated_value"),

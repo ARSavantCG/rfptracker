@@ -86,18 +86,19 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
       form.reset({
         contractorDueDate: rfp.contractorDueDate ? new Date(rfp.contractorDueDate).toISOString().split('T')[0] : "",
         architectDueDate: rfp.architectDueDate ? new Date(rfp.architectDueDate).toISOString().split('T')[0] : "",
-        generalContractor: "",
-        architect: "",
-        officeAreaExisting: "",
-        officeAreaNew: "",
-        warehouseArea: projectAreaValue,
+        generalContractor: rfp.generalContractor || "",
+        architect: rfp.architect || "",
+        officeAreaExisting: rfp.officeAreaExisting || "",
+        officeAreaNew: rfp.officeAreaNew || "",
+        warehouseArea: rfp.warehouseArea || projectAreaValue,
         requestTypes: rfp.requestTypes || ["pricing", "schedule", "space-plan"],
-        projectDescription: "",
-        documentsLink: "",
+        projectDescription: rfp.projectDescription || "",
+        documentsLink: rfp.documentsLink || "",
       });
       
-      // Ensure the field is explicitly set with trimmed value
-      form.setValue('warehouseArea', projectAreaValue);
+      // Use saved warehouse area if available, otherwise default to project area
+      const warehouseAreaValue = rfp.warehouseArea || projectAreaValue;
+      form.setValue('warehouseArea', warehouseAreaValue);
     }
   }, [rfp, isOpen, form]);
 

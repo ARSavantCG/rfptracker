@@ -44,10 +44,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
   const [editingItem, setEditingItem] = useState<string | null>(null);
   const [newItemCategory, setNewItemCategory] = useState<string>("");
   const [newItem, setNewItem] = useState<Partial<EvaluationLineItem>>({});
-  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
-  const [bulkEditCategory, setBulkEditCategory] = useState<string>("");
-  const [bulkEditMultiplier, setBulkEditMultiplier] = useState<string>("1.0");
-  const [showBulkEdit, setShowBulkEdit] = useState(false);
+
   const [showAdvancedEdit, setShowAdvancedEdit] = useState(false);
   const [itemHistory, setItemHistory] = useState<Record<string, EvaluationLineItem[]>>({});
   const [customCategories, setCustomCategories] = useState<string[]>([]);
@@ -232,39 +229,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
 
 
 
-  const bulkUpdateItems = () => {
-    if (selectedItems.size === 0) return;
 
-    const multiplier = parseFloat(bulkEditMultiplier) || 1;
-    const categories = ['tenantImprovements', 'designSoftCosts', 'existingImprovements'] as const;
-
-    setBudgetData(prev => {
-      const newData = { ...prev };
-      
-      for (const category of categories) {
-        newData[category] = newData[category].map(item => {
-          if (selectedItems.has(item.id)) {
-            const newUnitPrice = parseFloat(item.unitPrice) * multiplier;
-            const newTotalPrice = (item.quantity * newUnitPrice).toFixed(2);
-            
-            return {
-              ...item,
-              unitPrice: newUnitPrice.toFixed(2),
-              totalPrice: newTotalPrice,
-            };
-          }
-          return item;
-        });
-      }
-      
-      return newData;
-    });
-
-    setSelectedItems(new Set());
-    setShowBulkEdit(false);
-    setBulkEditMultiplier("1.0");
-    setBulkEditCategory("");
-  };
 
   const deleteItem = (category: 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', itemId: string) => {
     setBudgetData(prev => ({
@@ -275,57 +240,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
 
 
 
-  const applyBulkEdit = (category: 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements') => {
-    const multiplier = parseFloat(bulkEditMultiplier) || 1.0;
-    
-    setBudgetData(prev => ({
-      ...prev,
-      [category]: prev[category].map((item: EvaluationLineItem) => {
-        if (selectedItems.has(item.id)) {
-          const newUnitPrice = (parseFloat(item.unitPrice) * multiplier).toFixed(2);
-          const newTotalPrice = (item.quantity * parseFloat(newUnitPrice)).toFixed(2);
-          return {
-            ...item,
-            unitPrice: newUnitPrice,
-            totalPrice: newTotalPrice,
 
-          };
-        }
-        return item;
-      }),
-    }));
-    
-    setSelectedItems(new Set());
-    setShowBulkEdit(false);
-    setBulkEditCategory("");
-    setBulkEditMultiplier("1.0");
-    
-    toast({
-      title: "Bulk Edit Applied",
-      description: `Updated ${selectedItems.size} items successfully.`,
-    });
-  };
-
-  const toggleItemSelection = (itemId: string) => {
-    setSelectedItems(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(itemId)) {
-        newSet.delete(itemId);
-      } else {
-        newSet.add(itemId);
-      }
-      return newSet;
-    });
-  };
-
-  const selectAllItems = (items: EvaluationLineItem[]) => {
-    const allIds = items.map(item => item.id);
-    setSelectedItems(new Set(allIds));
-  };
-
-  const clearSelection = () => {
-    setSelectedItems(new Set());
-  };
 
   const saveAndAdvanceMutation = useMutation({
     mutationFn: async () => {
@@ -405,17 +320,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         <CardTitle className="text-lg">{title}</CardTitle>
         <div className="flex items-center gap-2">
           <span className="text-lg font-bold text-green-600">{formatCurrency(total)}</span>
-          {selectedItems.size > 0 && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowBulkEdit(true)}
-              className="h-8"
-            >
-              <Edit className="h-4 w-4 mr-1" />
-              Bulk Edit ({selectedItems.size})
-            </Button>
-          )}
+
           <Button
             size="sm"
             onClick={() => setNewItemCategory(category)}
@@ -433,18 +338,6 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-12">
-                  <Checkbox
-                    checked={items.length > 0 && items.every(item => selectedItems.has(item.id))}
-                    onCheckedChange={(checked) => {
-                      if (checked) {
-                        selectAllItems(items);
-                      } else {
-                        clearSelection();
-                      }
-                    }}
-                  />
-                </TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead className="w-32">Quantity (Unit)</TableHead>
                 <TableHead className="w-24">Unit Price</TableHead>
@@ -458,12 +351,6 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                   {editingItem === item.id ? (
                     // Editing mode for all items
                     <>
-                      <TableCell>
-                        <Checkbox
-                          checked={selectedItems.has(item.id)}
-                          onCheckedChange={() => toggleItemSelection(item.id)}
-                        />
-                      </TableCell>
                       <TableCell>
                         <Input
                           value={item.description}
@@ -551,12 +438,6 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                   ) : (
                     // Display mode
                     <>
-                      <TableCell>
-                        <Checkbox
-                          checked={selectedItems.has(item.id)}
-                          onCheckedChange={() => toggleItemSelection(item.id)}
-                        />
-                      </TableCell>
                       <TableCell>{item.description}</TableCell>
                       <TableCell>{item.quantity} {item.unit}</TableCell>
                       <TableCell>{formatCurrency(item.unitPrice)}</TableCell>
@@ -669,58 +550,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
           </div>
         )}
 
-        {/* Bulk Edit Modal */}
-        {showBulkEdit && selectedItems.size > 0 && (
-          <div className="mt-4 p-4 border rounded-lg bg-blue-50 border-blue-200">
-            <h4 className="font-medium mb-3">Bulk Edit Selected Items ({selectedItems.size})</h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <Label>Price Multiplier</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={bulkEditMultiplier}
-                  onChange={(e) => setBulkEditMultiplier(e.target.value)}
-                  placeholder="1.0"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Enter 1.1 for 10% increase, 0.9 for 10% decrease
-                </p>
-              </div>
-              <div>
-                <Label>Change Category (Optional)</Label>
-                <Input
-                  value={bulkEditCategory}
-                  onChange={(e) => setBulkEditCategory(e.target.value)}
-                  placeholder="Leave blank to keep current"
-                />
-              </div>
-              <div className="flex items-end gap-2">
-                <Button
-                  size="sm"
-                  onClick={() => applyBulkEdit(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements')}
-                  className="h-9"
-                >
-                  <Save className="h-4 w-4 mr-1" />
-                  Apply Changes
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setShowBulkEdit(false);
-                    setBulkEditCategory("");
-                    setBulkEditMultiplier("1.0");
-                  }}
-                  className="h-9"
-                >
-                  <X className="h-4 w-4 mr-1" />
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
+
       </CardContent>
     </Card>
   );

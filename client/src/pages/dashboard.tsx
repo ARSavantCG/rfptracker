@@ -76,6 +76,11 @@ export default function Dashboard() {
     setIsInvitationModalOpen(true);
   };
 
+  const handleOpenInvitationModal = (rfp: RfpRequest) => {
+    setWorkflowRfp(rfp);
+    setIsInvitationModalOpen(true);
+  };
+
   const handleValidateRfp = (rfp: RfpRequest) => {
     setValidationRfp(rfp);
     setIsValidationModalOpen(true);
@@ -333,6 +338,11 @@ export default function Dashboard() {
         rfp={validationRfp}
         onValidationComplete={() => {
           setIsValidationModalOpen(false);
+          // Automatically open invitation modal after validation
+          if (validationRfp) {
+            setWorkflowRfp(validationRfp);
+            setIsInvitationModalOpen(true);
+          }
           setValidationRfp(null);
         }}
       />

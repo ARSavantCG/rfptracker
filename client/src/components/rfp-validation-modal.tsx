@@ -12,17 +12,23 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, AlertCircle, Download, FileText, ArrowRight, X } from "lucide-react";
+import { CheckCircle, AlertCircle, Download, FileText, ArrowRight, X, Plus, Trash2 } from "lucide-react";
+import { nanoid } from "nanoid";
 import type { RfpRequest, Contact } from "@shared/schema";
+
+const areaLineItemSchema = z.object({
+  id: z.string(),
+  description: z.string().min(1, "Area description is required"),
+  squareFootage: z.string().min(1, "Square footage is required"),
+});
 
 const validationFormSchema = z.object({
   contractorDueDate: z.string().min(1, "Contractor due date is required"),
   architectDueDate: z.string().min(1, "Architect due date is required"),
   generalContractor: z.string().optional(),
   architect: z.string().optional(),
-  officeAreaExisting: z.string().optional(),
-  officeAreaNew: z.string().optional(),
   warehouseArea: z.string().optional(),
+  areaBreakdown: z.array(areaLineItemSchema),
   requestTypes: z.array(z.string()).min(1, "At least one request type is required"),
   projectDescription: z.string().optional(),
   documentsLink: z.string().optional(),
@@ -63,9 +69,8 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
       architectDueDate: "",
       generalContractor: "",
       architect: "",
-      officeAreaExisting: "",
-      officeAreaNew: "",
       warehouseArea: "",
+      areaBreakdown: [],
       requestTypes: ["pricing", "schedule", "space-plan"],
       projectDescription: "",
       documentsLink: "",
@@ -83,14 +88,30 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
         isEmpty: !projectAreaValue 
       });
       
+      // Convert existing office areas to area breakdown format
+      const areaBreakdown = [];
+      if (rfp.officeAreaExisting) {
+        areaBreakdown.push({
+          id: nanoid(),
+          description: "Office Area (Existing)",
+          squareFootage: rfp.officeAreaExisting
+        });
+      }
+      if (rfp.officeAreaNew) {
+        areaBreakdown.push({
+          id: nanoid(),
+          description: "Office Area (New Construction)",
+          squareFootage: rfp.officeAreaNew
+        });
+      }
+
       form.reset({
         contractorDueDate: rfp.contractorDueDate ? new Date(rfp.contractorDueDate).toISOString().split('T')[0] : "",
         architectDueDate: rfp.architectDueDate ? new Date(rfp.architectDueDate).toISOString().split('T')[0] : "",
         generalContractor: rfp.generalContractor || "",
         architect: rfp.architect || "",
-        officeAreaExisting: rfp.officeAreaExisting || "",
-        officeAreaNew: rfp.officeAreaNew || "",
         warehouseArea: rfp.warehouseArea || projectAreaValue,
+        areaBreakdown: rfp.areaBreakdown || areaBreakdown,
         requestTypes: rfp.requestTypes || ["pricing", "schedule", "space-plan"],
         projectDescription: rfp.projectDescription || "",
         documentsLink: rfp.documentsLink || "",
@@ -286,61 +307,111 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
               )}
             />
 
-            {/* Office Areas */}
+            {/* Area Breakdown */}
             <div className="bg-blue-50 p-4 rounded-lg">
-              <h3 className="font-semibold mb-4">Office Areas (within the total rentable area)</h3>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <FormField
-                  control={form.control}
-                  name="officeAreaExisting"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Office Area (Existing)</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="sq ft" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="officeAreaNew"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Office Area (New Construction)</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="sq ft" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-semibold">Area Breakdown</h3>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const currentBreakdown = form.getValues('areaBreakdown');
+                    form.setValue('areaBreakdown', [
+                      ...currentBreakdown,
+                      {
+                        id: nanoid(),
+                        description: '',
+                        squareFootage: ''
+                      }
+                    ]);
+                  }}
+                  className="flex items-center gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Area
+                </Button>
               </div>
 
+              <FormField
+                control={form.control}
+                name="areaBreakdown"
+                render={({ field }) => (
+                  <FormItem>
+                    <div className="space-y-3">
+                      {field.value.map((item, index) => (
+                        <div key={item.id} className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3 bg-white rounded border">
+                          <div>
+                            <FormLabel className="text-sm">Area Description</FormLabel>
+                            <Input
+                              placeholder="e.g., Office Area (Existing), Conference Room, etc."
+                              value={item.description}
+                              onChange={(e) => {
+                                const newBreakdown = [...field.value];
+                                newBreakdown[index] = { ...item, description: e.target.value };
+                                field.onChange(newBreakdown);
+                              }}
+                            />
+                          </div>
+                          <div className="flex gap-2 items-end">
+                            <div className="flex-1">
+                              <FormLabel className="text-sm">Square Footage</FormLabel>
+                              <Input
+                                placeholder="sq ft"
+                                value={item.squareFootage}
+                                onChange={(e) => {
+                                  const newBreakdown = [...field.value];
+                                  newBreakdown[index] = { ...item, squareFootage: e.target.value };
+                                  field.onChange(newBreakdown);
+                                }}
+                              />
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                const newBreakdown = field.value.filter((_, i) => i !== index);
+                                field.onChange(newBreakdown);
+                              }}
+                              className="text-red-500 hover:text-red-700"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                      
+                      {field.value.length === 0 && (
+                        <div className="text-center py-6 text-gray-500">
+                          <p className="mb-2">No areas added yet</p>
+                          <p className="text-sm">Some tenants don't need any office areas - add as needed</p>
+                        </div>
+                      )}
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               {/* Area Calculations */}
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="font-medium">Total Rentable Area:</span>
+              <div className="space-y-2 text-sm mt-4 border-t pt-4">
+                <div className="flex justify-between font-medium">
+                  <span>Total Rentable Area:</span>
                   <span>{form.watch('warehouseArea') || '0'} sq ft</span>
                 </div>
-                <div className="flex justify-between">
-                  <span>- Office (Existing):</span>
-                  <span>{form.watch('officeAreaExisting') || '0'} sq ft</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>- Office (New):</span>
-                  <span>{form.watch('officeAreaNew') || '0'} sq ft</span>
-                </div>
-                <div className="flex justify-between font-medium pt-2 border-t">
+                {form.watch('areaBreakdown').map((item, index) => (
+                  <div key={item.id} className="flex justify-between">
+                    <span>- {item.description || `Area ${index + 1}`}:</span>
+                    <span>{item.squareFootage || '0'} sq ft</span>
+                  </div>
+                ))}
+                <div className="flex justify-between font-medium border-t pt-2">
                   <span>Remaining Warehouse Area:</span>
                   <span>
                     {Math.max(0, 
                       parseInt(form.watch('warehouseArea') || '0') - 
-                      parseInt(form.watch('officeAreaExisting') || '0') - 
-                      parseInt(form.watch('officeAreaNew') || '0')
+                      form.watch('areaBreakdown').reduce((sum, item) => sum + (parseInt(item.squareFootage) || 0), 0)
                     ).toLocaleString()} sq ft
                   </span>
                 </div>

@@ -872,16 +872,28 @@ function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, dates: a
   if (invitationToBid?.scopeOfWork && Array.isArray(invitationToBid.scopeOfWork) && invitationToBid.scopeOfWork.length > 0) {
     const scopeItems = invitationToBid.scopeOfWork.map(item => {
       const quantity = item.quantity ? ' - ' + item.quantity.toLocaleString() + ' ' + (item.unit || '') : '';
-      return `<li>${item.description}${quantity}</li>`;
+      return '<li>' + item.description + quantity + '</li>';
     }).join('');
     
-    scopeOfWorkHtml = `
-        <div class="scope-of-work">
-          <strong>Scope of Work:</strong>
-          <ul>
-            ${scopeItems}
-          </ul>
-        </div>`;
+    scopeOfWorkHtml = '<div class="scope-of-work"><strong>Scope of Work:</strong><ul>' + scopeItems + '</ul></div>';
+  }
+
+  // Generate space requirements table HTML safely
+  let spaceRequirementsHtml = '';
+  if (totalArea > 0) {
+    let spaceRows = '';
+    if (warehouseArea > 0) {
+      spaceRows += '<tr><td>Warehouse/Industrial</td><td>' + warehouseArea.toLocaleString() + '</td><td>Basic improvements - painting, utilities</td></tr>';
+    }
+    if (existingOffice > 0) {
+      spaceRows += '<tr><td>Existing Office</td><td>' + existingOffice.toLocaleString() + '</td><td>Renovation level TBD</td></tr>';
+    }
+    if (newOffice > 0) {
+      spaceRows += '<tr><td>New Office Space</td><td>' + newOffice.toLocaleString() + '</td><td>New construction</td></tr>';
+    }
+    spaceRows += '<tr><td><strong>Total</strong></td><td><strong>' + totalArea.toLocaleString() + '</strong></td><td></td></tr>';
+    
+    spaceRequirementsHtml = '<div class="section"><div class="section-title">Space Requirements</div><table><tr><th>Space Type</th><th>Area (sq ft)</th><th>Notes</th></tr>' + spaceRows + '</table></div>';
   }
 
   return `
@@ -949,16 +961,7 @@ function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, dates: a
         </div>
         ` : ''}
 
-        ${invitationToBid?.scopeOfWork && Array.isArray(invitationToBid.scopeOfWork) && invitationToBid.scopeOfWork.length > 0 ? `
-        <div class="scope-of-work">
-          <strong>Scope of Work:</strong>
-          <ul>
-            ${invitationToBid.scopeOfWork.map(item => `
-              <li>${item.description}${item.quantity ? ` - ${item.quantity.toLocaleString()} ${item.unit || ''}` : ''}</li>
-            `).join('')}
-          </ul>
-        </div>
-        ` : ''}
+        ${scopeOfWorkHtml}
 
         ${invitationToBid?.documentsLink ? `
         <div class="info-item" style="margin-top: 15px;">
@@ -989,18 +992,7 @@ function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, dates: a
         </ul>
       </div>
 
-      ${totalArea > 0 ? `
-      <div class="section">
-        <div class="section-title">Space Requirements</div>
-        <table>
-          <tr><th>Space Type</th><th>Area (sq ft)</th><th>Notes</th></tr>
-          ${warehouseArea > 0 ? `<tr><td>Warehouse/Industrial</td><td>${warehouseArea.toLocaleString()}</td><td>Basic improvements - painting, utilities</td></tr>` : ''}
-          ${existingOffice > 0 ? `<tr><td>Existing Office</td><td>${existingOffice.toLocaleString()}</td><td>Renovation level TBD</td></tr>` : ''}
-          ${newOffice > 0 ? `<tr><td>New Office Space</td><td>${newOffice.toLocaleString()}</td><td>New construction</td></tr>` : ''}
-          <tr><td><strong>Total</strong></td><td><strong>${totalArea.toLocaleString()}</strong></td><td></td></tr>
-        </table>
-      </div>
-      ` : ''}
+      ${spaceRequirementsHtml}
 
       <div class="requirements">
         <strong>Important Note:</strong> This preliminary RFP is issued to support ongoing lease negotiations with a prospective tenant. 

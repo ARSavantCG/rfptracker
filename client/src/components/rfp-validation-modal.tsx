@@ -206,57 +206,58 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
               />
             </div>
 
-            {/* General Contractor */}
-            <FormField
-              control={form.control}
-              name="generalContractor"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>General Contractor</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select general contractor" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {contractors.map((contractor) => (
-                        <SelectItem key={contractor.id} value={contractor.name}>
-                          {contractor.name} - {contractor.company}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {/* General Contractor and Architect - Side by Side */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="generalContractor"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>General Contractor</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select general contractor" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {contractors.map((contractor) => (
+                          <SelectItem key={contractor.id} value={contractor.name}>
+                            {contractor.name} - {contractor.company}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            {/* Architect */}
-            <FormField
-              control={form.control}
-              name="architect"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Architect</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select architect" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {architects.map((architect) => (
-                        <SelectItem key={architect.id} value={architect.name}>
-                          {architect.name} - {architect.company}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              <FormField
+                control={form.control}
+                name="architect"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Architect</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select architect" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {architects.map((architect) => (
+                          <SelectItem key={architect.id} value={architect.name}>
+                            {architect.name} - {architect.company}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             {/* Total Rentable Area */}
             <FormField

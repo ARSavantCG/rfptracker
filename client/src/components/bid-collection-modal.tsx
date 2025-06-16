@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Trash2, Upload, FileText, Save, X } from "lucide-react";
+import { Plus, Trash2, Upload, FileText, Save, X, Download } from "lucide-react";
 import { FileUpload } from "./file-upload";
 import { useToast } from "@/hooks/use-toast";
 import type { RfpRequest, Contact, BidCollection, BidLineItem } from "@shared/schema";
@@ -78,6 +78,12 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
   const { data: existingLineItems } = useQuery({
     queryKey: [`/api/bid-collections/${bidCollection?.id}/line-items`],
     enabled: isOpen && !!bidCollection,
+  });
+
+  // Fetch ITB scope of work for import functionality
+  const { data: invitationToBid } = useQuery({
+    queryKey: [`/api/rfp-requests/${rfp?.id}/invitation-to-bid`],
+    enabled: isOpen && !!rfp?.id,
   });
 
   // Get all contractors and architects for bid collection
@@ -274,6 +280,22 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
     }, 0).toFixed(2);
   };
 
+  const importFromScopeOfWork = () => {
+    if (!invitationToBid || !(invitationToBid as any)?.scopeOfWork) return;
+    
+    const scopeItems = (invitationToBid as any).scopeOfWork.map((item: any) => ({
+      category: "General",
+      description: item.description || "",
+      quantity: item.quantity?.toString() || "",
+      unit: item.unit || "",
+      unitPrice: "",
+      totalPrice: "",
+      notes: "",
+    }));
+    
+    setLineItems([...lineItems, ...scopeItems]);
+  };
+
   if (!rfp) return null;
 
   return (
@@ -437,10 +459,18 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-medium">Pricing Breakdown</h3>
-                <Button type="button" onClick={addLineItem} variant="outline" size="sm">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Line Item
-                </Button>
+                <div className="flex gap-2">
+                  {invitationToBid && (invitationToBid as any)?.scopeOfWork?.length > 0 && (
+                    <Button type="button" onClick={importFromScopeOfWork} variant="outline" size="sm">
+                      <Download className="h-4 w-4 mr-2" />
+                      Import from Scope of Work
+                    </Button>
+                  )}
+                  <Button type="button" onClick={addLineItem} variant="outline" size="sm">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Line Item
+                  </Button>
+                </div>
               </div>
 
               <div className="border rounded-lg overflow-hidden">

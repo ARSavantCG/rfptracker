@@ -165,6 +165,7 @@ export const invitationToBid = pgTable("invitation_to_bid", {
   projectDescription: text("project_description"),
   documentsLink: text("documents_link"),
   keyDates: json("key_dates").$type<{label: string, date: string}[]>().default([]),
+  scopeOfWork: json("scope_of_work").$type<{description: string, quantity: number, unit: string}[]>().default([]),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -180,6 +181,11 @@ export const insertInvitationToBidSchema = createInsertSchema(invitationToBid).o
   projectStartDate: z.string().optional().transform((val) => val && val.trim() ? new Date(val) : undefined),
   projectEndDate: z.string().optional().transform((val) => val && val.trim() ? new Date(val) : undefined),
   siteVisitScheduled: z.string().optional().transform((val) => val && val.trim() ? new Date(val) : undefined),
+  scopeOfWork: z.array(z.object({
+    description: z.string(),
+    quantity: z.number(),
+    unit: z.string(),
+  })).default([]),
 });
 
 export const updateInvitationToBidSchema = insertInvitationToBidSchema.partial();

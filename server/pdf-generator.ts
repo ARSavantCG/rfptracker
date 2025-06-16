@@ -185,23 +185,27 @@ function generateRfpHtml(options: PdfGenerationOptions): string {
   const projectStart = invitationToBid?.projectStartDate ? formatDate(invitationToBid.projectStartDate) : '';
   const projectEnd = invitationToBid?.projectEndDate ? formatDate(invitationToBid.projectEndDate) : '';
   
-  // Calculate areas for display
+  // Calculate areas for display using area breakdown data
   const totalArea = parseInt(rfp.warehouseArea?.replace(/,/g, '') || '0');
+  const areaBreakdown = (rfp as any).areaBreakdown || [];
+  const totalBreakdownArea = areaBreakdown.reduce((sum: number, item: any) => sum + (parseInt(item.squareFootage) || 0), 0);
+  const warehouseArea = totalArea - totalBreakdownArea;
+  
+  // Legacy support for old office area fields
   const existingOffice = parseInt(rfp.officeAreaExisting?.replace(/,/g, '') || '0');
   const newOffice = parseInt(rfp.officeAreaNew?.replace(/,/g, '') || '0');
-  const warehouseArea = totalArea - existingOffice - newOffice;
   
   // Generate different content based on recipient type
   if (recipientType === "contractor") {
-    return generateContractorRfpHtml(options, { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea });
+    return generateContractorRfpHtml(options, { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea, areaBreakdown });
   } else if (recipientType === "broker-contractor") {
-    return generateBrokerContractorRfpHtml(options, { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea });
+    return generateBrokerContractorRfpHtml(options, { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea, areaBreakdown });
   } else if (recipientType === "broker-architect") {
-    return generateBrokerArchitectRfpHtml(options, { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea });
+    return generateBrokerArchitectRfpHtml(options, { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea, areaBreakdown });
   } else if (recipientType === "financial-summary") {
-    return generateFinancialSummaryHtml(options, { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea });
+    return generateFinancialSummaryHtml(options, { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea, areaBreakdown });
   } else {
-    return generateArchitectRfpHtml(options, { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea });
+    return generateArchitectRfpHtml(options, { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea, areaBreakdown });
   }
 }
 
@@ -701,7 +705,7 @@ function generateArchitectRfpHtml(options: PdfGenerationOptions, dates: any): st
 
 function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dates: any): string {
   const { rfp, invitationToBid, recipientName, recipientCompany } = options;
-  const { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea } = dates;
+  const { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea, areaBreakdown } = dates;
 
   // Extract contact information from invitation to bid
   const contactInfo = invitationToBid?.contactForQuestions || '';
@@ -829,8 +833,11 @@ function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dates: an
         <table>
           <tr><th>Space Type</th><th>Area (sq ft)</th><th>Notes</th></tr>
           ${warehouseArea > 0 ? `<tr><td>Warehouse/Industrial</td><td>${warehouseArea.toLocaleString()}</td><td>Clear height requirements TBD</td></tr>` : ''}
-          ${existingOffice > 0 ? `<tr><td>Existing Office</td><td>${existingOffice.toLocaleString()}</td><td>Renovation level TBD</td></tr>` : ''}
-          ${newOffice > 0 ? `<tr><td>New Office Space</td><td>${newOffice.toLocaleString()}</td><td>New construction</td></tr>` : ''}
+          ${areaBreakdown && areaBreakdown.length > 0 ? areaBreakdown.map((item: any) => 
+            `<tr><td>${item.description || 'Area'}</td><td>${parseInt(item.squareFootage || '0').toLocaleString()}</td><td>${item.notes || ''}</td></tr>`
+          ).join('') : ''}
+          ${existingOffice > 0 && (!areaBreakdown || areaBreakdown.length === 0) ? `<tr><td>Existing Office</td><td>${existingOffice.toLocaleString()}</td><td>Renovation level TBD</td></tr>` : ''}
+          ${newOffice > 0 && (!areaBreakdown || areaBreakdown.length === 0) ? `<tr><td>New Office Space</td><td>${newOffice.toLocaleString()}</td><td>New construction</td></tr>` : ''}
           <tr><td><strong>Total</strong></td><td><strong>${totalArea.toLocaleString()}</strong></td><td></td></tr>
         </table>
       </div>
@@ -853,7 +860,7 @@ function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dates: an
 
 function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, dates: any): string {
   const { rfp, invitationToBid, recipientName, recipientCompany } = options;
-  const { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea } = dates;
+  const { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea, areaBreakdown } = dates;
 
   // Extract contact information from invitation to bid
   const contactInfo = invitationToBid?.contactForQuestions || '';

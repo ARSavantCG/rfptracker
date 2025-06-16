@@ -175,35 +175,36 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            {/* Contractor Due Date */}
-            <FormField
-              control={form.control}
-              name="contractorDueDate"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Contractor Due Date</FormLabel>
-                  <FormControl>
-                    <Input type="date" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {/* Due Dates - Side by Side */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="contractorDueDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Contractor Due Date</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            {/* Architect Due Date */}
-            <FormField
-              control={form.control}
-              name="architectDueDate"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Architect Due Date</FormLabel>
-                  <FormControl>
-                    <Input type="date" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              <FormField
+                control={form.control}
+                name="architectDueDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Architect Due Date</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             {/* General Contractor */}
             <FormField

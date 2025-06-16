@@ -20,6 +20,7 @@ const areaLineItemSchema = z.object({
   id: z.string(),
   description: z.string().min(1, "Area description is required"),
   squareFootage: z.string().min(1, "Square footage is required"),
+  notes: z.string().optional(),
 });
 
 const validationFormSchema = z.object({
@@ -94,14 +95,16 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
         areaBreakdown.push({
           id: nanoid(),
           description: "Office Area (Existing)",
-          squareFootage: rfp.officeAreaExisting
+          squareFootage: rfp.officeAreaExisting,
+          notes: ""
         });
       }
       if (rfp.officeAreaNew) {
         areaBreakdown.push({
           id: nanoid(),
           description: "Office Area (New Construction)",
-          squareFootage: rfp.officeAreaNew
+          squareFootage: rfp.officeAreaNew,
+          notes: ""
         });
       }
 
@@ -331,7 +334,8 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                       {
                         id: nanoid(),
                         description: '',
-                        squareFootage: ''
+                        squareFootage: '',
+                        notes: ''
                       }
                     ]);
                   }}
@@ -349,7 +353,7 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                   <FormItem>
                     <div className="space-y-3">
                       {field.value.map((item, index) => (
-                        <div key={item.id} className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3 bg-white rounded border">
+                        <div key={item.id} className="grid grid-cols-1 lg:grid-cols-3 gap-3 p-3 bg-white rounded border">
                           <div>
                             <FormLabel className="text-sm">Area Description</FormLabel>
                             <Input
@@ -362,15 +366,27 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                               }}
                             />
                           </div>
+                          <div>
+                            <FormLabel className="text-sm">Square Footage</FormLabel>
+                            <Input
+                              placeholder="sq ft"
+                              value={item.squareFootage}
+                              onChange={(e) => {
+                                const newBreakdown = [...field.value];
+                                newBreakdown[index] = { ...item, squareFootage: e.target.value };
+                                field.onChange(newBreakdown);
+                              }}
+                            />
+                          </div>
                           <div className="flex gap-2 items-end">
                             <div className="flex-1">
-                              <FormLabel className="text-sm">Square Footage</FormLabel>
+                              <FormLabel className="text-sm">Notes</FormLabel>
                               <Input
-                                placeholder="sq ft"
-                                value={item.squareFootage}
+                                placeholder="e.g., Clear height requirements TBD, Renovation level TBD"
+                                value={item.notes}
                                 onChange={(e) => {
                                   const newBreakdown = [...field.value];
-                                  newBreakdown[index] = { ...item, squareFootage: e.target.value };
+                                  newBreakdown[index] = { ...item, notes: e.target.value };
                                   field.onChange(newBreakdown);
                                 }}
                               />
@@ -410,9 +426,10 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                   <span>{form.watch('warehouseArea') || '0'} sq ft</span>
                 </div>
                 {form.watch('areaBreakdown').map((item, index) => (
-                  <div key={item.id} className="flex justify-between">
-                    <span>- {item.description || `Area ${index + 1}`}:</span>
-                    <span>{item.squareFootage || '0'} sq ft</span>
+                  <div key={item.id} className="grid grid-cols-3 gap-2 text-sm">
+                    <span>- {item.description || `Area ${index + 1}`}</span>
+                    <span className="text-right">{item.squareFootage || '0'} sq ft</span>
+                    <span className="text-gray-600 text-xs">{item.notes || ''}</span>
                   </div>
                 ))}
                 <div className="flex justify-between font-medium border-t pt-2">

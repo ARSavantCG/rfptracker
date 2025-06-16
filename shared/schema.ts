@@ -36,7 +36,7 @@ export const rfpRequests = pgTable("rfp_requests", {
   officeAreaExisting: text("office_area_existing"),
   officeAreaNew: text("office_area_new"),
   warehouseArea: text("warehouse_area"),
-  areaBreakdown: json("area_breakdown").$type<{id: string, description: string, squareFootage: string}[]>().default([]),
+  areaBreakdown: json("area_breakdown").$type<{id: string, description: string, squareFootage: string, notes?: string}[]>().default([]),
   projectAddress: text("project_address"),
   projectSize: text("project_size"),
   estimatedValue: text("estimated_value"),

@@ -757,35 +757,8 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Evaluation Budget - {rfp.projectName}</CardTitle>
-          <div className="flex gap-2">
-            <Button 
-              onClick={() => saveProgressMutation.mutate()}
-              disabled={saveProgressMutation.isPending}
-              variant="outline"
-              className="border-blue-500 text-blue-600 hover:bg-blue-50"
-            >
-              <Save className="h-4 w-4 mr-2" />
-              {saveProgressMutation.isPending ? "Saving..." : "Save Progress"}
-            </Button>
-            <Button 
-              onClick={generatePreview}
-              variant="outline"
-              className="border-purple-500 text-purple-600 hover:bg-purple-50"
-            >
-              <FileDown className="h-4 w-4 mr-2" />
-              Preview Report
-            </Button>
-            <Button 
-              onClick={saveAndAdvance} 
-              disabled={saveAndAdvanceMutation.isPending}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              <ArrowRight className="h-4 w-4 mr-2" />
-              {saveAndAdvanceMutation.isPending ? "Saving..." : "Save & Continue to Team Review"}
-            </Button>
-          </div>
+        <CardHeader>
+          <CardTitle>Budget Evaluation - Oakley & Sons 3 @ MG Westside - A</CardTitle>
         </CardHeader>
       </Card>
 
@@ -877,6 +850,38 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Action Buttons */}
+      <div className="flex gap-3 justify-center">
+        <Button 
+          onClick={() => saveProgressMutation.mutate()}
+          disabled={saveProgressMutation.isPending}
+          variant="outline"
+          size="sm"
+          className="border-blue-500 text-blue-600 hover:bg-blue-50"
+        >
+          <Save className="h-3 w-3 mr-2" />
+          {saveProgressMutation.isPending ? "Saving..." : "Save Progress"}
+        </Button>
+        <Button 
+          onClick={generatePreview}
+          variant="outline"
+          size="sm"
+          className="border-purple-500 text-purple-600 hover:bg-purple-50"
+        >
+          <FileDown className="h-3 w-3 mr-2" />
+          Preview Report
+        </Button>
+        <Button 
+          onClick={saveAndAdvance} 
+          disabled={saveAndAdvanceMutation.isPending}
+          size="sm"
+          className="bg-green-600 hover:bg-green-700"
+        >
+          <ArrowRight className="h-3 w-3 mr-2" />
+          {saveAndAdvanceMutation.isPending ? "Saving..." : "Save & Continue to Team Review"}
+        </Button>
+      </div>
     </div>
   );
 }

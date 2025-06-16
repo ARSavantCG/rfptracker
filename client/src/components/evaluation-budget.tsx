@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -91,7 +91,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
   });
 
   // Initialize budget with bid line items data
-  useState(() => {
+  useEffect(() => {
     if (allBidLineItems && Array.isArray(allBidLineItems) && allBidLineItems.length > 0) {
       const initialItems: EvaluationLineItem[] = [];
       
@@ -133,7 +133,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         tenantImprovements: initialItems,
       }));
     }
-  });
+  }, [allBidLineItems, bidCollections]);
 
   const formatCurrency = (amount: string | number) => {
     const num = typeof amount === 'string' ? parseFloat(amount) : amount;

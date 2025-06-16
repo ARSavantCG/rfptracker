@@ -47,9 +47,14 @@ const rfpValidationRules: ValidationRule[] = [
   },
   // Phase 2 validation fields (for workflow progression to General Contractor and/or Architect)
   {
-    field: "dueDate",
+    field: "contractorDueDate",
     required: true,
-    message: "Due date is required for validation"
+    message: "Contractor due date is required for validation"
+  },
+  {
+    field: "architectDueDate",
+    required: true,
+    message: "Architect due date is required for validation"
   },
   {
     field: "files",

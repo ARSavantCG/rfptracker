@@ -466,11 +466,11 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
             )}
 
             {/* Action Buttons */}
-            <div className="flex gap-2 pt-4">
+            <div className="flex gap-2 pt-4 justify-end">
               <Button 
                 type="submit" 
                 disabled={validateMutation.isPending}
-                className="flex-1"
+                size="sm"
               >
                 {validateMutation.isPending ? (
                   "Validating..."
@@ -483,7 +483,7 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                   "Validate & Continue"
                 )}
               </Button>
-              <Button type="button" variant="outline" onClick={handleClose}>
+              <Button type="button" variant="outline" size="sm" onClick={handleClose}>
                 <X className="h-4 w-4 mr-2" />
                 Cancel
               </Button>

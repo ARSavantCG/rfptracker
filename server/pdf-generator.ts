@@ -766,7 +766,7 @@ function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dates: an
           <div>
             <div class="info-item"><span class="label">Property:</span><span class="value">${invitationToBid?.projectScope || rfp.tenantName}</span></div>
             <div class="info-item"><span class="label">Prospective Tenant:</span><span class="value">${rfp.confidential ? 'Confidential' : rfp.tenantName}</span></div>
-            ${totalArea > 0 ? `<div class="info-item"><span class="label">Total Area:</span><span class="value">${totalArea.toLocaleString()} sq ft</span></div>` : ''}
+            <div class="info-item"><span class="label">Property Address:</span><span class="value">${invitationToBid?.projectLocation || rfp.propertyAddress || rfp.property}</span></div>
           </div>
           <div>
             <div class="info-item"><span class="label">Requested Response:</span><span class="value">${formattedDeadline}</span></div>
@@ -790,18 +790,24 @@ function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dates: an
       </div>
 
       <div class="section">
-        <div class="section-title">Preliminary Scope of Work</div>
-        <p><strong>Phase 1 - Initial Assessment (Requested):</strong></p>
+        <div class="section-title">Requested Deliverables</div>
+        <ul>
+          <li>Preliminary space planning concepts (2-3 options preferred)</li>
+          <li>Basic floor plans showing proposed layout</li>
+          <li>Conceptual cost estimate for tenant improvements</li>
+          <li>Timeline estimate for design and construction phases</li>
+          <li>Fee proposal for full architectural services (if project proceeds)</li>
+        </ul>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Pricing Considerations</div>
         <ul>
           <li>Review existing building conditions and space requirements</li>
           <li>Develop preliminary space planning concepts</li>
           <li>Provide conceptual floor plans showing potential layout options</li>
           <li>Identify major building system impacts and requirements</li>
           <li>Preliminary cost estimation for tenant improvements</li>
-        </ul>
-        
-        <p><strong>Future Phases (If Project Proceeds):</strong></p>
-        <ul>
           <li>Detailed design development</li>
           <li>Construction documents</li>
           <li>Permitting support</li>
@@ -821,17 +827,6 @@ function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dates: an
         </table>
       </div>
       ` : ''}
-
-      <div class="section">
-        <div class="section-title">Requested Deliverables</div>
-        <ul>
-          <li>Preliminary space planning concepts (2-3 options preferred)</li>
-          <li>Basic floor plans showing proposed layout</li>
-          <li>Conceptual cost estimate for tenant improvements</li>
-          <li>Timeline estimate for design and construction phases</li>
-          <li>Fee proposal for full architectural services (if project proceeds)</li>
-        </ul>
-      </div>
 
       <div class="requirements">
         <strong>Important Note:</strong> This preliminary RFP is issued to support ongoing lease negotiations with a prospective tenant. 

@@ -305,7 +305,17 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
             if (newWindow) {
               newWindow.document.write(htmlContent);
               newWindow.document.close();
+              console.log(`Successfully opened ${doc.title} in new window`);
+            } else {
+              console.error(`Failed to open window for ${doc.title} - popup may be blocked`);
+              toast({
+                title: "Popup Blocked",
+                description: `${doc.title} was blocked by popup blocker. Please allow popups and try again.`,
+                variant: "destructive",
+              });
             }
+          } else {
+            console.error(`HTTP error for ${doc.title}:`, response.status, response.statusText);
           }
           
           // Add a small delay between documents to avoid overwhelming the browser

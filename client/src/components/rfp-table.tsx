@@ -151,44 +151,49 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
       <div className="px-4 py-2 border-b border-gray-200">
         <h2 className="text-sm font-semibold text-gray-900">RFP Requests</h2>
       </div>
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
+      <div className="overflow-x-auto max-w-full">
+        <table className="w-full divide-y divide-gray-200" style={{ minWidth: '800px' }}>
           <thead className="bg-gray-50">
             <tr>
               <th 
                 className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
                 onClick={() => handleSort("rfpNumber")}
+                style={{ width: '120px' }}
               >
                 RFP ID <i className={`${getSortIcon("rfpNumber")} ml-1`}></i>
               </th>
               <th 
                 className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
                 onClick={() => handleSort("tenantName")}
+                style={{ width: '140px' }}
               >
                 Tenant <i className={`${getSortIcon("tenantName")} ml-1`}></i>
               </th>
               <th 
                 className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
                 onClick={() => handleSort("property")}
+                style={{ width: '160px' }}
               >
                 Property <i className={`${getSortIcon("property")} ml-1`}></i>
               </th>
               <th 
                 className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
                 onClick={() => handleSort("status")}
+                style={{ width: '120px' }}
               >
                 Status <i className={`${getSortIcon("status")} ml-1`}></i>
               </th>
               <th 
                 className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
                 onClick={() => handleSort("receivedOn")}
+                style={{ width: '110px' }}
               >
                 Received On <i className={`${getSortIcon("receivedOn")} ml-1`}></i>
               </th>
-              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '70px' }}>
                 Files
               </th>
-              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '80px' }}>
                 Actions
               </th>
             </tr>

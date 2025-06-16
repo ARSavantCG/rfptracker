@@ -649,7 +649,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
 
         {newItemCategory === category && (
           <div className="mt-4 p-4 border rounded-lg bg-gray-50">
-            <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               <div className="md:col-span-2">
                 <Label>Description</Label>
                 <Input
@@ -658,23 +658,21 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                   placeholder="Item description"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <Label>Quantity</Label>
-                  <Input
-                    type="number"
-                    value={newItem.quantity || 1}
-                    onChange={(e) => setNewItem(prev => ({ ...prev, quantity: parseInt(e.target.value) || 1 }))}
-                  />
-                </div>
-                <div>
-                  <Label>Unit</Label>
-                  <Input
-                    value={newItem.unit || ""}
-                    onChange={(e) => setNewItem(prev => ({ ...prev, unit: e.target.value }))}
-                    placeholder="ea, sq ft, lf, etc."
-                  />
-                </div>
+              <div>
+                <Label>Quantity</Label>
+                <Input
+                  type="number"
+                  value={newItem.quantity || 1}
+                  onChange={(e) => setNewItem(prev => ({ ...prev, quantity: parseInt(e.target.value) || 1 }))}
+                />
+              </div>
+              <div>
+                <Label>Unit</Label>
+                <Input
+                  value={newItem.unit || ""}
+                  onChange={(e) => setNewItem(prev => ({ ...prev, unit: e.target.value }))}
+                  placeholder="ea, sq ft, lf, etc."
+                />
               </div>
               <div>
                 <Label>Unit Price</Label>

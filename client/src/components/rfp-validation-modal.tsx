@@ -111,7 +111,7 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
         generalContractor: rfp.generalContractor || "",
         architect: rfp.architect || "",
         warehouseArea: rfp.warehouseArea || projectAreaValue,
-        areaBreakdown: rfp.areaBreakdown || areaBreakdown,
+        areaBreakdown: (rfp as any).areaBreakdown || areaBreakdown,
         requestTypes: rfp.requestTypes || ["pricing", "schedule", "space-plan"],
         projectDescription: rfp.projectDescription || "",
         documentsLink: rfp.documentsLink || "",
@@ -137,10 +137,19 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
       
       if (result.isValid) {
         // Update the RFP with validation data and advance workflow phase
+        const formData = form.getValues();
         await apiRequest(`/api/rfp-requests/${rfp?.id}`, "PATCH", {
           workflowPhase: "invitation-to-bid",
           status: "in-progress",
-          ...form.getValues()
+          contractorDueDate: new Date(formData.contractorDueDate).toISOString(),
+          architectDueDate: new Date(formData.architectDueDate).toISOString(),
+          generalContractor: formData.generalContractor,
+          architect: formData.architect,
+          warehouseArea: formData.warehouseArea,
+          areaBreakdown: formData.areaBreakdown,
+          requestTypes: formData.requestTypes,
+          projectDescription: formData.projectDescription,
+          documentsLink: formData.documentsLink,
         });
         
         queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });

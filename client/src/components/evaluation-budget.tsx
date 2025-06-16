@@ -616,21 +616,23 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                   placeholder="Item description"
                 />
               </div>
-              <div>
-                <Label>Category</Label>
-                <Input
-                  value={newItem.category || ""}
-                  onChange={(e) => setNewItem(prev => ({ ...prev, category: e.target.value }))}
-                  placeholder="Category"
-                />
-              </div>
-              <div>
-                <Label>Quantity</Label>
-                <Input
-                  type="number"
-                  value={newItem.quantity || 1}
-                  onChange={(e) => setNewItem(prev => ({ ...prev, quantity: parseInt(e.target.value) || 1 }))}
-                />
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label>Quantity</Label>
+                  <Input
+                    type="number"
+                    value={newItem.quantity || 1}
+                    onChange={(e) => setNewItem(prev => ({ ...prev, quantity: parseInt(e.target.value) || 1 }))}
+                  />
+                </div>
+                <div>
+                  <Label>Unit</Label>
+                  <Input
+                    value={newItem.unit || ""}
+                    onChange={(e) => setNewItem(prev => ({ ...prev, unit: e.target.value }))}
+                    placeholder="ea, sq ft, lf, etc."
+                  />
+                </div>
               </div>
               <div>
                 <Label>Unit Price</Label>

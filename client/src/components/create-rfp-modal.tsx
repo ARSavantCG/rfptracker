@@ -24,8 +24,7 @@ const createRfpSchema = z.object({
   rfpRequest: z.string().min(1, "RFP request is required"),
   receivedOn: z.string().min(1, "Received on date is required"),
   internalDueDate: z.string().min(1, "Internal due date is required"),
-  contractorDueDate: z.string().optional(),
-  architectDueDate: z.string().optional(),
+
   developmentContact: z.string().optional(),
   projectArea: z.string().optional(),
   confidential: z.boolean().default(false),
@@ -54,8 +53,6 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
       rfpRequest: "",
       receivedOn: "",
       internalDueDate: "",
-      contractorDueDate: "",
-      architectDueDate: "",
       developmentContact: "",
       projectArea: "",
       confidential: false,
@@ -300,47 +297,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="contractorDueDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Contractor Due Date</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="date"
-                          {...field}
-                        />
-                      </FormControl>
-                      <p className="text-sm text-muted-foreground">
-                        Due date for contractor submissions
-                      </p>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
 
-                <FormField
-                  control={form.control}
-                  name="architectDueDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Architect Due Date</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="date"
-                          {...field}
-                        />
-                      </FormControl>
-                      <p className="text-sm text-muted-foreground">
-                        Due date for architect submissions
-                      </p>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
 
               <FormField
                 control={form.control}

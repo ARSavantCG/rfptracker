@@ -6,6 +6,7 @@ import {
   bidCollections,
   bidLineItems,
   properties,
+  evaluationBudgets,
   type RfpRequest, 
   type InsertRfpRequest, 
   type UpdateRfpRequest,
@@ -27,6 +28,9 @@ import {
   type Property,
   type InsertProperty,
   type UpdateProperty,
+  type EvaluationBudget,
+  type InsertEvaluationBudget,
+  type UpdateEvaluationBudget,
   type RfpFile 
 } from "@shared/schema";
 import { db } from "./db";
@@ -88,6 +92,11 @@ export interface IStorage {
   createProperty(property: InsertProperty): Promise<Property>;
   updateProperty(id: number, updates: Partial<UpdateProperty>): Promise<Property | undefined>;
   deleteProperty(id: number): Promise<boolean>;
+
+  // Evaluation Budget management
+  getEvaluationBudget(rfpId: number): Promise<EvaluationBudget | undefined>;
+  createEvaluationBudget(budget: InsertEvaluationBudget): Promise<EvaluationBudget>;
+  updateEvaluationBudget(rfpId: number, updates: Partial<UpdateEvaluationBudget>): Promise<EvaluationBudget | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -486,6 +495,35 @@ export class DatabaseStorage implements IStorage {
   async deleteProperty(id: number): Promise<boolean> {
     const result = await db.delete(properties).where(eq(properties.id, id));
     return (result.rowCount || 0) > 0;
+  }
+
+  // Evaluation Budget management
+  async getEvaluationBudget(rfpId: number): Promise<EvaluationBudget | undefined> {
+    const [budget] = await db.select().from(evaluationBudgets).where(eq(evaluationBudgets.rfpId, rfpId));
+    return budget || undefined;
+  }
+
+  async createEvaluationBudget(budget: InsertEvaluationBudget): Promise<EvaluationBudget> {
+    const [created] = await db
+      .insert(evaluationBudgets)
+      .values({
+        ...budget,
+        updatedAt: new Date(),
+      })
+      .returning();
+    return created;
+  }
+
+  async updateEvaluationBudget(rfpId: number, updates: Partial<UpdateEvaluationBudget>): Promise<EvaluationBudget | undefined> {
+    const [updated] = await db
+      .update(evaluationBudgets)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(evaluationBudgets.rfpId, rfpId))
+      .returning();
+    return updated || undefined;
   }
 }
 

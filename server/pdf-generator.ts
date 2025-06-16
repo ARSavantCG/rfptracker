@@ -806,6 +806,22 @@ function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dates: an
         ` : ''}
       </div>
 
+      ${totalArea > 0 ? `
+      <div class="section">
+        <div class="section-title">Space Requirements</div>
+        <table>
+          <tr><th>Space Type</th><th>Area (sq ft)</th><th>Notes</th></tr>
+          ${warehouseArea > 0 ? `<tr><td>Warehouse</td><td>${warehouseArea.toLocaleString()}</td><td>${warehouseNotes}</td></tr>` : ''}
+          ${areaBreakdown && areaBreakdown.length > 0 ? areaBreakdown.map((item: any) => 
+            `<tr><td>${item.description || 'Area'}</td><td>${parseInt(item.squareFootage || '0').toLocaleString()}</td><td>${item.notes || ''}</td></tr>`
+          ).join('') : ''}
+          ${existingOffice > 0 && (!areaBreakdown || areaBreakdown.length === 0) ? `<tr><td>Existing Office</td><td>${existingOffice.toLocaleString()}</td><td>Renovation level TBD</td></tr>` : ''}
+          ${newOffice > 0 && (!areaBreakdown || areaBreakdown.length === 0) ? `<tr><td>New Office Space</td><td>${newOffice.toLocaleString()}</td><td>New construction</td></tr>` : ''}
+          <tr><td><strong>Total</strong></td><td><strong>${totalArea.toLocaleString()}</strong></td><td></td></tr>
+        </table>
+      </div>
+      ` : ''}
+
       <div class="section">
         <div class="section-title">Requested Deliverables</div>
         <ul>
@@ -829,22 +845,6 @@ function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dates: an
           <li>Construction administration</li>
         </ul>
       </div>
-
-      ${totalArea > 0 ? `
-      <div class="section">
-        <div class="section-title">Space Requirements</div>
-        <table>
-          <tr><th>Space Type</th><th>Area (sq ft)</th><th>Notes</th></tr>
-          ${warehouseArea > 0 ? `<tr><td>Warehouse</td><td>${warehouseArea.toLocaleString()}</td><td>${warehouseNotes}</td></tr>` : ''}
-          ${areaBreakdown && areaBreakdown.length > 0 ? areaBreakdown.map((item: any) => 
-            `<tr><td>${item.description || 'Area'}</td><td>${parseInt(item.squareFootage || '0').toLocaleString()}</td><td>${item.notes || ''}</td></tr>`
-          ).join('') : ''}
-          ${existingOffice > 0 && (!areaBreakdown || areaBreakdown.length === 0) ? `<tr><td>Existing Office</td><td>${existingOffice.toLocaleString()}</td><td>Renovation level TBD</td></tr>` : ''}
-          ${newOffice > 0 && (!areaBreakdown || areaBreakdown.length === 0) ? `<tr><td>New Office Space</td><td>${newOffice.toLocaleString()}</td><td>New construction</td></tr>` : ''}
-          <tr><td><strong>Total</strong></td><td><strong>${totalArea.toLocaleString()}</strong></td><td></td></tr>
-        </table>
-      </div>
-      ` : ''}
 
       <div class="requirements">
         <strong>Important Note:</strong> This preliminary RFP is issued to support ongoing lease negotiations with a prospective tenant. 
@@ -998,6 +998,8 @@ function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, dates: a
         ` : ''}
       </div>
 
+      ${spaceRequirementsHtml}
+
       <div class="section">
         <div class="section-title">Requested Deliverables</div>
         <ul>
@@ -1018,8 +1020,6 @@ function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, dates: a
           <li>Assessment of existing building systems and access requirements</li>
         </ul>
       </div>
-
-      ${spaceRequirementsHtml}
 
       <div class="requirements">
         <strong>Important Note:</strong> This preliminary RFP is issued to support ongoing lease negotiations with a prospective tenant. 

@@ -27,6 +27,7 @@ const bidCollectionSchema = z.object({
 });
 
 const lineItemSchema = z.object({
+  category: z.string().optional(),
   description: z.string().min(1, "Description is required"),
   quantity: z.string().optional(),
   unit: z.string().optional(),
@@ -50,7 +51,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
   const queryClient = useQueryClient();
   const [attachments, setAttachments] = useState<File[]>([]);
   const [lineItems, setLineItems] = useState<LineItemFormData[]>([
-    { description: "", quantity: "", unit: "", unitPrice: "", totalPrice: "", notes: "" }
+    { category: "General", description: "", quantity: "", unit: "", unitPrice: "", totalPrice: "", notes: "" }
   ]);
 
   const form = useForm<BidCollectionFormData>({
@@ -124,7 +125,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
         notes: "",
       });
       setLineItems([
-        { description: "", quantity: "", unit: "", unitPrice: "", totalPrice: "", notes: "" }
+        { category: "General", description: "", quantity: "", unit: "", unitPrice: "", totalPrice: "", notes: "" }
       ]);
     }
   }, [bidCollection, isOpen, form, existingLineItems]);
@@ -231,6 +232,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
 
   const addLineItem = () => {
     setLineItems([...lineItems, {
+      category: "General",
       description: "",
       quantity: "",
       unit: "",

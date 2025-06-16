@@ -885,19 +885,36 @@ function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, dates: a
     scopeOfWorkHtml = '<div class="scope-of-work"><strong>Scope of Work:</strong><ul>' + scopeItems + '</ul></div>';
   }
 
-  // Generate space requirements table HTML safely
+  // Generate space requirements table HTML safely using area breakdown data
   let spaceRequirementsHtml = '';
   if (totalArea > 0) {
     let spaceRows = '';
+    
+    // Add warehouse area if it exists
     if (warehouseArea > 0) {
-      spaceRows += '<tr><td>Warehouse/Industrial</td><td>' + warehouseArea.toLocaleString() + '</td><td>Basic improvements - painting, utilities</td></tr>';
+      spaceRows += '<tr><td>Warehouse/Industrial</td><td>' + warehouseArea.toLocaleString() + '</td><td>Clear height requirements TBD</td></tr>';
     }
-    if (existingOffice > 0) {
-      spaceRows += '<tr><td>Existing Office</td><td>' + existingOffice.toLocaleString() + '</td><td>Renovation level TBD</td></tr>';
+    
+    // Add dynamic area breakdown items with custom notes
+    if (areaBreakdown && areaBreakdown.length > 0) {
+      areaBreakdown.forEach((item: any) => {
+        const description = item.description || 'Area';
+        const squareFootage = parseInt(item.squareFootage || '0');
+        const notes = item.notes || '';
+        if (squareFootage > 0) {
+          spaceRows += '<tr><td>' + description + '</td><td>' + squareFootage.toLocaleString() + '</td><td>' + notes + '</td></tr>';
+        }
+      });
+    } else {
+      // Fallback to legacy office areas if no area breakdown exists
+      if (existingOffice > 0) {
+        spaceRows += '<tr><td>Existing Office</td><td>' + existingOffice.toLocaleString() + '</td><td>Renovation level TBD</td></tr>';
+      }
+      if (newOffice > 0) {
+        spaceRows += '<tr><td>New Office Space</td><td>' + newOffice.toLocaleString() + '</td><td>New construction</td></tr>';
+      }
     }
-    if (newOffice > 0) {
-      spaceRows += '<tr><td>New Office Space</td><td>' + newOffice.toLocaleString() + '</td><td>New construction</td></tr>';
-    }
+    
     spaceRows += '<tr><td><strong>Total</strong></td><td><strong>' + totalArea.toLocaleString() + '</strong></td><td></td></tr>';
     
     spaceRequirementsHtml = '<div class="section"><div class="section-title">Space Requirements</div><table><tr><th>Space Type</th><th>Area (sq ft)</th><th>Notes</th></tr>' + spaceRows + '</table></div>';

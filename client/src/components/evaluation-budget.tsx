@@ -49,6 +49,12 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
+  // Load existing evaluation budget data
+  const { data: existingBudget } = useQuery({
+    queryKey: [`/api/rfp-requests/${rfp?.id}/evaluation-budget`],
+    enabled: !!rfp?.id,
+  });
+
   // Load existing bid collections to populate initial budget
   const { data: bidCollections } = useQuery({
     queryKey: [`/api/rfp-requests/${rfp?.id}/bid-collections`],
@@ -88,9 +94,24 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     notes: "",
   });
 
-  // Initialize budget with bid line items data
+  // Initialize budget with saved data or bid line items data
   useEffect(() => {
-    if (allBidLineItems && Array.isArray(allBidLineItems) && allBidLineItems.length > 0) {
+    if (existingBudget) {
+      // Load saved budget data
+      setBudgetData({
+        tenantImprovements: existingBudget.tenantImprovements || [],
+        designSoftCosts: existingBudget.designSoftCosts || [],
+        existingImprovements: existingBudget.existingImprovements || [],
+        hasExistingImprovements: existingBudget.hasExistingImprovements || false,
+        includeExistingInTotal: existingBudget.includeExistingInTotal || false,
+        totalTenantImprovements: existingBudget.totalTenantImprovements || "0.00",
+        totalDesignSoftCosts: existingBudget.totalDesignSoftCosts || "0.00",
+        totalExistingImprovements: existingBudget.totalExistingImprovements || "0.00",
+        grandTotal: existingBudget.grandTotal || "0.00",
+        notes: existingBudget.notes || "",
+      });
+    } else if (allBidLineItems && Array.isArray(allBidLineItems) && allBidLineItems.length > 0) {
+      // Initialize with bid line items if no saved budget exists
       const initialItems = allBidLineItems.map((item: BidLineItem & { bidCollectionId: number }) => ({
         id: `tenant-${item.id}`,
         description: item.description,
@@ -107,7 +128,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         tenantImprovements: initialItems,
       }));
     }
-  }, [allBidLineItems, bidCollections]);
+  }, [existingBudget, allBidLineItems, bidCollections]);
 
   const formatCurrency = (amount: string | number) => {
     const num = typeof amount === 'string' ? parseFloat(amount) : amount;

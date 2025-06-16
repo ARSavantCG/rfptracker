@@ -1137,15 +1137,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const budgetData = req.body;
       
-      // For now, just acknowledge the save - in a full implementation, 
-      // you would save this to the evaluation_budgets table
+      // Check if evaluation budget already exists
+      const existingBudget = await storage.getEvaluationBudget(rfpId);
+      
+      let savedBudget;
+      if (existingBudget) {
+        // Update existing budget
+        savedBudget = await storage.updateEvaluationBudget(rfpId, budgetData);
+      } else {
+        // Create new budget
+        savedBudget = await storage.createEvaluationBudget(budgetData);
+      }
+      
       res.status(201).json({ 
         message: "Evaluation budget saved successfully",
         rfpId,
-        data: budgetData
+        data: savedBudget
       });
     } catch (error) {
+      console.error('Evaluation budget save error:', error);
       res.status(500).json({ message: "Failed to save evaluation budget" });
+    }
+  });
+
+  // Get evaluation budget for an RFP
+  app.get("/api/rfp-requests/:rfpId/evaluation-budget", async (req, res) => {
+    try {
+      const rfpId = parseInt(req.params.rfpId);
+      if (isNaN(rfpId)) {
+        return res.status(400).json({ message: "Invalid RFP ID" });
+      }
+
+      const budget = await storage.getEvaluationBudget(rfpId);
+      if (!budget) {
+        return res.status(404).json({ message: "Evaluation budget not found" });
+      }
+
+      res.json(budget);
+    } catch (error) {
+      console.error('Evaluation budget fetch error:', error);
+      res.status(500).json({ message: "Failed to fetch evaluation budget" });
     }
   });
 

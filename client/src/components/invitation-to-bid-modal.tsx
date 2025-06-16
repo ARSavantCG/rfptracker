@@ -584,73 +584,83 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                 </div>
               )}
 
-              {scopeFields.map((field, index) => (
-                <div key={field.id} className="grid grid-cols-12 gap-4 items-end">
-                  <div className="col-span-6">
-                    <FormField
-                      control={form.control}
-                      name={`scopeOfWork.${index}.description`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Description</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="Work description" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  
-                  <div className="col-span-2">
-                    <FormField
-                      control={form.control}
-                      name={`scopeOfWork.${index}.quantity`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Quantity</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              {...field} 
-                              onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                              placeholder="1" 
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+              {scopeFields.length > 0 && (
+                <div className="space-y-2">
+                  {/* Column Headers */}
+                  <div className="grid grid-cols-12 gap-4 pb-2 border-b text-sm font-medium text-gray-600">
+                    <div className="col-span-6">Description</div>
+                    <div className="col-span-2">Quantity</div>
+                    <div className="col-span-3">Unit</div>
+                    <div className="col-span-1"></div>
                   </div>
 
-                  <div className="col-span-3">
-                    <FormField
-                      control={form.control}
-                      name={`scopeOfWork.${index}.unit`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Unit</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="sq ft, each, etc." />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
+                  {/* Scope Items */}
+                  {scopeFields.map((field, index) => (
+                    <div key={field.id} className="grid grid-cols-12 gap-4 items-center">
+                      <div className="col-span-6">
+                        <FormField
+                          control={form.control}
+                          name={`scopeOfWork.${index}.description`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormControl>
+                                <Input {...field} placeholder="Work description" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      
+                      <div className="col-span-2">
+                        <FormField
+                          control={form.control}
+                          name={`scopeOfWork.${index}.quantity`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormControl>
+                                <Input 
+                                  type="number" 
+                                  {...field} 
+                                  onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                                  placeholder="1" 
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
 
-                  <div className="col-span-1">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => removeScope(index)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
+                      <div className="col-span-3">
+                        <FormField
+                          control={form.control}
+                          name={`scopeOfWork.${index}.unit`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormControl>
+                                <Input {...field} placeholder="sq ft, each, etc." />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <div className="col-span-1">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => removeScope(index)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
 
             {/* Additional Information */}

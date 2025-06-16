@@ -296,7 +296,7 @@ export default function Dashboard() {
                 rfp={selectedRfp}
                 onAdvanceToInvitation={handleAdvanceToInvitation}
                 onValidateRfp={handleValidateRfp}
-                onOpenInvitationModal={handleAdvanceToInvitation}
+                onOpenInvitationModal={handleOpenInvitationModal}
                 onOpenBidCollection={handleOpenBidCollection}
               />
             </div>

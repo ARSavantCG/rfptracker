@@ -180,6 +180,13 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
 
       form.reset(formValues);
       setKeyDates(formValues.keyDates);
+      
+      // Force update scope of work fields after form reset
+      if (formValues.scopeOfWork && formValues.scopeOfWork.length > 0) {
+        setTimeout(() => {
+          form.setValue('scopeOfWork', formValues.scopeOfWork);
+        }, 50);
+      }
     }
   }, [rfp, isOpen, existingInvitation, form, properties, contacts]);
 
@@ -211,12 +218,25 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
         return response.json();
       }
     },
-    onSuccess: () => {
+    onSuccess: (updatedInvitation) => {
       toast({
         title: "Invitation Saved",
         description: "Your invitation details have been saved successfully.",
       });
+      
+      // Preserve current form state including scope of work
+      const currentFormValues = form.getValues();
+      
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests", rfp?.id, "invitation-to-bid"] });
+      
+      // Restore form state after a brief delay to allow data to refresh
+      setTimeout(() => {
+        if (updatedInvitation?.scopeOfWork) {
+          form.setValue('scopeOfWork', updatedInvitation.scopeOfWork);
+        } else if (currentFormValues.scopeOfWork) {
+          form.setValue('scopeOfWork', currentFormValues.scopeOfWork);
+        }
+      }, 100);
     },
     onError: (error) => {
       toast({

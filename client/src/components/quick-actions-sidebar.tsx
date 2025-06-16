@@ -1,12 +1,10 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   Plus, 
-  Search, 
   FileText, 
   Users, 
   Building2, 
@@ -44,7 +42,6 @@ export function QuickActionsSidebar({
   className = ""
 }: QuickActionsSidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
 
   // Fetch recent data for quick access
   const { data: rfpRequests = [] } = useQuery<RfpRequest[]>({
@@ -79,11 +76,6 @@ export function QuickActionsSidebar({
     { label: "Completed", value: stats?.completed ?? 0, color: "bg-green-500", icon: CheckCircle },
     { label: "On Hold", value: stats?.onHold ?? 0, color: "bg-red-500", icon: PauseCircle },
   ];
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSearch?.(searchQuery);
-  };
 
   const handleStatusFilter = (status: string) => {
     onStatusFilter?.(status);
@@ -148,7 +140,7 @@ export function QuickActionsSidebar({
     <div className={`w-56 bg-white border-r border-gray-200 flex flex-col ${className}`}>
       {/* Header */}
       <div className="p-3 border-b border-gray-200">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between">
           <h2 className="text-base font-semibold text-gray-900">Quick Actions</h2>
           <Button
             variant="ghost"
@@ -159,19 +151,6 @@ export function QuickActionsSidebar({
             <ChevronLeft className="h-4 w-4" />
           </Button>
         </div>
-
-        {/* Search */}
-        <form onSubmit={handleSearch} className="space-y-2">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="Search RFPs..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-        </form>
       </div>
 
       <ScrollArea className="flex-1">

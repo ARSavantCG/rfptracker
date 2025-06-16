@@ -524,7 +524,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         </div>
       </CardHeader>
       <CardContent>
-        {items.length === 0 ? (
+        {items.length === 0 && !newItemCategory ? (
           <p className="text-gray-500 text-center py-4">No items added yet</p>
         ) : (
           <Table>
@@ -533,7 +533,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                 <TableHead>Description</TableHead>
                 <TableHead className="w-32">Quantity (Unit)</TableHead>
                 <TableHead className="w-24">Unit Price</TableHead>
-                <TableHead className="w-24">Total</TableHead>
+                {!newItemCategory && <TableHead className="w-24">Total</TableHead>}
                 <TableHead className="w-24">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -577,7 +577,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                           className="text-sm"
                         />
                       </TableCell>
-                      <TableCell className="font-medium">{formatCurrency(item.totalPrice)}</TableCell>
+                      {!newItemCategory && <TableCell className="font-medium">{formatCurrency(item.totalPrice)}</TableCell>}
                       <TableCell>
                         <div className="flex gap-1">
                           <Button
@@ -602,7 +602,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                       <TableCell>{item.description}</TableCell>
                       <TableCell>{item.quantity} {item.unit}</TableCell>
                       <TableCell>{formatCurrency(item.unitPrice)}</TableCell>
-                      <TableCell className="font-medium">{formatCurrency(item.totalPrice)}</TableCell>
+                      {!newItemCategory && <TableCell className="font-medium">{formatCurrency(item.totalPrice)}</TableCell>}
                       <TableCell>
                         <div className="flex gap-1">
                           <Button
@@ -649,8 +649,8 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
 
         {newItemCategory === category && (
           <div className="mt-4 p-4 border rounded-lg bg-gray-50">
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-              <div className="md:col-span-2">
+            <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
+              <div className="md:col-span-3">
                 <Label>Description</Label>
                 <Input
                   value={newItem.description || ""}
@@ -666,12 +666,13 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                   onChange={(e) => setNewItem(prev => ({ ...prev, quantity: parseInt(e.target.value) || 1 }))}
                 />
               </div>
-              <div>
+              <div className="md:col-span-1">
                 <Label>Unit</Label>
                 <Input
                   value={newItem.unit || ""}
                   onChange={(e) => setNewItem(prev => ({ ...prev, unit: e.target.value }))}
                   placeholder="ea, sq ft, lf, etc."
+                  className="max-w-20"
                 />
               </div>
               <div>

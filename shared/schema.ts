@@ -234,7 +234,7 @@ export const bidCollections = pgTable("bid_collections", {
 export const bidLineItems = pgTable("bid_line_items", {
   id: serial("id").primaryKey(),
   bidCollectionId: integer("bid_collection_id").notNull().references(() => bidCollections.id),
-  category: text("category").notNull(), // e.g., "Labor", "Materials", "Equipment"
+  category: text("category"), // e.g., "Labor", "Materials", "Equipment" - now optional
   description: text("description").notNull(),
   quantity: text("quantity"),
   unit: text("unit"), // e.g., "sq ft", "lf", "ea"

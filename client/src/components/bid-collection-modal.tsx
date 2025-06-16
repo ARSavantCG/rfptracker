@@ -27,7 +27,6 @@ const bidCollectionSchema = z.object({
 });
 
 const lineItemSchema = z.object({
-  category: z.string().min(1, "Category is required"),
   description: z.string().min(1, "Description is required"),
   quantity: z.string().optional(),
   unit: z.string().optional(),
@@ -51,7 +50,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
   const queryClient = useQueryClient();
   const [attachments, setAttachments] = useState<File[]>([]);
   const [lineItems, setLineItems] = useState<LineItemFormData[]>([
-    { category: "Labor", description: "", quantity: "", unit: "", unitPrice: "", totalPrice: "", notes: "" }
+    { description: "", quantity: "", unit: "", unitPrice: "", totalPrice: "", notes: "" }
   ]);
 
   const form = useForm<BidCollectionFormData>({
@@ -125,7 +124,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
         notes: "",
       });
       setLineItems([
-        { category: "Labor", description: "", quantity: "", unit: "", unitPrice: "", totalPrice: "", notes: "" }
+        { description: "", quantity: "", unit: "", unitPrice: "", totalPrice: "", notes: "" }
       ]);
     }
   }, [bidCollection, isOpen, form, existingLineItems]);
@@ -232,7 +231,6 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
 
   const addLineItem = () => {
     setLineItems([...lineItems, {
-      category: "Materials",
       description: "",
       quantity: "",
       unit: "",
@@ -462,7 +460,6 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Category</TableHead>
                       <TableHead>Description</TableHead>
                       <TableHead>Qty</TableHead>
                       <TableHead>Unit</TableHead>
@@ -475,23 +472,6 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                   <TableBody>
                     {lineItems.map((item, index) => (
                       <TableRow key={index}>
-                        <TableCell>
-                          <Select 
-                            value={item.category} 
-                            onValueChange={(value) => updateLineItem(index, 'category', value)}
-                          >
-                            <SelectTrigger className="min-w-[120px]">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="Labor">Labor</SelectItem>
-                              <SelectItem value="Materials">Materials</SelectItem>
-                              <SelectItem value="Equipment">Equipment</SelectItem>
-                              <SelectItem value="Permits">Permits</SelectItem>
-                              <SelectItem value="Other">Other</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
                         <TableCell>
                           <Input
                             value={item.description}

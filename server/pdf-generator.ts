@@ -832,7 +832,7 @@ function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dates: an
         <div class="section-title">Space Requirements</div>
         <table>
           <tr><th>Space Type</th><th>Area (sq ft)</th><th>Notes</th></tr>
-          ${warehouseArea > 0 ? `<tr><td>Warehouse/Industrial</td><td>${warehouseArea.toLocaleString()}</td><td>Clear height requirements TBD</td></tr>` : ''}
+          ${warehouseArea > 0 ? `<tr><td>Warehouse</td><td>${warehouseArea.toLocaleString()}</td><td>Clear height requirements TBD</td></tr>` : ''}
           ${areaBreakdown && areaBreakdown.length > 0 ? areaBreakdown.map((item: any) => 
             `<tr><td>${item.description || 'Area'}</td><td>${parseInt(item.squareFootage || '0').toLocaleString()}</td><td>${item.notes || ''}</td></tr>`
           ).join('') : ''}
@@ -892,7 +892,7 @@ function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, dates: a
     
     // Add warehouse area if it exists
     if (warehouseArea > 0) {
-      spaceRows += '<tr><td>Warehouse/Industrial</td><td>' + warehouseArea.toLocaleString() + '</td><td>Clear height requirements TBD</td></tr>';
+      spaceRows += '<tr><td>Warehouse</td><td>' + warehouseArea.toLocaleString() + '</td><td>Clear height requirements TBD</td></tr>';
     }
     
     // Add dynamic area breakdown items with custom notes

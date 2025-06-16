@@ -29,6 +29,7 @@ const validationFormSchema = z.object({
   generalContractor: z.string().optional(),
   architect: z.string().optional(),
   warehouseArea: z.string().optional(),
+  warehouseNotes: z.string().optional(),
   areaBreakdown: z.array(areaLineItemSchema),
   requestTypes: z.array(z.string()).min(1, "At least one request type is required"),
   projectDescription: z.string().optional(),
@@ -71,6 +72,7 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
       generalContractor: "",
       architect: "",
       warehouseArea: "",
+      warehouseNotes: "",
       areaBreakdown: [],
       requestTypes: ["pricing", "schedule", "space-plan"],
       projectDescription: "",
@@ -303,21 +305,38 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
               />
             </div>
 
-            {/* Total Rentable Area */}
-            <FormField
-              control={form.control}
-              name="warehouseArea"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Total Rentable Area (What tenant pays rent on)</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="Enter total area in sq ft" />
-                  </FormControl>
-                  <FormMessage />
-                  <p className="text-sm text-gray-500">From Step 1: {rfp.projectArea} - you can edit if needed</p>
-                </FormItem>
-              )}
-            />
+            {/* Total Rentable Area - Side by Side with Notes */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="warehouseArea"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Total Rentable Area (What tenant pays rent on)</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="Enter total area in sq ft" />
+                    </FormControl>
+                    <FormMessage />
+                    <p className="text-sm text-gray-500">From Step 1: {rfp.projectArea} - you can edit if needed</p>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="warehouseNotes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Warehouse Notes</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="e.g., Clear height requirements TBD" />
+                    </FormControl>
+                    <FormMessage />
+                    <p className="text-sm text-gray-500">Notes that will appear in the PDF for the warehouse area</p>
+                  </FormItem>
+                )}
+              />
+            </div>
 
             {/* Area Breakdown */}
             <div className="bg-blue-50 p-4 rounded-lg">

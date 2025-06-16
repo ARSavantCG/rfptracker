@@ -24,31 +24,72 @@ function generateFinancialSummaryHtml(options: PdfGenerationOptions, dates: any)
   const { rfp } = options;
   const { today } = dates;
   
-  // Calculate totals from bid collections and line items
+  // Calculate totals from evaluation budget data
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     }).format(value);
   };
 
-  // Calculate category totals from all line items
-  const calculateCategoryTotal = (category: string) => {
-    if (!rfp.allLineItems) return 0;
-    return rfp.allLineItems.reduce((sum: number, item: any) => {
-      if (item.category?.toLowerCase() === category.toLowerCase()) {
-        return sum + (parseFloat(item.totalPrice) || 0);
-      }
-      return sum;
+  // Get evaluation budget data from rfp
+  const evaluationBudget = rfp.evaluationBudget || {};
+  const tenantImprovements = evaluationBudget.tenantImprovements || [];
+  const designSoftCosts = evaluationBudget.designSoftCosts || [];
+  const existingImprovements = evaluationBudget.existingImprovements || [];
+
+  // Calculate category totals
+  const calculateCategoryTotal = (items: any[]) => {
+    return items.reduce((sum: number, item: any) => {
+      return sum + (parseFloat(item.totalPrice) || 0);
     }, 0);
   };
 
-  const tenantImprovementsTotal = calculateCategoryTotal("tenant improvements");
-  const designSoftCostsTotal = calculateCategoryTotal("design/soft costs");
-  const existingImprovementsTotal = calculateCategoryTotal("existing improvements");
-  const grandTotal = tenantImprovementsTotal + designSoftCostsTotal + existingImprovementsTotal;
+  const tenantImprovementsTotal = calculateCategoryTotal(tenantImprovements);
+  const designSoftCostsTotal = calculateCategoryTotal(designSoftCosts);
+  const existingImprovementsTotal = calculateCategoryTotal(existingImprovements);
+  const grandTotal = tenantImprovementsTotal + designSoftCostsTotal + 
+    (evaluationBudget.hasExistingImprovements && evaluationBudget.includeExistingInTotal ? existingImprovementsTotal : 0);
+
+  // Generate line item table for a category
+  const generateLineItemTable = (title: string, items: any[], total: number) => {
+    if (items.length === 0) return '';
+    
+    return `
+      <div class="section">
+        <div class="section-header">
+          <h2 class="section-title">${title}</h2>
+          <span class="section-total">${formatCurrency(total)}</span>
+        </div>
+        <div class="table-container">
+          <table class="line-items-table">
+            <thead>
+              <tr>
+                <th class="description-col">DESCRIPTION</th>
+                <th class="quantity-col">QUANTITY</th>
+                <th class="unit-col">UNIT</th>
+                <th class="unit-price-col">UNIT PRICE</th>
+                <th class="total-price-col">TOTAL PRICE</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${items.map(item => `
+                <tr>
+                  <td class="description-col">${item.description}</td>
+                  <td class="quantity-col">${item.quantity}</td>
+                  <td class="unit-col">${item.unit}</td>
+                  <td class="unit-price-col">${formatCurrency(parseFloat(item.unitPrice) || 0)}</td>
+                  <td class="total-price-col">${formatCurrency(parseFloat(item.totalPrice) || 0)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  };
 
   return `
     <!DOCTYPE html>
@@ -57,25 +98,128 @@ function generateFinancialSummaryHtml(options: PdfGenerationOptions, dates: any)
       <meta charset="UTF-8">
       <title>Financial Summary - ${rfp.projectName}</title>
       <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; color: #333; line-height: 1.4; }
-        .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #2563eb; padding-bottom: 20px; }
+        body { 
+          font-family: Arial, sans-serif; 
+          margin: 0; 
+          padding: 20px; 
+          color: #333; 
+          line-height: 1.4; 
+        }
+        .header { 
+          text-align: center; 
+          margin-bottom: 30px; 
+          border-bottom: 2px solid #2563eb; 
+          padding-bottom: 20px; 
+        }
         .company-info { text-align: left; margin-bottom: 20px; }
-        .document-title { font-size: 24px; font-weight: bold; color: #2563eb; margin: 10px 0; }
-        .project-title { font-size: 18px; font-weight: bold; margin: 5px 0; }
-        .section { margin: 20px 0; }
-        .section-title { font-size: 16px; font-weight: bold; color: #2563eb; margin-bottom: 10px; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; }
+        .document-title { font-size: 18px; font-weight: bold; color: #2563eb; margin: 10px 0; }
+        .project-title { font-size: 16px; font-weight: bold; margin: 5px 0; }
+        
+        .section {
+          background: white;
+          margin: 20px 0;
+          padding: 20px;
+          border-radius: 8px;
+          box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .section-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 15px;
+          padding-bottom: 10px;
+          border-bottom: 2px solid #e9ecef;
+        }
+        
+        .section-title {
+          font-size: 16px;
+          font-weight: bold;
+          color: #495057;
+          margin: 0;
+        }
+        
+        .section-total {
+          font-size: 18px;
+          font-weight: bold;
+          color: #28a745;
+        }
+        
+        .table-container {
+          overflow-x: auto;
+        }
+        
+        .line-items-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 0;
+        }
+        
+        .line-items-table th {
+          background-color: #f8f9fa;
+          border: 1px solid #dee2e6;
+          padding: 12px 8px;
+          text-align: left;
+          font-weight: bold;
+          font-size: 11px;
+          color: #495057;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+        
+        .line-items-table td {
+          border: 1px solid #dee2e6;
+          padding: 10px 8px;
+          vertical-align: top;
+          font-size: 12px;
+        }
+        
+        .line-items-table tbody tr:nth-child(even) {
+          background-color: #f8f9fa;
+        }
+        
+        /* Column-specific styling for consistent alignment */
+        .description-col { 
+          width: 40%; 
+          text-align: left; 
+        }
+        .quantity-col { 
+          width: 12%; 
+          text-align: center; 
+        }
+        .unit-col { 
+          width: 8%; 
+          text-align: center; 
+        }
+        .unit-price-col { 
+          width: 20%; 
+          text-align: right; 
+        }
+        .total-price-col { 
+          width: 20%; 
+          text-align: right; 
+        }
+        
+        .grand-total {
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+          padding: 20px;
+          border-radius: 8px;
+          text-align: center;
+          margin: 30px 0;
+          box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        .grand-total h2 {
+          margin: 0;
+          font-size: 24px;
+          font-weight: 600;
+        }
+        
         .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 15px 0; }
         .info-item { display: flex; margin: 5px 0; }
         .label { font-weight: bold; min-width: 120px; }
         .value { margin-left: 10px; }
-        .cost-summary { background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0; }
-        .cost-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #e5e7eb; }
-        .cost-item:last-child { border-bottom: none; }
-        .cost-label { font-weight: bold; }
-        .cost-value { font-size: 18px; font-weight: bold; }
-        .total-row { background-color: #2563eb; color: white; padding: 15px; border-radius: 5px; margin-top: 10px; }
-        .bid-summary { margin: 20px 0; }
-        .bid-item { background-color: #f9fafb; padding: 15px; margin: 10px 0; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; }
         .export-info { background-color: #dbeafe; padding: 15px; border-radius: 8px; margin: 20px 0; }
         table { width: 100%; border-collapse: collapse; margin: 15px 0; }
         th, td { border: 1px solid #e5e7eb; padding: 12px; text-align: left; }
@@ -102,35 +246,23 @@ function generateFinancialSummaryHtml(options: PdfGenerationOptions, dates: any)
             <div class="info-item"><span class="label">Tenant:</span><span class="value">${rfp.tenantName}</span></div>
           </div>
           <div>
-            <div class="info-item"><span class="label">Project Area:</span><span class="value">${rfp.projectArea} sq ft</span></div>
-            <div class="info-item"><span class="label">Development Contact:</span><span class="value">${rfp.developmentContact}</span></div>
+            <div class="info-item"><span class="label">Property:</span><span class="value">${rfp.property}</span></div>
+            <div class="info-item"><span class="label">Development Contact:</span><span class="value">${rfp.developmentContact || 'Not specified'}</span></div>
             <div class="info-item"><span class="label">Report Date:</span><span class="value">${today}</span></div>
           </div>
         </div>
       </div>
 
-      <div class="section">
-        <div class="section-title">Cost Breakdown Summary</div>
-        <div class="cost-summary">
-          <div class="cost-item">
-            <span class="cost-label">Tenant Improvements</span>
-            <span class="cost-value" style="color: #16a34a;">${formatCurrency(tenantImprovementsTotal)}</span>
-          </div>
-          <div class="cost-item">
-            <span class="cost-label">Design / Soft Costs / Other Fees</span>
-            <span class="cost-value" style="color: #2563eb;">${formatCurrency(designSoftCostsTotal)}</span>
-          </div>
-          ${existingImprovementsTotal > 0 ? `
-          <div class="cost-item">
-            <span class="cost-label">Existing Improvements</span>
-            <span class="cost-value" style="color: #ea580c;">${formatCurrency(existingImprovementsTotal)}</span>
-          </div>
-          ` : ''}
-          <div class="cost-item total-row">
-            <span class="cost-label" style="font-size: 20px;">Total Project Cost</span>
-            <span class="cost-value" style="font-size: 24px;">${formatCurrency(grandTotal)}</span>
-          </div>
-        </div>
+      <!-- Detailed Line Item Tables -->
+      ${generateLineItemTable("Tenant Improvements", tenantImprovements, tenantImprovementsTotal)}
+      ${generateLineItemTable("Design / Soft Costs / Other Fees", designSoftCosts, designSoftCostsTotal)}
+      ${existingImprovements.length > 0 ? generateLineItemTable("Existing Improvements", existingImprovements, existingImprovementsTotal) : ''}
+
+      <div class="grand-total">
+        <h2>Grand Total: ${formatCurrency(grandTotal)}</h2>
+        ${evaluationBudget.hasExistingImprovements && !evaluationBudget.includeExistingInTotal ? 
+          '<p style="margin: 10px 0 0 0; font-size: 14px; opacity: 0.9;">* Existing improvements tracked separately for financial modeling</p>' : ''
+        }
       </div>
 
 

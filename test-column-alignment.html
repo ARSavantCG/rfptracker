@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Column Alignment Test</title>
+  <style>
+    body { 
+      font-family: Arial, sans-serif; 
+      margin: 0; 
+      padding: 20px; 
+      color: #333; 
+      line-height: 1.4; 
+    }
+    
+    .section {
+      background: white;
+      margin: 20px 0;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #e9ecef;
+    }
+    
+    .section-title {
+      font-size: 16px;
+      font-weight: bold;
+      color: #495057;
+      margin: 0;
+    }
+    
+    .section-total {
+      font-size: 18px;
+      font-weight: bold;
+      color: #28a745;
+    }
+    
+    .table-container {
+      overflow-x: auto;
+    }
+    
+    .line-items-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0;
+    }
+    
+    .line-items-table th {
+      background-color: #f8f9fa;
+      border: 1px solid #dee2e6;
+      padding: 12px 8px;
+      text-align: left;
+      font-weight: bold;
+      font-size: 11px;
+      color: #495057;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .line-items-table td {
+      border: 1px solid #dee2e6;
+      padding: 10px 8px;
+      vertical-align: top;
+      font-size: 12px;
+    }
+    
+    .line-items-table tbody tr:nth-child(even) {
+      background-color: #f8f9fa;
+    }
+    
+    /* Column-specific styling for consistent alignment */
+    .description-col { 
+      width: 40%; 
+      text-align: left; 
+    }
+    .quantity-col { 
+      width: 12%; 
+      text-align: center; 
+    }
+    .unit-col { 
+      width: 8%; 
+      text-align: center; 
+    }
+    .unit-price-col { 
+      width: 20%; 
+      text-align: right; 
+    }
+    .total-price-col { 
+      width: 20%; 
+      text-align: right; 
+    }
+  </style>
+</head>
+<body>
+
+<div class="section">
+  <div class="section-header">
+    <h2 class="section-title">Tenant Improvements</h2>
+    <span class="section-total">$675,000.00</span>
+  </div>
+  <div class="table-container">
+    <table class="line-items-table">
+      <thead>
+        <tr>
+          <th class="description-col">DESCRIPTION</th>
+          <th class="quantity-col">QUANTITY</th>
+          <th class="unit-col">UNIT</th>
+          <th class="unit-price-col">UNIT PRICE</th>
+          <th class="total-price-col">TOTAL PRICE</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="description-col">Pit Levelers</td>
+          <td class="quantity-col">25</td>
+          <td class="unit-col">ea</td>
+          <td class="unit-price-col">$10,000.00</td>
+          <td class="total-price-col">$250,000.00</td>
+        </tr>
+        <tr>
+          <td class="description-col">Electrical Service Upgrade (800 Amps)</td>
+          <td class="quantity-col">1</td>
+          <td class="unit-col">ls</td>
+          <td class="unit-price-col">$75,000.00</td>
+          <td class="total-price-col">$75,000.00</td>
+        </tr>
+        <tr>
+          <td class="description-col">New Lighting @ Entry</td>
+          <td class="quantity-col">1</td>
+          <td class="unit-col">ls</td>
+          <td class="unit-price-col">$25,000.00</td>
+          <td class="total-price-col">$25,000.00</td>
+        </tr>
+        <tr>
+          <td class="description-col">Architectural Design</td>
+          <td class="quantity-col">1</td>
+          <td class="unit-col">ls</td>
+          <td class="unit-price-col">$75,000.00</td>
+          <td class="total-price-col">$75,000.00</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-header">
+    <h2 class="section-title">Design / Soft Costs / Other Fees</h2>
+    <span class="section-total">$25,000.00</span>
+  </div>
+  <div class="table-container">
+    <table class="line-items-table">
+      <thead>
+        <tr>
+          <th class="description-col">DESCRIPTION</th>
+          <th class="quantity-col">QUANTITY</th>
+          <th class="unit-col">UNIT</th>
+          <th class="unit-price-col">UNIT PRICE</th>
+          <th class="total-price-col">TOTAL PRICE</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="description-col">MEP Design</td>
+          <td class="quantity-col">1</td>
+          <td class="unit-col">ls</td>
+          <td class="unit-price-col">$25,000.00</td>
+          <td class="total-price-col">$25,000.00</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+</body>
+</html>

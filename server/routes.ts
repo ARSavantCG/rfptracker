@@ -1202,6 +1202,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         allLineItems.push(...lineItems.map(item => ({ ...item, bidCollection: bid })));
       }
 
+      // Get evaluation budget data
+      const evaluationBudget = await storage.getEvaluationBudget(rfpId);
+
       // Generate PDF using existing PDF generator
       const { generateRfpPdf } = await import("./pdf-generator");
       
@@ -1209,7 +1212,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         rfp: {
           ...rfp,
           bidCollections,
-          allLineItems
+          allLineItems,
+          evaluationBudget
         },
         recipientType: "financial-summary",
         recipientName: "Financial Team",

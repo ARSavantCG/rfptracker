@@ -294,7 +294,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                 name="contractorId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Bidder (Contractor/Architect)</FormLabel>
+                    <FormLabel>Respondent (Contractor/Architect)</FormLabel>
                     <Select 
                       onValueChange={(value) => {
                         field.onChange(value);

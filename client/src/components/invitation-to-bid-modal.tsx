@@ -632,7 +632,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                   name="bidSubmissionDeadline"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Bid Submission Deadline</FormLabel>
+                      <FormLabel>Due Date (Internal or Consultant)</FormLabel>
                       <FormControl>
                         <Input type="date" {...field} />
                       </FormControl>

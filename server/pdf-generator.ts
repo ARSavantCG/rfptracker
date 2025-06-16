@@ -867,6 +867,23 @@ function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, dates: a
   // Format bid deadline with E.O.B.
   const formattedDeadline = bidDeadline.replace(/(\d{4})$/, '$1 E.O.B.');
 
+  // Generate scope of work HTML safely
+  let scopeOfWorkHtml = '';
+  if (invitationToBid?.scopeOfWork && Array.isArray(invitationToBid.scopeOfWork) && invitationToBid.scopeOfWork.length > 0) {
+    const scopeItems = invitationToBid.scopeOfWork.map(item => {
+      const quantity = item.quantity ? ' - ' + item.quantity.toLocaleString() + ' ' + (item.unit || '') : '';
+      return `<li>${item.description}${quantity}</li>`;
+    }).join('');
+    
+    scopeOfWorkHtml = `
+        <div class="scope-of-work">
+          <strong>Scope of Work:</strong>
+          <ul>
+            ${scopeItems}
+          </ul>
+        </div>`;
+  }
+
   return `
     <!DOCTYPE html>
     <html>

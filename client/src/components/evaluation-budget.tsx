@@ -179,6 +179,18 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     return itemCost + distributedDesignCost;
   };
 
+  // Calculate distributed unit price when design costs are hidden
+  const calculateDistributedUnitPrice = (item: EvaluationLineItem) => {
+    if (budgetData.separateDesignCosts || item.quantity === 0) {
+      // When showing separately or quantity is 0, return original unit price
+      return parseFloat(item.unitPrice) || 0;
+    }
+    
+    // When hiding design costs, calculate new unit price based on distributed total
+    const distributedTotal = calculateDistributedCosts(item);
+    return distributedTotal / item.quantity;
+  };
+
   const calculateGrandTotal = () => {
     const tiTotal = calculateCategoryTotal(budgetData.tenantImprovements);
     const designTotal = calculateCategoryTotal(budgetData.designSoftCosts);
@@ -232,13 +244,17 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                         const totalPrice = isTenantImprovements && !budgetData.separateDesignCosts ? 
                           calculateDistributedCosts(item) : 
                           parseFloat(item.totalPrice) || 0;
+                        // Use distributed unit price for tenant improvements when design costs are hidden
+                        const unitPrice = isTenantImprovements && !budgetData.separateDesignCosts ? 
+                          calculateDistributedUnitPrice(item) : 
+                          parseFloat(item.unitPrice) || 0;
                         const pricePerSf = rentableArea > 0 ? totalPrice / rentableArea : 0;
                         return `
                         <tr>
                             <td>${item.description}</td>
                             <td>${item.quantity}</td>
                             <td>${item.unit}</td>
-                            <td class="currency">${formatCurrency(parseFloat(item.unitPrice) || 0)}</td>
+                            <td class="currency">${formatCurrency(unitPrice)}</td>
                             <td class="currency">${formatCurrency(totalPrice)}</td>
                             <td class="currency">${pricePerSf > 0 ? '$' + pricePerSf.toFixed(2) : 'N/A'}</td>
                         </tr>
@@ -697,7 +713,12 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                     <>
                       <TableCell>{item.description}</TableCell>
                       <TableCell>{item.quantity} {item.unit}</TableCell>
-                      <TableCell>{formatCurrency(item.unitPrice)}</TableCell>
+                      <TableCell>
+                        {category === 'tenantImprovements' ? 
+                          formatCurrency(calculateDistributedUnitPrice(item)) : 
+                          formatCurrency(item.unitPrice)
+                        }
+                      </TableCell>
                       {!newItemCategory && <TableCell className="font-medium">
                         {category === 'tenantImprovements' ? 
                           formatCurrency(calculateDistributedCosts(item)) : 

@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Building, MapPin, Plus, Search, Edit } from "lucide-react";
 import { useState } from "react";
 import Navigation from "@/components/navigation";
+import { PropertyFormModal } from "@/components/property-form-modal";
 import type { Property } from "@shared/schema";
 
 export default function Properties() {
@@ -46,10 +47,7 @@ export default function Properties() {
               Manage your property portfolio and building information
             </p>
           </div>
-          <Button className="bg-blue-600 hover:bg-blue-700">
-            <Plus className="h-4 w-4 mr-2" />
-            Add Property
-          </Button>
+          <PropertyFormModal />
         </div>
 
         {/* Search Bar */}
@@ -137,10 +135,7 @@ export default function Properties() {
                   }
                 </p>
                 {!searchTerm && (
-                  <Button className="bg-blue-600 hover:bg-blue-700">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Your First Property
-                  </Button>
+                  <PropertyFormModal />
                 )}
               </div>
             </CardContent>

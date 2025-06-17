@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Users, Mail, Phone, Building2, Plus, Search } from "lucide-react";
 import { useState } from "react";
 import Navigation from "@/components/navigation";
+import { ContactFormModal } from "@/components/contact-form-modal";
 import type { Contact } from "@shared/schema";
 
 export default function Contacts() {
@@ -55,10 +56,7 @@ export default function Contacts() {
               Manage your contractors, architects, and property owners
             </p>
           </div>
-          <Button className="bg-blue-600 hover:bg-blue-700">
-            <Plus className="h-4 w-4 mr-2" />
-            Add Contact
-          </Button>
+          <ContactFormModal />
         </div>
 
         {/* Search Bar */}
@@ -162,10 +160,7 @@ export default function Contacts() {
                   }
                 </p>
                 {!searchTerm && (
-                  <Button className="bg-blue-600 hover:bg-blue-700">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Your First Contact
-                  </Button>
+                  <ContactFormModal />
                 )}
               </div>
             </CardContent>
@@ -228,9 +223,14 @@ export default function Contacts() {
                   </div>
                   
                   <div className="flex space-x-2 mt-4">
-                    <Button variant="outline" size="sm" className="flex-1">
-                      Edit
-                    </Button>
+                    <ContactFormModal 
+                      contact={contact}
+                      trigger={
+                        <Button variant="outline" size="sm" className="flex-1">
+                          Edit
+                        </Button>
+                      }
+                    />
                     <Button variant="outline" size="sm">
                       <Mail className="h-4 w-4" />
                     </Button>

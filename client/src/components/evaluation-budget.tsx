@@ -993,7 +993,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
           {saveProgressMutation.isPending ? "Saving..." : "Save Progress"}
         </Button>
         <Button 
-          onClick={generatePreview}
+          onClick={() => generateReportPreview(false)}
           variant="outline"
           size="sm"
           className="border-purple-500 text-purple-600 hover:bg-purple-50"

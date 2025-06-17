@@ -51,50 +51,32 @@ export default function Reports() {
     onHold: filteredRfps.filter((rfp: RfpRequest) => rfp.status === "on-hold").length,
     dueSoon: filteredRfps.filter((rfp: RfpRequest) => {
       const dueDate = parseISO(rfp.internalDueDate.toString());
-      const threeDaysFromNow = addDays(new Date(), 3);
-      return isBefore(dueDate, threeDaysFromNow) && rfp.status !== "completed";
+      const daysUntil = Math.ceil((dueDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+      return daysUntil >= 0 && daysUntil <= 3 && rfp.status !== "completed";
     }).length,
     overdue: filteredRfps.filter((rfp: RfpRequest) => {
       const dueDate = parseISO(rfp.internalDueDate.toString());
-      return isBefore(dueDate, new Date()) && rfp.status !== "completed";
+      const daysUntil = Math.ceil((dueDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+      return daysUntil < 0 && rfp.status !== "completed";
     }).length,
   };
 
-  const handleExport = async (reportType: "detailed" | "historical-pricing") => {
+  const clearFilters = () => {
+    setFilters({});
+  };
+
+  const generateReport = async (reportType: "executive" | "detailed" | "historical") => {
     try {
-      const endpoint = reportType === "detailed" ? "/api/reports/detailed" : "/api/reports/historical-pricing";
-      
-      const response = await fetch(endpoint, {
+      const response = await fetch(`/api/reports/${reportType}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          filters,
-          rfps: filteredRfps,
-        }),
+        body: JSON.stringify({ filters, format: exportFormat }),
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to generate report");
-      }
-
-      const contentType = response.headers.get("content-type");
-      const blob = await response.blob();
-      
-      if (contentType?.includes("text/html")) {
-        // Open HTML report in new window for viewing/printing as PDF
-        const url = window.URL.createObjectURL(blob);
-        const newWindow = window.open(url, '_blank');
-        if (newWindow) {
-          newWindow.onload = () => {
-            setTimeout(() => {
-              window.URL.revokeObjectURL(url);
-            }, 1000);
-          };
-        }
-      } else {
-        // Download as PDF file
+      if (response.ok) {
+        const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.style.display = "none";
@@ -176,214 +158,210 @@ export default function Reports() {
 
         {/* Filters Card */}
         <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Calendar className="h-5 w-5" />
-            <span>Report Filters</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="status-filter">Status</Label>
-              <Select
-                value={filters.status || ""}
-                onValueChange={(value) => setFilters({ ...filters, status: value || undefined })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="All statuses" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All statuses</SelectItem>
-                  <SelectItem value="received">Received</SelectItem>
-                  <SelectItem value="in-progress">In Progress</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="on-hold">On Hold</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="property-filter">Property</Label>
-              <Select
-                value={filters.property || ""}
-                onValueChange={(value) => setFilters({ ...filters, property: value || undefined })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="All properties" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All properties</SelectItem>
-                  {properties.map((property) => (
-                    <SelectItem key={property.id} value={property.propertyName}>
-                      {property.propertyName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="due-filter">Due Within</Label>
-              <Select
-                value={filters.dueInDays?.toString() || ""}
-                onValueChange={(value) => setFilters({ ...filters, dueInDays: value ? parseInt(value) : undefined })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Any time" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Any time</SelectItem>
-                  <SelectItem value="1">1 day</SelectItem>
-                  <SelectItem value="3">3 days</SelectItem>
-                  <SelectItem value="7">1 week</SelectItem>
-                  <SelectItem value="30">1 month</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="clear-filters">Actions</Label>
-              <Button
-                variant="outline"
-                onClick={() => setFilters({})}
-                className="w-full"
-              >
-                Clear Filters
-              </Button>
-            </div>
-          </div>
-
-          {/* Metrics Summary */}
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mt-6 pt-6 border-t">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-gray-900">{metrics.total}</p>
-              <p className="text-xs text-gray-600 uppercase font-medium">Total</p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold text-blue-600">{metrics.received}</p>
-              <p className="text-xs text-blue-600 uppercase font-medium">Received</p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold text-yellow-600">{metrics.inProgress}</p>
-              <p className="text-xs text-yellow-600 uppercase font-medium">In Progress</p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold text-green-600">{metrics.completed}</p>
-              <p className="text-xs text-green-600 uppercase font-medium">Completed</p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold text-gray-600">{metrics.onHold}</p>
-              <p className="text-xs text-gray-600 uppercase font-medium">On Hold</p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold text-orange-600">{metrics.dueSoon}</p>
-              <p className="text-xs text-orange-600 uppercase font-medium">Due Soon</p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold text-red-600">{metrics.overdue}</p>
-              <p className="text-xs text-red-600 uppercase font-medium">Overdue</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Report Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        
-        {/* Executive Summary Report */}
-        <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleExport("detailed")}>
           <CardHeader>
-            <CardTitle className="flex items-center space-x-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <FileText className="h-6 w-6 text-blue-600" />
-              </div>
-              <span>Executive Summary</span>
+            <CardTitle className="flex items-center space-x-2">
+              <Calendar className="h-5 w-5" />
+              <span>Report Filters</span>
             </CardTitle>
-            <p className="text-sm text-gray-600">
-              Comprehensive status overview of all active RFP projects
-            </p>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-gray-50 p-3 rounded-lg">
-                  <p className="text-2xl font-bold text-gray-900">{metrics.total}</p>
-                  <p className="text-xs text-gray-600 uppercase font-medium">Total RFPs</p>
-                </div>
-                <div className="bg-blue-50 p-3 rounded-lg">
-                  <p className="text-2xl font-bold text-blue-900">{metrics.inProgress}</p>
-                  <p className="text-xs text-blue-600 uppercase font-medium">In Progress</p>
-                </div>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="status-filter">Status</Label>
+                <Select
+                  value={filters.status || ""}
+                  onValueChange={(value) => setFilters({ ...filters, status: value || undefined })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="All statuses" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All statuses</SelectItem>
+                    <SelectItem value="received">Received</SelectItem>
+                    <SelectItem value="in-progress">In Progress</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="on-hold">On Hold</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-              
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h4 className="font-medium text-gray-900 mb-2">Report Contents</h4>
-                <ul className="space-y-1 text-sm text-gray-600">
-                  <li>• Current RFP status breakdown</li>
-                  <li>• Due date analysis and priorities</li>
-                  <li>• Project timeline overview</li>
-                  <li>• Performance metrics</li>
-                </ul>
+
+              <div className="space-y-2">
+                <Label htmlFor="property-filter">Property</Label>
+                <Select
+                  value={filters.property || ""}
+                  onValueChange={(value) => setFilters({ ...filters, property: value || undefined })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="All properties" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All properties</SelectItem>
+                    {properties.map((property) => (
+                      <SelectItem key={property.id} value={property.propertyName}>
+                        {property.propertyName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-              
-              <Button className="w-full flex items-center justify-center space-x-2">
-                <Download className="h-4 w-4" />
-                <span>Generate Executive Summary</span>
-              </Button>
+
+              <div className="space-y-2">
+                <Label htmlFor="due-filter">Due Within</Label>
+                <Select
+                  value={filters.dueInDays?.toString() || ""}
+                  onValueChange={(value) => setFilters({ ...filters, dueInDays: value === "all" ? undefined : parseInt(value) })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Any time" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Any time</SelectItem>
+                    <SelectItem value="1">1 day</SelectItem>
+                    <SelectItem value="3">3 days</SelectItem>
+                    <SelectItem value="7">1 week</SelectItem>
+                    <SelectItem value="30">1 month</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Actions</Label>
+                <Button variant="outline" onClick={clearFilters} className="w-full">
+                  Clear Filters
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Historical Pricing Report */}
-        <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleExport("historical-pricing")}>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <TrendingUp className="h-6 w-6 text-green-600" />
+        {/* Metrics Overview */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="grid grid-cols-7 gap-6 text-center">
+              <div className="text-center">
+                <p className="text-2xl font-bold text-gray-900">{metrics.total}</p>
+                <p className="text-xs text-gray-600 uppercase font-medium">Total</p>
               </div>
-              <span>Historical Pricing</span>
-            </CardTitle>
-            <p className="text-sm text-gray-600">
-              Pricing analysis from completed RFP projects with detailed breakdowns
-            </p>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-gray-50 p-3 rounded-lg">
-                  <p className="text-2xl font-bold text-gray-900">{metrics.completed}</p>
-                  <p className="text-xs text-gray-600 uppercase font-medium">Completed</p>
-                </div>
-                <div className="bg-green-50 p-3 rounded-lg">
-                  <p className="text-lg font-bold text-green-900">PDF</p>
-                  <p className="text-xs text-green-600 uppercase font-medium">Format</p>
-                </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-blue-600">{metrics.received}</p>
+                <p className="text-xs text-blue-600 uppercase font-medium">Received</p>
               </div>
-              
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h4 className="font-medium text-gray-900 mb-2">Report Contents</h4>
-                <ul className="space-y-1 text-sm text-gray-600">
-                  <li>• Project-by-project pricing breakdown</li>
-                  <li>• Contractor bid comparisons</li>
-                  <li>• Line items by category</li>
-                  <li>• Unit pricing analysis</li>
-                </ul>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-yellow-600">{metrics.inProgress}</p>
+                <p className="text-xs text-yellow-600 uppercase font-medium">In Progress</p>
               </div>
-              
-              <Button className="w-full flex items-center justify-center space-x-2" disabled={metrics.completed === 0}>
-                <Download className="h-4 w-4" />
-                <span>Generate Pricing Report</span>
-              </Button>
-              
-              {metrics.completed === 0 && (
-                <p className="text-xs text-gray-500 text-center">
-                  No completed projects available for pricing analysis
-                </p>
-              )}
+              <div className="text-center">
+                <p className="text-2xl font-bold text-green-600">{metrics.completed}</p>
+                <p className="text-xs text-green-600 uppercase font-medium">Completed</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-gray-600">{metrics.onHold}</p>
+                <p className="text-xs text-gray-600 uppercase font-medium">On Hold</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-orange-600">{metrics.dueSoon}</p>
+                <p className="text-xs text-orange-600 uppercase font-medium">Due Soon</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-red-600">{metrics.overdue}</p>
+                <p className="text-xs text-red-600 uppercase font-medium">Overdue</p>
+              </div>
             </div>
           </CardContent>
         </Card>
+
+        {/* Report Generation Cards */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <FileText className="h-5 w-5" />
+                <span>Executive Summary</span>
+              </CardTitle>
+              <p className="text-sm text-gray-600">
+                Comprehensive status overview of all active RFP projects
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-2xl font-bold text-gray-900">{metrics.total}</p>
+                    <p className="text-xs text-gray-600 uppercase font-medium">Total RFPs</p>
+                  </div>
+                  <div className="bg-yellow-50 p-3 rounded-lg">
+                    <p className="text-2xl font-bold text-yellow-900">{metrics.inProgress}</p>
+                    <p className="text-xs text-yellow-600 uppercase font-medium">In Progress</p>
+                  </div>
+                </div>
+                
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h4 className="font-medium text-gray-900 mb-2">Report Contents</h4>
+                  <ul className="space-y-1 text-sm text-gray-600">
+                    <li>• Current RFP status breakdown</li>
+                    <li>• Due date analysis and priorities</li>
+                    <li>• Project timeline overview</li>
+                    <li>• Performance metrics</li>
+                  </ul>
+                </div>
+                
+                <Button 
+                  className="w-full flex items-center justify-center space-x-2" 
+                  onClick={() => generateReport("executive")}
+                >
+                  <Download className="h-4 w-4" />
+                  <span>Generate Executive Summary</span>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <TrendingUp className="h-5 w-5" />
+                <span>Historical Pricing</span>
+              </CardTitle>
+              <p className="text-sm text-gray-600">
+                Pricing analysis from completed RFP projects with detailed breakdowns
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-2xl font-bold text-gray-900">{metrics.completed}</p>
+                    <p className="text-xs text-gray-600 uppercase font-medium">Completed</p>
+                  </div>
+                  <div className="bg-green-50 p-3 rounded-lg">
+                    <p className="text-lg font-bold text-green-900">PDF</p>
+                    <p className="text-xs text-green-600 uppercase font-medium">Format</p>
+                  </div>
+                </div>
+                
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h4 className="font-medium text-gray-900 mb-2">Report Contents</h4>
+                  <ul className="space-y-1 text-sm text-gray-600">
+                    <li>• Project-by-project pricing breakdown</li>
+                    <li>• Contractor bid comparisons</li>
+                    <li>• Line items by category</li>
+                    <li>• Unit pricing analysis</li>
+                  </ul>
+                </div>
+                
+                <Button className="w-full flex items-center justify-center space-x-2" disabled={metrics.completed === 0}>
+                  <Download className="h-4 w-4" />
+                  <span>Generate Pricing Report</span>
+                </Button>
+                
+                {metrics.completed === 0 && (
+                  <p className="text-xs text-gray-500 text-center">
+                    No completed projects available for pricing analysis
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

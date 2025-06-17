@@ -423,8 +423,8 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         <p style="margin: 0; font-size: 14px; color: #666;"><strong>Rentable Area:</strong> ${rfp?.projectArea ? new Intl.NumberFormat('en-US').format(parseInt(rfp.projectArea)) + ' sf' : 'N/A'}</p>
     </div>
 
-    ${renderCategorySection("Tenant Improvements", budgetData.tenantImprovements)}
-    ${budgetData.separateDesignCosts ? renderCategorySection("Design / Soft Costs / Other Fees", budgetData.designSoftCosts) : ''}
+    ${renderCategorySection("Tenant Improvements", budgetData.tenantImprovements, "tenantImprovements")}
+    ${budgetData.separateDesignCosts ? renderCategorySection("Design / Soft Costs / Other Fees", budgetData.designSoftCosts, "designSoftCosts") : ''}
     ${budgetData.hasExistingImprovements ? renderExistingImprovementsSection() : ''}
 
     <div class="grand-total">

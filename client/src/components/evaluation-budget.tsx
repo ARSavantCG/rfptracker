@@ -919,57 +919,6 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         </CardHeader>
       </Card>
 
-      {/* Existing Improvements */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="hasExistingImprovements"
-              checked={budgetData.hasExistingImprovements}
-              onCheckedChange={(checked) => setBudgetData(prev => ({ 
-                ...prev, 
-                hasExistingImprovements: !!checked 
-              }))}
-            />
-            <Label htmlFor="hasExistingImprovements" className="text-lg font-semibold">
-              Existing Improvements
-            </Label>
-          </div>
-          <p className="text-sm text-gray-600">
-            Check this box if there are costs associated with existing improvements that need to be factored into the budget.
-          </p>
-        </CardHeader>
-        {budgetData.hasExistingImprovements && (
-          <CardContent>
-            <div className="mb-4">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="includeExistingInTotal"
-                  checked={budgetData.includeExistingInTotal}
-                  onCheckedChange={(checked) => setBudgetData(prev => ({ 
-                    ...prev, 
-                    includeExistingInTotal: !!checked 
-                  }))}
-                />
-                <Label htmlFor="includeExistingInTotal" className="text-sm font-medium">
-                  Include in Grand Total
-                </Label>
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                Check this box to include existing improvements in the project's Grand Total. 
-                Leave unchecked to track for financial modeling only.
-              </p>
-            </div>
-            {renderCategoryTable(
-              "",
-              budgetData.existingImprovements,
-              'existingImprovements',
-              calculateCategoryTotal(budgetData.existingImprovements)
-            )}
-          </CardContent>
-        )}
-      </Card>
-
       {/* Action Buttons */}
       <div className="flex gap-3 justify-center">
         <Button 

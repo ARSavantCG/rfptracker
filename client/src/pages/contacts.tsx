@@ -11,23 +11,29 @@ import type { Contact } from "@shared/schema";
 
 export default function Contacts() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedType, setSelectedType] = useState<string>("all");
 
   const { data: contacts, isLoading } = useQuery<Contact[]>({
     queryKey: ["/api/contacts"],
   });
 
-  const filteredContacts = contacts?.filter(contact =>
-    contact.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    contact.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    contact.company?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    contact.type.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
+  const filteredContacts = contacts?.filter(contact => {
+    const matchesSearch = contact.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      contact.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      contact.company?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      contact.type.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesType = selectedType === "all" || contact.type === selectedType;
+    
+    return matchesSearch && matchesType;
+  }) || [];
 
   const getContactTypeColor = (type: string) => {
     switch (type) {
       case 'contractor': return 'bg-blue-100 text-blue-800';
       case 'architect': return 'bg-green-100 text-green-800';
       case 'owner': return 'bg-purple-100 text-purple-800';
+      case 'other': return 'bg-orange-100 text-orange-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -37,6 +43,7 @@ export default function Contacts() {
       case 'contractor': return '🔨';
       case 'architect': return '📐';
       case 'owner': return '🏢';
+      case 'other': return '👤';
       default: return '👤';
     }
   };
@@ -74,23 +81,29 @@ export default function Contacts() {
           </CardContent>
         </Card>
 
-        {/* Stats Cards */}
+        {/* Filter Cards */}
+        <div className="mb-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-medium text-gray-900">Filter by Contact Type</h3>
+            {selectedType !== 'all' && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setSelectedType('all')}
+                className="text-gray-600 hover:text-gray-900"
+              >
+                Show All Contacts
+              </Button>
+            )}
+          </div>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Users className="h-6 w-6 text-blue-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-2xl font-bold">{contacts?.length || 0}</p>
-                  <p className="text-gray-600 text-sm">Total Contacts</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
+          <Card 
+            className={`cursor-pointer transition-all hover:shadow-md ${
+              selectedType === 'architect' ? 'ring-2 ring-green-500 bg-green-50' : ''
+            }`}
+            onClick={() => setSelectedType(selectedType === 'architect' ? 'all' : 'architect')}
+          >
             <CardContent className="pt-6">
               <div className="flex items-center">
                 <div className="p-2 bg-green-100 rounded-lg">
@@ -106,7 +119,12 @@ export default function Contacts() {
             </CardContent>
           </Card>
           
-          <Card>
+          <Card 
+            className={`cursor-pointer transition-all hover:shadow-md ${
+              selectedType === 'contractor' ? 'ring-2 ring-blue-500 bg-blue-50' : ''
+            }`}
+            onClick={() => setSelectedType(selectedType === 'contractor' ? 'all' : 'contractor')}
+          >
             <CardContent className="pt-6">
               <div className="flex items-center">
                 <div className="p-2 bg-blue-100 rounded-lg">
@@ -122,7 +140,12 @@ export default function Contacts() {
             </CardContent>
           </Card>
           
-          <Card>
+          <Card 
+            className={`cursor-pointer transition-all hover:shadow-md ${
+              selectedType === 'owner' ? 'ring-2 ring-purple-500 bg-purple-50' : ''
+            }`}
+            onClick={() => setSelectedType(selectedType === 'owner' ? 'all' : 'owner')}
+          >
             <CardContent className="pt-6">
               <div className="flex items-center">
                 <div className="p-2 bg-purple-100 rounded-lg">
@@ -133,6 +156,27 @@ export default function Contacts() {
                     {contacts?.filter(c => c.type === 'owner').length || 0}
                   </p>
                   <p className="text-gray-600 text-sm">Property Owners</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card 
+            className={`cursor-pointer transition-all hover:shadow-md ${
+              selectedType === 'other' ? 'ring-2 ring-orange-500 bg-orange-50' : ''
+            }`}
+            onClick={() => setSelectedType(selectedType === 'other' ? 'all' : 'other')}
+          >
+            <CardContent className="pt-6">
+              <div className="flex items-center">
+                <div className="p-2 bg-orange-100 rounded-lg">
+                  <span className="text-lg">👤</span>
+                </div>
+                <div className="ml-4">
+                  <p className="text-2xl font-bold">
+                    {contacts?.filter(c => c.type === 'other').length || 0}
+                  </p>
+                  <p className="text-gray-600 text-sm">Other</p>
                 </div>
               </div>
             </CardContent>

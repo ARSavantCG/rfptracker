@@ -1,0 +1,249 @@
+import { useQuery } from "@tanstack/react-query";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Users, Mail, Phone, Building2, Plus, Search } from "lucide-react";
+import { useState } from "react";
+import Navigation from "@/components/navigation";
+import type { Contact } from "@shared/schema";
+
+export default function Contacts() {
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const { data: contacts, isLoading } = useQuery<Contact[]>({
+    queryKey: ["/api/contacts"],
+  });
+
+  const filteredContacts = contacts?.filter(contact =>
+    contact.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    contact.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    contact.company?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    contact.type.toLowerCase().includes(searchTerm.toLowerCase())
+  ) || [];
+
+  const getContactTypeColor = (type: string) => {
+    switch (type) {
+      case 'contractor': return 'bg-blue-100 text-blue-800';
+      case 'architect': return 'bg-green-100 text-green-800';
+      case 'owner': return 'bg-purple-100 text-purple-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getContactIcon = (type: string) => {
+    switch (type) {
+      case 'contractor': return '🔨';
+      case 'architect': return '📐';
+      case 'owner': return '🏢';
+      default: return '👤';
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Navigation />
+      
+      <div className="max-w-7xl mx-auto p-6">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+              <Users className="h-8 w-8 text-blue-600" />
+              Contacts
+            </h1>
+            <p className="text-gray-600 mt-2">
+              Manage your contractors, architects, and property owners
+            </p>
+          </div>
+          <Button className="bg-blue-600 hover:bg-blue-700">
+            <Plus className="h-4 w-4 mr-2" />
+            Add Contact
+          </Button>
+        </div>
+
+        {/* Search Bar */}
+        <Card className="mb-6">
+          <CardContent className="pt-6">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="Search contacts by name, email, company, or type..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Users className="h-6 w-6 text-blue-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-2xl font-bold">{contacts?.length || 0}</p>
+                  <p className="text-gray-600 text-sm">Total Contacts</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <span className="text-lg">📐</span>
+                </div>
+                <div className="ml-4">
+                  <p className="text-2xl font-bold">
+                    {contacts?.filter(c => c.type === 'architect').length || 0}
+                  </p>
+                  <p className="text-gray-600 text-sm">Architects</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <span className="text-lg">🔨</span>
+                </div>
+                <div className="ml-4">
+                  <p className="text-2xl font-bold">
+                    {contacts?.filter(c => c.type === 'contractor').length || 0}
+                  </p>
+                  <p className="text-gray-600 text-sm">Contractors</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center">
+                <div className="p-2 bg-purple-100 rounded-lg">
+                  <Building2 className="h-6 w-6 text-purple-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-2xl font-bold">
+                    {contacts?.filter(c => c.type === 'owner').length || 0}
+                  </p>
+                  <p className="text-gray-600 text-sm">Property Owners</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Contacts Grid */}
+        {isLoading ? (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="text-gray-600 mt-4">Loading contacts...</p>
+          </div>
+        ) : filteredContacts.length === 0 ? (
+          <Card>
+            <CardContent className="pt-6">
+              <div className="text-center py-12">
+                <Users className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  {searchTerm ? 'No contacts found' : 'No contacts yet'}
+                </h3>
+                <p className="text-gray-600 mb-6">
+                  {searchTerm 
+                    ? 'Try adjusting your search terms'
+                    : 'Get started by adding your first contact'
+                  }
+                </p>
+                {!searchTerm && (
+                  <Button className="bg-blue-600 hover:bg-blue-700">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Your First Contact
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredContacts.map((contact) => (
+              <Card key={contact.id} className="hover:shadow-md transition-shadow">
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="text-2xl">
+                        {getContactIcon(contact.type)}
+                      </div>
+                      <div>
+                        <CardTitle className="text-lg">{contact.name}</CardTitle>
+                        <Badge className={`mt-1 ${getContactTypeColor(contact.type)}`}>
+                          {contact.type.charAt(0).toUpperCase() + contact.type.slice(1)}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {contact.company && (
+                      <div className="flex items-center text-sm text-gray-600">
+                        <Building2 className="h-4 w-4 mr-2" />
+                        {contact.company}
+                      </div>
+                    )}
+                    
+                    <div className="flex items-center text-sm text-gray-600">
+                      <Mail className="h-4 w-4 mr-2" />
+                      <a 
+                        href={`mailto:${contact.email}`}
+                        className="hover:text-blue-600 truncate"
+                      >
+                        {contact.email}
+                      </a>
+                    </div>
+                    
+                    {contact.phone && (
+                      <div className="flex items-center text-sm text-gray-600">
+                        <Phone className="h-4 w-4 mr-2" />
+                        <a 
+                          href={`tel:${contact.phone}`}
+                          className="hover:text-blue-600"
+                        >
+                          {contact.phone}
+                        </a>
+                      </div>
+                    )}
+                    
+                    {contact.notes && (
+                      <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
+                        {contact.notes}
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="flex space-x-2 mt-4">
+                    <Button variant="outline" size="sm" className="flex-1">
+                      Edit
+                    </Button>
+                    <Button variant="outline" size="sm">
+                      <Mail className="h-4 w-4" />
+                    </Button>
+                    <Button variant="outline" size="sm">
+                      <Phone className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

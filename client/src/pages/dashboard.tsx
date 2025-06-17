@@ -13,6 +13,7 @@ import { BidCollectionTable } from "@/components/bid-collection-table";
 import { EvaluationBudget } from "@/components/evaluation-budget";
 import { FinancialSummary } from "@/components/financial-summary";
 import { QuickActionsSidebar } from "@/components/quick-actions-sidebar";
+import Navigation from "@/components/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";

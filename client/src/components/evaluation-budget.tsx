@@ -872,30 +872,6 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         calculateCategoryTotal(budgetData.designSoftCosts)
       )}
 
-
-
-      {/* Grand Total */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex justify-between items-center text-xl font-bold">
-            <span>Grand Total:</span>
-            <span className="text-green-600">{formatCurrency(calculateGrandTotal())}</span>
-          </div>
-          <Separator className="my-4" />
-          <div>
-            <Label htmlFor="notes">Budget Notes</Label>
-            <Textarea
-              id="notes"
-              value={budgetData.notes}
-              onChange={(e) => setBudgetData(prev => ({ ...prev, notes: e.target.value }))}
-              placeholder="Add any notes or comments about this budget evaluation..."
-              className="mt-2"
-              rows={3}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Existing Improvements */}
       <Card>
         <CardHeader>
@@ -945,6 +921,28 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
             )}
           </CardContent>
         )}
+      </Card>
+
+      {/* Grand Total */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex justify-between items-center text-xl font-bold">
+            <span>Grand Total:</span>
+            <span className="text-green-600">{formatCurrency(calculateGrandTotal())}</span>
+          </div>
+          <Separator className="my-4" />
+          <div>
+            <Label htmlFor="notes">Budget Notes</Label>
+            <Textarea
+              id="notes"
+              value={budgetData.notes}
+              onChange={(e) => setBudgetData(prev => ({ ...prev, notes: e.target.value }))}
+              placeholder="Add any notes or comments about this budget evaluation..."
+              className="mt-2"
+              rows={3}
+            />
+          </div>
+        </CardContent>
       </Card>
 
       {/* Design Cost Approach Toggle */}

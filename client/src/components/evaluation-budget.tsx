@@ -101,24 +101,24 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     if (existingBudget) {
       // Load saved budget data
       setBudgetData({
-        tenantImprovements: existingBudget.tenantImprovements || [],
-        designSoftCosts: existingBudget.designSoftCosts || [],
-        existingImprovements: existingBudget.existingImprovements || [],
-        hasExistingImprovements: existingBudget.hasExistingImprovements || false,
-        includeExistingInTotal: existingBudget.includeExistingInTotal || false,
-        separateDesignCosts: existingBudget.separateDesignCosts !== undefined ? existingBudget.separateDesignCosts : true,
-        totalTenantImprovements: existingBudget.totalTenantImprovements || "0.00",
-        totalDesignSoftCosts: existingBudget.totalDesignSoftCosts || "0.00",
-        totalExistingImprovements: existingBudget.totalExistingImprovements || "0.00",
-        grandTotal: existingBudget.grandTotal || "0.00",
-        notes: existingBudget.notes || "",
+        tenantImprovements: (existingBudget as any).tenantImprovements || [],
+        designSoftCosts: (existingBudget as any).designSoftCosts || [],
+        existingImprovements: (existingBudget as any).existingImprovements || [],
+        hasExistingImprovements: (existingBudget as any).hasExistingImprovements || false,
+        includeExistingInTotal: (existingBudget as any).includeExistingInTotal || false,
+        separateDesignCosts: (existingBudget as any).separateDesignCosts !== undefined ? (existingBudget as any).separateDesignCosts : true,
+        totalTenantImprovements: (existingBudget as any).totalTenantImprovements || "0.00",
+        totalDesignSoftCosts: (existingBudget as any).totalDesignSoftCosts || "0.00",
+        totalExistingImprovements: (existingBudget as any).totalExistingImprovements || "0.00",
+        grandTotal: (existingBudget as any).grandTotal || "0.00",
+        notes: (existingBudget as any).notes || "",
       });
     } else if (allBidLineItems && Array.isArray(allBidLineItems) && allBidLineItems.length > 0) {
       // Initialize with bid line items if no saved budget exists
       const initialItems = allBidLineItems.map((item: BidLineItem & { bidCollectionId: number }) => ({
         id: `tenant-${item.id}`,
         description: item.description,
-        quantity: item.quantity,
+        quantity: typeof item.quantity === 'string' ? parseInt(item.quantity) || 1 : item.quantity || 1,
         unit: item.unit || "ea",
         unitPrice: item.unitPrice?.toString() || "0.00",
         totalPrice: item.totalPrice?.toString() || "0.00",
@@ -128,7 +128,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
 
       setBudgetData(prev => ({
         ...prev,
-        tenantImprovements: initialItems,
+        tenantImprovements: initialItems as EvaluationLineItem[],
         separateDesignCosts: true,
       }));
     }
@@ -564,7 +564,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     saveAndAdvanceMutation.mutate();
   };
 
-  const renderCategoryTable = (title: string, items: EvaluationLineItem[], category: string, total: number) => (
+  const renderCategoryTable = (title: string, items: EvaluationLineItem[], category: 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', total: number) => (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-lg">{title}</CardTitle>

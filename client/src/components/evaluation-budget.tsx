@@ -30,6 +30,7 @@ interface EvaluationBudgetData {
   existingImprovements: EvaluationLineItem[];
   hasExistingImprovements: boolean;
   includeExistingInTotal: boolean;
+  separateDesignCosts: boolean;
   totalTenantImprovements: string;
   totalDesignSoftCosts: string;
   totalExistingImprovements: string;
@@ -87,6 +88,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     existingImprovements: [],
     hasExistingImprovements: false,
     includeExistingInTotal: false,
+    separateDesignCosts: true,
     totalTenantImprovements: "0.00",
     totalDesignSoftCosts: "0.00", 
     totalExistingImprovements: "0.00",
@@ -104,6 +106,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         existingImprovements: existingBudget.existingImprovements || [],
         hasExistingImprovements: existingBudget.hasExistingImprovements || false,
         includeExistingInTotal: existingBudget.includeExistingInTotal || false,
+        separateDesignCosts: existingBudget.separateDesignCosts !== undefined ? existingBudget.separateDesignCosts : true,
         totalTenantImprovements: existingBudget.totalTenantImprovements || "0.00",
         totalDesignSoftCosts: existingBudget.totalDesignSoftCosts || "0.00",
         totalExistingImprovements: existingBudget.totalExistingImprovements || "0.00",
@@ -126,6 +129,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
       setBudgetData(prev => ({
         ...prev,
         tenantImprovements: initialItems,
+        separateDesignCosts: true,
       }));
     }
   }, [existingBudget, allBidLineItems, bidCollections]);

@@ -163,6 +163,8 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     const renderCategorySection = (title: string, items: EvaluationLineItem[]) => {
       if (items.length === 0) return '';
       const total = calculateCategoryTotal(items);
+      const rentableArea = rfp?.projectArea ? parseInt(rfp.projectArea) : 0;
+      
       return `
       <div class="section">
           <div class="section-header">
@@ -180,18 +182,24 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                           <th>Unit</th>
                           <th>Unit Price</th>
                           <th>Total Price</th>
+                          <th>$ / sf</th>
                       </tr>
                   </thead>
                   <tbody>
-                      ${items.map(item => `
-                      <tr>
-                          <td>${item.description}</td>
-                          <td>${item.quantity}</td>
-                          <td>${item.unit}</td>
-                          <td class="currency">${formatCurrency(parseFloat(item.unitPrice) || 0)}</td>
-                          <td class="currency">${formatCurrency(parseFloat(item.totalPrice) || 0)}</td>
-                      </tr>
-                      `).join('')}
+                      ${items.map(item => {
+                        const totalPrice = parseFloat(item.totalPrice) || 0;
+                        const pricePerSf = rentableArea > 0 ? totalPrice / rentableArea : 0;
+                        return `
+                        <tr>
+                            <td>${item.description}</td>
+                            <td>${item.quantity}</td>
+                            <td>${item.unit}</td>
+                            <td class="currency">${formatCurrency(parseFloat(item.unitPrice) || 0)}</td>
+                            <td class="currency">${formatCurrency(totalPrice)}</td>
+                            <td class="currency">${pricePerSf > 0 ? '$' + pricePerSf.toFixed(2) : 'N/A'}</td>
+                        </tr>
+                        `;
+                      }).join('')}
                   </tbody>
               </table>
           </div>
@@ -200,6 +208,8 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
 
     const renderExistingImprovementsSection = () => {
       const total = calculateCategoryTotal(budgetData.existingImprovements);
+      const rentableArea = rfp?.projectArea ? parseInt(rfp.projectArea) : 0;
+      
       return `
       <div class="section">
           <div class="section-header">
@@ -218,18 +228,24 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                           <th>Unit</th>
                           <th>Unit Price</th>
                           <th>Total Price</th>
+                          <th>$ / sf</th>
                       </tr>
                   </thead>
                   <tbody>
-                      ${budgetData.existingImprovements.map(item => `
-                      <tr>
-                          <td>${item.description}</td>
-                          <td>${item.quantity}</td>
-                          <td>${item.unit}</td>
-                          <td class="currency">${formatCurrency(parseFloat(item.unitPrice) || 0)}</td>
-                          <td class="currency">${formatCurrency(parseFloat(item.totalPrice) || 0)}</td>
-                      </tr>
-                      `).join('')}
+                      ${budgetData.existingImprovements.map(item => {
+                        const totalPrice = parseFloat(item.totalPrice) || 0;
+                        const pricePerSf = rentableArea > 0 ? totalPrice / rentableArea : 0;
+                        return `
+                        <tr>
+                            <td>${item.description}</td>
+                            <td>${item.quantity}</td>
+                            <td>${item.unit}</td>
+                            <td class="currency">${formatCurrency(parseFloat(item.unitPrice) || 0)}</td>
+                            <td class="currency">${formatCurrency(totalPrice)}</td>
+                            <td class="currency">${pricePerSf > 0 ? '$' + pricePerSf.toFixed(2) : 'N/A'}</td>
+                        </tr>
+                        `;
+                      }).join('')}
                   </tbody>
               </table>
               ` : '<p style="text-align: center; color: #6c757d; padding: 20px;">No existing improvements added yet</p>'}
@@ -299,11 +315,12 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         }
         
         /* Consistent column widths for alignment */
-        th:nth-child(1), td:nth-child(1) { width: 40%; text-align: left; }    /* Description */
-        th:nth-child(2), td:nth-child(2) { width: 12%; text-align: center; }  /* Quantity */
+        th:nth-child(1), td:nth-child(1) { width: 35%; text-align: left; }    /* Description */
+        th:nth-child(2), td:nth-child(2) { width: 10%; text-align: center; }  /* Quantity */
         th:nth-child(3), td:nth-child(3) { width: 8%; text-align: center; }   /* Unit */
-        th:nth-child(4), td:nth-child(4) { width: 20%; text-align: right; }   /* Unit Price */
-        th:nth-child(5), td:nth-child(5) { width: 20%; text-align: right; }   /* Total Price */
+        th:nth-child(4), td:nth-child(4) { width: 17%; text-align: right; }   /* Unit Price */
+        th:nth-child(5), td:nth-child(5) { width: 17%; text-align: right; }   /* Total Price */
+        th:nth-child(6), td:nth-child(6) { width: 13%; text-align: right; }   /* $ / sf */
         
         th {
             font-size: 12px;
@@ -353,9 +370,16 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
 <body>
     <div class="header">
         <h1>Evaluation Budget Report</h1>
-        <p><strong>Project:</strong> ${rfp?.projectName}</p>
-        <p><strong>RFP Number:</strong> ${rfp?.rfpNumber}</p>
-        <p><strong>Generated:</strong> ${currentDate}</p>
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+                <p><strong>Project:</strong> ${rfp?.projectName}</p>
+                <p><strong>RFP Number:</strong> ${rfp?.rfpNumber}</p>
+                <p><strong>Generated:</strong> ${currentDate}</p>
+            </div>
+            <div style="text-align: right;">
+                <p><strong>Rentable Area:</strong> ${rfp?.projectArea ? new Intl.NumberFormat('en-US').format(parseInt(rfp.projectArea)) + ' sf' : 'N/A'}</p>
+            </div>
+        </div>
     </div>
 
     ${renderCategorySection("Tenant Improvements", budgetData.tenantImprovements)}

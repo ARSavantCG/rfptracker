@@ -181,7 +181,7 @@ export function ContactFormModal({ contact, trigger, onSuccess }: ContactFormMod
               <Label htmlFor="phone">Phone</Label>
               <Input
                 id="phone"
-                value={formData.phone}
+                value={formData.phone || ""}
                 onChange={(e) => handleInputChange("phone", e.target.value)}
                 placeholder="(555) 123-4567"
               />
@@ -191,7 +191,7 @@ export function ContactFormModal({ contact, trigger, onSuccess }: ContactFormMod
               <Label htmlFor="company">Company</Label>
               <Input
                 id="company"
-                value={formData.company}
+                value={formData.company || ""}
                 onChange={(e) => handleInputChange("company", e.target.value)}
                 placeholder="Company name"
               />
@@ -202,7 +202,7 @@ export function ContactFormModal({ contact, trigger, onSuccess }: ContactFormMod
             <Label htmlFor="notes">Notes</Label>
             <Textarea
               id="notes"
-              value={formData.notes}
+              value={formData.notes ?? ""}
               onChange={(e) => handleInputChange("notes", e.target.value)}
               placeholder="Additional notes or comments..."
               rows={3}

@@ -31,10 +31,7 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
   const isEdit = !!property;
 
   const createMutation = useMutation({
-    mutationFn: (data: InsertProperty) => apiRequest("/api/properties", {
-      method: "POST",
-      body: JSON.stringify(data),
-    }),
+    mutationFn: (data: InsertProperty) => apiRequest("/api/properties", "POST", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/properties"] });
       toast({
@@ -55,10 +52,7 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
   });
 
   const updateMutation = useMutation({
-    mutationFn: (data: Partial<InsertProperty>) => apiRequest(`/api/properties/${property?.id}`, {
-      method: "PATCH",
-      body: JSON.stringify(data),
-    }),
+    mutationFn: (data: Partial<InsertProperty>) => apiRequest(`/api/properties/${property?.id}`, "PATCH", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/properties"] });
       toast({

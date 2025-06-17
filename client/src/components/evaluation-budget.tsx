@@ -151,7 +151,8 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
 
   const calculateGrandTotal = () => {
     const tiTotal = calculateCategoryTotal(budgetData.tenantImprovements);
-    const designTotal = calculateCategoryTotal(budgetData.designSoftCosts);
+    // Only include design costs separately if they're being shown as separate line items
+    const designTotal = budgetData.separateDesignCosts ? calculateCategoryTotal(budgetData.designSoftCosts) : 0;
     const existingTotal = (budgetData.hasExistingImprovements && budgetData.includeExistingInTotal)
       ? calculateCategoryTotal(budgetData.existingImprovements) 
       : 0;
@@ -785,6 +786,28 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         </CardHeader>
       </Card>
 
+      {/* Design Cost Approach Toggle */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="separateDesignCosts"
+              checked={budgetData.separateDesignCosts}
+              onCheckedChange={(checked) => setBudgetData(prev => ({ 
+                ...prev, 
+                separateDesignCosts: !!checked 
+              }))}
+            />
+            <Label htmlFor="separateDesignCosts" className="text-lg font-semibold">
+              Show Design Costs as Separate Line Items
+            </Label>
+          </div>
+          <p className="text-sm text-gray-600">
+            When unchecked, design costs will be buried within tenant improvement line items. When checked, design costs will appear as a separate section.
+          </p>
+        </CardHeader>
+      </Card>
+
       {/* Tenant Improvements */}
       {renderCategoryTable(
         "Tenant Improvements",
@@ -793,8 +816,8 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         calculateCategoryTotal(budgetData.tenantImprovements)
       )}
 
-      {/* Design / Soft Costs / Other Fees */}
-      {renderCategoryTable(
+      {/* Design / Soft Costs / Other Fees - Only show when separateDesignCosts is true */}
+      {budgetData.separateDesignCosts && renderCategoryTable(
         "Design / Soft Costs / Other Fees",
         budgetData.designSoftCosts,
         'designSoftCosts',

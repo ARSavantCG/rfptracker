@@ -1028,15 +1028,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
           <Save className="h-3 w-3 mr-2" />
           {saveProgressMutation.isPending ? "Saving..." : "Save Progress"}
         </Button>
-        <Button 
-          onClick={() => generateReportPreview(false)}
-          variant="outline"
-          size="sm"
-          className="border-purple-500 text-purple-600 hover:bg-purple-50"
-        >
-          <FileDown className="h-3 w-3 mr-2" />
-          Preview Report
-        </Button>
+
         <Button 
           onClick={saveAndAdvance} 
           disabled={saveAndAdvanceMutation.isPending}

@@ -212,7 +212,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
       
       // Use distributed totals for tenant improvements when design costs are hidden
       const isTenantImprovements = categoryType === 'tenantImprovements';
-      const total = isTenantImprovements && !budgetData.separateDesignCosts ? 
+      const total = isTenantImprovements && budgetData.separateDesignCosts ? 
         calculateDisplayedCategoryTotal(items, 'tenantImprovements') : 
         calculateCategoryTotal(items);
       
@@ -241,11 +241,11 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                   <tbody>
                       ${items.map(item => {
                         // Use distributed costs for tenant improvements when design costs are hidden
-                        const totalPrice = isTenantImprovements && !budgetData.separateDesignCosts ? 
+                        const totalPrice = isTenantImprovements && budgetData.separateDesignCosts ? 
                           calculateDistributedCosts(item) : 
                           parseFloat(item.totalPrice) || 0;
                         // Use distributed unit price for tenant improvements when design costs are hidden
-                        const unitPrice = isTenantImprovements && !budgetData.separateDesignCosts ? 
+                        const unitPrice = isTenantImprovements && budgetData.separateDesignCosts ? 
                           calculateDistributedUnitPrice(item) : 
                           parseFloat(item.unitPrice) || 0;
                         const pricePerSf = rentableArea > 0 ? totalPrice / rentableArea : 0;
@@ -440,7 +440,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     </div>
 
     ${renderCategorySection("Tenant Improvements", budgetData.tenantImprovements, "tenantImprovements")}
-    ${budgetData.separateDesignCosts ? renderCategorySection("Design / Soft Costs / Other Fees", budgetData.designSoftCosts, "designSoftCosts") : ''}
+    ${!budgetData.separateDesignCosts ? renderCategorySection("Design / Soft Costs / Other Fees", budgetData.designSoftCosts, "designSoftCosts") : ''}
     ${budgetData.hasExistingImprovements ? renderExistingImprovementsSection() : ''}
 
     <div class="grand-total">

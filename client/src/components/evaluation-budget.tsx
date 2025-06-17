@@ -260,15 +260,13 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
             background-color: #f8f9fa;
         }
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
             padding: 15px 20px;
-            border-radius: 8px;
             margin-bottom: 20px;
             text-align: center;
+            border-bottom: 2px solid #e9ecef;
         }
-        .header h1 { margin: 0 0 8px 0; font-size: 20px; font-weight: 600; }
-        .header p { margin: 2px 0; opacity: 0.9; font-size: 14px; }
+        .header h1 { margin: 0 0 8px 0; font-size: 20px; font-weight: 600; color: #333; }
+        .header p { margin: 2px 0; font-size: 14px; color: #666; }
         .section {
             background: white;
             margin-bottom: 25px;
@@ -356,7 +354,6 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         <h1>Evaluation Budget Report</h1>
         <p><strong>Project:</strong> ${rfp?.projectName}</p>
         <p><strong>RFP Number:</strong> ${rfp?.rfpNumber}</p>
-        <p><strong>Property:</strong> ${rfp?.property}</p>
         <p><strong>Generated:</strong> ${currentDate}</p>
     </div>
 

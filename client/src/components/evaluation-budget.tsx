@@ -853,27 +853,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         </CardHeader>
       </Card>
 
-      {/* Design Cost Approach Toggle */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="hideDesignCosts"
-              checked={budgetData.separateDesignCosts}
-              onCheckedChange={(checked) => setBudgetData(prev => ({ 
-                ...prev, 
-                separateDesignCosts: !!checked 
-              }))}
-            />
-            <Label htmlFor="hideDesignCosts" className="text-lg font-semibold">
-              Hide Design / Soft Costs / Other Fees
-            </Label>
-          </div>
-          <p className="text-sm text-gray-600">
-            When unchecked, design costs appear as a separate section. When checked, design costs are buried within tenant improvement line items with proportional distribution.
-          </p>
-        </CardHeader>
-      </Card>
+
 
       {/* Tenant Improvements */}
       {renderCategoryTable(
@@ -962,6 +942,28 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
             />
           </div>
         </CardContent>
+      </Card>
+
+      {/* Design Cost Approach Toggle */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="hideDesignCosts"
+              checked={budgetData.separateDesignCosts}
+              onCheckedChange={(checked) => setBudgetData(prev => ({ 
+                ...prev, 
+                separateDesignCosts: !!checked 
+              }))}
+            />
+            <Label htmlFor="hideDesignCosts" className="text-lg font-semibold">
+              Hide Design / Soft Costs / Other Fees
+            </Label>
+          </div>
+          <p className="text-sm text-gray-600">
+            When unchecked, design costs appear as a separate section. When checked, design costs are buried within tenant improvement line items with proportional distribution.
+          </p>
+        </CardHeader>
       </Card>
 
       {/* Action Buttons */}

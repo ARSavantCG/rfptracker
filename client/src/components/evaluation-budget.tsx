@@ -201,7 +201,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     return tiTotal + designTotal + existingTotal;
   };
 
-  const generatePreview = async () => {
+  const generateReportPreview = async (hideDesignCosts: boolean) => {
     if (!rfp) return;
     
     const currentDate = new Date().toLocaleDateString();
@@ -212,7 +212,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
       
       // Use distributed totals for tenant improvements when design costs are hidden
       const isTenantImprovements = categoryType === 'tenantImprovements';
-      const total = isTenantImprovements && budgetData.separateDesignCosts ? 
+      const total = isTenantImprovements && hideDesignCosts ? 
         calculateDisplayedCategoryTotal(items, 'tenantImprovements') : 
         calculateCategoryTotal(items);
       
@@ -241,11 +241,11 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                   <tbody>
                       ${items.map(item => {
                         // Use distributed costs for tenant improvements when design costs are hidden
-                        const totalPrice = isTenantImprovements && budgetData.separateDesignCosts ? 
+                        const totalPrice = isTenantImprovements && hideDesignCosts ? 
                           calculateDistributedCosts(item) : 
                           parseFloat(item.totalPrice) || 0;
                         // Use distributed unit price for tenant improvements when design costs are hidden
-                        const unitPrice = isTenantImprovements && budgetData.separateDesignCosts ? 
+                        const unitPrice = isTenantImprovements && hideDesignCosts ? 
                           calculateDistributedUnitPrice(item) : 
                           parseFloat(item.unitPrice) || 0;
                         const pricePerSf = rentableArea > 0 ? totalPrice / rentableArea : 0;
@@ -440,7 +440,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     </div>
 
     ${renderCategorySection("Tenant Improvements", budgetData.tenantImprovements, "tenantImprovements")}
-    ${!budgetData.separateDesignCosts ? renderCategorySection("Design / Soft Costs / Other Fees", budgetData.designSoftCosts, "designSoftCosts") : ''}
+    ${!hideDesignCosts ? renderCategorySection("Design / Soft Costs / Other Fees", budgetData.designSoftCosts, "designSoftCosts") : ''}
 
     <div class="grand-total">
         <h2>Grand Total: ${formatCurrency(grandTotal)}</h2>
@@ -945,26 +945,39 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         </CardContent>
       </Card>
 
-      {/* Design Cost Approach Toggle */}
+      {/* Preview Report Options */}
       <Card>
         <CardHeader>
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="hideDesignCosts"
-              checked={budgetData.separateDesignCosts}
-              onCheckedChange={(checked) => setBudgetData(prev => ({ 
-                ...prev, 
-                separateDesignCosts: !!checked 
-              }))}
-            />
-            <Label htmlFor="hideDesignCosts" className="text-lg font-semibold">
-              Hide Design / Soft Costs / Other Fees
-            </Label>
+          <div className="text-center">
+            <Label className="text-lg font-semibold">Preview Report</Label>
+            <p className="text-sm text-gray-600 mt-2">
+              Choose how to display costs in the report preview
+            </p>
           </div>
-          <p className="text-sm text-gray-600">
-            When unchecked, design costs appear as a separate section. When checked, design costs are buried within tenant improvement line items with proportional distribution.
-          </p>
         </CardHeader>
+        <CardContent>
+          <div className="flex gap-4 justify-center">
+            <Button 
+              onClick={() => generateReportPreview(false)}
+              variant="outline"
+              size="sm"
+              className="flex-1"
+            >
+              Full Cost Breakdown
+            </Button>
+            <Button 
+              onClick={() => generateReportPreview(true)}
+              variant="outline" 
+              size="sm"
+              className="flex-1"
+            >
+              Simplified View
+            </Button>
+          </div>
+          <p className="text-xs text-gray-500 mt-2 text-center">
+            Full breakdown shows all cost categories. Simplified view distributes design costs within tenant improvements.
+          </p>
+        </CardContent>
       </Card>
 
       {/* Action Buttons */}

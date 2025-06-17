@@ -6,8 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Download, FileText, Calendar, TrendingUp, Clock, CheckCircle, AlertTriangle, BarChart3, ArrowLeft } from "lucide-react";
-import { Link } from "wouter";
+import { Download, FileText, Calendar, TrendingUp, Clock, CheckCircle, AlertTriangle, BarChart3 } from "lucide-react";
+import Navigation from "@/components/navigation";
 import { format, parseISO, isAfter, isBefore, addDays } from "date-fns";
 import type { RfpRequest } from "@shared/schema";
 
@@ -145,34 +145,37 @@ export default function Reports() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto p-6">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-lg">Loading reports...</div>
+      <div className="min-h-screen bg-gray-50">
+        <Navigation />
+        <div className="max-w-7xl mx-auto p-6">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-lg">Loading reports...</div>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <Link href="/">
-            <Button variant="outline" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Dashboard
-            </Button>
-          </Link>
+    <div className="min-h-screen bg-gray-50">
+      <Navigation />
+      
+      <div className="max-w-7xl mx-auto p-6 space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Reports</h1>
-            <p className="text-gray-600">Generate comprehensive reports for executive review</p>
+            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+              <BarChart3 className="h-8 w-8 text-blue-600" />
+              Reports
+            </h1>
+            <p className="text-gray-600 mt-2">
+              Generate comprehensive reports for executive review
+            </p>
           </div>
         </div>
-      </div>
 
-      {/* Filters Card */}
-      <Card>
+        {/* Filters Card */}
+        <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <Calendar className="h-5 w-5" />
@@ -381,7 +384,7 @@ export default function Reports() {
             </div>
           </CardContent>
         </Card>
-
+        </div>
       </div>
     </div>
   );

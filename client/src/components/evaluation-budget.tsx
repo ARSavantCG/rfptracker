@@ -385,7 +385,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     </div>
 
     ${renderCategorySection("Tenant Improvements", budgetData.tenantImprovements)}
-    ${renderCategorySection("Design / Soft Costs / Other Fees", budgetData.designSoftCosts)}
+    ${budgetData.separateDesignCosts ? renderCategorySection("Design / Soft Costs / Other Fees", budgetData.designSoftCosts) : ''}
     ${budgetData.hasExistingImprovements ? renderExistingImprovementsSection() : ''}
 
     <div class="grand-total">
@@ -519,6 +519,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         existingImprovements: budgetData.existingImprovements,
         hasExistingImprovements: budgetData.hasExistingImprovements,
         includeExistingInTotal: budgetData.includeExistingInTotal,
+        separateDesignCosts: budgetData.separateDesignCosts,
         totalTenantImprovements: calculateCategoryTotal(budgetData.tenantImprovements).toFixed(2),
         totalDesignSoftCosts: calculateCategoryTotal(budgetData.designSoftCosts).toFixed(2),
         totalExistingImprovements: calculateCategoryTotal(budgetData.existingImprovements).toFixed(2),

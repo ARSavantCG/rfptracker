@@ -312,14 +312,15 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         tr:hover { background-color: #f8f9fa; }
         .currency { text-align: right; font-weight: 600; }
         .grand-total {
-            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-            color: white;
-            padding: 25px;
+            background: white;
+            border: 2px solid #dee2e6;
+            color: #333;
+            padding: 20px;
             border-radius: 8px;
             text-align: center;
             margin: 30px 0;
         }
-        .grand-total h2 { margin: 0; font-size: 24px; }
+        .grand-total h2 { margin: 0; font-size: 18px; font-weight: bold; }
         .notes-section {
             background: white;
             padding: 25px;

@@ -370,16 +370,13 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
 <body>
     <div class="header">
         <h1>Evaluation Budget Report</h1>
-        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-            <div>
-                <p><strong>Project:</strong> ${rfp?.projectName}</p>
-                <p><strong>RFP Number:</strong> ${rfp?.rfpNumber}</p>
-                <p><strong>Generated:</strong> ${currentDate}</p>
-            </div>
-            <div style="text-align: right;">
-                <p><strong>Rentable Area:</strong> ${rfp?.projectArea ? new Intl.NumberFormat('en-US').format(parseInt(rfp.projectArea)) + ' sf' : 'N/A'}</p>
-            </div>
-        </div>
+        <p><strong>Project:</strong> ${rfp?.projectName}</p>
+        <p><strong>RFP Number:</strong> ${rfp?.rfpNumber}</p>
+        <p><strong>Generated:</strong> ${currentDate}</p>
+    </div>
+    
+    <div style="text-align: right; margin-bottom: 20px; padding-right: 20px;">
+        <p style="margin: 0; font-size: 14px; color: #666;"><strong>Rentable Area:</strong> ${rfp?.projectArea ? new Intl.NumberFormat('en-US').format(parseInt(rfp.projectArea)) + ' sf' : 'N/A'}</p>
     </div>
 
     ${renderCategorySection("Tenant Improvements", budgetData.tenantImprovements)}

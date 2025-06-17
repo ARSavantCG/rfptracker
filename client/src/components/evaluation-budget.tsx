@@ -919,6 +919,14 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         </CardHeader>
       </Card>
 
+      {/* Existing Improvements - positioned at bottom */}
+      {budgetData.hasExistingImprovements && renderCategoryTable(
+        "Existing Improvements",
+        budgetData.existingImprovements,
+        'existingImprovements',
+        calculateCategoryTotal(budgetData.existingImprovements)
+      )}
+
       {/* Action Buttons */}
       <div className="flex gap-3 justify-center">
         <Button 

@@ -149,13 +149,43 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     }, 0);
   };
 
+  const calculateDisplayedCategoryTotal = (items: EvaluationLineItem[], category: string) => {
+    if (category === 'tenantImprovements' && !budgetData.separateDesignCosts) {
+      // When hiding design costs, show total including distributed design costs
+      return items.reduce((total, item) => {
+        return total + calculateDistributedCosts(item);
+      }, 0);
+    }
+    return calculateCategoryTotal(items);
+  };
+
+  // Calculate distributed design costs for each tenant improvement item
+  const calculateDistributedCosts = (item: EvaluationLineItem) => {
+    if (budgetData.separateDesignCosts) {
+      // When showing separately, return original cost
+      return parseFloat(item.totalPrice) || 0;
+    }
+    
+    // When hiding design costs, distribute them proportionally
+    const tiTotal = calculateCategoryTotal(budgetData.tenantImprovements);
+    const designTotal = calculateCategoryTotal(budgetData.designSoftCosts);
+    const itemCost = parseFloat(item.totalPrice) || 0;
+    
+    if (tiTotal === 0) return itemCost;
+    
+    const itemPercentage = itemCost / tiTotal;
+    const distributedDesignCost = designTotal * itemPercentage;
+    
+    return itemCost + distributedDesignCost;
+  };
+
   const calculateGrandTotal = () => {
     const tiTotal = calculateCategoryTotal(budgetData.tenantImprovements);
-    // Only include design costs separately if they're being shown as separate line items
-    const designTotal = budgetData.separateDesignCosts ? calculateCategoryTotal(budgetData.designSoftCosts) : 0;
+    const designTotal = calculateCategoryTotal(budgetData.designSoftCosts);
     const existingTotal = (budgetData.hasExistingImprovements && budgetData.includeExistingInTotal)
       ? calculateCategoryTotal(budgetData.existingImprovements) 
       : 0;
+    // Always include design costs in grand total, whether separate or distributed
     return tiTotal + designTotal + existingTotal;
   };
 
@@ -165,9 +195,15 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     const currentDate = new Date().toLocaleDateString();
     const grandTotal = calculateGrandTotal();
     
-    const renderCategorySection = (title: string, items: EvaluationLineItem[]) => {
+    const renderCategorySection = (title: string, items: EvaluationLineItem[], categoryType?: string) => {
       if (items.length === 0) return '';
-      const total = calculateCategoryTotal(items);
+      
+      // Use distributed totals for tenant improvements when design costs are hidden
+      const isTenantImprovements = categoryType === 'tenantImprovements';
+      const total = isTenantImprovements && !budgetData.separateDesignCosts ? 
+        calculateDisplayedCategoryTotal(items, 'tenantImprovements') : 
+        calculateCategoryTotal(items);
+      
       const rentableArea = rfp?.projectArea ? parseInt(rfp.projectArea) : 0;
       
       return `
@@ -192,7 +228,10 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                   </thead>
                   <tbody>
                       ${items.map(item => {
-                        const totalPrice = parseFloat(item.totalPrice) || 0;
+                        // Use distributed costs for tenant improvements when design costs are hidden
+                        const totalPrice = isTenantImprovements && !budgetData.separateDesignCosts ? 
+                          calculateDistributedCosts(item) : 
+                          parseFloat(item.totalPrice) || 0;
                         const pricePerSf = rentableArea > 0 ? totalPrice / rentableArea : 0;
                         return `
                         <tr>
@@ -659,7 +698,12 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                       <TableCell>{item.description}</TableCell>
                       <TableCell>{item.quantity} {item.unit}</TableCell>
                       <TableCell>{formatCurrency(item.unitPrice)}</TableCell>
-                      {!newItemCategory && <TableCell className="font-medium">{formatCurrency(item.totalPrice)}</TableCell>}
+                      {!newItemCategory && <TableCell className="font-medium">
+                        {category === 'tenantImprovements' ? 
+                          formatCurrency(calculateDistributedCosts(item)) : 
+                          formatCurrency(item.totalPrice)
+                        }
+                      </TableCell>}
                       <TableCell>
                         <div className="flex gap-1">
                           <Button
@@ -815,7 +859,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         "Tenant Improvements",
         budgetData.tenantImprovements,
         'tenantImprovements',
-        calculateCategoryTotal(budgetData.tenantImprovements)
+        calculateDisplayedCategoryTotal(budgetData.tenantImprovements, 'tenantImprovements')
       )}
 
       {/* Design / Soft Costs / Other Fees - Only show when separateDesignCosts is true */}

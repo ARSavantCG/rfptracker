@@ -476,6 +476,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         existingImprovements: budgetData.existingImprovements,
         hasExistingImprovements: budgetData.hasExistingImprovements,
         includeExistingInTotal: budgetData.includeExistingInTotal,
+        separateDesignCosts: budgetData.separateDesignCosts,
         totalTenantImprovements: calculateCategoryTotal(budgetData.tenantImprovements).toFixed(2),
         totalDesignSoftCosts: calculateCategoryTotal(budgetData.designSoftCosts).toFixed(2),
         totalExistingImprovements: calculateCategoryTotal(budgetData.existingImprovements).toFixed(2),

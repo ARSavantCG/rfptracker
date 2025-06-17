@@ -207,13 +207,49 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     const currentDate = new Date().toLocaleDateString();
     const grandTotal = calculateGrandTotal();
     
+    // Local calculation functions that use the hideDesignCosts parameter
+    const calculateDistributedCostsForPreview = (item: EvaluationLineItem) => {
+      if (!hideDesignCosts) {
+        // When showing separately, return original cost
+        return parseFloat(item.totalPrice) || 0;
+      }
+      
+      // When hiding design costs, distribute them proportionally
+      const tiTotal = calculateCategoryTotal(budgetData.tenantImprovements);
+      const designTotal = calculateCategoryTotal(budgetData.designSoftCosts);
+      const itemCost = parseFloat(item.totalPrice) || 0;
+      
+      if (tiTotal === 0) return itemCost;
+      
+      const itemPercentage = itemCost / tiTotal;
+      const distributedDesignCost = designTotal * itemPercentage;
+      
+      return itemCost + distributedDesignCost;
+    };
+
+    const calculateDistributedUnitPriceForPreview = (item: EvaluationLineItem) => {
+      const distributedTotal = calculateDistributedCostsForPreview(item);
+      const quantity = typeof item.quantity === 'string' ? parseInt(item.quantity) || 1 : item.quantity || 1;
+      return distributedTotal / quantity;
+    };
+
+    const calculateDisplayedCategoryTotalForPreview = (items: EvaluationLineItem[], category: string) => {
+      if (category === 'tenantImprovements' && hideDesignCosts) {
+        // When hiding design costs, show total including distributed design costs
+        return items.reduce((total, item) => {
+          return total + calculateDistributedCostsForPreview(item);
+        }, 0);
+      }
+      return calculateCategoryTotal(items);
+    };
+    
     const renderCategorySection = (title: string, items: EvaluationLineItem[], categoryType?: string) => {
       if (items.length === 0) return '';
       
       // Use distributed totals for tenant improvements when design costs are hidden
       const isTenantImprovements = categoryType === 'tenantImprovements';
       const total = isTenantImprovements && hideDesignCosts ? 
-        calculateDisplayedCategoryTotal(items, 'tenantImprovements') : 
+        calculateDisplayedCategoryTotalForPreview(items, 'tenantImprovements') : 
         calculateCategoryTotal(items);
       
       const rentableArea = rfp?.projectArea ? parseInt(rfp.projectArea) : 0;
@@ -242,11 +278,11 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                       ${items.map(item => {
                         // Use distributed costs for tenant improvements when design costs are hidden
                         const totalPrice = isTenantImprovements && hideDesignCosts ? 
-                          calculateDistributedCosts(item) : 
+                          calculateDistributedCostsForPreview(item) : 
                           parseFloat(item.totalPrice) || 0;
                         // Use distributed unit price for tenant improvements when design costs are hidden
                         const unitPrice = isTenantImprovements && hideDesignCosts ? 
-                          calculateDistributedUnitPrice(item) : 
+                          calculateDistributedUnitPriceForPreview(item) : 
                           parseFloat(item.unitPrice) || 0;
                         const pricePerSf = rentableArea > 0 ? totalPrice / rentableArea : 0;
                         return `

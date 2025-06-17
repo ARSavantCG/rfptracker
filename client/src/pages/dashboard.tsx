@@ -87,6 +87,10 @@ export default function Dashboard() {
     setShowBidCollection(true);
   };
 
+  const handleOpenEvaluation = (rfp: RfpRequest) => {
+    setShowBidCollection(true); // Reuse the same state to show evaluation view
+  };
+
   const clearFilters = () => {
     setSearchQuery("");
     setStatusFilter("");
@@ -220,7 +224,7 @@ export default function Dashboard() {
         <div className={`grid gap-6 ${selectedRfp ? 'grid-cols-1 lg:grid-cols-3' : 'grid-cols-1'}`}>
           {/* RFP Table or Workflow Content - Full width when no RFP selected, 2/3 when selected */}
           <div className={selectedRfp ? "lg:col-span-2" : "col-span-1"}>
-            {showBidCollection && selectedRfp ? (
+            {showBidCollection && selectedRfp && selectedRfp.workflowPhase === 'bid-collection' ? (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <Button
@@ -233,7 +237,7 @@ export default function Dashboard() {
                 </div>
                 <BidCollectionTable rfp={selectedRfp} />
               </div>
-            ) : selectedRfp && selectedRfp.workflowPhase === 'evaluation' && showBidCollection ? (
+            ) : showBidCollection && selectedRfp && selectedRfp.workflowPhase === 'evaluation' ? (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <Button
@@ -246,7 +250,7 @@ export default function Dashboard() {
                 </div>
                 <EvaluationBudget rfp={selectedRfp} />
               </div>
-            ) : selectedRfp && selectedRfp.workflowPhase === 'publish' && showBidCollection ? (
+            ) : showBidCollection && selectedRfp && selectedRfp.workflowPhase === 'publish' ? (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <Button
@@ -279,6 +283,7 @@ export default function Dashboard() {
                 onValidateRfp={handleValidateRfp}
                 onOpenInvitationModal={handleOpenInvitationModal}
                 onOpenBidCollection={handleOpenBidCollection}
+                onOpenEvaluation={handleOpenEvaluation}
               />
             </div>
           )}

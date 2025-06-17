@@ -12,6 +12,7 @@ interface WorkflowStatusProps {
   onValidateRfp?: (rfp: RfpRequest) => void;
   onOpenInvitationModal?: (rfp: RfpRequest) => void;
   onOpenBidCollection?: (rfp: RfpRequest) => void;
+  onOpenEvaluation?: (rfp: RfpRequest) => void;
 }
 
 const workflowPhases = [
@@ -52,7 +53,7 @@ const workflowPhases = [
   }
 ];
 
-export function WorkflowStatus({ rfp, onAdvanceToInvitation, onValidateRfp, onOpenInvitationModal, onOpenBidCollection }: WorkflowStatusProps) {
+export function WorkflowStatus({ rfp, onAdvanceToInvitation, onValidateRfp, onOpenInvitationModal, onOpenBidCollection, onOpenEvaluation }: WorkflowStatusProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -127,6 +128,8 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onValidateRfp, onOp
       onOpenInvitationModal(rfp);
     } else if (phase.key === "bid-collection" && onOpenBidCollection) {
       onOpenBidCollection(rfp);
+    } else if (phase.key === "evaluation" && onOpenEvaluation) {
+      onOpenEvaluation(rfp);
     }
   };
 
@@ -146,7 +149,7 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onValidateRfp, onOp
           const isCompleted = index < currentPhaseIndex;
           const isNext = index === currentPhaseIndex + 1;
 
-          const isClickable = (isActive || isCompleted) && (phase.key === "rfp-entry" || phase.key === "invitation-to-bid" || phase.key === "bid-collection");
+          const isClickable = (isActive || isCompleted) && (phase.key === "rfp-entry" || phase.key === "invitation-to-bid" || phase.key === "bid-collection" || phase.key === "evaluation");
           
           return (
             <div

@@ -88,7 +88,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     existingImprovements: [],
     hasExistingImprovements: false,
     includeExistingInTotal: false,
-    separateDesignCosts: true,
+    separateDesignCosts: false,
     totalTenantImprovements: "0.00",
     totalDesignSoftCosts: "0.00", 
     totalExistingImprovements: "0.00",
@@ -106,7 +106,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         existingImprovements: (existingBudget as any).existingImprovements || [],
         hasExistingImprovements: (existingBudget as any).hasExistingImprovements || false,
         includeExistingInTotal: (existingBudget as any).includeExistingInTotal || false,
-        separateDesignCosts: (existingBudget as any).separateDesignCosts !== undefined ? (existingBudget as any).separateDesignCosts : true,
+        separateDesignCosts: (existingBudget as any).separateDesignCosts !== undefined ? (existingBudget as any).separateDesignCosts : false,
         totalTenantImprovements: (existingBudget as any).totalTenantImprovements || "0.00",
         totalDesignSoftCosts: (existingBudget as any).totalDesignSoftCosts || "0.00",
         totalExistingImprovements: (existingBudget as any).totalExistingImprovements || "0.00",
@@ -129,7 +129,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
       setBudgetData(prev => ({
         ...prev,
         tenantImprovements: initialItems as EvaluationLineItem[],
-        separateDesignCosts: true,
+        separateDesignCosts: false,
       }));
     }
   }, [existingBudget, allBidLineItems, bidCollections]);
@@ -150,7 +150,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
   };
 
   const calculateDisplayedCategoryTotal = (items: EvaluationLineItem[], category: string) => {
-    if (category === 'tenantImprovements' && !budgetData.separateDesignCosts) {
+    if (category === 'tenantImprovements' && budgetData.separateDesignCosts) {
       // When hiding design costs, show total including distributed design costs
       return items.reduce((total, item) => {
         return total + calculateDistributedCosts(item);
@@ -161,7 +161,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
 
   // Calculate distributed design costs for each tenant improvement item
   const calculateDistributedCosts = (item: EvaluationLineItem) => {
-    if (budgetData.separateDesignCosts) {
+    if (!budgetData.separateDesignCosts) {
       // When showing separately, return original cost
       return parseFloat(item.totalPrice) || 0;
     }
@@ -181,7 +181,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
 
   // Calculate distributed unit price when design costs are hidden
   const calculateDistributedUnitPrice = (item: EvaluationLineItem) => {
-    if (budgetData.separateDesignCosts || item.quantity === 0) {
+    if (!budgetData.separateDesignCosts || item.quantity === 0) {
       // When showing separately or quantity is 0, return original unit price
       return parseFloat(item.unitPrice) || 0;
     }
@@ -858,19 +858,19 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         <CardHeader>
           <div className="flex items-center space-x-2">
             <Checkbox
-              id="separateDesignCosts"
+              id="hideDesignCosts"
               checked={budgetData.separateDesignCosts}
               onCheckedChange={(checked) => setBudgetData(prev => ({ 
                 ...prev, 
                 separateDesignCosts: !!checked 
               }))}
             />
-            <Label htmlFor="separateDesignCosts" className="text-lg font-semibold">
-              Show Design Costs as Separate Line Items
+            <Label htmlFor="hideDesignCosts" className="text-lg font-semibold">
+              Hide Design / Soft Costs / Other Fees
             </Label>
           </div>
           <p className="text-sm text-gray-600">
-            When unchecked, design costs will be buried within tenant improvement line items. When checked, design costs will appear as a separate section.
+            When unchecked, design costs appear as a separate section. When checked, design costs are buried within tenant improvement line items with proportional distribution.
           </p>
         </CardHeader>
       </Card>
@@ -883,8 +883,8 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         calculateDisplayedCategoryTotal(budgetData.tenantImprovements, 'tenantImprovements')
       )}
 
-      {/* Design / Soft Costs / Other Fees - Only show when separateDesignCosts is true */}
-      {budgetData.separateDesignCosts && renderCategoryTable(
+      {/* Design / Soft Costs / Other Fees - Only show when separateDesignCosts is false (not hidden) */}
+      {!budgetData.separateDesignCosts && renderCategoryTable(
         "Design / Soft Costs / Other Fees",
         budgetData.designSoftCosts,
         'designSoftCosts',

@@ -65,54 +65,7 @@ export default function Properties() {
           </CardContent>
         </Card>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Building className="h-6 w-6 text-blue-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-2xl font-bold">{properties?.length || 0}</p>
-                  <p className="text-gray-600 text-sm">Total Properties</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <MapPin className="h-6 w-6 text-green-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-2xl font-bold">
-                    {Array.from(new Set(properties?.map(p => p.city))).length || 0}
-                  </p>
-                  <p className="text-gray-600 text-sm">Cities</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center">
-                <div className="p-2 bg-purple-100 rounded-lg">
-                  <Building className="h-6 w-6 text-purple-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-2xl font-bold">
-                    {Array.from(new Set(properties?.map(p => p.propertyName))).length || 0}
-                  </p>
-                  <p className="text-gray-600 text-sm">Property Names</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+
 
         {/* Properties Grid */}
         {isLoading ? (

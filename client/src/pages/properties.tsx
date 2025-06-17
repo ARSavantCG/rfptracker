@@ -161,9 +161,14 @@ export default function Properties() {
                         )}
                       </div>
                     </div>
-                    <Button variant="outline" size="sm">
-                      <Edit className="h-4 w-4" />
-                    </Button>
+                    <PropertyFormModal 
+                      property={property}
+                      trigger={
+                        <Button variant="outline" size="sm">
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      }
+                    />
                   </div>
                 </CardHeader>
                 <CardContent>

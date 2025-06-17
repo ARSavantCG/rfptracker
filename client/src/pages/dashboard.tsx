@@ -32,6 +32,7 @@ export default function Dashboard() {
   const [isInvitationModalOpen, setIsInvitationModalOpen] = useState(false);
   const [isValidationModalOpen, setIsValidationModalOpen] = useState(false);
   const [showBidCollection, setShowBidCollection] = useState(false);
+  const [showEvaluation, setShowEvaluation] = useState(false);
   const [selectedRfp, setSelectedRfp] = useState<RfpRequest | null>(null);
   const [workflowRfp, setWorkflowRfp] = useState<RfpRequest | null>(null);
   const [validationRfp, setValidationRfp] = useState<RfpRequest | null>(null);
@@ -56,10 +57,11 @@ export default function Dashboard() {
     }
   }, [allRfps, selectedRfp]);
 
-  // Reset bid collection view when selecting a new RFP
+  // Reset workflow views when selecting a new RFP
   useEffect(() => {
     if (selectedRfp) {
       setShowBidCollection(false);
+      setShowEvaluation(false);
     }
   }, [selectedRfp]);
 
@@ -88,7 +90,8 @@ export default function Dashboard() {
   };
 
   const handleOpenEvaluation = (rfp: RfpRequest) => {
-    setShowBidCollection(true); // Reuse the same state to show evaluation view
+    setShowBidCollection(false);
+    setShowEvaluation(true);
   };
 
   const clearFilters = () => {
@@ -224,7 +227,7 @@ export default function Dashboard() {
         <div className={`grid gap-6 ${selectedRfp ? 'grid-cols-1 lg:grid-cols-3' : 'grid-cols-1'}`}>
           {/* RFP Table or Workflow Content - Full width when no RFP selected, 2/3 when selected */}
           <div className={selectedRfp ? "lg:col-span-2" : "col-span-1"}>
-            {showBidCollection && selectedRfp && selectedRfp.workflowPhase === 'bid-collection' ? (
+            {showBidCollection && selectedRfp ? (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <Button
@@ -237,12 +240,12 @@ export default function Dashboard() {
                 </div>
                 <BidCollectionTable rfp={selectedRfp} />
               </div>
-            ) : showBidCollection && selectedRfp && selectedRfp.workflowPhase === 'evaluation' ? (
+            ) : showEvaluation && selectedRfp ? (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <Button
                     variant="outline"
-                    onClick={() => setShowBidCollection(false)}
+                    onClick={() => setShowEvaluation(false)}
                     className="mb-4"
                   >
                     ← Back to RFP List
@@ -250,7 +253,7 @@ export default function Dashboard() {
                 </div>
                 <EvaluationBudget rfp={selectedRfp} />
               </div>
-            ) : showBidCollection && selectedRfp && selectedRfp.workflowPhase === 'publish' ? (
+            ) : selectedRfp && selectedRfp.workflowPhase === 'publish' && showBidCollection ? (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <Button

@@ -126,6 +126,16 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
     }
   }, [bayConfigurations.length]);
 
+  // Auto-populate End Bay when Start Bay changes
+  useEffect(() => {
+    if (newBay.startBay && !editingBay) {
+      const startBayNum = parseInt(newBay.startBay);
+      if (!isNaN(startBayNum)) {
+        setNewBay(prev => ({ ...prev, endBay: (startBayNum + 1).toString() }));
+      }
+    }
+  }, [newBay.startBay, editingBay]);
+
   const removeBayConfiguration = (bayId: string) => {
     setBayConfigurations(bayConfigurations.filter(bay => bay.id !== bayId));
   };

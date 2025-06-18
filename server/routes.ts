@@ -1275,6 +1275,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             table { width: 100%; border-collapse: collapse; margin-top: 20px; }
             th, td { border: 1px solid #e5e7eb; padding: 8px; text-align: left; }
             th { background: #f9fafb; font-weight: 600; }
+            th:nth-child(3), th:nth-child(4), th:nth-child(5) { width: 120px; }
+            td:nth-child(3), td:nth-child(4), td:nth-child(5) { width: 120px; }
             .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; color: white; display: inline-block; }
             .status-received { background: #8B5CF6; }
             .status-inprogress { background: #F59E0B; }

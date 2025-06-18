@@ -25,6 +25,18 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
   const [editingBay, setEditingBay] = useState<BayConfiguration | null>(null);
   const [showBayDetails, setShowBayDetails] = useState(false);
 
+  // Auto-populate start bay when bay configurations change
+  useEffect(() => {
+    if (!editingBay) {
+      const nextStart = getNextStartingBay();
+      setNewBay(prev => ({ 
+        ...prev, 
+        startBay: nextStart.toString(),
+        endBay: (nextStart + 1).toString()
+      }));
+    }
+  }, [bayConfigurations, editingBay]);
+
   const updatePropertyMutation = useMutation({
     mutationFn: async (updatedConfigurations: BayConfiguration[]) => {
       const response = await fetch(`/api/properties/${property.id}`, {
@@ -110,10 +122,11 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
 
     setBayConfigurations([...bayConfigurations, newBayConfig]);
     
-    // Reset form with end bay as next starting bay number
+    // Reset form with next starting bay number
+    const nextStart = getNextStartingBay();
     setNewBay({ 
-      startBay: endBayNum.toString(), 
-      endBay: "", 
+      startBay: nextStart.toString(), 
+      endBay: (nextStart + 1).toString(), 
       squareFootage: "",
       standardDockDoors: "",
       oversizedDockDoors: ""
@@ -125,23 +138,7 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
   const totalStandardDoors = bayConfigurations.reduce((total, bay) => total + (bay.standardDockDoors || 0), 0);
   const totalOversizedDoors = bayConfigurations.reduce((total, bay) => total + (bay.oversizedDockDoors || 0), 0);
 
-  // Set initial starting bay when component mounts or configurations change
-  useEffect(() => {
-    if (newBay.startBay === "" || newBay.startBay === "1") {
-      const nextStart = getNextStartingBay();
-      setNewBay(prev => ({ ...prev, startBay: nextStart.toString() }));
-    }
-  }, [bayConfigurations.length]);
 
-  // Auto-populate End Bay when Start Bay changes
-  useEffect(() => {
-    if (newBay.startBay && !editingBay) {
-      const startBayNum = parseInt(newBay.startBay);
-      if (!isNaN(startBayNum)) {
-        setNewBay(prev => ({ ...prev, endBay: (startBayNum + 1).toString() }));
-      }
-    }
-  }, [newBay.startBay, editingBay]);
 
   const removeBayConfiguration = (bayId: string) => {
     setBayConfigurations(bayConfigurations.filter(bay => bay.id !== bayId));

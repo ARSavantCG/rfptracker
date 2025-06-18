@@ -83,11 +83,13 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
   // Pre-populate form with existing RFP data
   useEffect(() => {
     if (rfp && isOpen) {
-      const projectAreaValue = rfp.projectArea ? rfp.projectArea.trim() : "";
+      // Extract numeric value from project area string (e.g., "409,189 SF (calculated...)" -> "409189")
+      const projectAreaValue = rfp.projectArea ? 
+        rfp.projectArea.replace(/[^\d,]/g, '').replace(/,/g, '') : "";
       
       console.log('Populating form with RFP data:', { 
         projectArea: rfp.projectArea, 
-        trimmed: projectAreaValue,
+        extracted: projectAreaValue,
         isEmpty: !projectAreaValue 
       });
       

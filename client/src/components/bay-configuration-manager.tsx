@@ -259,11 +259,13 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                   <div className="flex items-center">
                     <span className="bg-gray-100 border border-r-0 rounded-l-md px-3 py-2 text-sm text-gray-600">Bay</span>
                     <Input
-                      type="number"
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       placeholder="1"
                       value={newBay.startBay}
                       onChange={(e) => setNewBay({ ...newBay, startBay: e.target.value })}
-                      className="rounded-l-none"
+                      className="rounded-l-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     />
                   </div>
                 </div>
@@ -272,10 +274,12 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                   <div className="flex items-center">
                     <span className="bg-gray-100 border border-r-0 rounded-l-md px-3 py-2 text-sm text-gray-600">Bay</span>
                     <Input
-                      type="number"
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       value={newBay.endBay}
                       onChange={(e) => setNewBay({ ...newBay, endBay: e.target.value })}
-                      className="rounded-l-none"
+                      className="rounded-l-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     />
                   </div>
                 </div>
@@ -283,9 +287,12 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                   <Label htmlFor="squareFootage" className="text-sm font-medium">Square Footage</Label>
                   <Input
                     id="squareFootage"
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     value={newBay.squareFootage}
                     onChange={(e) => setNewBay({ ...newBay, squareFootage: e.target.value })}
+                    className="[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   />
                 </div>
                 <div className="flex gap-2">

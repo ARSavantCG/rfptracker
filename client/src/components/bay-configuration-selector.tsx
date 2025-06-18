@@ -22,34 +22,28 @@ export default function BayConfigurationSelector({
 
   const bayConfigurations = property.bayConfigurations || [];
 
-  // Convert bay ranges to individual bays for better visual representation
-  const individualBays = bayConfigurations.flatMap(bayConfig => {
+  // Convert bay configurations to proper bay representation
+  // Each bay configuration represents one bay (columns grouped into bays)
+  const individualBays = bayConfigurations.map(bayConfig => {
     const match = bayConfig.bayName.match(/Bay (\d+)-(\d+)/);
-    if (!match) return [];
+    if (!match) return null;
     
-    const startBay = parseInt(match[1]);
-    const endBay = parseInt(match[2]);
-    const baysInRange = endBay - startBay + 1;
-    const sqftPerBay = bayConfig.squareFootage / baysInRange;
-    const standardDoorsPerBay = Math.floor(bayConfig.standardDockDoors / baysInRange);
-    const oversizedDoorsPerBay = Math.floor(bayConfig.oversizedDockDoors / baysInRange);
+    const startColumn = parseInt(match[1]);
+    const endColumn = parseInt(match[2]);
+    // Calculate bay number: Bay 1 = Columns 1-2, Bay 2 = Columns 3-4, etc.
+    const bayNumber = Math.ceil(startColumn / 2);
     
-    const bays = [];
-    for (let i = startBay; i <= endBay; i++) {
-      bays.push({
-        id: `${bayConfig.id}-bay-${i}`,
-        bayNumber: i,
-        bayName: `Bay ${i}`,
-        squareFootage: Math.round(sqftPerBay),
-        standardDockDoors: standardDoorsPerBay,
-        oversizedDockDoors: oversizedDoorsPerBay,
-        parentConfigId: bayConfig.id
-      });
-    }
-    return bays;
-  }).sort((a, b) => a.bayNumber - b.bayNumber);
+    return {
+      id: bayConfig.id,
+      bayNumber: bayNumber,
+      bayName: `Bay ${bayNumber}`,
+      squareFootage: bayConfig.squareFootage, // Full rentable area for this bay
+      standardDockDoors: bayConfig.standardDockDoors,
+      oversizedDockDoors: bayConfig.oversizedDockDoors
+    };
+  }).filter(Boolean).sort((a, b) => a.bayNumber - b.bayNumber);
 
-  // Calculate total floor area from selected individual bays
+  // Calculate total rentable area from selected individual bays
   const calculateTotalArea = () => {
     return selectedBayIds.reduce((total, bayId) => {
       const bay = individualBays.find(b => b.id === bayId);
@@ -112,7 +106,7 @@ export default function BayConfigurationSelector({
         <div className="bg-gray-50 p-4 rounded-lg">
           <div className="mb-3">
             <Label className="text-sm font-medium text-gray-700">Building Layout</Label>
-            <p className="text-xs text-gray-500">Click bays to select for floor area calculation</p>
+            <p className="text-xs text-gray-500">Click bays to select for rentable area calculation</p>
           </div>
           
           {/* Single row layout representing building */}
@@ -182,7 +176,7 @@ export default function BayConfigurationSelector({
               <div className="flex items-center gap-2 p-3 bg-orange-50 rounded-lg">
                 <Calculator className="h-4 w-4 text-orange-600" />
                 <span className="font-medium text-orange-900">
-                  Total Floor Area: {totalArea.toLocaleString()} SF
+                  Total Rentable Area: {totalArea.toLocaleString()} SF
                 </span>
               </div>
             </div>

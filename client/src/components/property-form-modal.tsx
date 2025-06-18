@@ -291,9 +291,9 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
           <div className="bg-gray-50 p-3 rounded-lg">
             <Label className="text-sm font-medium text-gray-700">Preview Display Name</Label>
             <p className="text-sm text-gray-600 mt-1">
-              {formData.propertyName && formData.building && formData.streetAddress && formData.city && formData.state && formData.zip
-                ? `${formData.propertyName} - Building ${formData.building}, ${formData.streetAddress}, ${formData.city}, ${formData.state} ${formData.zip}`
-                : "Complete all fields to see display name preview"
+              {formData.propertyName && formData.streetAddress && formData.city && formData.state && formData.zip
+                ? `${formData.propertyName}${formData.building ? ` - Building ${formData.building}` : ''}, ${formData.streetAddress}, ${formData.city}, ${formData.state} ${formData.zip}`
+                : "Complete required fields to see display name preview"
               }
             </p>
           </div>

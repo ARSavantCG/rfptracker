@@ -453,7 +453,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createProperty(property: InsertProperty): Promise<Property> {
-    const displayName = `${property.propertyName} - Building ${property.building}, ${property.streetAddress}, ${property.city}, ${property.state} ${property.zip}`;
+    const buildingPart = property.building ? ` - Building ${property.building}` : '';
+    const displayName = `${property.propertyName}${buildingPart}, ${property.streetAddress}, ${property.city}, ${property.state} ${property.zip}`;
     
     const [created] = await db
       .insert(properties)
@@ -480,7 +481,8 @@ export class DatabaseStorage implements IStorage {
         const city = updates.city || current.city;
         const state = updates.state || current.state;
         const zip = updates.zip || current.zip;
-        updateData.displayName = `${propertyName} - Building ${building}, ${streetAddress}, ${city}, ${state} ${zip}`;
+        const buildingPart = building ? ` - Building ${building}` : '';
+        updateData.displayName = `${propertyName}${buildingPart}, ${streetAddress}, ${city}, ${state} ${zip}`;
       }
     }
 

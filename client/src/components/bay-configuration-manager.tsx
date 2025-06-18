@@ -148,7 +148,7 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
     setNewBay({
       startBay: (endBay + 1).toString(),
       endBay: "",
-      squareFootage: bay.squareFootage.toString()
+      squareFootage: ""
     });
 
     toast({

@@ -23,15 +23,13 @@ export default function BayConfigurationSelector({
   const bayConfigurations = property.bayConfigurations || [];
 
   // Convert bay configurations to proper bay representation
-  // Each bay configuration represents one bay (columns grouped into bays)
-  const individualBays = bayConfigurations.map(bayConfig => {
+  // Each bay configuration represents one bay with unique sequential numbering
+  const individualBays = bayConfigurations.map((bayConfig, index) => {
     const match = bayConfig.bayName.match(/Bay (\d+)-(\d+)/);
     if (!match) return null;
     
-    const startColumn = parseInt(match[1]);
-    const endColumn = parseInt(match[2]);
-    // Calculate bay number: Bay 1 = Columns 1-2, Bay 2 = Columns 3-4, etc.
-    const bayNumber = Math.ceil(startColumn / 2);
+    // Use sequential numbering based on array index to ensure unique bay numbers
+    const bayNumber = index + 1;
     
     return {
       id: bayConfig.id,
@@ -41,7 +39,7 @@ export default function BayConfigurationSelector({
       standardDockDoors: bayConfig.standardDockDoors,
       oversizedDockDoors: bayConfig.oversizedDockDoors
     };
-  }).filter(Boolean).sort((a, b) => a.bayNumber - b.bayNumber);
+  }).filter(Boolean);
 
   // Calculate total rentable area from selected individual bays
   const calculateTotalArea = () => {
@@ -61,6 +59,10 @@ export default function BayConfigurationSelector({
 
   const clearSelection = () => {
     setSelectedBayIds([]);
+  };
+
+  const selectAllBays = () => {
+    setSelectedBayIds(individualBays.map(bay => bay.id));
   };
 
   const totalArea = calculateTotalArea();
@@ -110,7 +112,7 @@ export default function BayConfigurationSelector({
           </div>
           
           {/* Single row layout representing building */}
-          <div className="flex flex-wrap gap-1 justify-center">
+          <div className="flex gap-1 justify-start overflow-x-auto pb-2">
             {individualBays.map((bay) => {
               const isSelected = selectedBayIds.includes(bay.id);
               return (
@@ -143,16 +145,26 @@ export default function BayConfigurationSelector({
         <div className="border-t pt-4">
           <div className="flex items-center justify-between mb-2">
             <Label className="font-medium">Selected Bays:</Label>
-            {selectedBayIds.length > 0 && (
+            <div className="flex gap-2">
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={clearSelection}
-                className="text-gray-500 hover:text-gray-700"
+                onClick={selectAllBays}
+                className="text-orange-600 hover:text-orange-700"
               >
-                Clear All
+                Select All
               </Button>
-            )}
+              {selectedBayIds.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearSelection}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  Clear All
+                </Button>
+              )}
+            </div>
           </div>
           
           {selectedBayIds.length === 0 ? (

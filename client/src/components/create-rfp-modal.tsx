@@ -6,14 +6,16 @@ import { z } from "zod";
 import { apiRequest } from "@/lib/queryClient";
 import { FileUpload } from "./file-upload";
 import { PropertySelector } from "./property-selector";
-import BayConfigurationSelector from "./bay-configuration-selector";
+import { BayConfigurationModal } from "./bay-configuration-modal";
 import { useToast } from "@/hooks/use-toast";
 import { type Property, type Contact, type BayConfiguration } from "@shared/schema";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Grid3x3 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { X } from "lucide-react";
@@ -47,6 +49,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [calculatedFloorArea, setCalculatedFloorArea] = useState<number>(0);
   const [selectedBayConfigurations, setSelectedBayConfigurations] = useState<BayConfiguration[]>([]);
+  const [bayConfigModalOpen, setBayConfigModalOpen] = useState(false);
 
   const form = useForm<CreateRfpFormData>({
     resolver: zodResolver(createRfpSchema),
@@ -358,14 +361,28 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                 )}
               />
 
-              {/* Bay Configuration Selector for Automatic Floor Area Calculation */}
+              {/* Bay Configuration Button for Automatic Floor Area Calculation */}
               {selectedProperty ? (
-                <div className="space-y-4 w-full">
-                  <div className="w-full">
-                    <BayConfigurationSelector
-                      property={selectedProperty}
-                      onRentableAreaChange={handleFloorAreaChange}
-                    />
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 border rounded-lg bg-gray-50">
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700">Bay Configuration</Label>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {selectedBayConfigurations.length > 0 
+                          ? `${selectedBayConfigurations.length} bay${selectedBayConfigurations.length !== 1 ? 's' : ''} selected (${calculatedFloorArea.toLocaleString()} SF)`
+                          : 'No bays selected for area calculation'
+                        }
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setBayConfigModalOpen(true)}
+                      className="flex items-center gap-2"
+                    >
+                      <Grid3x3 className="h-4 w-4" />
+                      {selectedBayConfigurations.length > 0 ? 'Modify Selection' : 'Select Bays'}
+                    </Button>
                   </div>
                   
                   <FormField

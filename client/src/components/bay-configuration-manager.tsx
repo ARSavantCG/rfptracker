@@ -277,19 +277,7 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
           {/* Add New Bay Configuration */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">
-                {editingBay ? `Edit ${editingBay.bayName}` : "Add Bay Configuration"}
-              </CardTitle>
-              {editingBay && (
-                <div className="bg-blue-50 border border-blue-200 rounded-md p-3 mt-2">
-                  <p className="text-sm text-blue-700 font-medium">
-                    🔧 Edit Mode Active
-                  </p>
-                  <p className="text-xs text-blue-600">
-                    You are editing an existing bay configuration. Changes will update the selected bay.
-                  </p>
-                </div>
-              )}
+              <CardTitle className="text-lg">Add Bay Configuration</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-5 gap-4 items-end">
@@ -361,22 +349,10 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  {editingBay ? (
-                    <>
-                      <Button onClick={saveEditedBay} className="flex-1">
-                        <Edit className="h-4 w-4 mr-2" />
-                        Save
-                      </Button>
-                      <Button onClick={cancelEdit} variant="outline" className="flex-1">
-                        Cancel
-                      </Button>
-                    </>
-                  ) : (
-                    <Button onClick={addBayConfiguration} className="w-full">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add
-                    </Button>
-                  )}
+                  <Button onClick={addBayConfiguration} className="w-full">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add
+                  </Button>
                 </div>
               </div>
             </CardContent>
@@ -438,8 +414,96 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                         const endBay = match ? match[2] : '';
                         
                         const isEditing = editingBay?.id === bay.id;
+                        
+                        if (isEditing) {
+                          // Inline edit form
+                          return (
+                            <div key={bay.id} className="bg-blue-50 border border-blue-200 rounded-md p-4 space-y-4">
+                              <div className="text-sm font-medium text-blue-700 mb-3">
+                                🔧 Editing {bay.bayName}
+                              </div>
+                              <div className="grid grid-cols-5 gap-4 items-end">
+                                <div className="space-y-2">
+                                  <Label className="text-sm font-medium">Start Bay</Label>
+                                  <div className="flex items-center">
+                                    <span className="bg-gray-100 border border-r-0 rounded-l-md px-3 py-2 text-sm text-gray-600">Bay</span>
+                                    <Input
+                                      type="text"
+                                      inputMode="numeric"
+                                      pattern="[0-9]*"
+                                      value={newBay.startBay}
+                                      onChange={(e) => setNewBay({ ...newBay, startBay: e.target.value })}
+                                      className="rounded-l-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                    />
+                                  </div>
+                                </div>
+                                <div className="space-y-2">
+                                  <Label className="text-sm font-medium">End Bay</Label>
+                                  <div className="flex items-center">
+                                    <span className="bg-gray-100 border border-r-0 rounded-l-md px-3 py-2 text-sm text-gray-600">Bay</span>
+                                    <Input
+                                      type="text"
+                                      inputMode="numeric"
+                                      pattern="[0-9]*"
+                                      value={newBay.endBay}
+                                      onChange={(e) => setNewBay({ ...newBay, endBay: e.target.value })}
+                                      className="rounded-l-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                    />
+                                  </div>
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor="squareFootage" className="text-sm font-medium">Square Footage</Label>
+                                  <Input
+                                    id="squareFootage"
+                                    type="text"
+                                    inputMode="numeric"
+                                    pattern="[0-9]*"
+                                    value={newBay.squareFootage}
+                                    onChange={(e) => setNewBay({ ...newBay, squareFootage: e.target.value })}
+                                    className="[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor="standardDoors" className="text-sm font-medium">Standard Doors</Label>
+                                  <Input
+                                    id="standardDoors"
+                                    type="text"
+                                    inputMode="numeric"
+                                    pattern="[0-9]*"
+                                    value={newBay.standardDockDoors}
+                                    onChange={(e) => setNewBay({ ...newBay, standardDockDoors: e.target.value })}
+                                    className="[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor="oversizedDoors" className="text-sm font-medium">Oversized Doors</Label>
+                                  <Input
+                                    id="oversizedDoors"
+                                    type="text"
+                                    inputMode="numeric"
+                                    pattern="[0-9]*"
+                                    value={newBay.oversizedDockDoors}
+                                    onChange={(e) => setNewBay({ ...newBay, oversizedDockDoors: e.target.value })}
+                                    className="[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                  />
+                                </div>
+                              </div>
+                              <div className="flex gap-2">
+                                <Button onClick={saveEditedBay} className="flex-1">
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  Save
+                                </Button>
+                                <Button onClick={cancelEdit} variant="outline" className="flex-1">
+                                  Cancel
+                                </Button>
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        // Normal display row
                         return (
-                          <div key={bay.id} className={`grid grid-cols-7 gap-4 items-center py-2 ${isEditing ? 'bg-blue-50 border border-blue-200 rounded-md px-3' : ''}`}>
+                          <div key={bay.id} className="grid grid-cols-7 gap-4 items-center py-2">
                             <div className="text-sm">Bay {startBay}</div>
                             <div className="text-sm">Bay {endBay}</div>
                             <div className="text-sm font-medium">{bay.bayName}</div>
@@ -460,11 +524,8 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => editBayConfiguration(bay)}
-                                className={isEditing 
-                                  ? "text-blue-600 bg-blue-100 hover:bg-blue-150 h-8 w-8 p-0" 
-                                  : "text-gray-600 hover:text-gray-700 hover:bg-gray-50 h-8 w-8 p-0"
-                                }
-                                title={isEditing ? "Currently editing" : "Edit bay"}
+                                className="text-gray-600 hover:text-gray-700 hover:bg-gray-50 h-8 w-8 p-0"
+                                title="Edit bay"
                               >
                                 <Edit className="h-3 w-3" />
                               </Button>

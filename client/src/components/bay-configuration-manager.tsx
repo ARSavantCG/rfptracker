@@ -27,6 +27,8 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
   const [newBay, setNewBay] = useState({ startBay: "", endBay: "", squareFootage: "", standardDockDoors: "", oversizedDockDoors: "" });
   const [editingBay, setEditingBay] = useState<BayConfiguration | null>(null);
   const [showBayDetails, setShowBayDetails] = useState(false);
+  const [isEditingMechRoom, setIsEditingMechRoom] = useState(false);
+  const [tempMechRoomSF, setTempMechRoomSF] = useState("");
 
   // Auto-populate start bay when bay configurations change
   useEffect(() => {
@@ -284,6 +286,53 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
     });
   };
 
+  const startEditingMechRoom = () => {
+    setIsEditingMechRoom(true);
+    setTempMechRoomSF(mechanicalRoomSF);
+  };
+
+  const saveMechanicalRoom = async () => {
+    const mechRoomValue = parseFloat(tempMechRoomSF) || 0;
+    
+    try {
+      const response = await fetch(`/api/properties/${property.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          bayConfigurations,
+          mechanicalRoomSquareFootage: mechRoomValue
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to update mechanical room square footage');
+      }
+      
+      setMechanicalRoomSF(mechRoomValue.toString());
+      setIsEditingMechRoom(false);
+      setTempMechRoomSF("");
+      
+      queryClient.invalidateQueries({ queryKey: ["/api/properties"] });
+      toast({
+        title: "Success",
+        description: "Mechanical room square footage updated successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update mechanical room square footage",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const cancelMechRoomEdit = () => {
+    setIsEditingMechRoom(false);
+    setTempMechRoomSF("");
+  };
+
 
 
   return (
@@ -390,25 +439,58 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
               <CardTitle className="text-lg">Mechanical Room Square Footage</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 items-end">
-                <div className="space-y-2">
-                  <Label htmlFor="mechanicalRoomSF" className="text-sm font-medium">Total Mechanical Room SF</Label>
-                  <Input
-                    id="mechanicalRoomSF"
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    placeholder="0"
-                    value={mechanicalRoomSF}
-                    onChange={(e) => setMechanicalRoomSF(e.target.value)}
-                    className="[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  />
+              {isEditingMechRoom ? (
+                <div className="bg-blue-50 border border-blue-200 rounded-md p-4 space-y-4">
+                  <div className="text-sm font-medium text-blue-700 mb-3">
+                    🔧 Editing Mechanical Room Square Footage
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 items-end">
+                    <div className="space-y-2">
+                      <Label htmlFor="tempMechanicalRoomSF" className="text-sm font-medium">Total Mechanical Room SF</Label>
+                      <Input
+                        id="tempMechanicalRoomSF"
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        placeholder="0"
+                        value={tempMechRoomSF}
+                        onChange={(e) => setTempMechRoomSF(e.target.value)}
+                        className="[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button onClick={saveMechanicalRoom} size="sm">
+                        Save
+                      </Button>
+                      <Button onClick={cancelMechRoomEdit} variant="outline" size="sm">
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    <p>This amount will be allocated to bays based on their percentage of total floor area.</p>
+                    <p className="text-xs mt-1">The allocated mechanical room area is added to each bay's square footage to calculate rentable area.</p>
+                  </div>
                 </div>
-                <div className="text-sm text-gray-600">
-                  <p>This amount will be allocated to bays based on their percentage of total floor area.</p>
-                  <p className="text-xs mt-1">The allocated mechanical room area is added to each bay's square footage to calculate rentable area.</p>
+              ) : (
+                <div className="grid grid-cols-2 gap-4 items-center">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Total Mechanical Room SF</Label>
+                    <div className="flex items-center gap-2">
+                      <div className="px-3 py-2 bg-gray-50 border rounded-md flex-1 text-sm">
+                        {(parseFloat(mechanicalRoomSF) || 0).toLocaleString()} SF
+                      </div>
+                      <Button onClick={startEditingMechRoom} variant="outline" size="sm">
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    <p>This amount will be allocated to bays based on their percentage of total floor area.</p>
+                    <p className="text-xs mt-1">The allocated mechanical room area is added to each bay's square footage to calculate rentable area.</p>
+                  </div>
                 </div>
-              </div>
+              )}
             </CardContent>
           </Card>
 

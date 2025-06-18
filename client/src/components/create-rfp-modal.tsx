@@ -359,7 +359,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
               />
 
               {/* Column Range Selector for Automatic Rentable Area Calculation */}
-              {selectedProperty && selectedProperty.columnRanges && selectedProperty.columnRanges.length > 0 ? (
+              {selectedProperty ? (
                 <div className="space-y-4">
                   <ColumnRangeSelector
                     property={selectedProperty}
@@ -380,7 +380,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                           />
                         </FormControl>
                         <p className="text-sm text-muted-foreground">
-                          Automatically calculated from selected column ranges
+                          Automatically calculated from selected bay/column ranges
                         </p>
                         <FormMessage />
                       </FormItem>
@@ -388,25 +388,10 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                   />
                 </div>
               ) : (
-                <FormField
-                  control={form.control}
-                  name="projectArea"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Rentable Square Footage</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="e.g., 10,000 sq ft"
-                          {...field}
-                        />
-                      </FormControl>
-                      <p className="text-sm text-muted-foreground">
-                        Total area that tenant will pay rent on {selectedProperty ? '(manual entry - no column ranges defined)' : ''}
-                      </p>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="p-4 border-2 border-dashed border-gray-300 rounded-lg text-center text-gray-500">
+                  <p className="font-medium">Select a property above</p>
+                  <p className="text-sm">Bay/column selection will appear here for rentable area calculation</p>
+                </div>
               )}
 
               <FormField

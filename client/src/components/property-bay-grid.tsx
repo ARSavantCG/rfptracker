@@ -2,23 +2,24 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Grid, Calculator } from "lucide-react";
+import type { PropertyBay } from "@shared/schema";
 
-interface Bay {
+interface GridBay {
   id: string;
   row: number;
   col: number;
-  width: number;
-  length: number;
-  sqft: number;
-  label?: string;
+  squareFootage: number;
+  bayNumber: string;
+  type: 'office' | 'warehouse' | 'retail' | 'mixed';
+  notes?: string;
 }
 
 interface PropertyBayGridProps {
   propertyId: number;
   propertyName: string;
-  bays: Bay[];
+  bays: PropertyBay[];
   gridLayout: { rows: number; columns: number };
-  onBaysUpdate?: (bays: Bay[], selectedBays: string[]) => void;
+  onBaysUpdate?: (bays: PropertyBay[], selectedBays: string[]) => void;
 }
 
 export default function PropertyBayGrid({ 
@@ -29,13 +30,27 @@ export default function PropertyBayGrid({
 }: PropertyBayGridProps) {
   const [selectedBays, setSelectedBays] = useState<string[]>([]);
   
-  // Create a grid matrix from bays data
+  // Convert PropertyBay to GridBay for display
+  const convertToGridBays = (): GridBay[] => {
+    return bays.map((bay, index) => ({
+      id: bay.id,
+      row: Math.floor(index / gridLayout.columns),
+      col: index % gridLayout.columns,
+      squareFootage: bay.squareFootage,
+      bayNumber: bay.bayNumber,
+      type: bay.type,
+      notes: bay.notes
+    }));
+  };
+
+  // Create a grid matrix from converted bay data
   const createGridMatrix = () => {
-    const matrix: (Bay | null)[][] = [];
+    const gridBays = convertToGridBays();
+    const matrix: (GridBay | null)[][] = [];
     for (let row = 0; row < gridLayout.rows; row++) {
       matrix[row] = [];
       for (let col = 0; col < gridLayout.columns; col++) {
-        const bay = bays.find(b => b.row === row && b.col === col);
+        const bay = gridBays.find(b => b.row === row && b.col === col);
         matrix[row][col] = bay || null;
       }
     }

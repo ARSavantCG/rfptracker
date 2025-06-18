@@ -2,14 +2,16 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Building, MapPin, Plus, Search, Edit } from "lucide-react";
+import { Building, MapPin, Plus, Search, Edit, Grid, ChevronDown, ChevronUp } from "lucide-react";
 import { useState } from "react";
 import Navigation from "@/components/navigation";
 import { PropertyFormModal } from "@/components/property-form-modal";
+import PropertyBayGrid from "@/components/property-bay-grid";
 import type { Property } from "@shared/schema";
 
 export default function Properties() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [expandedProperty, setExpandedProperty] = useState<number | null>(null);
 
   const { data: properties, isLoading } = useQuery<Property[]>({
     queryKey: ["/api/properties"],
@@ -30,6 +32,41 @@ export default function Properties() {
       property.zip
     ].filter(Boolean);
     return parts.join(', ');
+  };
+
+  const togglePropertyExpansion = (propertyId: number) => {
+    setExpandedProperty(expandedProperty === propertyId ? null : propertyId);
+  };
+
+  // Generate sample bay data based on property
+  const generateSampleBays = (property: Property) => {
+    const bays = property.bays || [];
+    const gridLayout = property.gridLayout || { rows: 2, columns: 10 };
+    
+    // If no bays defined, create sample bays based on the attached image pattern
+    if (bays.length === 0) {
+      const sampleBays = [];
+      for (let row = 0; row < gridLayout.rows; row++) {
+        for (let col = 0; col < gridLayout.columns; col++) {
+          // Skip some bays to create realistic layout
+          if (Math.random() > 0.15) { // 85% chance of having a bay
+            const width = 50 + Math.floor(Math.random() * 30); // 50-80 width
+            const length = 80 + Math.floor(Math.random() * 40); // 80-120 length
+            sampleBays.push({
+              id: `${property.id}-${row}-${col}`,
+              row,
+              col,
+              width,
+              length,
+              sqft: width * length,
+              label: `${width}.${length < 100 ? '0' : ''}${length}`
+            });
+          }
+        }
+      }
+      return sampleBays;
+    }
+    return bays;
   };
 
   return (
@@ -148,14 +185,33 @@ export default function Properties() {
                   </div>
                   
                   <div className="flex space-x-2 mt-4">
-                    <Button variant="outline" size="sm" className="flex-1">
-                      View Details
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      Edit
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="flex-1"
+                      onClick={() => togglePropertyExpansion(property.id)}
+                    >
+                      <Grid className="h-4 w-4 mr-2" />
+                      Bay Grid
+                      {expandedProperty === property.id ? 
+                        <ChevronUp className="h-4 w-4 ml-2" /> : 
+                        <ChevronDown className="h-4 w-4 ml-2" />
+                      }
                     </Button>
                   </div>
                 </CardContent>
+                
+                {/* Expandable Bay Grid Section */}
+                {expandedProperty === property.id && (
+                  <div className="border-t">
+                    <PropertyBayGrid
+                      propertyId={property.id}
+                      propertyName={property.propertyName || 'Unnamed Property'}
+                      bays={generateSampleBays(property)}
+                      gridLayout={property.gridLayout || { rows: 2, columns: 10 }}
+                    />
+                  </div>
+                )}
               </Card>
             ))}
           </div>

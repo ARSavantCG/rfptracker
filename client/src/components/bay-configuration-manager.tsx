@@ -25,12 +25,21 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
 
   const updatePropertyMutation = useMutation({
     mutationFn: async (updatedConfigurations: BayConfiguration[]) => {
-      return apiRequest(`/api/properties/${property.id}`, {
+      const response = await fetch(`/api/properties/${property.id}`, {
         method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           bayConfigurations: updatedConfigurations
         })
       });
+      
+      if (!response.ok) {
+        throw new Error('Failed to update bay configurations');
+      }
+      
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/properties"] });

@@ -38,35 +38,8 @@ export default function Properties() {
     setExpandedProperty(expandedProperty === propertyId ? null : propertyId);
   };
 
-  // Generate sample bay data based on property
-  const generateSampleBays = (property: Property): PropertyBay[] => {
-    const bays = property.bays || [];
-    const gridLayout = property.gridLayout || { rows: 2, columns: 10 };
-    
-    // If no bays defined, create sample bays based on the attached image pattern
-    if (bays.length === 0) {
-      const sampleBays: PropertyBay[] = [];
-      for (let row = 0; row < gridLayout.rows; row++) {
-        for (let col = 0; col < gridLayout.columns; col++) {
-          // Skip some bays to create realistic layout
-          if (Math.random() > 0.15) { // 85% chance of having a bay
-            const width = 50 + Math.floor(Math.random() * 30); // 50-80 width
-            const length = 80 + Math.floor(Math.random() * 40); // 80-120 length
-            sampleBays.push({
-              id: `${property.id}-${row}-${col}`,
-              bayNumber: `${width}.${length < 100 ? '0' : ''}${length}`,
-              squareFootage: width * length,
-              type: 'warehouse' as const,
-              notes: `Row ${row + 1}, Col ${col + 1}`,
-              areaLabel: col < 5 ? 'Loading Dock' : col < 15 ? 'Warehouse' : 'Office Area',
-              columnLabel: String.fromCharCode(65 + col) // A, B, C, etc.
-            });
-          }
-        }
-      }
-      return sampleBays;
-    }
-    return bays;
+  const getBayConfigurationCount = (property: Property): number => {
+    return property.bayConfigurations?.length || 0;
   };
 
   return (
@@ -185,33 +158,36 @@ export default function Properties() {
                   </div>
                   
                   <div className="flex space-x-2 mt-4">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="flex-1"
-                      onClick={() => togglePropertyExpansion(property.id)}
-                    >
-                      <Grid className="h-4 w-4 mr-2" />
-                      Bay Grid
-                      {expandedProperty === property.id ? 
-                        <ChevronUp className="h-4 w-4 ml-2" /> : 
-                        <ChevronDown className="h-4 w-4 ml-2" />
-                      }
-                    </Button>
+                    <BayConfigurationManager property={property} />
+                  </div>
+                  
+                  {/* Bay Configuration Summary */}
+                  <div className="mt-4 pt-4 border-t">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600">Bay Configurations:</span>
+                      <span className="font-medium">
+                        {getBayConfigurationCount(property)} configured
+                      </span>
+                    </div>
+                    {property.bayConfigurations && property.bayConfigurations.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {property.bayConfigurations.slice(0, 3).map((bay) => (
+                          <span 
+                            key={bay.id}
+                            className="inline-flex items-center px-2 py-1 rounded-md text-xs bg-blue-100 text-blue-800"
+                          >
+                            {bay.bayName}: {bay.squareFootage.toLocaleString()} SF
+                          </span>
+                        ))}
+                        {property.bayConfigurations.length > 3 && (
+                          <span className="text-xs text-gray-500">
+                            +{property.bayConfigurations.length - 3} more
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </CardContent>
-                
-                {/* Expandable Bay Grid Section */}
-                {expandedProperty === property.id && (
-                  <div className="border-t">
-                    <PropertyBayGrid
-                      propertyId={property.id}
-                      propertyName={property.propertyName || 'Unnamed Property'}
-                      bays={generateSampleBays(property)}
-                      gridLayout={property.gridLayout || { rows: 2, columns: 10 }}
-                    />
-                  </div>
-                )}
               </Card>
             ))}
           </div>

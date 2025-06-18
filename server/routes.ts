@@ -1315,43 +1315,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 const daysUntil = Math.ceil((dueDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
                 
                 let dayDisplay;
-                if (rfp.status === 'completed') {
+                let dueDateDisplay;
+                
+                // Check if RFP is completed based on status or workflow phase
+                const isCompleted = rfp.status === 'completed' || rfp.workflowPhase === 'award';
+                
+                if (isCompleted) {
                   dayDisplay = '-';
-                } else if (daysUntil < 0) {
-                  dayDisplay = Math.abs(daysUntil) + ' days overdue';
+                  dueDateDisplay = '-';
                 } else {
-                  dayDisplay = daysUntil + ' days';
+                  dueDateDisplay = dueDate.toLocaleDateString();
+                  if (daysUntil < 0) {
+                    dayDisplay = Math.abs(daysUntil) + ' days overdue';
+                  } else {
+                    dayDisplay = daysUntil + ' days';
+                  }
                 }
                 
-                // Display workflow phase instead of general status
+                // Display workflow phase or status
                 const workflowPhase = rfp.workflowPhase || 'rfp-entry';
                 let phaseDisplay = '';
                 let phaseClass = '';
                 
-                switch (workflowPhase) {
-                  case 'rfp-entry':
-                    phaseDisplay = 'RFP Entry';
-                    phaseClass = 'status-received';
-                    break;
-                  case 'invitation-to-bid':
-                    phaseDisplay = 'Invitation to Bid';
-                    phaseClass = 'status-inprogress';
-                    break;
-                  case 'bid-collection':
-                    phaseDisplay = 'Bid Collection';
-                    phaseClass = 'status-inprogress';
-                    break;
-                  case 'evaluation':
-                    phaseDisplay = 'Evaluation';
-                    phaseClass = 'status-inprogress';
-                    break;
-                  case 'award':
-                    phaseDisplay = 'Award';
-                    phaseClass = 'status-completed';
-                    break;
-                  default:
-                    phaseDisplay = 'RFP Entry';
-                    phaseClass = 'status-received';
+                // Check if completed by status first, then by workflow phase
+                if (rfp.status === 'completed' || workflowPhase === 'award') {
+                  phaseDisplay = 'Completed';
+                  phaseClass = 'status-completed';
+                } else {
+                  switch (workflowPhase) {
+                    case 'rfp-entry':
+                      phaseDisplay = 'RFP Entry';
+                      phaseClass = 'status-received';
+                      break;
+                    case 'invitation-to-bid':
+                      phaseDisplay = 'Invitation to Bid';
+                      phaseClass = 'status-inprogress';
+                      break;
+                    case 'bid-collection':
+                      phaseDisplay = 'Bid Collection';
+                      phaseClass = 'status-inprogress';
+                      break;
+                    case 'evaluation':
+                      phaseDisplay = 'Evaluation';
+                      phaseClass = 'status-inprogress';
+                      break;
+                    default:
+                      phaseDisplay = 'RFP Entry';
+                      phaseClass = 'status-received';
+                  }
                 }
                 
                 const statusDisplay = '<span class="status-badge ' + phaseClass + '">' + phaseDisplay + '</span>';
@@ -1360,7 +1371,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   '<td><strong>' + (rfp.rfpNumber || 'N/A') + '</strong></td>' +
                   '<td>' + (rfp.projectName || 'N/A') + '</td>' +
                   '<td>' + receivedDate.toLocaleDateString() + '</td>' +
-                  '<td>' + dueDate.toLocaleDateString() + '</td>' +
+                  '<td>' + dueDateDisplay + '</td>' +
                   '<td>' + dayDisplay + '</td>' +
                   '<td>' + statusDisplay + '</td>' +
                   '</tr>';

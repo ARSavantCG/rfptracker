@@ -12,6 +12,8 @@ interface GridBay {
   bayNumber: string;
   type: 'office' | 'warehouse' | 'retail' | 'mixed';
   notes?: string;
+  areaLabel?: string;
+  columnLabel?: string;
 }
 
 interface PropertyBayGridProps {
@@ -39,7 +41,9 @@ export default function PropertyBayGrid({
       squareFootage: bay.squareFootage,
       bayNumber: bay.bayNumber,
       type: bay.type,
-      notes: bay.notes
+      notes: bay.notes,
+      areaLabel: bay.areaLabel,
+      columnLabel: bay.columnLabel
     }));
   };
 

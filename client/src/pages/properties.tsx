@@ -57,7 +57,9 @@ export default function Properties() {
               bayNumber: `${width}.${length < 100 ? '0' : ''}${length}`,
               squareFootage: width * length,
               type: 'warehouse' as const,
-              notes: `Row ${row + 1}, Col ${col + 1}`
+              notes: `Row ${row + 1}, Col ${col + 1}`,
+              areaLabel: col < 5 ? 'Loading Dock' : col < 15 ? 'Warehouse' : 'Office Area',
+              columnLabel: String.fromCharCode(65 + col) // A, B, C, etc.
             });
           }
         }

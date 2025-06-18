@@ -45,7 +45,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
   const queryClient = useQueryClient();
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
-  const [calculatedRentableArea, setCalculatedRentableArea] = useState<number>(0);
+  const [calculatedFloorArea, setCalculatedFloorArea] = useState<number>(0);
   const [selectedBayConfigurations, setSelectedBayConfigurations] = useState<BayConfiguration[]>([]);
 
   const form = useForm<CreateRfpFormData>({

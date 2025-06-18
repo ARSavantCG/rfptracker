@@ -49,10 +49,10 @@ export default function BayConfigurationSelector({
     return bays;
   }).sort((a, b) => a.bayNumber - b.bayNumber);
 
-  // Calculate total rentable area from selected bays
+  // Calculate total floor area from selected individual bays
   const calculateTotalArea = () => {
     return selectedBayIds.reduce((total, bayId) => {
-      const bay = bayConfigurations.find(b => b.id === bayId);
+      const bay = individualBays.find(b => b.id === bayId);
       return total + (bay?.squareFootage || 0);
     }, 0);
   };
@@ -71,7 +71,7 @@ export default function BayConfigurationSelector({
 
   const totalArea = calculateTotalArea();
   const selectedBays = selectedBayIds.map(id => 
-    bayConfigurations.find(bay => bay.id === id)!
+    individualBays.find(bay => bay.id === id)!
   ).filter(Boolean);
 
   // Update parent component when selection changes
@@ -79,7 +79,7 @@ export default function BayConfigurationSelector({
     onRentableAreaChange(totalArea, selectedBays);
   }, [selectedBayIds, totalArea]);
 
-  if (!bayConfigurations.length) {
+  if (!individualBays.length) {
     return (
       <Card>
         <CardHeader>
@@ -92,7 +92,7 @@ export default function BayConfigurationSelector({
           <div className="text-center py-8 text-gray-500">
             <Grid3x3 className="h-12 w-12 mx-auto mb-3 text-gray-400" />
             <p className="font-medium">No bay configurations defined</p>
-            <p className="text-sm">Add bay configurations to the property to enable automatic rentable area calculation.</p>
+            <p className="text-sm">Add bay configurations to the property to enable automatic floor area calculation.</p>
           </div>
         </CardContent>
       </Card>
@@ -108,28 +108,41 @@ export default function BayConfigurationSelector({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Bay Selection Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-          {bayConfigurations.map((bay) => {
-            const isSelected = selectedBayIds.includes(bay.id);
-            return (
-              <Button
-                key={bay.id}
-                variant={isSelected ? "default" : "outline"}
-                className={`h-16 flex flex-col items-center justify-center text-xs p-2 ${
-                  isSelected 
-                    ? "bg-orange-600 hover:bg-orange-700 text-white" 
-                    : "hover:bg-orange-50 border-orange-200"
-                }`}
-                onClick={() => toggleBaySelection(bay.id)}
-              >
-                <div className="font-medium">{bay.bayName}</div>
-                <div className="text-xs opacity-75">
-                  {bay.squareFootage.toLocaleString()} SF
-                </div>
-              </Button>
-            );
-          })}
+        {/* Building-like Bay Layout */}
+        <div className="bg-gray-50 p-4 rounded-lg">
+          <div className="mb-3">
+            <Label className="text-sm font-medium text-gray-700">Building Layout</Label>
+            <p className="text-xs text-gray-500">Click bays to select for floor area calculation</p>
+          </div>
+          
+          {/* Single row layout representing building */}
+          <div className="flex flex-wrap gap-1 justify-center">
+            {individualBays.map((bay) => {
+              const isSelected = selectedBayIds.includes(bay.id);
+              return (
+                <Button
+                  key={bay.id}
+                  variant={isSelected ? "default" : "outline"}
+                  className={`h-20 w-16 flex flex-col items-center justify-center text-xs p-1 ${
+                    isSelected 
+                      ? "bg-orange-600 hover:bg-orange-700 text-white border-orange-700" 
+                      : "hover:bg-orange-50 border-orange-200 bg-white"
+                  }`}
+                  onClick={() => toggleBaySelection(bay.id)}
+                >
+                  <div className="font-medium text-xs">{bay.bayName}</div>
+                  <div className="text-xs opacity-75 leading-tight">
+                    {bay.squareFootage.toLocaleString()} SF
+                  </div>
+                  {(bay.standardDockDoors > 0 || bay.oversizedDockDoors > 0) && (
+                    <div className="text-xs opacity-60 leading-tight">
+                      {bay.standardDockDoors + bay.oversizedDockDoors} doors
+                    </div>
+                  )}
+                </Button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Selection Summary */}
@@ -169,7 +182,7 @@ export default function BayConfigurationSelector({
               <div className="flex items-center gap-2 p-3 bg-orange-50 rounded-lg">
                 <Calculator className="h-4 w-4 text-orange-600" />
                 <span className="font-medium text-orange-900">
-                  Total Rentable Area: {totalArea.toLocaleString()} SF
+                  Total Floor Area: {totalArea.toLocaleString()} SF
                 </span>
               </div>
             </div>

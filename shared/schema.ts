@@ -283,6 +283,8 @@ export type PropertyBay = {
   squareFootage: number;
   type: 'office' | 'warehouse' | 'retail' | 'mixed';
   notes?: string;
+  areaLabel?: string; // Area/section identifier (e.g., "Loading Dock", "Office Area")
+  columnLabel?: string; // Column identifier (e.g., "A", "B", "C" or "1", "2", "3")
 };
 
 // Properties table

@@ -122,15 +122,22 @@ export default function PropertyBayGrid({
                   >
                     {bay ? (
                       <div className="space-y-1">
-                        <div className="font-medium">
+                        <div className="font-medium text-xs">
                           {bay.bayNumber}
                         </div>
+                        {bay.columnLabel && (
+                          <div className="text-xs font-bold text-blue-600">
+                            Col {bay.columnLabel}
+                          </div>
+                        )}
                         <div className="text-xs opacity-75">
                           {bay.squareFootage.toLocaleString()} SF
                         </div>
-                        <div className="text-xs opacity-60">
-                          {bay.type}
-                        </div>
+                        {bay.areaLabel && (
+                          <div className="text-xs opacity-60 truncate" title={bay.areaLabel}>
+                            {bay.areaLabel}
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div className="text-gray-400">-</div>

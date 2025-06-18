@@ -276,7 +276,7 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
                   id="gridRows"
                   type="number"
                   min="1"
-                  max="10"
+                  max="50"
                   value={gridRows}
                   onChange={(e) => updateGridDimensions(parseInt(e.target.value) || 1, gridColumns)}
                 />
@@ -287,10 +287,13 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
                   id="gridColumns"
                   type="number"
                   min="1"
-                  max="10"
+                  max="50"
                   value={gridColumns}
                   onChange={(e) => updateGridDimensions(gridRows, parseInt(e.target.value) || 1)}
                 />
+                <p className="text-xs text-gray-500">
+                  Enter up to 50 columns (e.g., 23 for your project)
+                </p>
               </div>
             </div>
 
@@ -298,15 +301,17 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
             {bays.length > 0 && (
               <div className="space-y-3 max-h-40 overflow-y-auto">
                 <div className="grid grid-cols-12 gap-2 text-xs font-medium text-gray-600 px-3">
-                  <div className="col-span-3">Bay Name</div>
-                  <div className="col-span-2">Sq Ft</div>
-                  <div className="col-span-3">Type</div>
+                  <div className="col-span-2">Bay Name</div>
+                  <div className="col-span-1">Sq Ft</div>
+                  <div className="col-span-2">Type</div>
+                  <div className="col-span-2">Area Label</div>
+                  <div className="col-span-1">Column</div>
                   <div className="col-span-3">Notes</div>
                   <div className="col-span-1"></div>
                 </div>
                 {bays.map((bay) => (
                   <div key={bay.id} className="grid grid-cols-12 gap-2 items-center p-3 border rounded-lg">
-                    <div className="col-span-3">
+                    <div className="col-span-2">
                       <Input
                         value={bay.bayNumber}
                         onChange={(e) => updateBay(bay.id, { bayNumber: e.target.value })}
@@ -314,7 +319,7 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
                         className="h-8"
                       />
                     </div>
-                    <div className="col-span-2">
+                    <div className="col-span-1">
                       <Input
                         type="number"
                         value={bay.squareFootage}
@@ -323,7 +328,7 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
                         className="h-8"
                       />
                     </div>
-                    <div className="col-span-3">
+                    <div className="col-span-2">
                       <Select
                         value={bay.type}
                         onValueChange={(value: 'office' | 'warehouse' | 'retail' | 'mixed') => 
@@ -340,6 +345,22 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
                           <SelectItem value="mixed">Mixed</SelectItem>
                         </SelectContent>
                       </Select>
+                    </div>
+                    <div className="col-span-2">
+                      <Input
+                        value={bay.areaLabel || ''}
+                        onChange={(e) => updateBay(bay.id, { areaLabel: e.target.value })}
+                        placeholder="Area (e.g., Loading Dock)"
+                        className="h-8"
+                      />
+                    </div>
+                    <div className="col-span-1">
+                      <Input
+                        value={bay.columnLabel || ''}
+                        onChange={(e) => updateBay(bay.id, { columnLabel: e.target.value })}
+                        placeholder="Col (A, 1)"
+                        className="h-8"
+                      />
                     </div>
                     <div className="col-span-3">
                       <Input

@@ -6,8 +6,9 @@ import { z } from "zod";
 import { apiRequest } from "@/lib/queryClient";
 import { FileUpload } from "./file-upload";
 import { PropertySelector } from "./property-selector";
+import ColumnRangeSelector from "./column-range-selector";
 import { useToast } from "@/hooks/use-toast";
-import { type Property, type Contact } from "@shared/schema";
+import { type Property, type Contact, type ColumnRange } from "@shared/schema";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,6 +44,9 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
+  const [calculatedRentableArea, setCalculatedRentableArea] = useState<number>(0);
+  const [selectedColumnRanges, setSelectedColumnRanges] = useState<ColumnRange[]>([]);
 
   const form = useForm<CreateRfpFormData>({
     resolver: zodResolver(createRfpSchema),
@@ -132,7 +136,34 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
   const handleClose = () => {
     form.reset();
     setSelectedFiles([]);
+    setSelectedProperty(null);
+    setCalculatedRentableArea(0);
+    setSelectedColumnRanges([]);
     onClose();
+  };
+
+  // Handle property selection and set the selected property for column range selector
+  const handlePropertyChange = (propertyId: string) => {
+    const property = properties.find(p => p.id.toString() === propertyId);
+    setSelectedProperty(property || null);
+    setCalculatedRentableArea(0);
+    setSelectedColumnRanges([]);
+    
+    // Reset project area when property changes
+    form.setValue("projectArea", "");
+  };
+
+  // Handle column range selection and calculate rentable area
+  const handleRentableAreaChange = (area: number, ranges: ColumnRange[]) => {
+    setCalculatedRentableArea(area);
+    setSelectedColumnRanges(ranges);
+    
+    // Auto-populate the project area field with calculated value
+    if (area > 0) {
+      form.setValue("projectArea", `${area.toLocaleString()} SF (calculated from selected column ranges)`);
+    } else {
+      form.setValue("projectArea", "");
+    }
   };
 
   const handleFilesSelected = (files: File[]) => {
@@ -184,7 +215,10 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                       <FormLabel>Property *</FormLabel>
                       <PropertySelector
                         value={field.value}
-                        onChange={field.onChange}
+                        onChange={(value) => {
+                          field.onChange(value);
+                          handlePropertyChange(value);
+                        }}
                       />
                       <FormMessage />
                     </FormItem>

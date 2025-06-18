@@ -409,6 +409,94 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
             )}
           </div>
 
+          {/* Column Range Management Section */}
+          <div className="space-y-4 border-t pt-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-base font-medium">Column Ranges for Rentable Area</Label>
+                <p className="text-sm text-gray-600 mt-1">
+                  Define column ranges and their square footages for automatic rentable area calculation
+                </p>
+              </div>
+              <Button type="button" variant="outline" size="sm" onClick={addColumnRange}>
+                <Plus className="h-4 w-4 mr-1" />
+                Add Range
+              </Button>
+            </div>
+
+            {/* Column Range List */}
+            {columnRanges.length > 0 && (
+              <div className="space-y-3 max-h-40 overflow-y-auto">
+                <div className="grid grid-cols-12 gap-2 text-xs font-medium text-gray-600 px-3">
+                  <div className="col-span-2">Start Column</div>
+                  <div className="col-span-2">End Column</div>
+                  <div className="col-span-2">Square Footage</div>
+                  <div className="col-span-5">Description</div>
+                  <div className="col-span-1"></div>
+                </div>
+                {columnRanges.map((range) => (
+                  <div key={range.id} className="grid grid-cols-12 gap-2 items-center p-3 border rounded-lg">
+                    <div className="col-span-2">
+                      <Input
+                        type="number"
+                        value={range.startColumn}
+                        onChange={(e) => updateColumnRange(range.id, { startColumn: parseInt(e.target.value) || 1 })}
+                        placeholder="Start"
+                        className="h-8"
+                        min="1"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <Input
+                        type="number"
+                        value={range.endColumn}
+                        onChange={(e) => updateColumnRange(range.id, { endColumn: parseInt(e.target.value) || 2 })}
+                        placeholder="End"
+                        className="h-8"
+                        min="1"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <Input
+                        type="number"
+                        value={range.squareFootage}
+                        onChange={(e) => updateColumnRange(range.id, { squareFootage: parseInt(e.target.value) || 0 })}
+                        placeholder="Square Feet"
+                        className="h-8"
+                      />
+                    </div>
+                    <div className="col-span-5">
+                      <Input
+                        value={range.description || ''}
+                        onChange={(e) => updateColumnRange(range.id, { description: e.target.value })}
+                        placeholder="e.g., Between columns 1-2"
+                        className="h-8"
+                      />
+                    </div>
+                    <div className="col-span-1">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => removeColumnRange(range.id)}
+                        className="h-8 w-8 p-0"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {columnRanges.length === 0 && (
+              <div className="text-center py-6 text-gray-500 border-2 border-dashed border-gray-300 rounded-lg">
+                <p className="font-medium">No column ranges defined</p>
+                <p className="text-sm">Add column ranges to enable automatic rentable area calculation for RFPs</p>
+              </div>
+            )}
+          </div>
+
           <div className="flex justify-end space-x-2 pt-4">
             <Button
               type="button"

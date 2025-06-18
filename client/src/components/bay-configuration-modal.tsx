@@ -141,30 +141,29 @@ export function BayConfigurationModal({
               <p className="text-xs text-gray-500">Click bays to select for rentable area calculation</p>
             </div>
             
-            {/* Bay Grid - More space available */}
-            <div className="flex gap-2 justify-start flex-wrap">
+            {/* Bay Grid - Narrow buttons to fit all in one row */}
+            <div className="flex gap-1 justify-start overflow-x-auto">
               {individualBays.map((bay) => {
                 const isSelected = selectedBayIds.includes(bay.id);
                 return (
                   <Button
                     key={bay.id}
                     variant={isSelected ? "default" : "outline"}
-                    className={`h-24 w-20 flex flex-col items-center justify-center text-xs p-2 flex-shrink-0 ${
+                    className={`h-20 w-10 flex flex-col items-center justify-center text-xs p-1 flex-shrink-0 ${
                       isSelected 
                         ? "bg-orange-600 hover:bg-orange-700 text-white border-orange-700" 
                         : "hover:bg-orange-50 border-orange-200 bg-white"
                     }`}
                     onClick={() => toggleBaySelection(bay.id)}
                   >
-                    <div className="font-bold text-sm mb-1">{bay.bayName}</div>
-                    <div className="text-xs opacity-75 leading-tight">
-                      {((bay.rentableSquareFootage || bay.squareFootage) / 1000).toFixed(0)}K SF
-                    </div>
-                    {(bay.standardDockDoors > 0 || bay.oversizedDockDoors > 0) && (
-                      <div className="text-xs opacity-60 leading-tight mt-1">
-                        {bay.standardDockDoors + bay.oversizedDockDoors} Doors
+                    <div className="flex flex-col items-center justify-center h-full">
+                      <div className="font-bold text-xs mb-1">
+                        {bay.bayName.replace('Bay ', '')}
                       </div>
-                    )}
+                      <div className="text-xs opacity-75">
+                        {((bay.rentableSquareFootage || bay.squareFootage) / 1000).toFixed(0)}K
+                      </div>
+                    </div>
                   </Button>
                 );
               })}

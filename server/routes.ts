@@ -1309,7 +1309,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
               ${(rfpData || []).map((rfp: any) => {
                 const dueDate = new Date(rfp.internalDueDate);
                 const daysUntil = Math.ceil((dueDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-                const statusClass = `status-${(rfp.status || '').replace('-', '')}`;
                 
                 let dayDisplay;
                 if (rfp.status === 'completed') {
@@ -1320,9 +1319,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   dayDisplay = daysUntil + ' days';
                 }
                 
-                // Handle status display - ensure we have a status or show as blank
-                const statusText = rfp.status ? rfp.status.replace('-', ' ').toUpperCase() : '';
-                const statusDisplay = statusText ? '<span class="status-badge ' + statusClass + '">' + statusText + '</span>' : '';
+                // Display workflow phase instead of general status
+                const workflowPhase = rfp.workflowPhase || 'received';
+                let phaseDisplay = '';
+                let phaseClass = '';
+                
+                switch (workflowPhase) {
+                  case 'received':
+                    phaseDisplay = 'Received';
+                    phaseClass = 'status-received';
+                    break;
+                  case 'review':
+                    phaseDisplay = 'Review';
+                    phaseClass = 'status-inprogress';
+                    break;
+                  case 'validation':
+                    phaseDisplay = 'Validation';
+                    phaseClass = 'status-inprogress';
+                    break;
+                  case 'invitation':
+                    phaseDisplay = 'Invitation to Bid';
+                    phaseClass = 'status-inprogress';
+                    break;
+                  case 'bidCollection':
+                    phaseDisplay = 'Bid Collection';
+                    phaseClass = 'status-inprogress';
+                    break;
+                  case 'evaluation':
+                    phaseDisplay = 'Evaluation';
+                    phaseClass = 'status-inprogress';
+                    break;
+                  case 'completion':
+                    phaseDisplay = 'Completed';
+                    phaseClass = 'status-completed';
+                    break;
+                  default:
+                    phaseDisplay = 'Received';
+                    phaseClass = 'status-received';
+                }
+                
+                const statusDisplay = '<span class="status-badge ' + phaseClass + '">' + phaseDisplay + '</span>';
                 
                 return '<tr>' +
                   '<td><strong>' + (rfp.rfpNumber || 'N/A') + '</strong></td>' +

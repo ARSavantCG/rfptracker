@@ -358,25 +358,56 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="projectArea"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Rentable Square Footage</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="e.g., 10,000 sq ft"
-                        {...field}
-                      />
-                    </FormControl>
-                    <p className="text-sm text-muted-foreground">
-                      Total area that tenant will pay rent on
-                    </p>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {/* Column Range Selector for Automatic Rentable Area Calculation */}
+              {selectedProperty && selectedProperty.columnRanges && selectedProperty.columnRanges.length > 0 ? (
+                <div className="space-y-4">
+                  <ColumnRangeSelector
+                    property={selectedProperty}
+                    onRentableAreaChange={handleRentableAreaChange}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="projectArea"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Calculated Rentable Area</FormLabel>
+                        <FormControl>
+                          <Input 
+                            {...field}
+                            readOnly
+                            className="bg-gray-50"
+                          />
+                        </FormControl>
+                        <p className="text-sm text-muted-foreground">
+                          Automatically calculated from selected column ranges
+                        </p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              ) : (
+                <FormField
+                  control={form.control}
+                  name="projectArea"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Rentable Square Footage</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="e.g., 10,000 sq ft"
+                          {...field}
+                        />
+                      </FormControl>
+                      <p className="text-sm text-muted-foreground">
+                        Total area that tenant will pay rent on {selectedProperty ? '(manual entry - no column ranges defined)' : ''}
+                      </p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
 
               <FormField
                 control={form.control}

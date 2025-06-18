@@ -281,6 +281,8 @@ export type BayConfiguration = {
   id: string;
   bayName: string; // e.g., "Bay 1-2", "Bay 2-3", etc.
   squareFootage: number;
+  standardDockDoors: number; // Count of standard overhead dock doors
+  oversizedDockDoors: number; // Count of oversized dock doors
 };
 
 // Properties table

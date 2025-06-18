@@ -21,7 +21,7 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
   const [bayConfigurations, setBayConfigurations] = useState<BayConfiguration[]>(
     property.bayConfigurations || []
   );
-  const [newBay, setNewBay] = useState({ startBay: "", endBay: "", squareFootage: "" });
+  const [newBay, setNewBay] = useState({ startBay: "", endBay: "", squareFootage: "", standardDockDoors: "", oversizedDockDoors: "" });
   const [editingBay, setEditingBay] = useState<BayConfiguration | null>(null);
   const [showBayDetails, setShowBayDetails] = useState(false);
 
@@ -103,7 +103,9 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
     const newBayConfig: BayConfiguration = {
       id: Date.now().toString(),
       bayName: `Bay ${startBayNum}-${endBayNum}`,
-      squareFootage: parseInt(newBay.squareFootage)
+      squareFootage: parseInt(newBay.squareFootage),
+      standardDockDoors: parseInt(newBay.standardDockDoors) || 0,
+      oversizedDockDoors: parseInt(newBay.oversizedDockDoors) || 0
     };
 
     setBayConfigurations([...bayConfigurations, newBayConfig]);
@@ -112,7 +114,9 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
     setNewBay({ 
       startBay: endBayNum.toString(), 
       endBay: "", 
-      squareFootage: "" 
+      squareFootage: "",
+      standardDockDoors: "",
+      oversizedDockDoors: ""
     });
   };
 
@@ -150,7 +154,9 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
     const newBayConfig: BayConfiguration = {
       id: `bay-${Date.now()}`,
       bayName: `Bay ${endBay}-${endBay + 1}`, // Default to single bay increment
-      squareFootage: bay.squareFootage
+      squareFootage: bay.squareFootage,
+      standardDockDoors: bay.standardDockDoors,
+      oversizedDockDoors: bay.oversizedDockDoors
     };
 
     setBayConfigurations([...bayConfigurations, newBayConfig]);
@@ -159,7 +165,9 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
     setNewBay({
       startBay: (endBay + 1).toString(),
       endBay: "",
-      squareFootage: ""
+      squareFootage: "",
+      standardDockDoors: "",
+      oversizedDockDoors: ""
     });
 
     toast({
@@ -177,7 +185,9 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
     setNewBay({
       startBay,
       endBay,
-      squareFootage: bay.squareFootage.toString()
+      squareFootage: bay.squareFootage.toString(),
+      standardDockDoors: bay.standardDockDoors?.toString() || "0",
+      oversizedDockDoors: bay.oversizedDockDoors?.toString() || "0"
     });
   };
 
@@ -206,7 +216,9 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
     const updatedBay: BayConfiguration = {
       ...editingBay,
       bayName: `Bay ${startBayNum}-${endBayNum}`,
-      squareFootage: parseInt(newBay.squareFootage)
+      squareFootage: parseInt(newBay.squareFootage),
+      standardDockDoors: parseInt(newBay.standardDockDoors) || 0,
+      oversizedDockDoors: parseInt(newBay.oversizedDockDoors) || 0
     };
 
     setBayConfigurations(bayConfigurations.map(bay => 

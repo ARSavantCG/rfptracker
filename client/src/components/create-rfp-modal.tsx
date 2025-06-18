@@ -530,6 +530,17 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
           </form>
         </Form>
       </DialogContent>
+
+      {/* Bay Configuration Modal */}
+      {selectedProperty && (
+        <BayConfigurationModal
+          isOpen={bayConfigModalOpen}
+          onClose={() => setBayConfigModalOpen(false)}
+          property={selectedProperty}
+          onConfirm={handleFloorAreaChange}
+          initialSelectedBays={selectedBayConfigurations}
+        />
+      )}
     </Dialog>
   );
 }

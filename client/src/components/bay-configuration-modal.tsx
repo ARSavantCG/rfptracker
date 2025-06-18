@@ -66,21 +66,8 @@ export function BayConfigurationModal({
     );
   }
 
-  // Create individual bays from bay configurations
-  const individualBays = property.bayConfigurations.flatMap((config) => {
-    const bays: BayConfiguration[] = [];
-    for (let i = config.startColumn; i <= config.endColumn; i += 2) {
-      const endCol = Math.min(i + 1, config.endColumn);
-      bays.push({
-        ...config,
-        id: `${config.id}-${i}`,
-        bayName: `Bay ${Math.floor((i - 1) / 2) + 1}`,
-        startColumn: i,
-        endColumn: endCol
-      });
-    }
-    return bays;
-  });
+  // Use the bay configurations directly as they already represent individual bays
+  const individualBays = property.bayConfigurations;
 
   const toggleBaySelection = (bayId: string) => {
     const bay = individualBays.find(b => b.id === bayId);

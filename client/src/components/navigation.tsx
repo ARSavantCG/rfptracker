@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Home, FileText, BarChart3, Users, Building } from "lucide-react";
+import { Home, FileText, BarChart3, Users, Building, Calculator } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function Navigation() {
@@ -10,6 +10,7 @@ export default function Navigation() {
     { path: "/", label: "Dashboard", icon: Home },
     { path: "/contacts", label: "Contacts", icon: Users },
     { path: "/properties", label: "Properties", icon: Building },
+    { path: "/bay-calculator", label: "Bay Calculator", icon: Calculator },
     { path: "/reports", label: "Reports", icon: BarChart3 },
   ];
 

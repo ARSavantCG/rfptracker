@@ -258,6 +258,114 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
             </p>
           </div>
 
+          {/* Bay Management Section */}
+          <div className="space-y-4 border-t pt-4">
+            <div className="flex items-center justify-between">
+              <Label className="text-base font-medium">Bay Configuration</Label>
+              <Button type="button" variant="outline" size="sm" onClick={addBay}>
+                <Plus className="h-4 w-4 mr-1" />
+                Add Bay
+              </Button>
+            </div>
+            
+            {/* Grid Layout Controls */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="gridRows">Grid Rows</Label>
+                <Input
+                  id="gridRows"
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={gridRows}
+                  onChange={(e) => updateGridDimensions(parseInt(e.target.value) || 1, gridColumns)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="gridColumns">Grid Columns</Label>
+                <Input
+                  id="gridColumns"
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={gridColumns}
+                  onChange={(e) => updateGridDimensions(gridRows, parseInt(e.target.value) || 1)}
+                />
+              </div>
+            </div>
+
+            {/* Bay List */}
+            {bays.length > 0 && (
+              <div className="space-y-3 max-h-40 overflow-y-auto">
+                <div className="grid grid-cols-12 gap-2 text-xs font-medium text-gray-600 px-3">
+                  <div className="col-span-3">Bay Name</div>
+                  <div className="col-span-2">Sq Ft</div>
+                  <div className="col-span-3">Type</div>
+                  <div className="col-span-3">Notes</div>
+                  <div className="col-span-1"></div>
+                </div>
+                {bays.map((bay) => (
+                  <div key={bay.id} className="grid grid-cols-12 gap-2 items-center p-3 border rounded-lg">
+                    <div className="col-span-3">
+                      <Input
+                        value={bay.bayNumber}
+                        onChange={(e) => updateBay(bay.id, { bayNumber: e.target.value })}
+                        placeholder="Bay Name"
+                        className="h-8"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <Input
+                        type="number"
+                        value={bay.squareFootage}
+                        onChange={(e) => updateBay(bay.id, { squareFootage: parseInt(e.target.value) || 0 })}
+                        placeholder="Sq Ft"
+                        className="h-8"
+                      />
+                    </div>
+                    <div className="col-span-3">
+                      <Select
+                        value={bay.type}
+                        onValueChange={(value: 'office' | 'warehouse' | 'retail' | 'mixed') => 
+                          updateBay(bay.id, { type: value })
+                        }
+                      >
+                        <SelectTrigger className="h-8">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="office">Office</SelectItem>
+                          <SelectItem value="warehouse">Warehouse</SelectItem>
+                          <SelectItem value="retail">Retail</SelectItem>
+                          <SelectItem value="mixed">Mixed</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="col-span-3">
+                      <Input
+                        value={bay.notes || ''}
+                        onChange={(e) => updateBay(bay.id, { notes: e.target.value })}
+                        placeholder="Notes"
+                        className="h-8"
+                      />
+                    </div>
+                    <div className="col-span-1">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => removeBay(bay.id)}
+                        className="h-8 w-8 p-0"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div className="flex justify-end space-x-2 pt-4">
             <Button
               type="button"

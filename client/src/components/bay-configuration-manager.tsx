@@ -21,7 +21,7 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
   const [bayConfigurations, setBayConfigurations] = useState<BayConfiguration[]>(
     property.bayConfigurations || []
   );
-  const [newBay, setNewBay] = useState({ bayName: "", squareFootage: "" });
+  const [newBay, setNewBay] = useState({ bayRange: "", squareFootage: "" });
 
   const updatePropertyMutation = useMutation({
     mutationFn: async (updatedConfigurations: BayConfiguration[]) => {
@@ -59,10 +59,10 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
   });
 
   const addBayConfiguration = () => {
-    if (!newBay.bayName || !newBay.squareFootage) {
+    if (!newBay.bayRange || !newBay.squareFootage) {
       toast({
         title: "Error",
-        description: "Please fill in both bay name and square footage",
+        description: "Please fill in both bay range and square footage",
         variant: "destructive",
       });
       return;
@@ -70,13 +70,16 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
 
     const newBayConfig: BayConfiguration = {
       id: Date.now().toString(),
-      bayName: newBay.bayName,
+      bayName: `Bay ${newBay.bayRange}`, // Automatically prefix with "Bay"
       squareFootage: parseInt(newBay.squareFootage)
     };
 
     setBayConfigurations([...bayConfigurations, newBayConfig]);
-    setNewBay({ bayName: "", squareFootage: "" });
+    setNewBay({ bayRange: "", squareFootage: "" });
   };
+
+  // Calculate total square footage
+  const totalSquareFootage = bayConfigurations.reduce((total, bay) => total + bay.squareFootage, 0);
 
   const removeBayConfiguration = (bayId: string) => {
     setBayConfigurations(bayConfigurations.filter(bay => bay.id !== bayId));
@@ -106,31 +109,36 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
               <CardTitle className="text-lg">Add Bay Configuration</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4 items-end">
                 <div className="space-y-2">
-                  <Label htmlFor="bayName">Bay Name</Label>
-                  <Input
-                    id="bayName"
-                    placeholder="e.g., Bay 1-2, Bay 2-3"
-                    value={newBay.bayName}
-                    onChange={(e) => setNewBay({ ...newBay, bayName: e.target.value })}
-                  />
+                  <Label className="text-sm font-medium">Bay</Label>
+                  <div className="flex items-center">
+                    <span className="bg-gray-100 border border-r-0 rounded-l-md px-3 py-2 text-sm text-gray-600">Bay</span>
+                    <Input
+                      placeholder="1-2"
+                      value={newBay.bayRange}
+                      onChange={(e) => setNewBay({ ...newBay, bayRange: e.target.value })}
+                      className="rounded-l-none"
+                    />
+                  </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="squareFootage">Square Footage</Label>
+                  <Label htmlFor="squareFootage" className="text-sm font-medium">Square Footage</Label>
                   <Input
                     id="squareFootage"
                     type="number"
-                    placeholder="e.g., 15301"
+                    placeholder="15301"
                     value={newBay.squareFootage}
                     onChange={(e) => setNewBay({ ...newBay, squareFootage: e.target.value })}
                   />
                 </div>
+                <div>
+                  <Button onClick={addBayConfiguration} className="w-full">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add
+                  </Button>
+                </div>
               </div>
-              <Button onClick={addBayConfiguration} className="w-full">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Bay Configuration
-              </Button>
             </CardContent>
           </Card>
 
@@ -146,28 +154,41 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                   <p className="text-sm">Add bay configurations above to enable automatic rentable area calculation in RFPs</p>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-4">
+                  {/* Table Header */}
+                  <div className="grid grid-cols-4 gap-4 pb-2 border-b font-medium text-sm text-gray-600">
+                    <div>Bay</div>
+                    <div>Range</div>
+                    <div className="text-right">Square Footage</div>
+                    <div></div>
+                  </div>
+                  
+                  {/* Bay Rows */}
                   {bayConfigurations.map((bay) => (
-                    <div
-                      key={bay.id}
-                      className="flex items-center justify-between p-3 border rounded-lg bg-gray-50"
-                    >
-                      <div className="flex-1">
-                        <div className="font-medium">{bay.bayName}</div>
-                        <div className="text-sm text-gray-600">
-                          {bay.squareFootage.toLocaleString()} SF
-                        </div>
+                    <div key={bay.id} className="grid grid-cols-4 gap-4 items-center py-2">
+                      <div className="text-sm font-medium">Bay</div>
+                      <div className="text-sm">{bay.bayName.replace('Bay ', '')}</div>
+                      <div className="text-sm text-right">{bay.squareFootage.toLocaleString()} SF</div>
+                      <div className="flex justify-end">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeBayConfiguration(bay.id)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50 h-8 w-8 p-0"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeBayConfiguration(bay.id)}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
                     </div>
                   ))}
+                  
+                  {/* Total Row */}
+                  <div className="grid grid-cols-4 gap-4 pt-2 border-t font-medium">
+                    <div></div>
+                    <div className="text-sm">Total</div>
+                    <div className="text-sm text-right">{totalSquareFootage.toLocaleString()} SF</div>
+                    <div></div>
+                  </div>
                 </div>
               )}
             </CardContent>

@@ -146,25 +146,27 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
   };
 
   const copyBayConfiguration = (bay: BayConfiguration) => {
-    // Extract end number from the bay name to continue numbering
-    const match = bay.bayName.match(/Bay (\d+)-(\d+)/);
-    const endBay = match ? parseInt(match[2]) : getNextStartingBay();
+    // Get the next sequential bay number (not based on the copied bay)
+    const nextStartBay = getNextStartingBay();
+    const nextEndBay = nextStartBay + 1;
     
-    // Create a new bay configuration starting from the end of the copied bay
+    // Create a new bay configuration with the next sequential numbering
     const newBayConfig: BayConfiguration = {
       id: `bay-${Date.now()}`,
-      bayName: `Bay ${endBay}-${endBay + 1}`, // Default to single bay increment
+      bayName: `Bay ${nextStartBay}-${nextEndBay}`,
       squareFootage: bay.squareFootage,
       standardDockDoors: bay.standardDockDoors,
       oversizedDockDoors: bay.oversizedDockDoors
     };
 
-    setBayConfigurations([...bayConfigurations, newBayConfig]);
+    const updatedBayConfigurations = [...bayConfigurations, newBayConfig];
+    setBayConfigurations(updatedBayConfigurations);
     
-    // Set the form with the next bay number for further editing if needed
+    // Calculate the next start bay based on the updated list
+    const newNextStart = nextEndBay; // The end of what we just added becomes the start of the next
     setNewBay({
-      startBay: (endBay + 1).toString(),
-      endBay: "",
+      startBay: newNextStart.toString(),
+      endBay: (newNextStart + 1).toString(),
       squareFootage: "",
       standardDockDoors: "",
       oversizedDockDoors: ""
@@ -172,7 +174,7 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
 
     toast({
       title: "Bay Copied",
-      description: `${newBayConfig.bayName} added. Continue from Bay ${endBay + 1}.`,
+      description: `${newBayConfig.bayName} created with copied properties.`,
     });
   };
 

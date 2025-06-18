@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Trash2, Edit, Settings } from "lucide-react";
+import { Plus, Trash2, Edit, Settings, Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { Property, BayConfiguration } from "@shared/schema";
@@ -22,6 +22,7 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
     property.bayConfigurations || []
   );
   const [newBay, setNewBay] = useState({ startBay: "", endBay: "", squareFootage: "" });
+  const [editingBay, setEditingBay] = useState<BayConfiguration | null>(null);
 
   const updatePropertyMutation = useMutation({
     mutationFn: async (updatedConfigurations: BayConfiguration[]) => {
@@ -129,6 +130,94 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
     setBayConfigurations(bayConfigurations.filter(bay => bay.id !== bayId));
   };
 
+  const copyBayConfiguration = (bay: BayConfiguration) => {
+    // Extract end number from the bay name to continue numbering
+    const match = bay.bayName.match(/Bay (\d+)-(\d+)/);
+    const endBay = match ? parseInt(match[2]) : getNextStartingBay();
+    
+    // Set the form with the next bay number and same square footage
+    setNewBay({
+      startBay: endBay.toString(),
+      endBay: "",
+      squareFootage: bay.squareFootage.toString()
+    });
+
+    toast({
+      title: "Bay Copied",
+      description: `Bay configuration copied. Continue from Bay ${endBay}.`,
+    });
+  };
+
+  const editBayConfiguration = (bay: BayConfiguration) => {
+    const match = bay.bayName.match(/Bay (\d+)-(\d+)/);
+    const startBay = match ? match[1] : "";
+    const endBay = match ? match[2] : "";
+    
+    setEditingBay(bay);
+    setNewBay({
+      startBay,
+      endBay,
+      squareFootage: bay.squareFootage.toString()
+    });
+  };
+
+  const saveEditedBay = () => {
+    if (!editingBay || !newBay.startBay || !newBay.endBay || !newBay.squareFootage) {
+      toast({
+        title: "Error",
+        description: "Please fill in all fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const startBayNum = parseInt(newBay.startBay);
+    const endBayNum = parseInt(newBay.endBay);
+
+    if (endBayNum <= startBayNum) {
+      toast({
+        title: "Error",
+        description: "End bay must be greater than start bay",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const updatedBay: BayConfiguration = {
+      ...editingBay,
+      bayName: `Bay ${startBayNum}-${endBayNum}`,
+      squareFootage: parseInt(newBay.squareFootage)
+    };
+
+    setBayConfigurations(bayConfigurations.map(bay => 
+      bay.id === editingBay.id ? updatedBay : bay
+    ));
+
+    // Reset form
+    setEditingBay(null);
+    const nextStart = getNextStartingBay();
+    setNewBay({ 
+      startBay: nextStart.toString(), 
+      endBay: "", 
+      squareFootage: "" 
+    });
+
+    toast({
+      title: "Success",
+      description: "Bay configuration updated successfully",
+    });
+  };
+
+  const cancelEdit = () => {
+    setEditingBay(null);
+    const nextStart = getNextStartingBay();
+    setNewBay({ 
+      startBay: nextStart.toString(), 
+      endBay: "", 
+      squareFootage: "" 
+    });
+  };
+
   const saveBayConfigurations = () => {
     updatePropertyMutation.mutate(bayConfigurations);
   };
@@ -190,11 +279,23 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                     onChange={(e) => setNewBay({ ...newBay, squareFootage: e.target.value })}
                   />
                 </div>
-                <div>
-                  <Button onClick={addBayConfiguration} className="w-full">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add
-                  </Button>
+                <div className="flex gap-2">
+                  {editingBay ? (
+                    <>
+                      <Button onClick={saveEditedBay} className="flex-1">
+                        <Edit className="h-4 w-4 mr-2" />
+                        Save
+                      </Button>
+                      <Button onClick={cancelEdit} variant="outline" className="flex-1">
+                        Cancel
+                      </Button>
+                    </>
+                  ) : (
+                    <Button onClick={addBayConfiguration} className="w-full">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add
+                    </Button>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -214,11 +315,12 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
               ) : (
                 <div className="space-y-4">
                   {/* Table Header */}
-                  <div className="grid grid-cols-5 gap-4 pb-2 border-b font-medium text-sm text-gray-600">
+                  <div className="grid grid-cols-6 gap-4 pb-2 border-b font-medium text-sm text-gray-600">
                     <div>Start Bay</div>
                     <div>End Bay</div>
                     <div>Range</div>
                     <div className="text-right">Square Footage</div>
+                    <div className="text-center">Actions</div>
                     <div></div>
                   </div>
                   
@@ -229,17 +331,38 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                     const endBay = match ? match[2] : '';
                     
                     return (
-                      <div key={bay.id} className="grid grid-cols-5 gap-4 items-center py-2">
+                      <div key={bay.id} className="grid grid-cols-6 gap-4 items-center py-2">
                         <div className="text-sm">Bay {startBay}</div>
                         <div className="text-sm">Bay {endBay}</div>
                         <div className="text-sm font-medium">{bay.bayName}</div>
                         <div className="text-sm text-right">{bay.squareFootage.toLocaleString()} SF</div>
+                        <div className="flex justify-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => copyBayConfiguration(bay)}
+                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 h-8 w-8 p-0"
+                            title="Copy bay"
+                          >
+                            <Copy className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => editBayConfiguration(bay)}
+                            className="text-gray-600 hover:text-gray-700 hover:bg-gray-50 h-8 w-8 p-0"
+                            title="Edit bay"
+                          >
+                            <Edit className="h-3 w-3" />
+                          </Button>
+                        </div>
                         <div className="flex justify-end">
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => removeBayConfiguration(bay.id)}
                             className="text-red-600 hover:text-red-700 hover:bg-red-50 h-8 w-8 p-0"
+                            title="Delete bay"
                           >
                             <Trash2 className="h-3 w-3" />
                           </Button>
@@ -249,11 +372,12 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                   })}
                   
                   {/* Total Row */}
-                  <div className="grid grid-cols-5 gap-4 pt-2 border-t font-medium">
+                  <div className="grid grid-cols-6 gap-4 pt-2 border-t font-medium">
                     <div></div>
                     <div></div>
                     <div className="text-sm">Total</div>
                     <div className="text-sm text-right">{totalSquareFootage.toLocaleString()} SF</div>
+                    <div></div>
                     <div></div>
                   </div>
                 </div>

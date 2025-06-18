@@ -283,6 +283,8 @@ export type BayConfiguration = {
   squareFootage: number;
   standardDockDoors: number; // Count of standard overhead dock doors
   oversizedDockDoors: number; // Count of oversized dock doors
+  mechanicalRoomAllocation?: number; // Calculated mechanical room square footage allocation for this bay
+  rentableSquareFootage?: number; // Calculated rentable area (squareFootage + mechanicalRoomAllocation)
 };
 
 // Properties table
@@ -296,6 +298,7 @@ export const properties = pgTable("properties", {
   zip: text("zip").notNull(),
   displayName: text("display_name").notNull(), // Computed field like "Property Name - Building A, 123 Main St, New York, NY 10001"
   bayConfigurations: json("bay_configurations").$type<BayConfiguration[]>().default([]), // Simple bay configurations with square footage
+  mechanicalRoomSquareFootage: integer("mechanical_room_square_footage").default(0), // Total mechanical room square footage for allocation
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

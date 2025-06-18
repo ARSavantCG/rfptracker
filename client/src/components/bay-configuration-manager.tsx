@@ -21,6 +21,9 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
   const [bayConfigurations, setBayConfigurations] = useState<BayConfiguration[]>(
     property.bayConfigurations || []
   );
+  const [mechanicalRoomSF, setMechanicalRoomSF] = useState<string>(
+    property.mechanicalRoomSquareFootage?.toString() || "0"
+  );
   const [newBay, setNewBay] = useState({ startBay: "", endBay: "", squareFootage: "", standardDockDoors: "", oversizedDockDoors: "" });
   const [editingBay, setEditingBay] = useState<BayConfiguration | null>(null);
   const [showBayDetails, setShowBayDetails] = useState(false);
@@ -37,16 +40,31 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
     }
   }, [bayConfigurations, editingBay]);
 
+  // Calculate mechanical room allocation and rentable square footage for all bays
+  const calculateBayAllocations = (bays: BayConfiguration[], mechanicalSF: number): BayConfiguration[] => {
+    const totalFloorArea = bays.reduce((sum, bay) => sum + bay.squareFootage, 0);
+    
+    return bays.map(bay => {
+      const allocationPercentage = totalFloorArea > 0 ? bay.squareFootage / totalFloorArea : 0;
+      const mechanicalRoomAllocation = Math.round(mechanicalSF * allocationPercentage * 100) / 100;
+      const rentableSquareFootage = bay.squareFootage + mechanicalRoomAllocation;
+      
+      return {
+        ...bay,
+        mechanicalRoomAllocation,
+        rentableSquareFootage
+      };
+    });
+  };
+
   const updatePropertyMutation = useMutation({
-    mutationFn: async (updatedConfigurations: BayConfiguration[]) => {
+    mutationFn: async (data: { bayConfigurations: BayConfiguration[], mechanicalRoomSquareFootage: number }) => {
       const response = await fetch(`/api/properties/${property.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          bayConfigurations: updatedConfigurations
-        })
+        body: JSON.stringify(data)
       });
       
       if (!response.ok) {

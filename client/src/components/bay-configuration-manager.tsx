@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Trash2, Edit, Settings, Copy } from "lucide-react";
+import { Plus, Trash2, Edit, Settings, Copy, ChevronDown, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { Property, BayConfiguration } from "@shared/schema";
@@ -23,6 +23,7 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
   );
   const [newBay, setNewBay] = useState({ startBay: "", endBay: "", squareFootage: "" });
   const [editingBay, setEditingBay] = useState<BayConfiguration | null>(null);
+  const [showBayDetails, setShowBayDetails] = useState(false);
 
   const updatePropertyMutation = useMutation({
     mutationFn: async (updatedConfigurations: BayConfiguration[]) => {
@@ -340,68 +341,91 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {/* Table Header */}
-                  <div className="grid grid-cols-5 gap-4 pb-2 border-b font-medium text-sm text-gray-600">
-                    <div>Start Bay</div>
-                    <div>End Bay</div>
-                    <div>Range</div>
-                    <div className="text-right">Square Footage</div>
-                    <div className="text-center">Actions</div>
+                  {/* Clickable Count Summary */}
+                  <div className="flex items-center justify-between">
+                    <button
+                      onClick={() => setShowBayDetails(!showBayDetails)}
+                      className="flex items-center gap-2 text-blue-600 hover:text-blue-700 transition-colors"
+                    >
+                      {showBayDetails ? (
+                        <ChevronDown className="h-4 w-4" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4" />
+                      )}
+                      <span className="font-medium">{bayConfigurations.length} configured</span>
+                    </button>
+                    <div className="text-sm text-gray-600">
+                      Total: {totalSquareFootage.toLocaleString()} SF
+                    </div>
                   </div>
-                  
-                  {/* Bay Rows */}
-                  {bayConfigurations.map((bay) => {
-                    const match = bay.bayName.match(/Bay (\d+)-(\d+)/);
-                    const startBay = match ? match[1] : '';
-                    const endBay = match ? match[2] : '';
-                    
-                    return (
-                      <div key={bay.id} className="grid grid-cols-5 gap-4 items-center py-2">
-                        <div className="text-sm">Bay {startBay}</div>
-                        <div className="text-sm">Bay {endBay}</div>
-                        <div className="text-sm font-medium">{bay.bayName}</div>
-                        <div className="text-sm text-right">{bay.squareFootage.toLocaleString()} SF</div>
-                        <div className="flex justify-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => copyBayConfiguration(bay)}
-                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 h-8 w-8 p-0"
-                            title="Copy bay"
-                          >
-                            <Copy className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => editBayConfiguration(bay)}
-                            className="text-gray-600 hover:text-gray-700 hover:bg-gray-50 h-8 w-8 p-0"
-                            title="Edit bay"
-                          >
-                            <Edit className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeBayConfiguration(bay.id)}
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50 h-8 w-8 p-0"
-                            title="Delete bay"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
+
+                  {/* Expandable Bay Details */}
+                  {showBayDetails && (
+                    <div className="space-y-4">
+                      {/* Table Header */}
+                      <div className="grid grid-cols-5 gap-4 pb-2 border-b font-medium text-sm text-gray-600">
+                        <div>Start Bay</div>
+                        <div>End Bay</div>
+                        <div>Range</div>
+                        <div className="text-right">Square Footage</div>
+                        <div className="text-center">Actions</div>
                       </div>
-                    );
-                  })}
-                  
-                  {/* Total Row */}
-                  <div className="grid grid-cols-5 gap-4 pt-2 border-t font-medium">
-                    <div></div>
-                    <div></div>
-                    <div className="text-sm">Total</div>
-                    <div className="text-sm text-right">{totalSquareFootage.toLocaleString()} SF</div>
-                    <div></div>
-                  </div>
+                      
+                      {/* Bay Rows */}
+                      {bayConfigurations.map((bay) => {
+                        const match = bay.bayName.match(/Bay (\d+)-(\d+)/);
+                        const startBay = match ? match[1] : '';
+                        const endBay = match ? match[2] : '';
+                        
+                        return (
+                          <div key={bay.id} className="grid grid-cols-5 gap-4 items-center py-2">
+                            <div className="text-sm">Bay {startBay}</div>
+                            <div className="text-sm">Bay {endBay}</div>
+                            <div className="text-sm font-medium">{bay.bayName}</div>
+                            <div className="text-sm text-right">{bay.squareFootage.toLocaleString()} SF</div>
+                            <div className="flex justify-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => copyBayConfiguration(bay)}
+                                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 h-8 w-8 p-0"
+                                title="Copy bay"
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => editBayConfiguration(bay)}
+                                className="text-gray-600 hover:text-gray-700 hover:bg-gray-50 h-8 w-8 p-0"
+                                title="Edit bay"
+                              >
+                                <Edit className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeBayConfiguration(bay.id)}
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50 h-8 w-8 p-0"
+                                title="Delete bay"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                      
+                      {/* Total Row */}
+                      <div className="grid grid-cols-5 gap-4 pt-2 border-t font-medium">
+                        <div></div>
+                        <div></div>
+                        <div className="text-sm">Total</div>
+                        <div className="text-sm text-right">{totalSquareFootage.toLocaleString()} SF</div>
+                        <div></div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>

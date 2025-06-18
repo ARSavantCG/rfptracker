@@ -556,15 +556,23 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                           );
                         }
 
+                        // Calculate mechanical room allocation for this bay
+                        const mechanicalSF = parseFloat(mechanicalRoomSF) || 0;
+                        const totalFloorArea = bayConfigurations.reduce((sum, b) => sum + b.squareFootage, 0);
+                        const allocationPercentage = totalFloorArea > 0 ? bay.squareFootage / totalFloorArea : 0;
+                        const mechanicalRoomAllocation = Math.round(mechanicalSF * allocationPercentage * 100) / 100;
+                        const rentableSquareFootage = bay.squareFootage + mechanicalRoomAllocation;
+                        
                         // Normal display row
                         return (
-                          <div key={bay.id} className="grid grid-cols-7 gap-4 items-center py-2">
+                          <div key={bay.id} className="grid grid-cols-8 gap-4 items-center py-2">
                             <div className="text-sm">Bay {startBay}</div>
                             <div className="text-sm">Bay {endBay}</div>
                             <div className="text-sm font-medium">{bay.bayName}</div>
                             <div className="text-sm text-right">{bay.squareFootage.toLocaleString()} SF</div>
-                            <div className="text-sm text-center">{bay.standardDockDoors || 0}</div>
-                            <div className="text-sm text-center">{bay.oversizedDockDoors || 0}</div>
+                            <div className="text-sm text-right">{mechanicalRoomAllocation > 0 ? mechanicalRoomAllocation.toLocaleString() : '0'} SF</div>
+                            <div className="text-sm text-right font-medium">{rentableSquareFootage.toLocaleString()} SF</div>
+                            <div className="text-sm text-center">{bay.standardDockDoors || 0} / {bay.oversizedDockDoors || 0}</div>
                             <div className="flex justify-center gap-1">
                               <Button
                                 variant="ghost"
@@ -599,11 +607,14 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                       })}
                       
                       {/* Total Row */}
-                      <div className="grid grid-cols-5 gap-4 pt-2 border-t font-medium">
+                      <div className="grid grid-cols-8 gap-4 pt-2 border-t font-medium">
                         <div></div>
                         <div></div>
                         <div className="text-sm">Total</div>
                         <div className="text-sm text-right">{totalSquareFootage.toLocaleString()} SF</div>
+                        <div className="text-sm text-right">{(parseFloat(mechanicalRoomSF) || 0).toLocaleString()} SF</div>
+                        <div className="text-sm text-right">{(totalSquareFootage + (parseFloat(mechanicalRoomSF) || 0)).toLocaleString()} SF</div>
+                        <div className="text-sm text-center">{totalStandardDoors} / {totalOversizedDoors}</div>
                         <div></div>
                       </div>
                     </div>

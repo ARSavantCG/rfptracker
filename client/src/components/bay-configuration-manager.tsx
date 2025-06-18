@@ -135,16 +135,25 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
     const match = bay.bayName.match(/Bay (\d+)-(\d+)/);
     const endBay = match ? parseInt(match[2]) : getNextStartingBay();
     
-    // Set the form with the next bay number and same square footage
+    // Create a new bay configuration starting from the end of the copied bay
+    const newBayConfig: BayConfiguration = {
+      id: `bay-${Date.now()}`,
+      bayName: `Bay ${endBay}-${endBay + 1}`, // Default to single bay increment
+      squareFootage: bay.squareFootage
+    };
+
+    setBayConfigurations([...bayConfigurations, newBayConfig]);
+    
+    // Set the form with the next bay number for further editing if needed
     setNewBay({
-      startBay: endBay.toString(),
+      startBay: (endBay + 1).toString(),
       endBay: "",
       squareFootage: bay.squareFootage.toString()
     });
 
     toast({
       title: "Bay Copied",
-      description: `Bay configuration copied. Continue from Bay ${endBay}.`,
+      description: `${newBayConfig.bayName} added. Continue from Bay ${endBay + 1}.`,
     });
   };
 

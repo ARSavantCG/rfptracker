@@ -93,12 +93,12 @@ export function BayConfigurationModal({
   };
 
   const handleConfirm = () => {
-    const totalArea = selectedBays.reduce((sum, bay) => sum + bay.squareFootage, 0);
+    const totalArea = selectedBays.reduce((sum, bay) => sum + (bay.rentableSquareFootage || bay.squareFootage), 0);
     onConfirm(totalArea, selectedBays);
     onClose();
   };
 
-  const totalSelectedArea = selectedBays.reduce((sum, bay) => sum + bay.squareFootage, 0);
+  const totalSelectedArea = selectedBays.reduce((sum, bay) => sum + (bay.rentableSquareFootage || bay.squareFootage), 0);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -158,7 +158,7 @@ export function BayConfigurationModal({
                   >
                     <div className="font-bold text-sm mb-1">{bay.bayName}</div>
                     <div className="text-xs opacity-75 leading-tight">
-                      {(bay.squareFootage / 1000).toFixed(0)}K SF
+                      {((bay.rentableSquareFootage || bay.squareFootage) / 1000).toFixed(0)}K SF
                     </div>
                     {(bay.standardDockDoors > 0 || bay.oversizedDockDoors > 0) && (
                       <div className="text-xs opacity-60 leading-tight mt-1">

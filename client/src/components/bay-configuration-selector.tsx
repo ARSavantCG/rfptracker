@@ -45,7 +45,7 @@ export default function BayConfigurationSelector({
   const calculateTotalArea = () => {
     return selectedBayIds.reduce((total, bayId) => {
       const bay = individualBays.find(b => b.id === bayId);
-      return total + (bay?.squareFootage || 0);
+      return total + (bay?.rentableSquareFootage || bay?.squareFootage || 0);
     }, 0);
   };
 

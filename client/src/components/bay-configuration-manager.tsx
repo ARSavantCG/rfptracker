@@ -715,16 +715,16 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
               <CardContent>
                 <div className="grid grid-cols-3 gap-6">
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                      {(parseFloat(mechanicalRoomSF) || 0).toLocaleString()} SF
-                    </div>
-                    <div className="text-sm text-gray-600 dark:text-gray-400">Mechanical Rooms</div>
-                  </div>
-                  <div className="text-center">
                     <div className="text-2xl font-bold text-green-600 dark:text-green-400">
                       {totalSquareFootage.toLocaleString()} SF
                     </div>
                     <div className="text-sm text-gray-600 dark:text-gray-400">Bay Configurations</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                      {(parseFloat(mechanicalRoomSF) || 0).toLocaleString()} SF
+                    </div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400">Mechanical Rooms</div>
                   </div>
                   <div className="text-center">
                     <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">

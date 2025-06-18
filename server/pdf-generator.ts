@@ -12,6 +12,65 @@ function formatDate(date: string | Date): string {
   });
 }
 
+function getBayConfigurationSection(rfp: any): string {
+  // Get bay configurations from the RFP's selected bay configurations
+  const selectedBayConfigs = rfp.selectedBayConfigurations || [];
+  
+  if (!selectedBayConfigs.length) {
+    return '';
+  }
+
+  // Calculate totals
+  let totalSquareFootage = 0;
+  let totalStandardDoors = 0;
+  let totalOversizedDoors = 0;
+
+  const bayRows = selectedBayConfigs.map((bay: any) => {
+    totalSquareFootage += bay.squareFootage || 0;
+    totalStandardDoors += bay.standardDockDoors || 0;
+    totalOversizedDoors += bay.oversizedDockDoors || 0;
+
+    return `
+      <tr>
+        <td>${bay.bayName}</td>
+        <td style="text-align: right;">${(bay.squareFootage || 0).toLocaleString()} sf</td>
+        <td style="text-align: center;">${bay.standardDockDoors || 0}</td>
+        <td style="text-align: center;">${bay.oversizedDockDoors || 0}</td>
+      </tr>
+    `;
+  }).join('');
+
+  return `
+    <div class="section">
+      <div class="section-title">FACILITY DETAILS:</div>
+      <div class="description-box">
+        <p>The tenant space includes the following bay configurations:</p>
+        <table style="width: 100%; border-collapse: collapse; margin: 10px 0;">
+          <tr style="background-color: #f5f5f5;">
+            <th style="border: 1px solid #000; padding: 8px; text-align: left;">Bay Range</th>
+            <th style="border: 1px solid #000; padding: 8px; text-align: right;">Square Footage</th>
+            <th style="border: 1px solid #000; padding: 8px; text-align: center;">Standard Doors</th>
+            <th style="border: 1px solid #000; padding: 8px; text-align: center;">Oversized Doors</th>
+          </tr>
+          ${bayRows}
+          <tr style="background-color: #f0f0f0; font-weight: bold;">
+            <td style="border: 1px solid #000; padding: 8px;">TOTAL</td>
+            <td style="border: 1px solid #000; padding: 8px; text-align: right;">${totalSquareFootage.toLocaleString()} sf</td>
+            <td style="border: 1px solid #000; padding: 8px; text-align: center;">${totalStandardDoors}</td>
+            <td style="border: 1px solid #000; padding: 8px; text-align: center;">${totalOversizedDoors}</td>
+          </tr>
+        </table>
+        <p><strong>Dock Door Specifications:</strong></p>
+        <ul class="requirements-list">
+          <li>Standard Dock Doors: 8' x 9' overhead doors with dock levelers</li>
+          <li>Oversized Dock Doors: 10' x 12' overhead doors with heavy-duty dock levelers</li>
+          <li>All dock doors include weatherproofing and safety equipment</li>
+        </ul>
+      </div>
+    </div>
+  `;
+}
+
 export interface PdfGenerationOptions {
   rfp: any;
   invitationToBid?: any;
@@ -749,6 +808,8 @@ function generateArchitectRfpHtml(options: PdfGenerationOptions, dates: any): st
         </div>
       </div>
       
+      ${getBayConfigurationSection(rfp)}
+      
       <div class="section">
         <div class="section-title">PROPOSAL REQUIREMENTS:</div>
         <div class="description-box">
@@ -954,6 +1015,8 @@ function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dates: an
       </div>
       ` : ''}
 
+      ${getBayConfigurationSection(rfp)}
+
       <div class="section">
         <div class="section-title">Requested Deliverables</div>
         <ul>
@@ -1131,6 +1194,8 @@ function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, dates: a
       </div>
 
       ${spaceRequirementsHtml}
+
+      ${getBayConfigurationSection(rfp)}
 
       <div class="section">
         <div class="section-title">Requested Deliverables</div>

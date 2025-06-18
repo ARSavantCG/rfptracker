@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
@@ -34,6 +35,7 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
   const [gridRows, setGridRows] = useState(property?.gridLayout?.rows || 1);
   const [gridColumns, setGridColumns] = useState(property?.gridLayout?.columns || 1);
   const [columnRanges, setColumnRanges] = useState<ColumnRange[]>(property?.columnRanges || []);
+  const [isSingleBuilding, setIsSingleBuilding] = useState(false);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -146,7 +148,7 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.propertyName || !formData.building || !formData.streetAddress || !formData.city || !formData.state || !formData.zip) {
+    if (!formData.propertyName || (!isSingleBuilding && !formData.building) || !formData.streetAddress || !formData.city || !formData.state || !formData.zip) {
       toast({
         title: "Validation Error",
         description: "Please fill in all required fields.",
@@ -212,13 +214,29 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="building">Building *</Label>
+              <div className="flex items-center space-x-2 mb-2">
+                <Checkbox
+                  id="singleBuilding"
+                  checked={isSingleBuilding}
+                  onCheckedChange={(checked) => {
+                    setIsSingleBuilding(checked as boolean);
+                    if (checked) {
+                      handleInputChange("building", "1");
+                    } else {
+                      handleInputChange("building", "");
+                    }
+                  }}
+                />
+                <Label htmlFor="singleBuilding" className="text-sm">Single building property</Label>
+              </div>
+              <Label htmlFor="building">{isSingleBuilding ? "Building" : "Building *"}</Label>
               <Input
                 id="building"
                 value={formData.building}
                 onChange={(e) => handleInputChange("building", e.target.value)}
-                placeholder="e.g. A, B, 1, 2"
-                required
+                placeholder={isSingleBuilding ? "Building number (optional)" : "e.g. A, B, 1, 2"}
+                required={!isSingleBuilding}
+                disabled={isSingleBuilding}
               />
             </div>
           </div>

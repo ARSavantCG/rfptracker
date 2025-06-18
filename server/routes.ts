@@ -1320,28 +1320,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 }
                 
                 // Display workflow phase instead of general status
-                const workflowPhase = rfp.workflowPhase || 'received';
+                const workflowPhase = rfp.workflowPhase || 'rfp-entry';
                 let phaseDisplay = '';
                 let phaseClass = '';
                 
                 switch (workflowPhase) {
-                  case 'received':
-                    phaseDisplay = 'Received';
+                  case 'rfp-entry':
+                    phaseDisplay = 'RFP Entry';
                     phaseClass = 'status-received';
                     break;
-                  case 'review':
-                    phaseDisplay = 'Review';
-                    phaseClass = 'status-inprogress';
-                    break;
-                  case 'validation':
-                    phaseDisplay = 'Validation';
-                    phaseClass = 'status-inprogress';
-                    break;
-                  case 'invitation':
+                  case 'invitation-to-bid':
                     phaseDisplay = 'Invitation to Bid';
                     phaseClass = 'status-inprogress';
                     break;
-                  case 'bidCollection':
+                  case 'bid-collection':
                     phaseDisplay = 'Bid Collection';
                     phaseClass = 'status-inprogress';
                     break;
@@ -1349,12 +1341,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     phaseDisplay = 'Evaluation';
                     phaseClass = 'status-inprogress';
                     break;
-                  case 'completion':
-                    phaseDisplay = 'Completed';
+                  case 'award':
+                    phaseDisplay = 'Award';
                     phaseClass = 'status-completed';
                     break;
                   default:
-                    phaseDisplay = 'Received';
+                    phaseDisplay = 'RFP Entry';
                     phaseClass = 'status-received';
                 }
                 

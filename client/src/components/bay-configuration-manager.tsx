@@ -77,6 +77,7 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
     if (bayConfigurations.length === 0) return 1;
     
     // Find the highest ending bay number from existing configurations
+    // The next start bay should be the same as the highest end bay (overlapping)
     let highestEndBay = 0;
     bayConfigurations.forEach(bay => {
       // Extract end number from "Bay X-Y" format
@@ -87,7 +88,7 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
       }
     });
     
-    return highestEndBay + 1;
+    return highestEndBay; // Start at the end bay, not +1
   };
 
   const addBayConfiguration = () => {

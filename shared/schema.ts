@@ -287,6 +287,15 @@ export type PropertyBay = {
   columnLabel?: string; // Column identifier (e.g., "A", "B", "C" or "1", "2", "3")
 };
 
+// Column range definition for rentable area calculation
+export type ColumnRange = {
+  id: string;
+  startColumn: number;
+  endColumn: number;
+  squareFootage: number;
+  description?: string; // e.g., "Between columns 1-2"
+};
+
 // Properties table
 export const properties = pgTable("properties", {
   id: serial("id").primaryKey(),
@@ -299,6 +308,7 @@ export const properties = pgTable("properties", {
   displayName: text("display_name").notNull(), // Computed field like "Property Name - Building A, 123 Main St, New York, NY 10001"
   bays: json("bays").$type<PropertyBay[]>().default([]), // Bay definitions with square footage
   gridLayout: json("grid_layout").$type<{rows: number, columns: number}>().default({rows: 1, columns: 1}), // Grid dimensions
+  columnRanges: json("column_ranges").$type<ColumnRange[]>().default([]), // Column-based square footage for rentable area calculation
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

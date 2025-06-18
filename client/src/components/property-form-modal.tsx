@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit, Building, Trash2, Grid } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { nanoid } from "nanoid";
-import type { Property, InsertProperty, PropertyBay } from "@shared/schema";
+import type { Property, InsertProperty, PropertyBay, ColumnRange } from "@shared/schema";
 
 interface PropertyFormModalProps {
   property?: Property;
@@ -33,6 +33,7 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
   const [bays, setBays] = useState<PropertyBay[]>(property?.bays || []);
   const [gridRows, setGridRows] = useState(property?.gridLayout?.rows || 1);
   const [gridColumns, setGridColumns] = useState(property?.gridLayout?.columns || 1);
+  const [columnRanges, setColumnRanges] = useState<ColumnRange[]>(property?.columnRanges || []);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -93,6 +94,7 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
     setBays([]);
     setGridRows(1);
     setGridColumns(1);
+    setColumnRanges([]);
   };
 
   const addBay = () => {
@@ -122,6 +124,25 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
     }));
   };
 
+  const addColumnRange = () => {
+    const newRange: ColumnRange = {
+      id: nanoid(),
+      startColumn: columnRanges.length + 1,
+      endColumn: columnRanges.length + 2,
+      squareFootage: 0,
+      description: `Between columns ${columnRanges.length + 1}-${columnRanges.length + 2}`
+    };
+    setColumnRanges([...columnRanges, newRange]);
+  };
+
+  const updateColumnRange = (rangeId: string, updates: Partial<ColumnRange>) => {
+    setColumnRanges(columnRanges.map(range => range.id === rangeId ? { ...range, ...updates } : range));
+  };
+
+  const removeColumnRange = (rangeId: string) => {
+    setColumnRanges(columnRanges.filter(range => range.id !== rangeId));
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -138,6 +159,7 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
       ...formData,
       bays,
       gridLayout: { rows: gridRows, columns: gridColumns },
+      columnRanges,
     };
 
     if (isEdit) {

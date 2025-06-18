@@ -239,7 +239,9 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
           {/* Add New Bay Configuration */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Add Bay Configuration</CardTitle>
+              <CardTitle className="text-lg">
+                {editingBay ? "Edit Bay Configuration" : "Add Bay Configuration"}
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-5 gap-4 items-end">

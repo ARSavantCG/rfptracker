@@ -273,7 +273,6 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                     <span className="bg-gray-100 border border-r-0 rounded-l-md px-3 py-2 text-sm text-gray-600">Bay</span>
                     <Input
                       type="number"
-                      placeholder="2"
                       value={newBay.endBay}
                       onChange={(e) => setNewBay({ ...newBay, endBay: e.target.value })}
                       className="rounded-l-none"
@@ -285,7 +284,6 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                   <Input
                     id="squareFootage"
                     type="number"
-                    placeholder="15301"
                     value={newBay.squareFootage}
                     onChange={(e) => setNewBay({ ...newBay, squareFootage: e.target.value })}
                   />

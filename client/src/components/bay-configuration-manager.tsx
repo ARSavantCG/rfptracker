@@ -29,6 +29,7 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
   const [showBayDetails, setShowBayDetails] = useState(false);
   const [isEditingMechRoom, setIsEditingMechRoom] = useState(false);
   const [tempMechRoomSF, setTempMechRoomSF] = useState("");
+  const [showAddBayForm, setShowAddBayForm] = useState(false);
 
   // Auto-populate start bay when bay configurations change
   useEffect(() => {
@@ -352,9 +353,21 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
           {/* Add New Bay Configuration */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Add Bay Configuration</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg">Add Bay Configuration</CardTitle>
+                <Button 
+                  onClick={() => setShowAddBayForm(!showAddBayForm)} 
+                  variant="outline" 
+                  size="sm"
+                  className="flex items-center gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  {showAddBayForm ? "Hide Form" : "Add New Bay"}
+                </Button>
+              </div>
             </CardHeader>
-            <CardContent className="space-y-4">
+            {showAddBayForm && (
+              <CardContent className="space-y-4">
               <div className="grid grid-cols-5 gap-4 items-end">
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">Start Bay</Label>
@@ -430,7 +443,8 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                   </Button>
                 </div>
               </div>
-            </CardContent>
+              </CardContent>
+            )}
           </Card>
 
           {/* Current Bay Configurations */}

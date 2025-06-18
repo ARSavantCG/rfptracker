@@ -370,33 +370,28 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
               <CardContent className="space-y-4">
               <div className="grid grid-cols-5 gap-4 items-end">
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium">Start Bay</Label>
-                  <div className="flex items-center">
-                    <span className="bg-gray-100 border border-r-0 rounded-l-md px-3 py-2 text-sm text-gray-600">Bay</span>
-                    <Input
-                      type="text"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      placeholder="1"
-                      value={newBay.startBay}
-                      onChange={(e) => setNewBay({ ...newBay, startBay: e.target.value })}
-                      className="rounded-l-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    />
-                  </div>
+                  <Label className="text-sm font-medium">Start Column</Label>
+                  <Input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    placeholder="1"
+                    value={newBay.startBay}
+                    onChange={(e) => setNewBay({ ...newBay, startBay: e.target.value })}
+                    className="[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium">End Bay</Label>
-                  <div className="flex items-center">
-                    <span className="bg-gray-100 border border-r-0 rounded-l-md px-3 py-2 text-sm text-gray-600">Bay</span>
-                    <Input
-                      type="text"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      value={newBay.endBay}
-                      onChange={(e) => setNewBay({ ...newBay, endBay: e.target.value })}
-                      className="rounded-l-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    />
-                  </div>
+                  <Label className="text-sm font-medium">End Column</Label>
+                  <Input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    placeholder="2"
+                    value={newBay.endBay}
+                    onChange={(e) => setNewBay({ ...newBay, endBay: e.target.value })}
+                    className="[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="squareFootage" className="text-sm font-medium">Square Footage</Label>
@@ -487,9 +482,9 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                     <div className="space-y-4">
                       {/* Table Header */}
                       <div className="grid grid-cols-8 gap-4 pb-2 border-b font-medium text-sm text-gray-600">
-                        <div>Start Bay</div>
-                        <div>End Bay</div>
-                        <div>Range</div>
+                        <div>Start Column</div>
+                        <div>End Column</div>
+                        <div>Bay</div>
                         <div className="text-right">Floor Area</div>
                         <div className="text-right">Mech Room</div>
                         <div className="text-right">Rentable SF</div>
@@ -514,32 +509,26 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                               </div>
                               <div className="grid grid-cols-5 gap-4 items-end">
                                 <div className="space-y-2">
-                                  <Label className="text-sm font-medium">Start Bay</Label>
-                                  <div className="flex items-center">
-                                    <span className="bg-gray-100 border border-r-0 rounded-l-md px-3 py-2 text-sm text-gray-600">Bay</span>
-                                    <Input
-                                      type="text"
-                                      inputMode="numeric"
-                                      pattern="[0-9]*"
-                                      value={newBay.startBay}
-                                      onChange={(e) => setNewBay({ ...newBay, startBay: e.target.value })}
-                                      className="rounded-l-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                    />
-                                  </div>
+                                  <Label className="text-sm font-medium">Start Column</Label>
+                                  <Input
+                                    type="text"
+                                    inputMode="numeric"
+                                    pattern="[0-9]*"
+                                    value={newBay.startBay}
+                                    onChange={(e) => setNewBay({ ...newBay, startBay: e.target.value })}
+                                    className="[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                  />
                                 </div>
                                 <div className="space-y-2">
-                                  <Label className="text-sm font-medium">End Bay</Label>
-                                  <div className="flex items-center">
-                                    <span className="bg-gray-100 border border-r-0 rounded-l-md px-3 py-2 text-sm text-gray-600">Bay</span>
-                                    <Input
-                                      type="text"
-                                      inputMode="numeric"
-                                      pattern="[0-9]*"
-                                      value={newBay.endBay}
-                                      onChange={(e) => setNewBay({ ...newBay, endBay: e.target.value })}
-                                      className="rounded-l-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                    />
-                                  </div>
+                                  <Label className="text-sm font-medium">End Column</Label>
+                                  <Input
+                                    type="text"
+                                    inputMode="numeric"
+                                    pattern="[0-9]*"
+                                    value={newBay.endBay}
+                                    onChange={(e) => setNewBay({ ...newBay, endBay: e.target.value })}
+                                    className="[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                  />
                                 </div>
                                 <div className="space-y-2">
                                   <Label htmlFor="squareFootage" className="text-sm font-medium">Square Footage</Label>
@@ -601,9 +590,9 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                         // Normal display row
                         return (
                           <div key={bay.id} className="grid grid-cols-8 gap-4 items-center py-2">
-                            <div className="text-sm">Bay {startBay}</div>
-                            <div className="text-sm">Bay {endBay}</div>
-                            <div className="text-sm font-medium">{bay.bayName}</div>
+                            <div className="text-sm">{startBay}</div>
+                            <div className="text-sm">{endBay}</div>
+                            <div className="text-sm font-medium">Bay {startBay}</div>
                             <div className="text-sm text-right">{bay.squareFootage.toLocaleString()} SF</div>
                             <div className="text-sm text-right">{mechanicalRoomAllocation > 0 ? mechanicalRoomAllocation.toLocaleString() : '0'} SF</div>
                             <div className="text-sm text-right font-medium">{rentableSquareFootage.toLocaleString()} SF</div>

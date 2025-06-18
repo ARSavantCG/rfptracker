@@ -106,10 +106,9 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
 
     setBayConfigurations([...bayConfigurations, newBayConfig]);
     
-    // Reset form with next starting bay number
-    const nextStart = endBayNum + 1;
+    // Reset form with end bay as next starting bay number
     setNewBay({ 
-      startBay: nextStart.toString(), 
+      startBay: endBayNum.toString(), 
       endBay: "", 
       squareFootage: "" 
     });

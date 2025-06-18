@@ -109,6 +109,16 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
     return highestEndBay; // Start at the end bay, not +1
   };
 
+  const saveBayConfigurations = () => {
+    const mechanicalSF = parseFloat(mechanicalRoomSF) || 0;
+    const updatedBays = calculateBayAllocations(bayConfigurations, mechanicalSF);
+    
+    updatePropertyMutation.mutate({
+      bayConfigurations: updatedBays,
+      mechanicalRoomSquareFootage: mechanicalSF
+    });
+  };
+
   const addBayConfiguration = () => {
     if (!newBay.startBay || !newBay.endBay || !newBay.squareFootage) {
       toast({
@@ -274,9 +284,7 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
     });
   };
 
-  const saveBayConfigurations = () => {
-    updatePropertyMutation.mutate(bayConfigurations);
-  };
+
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -376,6 +384,34 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
             </CardContent>
           </Card>
 
+          {/* Mechanical Room Configuration */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Mechanical Room Square Footage</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4 items-end">
+                <div className="space-y-2">
+                  <Label htmlFor="mechanicalRoomSF" className="text-sm font-medium">Total Mechanical Room SF</Label>
+                  <Input
+                    id="mechanicalRoomSF"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    placeholder="0"
+                    value={mechanicalRoomSF}
+                    onChange={(e) => setMechanicalRoomSF(e.target.value)}
+                    className="[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                </div>
+                <div className="text-sm text-gray-600">
+                  <p>This amount will be allocated to bays based on their percentage of total floor area.</p>
+                  <p className="text-xs mt-1">The allocated mechanical room area is added to each bay's square footage to calculate rentable area.</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Current Bay Configurations */}
           <Card>
             <CardHeader>
@@ -415,13 +451,14 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                   {showBayDetails && (
                     <div className="space-y-4">
                       {/* Table Header */}
-                      <div className="grid grid-cols-7 gap-4 pb-2 border-b font-medium text-sm text-gray-600">
+                      <div className="grid grid-cols-8 gap-4 pb-2 border-b font-medium text-sm text-gray-600">
                         <div>Start Bay</div>
                         <div>End Bay</div>
                         <div>Range</div>
-                        <div className="text-right">Square Footage</div>
-                        <div className="text-center">Standard Doors</div>
-                        <div className="text-center">Oversized Doors</div>
+                        <div className="text-right">Floor Area</div>
+                        <div className="text-right">Mech Room</div>
+                        <div className="text-right">Rentable SF</div>
+                        <div className="text-center">Dock Doors</div>
                         <div className="text-center">Actions</div>
                       </div>
                       

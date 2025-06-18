@@ -1300,14 +1300,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
               <tr>
                 <th>RFP Number</th>
                 <th>Project Name</th>
+                <th>Date Received</th>
                 <th>Due Date</th>
-                <th>Status</th>
                 <th>Days Until Due</th>
+                <th>Status</th>
               </tr>
             </thead>
             <tbody>
               ${(rfpData || []).map((rfp: any) => {
                 const dueDate = new Date(rfp.internalDueDate);
+                const receivedDate = new Date(rfp.receivedOn);
                 const daysUntil = Math.ceil((dueDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
                 
                 let dayDisplay;
@@ -1355,9 +1357,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 return '<tr>' +
                   '<td><strong>' + (rfp.rfpNumber || 'N/A') + '</strong></td>' +
                   '<td>' + (rfp.projectName || 'N/A') + '</td>' +
+                  '<td>' + receivedDate.toLocaleDateString() + '</td>' +
                   '<td>' + dueDate.toLocaleDateString() + '</td>' +
-                  '<td>' + statusDisplay + '</td>' +
                   '<td>' + dayDisplay + '</td>' +
+                  '<td>' + statusDisplay + '</td>' +
                   '</tr>';
               }).join('')}
             </tbody>

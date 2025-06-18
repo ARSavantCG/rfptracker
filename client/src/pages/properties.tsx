@@ -7,7 +7,7 @@ import { useState } from "react";
 import Navigation from "@/components/navigation";
 import { PropertyFormModal } from "@/components/property-form-modal";
 import PropertyBayGrid from "@/components/property-bay-grid";
-import type { Property } from "@shared/schema";
+import type { Property, PropertyBay } from "@shared/schema";
 
 export default function Properties() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -39,13 +39,13 @@ export default function Properties() {
   };
 
   // Generate sample bay data based on property
-  const generateSampleBays = (property: Property) => {
+  const generateSampleBays = (property: Property): PropertyBay[] => {
     const bays = property.bays || [];
     const gridLayout = property.gridLayout || { rows: 2, columns: 10 };
     
     // If no bays defined, create sample bays based on the attached image pattern
     if (bays.length === 0) {
-      const sampleBays = [];
+      const sampleBays: PropertyBay[] = [];
       for (let row = 0; row < gridLayout.rows; row++) {
         for (let col = 0; col < gridLayout.columns; col++) {
           // Skip some bays to create realistic layout
@@ -54,12 +54,10 @@ export default function Properties() {
             const length = 80 + Math.floor(Math.random() * 40); // 80-120 length
             sampleBays.push({
               id: `${property.id}-${row}-${col}`,
-              row,
-              col,
-              width,
-              length,
-              sqft: width * length,
-              label: `${width}.${length < 100 ? '0' : ''}${length}`
+              bayNumber: `${width}.${length < 100 ? '0' : ''}${length}`,
+              squareFootage: width * length,
+              type: 'warehouse' as const,
+              notes: `Row ${row + 1}, Col ${col + 1}`
             });
           }
         }

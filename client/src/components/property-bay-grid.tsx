@@ -73,7 +73,7 @@ export default function PropertyBayGrid({
   const calculateTotalSquareFootage = () => {
     return selectedBays.reduce((total, bayId) => {
       const bay = bays.find(b => b.id === bayId);
-      return total + (bay?.sqft || 0);
+      return total + (bay?.squareFootage || 0);
     }, 0);
   };
 
@@ -123,10 +123,13 @@ export default function PropertyBayGrid({
                     {bay ? (
                       <div className="space-y-1">
                         <div className="font-medium">
-                          {bay.label || `${bay.width}x${bay.length}`}
+                          {bay.bayNumber}
                         </div>
                         <div className="text-xs opacity-75">
-                          {bay.sqft.toLocaleString()} SF
+                          {bay.squareFootage.toLocaleString()} SF
+                        </div>
+                        <div className="text-xs opacity-60">
+                          {bay.type}
                         </div>
                       </div>
                     ) : (

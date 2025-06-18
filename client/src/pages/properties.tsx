@@ -6,8 +6,8 @@ import { Building, MapPin, Plus, Search, Edit, Grid, ChevronDown, ChevronUp } fr
 import { useState } from "react";
 import Navigation from "@/components/navigation";
 import { PropertyFormModal } from "@/components/property-form-modal";
-import PropertyBayGrid from "@/components/property-bay-grid";
-import type { Property, PropertyBay } from "@shared/schema";
+import BayConfigurationManager from "@/components/bay-configuration-manager";
+import type { Property, BayConfiguration } from "@shared/schema";
 
 export default function Properties() {
   const [searchTerm, setSearchTerm] = useState("");

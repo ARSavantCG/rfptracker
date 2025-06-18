@@ -46,7 +46,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [calculatedRentableArea, setCalculatedRentableArea] = useState<number>(0);
-  const [selectedColumnRanges, setSelectedColumnRanges] = useState<ColumnRange[]>([]);
+  const [selectedBayConfigurations, setSelectedBayConfigurations] = useState<BayConfiguration[]>([]);
 
   const form = useForm<CreateRfpFormData>({
     resolver: zodResolver(createRfpSchema),
@@ -138,29 +138,29 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
     setSelectedFiles([]);
     setSelectedProperty(null);
     setCalculatedRentableArea(0);
-    setSelectedColumnRanges([]);
+    setSelectedBayConfigurations([]);
     onClose();
   };
 
-  // Handle property selection and set the selected property for column range selector
+  // Handle property selection and set the selected property for bay configuration selector
   const handlePropertyChange = (propertyId: string) => {
     const property = properties.find(p => p.id.toString() === propertyId);
     setSelectedProperty(property || null);
     setCalculatedRentableArea(0);
-    setSelectedColumnRanges([]);
+    setSelectedBayConfigurations([]);
     
     // Reset project area when property changes
     form.setValue("projectArea", "");
   };
 
-  // Handle column range selection and calculate rentable area
-  const handleRentableAreaChange = (area: number, ranges: ColumnRange[]) => {
+  // Handle bay configuration selection and calculate rentable area
+  const handleRentableAreaChange = (area: number, bayConfigs: BayConfiguration[]) => {
     setCalculatedRentableArea(area);
-    setSelectedColumnRanges(ranges);
+    setSelectedBayConfigurations(bayConfigs);
     
     // Auto-populate the project area field with calculated value
     if (area > 0) {
-      form.setValue("projectArea", `${area.toLocaleString()} SF (calculated from selected column ranges)`);
+      form.setValue("projectArea", `${area.toLocaleString()} SF (calculated from selected bay configurations)`);
     } else {
       form.setValue("projectArea", "");
     }
@@ -358,10 +358,10 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                 )}
               />
 
-              {/* Column Range Selector for Automatic Rentable Area Calculation */}
+              {/* Bay Configuration Selector for Automatic Rentable Area Calculation */}
               {selectedProperty ? (
                 <div className="space-y-4">
-                  <ColumnRangeSelector
+                  <BayConfigurationSelector
                     property={selectedProperty}
                     onRentableAreaChange={handleRentableAreaChange}
                   />
@@ -380,7 +380,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                           />
                         </FormControl>
                         <p className="text-sm text-muted-foreground">
-                          Automatically calculated from selected bay/column ranges
+                          Automatically calculated from selected bay configurations
                         </p>
                         <FormMessage />
                       </FormItem>
@@ -390,7 +390,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
               ) : (
                 <div className="p-4 border-2 border-dashed border-gray-300 rounded-lg text-center text-gray-500">
                   <p className="font-medium">Select a property above</p>
-                  <p className="text-sm">Bay/column selection will appear here for rentable area calculation</p>
+                  <p className="text-sm">Bay selection will appear here for rentable area calculation</p>
                 </div>
               )}
 

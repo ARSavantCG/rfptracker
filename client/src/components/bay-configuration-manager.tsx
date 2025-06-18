@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,7 +21,7 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
   const [bayConfigurations, setBayConfigurations] = useState<BayConfiguration[]>(
     property.bayConfigurations || []
   );
-  const [newBay, setNewBay] = useState({ bayRange: "", squareFootage: "" });
+  const [newBay, setNewBay] = useState({ startBay: "", endBay: "", squareFootage: "" });
 
   const updatePropertyMutation = useMutation({
     mutationFn: async (updatedConfigurations: BayConfiguration[]) => {
@@ -58,11 +58,41 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
     },
   });
 
+  // Calculate the next starting bay number
+  const getNextStartingBay = (): number => {
+    if (bayConfigurations.length === 0) return 1;
+    
+    // Find the highest ending bay number from existing configurations
+    let highestEndBay = 0;
+    bayConfigurations.forEach(bay => {
+      // Extract end number from "Bay X-Y" format
+      const match = bay.bayName.match(/Bay (\d+)-(\d+)/);
+      if (match) {
+        const endBay = parseInt(match[2]);
+        highestEndBay = Math.max(highestEndBay, endBay);
+      }
+    });
+    
+    return highestEndBay + 1;
+  };
+
   const addBayConfiguration = () => {
-    if (!newBay.bayRange || !newBay.squareFootage) {
+    if (!newBay.startBay || !newBay.endBay || !newBay.squareFootage) {
       toast({
         title: "Error",
-        description: "Please fill in both bay range and square footage",
+        description: "Please fill in start bay, end bay, and square footage",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const startBayNum = parseInt(newBay.startBay);
+    const endBayNum = parseInt(newBay.endBay);
+
+    if (endBayNum <= startBayNum) {
+      toast({
+        title: "Error",
+        description: "End bay must be greater than start bay",
         variant: "destructive",
       });
       return;
@@ -70,16 +100,31 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
 
     const newBayConfig: BayConfiguration = {
       id: Date.now().toString(),
-      bayName: `Bay ${newBay.bayRange}`, // Automatically prefix with "Bay"
+      bayName: `Bay ${startBayNum}-${endBayNum}`,
       squareFootage: parseInt(newBay.squareFootage)
     };
 
     setBayConfigurations([...bayConfigurations, newBayConfig]);
-    setNewBay({ bayRange: "", squareFootage: "" });
+    
+    // Reset form with next starting bay number
+    const nextStart = endBayNum + 1;
+    setNewBay({ 
+      startBay: nextStart.toString(), 
+      endBay: "", 
+      squareFootage: "" 
+    });
   };
 
   // Calculate total square footage
   const totalSquareFootage = bayConfigurations.reduce((total, bay) => total + bay.squareFootage, 0);
+
+  // Set initial starting bay when component mounts or configurations change
+  useEffect(() => {
+    if (newBay.startBay === "" || newBay.startBay === "1") {
+      const nextStart = getNextStartingBay();
+      setNewBay(prev => ({ ...prev, startBay: nextStart.toString() }));
+    }
+  }, [bayConfigurations.length]);
 
   const removeBayConfiguration = (bayId: string) => {
     setBayConfigurations(bayConfigurations.filter(bay => bay.id !== bayId));
@@ -109,15 +154,29 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
               <CardTitle className="text-lg">Add Bay Configuration</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-3 gap-4 items-end">
+              <div className="grid grid-cols-5 gap-4 items-end">
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium">Bay</Label>
+                  <Label className="text-sm font-medium">Start Bay</Label>
                   <div className="flex items-center">
                     <span className="bg-gray-100 border border-r-0 rounded-l-md px-3 py-2 text-sm text-gray-600">Bay</span>
                     <Input
-                      placeholder="1-2"
-                      value={newBay.bayRange}
-                      onChange={(e) => setNewBay({ ...newBay, bayRange: e.target.value })}
+                      type="number"
+                      placeholder="1"
+                      value={newBay.startBay}
+                      onChange={(e) => setNewBay({ ...newBay, startBay: e.target.value })}
+                      className="rounded-l-none"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">End Bay</Label>
+                  <div className="flex items-center">
+                    <span className="bg-gray-100 border border-r-0 rounded-l-md px-3 py-2 text-sm text-gray-600">Bay</span>
+                    <Input
+                      type="number"
+                      placeholder="2"
+                      value={newBay.endBay}
+                      onChange={(e) => setNewBay({ ...newBay, endBay: e.target.value })}
                       className="rounded-l-none"
                     />
                   </div>
@@ -156,34 +215,43 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
               ) : (
                 <div className="space-y-4">
                   {/* Table Header */}
-                  <div className="grid grid-cols-4 gap-4 pb-2 border-b font-medium text-sm text-gray-600">
-                    <div>Bay</div>
+                  <div className="grid grid-cols-5 gap-4 pb-2 border-b font-medium text-sm text-gray-600">
+                    <div>Start Bay</div>
+                    <div>End Bay</div>
                     <div>Range</div>
                     <div className="text-right">Square Footage</div>
                     <div></div>
                   </div>
                   
                   {/* Bay Rows */}
-                  {bayConfigurations.map((bay) => (
-                    <div key={bay.id} className="grid grid-cols-4 gap-4 items-center py-2">
-                      <div className="text-sm font-medium">Bay</div>
-                      <div className="text-sm">{bay.bayName.replace('Bay ', '')}</div>
-                      <div className="text-sm text-right">{bay.squareFootage.toLocaleString()} SF</div>
-                      <div className="flex justify-end">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeBayConfiguration(bay.id)}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50 h-8 w-8 p-0"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
+                  {bayConfigurations.map((bay) => {
+                    const match = bay.bayName.match(/Bay (\d+)-(\d+)/);
+                    const startBay = match ? match[1] : '';
+                    const endBay = match ? match[2] : '';
+                    
+                    return (
+                      <div key={bay.id} className="grid grid-cols-5 gap-4 items-center py-2">
+                        <div className="text-sm">Bay {startBay}</div>
+                        <div className="text-sm">Bay {endBay}</div>
+                        <div className="text-sm font-medium">{bay.bayName}</div>
+                        <div className="text-sm text-right">{bay.squareFootage.toLocaleString()} SF</div>
+                        <div className="flex justify-end">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeBayConfiguration(bay.id)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50 h-8 w-8 p-0"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                   
                   {/* Total Row */}
-                  <div className="grid grid-cols-4 gap-4 pt-2 border-t font-medium">
+                  <div className="grid grid-cols-5 gap-4 pt-2 border-t font-medium">
+                    <div></div>
                     <div></div>
                     <div className="text-sm">Total</div>
                     <div className="text-sm text-right">{totalSquareFootage.toLocaleString()} SF</div>

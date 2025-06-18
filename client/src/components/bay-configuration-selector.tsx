@@ -22,6 +22,33 @@ export default function BayConfigurationSelector({
 
   const bayConfigurations = property.bayConfigurations || [];
 
+  // Convert bay ranges to individual bays for better visual representation
+  const individualBays = bayConfigurations.flatMap(bayConfig => {
+    const match = bayConfig.bayName.match(/Bay (\d+)-(\d+)/);
+    if (!match) return [];
+    
+    const startBay = parseInt(match[1]);
+    const endBay = parseInt(match[2]);
+    const baysInRange = endBay - startBay + 1;
+    const sqftPerBay = bayConfig.squareFootage / baysInRange;
+    const standardDoorsPerBay = Math.floor(bayConfig.standardDockDoors / baysInRange);
+    const oversizedDoorsPerBay = Math.floor(bayConfig.oversizedDockDoors / baysInRange);
+    
+    const bays = [];
+    for (let i = startBay; i <= endBay; i++) {
+      bays.push({
+        id: `${bayConfig.id}-bay-${i}`,
+        bayNumber: i,
+        bayName: `Bay ${i}`,
+        squareFootage: Math.round(sqftPerBay),
+        standardDockDoors: standardDoorsPerBay,
+        oversizedDockDoors: oversizedDoorsPerBay,
+        parentConfigId: bayConfig.id
+      });
+    }
+    return bays;
+  }).sort((a, b) => a.bayNumber - b.bayNumber);
+
   // Calculate total rentable area from selected bays
   const calculateTotalArea = () => {
     return selectedBayIds.reduce((total, bayId) => {

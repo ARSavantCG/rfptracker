@@ -119,20 +119,21 @@ export default function BayConfigurationSelector({
                 <Button
                   key={bay.id}
                   variant={isSelected ? "default" : "outline"}
-                  className={`h-20 w-16 flex flex-col items-center justify-center text-xs p-1 ${
+                  className={`h-24 w-12 flex flex-col items-center justify-center text-xs p-1 flex-shrink-0 ${
                     isSelected 
                       ? "bg-orange-600 hover:bg-orange-700 text-white border-orange-700" 
                       : "hover:bg-orange-50 border-orange-200 bg-white"
                   }`}
                   onClick={() => toggleBaySelection(bay.id)}
+                  style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}
                 >
-                  <div className="font-medium text-xs">{bay.bayName}</div>
-                  <div className="text-xs opacity-75 leading-tight">
-                    {bay.squareFootage.toLocaleString()} SF
+                  <div className="font-medium text-xs rotate-180">{bay.bayName}</div>
+                  <div className="text-xs opacity-75 leading-tight rotate-180">
+                    {(bay.squareFootage / 1000).toFixed(0)}K SF
                   </div>
                   {(bay.standardDockDoors > 0 || bay.oversizedDockDoors > 0) && (
-                    <div className="text-xs opacity-60 leading-tight">
-                      {bay.standardDockDoors + bay.oversizedDockDoors} doors
+                    <div className="text-xs opacity-60 leading-tight rotate-180">
+                      {bay.standardDockDoors + bay.oversizedDockDoors}D
                     </div>
                   )}
                 </Button>
@@ -187,9 +188,14 @@ export default function BayConfigurationSelector({
               
               <div className="flex items-center gap-2 p-3 bg-orange-50 rounded-lg">
                 <Calculator className="h-4 w-4 text-orange-600" />
-                <span className="font-medium text-orange-900">
-                  Total Rentable Area: {totalArea.toLocaleString()} SF
-                </span>
+                <div className="flex flex-col">
+                  <span className="font-medium text-orange-900">
+                    Total Rentable Area: {totalArea.toLocaleString()} SF
+                  </span>
+                  <span className="text-xs text-orange-700">
+                    Building Total Available: {bayConfigurations.reduce((sum, bay) => sum + bay.squareFootage, 0).toLocaleString()} SF
+                  </span>
+                </div>
               </div>
             </div>
           )}

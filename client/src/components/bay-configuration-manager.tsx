@@ -433,67 +433,6 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
             </CardContent>
           </Card>
 
-          {/* Mechanical Room Configuration */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Mechanical Room Square Footage</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {isEditingMechRoom ? (
-                <div className="bg-blue-50 border border-blue-200 rounded-md p-4 space-y-4">
-                  <div className="text-sm font-medium text-blue-700 mb-3">
-                    🔧 Editing Mechanical Room Square Footage
-                  </div>
-                  <div className="grid grid-cols-2 gap-4 items-end">
-                    <div className="space-y-2">
-                      <Label htmlFor="tempMechanicalRoomSF" className="text-sm font-medium">Total Mechanical Room SF</Label>
-                      <Input
-                        id="tempMechanicalRoomSF"
-                        type="text"
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                        placeholder="0"
-                        value={tempMechRoomSF}
-                        onChange={(e) => setTempMechRoomSF(e.target.value)}
-                        className="[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      />
-                    </div>
-                    <div className="flex gap-2">
-                      <Button onClick={saveMechanicalRoom} size="sm">
-                        Save
-                      </Button>
-                      <Button onClick={cancelMechRoomEdit} variant="outline" size="sm">
-                        Cancel
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="text-sm text-gray-600">
-                    <p>This amount will be allocated to bays based on their percentage of total floor area.</p>
-                    <p className="text-xs mt-1">The allocated mechanical room area is added to each bay's square footage to calculate rentable area.</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-4 items-center">
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Total Mechanical Room SF</Label>
-                    <div className="flex items-center gap-2">
-                      <div className="px-3 py-2 bg-gray-50 border rounded-md flex-1 text-sm">
-                        {(parseFloat(mechanicalRoomSF) || 0).toLocaleString()} SF
-                      </div>
-                      <Button onClick={startEditingMechRoom} variant="outline" size="sm">
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="text-sm text-gray-600">
-                    <p>This amount will be allocated to bays based on their percentage of total floor area.</p>
-                    <p className="text-xs mt-1">The allocated mechanical room area is added to each bay's square footage to calculate rentable area.</p>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
           {/* Current Bay Configurations */}
           <Card>
             <CardHeader>
@@ -701,6 +640,67 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                       </div>
                     </div>
                   )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Mechanical Room Configuration */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Mechanical Room Square Footage</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {isEditingMechRoom ? (
+                <div className="bg-blue-50 border border-blue-200 rounded-md p-4 space-y-4">
+                  <div className="text-sm font-medium text-blue-700 mb-3">
+                    🔧 Editing Mechanical Room Square Footage
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 items-end">
+                    <div className="space-y-2">
+                      <Label htmlFor="tempMechanicalRoomSF" className="text-sm font-medium">Total Mechanical Room SF</Label>
+                      <Input
+                        id="tempMechanicalRoomSF"
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        placeholder="0"
+                        value={tempMechRoomSF}
+                        onChange={(e) => setTempMechRoomSF(e.target.value)}
+                        className="[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button onClick={saveMechanicalRoom} size="sm">
+                        Save
+                      </Button>
+                      <Button onClick={cancelMechRoomEdit} variant="outline" size="sm">
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    <p>This amount will be allocated to bays based on their percentage of total floor area.</p>
+                    <p className="text-xs mt-1">The allocated mechanical room area is added to each bay's square footage to calculate rentable area.</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-4 items-center">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Total Mechanical Room SF</Label>
+                    <div className="flex items-center gap-2">
+                      <div className="px-3 py-2 bg-gray-50 border rounded-md flex-1 text-sm">
+                        {(parseFloat(mechanicalRoomSF) || 0).toLocaleString()} SF
+                      </div>
+                      <Button onClick={startEditingMechRoom} variant="outline" size="sm">
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    <p>This amount will be allocated to bays based on their percentage of total floor area.</p>
+                    <p className="text-xs mt-1">The allocated mechanical room area is added to each bay's square footage to calculate rentable area.</p>
+                  </div>
                 </div>
               )}
             </CardContent>

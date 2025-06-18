@@ -106,7 +106,7 @@ async function getHistoricalPricingData(): Promise<HistoricalPricingData> {
         totalAmount: parseFloat(bid.totalAmount || '0'),
         lineItems: lineItems.map(item => ({
           description: item.description,
-          category: item.category,
+          category: item.category || 'Other',
           quantity: typeof item.quantity === 'string' ? parseInt(item.quantity) : item.quantity || 0,
           unitPrice: parseFloat(item.unitPrice || '0'),
           totalPrice: parseFloat(item.totalPrice || '0')
@@ -168,6 +168,15 @@ function generateHistoricalPricingHtml(data: HistoricalPricingData): string {
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
           }
+        }
+        
+        .no-print {
+          background: #3b82f6;
+          color: white;
+          padding: 15px;
+          text-align: center;
+          margin-bottom: 20px;
+          border-radius: 8px;
         }
         
         body {
@@ -496,7 +505,7 @@ function generateHistoricalPricingHtml(data: HistoricalPricingData): string {
 
 export async function generateHistoricalPricingPdf(): Promise<Buffer> {
   try {
-    console.log("Starting historical pricing PDF generation...");
+    console.log("Starting historical pricing HTML generation...");
     const data = await getHistoricalPricingData();
     console.log("Historical pricing data retrieved:", { 
       totalProjects: data.totalProjects, 
@@ -506,36 +515,8 @@ export async function generateHistoricalPricingPdf(): Promise<Buffer> {
     const html = generateHistoricalPricingHtml(data);
     console.log("HTML generated, length:", html.length);
 
-    // Try puppeteer first, fall back to HTML if it fails
-    try {
-      const browser = await puppeteer.launch({
-        headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--disable-web-security']
-      });
-
-      const page = await browser.newPage();
-      await page.setContent(html, { waitUntil: 'networkidle0' });
-      
-      const pdf = await page.pdf({
-        format: 'A4',
-        landscape: true,
-        margin: {
-          top: '0.5in',
-          right: '0.5in',
-          bottom: '0.5in',
-          left: '0.5in'
-        },
-        printBackground: true
-      });
-
-      await browser.close();
-      console.log("PDF generated successfully, size:", pdf.length);
-      return Buffer.from(pdf);
-    } catch (puppeteerError: any) {
-      console.log("Puppeteer failed, falling back to HTML:", puppeteerError?.message || 'Unknown error');
-      // Return HTML as buffer for browser-based PDF generation
-      return Buffer.from(html, 'utf8');
-    }
+    // Always return HTML for browser-based PDF generation in new window
+    return Buffer.from(html, 'utf8');
   } catch (error) {
     console.error("Error in generateHistoricalPricingPdf:", error);
     throw error;

@@ -67,26 +67,14 @@ export default function Reports() {
 
   const generateReport = async (reportType: "executive" | "detailed" | "historical") => {
     try {
-      const response = await fetch(`/api/reports/${reportType}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ filters, format: exportFormat }),
+      const url = `/api/reports/${reportType}`;
+      const params = new URLSearchParams({
+        filters: JSON.stringify(filters),
+        format: exportFormat
       });
-
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.style.display = "none";
-        a.href = url;
-        a.download = `${reportType}-report-${format(new Date(), "yyyy-MM-dd")}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-      }
+      
+      // Open report in new window
+      window.open(`${url}?${params}`, '_blank');
     } catch (error) {
       console.error("Error generating report:", error);
     }
@@ -349,7 +337,11 @@ export default function Reports() {
                   </ul>
                 </div>
                 
-                <Button className="w-full flex items-center justify-center space-x-2" disabled={metrics.completed === 0}>
+                <Button 
+                  className="w-full flex items-center justify-center space-x-2" 
+                  disabled={metrics.completed === 0}
+                  onClick={() => generateReport("historical")}
+                >
                   <Download className="h-4 w-4" />
                   <span>Generate Pricing Report</span>
                 </Button>

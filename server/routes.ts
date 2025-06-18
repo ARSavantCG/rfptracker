@@ -1230,16 +1230,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Executive Summary Report route
-  app.post("/api/reports/detailed", async (req, res) => {
+  app.get("/api/reports/executive", async (req, res) => {
     try {
-      const { filters, rfps } = req.body;
-      console.log("Generating executive summary with", rfps?.length || 0, "RFPs");
+      const filters = req.query.filters ? JSON.parse(req.query.filters as string) : {};
+      console.log("Generating executive summary with filters:", filters);
       
-      // If no RFPs provided in request, fetch all RFPs from storage
-      let rfpData = rfps;
-      if (!rfpData || rfpData.length === 0) {
-        rfpData = await storage.getAllRfpRequests();
-        console.log("Fetched", rfpData.length, "RFPs from storage");
+      // Fetch all RFPs from storage
+      let rfpData = await storage.getAllRfpRequests();
+      console.log("Fetched", rfpData.length, "RFPs from storage");
+      
+      // Apply filters to RFP data
+      if (filters.status && filters.status !== "all") {
+        rfpData = rfpData.filter(rfp => rfp.status === filters.status);
+      }
+      if (filters.property && filters.property !== "all") {
+        rfpData = rfpData.filter(rfp => rfp.property === filters.property);
+      }
+      if (filters.dueInDays && filters.dueInDays !== "all") {
+        const targetDate = new Date();
+        targetDate.setDate(targetDate.getDate() + parseInt(filters.dueInDays));
+        rfpData = rfpData.filter(rfp => {
+          const dueDate = new Date(rfp.internalDueDate);
+          return dueDate <= targetDate;
+        });
       }
       
 
@@ -1386,27 +1399,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Historical Pricing Report route
-  app.post("/api/reports/historical-pricing", async (req, res) => {
+  app.get("/api/reports/historical", async (req, res) => {
     try {
+      const { generateHistoricalPricingPdf } = await import("./historical-pricing-reports");
       const pdfBuffer = await generateHistoricalPricingPdf();
-      const filename = generateHistoricalPricingFilename();
       
-      // Check if it's HTML (fallback) or actual PDF
-      const content = pdfBuffer.toString('utf8', 0, 50);
-      if (content.includes('<!DOCTYPE html>')) {
-        // Return HTML for browser-based PDF generation
-        res.setHeader('Content-Type', 'text/html');
-        res.setHeader('Content-Disposition', `inline; filename="${filename.replace('.pdf', '.html')}"`);
-        res.send(pdfBuffer);
-      } else {
-        // Return actual PDF
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-        res.send(pdfBuffer);
-      }
+      // Always return HTML for browser-based PDF generation in new window
+      res.setHeader('Content-Type', 'text/html');
+      res.setHeader('Content-Disposition', 'inline; filename="historical-pricing-report.html"');
+      res.send(pdfBuffer);
     } catch (error) {
-      console.error("Error generating historical pricing PDF:", error);
-      res.status(500).json({ message: "Failed to generate historical pricing PDF" });
+      console.error("Error generating historical pricing report:", error);
+      res.status(500).json({ message: "Failed to generate historical pricing report" });
     }
   });
 

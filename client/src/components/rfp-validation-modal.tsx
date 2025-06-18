@@ -12,7 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, AlertCircle, Download, FileText, ArrowRight, X, Plus, Trash2 } from "lucide-react";
+import { CheckCircle, AlertCircle, Download, FileText, ArrowRight, X, Plus, Trash2, Edit2 } from "lucide-react";
 import { nanoid } from "nanoid";
 import type { RfpRequest, Contact } from "@shared/schema";
 
@@ -53,6 +53,7 @@ interface ValidationResult {
 
 export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete }: RfpValidationModalProps) {
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
+  const [isEditingTotalArea, setIsEditingTotalArea] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -316,11 +317,28 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Total Rentable Area (What tenant pays rent on)</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="Enter total area in sq ft" />
-                  </FormControl>
+                  <div className="flex gap-2">
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        placeholder="Enter total area in sq ft" 
+                        readOnly={!isEditingTotalArea}
+                        className={!isEditingTotalArea ? "bg-gray-50" : ""}
+                      />
+                    </FormControl>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsEditingTotalArea(!isEditingTotalArea)}
+                      className="flex items-center gap-1"
+                    >
+                      <Edit2 className="h-4 w-4" />
+                      {isEditingTotalArea ? "Lock" : "Edit"}
+                    </Button>
+                  </div>
                   <FormMessage />
-                  <p className="text-sm text-gray-500">From Step 1: {rfp.projectArea} - you can edit if needed</p>
+                  <p className="text-sm text-gray-500">From Step 1: {rfp.projectArea} - use edit button to modify if needed</p>
                 </FormItem>
               )}
             />
@@ -358,10 +376,18 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                 render={({ field }) => (
                   <FormItem>
                     <div className="space-y-3">
+                      {/* Headers - only show once */}
+                      {field.value.length > 0 && (
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 px-3">
+                          <FormLabel className="text-sm font-medium">Area Description</FormLabel>
+                          <FormLabel className="text-sm font-medium">Square Footage</FormLabel>
+                          <FormLabel className="text-sm font-medium">Notes</FormLabel>
+                        </div>
+                      )}
+                      
                       {field.value.map((item, index) => (
                         <div key={item.id} className="grid grid-cols-1 lg:grid-cols-3 gap-3 p-3 bg-white rounded border">
                           <div>
-                            <FormLabel className="text-sm">Area Description</FormLabel>
                             <Input
                               placeholder="e.g., Office Area (Existing), Conference Room, etc."
                               value={item.description}
@@ -373,7 +399,6 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                             />
                           </div>
                           <div>
-                            <FormLabel className="text-sm">Square Footage</FormLabel>
                             <Input
                               placeholder="sq ft"
                               value={item.squareFootage}
@@ -386,7 +411,6 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                           </div>
                           <div className="flex gap-2 items-end">
                             <div className="flex-1">
-                              <FormLabel className="text-sm">Notes</FormLabel>
                               <Input
                                 placeholder="e.g., Clear height requirements TBD, Renovation level TBD"
                                 value={item.notes}

@@ -276,6 +276,15 @@ export type BidLineItem = typeof bidLineItems.$inferSelect;
 export type InsertBidLineItem = z.infer<typeof insertBidLineItemSchema>;
 export type UpdateBidLineItem = z.infer<typeof updateBidLineItemSchema>;
 
+// Bay definition type
+export type PropertyBay = {
+  id: string;
+  bayNumber: string;
+  squareFootage: number;
+  type: 'office' | 'warehouse' | 'retail' | 'mixed';
+  notes?: string;
+};
+
 // Properties table
 export const properties = pgTable("properties", {
   id: serial("id").primaryKey(),
@@ -286,6 +295,8 @@ export const properties = pgTable("properties", {
   state: text("state").notNull(),
   zip: text("zip").notNull(),
   displayName: text("display_name").notNull(), // Computed field like "Property Name - Building A, 123 Main St, New York, NY 10001"
+  bays: json("bays").$type<PropertyBay[]>().default([]), // Bay definitions with square footage
+  gridLayout: json("grid_layout").$type<{rows: number, columns: number}>().default({rows: 1, columns: 1}), // Grid dimensions
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

@@ -120,8 +120,10 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
     });
   };
 
-  // Calculate total square footage
+  // Calculate total square footage and dock doors
   const totalSquareFootage = bayConfigurations.reduce((total, bay) => total + bay.squareFootage, 0);
+  const totalStandardDoors = bayConfigurations.reduce((total, bay) => total + (bay.standardDockDoors || 0), 0);
+  const totalOversizedDoors = bayConfigurations.reduce((total, bay) => total + (bay.oversizedDockDoors || 0), 0);
 
   // Set initial starting bay when component mounts or configurations change
   useEffect(() => {
@@ -231,7 +233,9 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
     setNewBay({ 
       startBay: nextStart.toString(), 
       endBay: "", 
-      squareFootage: "" 
+      squareFootage: "",
+      standardDockDoors: "",
+      oversizedDockDoors: ""
     });
 
     toast({
@@ -246,7 +250,9 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
     setNewBay({ 
       startBay: nextStart.toString(), 
       endBay: "", 
-      squareFootage: "" 
+      squareFootage: "",
+      standardDockDoors: "",
+      oversizedDockDoors: ""
     });
   };
 
@@ -318,6 +324,32 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                     className="[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   />
                 </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="standardDockDoors" className="text-sm font-medium">Standard Dock Doors</Label>
+                    <Input
+                      id="standardDockDoors"
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={newBay.standardDockDoors}
+                      onChange={(e) => setNewBay({ ...newBay, standardDockDoors: e.target.value })}
+                      className="[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="oversizedDockDoors" className="text-sm font-medium">Oversized Dock Doors</Label>
+                    <Input
+                      id="oversizedDockDoors"
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={newBay.oversizedDockDoors}
+                      onChange={(e) => setNewBay({ ...newBay, oversizedDockDoors: e.target.value })}
+                      className="[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                  </div>
+                </div>
                 <div className="flex gap-2">
                   {editingBay ? (
                     <>
@@ -366,8 +398,12 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                       )}
                       <span className="font-medium">{bayConfigurations.length} configured</span>
                     </button>
-                    <div className="text-sm text-gray-600">
-                      Total: {totalSquareFootage.toLocaleString()} SF
+                    <div className="text-sm text-gray-600 space-y-1">
+                      <div>Total: {totalSquareFootage.toLocaleString()} SF</div>
+                      <div className="flex gap-4">
+                        <span>Standard Doors: {totalStandardDoors}</span>
+                        <span>Oversized Doors: {totalOversizedDoors}</span>
+                      </div>
                     </div>
                   </div>
 
@@ -375,11 +411,13 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                   {showBayDetails && (
                     <div className="space-y-4">
                       {/* Table Header */}
-                      <div className="grid grid-cols-5 gap-4 pb-2 border-b font-medium text-sm text-gray-600">
+                      <div className="grid grid-cols-7 gap-4 pb-2 border-b font-medium text-sm text-gray-600">
                         <div>Start Bay</div>
                         <div>End Bay</div>
                         <div>Range</div>
                         <div className="text-right">Square Footage</div>
+                        <div className="text-center">Standard Doors</div>
+                        <div className="text-center">Oversized Doors</div>
                         <div className="text-center">Actions</div>
                       </div>
                       
@@ -390,11 +428,13 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                         const endBay = match ? match[2] : '';
                         
                         return (
-                          <div key={bay.id} className="grid grid-cols-5 gap-4 items-center py-2">
+                          <div key={bay.id} className="grid grid-cols-7 gap-4 items-center py-2">
                             <div className="text-sm">Bay {startBay}</div>
                             <div className="text-sm">Bay {endBay}</div>
                             <div className="text-sm font-medium">{bay.bayName}</div>
                             <div className="text-sm text-right">{bay.squareFootage.toLocaleString()} SF</div>
+                            <div className="text-sm text-center">{bay.standardDockDoors || 0}</div>
+                            <div className="text-sm text-center">{bay.oversizedDockDoors || 0}</div>
                             <div className="flex justify-center gap-1">
                               <Button
                                 variant="ghost"

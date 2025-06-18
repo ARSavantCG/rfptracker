@@ -278,8 +278,18 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">
-                {editingBay ? "Edit Bay Configuration" : "Add Bay Configuration"}
+                {editingBay ? `Edit ${editingBay.bayName}` : "Add Bay Configuration"}
               </CardTitle>
+              {editingBay && (
+                <div className="bg-blue-50 border border-blue-200 rounded-md p-3 mt-2">
+                  <p className="text-sm text-blue-700 font-medium">
+                    🔧 Edit Mode Active
+                  </p>
+                  <p className="text-xs text-blue-600">
+                    You are editing an existing bay configuration. Changes will update the selected bay.
+                  </p>
+                </div>
+              )}
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-5 gap-4 items-end">
@@ -324,9 +334,9 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                     className="[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="standardDockDoors" className="text-sm font-medium">Standard Dock Doors</Label>
+                    <Label htmlFor="standardDockDoors" className="text-sm font-medium">Standard Doors</Label>
                     <Input
                       id="standardDockDoors"
                       type="text"
@@ -338,7 +348,7 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="oversizedDockDoors" className="text-sm font-medium">Oversized Dock Doors</Label>
+                    <Label htmlFor="oversizedDockDoors" className="text-sm font-medium">Oversized Doors</Label>
                     <Input
                       id="oversizedDockDoors"
                       type="text"
@@ -427,8 +437,9 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                         const startBay = match ? match[1] : '';
                         const endBay = match ? match[2] : '';
                         
+                        const isEditing = editingBay?.id === bay.id;
                         return (
-                          <div key={bay.id} className="grid grid-cols-7 gap-4 items-center py-2">
+                          <div key={bay.id} className={`grid grid-cols-7 gap-4 items-center py-2 ${isEditing ? 'bg-blue-50 border border-blue-200 rounded-md px-3' : ''}`}>
                             <div className="text-sm">Bay {startBay}</div>
                             <div className="text-sm">Bay {endBay}</div>
                             <div className="text-sm font-medium">{bay.bayName}</div>
@@ -449,8 +460,11 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => editBayConfiguration(bay)}
-                                className="text-gray-600 hover:text-gray-700 hover:bg-gray-50 h-8 w-8 p-0"
-                                title="Edit bay"
+                                className={isEditing 
+                                  ? "text-blue-600 bg-blue-100 hover:bg-blue-150 h-8 w-8 p-0" 
+                                  : "text-gray-600 hover:text-gray-700 hover:bg-gray-50 h-8 w-8 p-0"
+                                }
+                                title={isEditing ? "Currently editing" : "Edit bay"}
                               >
                                 <Edit className="h-3 w-3" />
                               </Button>

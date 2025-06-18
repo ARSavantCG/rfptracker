@@ -192,7 +192,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl">Create New RFP Request</DialogTitle>
           <DialogDescription>
@@ -360,11 +360,13 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
 
               {/* Bay Configuration Selector for Automatic Floor Area Calculation */}
               {selectedProperty ? (
-                <div className="space-y-4">
-                  <BayConfigurationSelector
-                    property={selectedProperty}
-                    onRentableAreaChange={handleFloorAreaChange}
-                  />
+                <div className="space-y-4 w-full">
+                  <div className="w-full">
+                    <BayConfigurationSelector
+                      property={selectedProperty}
+                      onRentableAreaChange={handleFloorAreaChange}
+                    />
+                  </div>
                   
                   <FormField
                     control={form.control}

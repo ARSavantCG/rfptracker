@@ -105,21 +105,21 @@ export default function BayConfigurationSelector({
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Building-like Bay Layout */}
-        <div className="bg-gray-50 p-4 rounded-lg">
-          <div className="mb-3">
+        <div className="bg-gray-50 p-3 rounded-lg">
+          <div className="mb-2">
             <Label className="text-sm font-medium text-gray-700">Building Layout</Label>
             <p className="text-xs text-gray-500">Click bays to select for rentable area calculation</p>
           </div>
           
           {/* Single row layout representing building */}
-          <div className="flex gap-1 justify-start overflow-x-auto pb-2">
+          <div className="flex gap-0.5 justify-start overflow-x-auto pb-1">
             {individualBays.map((bay) => {
               const isSelected = selectedBayIds.includes(bay.id);
               return (
                 <Button
                   key={bay.id}
                   variant={isSelected ? "default" : "outline"}
-                  className={`h-24 w-12 flex flex-col items-center justify-center text-xs p-1 flex-shrink-0 ${
+                  className={`h-16 w-10 flex flex-col items-center justify-center text-xs p-1 flex-shrink-0 ${
                     isSelected 
                       ? "bg-orange-600 hover:bg-orange-700 text-white border-orange-700" 
                       : "hover:bg-orange-50 border-orange-200 bg-white"
@@ -129,7 +129,7 @@ export default function BayConfigurationSelector({
                 >
                   <div className="font-medium text-xs rotate-180">{bay.bayName}</div>
                   <div className="text-xs opacity-75 leading-tight rotate-180">
-                    {(bay.squareFootage / 1000).toFixed(0)}K SF
+                    {(bay.squareFootage / 1000).toFixed(0)}K
                   </div>
                   {(bay.standardDockDoors > 0 || bay.oversizedDockDoors > 0) && (
                     <div className="text-xs opacity-60 leading-tight rotate-180">

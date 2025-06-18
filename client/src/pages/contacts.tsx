@@ -97,23 +97,23 @@ export default function Contacts() {
             )}
           </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6">
           <Card 
             className={`cursor-pointer transition-all hover:shadow-md ${
               selectedType === 'architect' ? 'ring-2 ring-green-500 bg-green-50' : ''
             }`}
             onClick={() => setSelectedType(selectedType === 'architect' ? 'all' : 'architect')}
           >
-            <CardContent className="pt-6">
+            <CardContent className="p-3">
               <div className="flex items-center">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <span className="text-lg">📐</span>
+                <div className="p-1.5 bg-green-100 rounded-md">
+                  <span className="text-sm">📐</span>
                 </div>
-                <div className="ml-4">
-                  <p className="text-2xl font-bold">
+                <div className="ml-3">
+                  <p className="text-lg font-bold">
                     {contacts?.filter(c => c.type === 'architect').length || 0}
                   </p>
-                  <p className="text-gray-600 text-sm">Architects</p>
+                  <p className="text-gray-600 text-xs">Architects</p>
                 </div>
               </div>
             </CardContent>
@@ -125,16 +125,16 @@ export default function Contacts() {
             }`}
             onClick={() => setSelectedType(selectedType === 'contractor' ? 'all' : 'contractor')}
           >
-            <CardContent className="pt-6">
+            <CardContent className="p-3">
               <div className="flex items-center">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <span className="text-lg">🔨</span>
+                <div className="p-1.5 bg-blue-100 rounded-md">
+                  <span className="text-sm">🔨</span>
                 </div>
-                <div className="ml-4">
-                  <p className="text-2xl font-bold">
+                <div className="ml-3">
+                  <p className="text-lg font-bold">
                     {contacts?.filter(c => c.type === 'contractor').length || 0}
                   </p>
-                  <p className="text-gray-600 text-sm">Contractors</p>
+                  <p className="text-gray-600 text-xs">Contractors</p>
                 </div>
               </div>
             </CardContent>
@@ -146,16 +146,16 @@ export default function Contacts() {
             }`}
             onClick={() => setSelectedType(selectedType === 'owner' ? 'all' : 'owner')}
           >
-            <CardContent className="pt-6">
+            <CardContent className="p-3">
               <div className="flex items-center">
-                <div className="p-2 bg-purple-100 rounded-lg">
-                  <Building2 className="h-6 w-6 text-purple-600" />
+                <div className="p-1.5 bg-purple-100 rounded-md">
+                  <Building2 className="h-4 w-4 text-purple-600" />
                 </div>
-                <div className="ml-4">
-                  <p className="text-2xl font-bold">
+                <div className="ml-3">
+                  <p className="text-lg font-bold">
                     {contacts?.filter(c => c.type === 'owner').length || 0}
                   </p>
-                  <p className="text-gray-600 text-sm">Property Owners</p>
+                  <p className="text-gray-600 text-xs">Property Owners</p>
                 </div>
               </div>
             </CardContent>
@@ -167,16 +167,16 @@ export default function Contacts() {
             }`}
             onClick={() => setSelectedType(selectedType === 'other' ? 'all' : 'other')}
           >
-            <CardContent className="pt-6">
+            <CardContent className="p-3">
               <div className="flex items-center">
-                <div className="p-2 bg-orange-100 rounded-lg">
-                  <span className="text-lg">👤</span>
+                <div className="p-1.5 bg-orange-100 rounded-md">
+                  <span className="text-sm">👤</span>
                 </div>
-                <div className="ml-4">
-                  <p className="text-2xl font-bold">
+                <div className="ml-3">
+                  <p className="text-lg font-bold">
                     {contacts?.filter(c => c.type === 'other').length || 0}
                   </p>
-                  <p className="text-gray-600 text-sm">Other</p>
+                  <p className="text-gray-600 text-xs">Other</p>
                 </div>
               </div>
             </CardContent>

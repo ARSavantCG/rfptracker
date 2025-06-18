@@ -137,7 +137,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
     form.reset();
     setSelectedFiles([]);
     setSelectedProperty(null);
-    setCalculatedRentableArea(0);
+    setCalculatedFloorArea(0);
     setSelectedBayConfigurations([]);
     onClose();
   };
@@ -146,16 +146,16 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
   const handlePropertyChange = (propertyId: string) => {
     const property = properties.find(p => p.id.toString() === propertyId);
     setSelectedProperty(property || null);
-    setCalculatedRentableArea(0);
+    setCalculatedFloorArea(0);
     setSelectedBayConfigurations([]);
     
     // Reset project area when property changes
     form.setValue("projectArea", "");
   };
 
-  // Handle bay configuration selection and calculate rentable area
-  const handleRentableAreaChange = (area: number, bayConfigs: BayConfiguration[]) => {
-    setCalculatedRentableArea(area);
+  // Handle bay configuration selection and calculate floor area
+  const handleFloorAreaChange = (area: number, bayConfigs: BayConfiguration[]) => {
+    setCalculatedFloorArea(area);
     setSelectedBayConfigurations(bayConfigs);
     
     // Auto-populate the project area field with calculated value
@@ -358,12 +358,12 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                 )}
               />
 
-              {/* Bay Configuration Selector for Automatic Rentable Area Calculation */}
+              {/* Bay Configuration Selector for Automatic Floor Area Calculation */}
               {selectedProperty ? (
                 <div className="space-y-4">
                   <BayConfigurationSelector
                     property={selectedProperty}
-                    onRentableAreaChange={handleRentableAreaChange}
+                    onRentableAreaChange={handleFloorAreaChange}
                   />
                   
                   <FormField
@@ -371,7 +371,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                     name="projectArea"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Calculated Rentable Area</FormLabel>
+                        <FormLabel>Calculated Floor Area</FormLabel>
                         <FormControl>
                           <Input 
                             {...field}
@@ -390,7 +390,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
               ) : (
                 <div className="p-4 border-2 border-dashed border-gray-300 rounded-lg text-center text-gray-500">
                   <p className="font-medium">Select a property above</p>
-                  <p className="text-sm">Bay selection will appear here for rentable area calculation</p>
+                  <p className="text-sm">Bay selection will appear here for floor area calculation</p>
                 </div>
               )}
 

@@ -326,13 +326,12 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
               ) : (
                 <div className="space-y-4">
                   {/* Table Header */}
-                  <div className="grid grid-cols-6 gap-4 pb-2 border-b font-medium text-sm text-gray-600">
+                  <div className="grid grid-cols-5 gap-4 pb-2 border-b font-medium text-sm text-gray-600">
                     <div>Start Bay</div>
                     <div>End Bay</div>
                     <div>Range</div>
                     <div className="text-right">Square Footage</div>
                     <div className="text-center">Actions</div>
-                    <div></div>
                   </div>
                   
                   {/* Bay Rows */}
@@ -342,7 +341,7 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                     const endBay = match ? match[2] : '';
                     
                     return (
-                      <div key={bay.id} className="grid grid-cols-6 gap-4 items-center py-2">
+                      <div key={bay.id} className="grid grid-cols-5 gap-4 items-center py-2">
                         <div className="text-sm">Bay {startBay}</div>
                         <div className="text-sm">Bay {endBay}</div>
                         <div className="text-sm font-medium">{bay.bayName}</div>
@@ -366,8 +365,6 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                           >
                             <Edit className="h-3 w-3" />
                           </Button>
-                        </div>
-                        <div className="flex justify-end">
                           <Button
                             variant="ghost"
                             size="sm"
@@ -383,12 +380,11 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                   })}
                   
                   {/* Total Row */}
-                  <div className="grid grid-cols-6 gap-4 pt-2 border-t font-medium">
+                  <div className="grid grid-cols-5 gap-4 pt-2 border-t font-medium">
                     <div></div>
                     <div></div>
                     <div className="text-sm">Total</div>
                     <div className="text-sm text-right">{totalSquareFootage.toLocaleString()} SF</div>
-                    <div></div>
                     <div></div>
                   </div>
                 </div>

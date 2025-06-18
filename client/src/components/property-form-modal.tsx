@@ -221,7 +221,7 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
                   onCheckedChange={(checked) => {
                     setIsSingleBuilding(checked as boolean);
                     if (checked) {
-                      handleInputChange("building", "1");
+                      handleInputChange("building", "");
                     } else {
                       handleInputChange("building", "");
                     }

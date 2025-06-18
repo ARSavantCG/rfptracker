@@ -169,23 +169,6 @@ export default function Properties() {
                         {getBayConfigurationCount(property)} configured
                       </span>
                     </div>
-                    {property.bayConfigurations && property.bayConfigurations.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        {property.bayConfigurations.slice(0, 3).map((bay) => (
-                          <span 
-                            key={bay.id}
-                            className="inline-flex items-center px-2 py-1 rounded-md text-xs bg-blue-100 text-blue-800"
-                          >
-                            {bay.bayName}: {bay.squareFootage.toLocaleString()} SF
-                          </span>
-                        ))}
-                        {property.bayConfigurations.length > 3 && (
-                          <span className="text-xs text-gray-500">
-                            +{property.bayConfigurations.length - 3} more
-                          </span>
-                        )}
-                      </div>
-                    )}
                   </div>
                 </CardContent>
               </Card>

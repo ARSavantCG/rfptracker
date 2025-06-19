@@ -347,7 +347,14 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     if (!rfp) return;
     
     const currentDate = new Date().toLocaleDateString();
-    const grandTotal = calculateGrandTotal();
+    
+    // Calculate grand total for report (sum of category totals with rollups)
+    const tiTotal = calculateCategoryTotalWithRollups('tenantImprovements');
+    const designTotal = calculateCategoryTotalWithRollups('designSoftCosts');
+    const existingTotal = (budgetData.hasExistingImprovements && budgetData.includeExistingInTotal)
+      ? calculateCategoryTotalWithRollups('existingImprovements') 
+      : 0;
+    const grandTotal = tiTotal + designTotal + existingTotal;
     
     // Local calculation functions that use the hideDesignCosts parameter
     const calculateDistributedCostsForPreview = (item: EvaluationLineItem) => {

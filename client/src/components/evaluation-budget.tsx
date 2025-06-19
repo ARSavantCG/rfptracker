@@ -595,7 +595,6 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
             padding: 12px;
             border-radius: 4px;
             margin: 15px 0;
-            border-left: 3px solid #17a2b8;
         }
         .rollup-summary-title { 
             color: #495057; 
@@ -612,6 +611,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
             background-color: #f8f9fa;
             padding: 8px;
             border-radius: 3px;
+            border-left: 3px solid #17a2b8;
         }
         .rollup-summary-item {
             display: flex;

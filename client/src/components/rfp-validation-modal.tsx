@@ -10,10 +10,14 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, AlertCircle, Download, FileText, ArrowRight, X, Plus, Trash2, Edit2 } from "lucide-react";
+import { CheckCircle, AlertCircle, Download, FileText, ArrowRight, X, Plus, Trash2, Edit2, CalendarIcon } from "lucide-react";
 import { nanoid } from "nanoid";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 import type { RfpRequest, Contact } from "@shared/schema";
 
 const areaLineItemSchema = z.object({
@@ -221,39 +225,141 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
               <FormField
                 control={form.control}
                 name="contractorDueDate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Contractor Due Date</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="date" 
-                        {...field} 
-                        onChange={(e) => {
-                          field.onChange(e);
-                          // Auto-populate architect due date if it's empty
-                          if (!form.getValues('architectDueDate')) {
-                            form.setValue('architectDueDate', e.target.value);
-                          }
-                        }}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                render={({ field }) => {
+                  const internalDueDate = rfp?.internalDueDate ? new Date(rfp.internalDueDate) : null;
+                  return (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Contractor Due Date</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant={"outline"}
+                              className={cn(
+                                "w-full pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              {field.value ? (
+                                format(new Date(field.value), "PPP")
+                              ) : (
+                                <span>Pick a date</span>
+                              )}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value ? new Date(field.value) : undefined}
+                            onSelect={(date) => {
+                              const dateString = date ? format(date, "yyyy-MM-dd") : "";
+                              field.onChange(dateString);
+                              // Auto-populate architect due date if it's empty
+                              if (!form.getValues('architectDueDate') && dateString) {
+                                form.setValue('architectDueDate', dateString);
+                              }
+                            }}
+                            disabled={(date) =>
+                              date < new Date() || date < new Date("1900-01-01")
+                            }
+                            initialFocus
+                            modifiers={internalDueDate ? {
+                              internalDue: internalDueDate
+                            } : {}}
+                            modifiersStyles={internalDueDate ? {
+                              internalDue: {
+                                border: '2px solid #3b82f6',
+                                backgroundColor: '#dbeafe',
+                                fontWeight: 'bold'
+                              }
+                            } : {}}
+                          />
+                          {internalDueDate && (
+                            <div className="p-3 border-t bg-blue-50">
+                              <p className="text-xs text-blue-600 font-medium">
+                                📅 Internal Due: {format(internalDueDate, "MMM d, yyyy")}
+                              </p>
+                              <p className="text-xs text-gray-600">
+                                Reference date for scheduling contractor due date
+                              </p>
+                            </div>
+                          )}
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
               />
 
               <FormField
                 control={form.control}
                 name="architectDueDate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Architect Due Date</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                render={({ field }) => {
+                  const internalDueDate = rfp?.internalDueDate ? new Date(rfp.internalDueDate) : null;
+                  return (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Architect Due Date</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant={"outline"}
+                              className={cn(
+                                "w-full pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              {field.value ? (
+                                format(new Date(field.value), "PPP")
+                              ) : (
+                                <span>Pick a date</span>
+                              )}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value ? new Date(field.value) : undefined}
+                            onSelect={(date) => {
+                              const dateString = date ? format(date, "yyyy-MM-dd") : "";
+                              field.onChange(dateString);
+                            }}
+                            disabled={(date) =>
+                              date < new Date() || date < new Date("1900-01-01")
+                            }
+                            initialFocus
+                            modifiers={internalDueDate ? {
+                              internalDue: internalDueDate
+                            } : {}}
+                            modifiersStyles={internalDueDate ? {
+                              internalDue: {
+                                border: '2px solid #3b82f6',
+                                backgroundColor: '#dbeafe',
+                                fontWeight: 'bold'
+                              }
+                            } : {}}
+                          />
+                          {internalDueDate && (
+                            <div className="p-3 border-t bg-blue-50">
+                              <p className="text-xs text-blue-600 font-medium">
+                                📅 Internal Due: {format(internalDueDate, "MMM d, yyyy")}
+                              </p>
+                              <p className="text-xs text-gray-600">
+                                Reference date for scheduling architect due date
+                              </p>
+                            </div>
+                          )}
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
               />
             </div>
 

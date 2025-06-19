@@ -510,50 +510,51 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
+            line-height: 1.4;
             color: #333;
             max-width: 1200px;
             margin: 0 auto;
-            padding: 20px;
-            background-color: #f8f9fa;
+            padding: 15px;
+            background-color: white;
         }
         .header {
-            padding: 15px 20px;
-            margin-bottom: 20px;
+            padding: 10px 0;
+            margin-bottom: 15px;
             text-align: center;
-            border-bottom: 2px solid #e9ecef;
+            border-bottom: 1px solid #dee2e6;
         }
-        .header h1 { margin: 0 0 8px 0; font-size: 20px; font-weight: 600; color: #333; }
-        .header p { margin: 2px 0; font-size: 14px; color: #666; }
+        .header h1 { margin: 0 0 5px 0; font-size: 18px; font-weight: 600; color: #333; }
+        .header p { margin: 1px 0; font-size: 12px; color: #666; }
         .section {
-            background: white;
-            margin-bottom: 25px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            overflow: hidden;
+            margin-bottom: 15px;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
         }
         .section-header {
             background-color: #f8f9fa;
-            padding: 20px;
-            border-bottom: 2px solid #e9ecef;
+            padding: 8px 12px;
+            border-bottom: 1px solid #dee2e6;
         }
         .section-title {
             margin: 0;
             color: #495057;
-            font-size: 20px;
+            font-size: 16px;
+            font-weight: 600;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
-        .section-total { font-weight: bold; color: #28a745; font-size: 18px; }
-        .table-container { padding: 20px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; table-layout: fixed; }
-        th, td { padding: 12px; border-bottom: 1px solid #dee2e6; vertical-align: top; }
+        .section-total { font-weight: bold; color: #28a745; font-size: 16px; }
+        .table-container { padding: 8px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 5px; table-layout: fixed; }
+        th, td { padding: 6px 8px; border-bottom: 1px solid #dee2e6; vertical-align: top; font-size: 13px; }
         th {
             background-color: #f8f9fa;
             font-weight: 600;
             color: #495057;
+            font-size: 11px;
             text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
         
         /* Consistent column widths for alignment */
@@ -564,90 +565,84 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         th:nth-child(5), td:nth-child(5) { width: 17%; text-align: right; }   /* Total Price */
         th:nth-child(6), td:nth-child(6) { width: 13%; text-align: right; }   /* $ / sf */
         
-        th {
-            font-size: 12px;
-            letter-spacing: 0.5px;
-        }
-        tr:hover { background-color: #f8f9fa; }
         .currency { text-align: right; font-weight: 600; }
         .grand-total {
-            background: white;
-            border: 2px solid #dee2e6;
+            border: 1px solid #dee2e6;
             color: #333;
-            padding: 20px;
-            border-radius: 8px;
+            padding: 12px;
+            border-radius: 4px;
             text-align: center;
-            margin: 30px 0;
+            margin: 15px 0;
         }
-        .grand-total h2 { margin: 0; font-size: 18px; font-weight: bold; }
+        .grand-total h2 { margin: 0; font-size: 16px; font-weight: bold; }
         .notes-section {
-            background: white;
-            padding: 25px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border: 1px solid #dee2e6;
+            padding: 12px;
+            border-radius: 4px;
+            margin: 15px 0;
         }
-        .notes-title { color: #495057; margin: 0 0 15px 0; font-size: 18px; }
+        .notes-title { color: #495057; margin: 0 0 8px 0; font-size: 14px; font-weight: 600; }
         .notes-content {
             background-color: #f8f9fa;
-            padding: 15px;
-            border-radius: 5px;
-            border-left: 4px solid #007bff;
+            padding: 10px;
+            border-radius: 3px;
+            border-left: 3px solid #007bff;
             white-space: pre-wrap;
+            font-size: 13px;
         }
         .rollup-summary-section {
-            background: white;
-            padding: 25px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            margin: 20px 0;
-            border-left: 4px solid #17a2b8;
+            border: 1px solid #dee2e6;
+            padding: 12px;
+            border-radius: 4px;
+            margin: 15px 0;
+            border-left: 3px solid #17a2b8;
         }
         .rollup-summary-title { 
             color: #495057; 
-            margin: 0 0 10px 0; 
-            font-size: 18px; 
+            margin: 0 0 6px 0; 
+            font-size: 14px; 
+            font-weight: 600;
         }
         .rollup-summary-description {
             color: #6c757d;
-            margin: 0 0 15px 0;
-            font-size: 14px;
+            margin: 0 0 8px 0;
+            font-size: 12px;
         }
         .rollup-summary-content {
-            background-color: #e9f7fd;
-            padding: 15px;
-            border-radius: 5px;
+            background-color: #f8f9fa;
+            padding: 8px;
+            border-radius: 3px;
         }
         .rollup-summary-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 8px 0;
-            border-bottom: 1px solid #b8daff;
+            padding: 4px 0;
+            border-bottom: 1px solid #dee2e6;
+            font-size: 12px;
         }
         .rollup-summary-item:last-child {
             border-bottom: none;
         }
         .rollup-item-name {
             color: #495057;
-            font-size: 14px;
         }
         .rollup-item-target {
             color: #17a2b8;
-            font-size: 14px;
             font-weight: 500;
         }
         .existing-improvements-note {
             background-color: #fff3cd;
             border: 1px solid #ffeaa7;
-            border-radius: 5px;
-            padding: 10px;
-            margin-top: 10px;
-            font-size: 14px;
+            border-radius: 3px;
+            padding: 8px;
+            margin-top: 8px;
+            font-size: 12px;
             color: #856404;
         }
         @media print {
             body { background-color: white; }
-            .section { box-shadow: none; border: 1px solid #ddd; }
+            .section { border: 1px solid #ddd; }
         }
     </style>
 </head>

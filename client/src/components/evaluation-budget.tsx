@@ -400,44 +400,9 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                (rollupTarget === 'tiAndDesign' && (categoryType === 'tenantImprovements' || categoryType === 'designSoftCosts'));
       });
       
-      // Add rolled-in items from other categories
-      const rolledInItems: EvaluationLineItem[] = [];
-      Object.entries(budgetData.lineItemRollups).forEach(([itemId, targetCategory]) => {
-        if (targetCategory === categoryType || (targetCategory === 'tiAndDesign' && (categoryType === 'tenantImprovements' || categoryType === 'designSoftCosts'))) {
-          const allItems = [
-            ...budgetData.tenantImprovements,
-            ...budgetData.designSoftCosts,
-            ...budgetData.existingImprovements
-          ];
-          const item = allItems.find(i => i.id === itemId);
-          if (item && !filteredItems.find(i => i.id === item.id)) {
-            // Calculate the portion for this category if rolling to TI & Design
-            let adjustedItem = { ...item };
-            if (targetCategory === 'tiAndDesign') {
-              const tiTotal = calculateCategoryTotal(budgetData.tenantImprovements);
-              const designTotal = calculateCategoryTotal(budgetData.designSoftCosts);
-              const combinedTotal = tiTotal + designTotal;
-              
-              if (combinedTotal > 0) {
-                const categoryPercentage = categoryType === 'tenantImprovements' 
-                  ? tiTotal / combinedTotal 
-                  : designTotal / combinedTotal;
-                const adjustedTotal = (parseFloat(item.totalPrice) * categoryPercentage).toFixed(2);
-                const adjustedUnitPrice = (parseFloat(adjustedTotal) / item.quantity).toFixed(2);
-                adjustedItem = {
-                  ...item,
-                  totalPrice: adjustedTotal,
-                  unitPrice: adjustedUnitPrice,
-                  description: `${item.description} (${Math.round(categoryPercentage * 100)}% allocation)`
-                };
-              }
-            }
-            rolledInItems.push(adjustedItem);
-          }
-        }
-      });
+      // Don't add rolled-in items as separate line items - they should be distributed within existing items
       
-      const allItemsForCategory = [...filteredItems, ...rolledInItems];
+      const allItemsForCategory = filteredItems;
       if (allItemsForCategory.length === 0) return '';
       
       // Calculate total with rollups
@@ -467,14 +432,10 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                   </thead>
                   <tbody>
                       ${allItemsForCategory.map(item => {
-                        // Use distributed costs for tenant improvements when design costs are hidden
-                        const totalPrice = isTenantImprovements && hideDesignCosts ? 
-                          calculateDistributedCostsForPreview(item) : 
-                          parseFloat(item.totalPrice) || 0;
-                        // Use distributed unit price for tenant improvements when design costs are hidden
-                        const unitPrice = isTenantImprovements && hideDesignCosts ? 
-                          calculateDistributedUnitPriceForPreview(item) : 
-                          parseFloat(item.unitPrice) || 0;
+                        // Use distributed costs that include rollups for all items
+                        const totalPrice = calculateDistributedCosts(item);
+                        // Use distributed unit price that includes rollups
+                        const unitPrice = calculateDistributedUnitPrice(item);
                         const pricePerSf = rentableArea > 0 ? totalPrice / rentableArea : 0;
                         return `
                         <tr>

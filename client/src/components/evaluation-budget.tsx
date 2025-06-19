@@ -219,34 +219,70 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     return calculateCategoryTotal(items);
   };
 
-  // Calculate distributed design costs for each tenant improvement item
+  // Calculate distributed costs including rolled-up items
   const calculateDistributedCosts = (item: EvaluationLineItem) => {
-    if (!budgetData.separateDesignCosts) {
-      // When showing separately, return original cost
-      return parseFloat(item.totalPrice) || 0;
-    }
-    
-    // When hiding design costs, distribute them proportionally
-    const tiTotal = calculateCategoryTotal(budgetData.tenantImprovements);
-    const designTotal = calculateCategoryTotal(budgetData.designSoftCosts);
     const itemCost = parseFloat(item.totalPrice) || 0;
     
-    if (tiTotal === 0) return itemCost;
+    // First handle design cost distribution if applicable
+    let distributedDesignCost = 0;
+    if (budgetData.separateDesignCosts) {
+      const tiTotal = calculateCategoryTotal(budgetData.tenantImprovements);
+      const designTotal = calculateCategoryTotal(budgetData.designSoftCosts);
+      
+      if (tiTotal > 0) {
+        const itemPercentage = itemCost / tiTotal;
+        distributedDesignCost = designTotal * itemPercentage;
+      }
+    }
     
-    const itemPercentage = itemCost / tiTotal;
-    const distributedDesignCost = designTotal * itemPercentage;
+    // Then handle rollup distribution
+    let rolledUpDistribution = 0;
     
-    return itemCost + distributedDesignCost;
+    // Find the category this item belongs to
+    let itemCategory: 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements' | null = null;
+    if (budgetData.tenantImprovements.find(i => i.id === item.id)) itemCategory = 'tenantImprovements';
+    else if (budgetData.designSoftCosts.find(i => i.id === item.id)) itemCategory = 'designSoftCosts';
+    else if (budgetData.existingImprovements.find(i => i.id === item.id)) itemCategory = 'existingImprovements';
+    
+    if (itemCategory) {
+      // Calculate base total for this category (excluding rolled-up items)
+      const baseCategoryTotal = budgetData[itemCategory]
+        .filter(i => !budgetData.lineItemRollups[i.id])
+        .reduce((total, i) => total + (parseFloat(i.totalPrice) || 0), 0);
+      
+      // Calculate total amount rolled INTO this category
+      let totalRolledIn = 0;
+      Object.entries(budgetData.lineItemRollups).forEach(([itemId, targetCategory]) => {
+        if (targetCategory === itemCategory) {
+          const allItems = [
+            ...budgetData.tenantImprovements,
+            ...budgetData.designSoftCosts,
+            ...budgetData.existingImprovements
+          ];
+          const rolledItem = allItems.find(i => i.id === itemId);
+          if (rolledItem) {
+            totalRolledIn += parseFloat(rolledItem.totalPrice) || 0;
+          }
+        }
+      });
+      
+      // Distribute rolled-in amount proportionally if this item is not rolled up elsewhere
+      if (!budgetData.lineItemRollups[item.id] && baseCategoryTotal > 0 && totalRolledIn > 0) {
+        const itemPercentage = itemCost / baseCategoryTotal;
+        rolledUpDistribution = totalRolledIn * itemPercentage;
+      }
+    }
+    
+    return itemCost + distributedDesignCost + rolledUpDistribution;
   };
 
-  // Calculate distributed unit price when design costs are hidden
+  // Calculate distributed unit price including rollups
   const calculateDistributedUnitPrice = (item: EvaluationLineItem) => {
-    if (!budgetData.separateDesignCosts || item.quantity === 0) {
-      // When showing separately or quantity is 0, return original unit price
+    if (item.quantity === 0) {
       return parseFloat(item.unitPrice) || 0;
     }
     
-    // When hiding design costs, calculate new unit price based on distributed total
+    // Calculate new unit price based on distributed total (includes design costs and rollups)
     const distributedTotal = calculateDistributedCosts(item);
     return distributedTotal / item.quantity;
   };
@@ -890,16 +926,10 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                         {item.quantity} {item.unit}
                       </TableCell>
                       <TableCell className={budgetData.lineItemRollups[item.id] ? "text-gray-500 italic line-through" : ""}>
-                        {category === 'tenantImprovements' ? 
-                          formatCurrency(calculateDistributedUnitPrice(item)) : 
-                          formatCurrency(item.unitPrice)
-                        }
+                        {formatCurrency(calculateDistributedUnitPrice(item))}
                       </TableCell>
                       {!newItemCategory && <TableCell className={`font-medium ${budgetData.lineItemRollups[item.id] ? "text-gray-500 italic line-through" : ""}`}>
-                        {category === 'tenantImprovements' ? 
-                          formatCurrency(calculateDistributedCosts(item)) : 
-                          formatCurrency(item.totalPrice)
-                        }
+                        {formatCurrency(calculateDistributedCosts(item))}
                       </TableCell>}
                       <TableCell>
                         <div className="flex gap-1">

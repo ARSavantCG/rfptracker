@@ -594,6 +594,48 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
             border-left: 4px solid #007bff;
             white-space: pre-wrap;
         }
+        .rollup-summary-section {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin: 20px 0;
+            border-left: 4px solid #17a2b8;
+        }
+        .rollup-summary-title { 
+            color: #495057; 
+            margin: 0 0 10px 0; 
+            font-size: 18px; 
+        }
+        .rollup-summary-description {
+            color: #6c757d;
+            margin: 0 0 15px 0;
+            font-size: 14px;
+        }
+        .rollup-summary-content {
+            background-color: #e9f7fd;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .rollup-summary-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #b8daff;
+        }
+        .rollup-summary-item:last-child {
+            border-bottom: none;
+        }
+        .rollup-item-name {
+            color: #495057;
+            font-size: 14px;
+        }
+        .rollup-item-target {
+            color: #17a2b8;
+            font-size: 14px;
+            font-weight: 500;
+        }
         .existing-improvements-note {
             background-color: #fff3cd;
             border: 1px solid #ffeaa7;
@@ -635,6 +677,43 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     <div class="notes-section">
         <h3 class="notes-title">Budget Notes</h3>
         <div class="notes-content">${budgetData.notes}</div>
+    </div>
+    ` : ''}
+
+    ${Object.keys(budgetData.lineItemRollups).length > 0 ? `
+    <div class="rollup-summary-section">
+        <h3 class="rollup-summary-title">Line Item Rollup Summary</h3>
+        <p class="rollup-summary-description">The following items are being redistributed to different categories:</p>
+        <div class="rollup-summary-content">
+            ${Object.entries(budgetData.lineItemRollups).map(([itemId, targetCategory]) => {
+              const allItems = [
+                ...budgetData.tenantImprovements,
+                ...budgetData.designSoftCosts,
+                ...budgetData.existingImprovements
+              ];
+              const item = allItems.find(i => i.id === itemId);
+              if (!item) return '';
+              
+              const targetName = targetCategory === 'tenantImprovements' ? 'Tenant Improvements' : 
+                targetCategory === 'designSoftCosts' ? 'Design/Soft Costs' : 
+                targetCategory === 'tiAndDesign' ? (() => {
+                  const tiTotal = calculateCategoryTotal(budgetData.tenantImprovements);
+                  const designTotal = calculateCategoryTotal(budgetData.designSoftCosts);
+                  const combinedTotal = tiTotal + designTotal;
+                  if (combinedTotal > 0) {
+                    const tiPercent = Math.round((tiTotal / combinedTotal) * 100);
+                    const designPercent = Math.round((designTotal / combinedTotal) * 100);
+                    return `TI & Design (${tiPercent}%/${designPercent}%)`;
+                  }
+                  return 'TI & Design (50%/50%)';
+                })() : 'Existing Improvements';
+              
+              return `<div class="rollup-summary-item">
+                <span class="rollup-item-name"><strong>${item.description}</strong> (${formatCurrency(item.totalPrice)})</span>
+                <span class="rollup-item-target">→ Rolling to ${targetName}</span>
+              </div>`;
+            }).join('')}
+        </div>
     </div>
     ` : ''}
 
@@ -1109,53 +1188,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
 
 
 
-      {/* Line Item Rollup Summary */}
-      {Object.keys(budgetData.lineItemRollups).length > 0 && (
-        <Card className="bg-blue-50 border-blue-200">
-          <CardHeader>
-            <CardTitle className="text-lg text-blue-800">Line Item Rollup Summary</CardTitle>
-            <p className="text-sm text-blue-600">
-              The following items are being redistributed to different categories:
-            </p>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {Object.entries(budgetData.lineItemRollups).map(([itemId, targetCategory]) => {
-                const allItems = [
-                  ...budgetData.tenantImprovements,
-                  ...budgetData.designSoftCosts,
-                  ...budgetData.existingImprovements
-                ];
-                const item = allItems.find(i => i.id === itemId);
-                if (!item) return null;
-                
-                return (
-                  <div key={itemId} className="flex justify-between items-center text-sm">
-                    <span className="text-gray-700">
-                      <strong>{item.description}</strong> ({formatCurrency(item.totalPrice)})
-                    </span>
-                    <span className="text-blue-600">
-                      → Rolling to {targetCategory === 'tenantImprovements' ? 'Tenant Improvements' : 
-                        targetCategory === 'designSoftCosts' ? 'Design/Soft Costs' : 
-                        targetCategory === 'tiAndDesign' ? (() => {
-                          const tiTotal = calculateCategoryTotal(budgetData.tenantImprovements);
-                          const designTotal = calculateCategoryTotal(budgetData.designSoftCosts);
-                          const combinedTotal = tiTotal + designTotal;
-                          if (combinedTotal > 0) {
-                            const tiPercent = Math.round((tiTotal / combinedTotal) * 100);
-                            const designPercent = Math.round((designTotal / combinedTotal) * 100);
-                            return `TI & Design (${tiPercent}%/${designPercent}%)`;
-                          }
-                          return 'TI & Design (50%/50%)';
-                        })() : 'Existing Improvements'}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+
 
       {/* Tenant Improvements */}
       {renderCategoryTable(
@@ -1245,6 +1278,54 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Line Item Rollup Summary */}
+      {Object.keys(budgetData.lineItemRollups).length > 0 && (
+        <Card className="bg-blue-50 border-blue-200">
+          <CardHeader>
+            <CardTitle className="text-lg text-blue-800">Line Item Rollup Summary</CardTitle>
+            <p className="text-sm text-blue-600">
+              The following items are being redistributed to different categories:
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {Object.entries(budgetData.lineItemRollups).map(([itemId, targetCategory]) => {
+                const allItems = [
+                  ...budgetData.tenantImprovements,
+                  ...budgetData.designSoftCosts,
+                  ...budgetData.existingImprovements
+                ];
+                const item = allItems.find(i => i.id === itemId);
+                if (!item) return null;
+                
+                return (
+                  <div key={itemId} className="flex justify-between items-center text-sm">
+                    <span className="text-gray-700">
+                      <strong>{item.description}</strong> ({formatCurrency(item.totalPrice)})
+                    </span>
+                    <span className="text-blue-600">
+                      → Rolling to {targetCategory === 'tenantImprovements' ? 'Tenant Improvements' : 
+                        targetCategory === 'designSoftCosts' ? 'Design/Soft Costs' : 
+                        targetCategory === 'tiAndDesign' ? (() => {
+                          const tiTotal = calculateCategoryTotal(budgetData.tenantImprovements);
+                          const designTotal = calculateCategoryTotal(budgetData.designSoftCosts);
+                          const combinedTotal = tiTotal + designTotal;
+                          if (combinedTotal > 0) {
+                            const tiPercent = Math.round((tiTotal / combinedTotal) * 100);
+                            const designPercent = Math.round((designTotal / combinedTotal) * 100);
+                            return `TI & Design (${tiPercent}%/${designPercent}%)`;
+                          }
+                          return 'TI & Design (50%/50%)';
+                        })() : 'Existing Improvements'}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Preview Report */}
       <Card>

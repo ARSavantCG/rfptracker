@@ -1074,7 +1074,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         "Tenant Improvements",
         budgetData.tenantImprovements,
         'tenantImprovements',
-        calculateCategoryTotalWithRollups('tenantImprovements')
+        calculateCategoryTotal(budgetData.tenantImprovements)
       )}
 
       {/* Design / Soft Costs / Other Fees - Only show when separateDesignCosts is false (not hidden) */}
@@ -1082,7 +1082,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         "Design / Soft Costs / Other Fees",
         budgetData.designSoftCosts,
         'designSoftCosts',
-        calculateCategoryTotalWithRollups('designSoftCosts')
+        calculateCategoryTotal(budgetData.designSoftCosts)
       )}
 
       {/* Existing Improvements */}
@@ -1130,7 +1130,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
               "",
               budgetData.existingImprovements,
               'existingImprovements',
-              calculateCategoryTotalWithRollups('existingImprovements')
+              calculateCategoryTotal(budgetData.existingImprovements)
             )}
           </CardContent>
         )}

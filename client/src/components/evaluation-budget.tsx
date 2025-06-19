@@ -38,7 +38,7 @@ interface EvaluationBudgetData {
   totalExistingImprovements: string;
   grandTotal: string;
   notes: string;
-  lineItemRollups: Record<string, 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements'>;
+  lineItemRollups: Record<string, 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements' | 'tiAndDesign'>;
 }
 
 interface EvaluationBudgetProps {
@@ -192,7 +192,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     
     // Add rolled-up items from other categories
     Object.entries(budgetData.lineItemRollups).forEach(([itemId, targetCategory]) => {
-      if (targetCategory === category) {
+      if (targetCategory === category || (targetCategory === 'tiAndDesign' && (category === 'tenantImprovements' || category === 'designSoftCosts'))) {
         // Find the item in any category
         const allItems = [
           ...budgetData.tenantImprovements,
@@ -201,7 +201,12 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         ];
         const item = allItems.find(i => i.id === itemId);
         if (item) {
-          total += parseFloat(item.totalPrice) || 0;
+          let amountToAdd = parseFloat(item.totalPrice) || 0;
+          // If rolling to both TI & Design, split the amount equally
+          if (targetCategory === 'tiAndDesign') {
+            amountToAdd = amountToAdd / 2;
+          }
+          total += amountToAdd;
         }
       }
     });
@@ -253,7 +258,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
       // Calculate total amount rolled INTO this category
       let totalRolledIn = 0;
       Object.entries(budgetData.lineItemRollups).forEach(([itemId, targetCategory]) => {
-        if (targetCategory === itemCategory) {
+        if (targetCategory === itemCategory || targetCategory === 'tiAndDesign') {
           const allItems = [
             ...budgetData.tenantImprovements,
             ...budgetData.designSoftCosts,
@@ -261,7 +266,12 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
           ];
           const rolledItem = allItems.find(i => i.id === itemId);
           if (rolledItem) {
-            totalRolledIn += parseFloat(rolledItem.totalPrice) || 0;
+            let amountToAdd = parseFloat(rolledItem.totalPrice) || 0;
+            // If rolling to both TI & Design, split the amount equally
+            if (targetCategory === 'tiAndDesign' && (itemCategory === 'tenantImprovements' || itemCategory === 'designSoftCosts')) {
+              amountToAdd = amountToAdd / 2;
+            }
+            totalRolledIn += amountToAdd;
           }
         }
       });
@@ -822,7 +832,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                             <SelectItem value="none">None</SelectItem>
                             <SelectItem value="tenantImprovements">TI</SelectItem>
                             <SelectItem value="designSoftCosts">Design</SelectItem>
-                            <SelectItem value="existingImprovements">Existing</SelectItem>
+                            <SelectItem value="tiAndDesign">TI & Design</SelectItem>
                           </SelectContent>
                         </Select>
                       </TableCell>

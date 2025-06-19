@@ -261,9 +261,11 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                                 form.setValue('architectDueDate', dateString);
                               }
                             }}
-                            disabled={(date) =>
-                              date < new Date() || date < new Date("1900-01-01")
-                            }
+                            disabled={(date) => {
+                              const today = new Date();
+                              today.setHours(0, 0, 0, 0);
+                              return date < today || date < new Date("1900-01-01");
+                            }}
                             initialFocus
                             modifiers={internalDueDate ? {
                               internalDue: internalDueDate
@@ -329,9 +331,11 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                               const dateString = date ? format(date, "yyyy-MM-dd") : "";
                               field.onChange(dateString);
                             }}
-                            disabled={(date) =>
-                              date < new Date() || date < new Date("1900-01-01")
-                            }
+                            disabled={(date) => {
+                              const today = new Date();
+                              today.setHours(0, 0, 0, 0);
+                              return date < today || date < new Date("1900-01-01");
+                            }}
                             initialFocus
                             modifiers={internalDueDate ? {
                               internalDue: internalDueDate

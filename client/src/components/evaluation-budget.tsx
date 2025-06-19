@@ -886,10 +886,10 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                           </span>
                         )}
                       </TableCell>
-                      <TableCell className={budgetData.lineItemRollups[item.id] ? "text-gray-500 italic" : ""}>
+                      <TableCell className={budgetData.lineItemRollups[item.id] ? "text-gray-500 italic line-through" : ""}>
                         {item.quantity} {item.unit}
                       </TableCell>
-                      <TableCell className={budgetData.lineItemRollups[item.id] ? "text-gray-500 italic" : ""}>
+                      <TableCell className={budgetData.lineItemRollups[item.id] ? "text-gray-500 italic line-through" : ""}>
                         {category === 'tenantImprovements' ? 
                           formatCurrency(calculateDistributedUnitPrice(item)) : 
                           formatCurrency(item.unitPrice)
@@ -1074,7 +1074,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         "Tenant Improvements",
         budgetData.tenantImprovements,
         'tenantImprovements',
-        calculateCategoryTotal(budgetData.tenantImprovements)
+        calculateCategoryTotalWithRollups('tenantImprovements')
       )}
 
       {/* Design / Soft Costs / Other Fees - Only show when separateDesignCosts is false (not hidden) */}
@@ -1082,7 +1082,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         "Design / Soft Costs / Other Fees",
         budgetData.designSoftCosts,
         'designSoftCosts',
-        calculateCategoryTotal(budgetData.designSoftCosts)
+        calculateCategoryTotalWithRollups('designSoftCosts')
       )}
 
       {/* Existing Improvements */}
@@ -1130,7 +1130,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
               "",
               budgetData.existingImprovements,
               'existingImprovements',
-              calculateCategoryTotal(budgetData.existingImprovements)
+              calculateCategoryTotalWithRollups('existingImprovements')
             )}
           </CardContent>
         )}

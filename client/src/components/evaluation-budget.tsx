@@ -176,6 +176,39 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     }, 0);
   };
 
+  // Calculate total including rolled-up items from other categories
+  const calculateCategoryTotalWithRollups = (
+    category: 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements'
+  ) => {
+    let total = 0;
+    
+    // Add items from this category that are not rolled up elsewhere
+    const categoryItems = budgetData[category];
+    categoryItems.forEach(item => {
+      if (!budgetData.lineItemRollups[item.id]) {
+        total += parseFloat(item.totalPrice) || 0;
+      }
+    });
+    
+    // Add rolled-up items from other categories
+    Object.entries(budgetData.lineItemRollups).forEach(([itemId, targetCategory]) => {
+      if (targetCategory === category) {
+        // Find the item in any category
+        const allItems = [
+          ...budgetData.tenantImprovements,
+          ...budgetData.designSoftCosts,
+          ...budgetData.existingImprovements
+        ];
+        const item = allItems.find(i => i.id === itemId);
+        if (item) {
+          total += parseFloat(item.totalPrice) || 0;
+        }
+      }
+    });
+    
+    return total;
+  };
+
   const calculateDisplayedCategoryTotal = (items: EvaluationLineItem[], category: string) => {
     if (category === 'tenantImprovements' && budgetData.separateDesignCosts) {
       // When hiding design costs, show total including distributed design costs
@@ -683,7 +716,10 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     saveAndAdvanceMutation.mutate();
   };
 
-  const renderCategoryTable = (title: string, items: EvaluationLineItem[], category: 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', total: number) => (
+  const renderCategoryTable = (title: string, items: EvaluationLineItem[], category: 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', total: number) => {
+    const totalWithRollups = calculateCategoryTotalWithRollups(category);
+    
+    return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-lg">{title}</CardTitle>
@@ -719,6 +755,22 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                 <TableRow key={item.id}>
                   {editingItem === item.id ? (
                     <>
+                      <TableCell>
+                        <Select
+                          value={budgetData.lineItemRollups[item.id] || 'none'}
+                          onValueChange={(value) => handleLineItemRollup(item.id, category, value as any)}
+                        >
+                          <SelectTrigger className="w-full text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">None</SelectItem>
+                            <SelectItem value="tenantImprovements">TI</SelectItem>
+                            <SelectItem value="designSoftCosts">Design</SelectItem>
+                            <SelectItem value="existingImprovements">Existing</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
                       <TableCell>
                         <Input
                           value={item.description}
@@ -776,15 +828,55 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                     </>
                   ) : (
                     <>
-                      <TableCell>{item.description}</TableCell>
-                      <TableCell>{item.quantity} {item.unit}</TableCell>
                       <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            checked={!!budgetData.lineItemRollups[item.id]}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                // Default to rolling up to tenant improvements
+                                handleLineItemRollup(item.id, category, 'tenantImprovements');
+                              } else {
+                                handleLineItemRollup(item.id, category, 'none');
+                              }
+                            }}
+                          />
+                          {budgetData.lineItemRollups[item.id] && (
+                            <Select
+                              value={budgetData.lineItemRollups[item.id]}
+                              onValueChange={(value) => handleLineItemRollup(item.id, category, value as any)}
+                            >
+                              <SelectTrigger className="w-16 h-6 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="tenantImprovements">TI</SelectItem>
+                                <SelectItem value="designSoftCosts">Design</SelectItem>
+                                <SelectItem value="existingImprovements">Existing</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className={budgetData.lineItemRollups[item.id] ? "text-gray-500 italic" : ""}>
+                        {item.description}
+                        {budgetData.lineItemRollups[item.id] && (
+                          <span className="text-xs text-blue-600 ml-2">
+                            → Rolling to {budgetData.lineItemRollups[item.id] === 'tenantImprovements' ? 'Tenant Improvements' : 
+                              budgetData.lineItemRollups[item.id] === 'designSoftCosts' ? 'Design/Soft Costs' : 'Existing Improvements'}
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell className={budgetData.lineItemRollups[item.id] ? "text-gray-500 italic" : ""}>
+                        {item.quantity} {item.unit}
+                      </TableCell>
+                      <TableCell className={budgetData.lineItemRollups[item.id] ? "text-gray-500 italic" : ""}>
                         {category === 'tenantImprovements' ? 
                           formatCurrency(calculateDistributedUnitPrice(item)) : 
                           formatCurrency(item.unitPrice)
                         }
                       </TableCell>
-                      {!newItemCategory && <TableCell className="font-medium">
+                      {!newItemCategory && <TableCell className={`font-medium ${budgetData.lineItemRollups[item.id] ? "text-gray-500 italic line-through" : ""}`}>
                         {category === 'tenantImprovements' ? 
                           formatCurrency(calculateDistributedCosts(item)) : 
                           formatCurrency(item.totalPrice)
@@ -898,7 +990,8 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         )}
       </CardContent>
     </Card>
-  );
+    );
+  };
 
   if (!rfp) {
     return (

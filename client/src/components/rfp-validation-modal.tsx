@@ -254,11 +254,19 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                             mode="single"
                             selected={field.value ? new Date(field.value) : undefined}
                             onSelect={(date) => {
-                              const dateString = date ? format(date, "yyyy-MM-dd") : "";
-                              field.onChange(dateString);
-                              // Auto-populate architect due date if it's empty
-                              if (!form.getValues('architectDueDate') && dateString) {
-                                form.setValue('architectDueDate', dateString);
+                              if (date) {
+                                // Create date string in local timezone to avoid timezone conversion issues
+                                const year = date.getFullYear();
+                                const month = String(date.getMonth() + 1).padStart(2, '0');
+                                const day = String(date.getDate()).padStart(2, '0');
+                                const dateString = `${year}-${month}-${day}`;
+                                field.onChange(dateString);
+                                // Auto-populate architect due date if it's empty
+                                if (!form.getValues('architectDueDate')) {
+                                  form.setValue('architectDueDate', dateString);
+                                }
+                              } else {
+                                field.onChange("");
                               }
                             }}
                             disabled={(date) => {
@@ -328,8 +336,16 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                             mode="single"
                             selected={field.value ? new Date(field.value) : undefined}
                             onSelect={(date) => {
-                              const dateString = date ? format(date, "yyyy-MM-dd") : "";
-                              field.onChange(dateString);
+                              if (date) {
+                                // Create date string in local timezone to avoid timezone conversion issues
+                                const year = date.getFullYear();
+                                const month = String(date.getMonth() + 1).padStart(2, '0');
+                                const day = String(date.getDate()).padStart(2, '0');
+                                const dateString = `${year}-${month}-${day}`;
+                                field.onChange(dateString);
+                              } else {
+                                field.onChange("");
+                              }
                             }}
                             disabled={(date) => {
                               const today = new Date();

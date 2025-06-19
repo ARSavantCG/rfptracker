@@ -22,6 +22,8 @@ interface EvaluationLineItem {
   totalPrice: string;
   bidCollectionId?: number;
   bidLineItemId?: number;
+  isRolledUp?: boolean;
+  rollupTarget?: 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements';
 }
 
 interface EvaluationBudgetData {
@@ -36,6 +38,7 @@ interface EvaluationBudgetData {
   totalExistingImprovements: string;
   grandTotal: string;
   notes: string;
+  lineItemRollups: Record<string, 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements'>;
 }
 
 interface EvaluationBudgetProps {
@@ -49,6 +52,28 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  // Handle line item rollup
+  const handleLineItemRollup = (
+    itemId: string, 
+    sourceCategory: 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements',
+    targetCategory: 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements' | 'none'
+  ) => {
+    setBudgetData(prev => {
+      const newLineItemRollups = { ...prev.lineItemRollups };
+      
+      if (targetCategory === 'none') {
+        delete newLineItemRollups[itemId];
+      } else {
+        newLineItemRollups[itemId] = targetCategory;
+      }
+
+      return {
+        ...prev,
+        lineItemRollups: newLineItemRollups,
+      };
+    });
+  };
 
   // Load existing evaluation budget data
   const { data: existingBudget } = useQuery({
@@ -94,6 +119,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     totalExistingImprovements: "0.00",
     grandTotal: "0.00",
     notes: "",
+    lineItemRollups: {},
   });
 
   // Initialize budget with saved data or bid line items data
@@ -112,6 +138,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         totalExistingImprovements: (existingBudget as any).totalExistingImprovements || "0.00",
         grandTotal: (existingBudget as any).grandTotal || "0.00",
         notes: (existingBudget as any).notes || "",
+        lineItemRollups: (existingBudget as any).lineItemRollups || {},
       });
     } else if (allBidLineItems && Array.isArray(allBidLineItems) && allBidLineItems.length > 0) {
       // Initialize with bid line items if no saved budget exists
@@ -679,6 +706,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-12">Rollup</TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead className="w-32">Quantity (Unit)</TableHead>
                 <TableHead className="w-24">Unit Price</TableHead>

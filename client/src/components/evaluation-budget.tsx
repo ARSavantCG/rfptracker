@@ -202,9 +202,20 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         const item = allItems.find(i => i.id === itemId);
         if (item) {
           let amountToAdd = parseFloat(item.totalPrice) || 0;
-          // If rolling to both TI & Design, split the amount equally
+          // If rolling to both TI & Design, distribute proportionally based on category sizes
           if (targetCategory === 'tiAndDesign') {
-            amountToAdd = amountToAdd / 2;
+            const tiTotal = calculateCategoryTotal(budgetData.tenantImprovements);
+            const designTotal = calculateCategoryTotal(budgetData.designSoftCosts);
+            const combinedTotal = tiTotal + designTotal;
+            
+            if (combinedTotal > 0) {
+              const categoryPercentage = category === 'tenantImprovements' 
+                ? tiTotal / combinedTotal 
+                : designTotal / combinedTotal;
+              amountToAdd = amountToAdd * categoryPercentage;
+            } else {
+              amountToAdd = amountToAdd / 2; // Fallback to 50/50 if no base amounts
+            }
           }
           total += amountToAdd;
         }
@@ -267,9 +278,20 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
           const rolledItem = allItems.find(i => i.id === itemId);
           if (rolledItem) {
             let amountToAdd = parseFloat(rolledItem.totalPrice) || 0;
-            // If rolling to both TI & Design, split the amount equally
+            // If rolling to both TI & Design, distribute proportionally based on category sizes
             if (targetCategory === 'tiAndDesign') {
-              amountToAdd = amountToAdd / 2;
+              const tiTotal = calculateCategoryTotal(budgetData.tenantImprovements);
+              const designTotal = calculateCategoryTotal(budgetData.designSoftCosts);
+              const combinedTotal = tiTotal + designTotal;
+              
+              if (combinedTotal > 0) {
+                const categoryPercentage = itemCategory === 'tenantImprovements' 
+                  ? tiTotal / combinedTotal 
+                  : designTotal / combinedTotal;
+                amountToAdd = amountToAdd * categoryPercentage;
+              } else {
+                amountToAdd = amountToAdd / 2; // Fallback to 50/50 if no base amounts
+              }
             }
             totalRolledIn += amountToAdd;
           }
@@ -917,7 +939,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                               <SelectContent>
                                 <SelectItem value="tenantImprovements">TI</SelectItem>
                                 <SelectItem value="designSoftCosts">Design</SelectItem>
-                                <SelectItem value="existingImprovements">Existing</SelectItem>
+                                <SelectItem value="tiAndDesign">TI & Design</SelectItem>
                               </SelectContent>
                             </Select>
                           )}
@@ -929,7 +951,17 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                           <span className="text-xs text-blue-600 ml-2">
                             → Rolling to {budgetData.lineItemRollups[item.id] === 'tenantImprovements' ? 'Tenant Improvements' : 
                               budgetData.lineItemRollups[item.id] === 'designSoftCosts' ? 'Design/Soft Costs' : 
-                              budgetData.lineItemRollups[item.id] === 'tiAndDesign' ? 'TI & Design (50/50)' : 'Existing Improvements'}
+                              budgetData.lineItemRollups[item.id] === 'tiAndDesign' ? (() => {
+                                const tiTotal = calculateCategoryTotal(budgetData.tenantImprovements);
+                                const designTotal = calculateCategoryTotal(budgetData.designSoftCosts);
+                                const combinedTotal = tiTotal + designTotal;
+                                if (combinedTotal > 0) {
+                                  const tiPercent = Math.round((tiTotal / combinedTotal) * 100);
+                                  const designPercent = Math.round((designTotal / combinedTotal) * 100);
+                                  return `TI & Design (${tiPercent}%/${designPercent}%)`;
+                                }
+                                return 'TI & Design (50%/50%)';
+                              })() : 'Existing Improvements'}
                           </span>
                         )}
                       </TableCell>
@@ -1101,7 +1133,17 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                     <span className="text-blue-600">
                       → Rolling to {targetCategory === 'tenantImprovements' ? 'Tenant Improvements' : 
                         targetCategory === 'designSoftCosts' ? 'Design/Soft Costs' : 
-                        targetCategory === 'tiAndDesign' ? 'TI & Design (50/50)' : 'Existing Improvements'}
+                        targetCategory === 'tiAndDesign' ? (() => {
+                          const tiTotal = calculateCategoryTotal(budgetData.tenantImprovements);
+                          const designTotal = calculateCategoryTotal(budgetData.designSoftCosts);
+                          const combinedTotal = tiTotal + designTotal;
+                          if (combinedTotal > 0) {
+                            const tiPercent = Math.round((tiTotal / combinedTotal) * 100);
+                            const designPercent = Math.round((designTotal / combinedTotal) * 100);
+                            return `TI & Design (${tiPercent}%/${designPercent}%)`;
+                          }
+                          return 'TI & Design (50%/50%)';
+                        })() : 'Existing Improvements'}
                     </span>
                   </div>
                 );

@@ -251,9 +251,6 @@ export function StatsCards({ onStatusFilter }: StatsCardsProps) {
           <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
             <div className="flex items-center justify-between mb-1">
               <h3 className="text-xs font-semibold text-gray-900">Overview</h3>
-              <span className="text-xs px-1 py-0.5 bg-blue-50 text-blue-600 rounded font-medium">
-                Live
-              </span>
             </div>
             
             <div className="h-20">

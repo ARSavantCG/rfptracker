@@ -388,13 +388,62 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     const renderCategorySection = (title: string, items: EvaluationLineItem[], categoryType?: string) => {
       if (items.length === 0) return '';
       
-      // Use distributed totals for tenant improvements when design costs are hidden
-      const isTenantImprovements = categoryType === 'tenantImprovements';
-      const total = isTenantImprovements && hideDesignCosts ? 
-        calculateDisplayedCategoryTotalForPreview(items, 'tenantImprovements') : 
-        calculateCategoryTotal(items);
+      // Filter items based on rollup configuration
+      const filteredItems = items.filter(item => {
+        const rollupTarget = budgetData.lineItemRollups[item.id];
+        if (!rollupTarget) {
+          // Item is not rolled up, include it in its original category
+          return true;
+        }
+        // Item is rolled up, only include it in the target category
+        return rollupTarget === categoryType || 
+               (rollupTarget === 'tiAndDesign' && (categoryType === 'tenantImprovements' || categoryType === 'designSoftCosts'));
+      });
       
+      // Add rolled-in items from other categories
+      const rolledInItems: EvaluationLineItem[] = [];
+      Object.entries(budgetData.lineItemRollups).forEach(([itemId, targetCategory]) => {
+        if (targetCategory === categoryType || (targetCategory === 'tiAndDesign' && (categoryType === 'tenantImprovements' || categoryType === 'designSoftCosts'))) {
+          const allItems = [
+            ...budgetData.tenantImprovements,
+            ...budgetData.designSoftCosts,
+            ...budgetData.existingImprovements
+          ];
+          const item = allItems.find(i => i.id === itemId);
+          if (item && !filteredItems.find(i => i.id === item.id)) {
+            // Calculate the portion for this category if rolling to TI & Design
+            let adjustedItem = { ...item };
+            if (targetCategory === 'tiAndDesign') {
+              const tiTotal = calculateCategoryTotal(budgetData.tenantImprovements);
+              const designTotal = calculateCategoryTotal(budgetData.designSoftCosts);
+              const combinedTotal = tiTotal + designTotal;
+              
+              if (combinedTotal > 0) {
+                const categoryPercentage = categoryType === 'tenantImprovements' 
+                  ? tiTotal / combinedTotal 
+                  : designTotal / combinedTotal;
+                const adjustedTotal = (parseFloat(item.totalPrice) * categoryPercentage).toFixed(2);
+                const adjustedUnitPrice = (parseFloat(adjustedTotal) / item.quantity).toFixed(2);
+                adjustedItem = {
+                  ...item,
+                  totalPrice: adjustedTotal,
+                  unitPrice: adjustedUnitPrice,
+                  description: `${item.description} (${Math.round(categoryPercentage * 100)}% allocation)`
+                };
+              }
+            }
+            rolledInItems.push(adjustedItem);
+          }
+        }
+      });
+      
+      const allItemsForCategory = [...filteredItems, ...rolledInItems];
+      if (allItemsForCategory.length === 0) return '';
+      
+      // Calculate total with rollups
+      const total = calculateCategoryTotalWithRollups(categoryType as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements');
       const rentableArea = rfp?.projectArea ? parseInt(rfp.projectArea) : 0;
+      const isTenantImprovements = categoryType === 'tenantImprovements';
       
       return `
       <div class="section">
@@ -417,7 +466,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                       </tr>
                   </thead>
                   <tbody>
-                      ${items.map(item => {
+                      ${allItemsForCategory.map(item => {
                         // Use distributed costs for tenant improvements when design costs are hidden
                         const totalPrice = isTenantImprovements && hideDesignCosts ? 
                           calculateDistributedCostsForPreview(item) : 
@@ -634,7 +683,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     </div>
     ` : ''}
 
-    ${budgetData.hasExistingImprovements ? renderExistingImprovementsSection() : ''}
+    ${budgetData.hasExistingImprovements ? renderCategorySection("Existing Improvements", budgetData.existingImprovements, "existingImprovements") : ''}
 </body>
 </html>`;
     

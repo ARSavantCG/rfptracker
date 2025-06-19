@@ -193,7 +193,6 @@ export function StatsCards({ onStatusFilter }: StatsCardsProps) {
           <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
             <div className="flex items-center justify-between mb-1">
               <h3 className="text-xs font-semibold text-gray-900">Distribution</h3>
-              <div className="w-1 h-1 bg-green-500 rounded-full"></div>
             </div>
             
             <div className="h-12">

@@ -252,14 +252,15 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                         <PopoverContent className="w-auto p-0" align="start">
                           <Calendar
                             mode="single"
-                            selected={field.value ? new Date(field.value + 'T00:00:00') : undefined}
+                            selected={field.value ? (() => {
+                              const [year, month, day] = field.value.split('-');
+                              return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                            })() : undefined}
                             onSelect={(date) => {
                               if (date) {
-                                // Force date to local timezone and extract components
-                                const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-                                const year = localDate.getFullYear();
-                                const month = String(localDate.getMonth() + 1).padStart(2, '0');
-                                const day = String(localDate.getDate()).padStart(2, '0');
+                                const year = date.getFullYear();
+                                const month = String(date.getMonth() + 1).padStart(2, '0');
+                                const day = String(date.getDate()).padStart(2, '0');
                                 const dateString = `${year}-${month}-${day}`;
                                 field.onChange(dateString);
                                 // Auto-populate architect due date if it's empty
@@ -277,7 +278,11 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                             }}
                             initialFocus
                             modifiers={internalDueDate ? {
-                              internalDue: internalDueDate
+                              internalDue: (() => {
+                                const isoString = internalDueDate.toISOString().split('T')[0];
+                                const [year, month, day] = isoString.split('-');
+                                return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                              })()
                             } : {}}
                             modifiersStyles={internalDueDate ? {
                               internalDue: {
@@ -291,9 +296,6 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                             <div className="p-3 border-t bg-blue-50">
                               <p className="text-xs text-blue-600 font-medium">
                                 📅 Internal Due: {format(internalDueDate, "MMM d, yyyy")}
-                              </p>
-                              <p className="text-xs text-gray-600">
-                                Reference date for scheduling contractor due date
                               </p>
                             </div>
                           )}
@@ -335,14 +337,15 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                         <PopoverContent className="w-auto p-0" align="start">
                           <Calendar
                             mode="single"
-                            selected={field.value ? new Date(field.value + 'T00:00:00') : undefined}
+                            selected={field.value ? (() => {
+                              const [year, month, day] = field.value.split('-');
+                              return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                            })() : undefined}
                             onSelect={(date) => {
                               if (date) {
-                                // Force date to local timezone and extract components
-                                const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-                                const year = localDate.getFullYear();
-                                const month = String(localDate.getMonth() + 1).padStart(2, '0');
-                                const day = String(localDate.getDate()).padStart(2, '0');
+                                const year = date.getFullYear();
+                                const month = String(date.getMonth() + 1).padStart(2, '0');
+                                const day = String(date.getDate()).padStart(2, '0');
                                 const dateString = `${year}-${month}-${day}`;
                                 field.onChange(dateString);
                               } else {
@@ -356,7 +359,11 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                             }}
                             initialFocus
                             modifiers={internalDueDate ? {
-                              internalDue: internalDueDate
+                              internalDue: (() => {
+                                const isoString = internalDueDate.toISOString().split('T')[0];
+                                const [year, month, day] = isoString.split('-');
+                                return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                              })()
                             } : {}}
                             modifiersStyles={internalDueDate ? {
                               internalDue: {
@@ -370,9 +377,6 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                             <div className="p-3 border-t bg-blue-50">
                               <p className="text-xs text-blue-600 font-medium">
                                 📅 Internal Due: {format(internalDueDate, "MMM d, yyyy")}
-                              </p>
-                              <p className="text-xs text-gray-600">
-                                Reference date for scheduling architect due date
                               </p>
                             </div>
                           )}

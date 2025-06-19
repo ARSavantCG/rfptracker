@@ -252,13 +252,27 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
   };
 
   const calculateGrandTotal = () => {
-    const tiTotal = calculateCategoryTotal(budgetData.tenantImprovements);
-    const designTotal = calculateCategoryTotal(budgetData.designSoftCosts);
+    const tiTotal = calculateCategoryTotalWithRollups('tenantImprovements');
+    const designTotal = calculateCategoryTotalWithRollups('designSoftCosts');
     const existingTotal = (budgetData.hasExistingImprovements && budgetData.includeExistingInTotal)
-      ? calculateCategoryTotal(budgetData.existingImprovements) 
+      ? calculateCategoryTotalWithRollups('existingImprovements') 
       : 0;
-    // Always include design costs in grand total, whether separate or distributed
-    return tiTotal + designTotal + existingTotal;
+    
+    // Subtract items that are rolled up to avoid double counting
+    let rolledUpTotal = 0;
+    Object.entries(budgetData.lineItemRollups).forEach(([itemId, targetCategory]) => {
+      const allItems = [
+        ...budgetData.tenantImprovements,
+        ...budgetData.designSoftCosts,
+        ...budgetData.existingImprovements
+      ];
+      const item = allItems.find(i => i.id === itemId);
+      if (item) {
+        rolledUpTotal += parseFloat(item.totalPrice) || 0;
+      }
+    });
+    
+    return tiTotal + designTotal + existingTotal - rolledUpTotal;
   };
 
   const generateReportPreview = async (hideDesignCosts: boolean) => {
@@ -724,7 +738,12 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-lg">{title}</CardTitle>
         <div className="flex items-center gap-2">
-          <span className="text-lg font-bold text-green-600">{formatCurrency(total)}</span>
+          <span className="text-lg font-bold text-green-600">{formatCurrency(totalWithRollups)}</span>
+          {totalWithRollups !== total && (
+            <span className="text-sm text-gray-500">
+              (Base: {formatCurrency(total)})
+            </span>
+          )}
           <Button
             size="sm"
             onClick={() => setNewItemCategory(category)}
@@ -1013,12 +1032,49 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
 
 
 
+      {/* Line Item Rollup Summary */}
+      {Object.keys(budgetData.lineItemRollups).length > 0 && (
+        <Card className="bg-blue-50 border-blue-200">
+          <CardHeader>
+            <CardTitle className="text-lg text-blue-800">Line Item Rollup Summary</CardTitle>
+            <p className="text-sm text-blue-600">
+              The following items are being redistributed to different categories:
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {Object.entries(budgetData.lineItemRollups).map(([itemId, targetCategory]) => {
+                const allItems = [
+                  ...budgetData.tenantImprovements,
+                  ...budgetData.designSoftCosts,
+                  ...budgetData.existingImprovements
+                ];
+                const item = allItems.find(i => i.id === itemId);
+                if (!item) return null;
+                
+                return (
+                  <div key={itemId} className="flex justify-between items-center text-sm">
+                    <span className="text-gray-700">
+                      <strong>{item.description}</strong> ({formatCurrency(item.totalPrice)})
+                    </span>
+                    <span className="text-blue-600">
+                      → Rolling to {targetCategory === 'tenantImprovements' ? 'Tenant Improvements' : 
+                        targetCategory === 'designSoftCosts' ? 'Design/Soft Costs' : 'Existing Improvements'}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Tenant Improvements */}
       {renderCategoryTable(
         "Tenant Improvements",
         budgetData.tenantImprovements,
         'tenantImprovements',
-        calculateDisplayedCategoryTotal(budgetData.tenantImprovements, 'tenantImprovements')
+        calculateCategoryTotal(budgetData.tenantImprovements)
       )}
 
       {/* Design / Soft Costs / Other Fees - Only show when separateDesignCosts is false (not hidden) */}

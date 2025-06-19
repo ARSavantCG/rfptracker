@@ -326,21 +326,8 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
       ? calculateCategoryTotalWithRollups('existingImprovements') 
       : 0;
     
-    // Subtract items that are rolled up to avoid double counting
-    let rolledUpTotal = 0;
-    Object.entries(budgetData.lineItemRollups).forEach(([itemId, targetCategory]) => {
-      const allItems = [
-        ...budgetData.tenantImprovements,
-        ...budgetData.designSoftCosts,
-        ...budgetData.existingImprovements
-      ];
-      const item = allItems.find(i => i.id === itemId);
-      if (item) {
-        rolledUpTotal += parseFloat(item.totalPrice) || 0;
-      }
-    });
-    
-    return tiTotal + designTotal + existingTotal - rolledUpTotal;
+    // Simple sum of category totals (rollups are already included in category totals)
+    return tiTotal + designTotal + existingTotal;
   };
 
   const generateReportPreview = async (hideDesignCosts: boolean) => {

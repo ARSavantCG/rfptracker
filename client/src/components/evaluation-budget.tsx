@@ -258,7 +258,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
       // Calculate total amount rolled INTO this category
       let totalRolledIn = 0;
       Object.entries(budgetData.lineItemRollups).forEach(([itemId, targetCategory]) => {
-        if (targetCategory === itemCategory || targetCategory === 'tiAndDesign') {
+        if (targetCategory === itemCategory || (targetCategory === 'tiAndDesign' && (itemCategory === 'tenantImprovements' || itemCategory === 'designSoftCosts'))) {
           const allItems = [
             ...budgetData.tenantImprovements,
             ...budgetData.designSoftCosts,
@@ -268,7 +268,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
           if (rolledItem) {
             let amountToAdd = parseFloat(rolledItem.totalPrice) || 0;
             // If rolling to both TI & Design, split the amount equally
-            if (targetCategory === 'tiAndDesign' && (itemCategory === 'tenantImprovements' || itemCategory === 'designSoftCosts')) {
+            if (targetCategory === 'tiAndDesign') {
               amountToAdd = amountToAdd / 2;
             }
             totalRolledIn += amountToAdd;
@@ -928,7 +928,8 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                         {budgetData.lineItemRollups[item.id] && (
                           <span className="text-xs text-blue-600 ml-2">
                             → Rolling to {budgetData.lineItemRollups[item.id] === 'tenantImprovements' ? 'Tenant Improvements' : 
-                              budgetData.lineItemRollups[item.id] === 'designSoftCosts' ? 'Design/Soft Costs' : 'Existing Improvements'}
+                              budgetData.lineItemRollups[item.id] === 'designSoftCosts' ? 'Design/Soft Costs' : 
+                              budgetData.lineItemRollups[item.id] === 'tiAndDesign' ? 'TI & Design (50/50)' : 'Existing Improvements'}
                           </span>
                         )}
                       </TableCell>
@@ -1099,7 +1100,8 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                     </span>
                     <span className="text-blue-600">
                       → Rolling to {targetCategory === 'tenantImprovements' ? 'Tenant Improvements' : 
-                        targetCategory === 'designSoftCosts' ? 'Design/Soft Costs' : 'Existing Improvements'}
+                        targetCategory === 'designSoftCosts' ? 'Design/Soft Costs' : 
+                        targetCategory === 'tiAndDesign' ? 'TI & Design (50/50)' : 'Existing Improvements'}
                     </span>
                   </div>
                 );

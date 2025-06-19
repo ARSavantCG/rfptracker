@@ -1242,37 +1242,29 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         </CardContent>
       </Card>
 
-      {/* Preview Report Options */}
+      {/* Preview Report */}
       <Card>
         <CardHeader>
           <div className="text-center">
-            <Label className="text-lg font-semibold">Preview Report</Label>
+            <Label className="text-lg font-semibold">Generate Report</Label>
             <p className="text-sm text-gray-600 mt-2">
-              Choose how to display costs in the report preview
+              Report will reflect your current checkbox settings and rollup configurations
             </p>
           </div>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-4 justify-center">
+          <div className="flex justify-center">
             <Button 
-              onClick={() => generateReportPreview(false)}
+              onClick={() => generateReportPreview(budgetData.separateDesignCosts)}
               variant="outline"
               size="sm"
-              className="flex-1"
+              className="px-8"
             >
-              Full Cost Breakdown
-            </Button>
-            <Button 
-              onClick={() => generateReportPreview(true)}
-              variant="outline" 
-              size="sm"
-              className="flex-1"
-            >
-              Simplified View
+              Generate Budget Report
             </Button>
           </div>
           <p className="text-xs text-gray-500 mt-2 text-center">
-            Full breakdown shows all cost categories. Simplified view distributes design costs within tenant improvements.
+            Report format is based on your "Hide Design Costs" checkbox setting and line item rollups.
           </p>
         </CardContent>
       </Card>

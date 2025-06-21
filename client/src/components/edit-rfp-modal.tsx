@@ -27,8 +27,6 @@ const editRfpSchema = z.object({
   sentBy: z.string().min(1, "Sent by is required"),
   receivedOn: z.string().min(1, "Received on date is required"),
   internalDueDate: z.string().min(1, "Internal due date is required"),
-  contractorDueDate: z.string().optional(),
-  architectDueDate: z.string().optional(),
   developmentContact: z.string(),
   projectArea: z.string(),
   requestTypes: z.array(z.string()).min(1, "At least one request type is required"),
@@ -129,8 +127,6 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
       sentBy: "",
       receivedOn: "",
       internalDueDate: "",
-      contractorDueDate: "",
-      architectDueDate: "",
       developmentContact: "",
       projectArea: "",
       requestTypes: [],
@@ -151,8 +147,6 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
         sentBy: rfp.sentBy || "",
         receivedOn: rfp.receivedOn ? new Date(rfp.receivedOn).toISOString().split('T')[0] : "",
         internalDueDate: rfp.internalDueDate ? new Date(rfp.internalDueDate).toISOString().split('T')[0] : "",
-        contractorDueDate: rfp.contractorDueDate ? new Date(rfp.contractorDueDate).toISOString().split('T')[0] : "",
-        architectDueDate: rfp.architectDueDate ? new Date(rfp.architectDueDate).toISOString().split('T')[0] : "",
         developmentContact: rfp.developmentContact || "",
         projectArea: rfp.projectArea || "",
         requestTypes: rfp.requestTypes || [],
@@ -402,36 +396,6 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
                 </FormItem>
               )}
             />
-
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="contractorDueDate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Contractor Due Date</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="architectDueDate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Architect Due Date</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
 
             <div className="grid grid-cols-2 gap-4">
               <FormField

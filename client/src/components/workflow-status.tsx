@@ -9,6 +9,7 @@ import type { RfpRequest } from "@shared/schema";
 interface WorkflowStatusProps {
   rfp: RfpRequest;
   onAdvanceToInvitation: (rfp: RfpRequest) => void;
+  onEditRfp?: (rfp: RfpRequest) => void;
   onValidateRfp?: (rfp: RfpRequest) => void;
   onOpenInvitationModal?: (rfp: RfpRequest) => void;
   onOpenBidCollection?: (rfp: RfpRequest) => void;
@@ -53,7 +54,7 @@ const workflowPhases = [
   }
 ];
 
-export function WorkflowStatus({ rfp, onAdvanceToInvitation, onValidateRfp, onOpenInvitationModal, onOpenBidCollection, onOpenEvaluation }: WorkflowStatusProps) {
+export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValidateRfp, onOpenInvitationModal, onOpenBidCollection, onOpenEvaluation }: WorkflowStatusProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -122,8 +123,8 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onValidateRfp, onOp
   };
 
   const handlePhaseClick = (phase: any) => {
-    if (phase.key === "rfp-entry" && onValidateRfp) {
-      onValidateRfp(rfp);
+    if (phase.key === "rfp-entry" && onEditRfp) {
+      onEditRfp(rfp);
     } else if (phase.key === "invitation-to-bid" && onOpenInvitationModal) {
       onOpenInvitationModal(rfp);
     } else if (phase.key === "bid-collection" && onOpenBidCollection) {

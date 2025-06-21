@@ -283,6 +283,7 @@ export default function Dashboard() {
               <WorkflowStatus 
                 rfp={selectedRfp}
                 onAdvanceToInvitation={handleAdvanceToInvitation}
+                onEditRfp={handleEditRfp}
                 onValidateRfp={handleValidateRfp}
                 onOpenInvitationModal={handleOpenInvitationModal}
                 onOpenBidCollection={handleOpenBidCollection}

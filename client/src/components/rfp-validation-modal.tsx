@@ -281,6 +281,13 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                               return date < today || date < new Date("1900-01-01");
                             }}
                           />
+                          {rfp?.internalDueDate && (
+                            <div className="p-3 border-t bg-blue-50">
+                              <p className="text-xs text-blue-600 font-medium">
+                                📅 Internal Due: {format(new Date(rfp.internalDueDate), "MMM d, yyyy")}
+                              </p>
+                            </div>
+                          )}
                         </PopoverContent>
                       </Popover>
                       <FormMessage />
@@ -344,6 +351,13 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                               return date < today || date < new Date("1900-01-01");
                             }}
                           />
+                          {rfp?.internalDueDate && (
+                            <div className="p-3 border-t bg-blue-50">
+                              <p className="text-xs text-blue-600 font-medium">
+                                📅 Internal Due: {format(new Date(rfp.internalDueDate), "MMM d, yyyy")}
+                              </p>
+                            </div>
+                          )}
                         </PopoverContent>
                       </Popover>
                       <FormMessage />

@@ -1071,7 +1071,7 @@ function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dates: an
         <div class="section-title">Requested Deliverables</div>
         <ul>
           <li>Preliminary space plan</li>
-          <li>Timeline estimate for design phases${hasMilestones(invitationToBid, 'broker-architect') ? ' based on milestone requests below' : ''}</li>
+          <li>Timeline estimate for design phases${hasMilestones(invitationToBid, 'broker-architect') ? ' based on milestone request(s) below' : ''}</li>
           <li>Fee proposal for full architectural services</li>
         </ul>
       </div>
@@ -1253,7 +1253,7 @@ function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, dates: a
         <div class="section-title">Requested Deliverables</div>
         <ul>
           <li>Preliminary cost estimate</li>
-          <li>Timeline estimate for construction phases${hasMilestones(invitationToBid, 'broker-contractor') ? ' based on milestone requests below' : ''}</li>
+          <li>Timeline estimate for construction phases${hasMilestones(invitationToBid, 'broker-contractor') ? ' based on milestone request(s) below' : ''}</li>
           <li>Pricing proposal for full construction services</li>
         </ul>
       </div>

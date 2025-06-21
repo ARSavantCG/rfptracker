@@ -205,21 +205,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         formData.sentBy = formData.rfpRequest;
       }
 
-      // Convert date strings to Date objects for database
-      if (formData.receivedOn && typeof formData.receivedOn === 'string') {
-        formData.receivedOn = new Date(formData.receivedOn);
-      }
-      if (formData.internalDueDate && typeof formData.internalDueDate === 'string') {
-        formData.internalDueDate = new Date(formData.internalDueDate);
-      }
-      if (formData.contractorDueDate && typeof formData.contractorDueDate === 'string') {
-        formData.contractorDueDate = new Date(formData.contractorDueDate);
-      }
-      if (formData.architectDueDate && typeof formData.architectDueDate === 'string') {
-        formData.architectDueDate = new Date(formData.architectDueDate);
-      }
-
+      // Parse with schema first, then convert dates for database
       const parsed = insertRfpRequestSchema.parse(formData);
+      
+      // Convert date strings to Date objects for database storage
+      if (parsed.receivedOn && typeof parsed.receivedOn === 'string') {
+        parsed.receivedOn = new Date(parsed.receivedOn);
+      }
+      if (parsed.internalDueDate && typeof parsed.internalDueDate === 'string') {
+        parsed.internalDueDate = new Date(parsed.internalDueDate);
+      }
+      if (parsed.contractorDueDate && typeof parsed.contractorDueDate === 'string') {
+        parsed.contractorDueDate = new Date(parsed.contractorDueDate);
+      }
+      if (parsed.architectDueDate && typeof parsed.architectDueDate === 'string') {
+        parsed.architectDueDate = new Date(parsed.architectDueDate);
+      }
       
       // Handle uploaded files
       const uploadedFiles = (req.files as Express.Multer.File[] || []).map(file => ({

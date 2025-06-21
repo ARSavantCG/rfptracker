@@ -38,6 +38,14 @@ const invitationFormSchema = z.object({
     quantity: z.number(),
     unit: z.string(),
   })).default([]),
+  architectMilestones: z.array(z.object({
+    description: z.string(),
+    dueDate: z.string(),
+  })).default([]),
+  contractorMilestones: z.array(z.object({
+    description: z.string(),
+    dueDate: z.string(),
+  })).default([]),
 });
 
 type InvitationFormData = z.infer<typeof invitationFormSchema>;
@@ -110,12 +118,24 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
       documentsLink: "",
       keyDates: [],
       scopeOfWork: [],
+      architectMilestones: [],
+      contractorMilestones: [],
     },
   });
 
   const { fields: scopeFields, append: appendScope, remove: removeScope, replace: replaceScope } = useFieldArray({
     control: form.control,
     name: "scopeOfWork",
+  });
+
+  const { fields: architectMilestoneFields, append: appendArchitectMilestone, remove: removeArchitectMilestone } = useFieldArray({
+    control: form.control,
+    name: "architectMilestones",
+  });
+
+  const { fields: contractorMilestoneFields, append: appendContractorMilestone, remove: removeContractorMilestone } = useFieldArray({
+    control: form.control,
+    name: "contractorMilestones",
   });
 
   // Watch checkbox values to enable/disable Generate RFPs button
@@ -228,6 +248,8 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
         documentsLink: data.documentsLink,
         keyDates: data.keyDates,
         scopeOfWork: data.scopeOfWork,
+        architectMilestones: data.architectMilestones,
+        contractorMilestones: data.contractorMilestones,
       };
       
       // Save or update invitation to bid record

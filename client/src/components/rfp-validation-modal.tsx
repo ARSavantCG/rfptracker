@@ -226,7 +226,6 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                 control={form.control}
                 name="contractorDueDate"
                 render={({ field }) => {
-                  const internalDueDate = rfp?.internalDueDate ? new Date(rfp.internalDueDate) : null;
                   return (
                     <FormItem className="flex flex-col">
                       <FormLabel>Contractor Due Date</FormLabel>
@@ -281,28 +280,7 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                               today.setHours(0, 0, 0, 0);
                               return date < today || date < new Date("1900-01-01");
                             }}
-                            modifiers={internalDueDate ? {
-                              internalDue: (() => {
-                                const isoString = internalDueDate.toISOString().split('T')[0];
-                                const [year, month, day] = isoString.split('-');
-                                return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-                              })()
-                            } : {}}
-                            modifiersStyles={internalDueDate ? {
-                              internalDue: {
-                                border: '2px solid #3b82f6',
-                                backgroundColor: '#dbeafe',
-                                fontWeight: 'bold'
-                              }
-                            } : {}}
                           />
-                          {internalDueDate && (
-                            <div className="p-3 border-t bg-blue-50">
-                              <p className="text-xs text-blue-600 font-medium">
-                                📅 Internal Due: {format(internalDueDate, "MMM d, yyyy")}
-                              </p>
-                            </div>
-                          )}
                         </PopoverContent>
                       </Popover>
                       <FormMessage />
@@ -315,7 +293,6 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                 control={form.control}
                 name="architectDueDate"
                 render={({ field }) => {
-                  const internalDueDate = rfp?.internalDueDate ? new Date(rfp.internalDueDate) : null;
                   return (
                     <FormItem className="flex flex-col">
                       <FormLabel>Architect Due Date</FormLabel>
@@ -366,28 +343,7 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                               today.setHours(0, 0, 0, 0);
                               return date < today || date < new Date("1900-01-01");
                             }}
-                            modifiers={internalDueDate ? {
-                              internalDue: (() => {
-                                const isoString = internalDueDate.toISOString().split('T')[0];
-                                const [year, month, day] = isoString.split('-');
-                                return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-                              })()
-                            } : {}}
-                            modifiersStyles={internalDueDate ? {
-                              internalDue: {
-                                border: '2px solid #3b82f6',
-                                backgroundColor: '#dbeafe',
-                                fontWeight: 'bold'
-                              }
-                            } : {}}
                           />
-                          {internalDueDate && (
-                            <div className="p-3 border-t bg-blue-50">
-                              <p className="text-xs text-blue-600 font-medium">
-                                📅 Internal Due: {format(internalDueDate, "MMM d, yyyy")}
-                              </p>
-                            </div>
-                          )}
                         </PopoverContent>
                       </Popover>
                       <FormMessage />

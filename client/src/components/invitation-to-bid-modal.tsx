@@ -48,6 +48,11 @@ interface InvitationToBidModalProps {
   rfp: RfpRequest | null;
 }
 
+// Helper function to clean up project names by removing trailing dashes and spaces
+const cleanProjectName = (projectName: string): string => {
+  return projectName.replace(/\s*-\s*$/, '').trim();
+};
+
 export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -143,7 +148,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
         generateContractorRfp: false,
         generateBrokerArchitectRfp: false,
         generateBrokerContractorRfp: false,
-        projectScope: rfp.projectName,
+        projectScope: cleanProjectName(rfp.projectName),
         projectLocation: getPropertyAddress(rfp.property) || "",
         contractorDueDate: rfp.contractorDueDate ? new Date(rfp.contractorDueDate).toISOString().split('T')[0] : "",
         architectDueDate: rfp.architectDueDate ? new Date(rfp.architectDueDate).toISOString().split('T')[0] : "",

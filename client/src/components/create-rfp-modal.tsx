@@ -89,6 +89,11 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
         }
       });
       
+      // Append selected bay configurations
+      if (selectedBayConfigurations.length > 0) {
+        formData.append('selectedBayConfigurations', JSON.stringify(selectedBayConfigurations));
+      }
+      
       // Append files
       selectedFiles.forEach((file) => {
         formData.append('files', file);
@@ -124,12 +129,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
   });
 
   const onSubmit = (data: CreateRfpFormData) => {
-    // Include selected bay configurations in the submission
-    const dataWithBayConfigs = {
-      ...data,
-      selectedBayConfigurations: selectedBayConfigurations
-    };
-    createMutation.mutate(dataWithBayConfigs);
+    createMutation.mutate(data);
   };
 
   const handleRequestTypeChange = (type: string, checked: boolean) => {

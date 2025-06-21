@@ -210,18 +210,18 @@ export default function Contacts() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {filteredContacts.map((contact) => (
               <Card key={contact.id} className="hover:shadow-md transition-shadow">
-                <CardHeader>
+                <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="text-2xl">
+                    <div className="flex items-center space-x-2">
+                      <div className="text-xl">
                         {getContactIcon(contact.type)}
                       </div>
-                      <div>
-                        <CardTitle className="text-lg">{contact.name}</CardTitle>
-                        <Badge className={`mt-1 ${getContactTypeColor(contact.type)}`}>
+                      <div className="min-w-0 flex-1">
+                        <CardTitle className="text-base truncate">{contact.name}</CardTitle>
+                        <Badge className={`mt-1 text-xs ${getContactTypeColor(contact.type)}`}>
                           {contact.type.charAt(0).toUpperCase() + contact.type.slice(1)}
                         </Badge>
                       </div>

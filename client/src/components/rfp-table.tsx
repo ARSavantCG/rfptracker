@@ -43,7 +43,11 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
   // Helper function to get property name with building
   const getPropertyDisplayName = (propertyId: string) => {
     const property = properties.find(p => p.id.toString() === propertyId);
-    return property ? `${property.propertyName} - ${property.building}` : propertyId;
+    if (!property) return propertyId;
+    
+    // Clean up property name - remove trailing dash for single building properties
+    const displayName = `${property.propertyName} - ${property.building}`;
+    return displayName.replace(/ - $/, '');
   };
 
   // Clear selected RFP if it no longer exists in the list

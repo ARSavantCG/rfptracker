@@ -232,9 +232,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         path: file.filename,
       }));
 
+      // Handle selected bay configurations
+      let selectedBayConfigurations: any[] = [];
+      if (req.body.selectedBayConfigurations) {
+        try {
+          selectedBayConfigurations = JSON.parse(req.body.selectedBayConfigurations);
+        } catch (e) {
+          console.error('Failed to parse selectedBayConfigurations:', e);
+        }
+      }
+
       const requestWithFiles = {
         ...parsed,
         files: uploadedFiles,
+        selectedBayConfigurations: selectedBayConfigurations,
         dueDate: parsed.internalDueDate, // Map internalDueDate to dueDate for validation
       };
 
@@ -472,6 +483,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       if (formData.architectDueDate && typeof formData.architectDueDate === 'string') {
         formData.architectDueDate = new Date(formData.architectDueDate);
+      }
+
+      // Handle selected bay configurations
+      if (formData.selectedBayConfigurations && typeof formData.selectedBayConfigurations === 'string') {
+        try {
+          formData.selectedBayConfigurations = JSON.parse(formData.selectedBayConfigurations);
+        } catch (e) {
+          console.error('Failed to parse selectedBayConfigurations:', e);
+          formData.selectedBayConfigurations = [];
+        }
       }
 
       console.log('Updating RFP with files - processed data:', formData);

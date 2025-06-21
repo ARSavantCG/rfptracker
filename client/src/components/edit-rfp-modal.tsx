@@ -163,11 +163,21 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
         }
       }
 
-      // Initialize bay configurations if they exist (stored in files or other field)
-      if ((rfp as any).selectedBayConfigurations) {
-        setSelectedBayConfigurations((rfp as any).selectedBayConfigurations);
-        const totalArea = (rfp as any).selectedBayConfigurations.reduce((sum: number, bay: any) => sum + (bay.rentableSquareFootage || bay.squareFootage), 0);
+      // Initialize bay configurations if they exist
+      if (rfp.selectedBayConfigurations && rfp.selectedBayConfigurations.length > 0) {
+        setSelectedBayConfigurations(rfp.selectedBayConfigurations);
+        const totalArea = rfp.selectedBayConfigurations.reduce((sum: number, bay: any) => sum + (bay.rentableSquareFootage || bay.squareFootage), 0);
         setCalculatedFloorArea(totalArea);
+      } else {
+        // Try to extract from project area if it contains calculated text
+        const projectArea = rfp.projectArea || "";
+        if (projectArea.includes("calculated from selected bay configurations")) {
+          const match = projectArea.match(/(\d{1,3}(?:,\d{3})*)/);
+          if (match) {
+            const area = parseInt(match[1].replace(/,/g, ''));
+            setCalculatedFloorArea(area);
+          }
+        }
       }
     }
   }, [rfp, isOpen, form, properties]);
@@ -224,6 +234,11 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
           formData.append(key, value.toString());
         }
       });
+      
+      // Add selected bay configurations
+      if (selectedBayConfigurations.length > 0) {
+        formData.append('selectedBayConfigurations', JSON.stringify(selectedBayConfigurations));
+      }
       
       // Append new files
       selectedFiles.forEach((file) => {

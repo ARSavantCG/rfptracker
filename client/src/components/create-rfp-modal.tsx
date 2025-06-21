@@ -435,7 +435,10 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                         <div>
                           <label className="text-sm font-medium text-gray-700">Total Rentable Area</label>
                           <div className="text-lg font-semibold text-blue-600">
-                            {calculatedFloorArea.toLocaleString()} SF
+                            {(() => {
+                              const roundedTotal = Math.round(calculatedFloorArea);
+                              return roundedTotal.toLocaleString();
+                            })()} SF
                           </div>
                           <p className="text-xs text-gray-500">From selected bay configurations</p>
                         </div>
@@ -443,9 +446,10 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                           <label className="text-sm font-medium text-gray-700">Warehouse Area</label>
                           <div className="text-lg font-semibold text-green-600">
                             {(() => {
+                              const roundedTotal = Math.round(calculatedFloorArea);
                               const totalMechanical = selectedBayConfigurations.reduce((sum, bay) => sum + (bay.mechanicalRoomAllocation || 0), 0);
                               const roundedMechanical = Math.round(totalMechanical);
-                              const warehouseArea = calculatedFloorArea - roundedMechanical;
+                              const warehouseArea = roundedTotal - roundedMechanical;
                               return warehouseArea.toLocaleString();
                             })()} SF
                           </div>

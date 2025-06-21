@@ -45,29 +45,46 @@ html {
   font-size: 14px; /* Reduce base font size from 16px to 14px */
 }
 
-/* Calendar styling overrides */
+/* Calendar styling overrides - comprehensive approach */
 .rdp-day:focus,
 .rdp-day:focus-visible,
 .rdp-day_today:not(.rdp-day_selected),
 .rdp-day_range_start:not(.rdp-day_selected),
 .rdp-day_range_end:not(.rdp-day_selected),
-.rdp-day_range_middle:not(.rdp-day_selected) {
+.rdp-day_range_middle:not(.rdp-day_selected),
+.rdp-button:focus,
+.rdp-button:focus-visible {
   outline: none !important;
   border: none !important;
   box-shadow: none !important;
   background-color: transparent !important;
 }
 
+/* Override shadcn calendar button styling */
+[data-radix-scroll-area-viewport] button:focus,
+[data-radix-scroll-area-viewport] button:focus-visible,
+.rdp .rdp-day:not([aria-selected="true"]):not(.rdp-day_outside) {
+  outline: none !important;
+  border: 1px solid transparent !important;
+  box-shadow: none !important;
+}
+
+/* Today styling only */
 .rdp-day_today:not(.rdp-day_selected) {
   background-color: hsl(var(--muted)) !important;
   color: hsl(var(--foreground)) !important;
   font-weight: normal !important;
+  border: 1px solid transparent !important;
 }
 
-/* Remove any default calendar button styling */
-.rdp-button:focus,
-.rdp-button:focus-visible {
+/* Remove any default focus rings from calendar */
+.rdp button {
   outline: none !important;
+}
+
+.rdp button:focus {
+  outline: none !important;
+  border: 1px solid transparent !important;
   box-shadow: none !important;
 }
 

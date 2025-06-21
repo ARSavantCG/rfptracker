@@ -256,6 +256,7 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                         <PopoverContent className="w-auto p-0" align="start">
                           <Calendar
                             mode="single"
+                            today={undefined}
                             selected={field.value ? (() => {
                               const [year, month, day] = field.value.split('-');
                               return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
@@ -344,6 +345,7 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                         <PopoverContent className="w-auto p-0" align="start">
                           <Calendar
                             mode="single"
+                            today={undefined}
                             selected={field.value ? (() => {
                               const [year, month, day] = field.value.split('-');
                               return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));

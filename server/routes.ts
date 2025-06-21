@@ -246,6 +246,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (req.body.selectedBayConfigurations) {
         try {
           selectedBayConfigurations = JSON.parse(req.body.selectedBayConfigurations);
+          console.log('Parsed selectedBayConfigurations:', selectedBayConfigurations.length, 'bays');
         } catch (e) {
           console.error('Failed to parse selectedBayConfigurations:', e);
         }
@@ -257,6 +258,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         selectedBayConfigurations: selectedBayConfigurations,
         dueDate: parsed.internalDueDate, // Map internalDueDate to dueDate for validation
       };
+
+      console.log('About to create RFP with selectedBayConfigurations:', requestWithFiles.selectedBayConfigurations?.length || 0);
 
       const newRequest = await storage.createRfpRequest(requestWithFiles);
       res.status(201).json(newRequest);

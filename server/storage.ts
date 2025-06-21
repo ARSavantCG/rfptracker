@@ -155,6 +155,7 @@ export class DatabaseStorage implements IStorage {
         requestTypes: request.requestTypes,
         notes: request.notes || null,
         files: request.files || [],
+        selectedBayConfigurations: request.selectedBayConfigurations || [],
         status: "received",
         workflowPhase: "rfp-entry",
       })

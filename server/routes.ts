@@ -205,12 +205,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         formData.sentBy = formData.rfpRequest;
       }
 
-      // Ensure date fields remain as strings for schema validation
-      if (formData.receivedOn instanceof Date) {
-        formData.receivedOn = formData.receivedOn.toISOString().split('T')[0];
+      // Convert date strings to Date objects for database
+      if (formData.receivedOn && typeof formData.receivedOn === 'string') {
+        formData.receivedOn = new Date(formData.receivedOn);
       }
-      if (formData.dueOn instanceof Date) {
-        formData.dueOn = formData.dueOn.toISOString().split('T')[0];
+      if (formData.internalDueDate && typeof formData.internalDueDate === 'string') {
+        formData.internalDueDate = new Date(formData.internalDueDate);
+      }
+      if (formData.contractorDueDate && typeof formData.contractorDueDate === 'string') {
+        formData.contractorDueDate = new Date(formData.contractorDueDate);
+      }
+      if (formData.architectDueDate && typeof formData.architectDueDate === 'string') {
+        formData.architectDueDate = new Date(formData.architectDueDate);
       }
 
       const parsed = insertRfpRequestSchema.parse(formData);
@@ -453,12 +459,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         formData.confidential = Boolean(formData.confidential);
       }
 
-      // Ensure date fields remain as strings for schema validation
-      if (formData.receivedOn instanceof Date) {
-        formData.receivedOn = formData.receivedOn.toISOString().split('T')[0];
+      // Convert date strings to Date objects for database
+      if (formData.receivedOn && typeof formData.receivedOn === 'string') {
+        formData.receivedOn = new Date(formData.receivedOn);
       }
-      if (formData.dueOn instanceof Date) {
-        formData.dueOn = formData.dueOn.toISOString().split('T')[0];
+      if (formData.internalDueDate && typeof formData.internalDueDate === 'string') {
+        formData.internalDueDate = new Date(formData.internalDueDate);
+      }
+      if (formData.contractorDueDate && typeof formData.contractorDueDate === 'string') {
+        formData.contractorDueDate = new Date(formData.contractorDueDate);
+      }
+      if (formData.architectDueDate && typeof formData.architectDueDate === 'string') {
+        formData.architectDueDate = new Date(formData.architectDueDate);
       }
 
       console.log('Updating RFP with files - processed data:', formData);

@@ -460,7 +460,12 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                   <div className="flex gap-2">
                     <FormControl>
                       <Input 
-                        {...field} 
+                        {...field}
+                        value={field.value ? parseInt(field.value).toLocaleString() : ''}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/,/g, '');
+                          field.onChange(value);
+                        }}
                         placeholder="Enter total area in sq ft" 
                         readOnly={!isEditingTotalArea}
                         className={!isEditingTotalArea ? "bg-gray-50" : ""}

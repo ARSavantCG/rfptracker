@@ -360,19 +360,19 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                 <div className="grid grid-cols-3 gap-6">
                   <div className="text-center">
                     <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                      {totalSquareFootage.toLocaleString()} SF
+                      {Math.round(totalSquareFootage).toLocaleString()} SF
                     </div>
                     <div className="text-sm text-gray-600 dark:text-gray-400">Bay Configurations</div>
                   </div>
                   <div className="text-center">
                     <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                      {(parseFloat(mechanicalRoomSF) || 0).toLocaleString()} SF
+                      {Math.round(parseFloat(mechanicalRoomSF) || 0).toLocaleString()} SF
                     </div>
                     <div className="text-sm text-gray-600 dark:text-gray-400">Mechanical Rooms</div>
                   </div>
                   <div className="text-center">
                     <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                      {(totalSquareFootage + (parseFloat(mechanicalRoomSF) || 0)).toLocaleString()} SF
+                      {Math.round(totalSquareFootage + (parseFloat(mechanicalRoomSF) || 0)).toLocaleString()} SF
                     </div>
                     <div className="text-sm text-gray-600 dark:text-gray-400">Total</div>
                   </div>
@@ -623,9 +623,9 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                             <div className="text-sm">{startBay}</div>
                             <div className="text-sm">{endBay}</div>
                             <div className="text-sm font-medium">Bay {startBay}</div>
-                            <div className="text-sm text-right">{bay.squareFootage.toLocaleString()} SF</div>
-                            <div className="text-sm text-right">{mechanicalRoomAllocation > 0 ? mechanicalRoomAllocation.toLocaleString() : '0'} SF</div>
-                            <div className="text-sm text-right font-medium">{rentableSquareFootage.toLocaleString()} SF</div>
+                            <div className="text-sm text-right">{Math.round(bay.squareFootage).toLocaleString()} SF</div>
+                            <div className="text-sm text-right">{mechanicalRoomAllocation > 0 ? Math.round(mechanicalRoomAllocation).toLocaleString() : '0'} SF</div>
+                            <div className="text-sm text-right font-medium">{Math.round(rentableSquareFootage).toLocaleString()} SF</div>
                             <div className="text-sm text-center">{bay.standardDockDoors || 0} / {bay.oversizedDockDoors || 0}</div>
                             <div className="flex justify-center gap-1">
                               <Button
@@ -665,9 +665,9 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                         <div></div>
                         <div></div>
                         <div className="text-sm">Total</div>
-                        <div className="text-sm text-right">{totalSquareFootage.toLocaleString()} SF</div>
-                        <div className="text-sm text-right">{(parseFloat(mechanicalRoomSF) || 0).toLocaleString()} SF</div>
-                        <div className="text-sm text-right">{(totalSquareFootage + (parseFloat(mechanicalRoomSF) || 0)).toLocaleString()} SF</div>
+                        <div className="text-sm text-right">{Math.round(totalSquareFootage).toLocaleString()} SF</div>
+                        <div className="text-sm text-right">{Math.round(parseFloat(mechanicalRoomSF) || 0).toLocaleString()} SF</div>
+                        <div className="text-sm text-right">{Math.round(totalSquareFootage + (parseFloat(mechanicalRoomSF) || 0)).toLocaleString()} SF</div>
                         <div className="text-sm text-center">{totalStandardDoors} / {totalOversizedDoors}</div>
                         <div></div>
                       </div>

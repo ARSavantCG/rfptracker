@@ -43,10 +43,12 @@ export default function BayConfigurationSelector({
 
   // Calculate total rentable area from selected individual bays
   const calculateTotalArea = () => {
-    return selectedBayIds.reduce((total, bayId) => {
-      const bay = individualBays.find(b => b.id === bayId);
-      return total + (bay?.rentableSquareFootage || bay?.squareFootage || 0);
+    const total = selectedBayIds.reduce((total, bayId) => {
+      const bay = individualBays.find(b => b?.id === bayId);
+      if (!bay) return total;
+      return total + (bay.squareFootage || 0);
     }, 0);
+    return Math.round(total);
   };
 
   const toggleBaySelection = (bayId: string) => {

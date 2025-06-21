@@ -593,12 +593,12 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
               <div className="space-y-2 text-sm mt-4 border-t pt-4">
                 <div className="flex justify-between font-medium">
                   <span>Total Rentable Area:</span>
-                  <span>{form.watch('warehouseArea') || '0'} sq ft</span>
+                  <span>{Math.round(parseInt(form.watch('warehouseArea') || '0')).toLocaleString()} sq ft</span>
                 </div>
                 {form.watch('areaBreakdown').map((item, index) => (
                   <div key={item.id} className="grid grid-cols-3 gap-2 text-sm">
                     <span>- {item.description || `Area ${index + 1}`}</span>
-                    <span className="text-right">{item.squareFootage || '0'} sq ft</span>
+                    <span className="text-right">{Math.round(parseInt(item.squareFootage || '0')).toLocaleString()} sq ft</span>
                     <span className="text-gray-600 text-xs">{item.notes || ''}</span>
                   </div>
                 ))}
@@ -606,8 +606,8 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                   <span>Remaining Warehouse Area:</span>
                   <span>
                     {Math.max(0, 
-                      parseInt(form.watch('warehouseArea') || '0') - 
-                      form.watch('areaBreakdown').reduce((sum, item) => sum + (parseInt(item.squareFootage) || 0), 0)
+                      Math.round(parseInt(form.watch('warehouseArea') || '0')) - 
+                      form.watch('areaBreakdown').reduce((sum, item) => sum + Math.round(parseInt(item.squareFootage || '0')), 0)
                     ).toLocaleString()} sq ft
                   </span>
                 </div>

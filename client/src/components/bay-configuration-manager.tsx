@@ -49,8 +49,8 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
     
     return bays.map(bay => {
       const allocationPercentage = totalFloorArea > 0 ? bay.squareFootage / totalFloorArea : 0;
-      const mechanicalRoomAllocation = Math.round(mechanicalSF * allocationPercentage * 100) / 100;
-      const rentableSquareFootage = bay.squareFootage + mechanicalRoomAllocation;
+      const mechanicalRoomAllocation = Math.round(mechanicalSF * allocationPercentage);
+      const rentableSquareFootage = Math.round(bay.squareFootage + mechanicalRoomAllocation);
       
       return {
         ...bay,

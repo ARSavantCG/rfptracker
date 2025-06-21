@@ -146,6 +146,18 @@ html {
   box-shadow: none !important;
 }
 
+/* Nuclear option - override ALL calendar day styling */
+.rdp .rdp-day_today {
+  background-color: transparent !important;
+  color: inherit !important;
+  border: 1px solid transparent !important;
+  font-weight: normal !important;
+}
+
+.rdp .rdp-day_today:hover {
+  background-color: hsl(var(--accent)) !important;
+}
+
 /* Compact form elements */
 .compact-input input {
   height: 2rem !important;

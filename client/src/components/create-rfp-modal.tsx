@@ -33,6 +33,12 @@ const createRfpSchema = z.object({
   confidential: z.boolean().default(false),
   requestTypes: z.array(z.string()).min(1, "At least one request type is required"),
   notes: z.string().optional(),
+  areaBreakdown: z.array(z.object({
+    id: z.string(),
+    description: z.string(),
+    squareFootage: z.string(),
+    notes: z.string().optional()
+  })).optional().default([]),
 });
 
 type CreateRfpFormData = z.infer<typeof createRfpSchema>;
@@ -404,7 +410,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                     name="projectArea"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Calculated Floor Area</FormLabel>
+                        <FormLabel>Total Rentable Area</FormLabel>
                         <FormControl>
                           <Input 
                             {...field}
@@ -419,6 +425,42 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                       </FormItem>
                     )}
                   />
+
+                  {/* Area Summary Section */}
+                  {calculatedFloorArea > 0 && (
+                    <div className="space-y-3 p-4 bg-blue-50 rounded-lg border">
+                      <h4 className="font-medium text-gray-900">Area Summary</h4>
+                      
+                      <div className="grid grid-cols-3 gap-4 p-3 bg-white rounded border">
+                        <div>
+                          <label className="text-sm font-medium text-gray-700">Total Rentable Area</label>
+                          <div className="text-lg font-semibold text-blue-600">
+                            {calculatedFloorArea.toLocaleString()} SF
+                          </div>
+                          <p className="text-xs text-gray-500">From selected bay configurations</p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-700">Warehouse Area</label>
+                          <div className="text-lg font-semibold text-green-600">
+                            {(calculatedFloorArea - selectedBayConfigurations.reduce((sum, bay) => sum + (bay.mechanicalRoomAllocation || 0), 0)).toLocaleString()} SF
+                          </div>
+                          <p className="text-xs text-gray-500">Available for tenant use</p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-700">Mechanical Allocation</label>
+                          <div className="text-lg font-semibold text-orange-600">
+                            {selectedBayConfigurations.reduce((sum, bay) => sum + (bay.mechanicalRoomAllocation || 0), 0).toLocaleString()} SF
+                          </div>
+                          <p className="text-xs text-gray-500">HVAC & building systems</p>
+                        </div>
+                      </div>
+
+                      <div className="text-sm text-gray-600 p-2 bg-yellow-50 rounded">
+                        <strong>Note:</strong> The warehouse area represents the actual usable space for the tenant. 
+                        Mechanical allocation is separate space for HVAC, electrical, and building systems.
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="p-4 border-2 border-dashed border-gray-300 rounded-lg text-center text-gray-500">

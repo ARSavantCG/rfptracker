@@ -70,6 +70,12 @@ export const insertRfpRequestSchema = createInsertSchema(rfpRequests).omit({
   contractorDueDate: z.string().optional().transform((val) => val ? new Date(val) : null),
   architectDueDate: z.string().optional().transform((val) => val ? new Date(val) : null),
   dueDate: z.string().optional().transform((val) => val ? new Date(val) : undefined),
+  areaBreakdown: z.array(z.object({
+    id: z.string(),
+    description: z.string(),
+    squareFootage: z.string(),
+    notes: z.string().optional()
+  })).optional().default([]),
 });
 
 export const updateRfpRequestSchema = insertRfpRequestSchema.partial().extend({

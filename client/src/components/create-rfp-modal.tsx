@@ -158,12 +158,13 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
 
   // Handle bay configuration selection and calculate floor area
   const handleFloorAreaChange = (area: number, bayConfigs: BayConfiguration[]) => {
-    setCalculatedFloorArea(area);
+    const roundedArea = Math.round(area);
+    setCalculatedFloorArea(roundedArea);
     setSelectedBayConfigurations(bayConfigs);
     
     // Auto-populate the project area field with calculated value
-    if (area > 0) {
-      form.setValue("projectArea", `${area.toLocaleString()} SF (calculated from selected bay configurations)`);
+    if (roundedArea > 0) {
+      form.setValue("projectArea", `${roundedArea.toLocaleString()} SF (calculated from selected bay configurations)`);
     } else {
       form.setValue("projectArea", "");
     }

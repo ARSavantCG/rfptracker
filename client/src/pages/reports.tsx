@@ -222,42 +222,6 @@ export default function Reports() {
           </CardContent>
         </Card>
 
-        {/* Metrics Overview */}
-        <Card>
-          <CardContent className="pt-6">
-            <div className="grid grid-cols-7 gap-6 text-center">
-              <div className="text-center">
-                <p className="text-2xl font-bold text-gray-900">{metrics.total}</p>
-                <p className="text-xs text-gray-600 uppercase font-medium">Total</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-blue-600">{metrics.received}</p>
-                <p className="text-xs text-blue-600 uppercase font-medium">Received</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-yellow-600">{metrics.inProgress}</p>
-                <p className="text-xs text-yellow-600 uppercase font-medium">In Progress</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-green-600">{metrics.completed}</p>
-                <p className="text-xs text-green-600 uppercase font-medium">Completed</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-gray-600">{metrics.onHold}</p>
-                <p className="text-xs text-gray-600 uppercase font-medium">On Hold</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-orange-600">{metrics.dueSoon}</p>
-                <p className="text-xs text-orange-600 uppercase font-medium">Due Soon</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-red-600">{metrics.overdue}</p>
-                <p className="text-xs text-red-600 uppercase font-medium">Overdue</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Report Generation Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           <Card>

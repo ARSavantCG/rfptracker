@@ -42,6 +42,22 @@ function getMilestoneRequestsSection(invitationToBid: any, recipientType: string
   return '';
 }
 
+function hasMilestones(invitationToBid: any, recipientType: string): boolean {
+  const isArchitect = recipientType === 'architect' || recipientType === 'broker-architect';
+  const isContractor = recipientType === 'contractor' || recipientType === 'broker-contractor';
+  
+  const architectMilestones = invitationToBid?.architectMilestones || [];
+  const contractorMilestones = invitationToBid?.contractorMilestones || [];
+  
+  if (isArchitect && architectMilestones.length > 0) {
+    return true;
+  } else if (isContractor && contractorMilestones.length > 0) {
+    return true;
+  }
+  
+  return false;
+}
+
 function getBayConfigurationSection(rfp: any): string {
   // Get bay configurations from the RFP's selected bay configurations
   const selectedBayConfigs = rfp.selectedBayConfigurations || [];
@@ -647,7 +663,7 @@ function generateContractorRfpHtml(options: PdfGenerationOptions, dates: any): s
         <div class="description-box">
           <ul class="requirements-list">
             <li>Bid Cost Breakdown (Excel File)</li>
-            <li>Detailed Construction Schedule (w/ Long Lead Items)</li>
+            <li>Detailed Construction Schedule (w/ Long Lead Items)${hasMilestones(invitationToBid, 'contractor') ? ' based on milestone requests below' : ''}</li>
             <li>Affidavit</li>
             ${invitationToBid?.prequalificationCriteria ? 
               (Array.isArray(invitationToBid.prequalificationCriteria) ? 
@@ -851,7 +867,7 @@ function generateArchitectRfpHtml(options: PdfGenerationOptions, dates: any): st
           <ul class="requirements-list">
             <li>Project understanding and approach</li>
             <li>Detailed scope of services</li>
-            <li>Project timeline and milestones</li>
+            <li>Project timeline and milestones${hasMilestones(invitationToBid, 'architect') ? ' based on milestone requests below' : ''}</li>
             <li>Fee proposal (lump sum or hourly breakdown)</li>
             <li>Team qualifications and relevant project experience</li>
             <li>Three references from similar projects</li>
@@ -1055,7 +1071,7 @@ function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dates: an
         <div class="section-title">Requested Deliverables</div>
         <ul>
           <li>Preliminary space plan</li>
-          <li>Timeline estimate for design phases</li>
+          <li>Timeline estimate for design phases${hasMilestones(invitationToBid, 'broker-architect') ? ' based on milestone requests below' : ''}</li>
           <li>Fee proposal for full architectural services</li>
         </ul>
       </div>
@@ -1237,7 +1253,7 @@ function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, dates: a
         <div class="section-title">Requested Deliverables</div>
         <ul>
           <li>Preliminary cost estimate</li>
-          <li>Timeline estimate for construction phases</li>
+          <li>Timeline estimate for construction phases${hasMilestones(invitationToBid, 'broker-contractor') ? ' based on milestone requests below' : ''}</li>
           <li>Pricing proposal for full construction services</li>
         </ul>
       </div>

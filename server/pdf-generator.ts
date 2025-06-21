@@ -433,7 +433,7 @@ function generateRfpHtml(options: PdfGenerationOptions): string {
   const newOffice = parseInt(rfp.officeAreaNew?.replace(/,/g, '') || '0');
   
   // Get warehouse notes from RFP data
-  const warehouseNotes = rfp.warehouseNotes || "Clear height requirements TBD";
+  const warehouseNotes = rfp.warehouseNotes || "";
 
   // Generate different content based on recipient type
   if (recipientType === "contractor") {

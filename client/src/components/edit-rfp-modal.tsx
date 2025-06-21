@@ -169,10 +169,10 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
         }
       }
 
-      // Initialize bay configurations if they exist
-      if (rfp.selectedBayConfigurations) {
-        setSelectedBayConfigurations(rfp.selectedBayConfigurations);
-        const totalArea = rfp.selectedBayConfigurations.reduce((sum, bay) => sum + (bay.rentableSquareFootage || bay.squareFootage), 0);
+      // Initialize bay configurations if they exist (stored in files or other field)
+      if ((rfp as any).selectedBayConfigurations) {
+        setSelectedBayConfigurations((rfp as any).selectedBayConfigurations);
+        const totalArea = (rfp as any).selectedBayConfigurations.reduce((sum: number, bay: any) => sum + (bay.rentableSquareFootage || bay.squareFootage), 0);
         setCalculatedFloorArea(totalArea);
       }
     }
@@ -185,6 +185,18 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
         const tenantName = value.tenantName || '';
         const property = value.property || '';
         const confidential = value.confidential || false;
+
+        // Update selected property when property field changes
+        if (name === 'property' && property && properties.length > 0) {
+          const selectedProp = properties.find(p => p.id.toString() === property);
+          if (selectedProp) {
+            setSelectedProperty(selectedProp);
+            // Reset bay configurations when property changes
+            setSelectedBayConfigurations([]);
+            setCalculatedFloorArea(0);
+            form.setValue("projectArea", "");
+          }
+        }
         
         if (property) {
           let projectName = '';
@@ -202,7 +214,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
     });
     
     return () => subscription.unsubscribe();
-  }, [form]);
+  }, [form, properties]);
 
   const updateMutation = useMutation({
     mutationFn: async (data: EditRfpFormData) => {
@@ -672,6 +684,17 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
           </form>
         </Form>
       </DialogContent>
+
+      {/* Bay Configuration Modal */}
+      {selectedProperty && (
+        <BayConfigurationModal
+          isOpen={bayConfigModalOpen}
+          onClose={() => setBayConfigModalOpen(false)}
+          property={selectedProperty}
+          onConfirm={handleFloorAreaChange}
+          initialSelectedBays={selectedBayConfigurations}
+        />
+      )}
     </Dialog>
   );
 }

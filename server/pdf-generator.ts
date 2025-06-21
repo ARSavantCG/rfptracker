@@ -12,6 +12,36 @@ function formatDate(date: string | Date): string {
   });
 }
 
+function getMilestoneRequestsSection(invitationToBid: any, recipientType: string): string {
+  const isArchitect = recipientType === 'architect' || recipientType === 'broker-architect';
+  const isContractor = recipientType === 'contractor' || recipientType === 'broker-contractor';
+  
+  const architectMilestones = invitationToBid?.architectMilestones || [];
+  const contractorMilestones = invitationToBid?.contractorMilestones || [];
+  
+  let milestonesList = '';
+  
+  if (isArchitect && architectMilestones.length > 0) {
+    milestonesList = architectMilestones.map((milestone: any) => `<li>${milestone.description}</li>`).join('');
+  } else if (isContractor && contractorMilestones.length > 0) {
+    milestonesList = contractorMilestones.map((milestone: any) => `<li>${milestone.description}</li>`).join('');
+  }
+  
+  if (milestonesList) {
+    return `
+      <div class="section">
+        <div class="section-title">Milestone Request(s)</div>
+        <p>Please provide timeline and schedule information for the following project milestones in your response:</p>
+        <ul>
+          ${milestonesList}
+        </ul>
+      </div>
+    `;
+  }
+  
+  return '';
+}
+
 function getBayConfigurationSection(rfp: any): string {
   // Get bay configurations from the RFP's selected bay configurations
   const selectedBayConfigs = rfp.selectedBayConfigurations || [];
@@ -610,6 +640,8 @@ function generateContractorRfpHtml(options: PdfGenerationOptions, dates: any): s
         </table>
       </div>
       
+      ${getMilestoneRequestsSection(invitationToBid, 'contractor')}
+      
       <div class="section">
         <div class="section-title">SUBMISSION REQUIREMENTS:</div>
         <div class="description-box">
@@ -809,6 +841,8 @@ function generateArchitectRfpHtml(options: PdfGenerationOptions, dates: any): st
       </div>
       
       ${getBayConfigurationSection(rfp)}
+      
+      ${getMilestoneRequestsSection(invitationToBid, 'architect')}
       
       <div class="section">
         <div class="section-title">PROPOSAL REQUIREMENTS:</div>
@@ -1026,6 +1060,8 @@ function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dates: an
         </ul>
       </div>
 
+      ${getMilestoneRequestsSection(invitationToBid, 'broker-architect')}
+
       <div class="section">
         <div class="section-title">Pricing Considerations</div>
         <ul>
@@ -1205,6 +1241,8 @@ function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, dates: a
           <li>Pricing proposal for full construction services</li>
         </ul>
       </div>
+
+      ${getMilestoneRequestsSection(invitationToBid, 'broker-contractor')}
 
       <div class="section">
         <div class="section-title">Pricing Considerations</div>

@@ -1132,7 +1132,7 @@ function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, dates: a
       return '<li>' + item.description + quantity + '</li>';
     }).join('');
     
-    scopeOfWorkHtml = '<div class="scope-of-work"><strong>Scope of Work:</strong><ul>' + scopeItems + '</ul></div>';
+    scopeOfWorkHtml = '<div class="section"><div class="section-title">Scope of Work</div><ul>' + scopeItems + '</ul></div>';
   }
 
   // Generate space requirements table HTML safely using area breakdown data

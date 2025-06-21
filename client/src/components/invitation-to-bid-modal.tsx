@@ -439,7 +439,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
-            Step 2: Issuance to General Contractor and/or Architect
+            Issuance to General Contractor and/or Architect
           </DialogTitle>
           <DialogDescription>
             Configure and generate RFPs for architects and/or general contractors for {rfp.rfpNumber}

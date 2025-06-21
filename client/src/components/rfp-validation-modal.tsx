@@ -211,7 +211,7 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
-            Step 2: Issuance to General Contractor and/or Architect
+            Issuance to General Contractor and/or Architect
           </DialogTitle>
           <DialogDescription>
             Complete the details needed to generate requests for your General Contractor and/or Architect

@@ -743,7 +743,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
               <h3 className="text-lg font-medium">Milestones</h3>
               
               {/* Side by Side Milestones */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="grid grid-cols-2 gap-6">
                 {/* Architect Milestones */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">

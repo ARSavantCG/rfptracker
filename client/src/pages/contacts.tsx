@@ -228,58 +228,56 @@ export default function Contacts() {
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {contact.company && (
-                      <div className="flex items-center text-sm text-gray-600">
-                        <Building2 className="h-4 w-4 mr-2" />
-                        {contact.company}
-                      </div>
-                    )}
-                    
-                    <div className="flex items-center text-sm text-gray-600">
-                      <Mail className="h-4 w-4 mr-2" />
-                      <a 
-                        href={`mailto:${contact.email}`}
-                        className="hover:text-blue-600 truncate"
-                      >
-                        {contact.email}
-                      </a>
+                <CardContent className="space-y-2">
+                  {contact.company && (
+                    <div className="flex items-center text-xs text-gray-600">
+                      <Building2 className="h-3 w-3 mr-1 flex-shrink-0" />
+                      <span className="truncate">{contact.company}</span>
                     </div>
-                    
-                    {contact.phone && (
-                      <div className="flex items-center text-sm text-gray-600">
-                        <Phone className="h-4 w-4 mr-2" />
-                        <a 
-                          href={`tel:${contact.phone}`}
-                          className="hover:text-blue-600"
-                        >
-                          {contact.phone}
-                        </a>
-                      </div>
-                    )}
-                    
-                    {contact.notes && (
-                      <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
-                        {contact.notes}
-                      </div>
-                    )}
+                  )}
+                  
+                  <div className="flex items-center text-xs text-gray-600">
+                    <Mail className="h-3 w-3 mr-1 flex-shrink-0" />
+                    <a 
+                      href={`mailto:${contact.email}`}
+                      className="hover:text-blue-600 truncate"
+                    >
+                      {contact.email}
+                    </a>
                   </div>
                   
-                  <div className="flex space-x-2 mt-4">
+                  {contact.phone && (
+                    <div className="flex items-center text-xs text-gray-600">
+                      <Phone className="h-3 w-3 mr-1 flex-shrink-0" />
+                      <a 
+                        href={`tel:${contact.phone}`}
+                        className="hover:text-blue-600"
+                      >
+                        {contact.phone}
+                      </a>
+                    </div>
+                  )}
+                  
+                  {contact.notes && (
+                    <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded">
+                      {contact.notes}
+                    </div>
+                  )}
+                  
+                  <div className="flex space-x-1 mt-3">
                     <ContactFormModal 
                       contact={contact}
                       trigger={
-                        <Button variant="outline" size="sm" className="flex-1">
+                        <Button variant="outline" size="sm" className="flex-1 text-xs">
                           Edit
                         </Button>
                       }
                     />
-                    <Button variant="outline" size="sm">
-                      <Mail className="h-4 w-4" />
+                    <Button variant="outline" size="sm" className="px-2">
+                      <Mail className="h-3 w-3" />
                     </Button>
-                    <Button variant="outline" size="sm">
-                      <Phone className="h-4 w-4" />
+                    <Button variant="outline" size="sm" className="px-2">
+                      <Phone className="h-3 w-3" />
                     </Button>
                   </div>
                 </CardContent>

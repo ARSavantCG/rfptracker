@@ -241,7 +241,11 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                               )}
                             >
                               {field.value ? (
-                                format(new Date(field.value), "PPP")
+                                (() => {
+                                  const [year, month, day] = field.value.split('-');
+                                  const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                                  return format(date, "PPP");
+                                })()
                               ) : (
                                 <span>Pick a date</span>
                               )}
@@ -326,7 +330,11 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                               )}
                             >
                               {field.value ? (
-                                format(new Date(field.value), "PPP")
+                                (() => {
+                                  const [year, month, day] = field.value.split('-');
+                                  const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                                  return format(date, "PPP");
+                                })()
                               ) : (
                                 <span>Pick a date</span>
                               )}

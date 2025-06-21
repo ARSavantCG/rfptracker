@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -14,8 +14,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from "@/hooks/use-toast";
 import { PropertySelector } from "./property-selector";
 import { FileUpload } from "./file-upload";
-import { Edit, Save, X, Download, Trash2 } from "lucide-react";
-import type { RfpRequest, RfpFile } from "@shared/schema";
+import { BayConfigurationModal } from "./bay-configuration-modal";
+import { Edit, Save, X, Download, Trash2, Grid3x3 } from "lucide-react";
+import type { RfpRequest, RfpFile, Property, BayConfiguration } from "@shared/schema";
 
 const editRfpSchema = z.object({
   rfpNumber: z.string().min(1, "RFP number is required"),
@@ -47,6 +48,30 @@ interface EditRfpModalProps {
 export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
   const { toast } = useToast();
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
+  const [calculatedFloorArea, setCalculatedFloorArea] = useState<number>(0);
+  const [selectedBayConfigurations, setSelectedBayConfigurations] = useState<BayConfiguration[]>([]);
+  const [bayConfigModalOpen, setBayConfigModalOpen] = useState(false);
+
+  // Fetch properties for bay configuration
+  const { data: properties = [] } = useQuery<Property[]>({
+    queryKey: ["/api/properties"],
+    enabled: isOpen,
+  });
+
+  // Handle bay configuration selection and calculate floor area
+  const handleFloorAreaChange = (area: number, bayConfigs: BayConfiguration[]) => {
+    const roundedArea = Math.round(area);
+    setCalculatedFloorArea(roundedArea);
+    setSelectedBayConfigurations(bayConfigs);
+    
+    // Auto-populate the project area field with calculated value
+    if (roundedArea > 0) {
+      form.setValue("projectArea", `${roundedArea.toLocaleString()} SF (calculated from selected bay configurations)`);
+    } else {
+      form.setValue("projectArea", "");
+    }
+  };
 
   // File management functions
   const deleteFileMutation = useMutation({
@@ -135,8 +160,23 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
         status: rfp.status as "received" | "in-progress" | "completed" | "on-hold",
         workflowPhase: (rfp.workflowPhase || "rfp-entry") as "rfp-entry" | "invitation-to-bid" | "bid-collection" | "evaluation" | "award",
       });
+
+      // Set selected property for bay configuration
+      if (rfp.property && properties.length > 0) {
+        const property = properties.find(p => p.id.toString() === rfp.property);
+        if (property) {
+          setSelectedProperty(property);
+        }
+      }
+
+      // Initialize bay configurations if they exist
+      if (rfp.selectedBayConfigurations) {
+        setSelectedBayConfigurations(rfp.selectedBayConfigurations);
+        const totalArea = rfp.selectedBayConfigurations.reduce((sum, bay) => sum + (bay.rentableSquareFootage || bay.squareFootage), 0);
+        setCalculatedFloorArea(totalArea);
+      }
     }
-  }, [rfp, isOpen, form]);
+  }, [rfp, isOpen, form, properties]);
 
   // Auto-format project name when tenant name, property, or confidential status changes
   useEffect(() => {
@@ -402,9 +442,45 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Project Area (sq ft)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., 95000" {...field} />
-                    </FormControl>
+                    {selectedProperty ? (
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between p-4 border rounded-lg bg-gray-50">
+                          <div>
+                            <div className="text-sm font-medium text-gray-700">Bay Configuration</div>
+                            <p className="text-xs text-gray-500 mt-1">
+                              {selectedBayConfigurations.length > 0 
+                                ? `${selectedBayConfigurations.length} bay${selectedBayConfigurations.length !== 1 ? 's' : ''} selected (${calculatedFloorArea.toLocaleString()} SF)`
+                                : 'No bays selected for area calculation'
+                              }
+                            </p>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setBayConfigModalOpen(true)}
+                            className="flex items-center gap-2"
+                          >
+                            <Grid3x3 className="h-4 w-4" />
+                            {selectedBayConfigurations.length > 0 ? 'Modify Selection' : 'Select Bays'}
+                          </Button>
+                        </div>
+                        
+                        <FormControl>
+                          <Input 
+                            {...field}
+                            readOnly
+                            className="bg-gray-50"
+                          />
+                        </FormControl>
+                        <p className="text-sm text-muted-foreground">
+                          Automatically calculated from selected bay configurations
+                        </p>
+                      </div>
+                    ) : (
+                      <FormControl>
+                        <Input placeholder="e.g., 95000" {...field} />
+                      </FormControl>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}

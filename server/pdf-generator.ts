@@ -989,6 +989,9 @@ function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dates: an
         table { width: 100%; border-collapse: collapse; margin: 15px 0; }
         th, td { border: 1px solid #e5e7eb; padding: 8px; text-align: left; }
         th { background-color: #f9fafb; font-weight: bold; }
+        th:nth-child(1), td:nth-child(1) { width: 25%; }
+        th:nth-child(2), td:nth-child(2) { width: 20%; }
+        th:nth-child(3), td:nth-child(3) { width: 55%; }
         .project-description { background-color: #f9fafb; padding: 15px; border-radius: 5px; margin: 15px 0; }
       </style>
     </head>
@@ -1194,6 +1197,9 @@ function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, dates: a
         table { width: 100%; border-collapse: collapse; margin: 15px 0; }
         th, td { border: 1px solid #e5e7eb; padding: 8px; text-align: left; }
         th { background-color: #f9fafb; font-weight: bold; }
+        th:nth-child(1), td:nth-child(1) { width: 25%; }
+        th:nth-child(2), td:nth-child(2) { width: 20%; }
+        th:nth-child(3), td:nth-child(3) { width: 55%; }
         .project-description { background-color: #f9fafb; padding: 15px; border-radius: 5px; margin: 15px 0; }
       </style>
     </head>

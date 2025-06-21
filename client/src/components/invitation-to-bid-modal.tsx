@@ -742,160 +742,163 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
             <div className="space-y-6">
               <h3 className="text-lg font-medium">Milestones</h3>
               
-              {/* Architect Milestones */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-md font-medium text-gray-700">Architect Milestones</h4>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => appendArchitectMilestone({ description: "", dueDate: "" })}
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Milestone
-                  </Button>
-                </div>
-                
-                {architectMilestoneFields.length === 0 && (
-                  <div className="text-center text-gray-500 py-4 border-2 border-dashed border-gray-200 rounded-lg">
-                    No architect milestones added yet. Click "Add Milestone" to get started.
+              {/* Side by Side Milestones */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Architect Milestones */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-md font-medium text-gray-700">Architect Milestones</h4>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => appendArchitectMilestone({ description: "", dueDate: "" })}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add
+                    </Button>
                   </div>
-                )}
-
-                {architectMilestoneFields.length > 0 && (
-                  <div className="space-y-2">
-                    {/* Column Headers */}
-                    <div className="grid grid-cols-12 gap-4 pb-2 border-b text-sm font-medium text-gray-600">
-                      <div className="col-span-8">Description</div>
-                      <div className="col-span-3">Due Date</div>
-                      <div className="col-span-1"></div>
+                  
+                  {architectMilestoneFields.length === 0 && (
+                    <div className="text-center text-gray-500 py-4 border-2 border-dashed border-gray-200 rounded-lg">
+                      No architect milestones added yet.
                     </div>
+                  )}
 
-                    {/* Milestone Items */}
-                    {architectMilestoneFields.map((field, index) => (
-                      <div key={field.id} className="grid grid-cols-12 gap-4 items-center">
-                        <div className="col-span-8">
-                          <FormField
-                            control={form.control}
-                            name={`architectMilestones.${index}.description`}
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormControl>
-                                  <Input {...field} placeholder="Milestone description" />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                        <div className="col-span-3">
-                          <FormField
-                            control={form.control}
-                            name={`architectMilestones.${index}.dueDate`}
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormControl>
-                                  <Input {...field} type="date" />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                        <div className="col-span-1">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeArchitectMilestone(index)}
-                            className="text-red-500 hover:text-red-700"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+                  {architectMilestoneFields.length > 0 && (
+                    <div className="space-y-2">
+                      {/* Column Headers */}
+                      <div className="grid grid-cols-12 gap-2 pb-2 border-b text-sm font-medium text-gray-600">
+                        <div className="col-span-6">Description</div>
+                        <div className="col-span-5">Due Date</div>
+                        <div className="col-span-1"></div>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
 
-              {/* Contractor Milestones */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-md font-medium text-gray-700">General Contractor Milestones</h4>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => appendContractorMilestone({ description: "", dueDate: "" })}
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Milestone
-                  </Button>
-                </div>
-                
-                {contractorMilestoneFields.length === 0 && (
-                  <div className="text-center text-gray-500 py-4 border-2 border-dashed border-gray-200 rounded-lg">
-                    No contractor milestones added yet. Click "Add Milestone" to get started.
-                  </div>
-                )}
-
-                {contractorMilestoneFields.length > 0 && (
-                  <div className="space-y-2">
-                    {/* Column Headers */}
-                    <div className="grid grid-cols-12 gap-4 pb-2 border-b text-sm font-medium text-gray-600">
-                      <div className="col-span-8">Description</div>
-                      <div className="col-span-3">Due Date</div>
-                      <div className="col-span-1"></div>
+                      {/* Milestone Items */}
+                      {architectMilestoneFields.map((field, index) => (
+                        <div key={field.id} className="grid grid-cols-12 gap-2 items-center">
+                          <div className="col-span-6">
+                            <FormField
+                              control={form.control}
+                              name={`architectMilestones.${index}.description`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormControl>
+                                    <Input {...field} placeholder="Milestone description" />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                          <div className="col-span-5">
+                            <FormField
+                              control={form.control}
+                              name={`architectMilestones.${index}.dueDate`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormControl>
+                                    <Input {...field} type="date" />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                          <div className="col-span-1">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeArchitectMilestone(index)}
+                              className="text-red-500 hover:text-red-700"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
+                  )}
+                </div>
 
-                    {/* Milestone Items */}
-                    {contractorMilestoneFields.map((field, index) => (
-                      <div key={field.id} className="grid grid-cols-12 gap-4 items-center">
-                        <div className="col-span-8">
-                          <FormField
-                            control={form.control}
-                            name={`contractorMilestones.${index}.description`}
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormControl>
-                                  <Input {...field} placeholder="Milestone description" />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                        <div className="col-span-3">
-                          <FormField
-                            control={form.control}
-                            name={`contractorMilestones.${index}.dueDate`}
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormControl>
-                                  <Input {...field} type="date" />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                        <div className="col-span-1">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeContractorMilestone(index)}
-                            className="text-red-500 hover:text-red-700"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
+                {/* Contractor Milestones */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-md font-medium text-gray-700">General Contractor Milestones</h4>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => appendContractorMilestone({ description: "", dueDate: "" })}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add
+                    </Button>
                   </div>
-                )}
+                  
+                  {contractorMilestoneFields.length === 0 && (
+                    <div className="text-center text-gray-500 py-4 border-2 border-dashed border-gray-200 rounded-lg">
+                      No contractor milestones added yet.
+                    </div>
+                  )}
+
+                  {contractorMilestoneFields.length > 0 && (
+                    <div className="space-y-2">
+                      {/* Column Headers */}
+                      <div className="grid grid-cols-12 gap-2 pb-2 border-b text-sm font-medium text-gray-600">
+                        <div className="col-span-6">Description</div>
+                        <div className="col-span-5">Due Date</div>
+                        <div className="col-span-1"></div>
+                      </div>
+
+                      {/* Milestone Items */}
+                      {contractorMilestoneFields.map((field, index) => (
+                        <div key={field.id} className="grid grid-cols-12 gap-2 items-center">
+                          <div className="col-span-6">
+                            <FormField
+                              control={form.control}
+                              name={`contractorMilestones.${index}.description`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormControl>
+                                    <Input {...field} placeholder="Milestone description" />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                          <div className="col-span-5">
+                            <FormField
+                              control={form.control}
+                              name={`contractorMilestones.${index}.dueDate`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormControl>
+                                    <Input {...field} type="date" />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                          <div className="col-span-1">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeContractorMilestone(index)}
+                              className="text-red-500 hover:text-red-700"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 

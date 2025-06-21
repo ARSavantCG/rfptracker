@@ -88,6 +88,64 @@ html {
   box-shadow: none !important;
 }
 
+/* Nuclear option - remove all borders from calendar buttons */
+.rdp .rdp-day {
+  border: 1px solid transparent !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.rdp .rdp-day:hover:not([aria-selected="true"]) {
+  border: 1px solid transparent !important;
+  background-color: hsl(var(--accent)) !important;
+}
+
+.rdp .rdp-day:focus:not([aria-selected="true"]) {
+  border: 1px solid transparent !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Target the specific day button that's causing issues */
+.rdp button[aria-label*="24"] {
+  border: 1px solid transparent !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Override any remaining calendar button styling */
+.rdp .rdp-button_reset {
+  border: 1px solid transparent !important;
+  outline: none !important;
+}
+
+/* Aggressive override for all calendar buttons */
+.rdp table button {
+  border: 1px solid transparent !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Ultra-specific targeting for the problematic day */
+.rdp-month .rdp-table .rdp-tbody .rdp-row .rdp-cell button {
+  border: 1px solid transparent !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Override any focus-visible or tabindex behavior */
+.rdp [tabindex] {
+  outline: none !important;
+  border: 1px solid transparent !important;
+}
+
+/* Remove focus from any calendar element */
+.rdp *:focus {
+  outline: none !important;
+  border: 1px solid transparent !important;
+  box-shadow: none !important;
+}
+
 /* Compact form elements */
 .compact-input input {
   height: 2rem !important;

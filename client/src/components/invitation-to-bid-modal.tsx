@@ -40,11 +40,9 @@ const invitationFormSchema = z.object({
   })).default([]),
   architectMilestones: z.array(z.object({
     description: z.string(),
-    dueDate: z.string(),
   })).default([]),
   contractorMilestones: z.array(z.object({
     description: z.string(),
-    dueDate: z.string(),
   })).default([]),
 });
 
@@ -738,21 +736,21 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
               )}
             </div>
 
-            {/* Milestones */}
+            {/* Milestone Requests */}
             <div className="space-y-6">
-              <h3 className="text-lg font-medium">Milestones</h3>
+              <h3 className="text-lg font-medium">Milestone Requests</h3>
               
               {/* Side by Side Milestones */}
               <div className="grid grid-cols-2 gap-6">
                 {/* Architect Milestones */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-md font-medium text-gray-700">Architect Milestones</h4>
+                    <h4 className="text-md font-medium text-gray-700">Architect Milestone Requests</h4>
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => appendArchitectMilestone({ description: "", dueDate: "" })}
+                      onClick={() => appendArchitectMilestone({ description: "" })}
                     >
                       <Plus className="h-4 w-4 mr-2" />
                       Add
@@ -761,7 +759,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                   
                   {architectMilestoneFields.length === 0 && (
                     <div className="text-center text-gray-500 py-4 border-2 border-dashed border-gray-200 rounded-lg">
-                      No architect milestones added yet.
+                      No architect milestone requests added yet.
                     </div>
                   )}
 
@@ -769,36 +767,21 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                     <div className="space-y-2">
                       {/* Column Headers */}
                       <div className="grid grid-cols-12 gap-2 pb-2 border-b text-sm font-medium text-gray-600">
-                        <div className="col-span-6">Description</div>
-                        <div className="col-span-5">Due Date</div>
+                        <div className="col-span-11">Milestone Request</div>
                         <div className="col-span-1"></div>
                       </div>
 
                       {/* Milestone Items */}
                       {architectMilestoneFields.map((field, index) => (
                         <div key={field.id} className="grid grid-cols-12 gap-2 items-center">
-                          <div className="col-span-6">
+                          <div className="col-span-11">
                             <FormField
                               control={form.control}
                               name={`architectMilestones.${index}.description`}
                               render={({ field }) => (
                                 <FormItem>
                                   <FormControl>
-                                    <Input {...field} placeholder="Milestone description" />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-                          <div className="col-span-5">
-                            <FormField
-                              control={form.control}
-                              name={`architectMilestones.${index}.dueDate`}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormControl>
-                                    <Input {...field} type="date" />
+                                    <Input {...field} placeholder="e.g., Preliminary design drawings completion date" />
                                   </FormControl>
                                   <FormMessage />
                                 </FormItem>
@@ -825,12 +808,12 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                 {/* Contractor Milestones */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-md font-medium text-gray-700">General Contractor Milestones</h4>
+                    <h4 className="text-md font-medium text-gray-700">Contractor Milestone Requests</h4>
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => appendContractorMilestone({ description: "", dueDate: "" })}
+                      onClick={() => appendContractorMilestone({ description: "" })}
                     >
                       <Plus className="h-4 w-4 mr-2" />
                       Add
@@ -839,7 +822,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                   
                   {contractorMilestoneFields.length === 0 && (
                     <div className="text-center text-gray-500 py-4 border-2 border-dashed border-gray-200 rounded-lg">
-                      No contractor milestones added yet.
+                      No contractor milestone requests added yet.
                     </div>
                   )}
 
@@ -847,36 +830,21 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                     <div className="space-y-2">
                       {/* Column Headers */}
                       <div className="grid grid-cols-12 gap-2 pb-2 border-b text-sm font-medium text-gray-600">
-                        <div className="col-span-6">Description</div>
-                        <div className="col-span-5">Due Date</div>
+                        <div className="col-span-11">Milestone Request</div>
                         <div className="col-span-1"></div>
                       </div>
 
                       {/* Milestone Items */}
                       {contractorMilestoneFields.map((field, index) => (
                         <div key={field.id} className="grid grid-cols-12 gap-2 items-center">
-                          <div className="col-span-6">
+                          <div className="col-span-11">
                             <FormField
                               control={form.control}
                               name={`contractorMilestones.${index}.description`}
                               render={({ field }) => (
                                 <FormItem>
                                   <FormControl>
-                                    <Input {...field} placeholder="Milestone description" />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-                          <div className="col-span-5">
-                            <FormField
-                              control={form.control}
-                              name={`contractorMilestones.${index}.dueDate`}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormControl>
-                                    <Input {...field} type="date" />
+                                    <Input {...field} placeholder="e.g., Construction schedule with key milestones" />
                                   </FormControl>
                                   <FormMessage />
                                 </FormItem>

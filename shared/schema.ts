@@ -175,8 +175,8 @@ export const invitationToBid = pgTable("invitation_to_bid", {
   documentsLink: text("documents_link"),
   keyDates: json("key_dates").$type<{label: string, date: string}[]>().default([]),
   scopeOfWork: json("scope_of_work").$type<{description: string, quantity: number, unit: string}[]>().default([]),
-  architectMilestones: json("architect_milestones").$type<{description: string, dueDate: string}[]>().default([]),
-  contractorMilestones: json("contractor_milestones").$type<{description: string, dueDate: string}[]>().default([]),
+  architectMilestones: json("architect_milestones").$type<{description: string}[]>().default([]),
+  contractorMilestones: json("contractor_milestones").$type<{description: string}[]>().default([]),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -201,11 +201,9 @@ export const insertInvitationToBidSchema = createInsertSchema(invitationToBid).o
   })).default([]),
   architectMilestones: z.array(z.object({
     description: z.string(),
-    dueDate: z.string(),
   })).default([]),
   contractorMilestones: z.array(z.object({
     description: z.string(),
-    dueDate: z.string(),
   })).default([]),
 });
 

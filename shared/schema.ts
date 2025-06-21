@@ -25,6 +25,7 @@ export const rfpRequests = pgTable("rfp_requests", {
   workflowPhase: text("workflow_phase").notNull().default("rfp-entry"), // rfp-entry, invitation-to-bid, bid-collection, evaluation, award, publish
   notes: text("notes"),
   files: json("files").$type<RfpFile[]>().notNull().default([]),
+  selectedBayConfigurations: json("selected_bay_configurations").$type<BayConfiguration[]>().default([]),
   
   // Validation fields for workflow progression
   isValidated: json("is_validated").default(false).$type<boolean>(),

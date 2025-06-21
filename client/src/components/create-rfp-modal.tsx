@@ -124,7 +124,12 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
   });
 
   const onSubmit = (data: CreateRfpFormData) => {
-    createMutation.mutate(data);
+    // Include selected bay configurations in the submission
+    const dataWithBayConfigs = {
+      ...data,
+      selectedBayConfigurations: selectedBayConfigurations
+    };
+    createMutation.mutate(dataWithBayConfigs);
   };
 
   const handleRequestTypeChange = (type: string, checked: boolean) => {

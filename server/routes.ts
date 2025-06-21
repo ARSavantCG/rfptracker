@@ -1369,7 +1369,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 
                 return '<tr>' +
                   '<td><strong>' + (rfp.rfpNumber || 'N/A') + '</strong></td>' +
-                  '<td>' + (rfp.projectName || 'N/A') + '</td>' +
+                  '<td>' + (rfp.projectName || 'N/A').replace(/ - $/, '') + '</td>' +
                   '<td>' + receivedDate.toLocaleDateString() + '</td>' +
                   '<td>' + dueDateDisplay + '</td>' +
                   '<td>' + dayDisplay + '</td>' +

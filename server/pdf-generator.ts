@@ -1001,7 +1001,7 @@ function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dates: an
           <div>Date: ${today}</div>
         </div>
         <div class="document-title">PRELIMINARY REQUEST FOR PROPOSAL</div>
-        <div class="project-title">Architectural Services - ${projectName}</div>
+        <div class="project-title">${projectName}</div>
         <div style="font-size: 14px; color: #666;">RFP Number: ${rfp.rfpNumber}</div>
       </div>
 
@@ -1206,7 +1206,7 @@ function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, dates: a
           <div>Date: ${today}</div>
         </div>
         <div class="document-title">PRELIMINARY REQUEST FOR PROPOSAL</div>
-        <div class="project-title">General Contractor Services - ${projectName}</div>
+        <div class="project-title">${projectName}</div>
         <div style="font-size: 14px; color: #666;">RFP Number: ${rfp.rfpNumber}</div>
       </div>
 

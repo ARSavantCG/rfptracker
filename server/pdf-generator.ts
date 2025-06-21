@@ -960,7 +960,7 @@ function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dates: an
   const contactEmail = contactParts[1] || 'contact@company.com';
   const contactPhone = contactParts[2] || '';
 
-  const projectName = rfp.confidential ? `Confidential @ ${invitationToBid?.projectLocation || rfp.propertyAddress || rfp.property}` : `${rfp.tenantName} @ ${invitationToBid?.projectLocation || rfp.propertyAddress || rfp.property}`;
+  const projectName = rfp.confidential ? `Confidential @ ${rfp.property}` : `${rfp.tenantName} @ ${rfp.property}`;
 
   // Format bid deadline with E.O.B.
   const formattedDeadline = bidDeadline.replace(/(\d{4})$/, '$1 E.O.B.');
@@ -1119,7 +1119,7 @@ function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, dates: a
   const contactEmail = contactParts[1] || 'contact@company.com';
   const contactPhone = contactParts[2] || '';
 
-  const projectName = rfp.confidential ? `Confidential @ ${invitationToBid?.projectLocation || rfp.propertyAddress || rfp.property}` : `${rfp.tenantName} @ ${invitationToBid?.projectLocation || rfp.propertyAddress || rfp.property}`;
+  const projectName = rfp.confidential ? `Confidential @ ${rfp.property}` : `${rfp.tenantName} @ ${rfp.property}`;
 
   // Format bid deadline with E.O.B.
   const formattedDeadline = bidDeadline.replace(/(\d{4})$/, '$1 E.O.B.');

@@ -259,99 +259,93 @@ export default function Reports() {
         </Card>
 
         {/* Report Generation Cards */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center space-x-2 text-lg">
                 <FileText className="h-5 w-5" />
                 <span>Executive Summary</span>
               </CardTitle>
               <p className="text-sm text-gray-600">
-                Comprehensive status overview of all active RFP projects
+                Status overview of all RFP projects
               </p>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-gray-50 p-3 rounded-lg">
-                    <p className="text-2xl font-bold text-gray-900">{metrics.total}</p>
-                    <p className="text-xs text-gray-600 uppercase font-medium">Total RFPs</p>
-                  </div>
-                  <div className="bg-yellow-50 p-3 rounded-lg">
-                    <p className="text-2xl font-bold text-yellow-900">{metrics.inProgress}</p>
-                    <p className="text-xs text-yellow-600 uppercase font-medium">In Progress</p>
-                  </div>
+            <CardContent className="space-y-3">
+              <div className="grid grid-cols-2 gap-2">
+                <div className="bg-gray-50 p-2 rounded text-center">
+                  <p className="text-xl font-bold text-gray-900">{metrics.total}</p>
+                  <p className="text-xs text-gray-600 uppercase font-medium">Total</p>
                 </div>
-                
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h4 className="font-medium text-gray-900 mb-2">Report Contents</h4>
-                  <ul className="space-y-1 text-sm text-gray-600">
-                    <li>• Current RFP status breakdown</li>
-                    <li>• Due date analysis and priorities</li>
-                    <li>• Project timeline overview</li>
-                    <li>• Performance metrics</li>
-                  </ul>
+                <div className="bg-yellow-50 p-2 rounded text-center">
+                  <p className="text-xl font-bold text-yellow-900">{metrics.inProgress}</p>
+                  <p className="text-xs text-yellow-600 uppercase font-medium">Active</p>
                 </div>
-                
-                <Button 
-                  className="w-full flex items-center justify-center space-x-2" 
-                  onClick={() => generateReport("executive")}
-                >
-                  <Download className="h-4 w-4" />
-                  <span>Generate Executive Summary</span>
-                </Button>
               </div>
+              
+              <div className="bg-gray-50 p-3 rounded">
+                <h4 className="font-medium text-gray-900 mb-1 text-sm">Includes</h4>
+                <ul className="space-y-0.5 text-xs text-gray-600">
+                  <li>• Status breakdown & timelines</li>
+                  <li>• Due dates & priorities</li>
+                  <li>• Performance metrics</li>
+                </ul>
+              </div>
+              
+              <Button 
+                className="w-full flex items-center justify-center space-x-2" 
+                onClick={() => generateReport("executive")}
+              >
+                <Download className="h-4 w-4" />
+                <span>Generate Report</span>
+              </Button>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center space-x-2 text-lg">
                 <TrendingUp className="h-5 w-5" />
                 <span>Historical Pricing</span>
               </CardTitle>
               <p className="text-sm text-gray-600">
-                Pricing analysis from completed RFP projects with detailed breakdowns
+                Pricing analysis from completed projects
               </p>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-gray-50 p-3 rounded-lg">
-                    <p className="text-2xl font-bold text-gray-900">{metrics.completed}</p>
-                    <p className="text-xs text-gray-600 uppercase font-medium">Completed</p>
-                  </div>
-                  <div className="bg-green-50 p-3 rounded-lg">
-                    <p className="text-lg font-bold text-green-900">PDF</p>
-                    <p className="text-xs text-green-600 uppercase font-medium">Format</p>
-                  </div>
+            <CardContent className="space-y-3">
+              <div className="grid grid-cols-2 gap-2">
+                <div className="bg-gray-50 p-2 rounded text-center">
+                  <p className="text-xl font-bold text-gray-900">{metrics.completed}</p>
+                  <p className="text-xs text-gray-600 uppercase font-medium">Complete</p>
                 </div>
-                
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h4 className="font-medium text-gray-900 mb-2">Report Contents</h4>
-                  <ul className="space-y-1 text-sm text-gray-600">
-                    <li>• Project-by-project pricing breakdown</li>
-                    <li>• Contractor bid comparisons</li>
-                    <li>• Line items by category</li>
-                    <li>• Unit pricing analysis</li>
-                  </ul>
+                <div className="bg-green-50 p-2 rounded text-center">
+                  <p className="text-xl font-bold text-green-900">PDF</p>
+                  <p className="text-xs text-green-600 uppercase font-medium">Format</p>
                 </div>
-                
-                <Button 
-                  className="w-full flex items-center justify-center space-x-2" 
-                  disabled={metrics.completed === 0}
-                  onClick={() => generateReport("historical")}
-                >
-                  <Download className="h-4 w-4" />
-                  <span>Generate Pricing Report</span>
-                </Button>
-                
-                {metrics.completed === 0 && (
-                  <p className="text-xs text-gray-500 text-center">
-                    No completed projects available for pricing analysis
-                  </p>
-                )}
               </div>
+              
+              <div className="bg-gray-50 p-3 rounded">
+                <h4 className="font-medium text-gray-900 mb-1 text-sm">Includes</h4>
+                <ul className="space-y-0.5 text-xs text-gray-600">
+                  <li>• Project pricing breakdown</li>
+                  <li>• Contractor bid comparisons</li>
+                  <li>• Line items by category</li>
+                </ul>
+              </div>
+              
+              <Button 
+                className="w-full flex items-center justify-center space-x-2" 
+                disabled={metrics.completed === 0}
+                onClick={() => generateReport("historical")}
+              >
+                <Download className="h-4 w-4" />
+                <span>Generate Report</span>
+              </Button>
+              
+              {metrics.completed === 0 && (
+                <p className="text-xs text-gray-500 text-center">
+                  No completed projects available
+                </p>
+              )}
             </CardContent>
           </Card>
         </div>

@@ -186,10 +186,9 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
       let propertyName = propertyId;
       
       if (selectedProperty) {
-        // Only add building name if it's different from property name and not empty
+        // Only add building name if it exists, is not empty, and is different from property name
         if (selectedProperty.building && 
-            selectedProperty.building.trim() !== '' && 
-            selectedProperty.building !== selectedProperty.propertyName) {
+            selectedProperty.building.trim() !== '') {
           propertyName = `${selectedProperty.propertyName} - ${selectedProperty.building}`;
         } else {
           propertyName = selectedProperty.propertyName;

@@ -280,7 +280,6 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                               today.setHours(0, 0, 0, 0);
                               return date < today || date < new Date("1900-01-01");
                             }}
-                            initialFocus
                             modifiers={internalDueDate ? {
                               internalDue: (() => {
                                 const isoString = internalDueDate.toISOString().split('T')[0];
@@ -365,7 +364,6 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                               today.setHours(0, 0, 0, 0);
                               return date < today || date < new Date("1900-01-01");
                             }}
-                            initialFocus
                             modifiers={internalDueDate ? {
                               internalDue: (() => {
                                 const isoString = internalDueDate.toISOString().split('T')[0];

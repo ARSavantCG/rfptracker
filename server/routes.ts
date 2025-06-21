@@ -191,6 +191,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // Parse areaBreakdown JSON array
+      if (formData.areaBreakdown && typeof formData.areaBreakdown === 'string') {
+        try {
+          formData.areaBreakdown = JSON.parse(formData.areaBreakdown);
+        } catch {
+          formData.areaBreakdown = [];
+        }
+      }
+
       // Convert string boolean to actual boolean
       if (formData.confidential === 'true') {
         formData.confidential = true;

@@ -493,14 +493,19 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
                     <div>
                       <label className="text-sm font-medium text-gray-700">Warehouse Area</label>
                       <div className="text-lg font-semibold text-green-600">
-                        {(calculatedFloorArea - selectedBayConfigurations.reduce((sum, bay) => sum + (bay.mechanicalRoomAllocation || 0), 0)).toLocaleString()} SF
+                        {(() => {
+                          const totalMechanical = selectedBayConfigurations.reduce((sum, bay) => sum + (bay.mechanicalRoomAllocation || 0), 0);
+                          const roundedMechanical = Math.round(totalMechanical);
+                          const warehouseArea = calculatedFloorArea - roundedMechanical;
+                          return warehouseArea.toLocaleString();
+                        })()} SF
                       </div>
                       <p className="text-xs text-gray-500">Available for tenant use</p>
                     </div>
                     <div>
                       <label className="text-sm font-medium text-gray-700">Mechanical Allocation</label>
                       <div className="text-lg font-semibold text-orange-600">
-                        {selectedBayConfigurations.reduce((sum, bay) => sum + (bay.mechanicalRoomAllocation || 0), 0).toLocaleString()} SF
+                        {Math.round(selectedBayConfigurations.reduce((sum, bay) => sum + (bay.mechanicalRoomAllocation || 0), 0)).toLocaleString()} SF
                       </div>
                       <p className="text-xs text-gray-500">HVAC & building systems</p>
                     </div>
@@ -508,7 +513,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
 
                   <div className="text-sm text-gray-600 p-2 bg-yellow-50 rounded">
                     <strong>Note:</strong> The warehouse area represents the actual usable space for the tenant. 
-                    Mechanical allocation is separate space for HVAC, electrical, and building systems.
+                    Mechanical Room allocation is proportionate to tenant's share of building.
                   </div>
                 </div>
               )}

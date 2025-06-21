@@ -1030,17 +1030,6 @@ function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dates: an
         </div>
         ` : ''}
 
-        ${invitationToBid?.scopeOfWork && Array.isArray(invitationToBid.scopeOfWork) && invitationToBid.scopeOfWork.length > 0 ? `
-        <div class="scope-of-work">
-          <strong>Scope of Work:</strong>
-          <ul>
-            ${invitationToBid.scopeOfWork.map(item => `
-              <li>${item.description}${item.quantity ? ` - ${item.quantity.toLocaleString()} ${item.unit || ''}` : ''}</li>
-            `).join('')}
-          </ul>
-        </div>
-        ` : ''}
-
         ${invitationToBid?.documentsLink ? `
         <div class="info-item" style="margin-top: 15px;">
           <span class="label">Project Documents:</span>
@@ -1062,6 +1051,17 @@ function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dates: an
           ${newOffice > 0 && (!areaBreakdown || areaBreakdown.length === 0) ? `<tr><td>New Office Space</td><td>${newOffice.toLocaleString()}</td><td>New construction</td></tr>` : ''}
           <tr><td><strong>Total</strong></td><td><strong>${totalArea.toLocaleString()}</strong></td><td></td></tr>
         </table>
+      </div>
+      ` : ''}
+
+      ${invitationToBid?.scopeOfWork && Array.isArray(invitationToBid.scopeOfWork) && invitationToBid.scopeOfWork.length > 0 ? `
+      <div class="section">
+        <div class="section-title">Scope of Work</div>
+        <ul>
+          ${invitationToBid.scopeOfWork.map((item: any) => `
+            <li>${item.description}${item.quantity ? ` - ${item.quantity.toLocaleString()} ${item.unit || ''}` : ''}</li>
+          `).join('')}
+        </ul>
       </div>
       ` : ''}
 
@@ -1235,8 +1235,6 @@ function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, dates: a
         </div>
         ` : ''}
 
-        ${scopeOfWorkHtml}
-
         ${invitationToBid?.documentsLink ? `
         <div class="info-item" style="margin-top: 15px;">
           <span class="label">Project Documents:</span>
@@ -1246,6 +1244,8 @@ function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, dates: a
       </div>
 
       ${spaceRequirementsHtml}
+
+      ${scopeOfWorkHtml}
 
       ${getBayConfigurationSection(rfp)}
 

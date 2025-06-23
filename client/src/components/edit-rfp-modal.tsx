@@ -16,7 +16,7 @@ import { PropertySelector } from "./property-selector";
 import { FileUpload } from "./file-upload";
 import { BayConfigurationModal } from "./bay-configuration-modal";
 import { Edit, Save, X, Download, Trash2, Grid3x3 } from "lucide-react";
-import type { RfpRequest, RfpFile, Property, BayConfiguration } from "@shared/schema";
+import type { RfpRequest, RfpFile, Property, BayConfiguration, Contact } from "@shared/schema";
 
 const editRfpSchema = z.object({
   rfpNumber: z.string().min(1, "RFP number is required"),
@@ -54,6 +54,12 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
   // Fetch properties for bay configuration
   const { data: properties = [] } = useQuery<Property[]>({
     queryKey: ["/api/properties"],
+    enabled: isOpen,
+  });
+
+  // Fetch contacts for development contact dropdown
+  const { data: contacts = [] } = useQuery<Contact[]>({
+    queryKey: ["/api/contacts"],
     enabled: isOpen,
   });
 
@@ -426,9 +432,9 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {contacts
-                          .filter((contact) => contact.tags && contact.tags.includes("Development"))
-                          .map((contact) => (
+                        {(contacts as Contact[])
+                          .filter((contact: Contact) => contact.tags && contact.tags.includes("Development"))
+                          .map((contact: Contact) => (
                             <SelectItem key={contact.id} value={`${contact.name} - ${contact.company}`}>
                               {contact.name} - {contact.company}
                             </SelectItem>

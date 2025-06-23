@@ -540,6 +540,14 @@ export function ContactManagementModal({ isOpen, onClose }: ContactManagementMod
                     )}
                   />
 
+                  <TagInput
+                    label="Tags (Optional)"
+                    placeholder="Type tag and press Enter (e.g., Development, Property Management)"
+                    value={editForm.watch("tags")}
+                    onChange={(tags: string[]) => editForm.setValue("tags", tags)}
+                    suggestions={["Development", "Property Management", "Leasing", "Operations", "Finance"]}
+                  />
+
                   <div className="flex justify-end space-x-2 pt-4">
                     <Button
                       type="button"

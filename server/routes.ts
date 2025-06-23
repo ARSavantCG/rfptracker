@@ -1813,6 +1813,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { lineItems } = req.body;
+      console.log("Saving ROM line items:", { romPilotId, lineItems });
+      
       const savedLineItems = await storage.saveRomPilotLineItems(romPilotId, lineItems);
       
       // Calculate and update total estimate
@@ -1821,6 +1823,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json(savedLineItems);
     } catch (error) {
+      console.error("ROM line items save error:", error);
       res.status(500).json({ message: "Failed to save line items" });
     }
   });

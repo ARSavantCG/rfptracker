@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Calculator, Edit, Trash2, FileText, ListChecks } from "lucide-react";
+import { Plus, Calculator, Edit, Trash2, FileText, ListChecks, Download } from "lucide-react";
 import Navigation from "@/components/navigation";
 import { CreateRomPilotModal } from "@/components/create-rom-pilot-modal";
 import { RomPilotScopeModal } from "@/components/rom-pilot-scope-modal";
@@ -69,6 +69,42 @@ export default function RomPilotPage() {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(num);
+  };
+
+  const generateRomReport = async (pilot: RomPilot) => {
+    try {
+      const response = await fetch(`/api/rom-pilots/${pilot.id}/report`, {
+        method: 'GET',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate ROM report');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const newWindow = window.open(url, '_blank');
+      
+      if (newWindow) {
+        newWindow.onload = () => {
+          setTimeout(() => {
+            window.URL.revokeObjectURL(url);
+          }, 1000);
+        };
+      }
+
+      toast({
+        title: "Success",
+        description: "ROM report generated successfully",
+      });
+    } catch (error) {
+      console.error('Error generating ROM report:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate ROM report",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -185,18 +221,27 @@ export default function RomPilotPage() {
                     {pilot.createdBy && <span>by {pilot.createdBy}</span>}
                   </div>
                   
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="w-full"
-                    onClick={() => {
-                      setSelectedRomPilot(pilot);
-                      setScopeModalOpen(true);
-                    }}
-                  >
-                    <ListChecks className="h-4 w-4 mr-2" />
-                    Manage Scope
-                  </Button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => {
+                        setSelectedRomPilot(pilot);
+                        setScopeModalOpen(true);
+                      }}
+                    >
+                      <ListChecks className="h-4 w-4 mr-2" />
+                      Manage Scope
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => generateRomReport(pilot)}
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Generate Report
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))

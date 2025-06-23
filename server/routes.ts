@@ -1881,6 +1881,189 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Helper function to generate ROM report HTML
+  function generateRomReportHtml(romPilot: any, lineItems: any[], scopeItems: any[]): string {
+    const currentDate = new Date().toLocaleDateString();
+    
+    // Categorize line items
+    const tenantImprovements = lineItems.filter(item => item.category === 'tenant-improvements');
+    const designSoftCosts = lineItems.filter(item => item.category === 'design-soft-costs');
+    
+    // Calculate totals
+    const calculateCategoryTotal = (items: any[]) => {
+      return items.reduce((sum: number, item: any) => sum + (parseFloat(item.totalPrice) || 0), 0);
+    };
+    
+    const formatCurrency = (amount: number) => {
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(amount);
+    };
+    
+    const formatPerSF = (total: number, sf: number) => {
+      if (sf === 0) return '$0.00';
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(total / sf);
+    };
+    
+    const tenantImprovementsTotal = calculateCategoryTotal(tenantImprovements);
+    const designSoftCostsTotal = calculateCategoryTotal(designSoftCosts);
+    const grandTotal = tenantImprovementsTotal + designSoftCostsTotal;
+    
+    // Calculate total square footage from selected bay configurations
+    let totalSquareFootage = 0;
+    if (romPilot.selectedBayConfigurations && Array.isArray(romPilot.selectedBayConfigurations)) {
+      totalSquareFootage = romPilot.selectedBayConfigurations.reduce((sum: number, bay: any) => {
+        return sum + (bay.squareFootage || 0);
+      }, 0);
+    }
+    
+    const renderCategorySection = (title: string, items: any[], categoryTotal: number, bgColor: string) => {
+      if (items.length === 0) return '';
+      
+      return `
+        <div style="margin-bottom: 30px;">
+          <div style="background: ${bgColor}; padding: 15px; margin-bottom: 10px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+            <h2 style="margin: 0; font-size: 18px; font-weight: 600; color: #1f2937;">${title}</h2>
+            <div style="font-size: 20px; font-weight: bold; color: #065f46;">${formatCurrency(categoryTotal)}</div>
+          </div>
+          
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px;">
+            <thead>
+              <tr style="background: #f9fafb;">
+                <th style="border: 1px solid #e5e7eb; padding: 12px; text-align: left; font-weight: 600; width: 40%;">DESCRIPTION</th>
+                <th style="border: 1px solid #e5e7eb; padding: 12px; text-align: center; font-weight: 600; width: 12%;">QUANTITY</th>
+                <th style="border: 1px solid #e5e7eb; padding: 12px; text-align: center; font-weight: 600; width: 12%;">UNIT</th>
+                <th style="border: 1px solid #e5e7eb; padding: 12px; text-align: center; font-weight: 600; width: 15%;">UNIT PRICE</th>
+                <th style="border: 1px solid #e5e7eb; padding: 12px; text-align: center; font-weight: 600; width: 15%;">TOTAL PRICE</th>
+                <th style="border: 1px solid #e5e7eb; padding: 12px; text-align: center; font-weight: 600; width: 6%;">$ / SF</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${items.map(item => {
+                const scopeItem = scopeItems.find(si => si.id === item.scopeItemId);
+                const itemTotal = parseFloat(item.totalPrice) || 0;
+                const perSF = totalSquareFootage > 0 ? itemTotal / totalSquareFootage : 0;
+                
+                return `
+                  <tr>
+                    <td style="border: 1px solid #e5e7eb; padding: 8px;">${scopeItem?.name || 'Custom Item'}</td>
+                    <td style="border: 1px solid #e5e7eb; padding: 8px; text-align: center;">${new Intl.NumberFormat('en-US').format(parseInt(item.quantity) || 0)}</td>
+                    <td style="border: 1px solid #e5e7eb; padding: 8px; text-align: center;">${scopeItem?.unit || 'ea'}</td>
+                    <td style="border: 1px solid #e5e7eb; padding: 8px; text-align: center;">${formatCurrency(parseFloat(item.unitPrice) || 0)}</td>
+                    <td style="border: 1px solid #e5e7eb; padding: 8px; text-align: center;">${formatCurrency(itemTotal)}</td>
+                    <td style="border: 1px solid #e5e7eb; padding: 8px; text-align: center;">${formatPerSF(itemTotal, totalSquareFootage)}</td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    };
+    
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>ROM Budget Report</title>
+        <style>
+          @page { size: A4; margin: 0.75in; }
+          @media print { 
+            .no-print { display: none !important; }
+            body { font-size: 11px; }
+          }
+          body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            font-size: 12px; 
+            margin: 0; 
+            color: #1f2937;
+            line-height: 1.4;
+          }
+          .no-print { 
+            background: #3b82f6; 
+            color: white; 
+            padding: 15px; 
+            text-align: center; 
+            margin-bottom: 20px; 
+            border-radius: 8px; 
+            font-weight: 600;
+          }
+          .header { 
+            text-align: center; 
+            margin-bottom: 30px; 
+            border-bottom: 2px solid #e5e7eb; 
+            padding-bottom: 20px; 
+          }
+          .header h1 { 
+            font-size: 28px; 
+            margin: 0 0 15px 0; 
+            color: #1f2937; 
+            font-weight: 700;
+          }
+          .header-info { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: flex-start; 
+            margin-top: 15px;
+          }
+          .header-left { text-align: left; }
+          .header-right { text-align: right; }
+          .header p { 
+            margin: 3px 0; 
+            font-size: 14px; 
+            color: #4b5563; 
+          }
+          .header strong { color: #1f2937; }
+          .grand-total {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: #065f46;
+            border-top: 3px solid #e5e7eb;
+            padding-top: 20px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="no-print">
+          <p>ROM Budget Report - Use your browser's print function to save as PDF or print this report</p>
+        </div>
+        
+        <div class="header">
+          <h1>ROM Budget Report</h1>
+          <div class="header-info">
+            <div class="header-left">
+              <p><strong>Project:</strong> ${romPilot.projectName}</p>
+              <p><strong>Property:</strong> ${romPilot.property}</p>
+              <p><strong>Generated:</strong> ${currentDate}</p>
+            </div>
+            <div class="header-right">
+              <p><strong>Rentable Area:</strong> ${totalSquareFootage > 0 ? new Intl.NumberFormat('en-US').format(totalSquareFootage) + ' sf' : 'N/A'}</p>
+            </div>
+          </div>
+        </div>
+
+        ${renderCategorySection("Tenant Improvements", tenantImprovements, tenantImprovementsTotal, "#f0fdf4")}
+        ${renderCategorySection("Design / Soft Costs / Other Fees", designSoftCosts, designSoftCostsTotal, "#fef3f2")}
+
+        <div class="grand-total">
+          Grand Total: ${formatCurrency(grandTotal)}
+        </div>
+      </body>
+      </html>
+    `;
+  }
+
   // Reports PDF generation
   app.post("/api/reports/detailed-report-pdf", async (req, res) => {
     try {

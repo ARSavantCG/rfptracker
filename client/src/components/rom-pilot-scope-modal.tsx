@@ -64,17 +64,13 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
   // Load existing line items when modal opens
   useEffect(() => {
     if (isOpen && !isInitialized) {
-      console.log("Initializing modal with data:", { existingLineItems, scopeItems });
-      
       if (Array.isArray(existingLineItems) && existingLineItems.length > 0) {
         const tenantItems: LineItem[] = [];
         const designItems: LineItem[] = [];
         
         existingLineItems.forEach((item: any) => {
-          console.log("Processing line item:", item);
           // Find the corresponding scope item for unit display
           const scopeItem = scopeItems.find(si => si.id === item.scopeItemId);
-          console.log("Found scope item:", scopeItem);
           
           const lineItem: LineItem = {
             id: item.id,
@@ -87,8 +83,6 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
             scopeItem: scopeItem,
           };
           
-          console.log("Created line item:", lineItem);
-          
           if (lineItem.category === 'tenant-improvements') {
             tenantItems.push(lineItem);
           } else if (lineItem.category === 'design-soft-costs') {
@@ -96,11 +90,9 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
           }
         });
         
-        console.log("Setting items:", { tenantItems, designItems });
         setTenantImprovements(tenantItems);
         setDesignSoftCosts(designItems);
       } else {
-        console.log("No existing line items, setting empty arrays");
         // Start with completely empty sections - no default items
         setTenantImprovements([]);
         setDesignSoftCosts([]);

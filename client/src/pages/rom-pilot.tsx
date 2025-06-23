@@ -83,7 +83,7 @@ export default function RomPilotPage() {
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
-      const newWindow = window.open(url, '_blank', 'width=600,height=500,scrollbars=yes,resizable=yes');
+      const newWindow = window.open(url, '_blank', 'width=450,height=400,scrollbars=yes,resizable=yes');
       
       if (newWindow) {
         newWindow.onload = () => {

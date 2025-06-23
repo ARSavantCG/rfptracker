@@ -385,21 +385,25 @@ export function ContactManagementModal({ isOpen, onClose }: ContactManagementMod
                     )}
                   />
 
-                  <TagInput
-                    label={`Tags (Optional)${form.watch("type") === "owner" ? " - Development tag available for Owners" : ""}`}
-                    placeholder={
-                      form.watch("type") === "owner" 
-                        ? "Type tag and press Enter (e.g., Development, Property Management)"
-                        : "Type tag and press Enter (e.g., Property Management, Leasing)"
-                    }
-                    value={form.watch("tags")}
-                    onChange={(tags: string[]) => form.setValue("tags", tags)}
-                    suggestions={
-                      form.watch("type") === "owner" 
-                        ? ["Development", "Property Management", "Leasing", "Operations", "Finance"]
-                        : ["Property Management", "Leasing", "Operations", "Finance"]
-                    }
-                  />
+                  <div className="space-y-1">
+                    <TagInput
+                      label="Tags (Optional)"
+                      placeholder="Type tag and press Enter (e.g., Development, Property Management)"
+                      value={form.watch("tags")}
+                      onChange={(tags: string[]) => form.setValue("tags", tags)}
+                      suggestions={["Development", "Property Management", "Leasing", "Operations", "Finance"]}
+                    />
+                    {form.watch("type") === "owner" && (
+                      <p className="text-xs text-green-600">
+                        ✓ Development tag available for Owner contacts
+                      </p>
+                    )}
+                    {form.watch("type") !== "owner" && form.watch("type") && (
+                      <p className="text-xs text-gray-500">
+                        Development tag only available for Owner contacts
+                      </p>
+                    )}
+                  </div>
 
                   <div className="flex justify-end gap-2 pt-3">
                     <Button 
@@ -548,21 +552,25 @@ export function ContactManagementModal({ isOpen, onClose }: ContactManagementMod
                     )}
                   />
 
-                  <TagInput
-                    label={`Tags (Optional)${editForm.watch("type") === "owner" ? " - Development tag available for Owners" : ""}`}
-                    placeholder={
-                      editForm.watch("type") === "owner" 
-                        ? "Type tag and press Enter (e.g., Development, Property Management)"
-                        : "Type tag and press Enter (e.g., Property Management, Leasing)"
-                    }
-                    value={editForm.watch("tags")}
-                    onChange={(tags: string[]) => editForm.setValue("tags", tags)}
-                    suggestions={
-                      editForm.watch("type") === "owner" 
-                        ? ["Development", "Property Management", "Leasing", "Operations", "Finance"]
-                        : ["Property Management", "Leasing", "Operations", "Finance"]
-                    }
-                  />
+                  <div className="space-y-1">
+                    <TagInput
+                      label="Tags (Optional)"
+                      placeholder="Type tag and press Enter (e.g., Development, Property Management)"
+                      value={editForm.watch("tags")}
+                      onChange={(tags: string[]) => editForm.setValue("tags", tags)}
+                      suggestions={["Development", "Property Management", "Leasing", "Operations", "Finance"]}
+                    />
+                    {editForm.watch("type") === "owner" && (
+                      <p className="text-xs text-green-600">
+                        ✓ Development tag available for Owner contacts
+                      </p>
+                    )}
+                    {editForm.watch("type") !== "owner" && editForm.watch("type") && (
+                      <p className="text-xs text-gray-500">
+                        Development tag only available for Owner contacts
+                      </p>
+                    )}
+                  </div>
 
                   <div className="flex justify-end space-x-2 pt-4">
                     <Button

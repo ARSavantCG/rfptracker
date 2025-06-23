@@ -70,7 +70,7 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
         const lineItem: LineItem = {
           id: item.id,
           scopeItemId: item.scopeItemId,
-          quantity: item.quantity?.toString() || "1",
+          quantity: item.quantity?.toString() || "",
           unitPrice: item.unitPrice || "0",
           totalPrice: item.totalPrice || "0",
           notes: item.notes || "",
@@ -128,11 +128,12 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
       updatedItems[index].totalPrice = (quantity * unitPrice).toFixed(2);
     }
 
-    // When scope item is selected, update unit price
+    // When scope item is selected, update unit price and scope item reference
     if (field === 'scopeItemId') {
       const selectedScopeItem = scopeItems.find(item => item.id === Number(value));
       if (selectedScopeItem) {
         updatedItems[index].unitPrice = selectedScopeItem.unitPrice;
+        updatedItems[index].scopeItem = selectedScopeItem;
         const quantity = parseFloat(updatedItems[index].quantity) || 0;
         const unitPrice = parseFloat(selectedScopeItem.unitPrice) || 0;
         updatedItems[index].totalPrice = (quantity * unitPrice).toFixed(2);
@@ -236,7 +237,7 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
                 <Label className="text-xs font-medium text-gray-600">Quantity</Label>
                 <Input
                   type="number"
-                  value={item.quantity || "1"}
+                  value={item.quantity || ""}
                   onChange={(e) => updateLineItem(category, index, 'quantity', e.target.value)}
                   className="h-8 text-xs"
                   placeholder="0"
@@ -244,7 +245,9 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
               </div>
 
               <div className="col-span-2">
-                <Label className="text-xs font-medium text-gray-600">Unit Price</Label>
+                <Label className="text-xs font-medium text-gray-600">
+                  Unit Price {item.scopeItem?.unit ? `(${item.scopeItem.unit})` : ''}
+                </Label>
                 <Input
                   type="number"
                   value={item.unitPrice || "0"}

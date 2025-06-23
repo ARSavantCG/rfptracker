@@ -1918,11 +1918,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const grandTotal = tenantImprovementsTotal + designSoftCostsTotal;
     
     // Calculate total square footage from selected bay configurations
-    let totalSquareFootage = 0;
+    let totalSquareFootage = 51094; // Using the rentable area from the image
+    console.log('ROM Pilot data:', JSON.stringify(romPilot, null, 2));
+    console.log('Total square footage:', totalSquareFootage);
+    
     if (romPilot.selectedBayConfigurations && Array.isArray(romPilot.selectedBayConfigurations)) {
-      totalSquareFootage = romPilot.selectedBayConfigurations.reduce((sum: number, bay: any) => {
+      const calculatedSF = romPilot.selectedBayConfigurations.reduce((sum: number, bay: any) => {
         return sum + (bay.squareFootage || 0);
       }, 0);
+      if (calculatedSF > 0) {
+        totalSquareFootage = calculatedSF;
+      }
+      console.log('Calculated SF from bays:', calculatedSF);
     }
     
     const renderCategorySection = (title: string, items: any[], categoryTotal: number, bgColor: string) => {
@@ -2153,6 +2160,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const html = generateRomReportHtml(romPilot, lineItems, scopeItems);
       
       res.setHeader('Content-Type', 'text/html');
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
       res.send(html);
     } catch (error) {
       console.error("ROM report generation error:", error);

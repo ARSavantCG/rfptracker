@@ -67,6 +67,9 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
       const designItems: LineItem[] = [];
       
       existingLineItems.forEach((item: any) => {
+        // Find the corresponding scope item for unit display
+        const scopeItem = scopeItems.find(si => si.id === item.scopeItemId);
+        
         const lineItem: LineItem = {
           id: item.id,
           scopeItemId: item.scopeItemId,
@@ -75,6 +78,7 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
           totalPrice: item.totalPrice || "0",
           notes: item.notes || "",
           category: item.category || 'tenant-improvements',
+          scopeItem: scopeItem,
         };
         
         if (lineItem.category === 'tenant-improvements') {
@@ -90,7 +94,7 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
       setTenantImprovements([]);
       setDesignSoftCosts([]);
     }
-  }, [isOpen, existingLineItems]);
+  }, [isOpen, existingLineItems, scopeItems]);
 
   const addLineItem = (category: 'tenant-improvements' | 'design-soft-costs') => {
     const newItem: LineItem = {

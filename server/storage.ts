@@ -7,6 +7,9 @@ import {
   bidLineItems,
   properties,
   evaluationBudgets,
+  romPilots,
+  romScopeItems,
+  romPilotLineItems,
   type RfpRequest, 
   type InsertRfpRequest, 
   type UpdateRfpRequest,
@@ -31,6 +34,15 @@ import {
   type EvaluationBudget,
   type InsertEvaluationBudget,
   type UpdateEvaluationBudget,
+  type RomPilot,
+  type InsertRomPilot,
+  type UpdateRomPilot,
+  type RomScopeItem,
+  type InsertRomScopeItem,
+  type UpdateRomScopeItem,
+  type RomPilotLineItem,
+  type InsertRomPilotLineItem,
+  type UpdateRomPilotLineItem,
   type RfpFile 
 } from "@shared/schema";
 import { db } from "./db";
@@ -97,6 +109,26 @@ export interface IStorage {
   getEvaluationBudget(rfpId: number): Promise<EvaluationBudget | undefined>;
   createEvaluationBudget(budget: InsertEvaluationBudget): Promise<EvaluationBudget>;
   updateEvaluationBudget(rfpId: number, updates: Partial<UpdateEvaluationBudget>): Promise<EvaluationBudget | undefined>;
+
+  // ROM Pilot management
+  getAllRomPilots(): Promise<RomPilot[]>;
+  getRomPilot(id: number): Promise<RomPilot | undefined>;
+  createRomPilot(romPilot: InsertRomPilot): Promise<RomPilot>;
+  updateRomPilot(id: number, updates: Partial<UpdateRomPilot>): Promise<RomPilot | undefined>;
+  deleteRomPilot(id: number): Promise<boolean>;
+
+  // ROM Scope Item management
+  getAllRomScopeItems(): Promise<RomScopeItem[]>;
+  getRomScopeItem(id: number): Promise<RomScopeItem | undefined>;
+  createRomScopeItem(scopeItem: InsertRomScopeItem): Promise<RomScopeItem>;
+  updateRomScopeItem(id: number, updates: Partial<UpdateRomScopeItem>): Promise<RomScopeItem | undefined>;
+  deleteRomScopeItem(id: number): Promise<boolean>;
+
+  // ROM Pilot Line Item management
+  getRomPilotLineItems(romPilotId: number): Promise<RomPilotLineItem[]>;
+  createRomPilotLineItem(lineItem: InsertRomPilotLineItem): Promise<RomPilotLineItem>;
+  updateRomPilotLineItem(id: number, updates: Partial<UpdateRomPilotLineItem>): Promise<RomPilotLineItem | undefined>;
+  deleteRomPilotLineItem(id: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -527,6 +559,118 @@ export class DatabaseStorage implements IStorage {
       .where(eq(evaluationBudgets.rfpId, rfpId))
       .returning();
     return updated || undefined;
+  }
+
+  // ROM Pilot implementation
+  async getAllRomPilots(): Promise<RomPilot[]> {
+    return await db.select().from(romPilots).orderBy(desc(romPilots.createdAt));
+  }
+
+  async getRomPilot(id: number): Promise<RomPilot | undefined> {
+    const [pilot] = await db.select().from(romPilots).where(eq(romPilots.id, id));
+    return pilot || undefined;
+  }
+
+  async createRomPilot(romPilot: InsertRomPilot): Promise<RomPilot> {
+    const [created] = await db
+      .insert(romPilots)
+      .values({
+        ...romPilot,
+        updatedAt: new Date(),
+      })
+      .returning();
+    return created;
+  }
+
+  async updateRomPilot(id: number, updates: Partial<UpdateRomPilot>): Promise<RomPilot | undefined> {
+    const [updated] = await db
+      .update(romPilots)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(romPilots.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteRomPilot(id: number): Promise<boolean> {
+    // Delete related line items first
+    await db.delete(romPilotLineItems).where(eq(romPilotLineItems.romPilotId, id));
+    
+    const result = await db.delete(romPilots).where(eq(romPilots.id, id));
+    return result.rowCount > 0;
+  }
+
+  // ROM Scope Item implementation
+  async getAllRomScopeItems(): Promise<RomScopeItem[]> {
+    return await db.select().from(romScopeItems).where(eq(romScopeItems.isActive, true)).orderBy(romScopeItems.category, romScopeItems.name);
+  }
+
+  async getRomScopeItem(id: number): Promise<RomScopeItem | undefined> {
+    const [item] = await db.select().from(romScopeItems).where(eq(romScopeItems.id, id));
+    return item || undefined;
+  }
+
+  async createRomScopeItem(scopeItem: InsertRomScopeItem): Promise<RomScopeItem> {
+    const [created] = await db
+      .insert(romScopeItems)
+      .values({
+        ...scopeItem,
+        updatedAt: new Date(),
+      })
+      .returning();
+    return created;
+  }
+
+  async updateRomScopeItem(id: number, updates: Partial<UpdateRomScopeItem>): Promise<RomScopeItem | undefined> {
+    const [updated] = await db
+      .update(romScopeItems)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(romScopeItems.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteRomScopeItem(id: number): Promise<boolean> {
+    const result = await db.delete(romScopeItems).where(eq(romScopeItems.id, id));
+    return result.rowCount > 0;
+  }
+
+  // ROM Pilot Line Item implementation
+  async getRomPilotLineItems(romPilotId: number): Promise<RomPilotLineItem[]> {
+    return await db.select().from(romPilotLineItems).where(eq(romPilotLineItems.romPilotId, romPilotId));
+  }
+
+  async createRomPilotLineItem(lineItem: InsertRomPilotLineItem): Promise<RomPilotLineItem> {
+    const [created] = await db
+      .insert(romPilotLineItems)
+      .values({
+        ...lineItem,
+        updatedAt: new Date(),
+      })
+      .returning();
+    return created;
+  }
+
+  async updateRomPilotLineItem(id: number, updates: Partial<UpdateRomPilotLineItem>): Promise<RomPilotLineItem | undefined> {
+    const [updated] = await db
+      .update(romPilotLineItems)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(romPilotLineItems.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteRomPilotLineItem(id: number): Promise<boolean> {
+    const result = await db.delete(romPilotLineItems).where(eq(romPilotLineItems.id, id));
+    return result.rowCount > 0;
   }
 }
 

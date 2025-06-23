@@ -376,3 +376,84 @@ export const updateEvaluationBudgetSchema = insertEvaluationBudgetSchema.partial
 export type EvaluationBudget = typeof evaluationBudgets.$inferSelect;
 export type InsertEvaluationBudget = z.infer<typeof insertEvaluationBudgetSchema>;
 export type UpdateEvaluationBudget = z.infer<typeof updateEvaluationBudgetSchema>;
+
+// ROM Pilot Tables
+export const romPilots = pgTable("rom_pilots", {
+  id: serial("id").primaryKey(),
+  projectName: text("project_name").notNull(),
+  property: text("property").notNull(),
+  selectedBayConfigurations: json("selected_bay_configurations").$type<BayConfiguration[]>().default([]),
+  totalEstimate: text("total_estimate").default("0"),
+  notes: text("notes"),
+  createdBy: text("created_by"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const romScopeItems = pgTable("rom_scope_items", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  unit: text("unit").notNull(), // "sf", "lf", "ea", etc.
+  unitPrice: text("unit_price").notNull(),
+  category: text("category").notNull(), // "office", "warehouse", "general", etc.
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const romPilotLineItems = pgTable("rom_pilot_line_items", {
+  id: serial("id").primaryKey(),
+  romPilotId: integer("rom_pilot_id").notNull(),
+  scopeItemId: integer("scope_item_id").notNull(),
+  quantity: text("quantity").default("0"),
+  unitPrice: text("unit_price").notNull(),
+  totalPrice: text("total_price").default("0"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// ROM Pilot Insert/Update Schemas
+export const insertRomPilotSchema = createInsertSchema(romPilots).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateRomPilotSchema = insertRomPilotSchema.partial().extend({
+  id: z.number(),
+});
+
+export const insertRomScopeItemSchema = createInsertSchema(romScopeItems).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateRomScopeItemSchema = insertRomScopeItemSchema.partial().extend({
+  id: z.number(),
+});
+
+export const insertRomPilotLineItemSchema = createInsertSchema(romPilotLineItems).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateRomPilotLineItemSchema = insertRomPilotLineItemSchema.partial().extend({
+  id: z.number(),
+});
+
+// ROM Pilot Types
+export type RomPilot = typeof romPilots.$inferSelect;
+export type InsertRomPilot = z.infer<typeof insertRomPilotSchema>;
+export type UpdateRomPilot = z.infer<typeof updateRomPilotSchema>;
+
+export type RomScopeItem = typeof romScopeItems.$inferSelect;
+export type InsertRomScopeItem = z.infer<typeof insertRomScopeItemSchema>;
+export type UpdateRomScopeItem = z.infer<typeof updateRomScopeItemSchema>;
+
+export type RomPilotLineItem = typeof romPilotLineItems.$inferSelect;
+export type InsertRomPilotLineItem = z.infer<typeof insertRomPilotLineItemSchema>;
+export type UpdateRomPilotLineItem = z.infer<typeof updateRomPilotLineItemSchema>;

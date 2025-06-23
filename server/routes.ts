@@ -2129,6 +2129,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ROM Report generation
+  app.get("/api/rom-pilots/:id/report", async (req, res) => {
+    try {
+      const romPilotId = parseInt(req.params.id);
+      if (isNaN(romPilotId)) {
+        return res.status(400).json({ message: "Invalid ROM Pilot ID" });
+      }
+
+      const romPilot = await storage.getRomPilot(romPilotId);
+      if (!romPilot) {
+        return res.status(404).json({ message: "ROM Pilot not found" });
+      }
+
+      const lineItems = await storage.getRomPilotLineItems(romPilotId);
+      const scopeItems = await storage.getAllRomScopeItems();
+      
+      // Generate HTML report
+      const html = generateRomReportHtml(romPilot, lineItems, scopeItems);
+      
+      res.setHeader('Content-Type', 'text/html');
+      res.send(html);
+    } catch (error) {
+      console.error("ROM report generation error:", error);
+      res.status(500).json({ message: "Failed to generate ROM report" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

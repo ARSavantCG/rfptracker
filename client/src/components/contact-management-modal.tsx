@@ -143,6 +143,7 @@ export function ContactManagementModal({ isOpen, onClose }: ContactManagementMod
       company: contact.company || "",
       phone: contact.phone || "",
       type: contact.type as "architect" | "contractor" | "owner" | "other",
+      tags: contact.tags || [],
     });
   };
 
@@ -165,6 +166,7 @@ export function ContactManagementModal({ isOpen, onClose }: ContactManagementMod
       company: "",
       phone: "",
       type: undefined,
+      tags: [],
     },
   });
 
@@ -238,15 +240,26 @@ export function ContactManagementModal({ isOpen, onClose }: ContactManagementMod
               
               {expandedContact === contact.id && (
                 <div className="px-2 pb-2 border-t bg-muted/20">
-                  <div className="flex items-center gap-4 mt-2">
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <Mail className="h-3 w-3" />
-                      {contact.email}
-                    </div>
-                    {contact.phone && (
+                  <div className="space-y-2 mt-2">
+                    <div className="flex items-center gap-4">
                       <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Phone className="h-3 w-3" />
-                        {contact.phone}
+                        <Mail className="h-3 w-3" />
+                        {contact.email}
+                      </div>
+                      {contact.phone && (
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Phone className="h-3 w-3" />
+                          {contact.phone}
+                        </div>
+                      )}
+                    </div>
+                    {contact.tags && contact.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {contact.tags.map((tag) => (
+                          <Badge key={tag} variant="outline" className="text-xs">
+                            {tag}
+                          </Badge>
+                        ))}
                       </div>
                     )}
                   </div>
@@ -376,7 +389,7 @@ export function ContactManagementModal({ isOpen, onClose }: ContactManagementMod
                     label="Tags (Optional)"
                     placeholder="Type tag and press Enter (e.g., Development, Property Management)"
                     value={form.watch("tags")}
-                    onChange={(tags) => form.setValue("tags", tags)}
+                    onChange={(tags: string[]) => form.setValue("tags", tags)}
                     suggestions={["Development", "Property Management", "Leasing", "Operations", "Finance"]}
                   />
 

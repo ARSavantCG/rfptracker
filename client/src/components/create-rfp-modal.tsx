@@ -369,11 +369,13 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {contacts.map((contact) => (
-                          <SelectItem key={contact.id} value={`${contact.name} - ${contact.company}`}>
-                            {contact.name} - {contact.company}
-                          </SelectItem>
-                        ))}
+                        {contacts
+                          .filter((contact) => contact.tags && contact.tags.includes("Development"))
+                          .map((contact) => (
+                            <SelectItem key={contact.id} value={`${contact.name} - ${contact.company}`}>
+                              {contact.name} - {contact.company}
+                            </SelectItem>
+                          ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />

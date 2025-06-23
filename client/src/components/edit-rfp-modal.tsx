@@ -419,9 +419,22 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Development Contact</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Development contact" {...field} />
-                    </FormControl>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select development contact" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {contacts
+                          .filter((contact) => contact.tags && contact.tags.includes("Development"))
+                          .map((contact) => (
+                            <SelectItem key={contact.id} value={`${contact.name} - ${contact.company}`}>
+                              {contact.name} - {contact.company}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}

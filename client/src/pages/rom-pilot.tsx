@@ -180,15 +180,12 @@ export default function RomPilotPage() {
                     size="sm" 
                     className="w-full"
                     onClick={() => {
-                      // TODO: Implement view/edit functionality
-                      toast({
-                        title: "Coming Soon",
-                        description: "Detailed view will be available soon",
-                      });
+                      setSelectedRomPilot(pilot);
+                      setScopeModalOpen(true);
                     }}
                   >
-                    <FileText className="h-4 w-4 mr-2" />
-                    View Details
+                    <ListChecks className="h-4 w-4 mr-2" />
+                    Manage Scope
                   </Button>
                 </CardContent>
               </Card>
@@ -205,6 +202,18 @@ export default function RomPilotPage() {
           refetch();
         }}
       />
+
+      {selectedRomPilot && (
+        <RomPilotScopeModal
+          isOpen={scopeModalOpen}
+          onClose={() => {
+            setScopeModalOpen(false);
+            setSelectedRomPilot(null);
+          }}
+          romPilotId={selectedRomPilot.id}
+          romPilotName={selectedRomPilot.projectName}
+        />
+      )}
     </div>
   );
 }

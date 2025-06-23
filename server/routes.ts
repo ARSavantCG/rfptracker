@@ -1733,6 +1733,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ROM Scope Items endpoints
+  app.get("/api/rom-scope-items", async (req, res) => {
+    try {
+      const scopeItems = await storage.getAllRomScopeItems();
+      res.json(scopeItems);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch scope items" });
+    }
+  });
+
+  // ROM Pilot Line Items endpoints
+  app.get("/api/rom-pilots/:id/line-items", async (req, res) => {
+    try {
+      const romPilotId = parseInt(req.params.id);
+      if (isNaN(romPilotId)) {
+        return res.status(400).json({ message: "Invalid ROM Pilot ID" });
+      }
+
+      const lineItems = await storage.getRomPilotLineItems(romPilotId);
+      res.json(lineItems);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch line items" });
+    }
+  });
+
+  app.post("/api/rom-pilots/:id/line-items", async (req, res) => {
+    try {
+      const romPilotId = parseInt(req.params.id);
+      if (isNaN(romPilotId)) {
+        return res.status(400).json({ message: "Invalid ROM Pilot ID" });
+      }
+
+      const { lineItems } = req.body;
+      const savedLineItems = await storage.saveRomPilotLineItems(romPilotId, lineItems);
+      
+      // Calculate and update total estimate
+      const total = lineItems.reduce((sum: number, item: any) => sum + (parseFloat(item.totalPrice) || 0), 0);
+      await storage.updateRomPilot(romPilotId, { totalEstimate: total.toString() });
+      
+      res.json(savedLineItems);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to save line items" });
+    }
+  });
+
   // Reports PDF generation
   app.post("/api/reports/detailed-report-pdf", async (req, res) => {
     try {

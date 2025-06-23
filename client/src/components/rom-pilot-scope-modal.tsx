@@ -111,11 +111,7 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
   // Save line items
   const saveLineItems = useMutation({
     mutationFn: async () => {
-      return await apiRequest(`/api/rom-pilots/${romPilotId}/line-items`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lineItems }),
-      });
+      return await apiRequest(`/api/rom-pilots/${romPilotId}/line-items`, "POST", { lineItems });
     },
     onSuccess: () => {
       toast({

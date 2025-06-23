@@ -129,6 +129,7 @@ export interface IStorage {
   createRomPilotLineItem(lineItem: InsertRomPilotLineItem): Promise<RomPilotLineItem>;
   updateRomPilotLineItem(id: number, updates: Partial<UpdateRomPilotLineItem>): Promise<RomPilotLineItem | undefined>;
   deleteRomPilotLineItem(id: number): Promise<boolean>;
+  saveRomPilotLineItems(romPilotId: number, lineItems: any[]): Promise<any[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -671,6 +672,33 @@ export class DatabaseStorage implements IStorage {
   async deleteRomPilotLineItem(id: number): Promise<boolean> {
     const result = await db.delete(romPilotLineItems).where(eq(romPilotLineItems.id, id));
     return result.rowCount > 0;
+  }
+
+  async saveRomPilotLineItems(romPilotId: number, lineItems: any[]): Promise<any[]> {
+    // Delete existing line items for this ROM Pilot
+    await db.delete(romPilotLineItems).where(eq(romPilotLineItems.romPilotId, romPilotId));
+    
+    // Insert new line items
+    const savedItems = [];
+    for (const item of lineItems) {
+      if (item.scopeItemId && item.scopeItemId > 0) {
+        const [created] = await db
+          .insert(romPilotLineItems)
+          .values({
+            romPilotId,
+            scopeItemId: item.scopeItemId,
+            quantity: item.quantity || "0",
+            unitPrice: item.unitPrice || "0",
+            totalPrice: item.totalPrice || "0",
+            notes: item.notes || null,
+            updatedAt: new Date(),
+          })
+          .returning();
+        savedItems.push(created);
+      }
+    }
+    
+    return savedItems;
   }
 }
 

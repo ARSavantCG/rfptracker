@@ -1928,11 +1928,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const renderCategorySection = (title: string, items: any[], categoryTotal: number, bgColor: string) => {
       if (items.length === 0) return '';
       
+      const categoryPerSF = totalSquareFootage > 0 ? categoryTotal / totalSquareFootage : 0;
+      
       return `
         <div style="margin-bottom: 30px;">
           <div style="background: ${bgColor}; padding: 15px; margin-bottom: 10px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
             <h2 style="margin: 0; font-size: 18px; font-weight: 600; color: #1f2937;">${title}</h2>
-            <div style="font-size: 20px; font-weight: bold; color: #065f46;">${formatCurrency(categoryTotal)}</div>
+            <div style="text-align: right;">
+              <div style="font-size: 20px; font-weight: bold; color: #065f46;">${formatCurrency(categoryTotal)}</div>
+              <div style="font-size: 14px; color: #6b7280; margin-top: 2px;">${formatCurrency(categoryPerSF)} / sf</div>
+            </div>
           </div>
           
           <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px;">
@@ -2057,7 +2062,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ${renderCategorySection("Design / Soft Costs / Other Fees", designSoftCosts, designSoftCostsTotal, "#fef3f2")}
 
         <div class="grand-total">
-          Grand Total: ${formatCurrency(grandTotal)}
+          <div style="display: flex; justify-content: center; align-items: center; gap: 20px;">
+            <span>Grand Total: ${formatCurrency(grandTotal)}</span>
+            <span style="font-size: 18px; color: #6b7280;">(${formatCurrency(totalSquareFootage > 0 ? grandTotal / totalSquareFootage : 0)} / sf)</span>
+          </div>
         </div>
       </body>
       </html>

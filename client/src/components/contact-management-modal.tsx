@@ -390,7 +390,11 @@ export function ContactManagementModal({ isOpen, onClose }: ContactManagementMod
                     placeholder="Type tag and press Enter (e.g., Development, Property Management)"
                     value={form.watch("tags")}
                     onChange={(tags: string[]) => form.setValue("tags", tags)}
-                    suggestions={["Development", "Property Management", "Leasing", "Operations", "Finance"]}
+                    suggestions={
+                      form.watch("type") === "owner" 
+                        ? ["Development", "Property Management", "Leasing", "Operations", "Finance"]
+                        : ["Property Management", "Leasing", "Operations", "Finance"]
+                    }
                   />
 
                   <div className="flex justify-end gap-2 pt-3">
@@ -545,7 +549,11 @@ export function ContactManagementModal({ isOpen, onClose }: ContactManagementMod
                     placeholder="Type tag and press Enter (e.g., Development, Property Management)"
                     value={editForm.watch("tags")}
                     onChange={(tags: string[]) => editForm.setValue("tags", tags)}
-                    suggestions={["Development", "Property Management", "Leasing", "Operations", "Finance"]}
+                    suggestions={
+                      editForm.watch("type") === "owner" 
+                        ? ["Development", "Property Management", "Leasing", "Operations", "Finance"]
+                        : ["Property Management", "Leasing", "Operations", "Finance"]
+                    }
                   />
 
                   <div className="flex justify-end space-x-2 pt-4">

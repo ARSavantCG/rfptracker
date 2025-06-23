@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Calculator, User } from "lucide-react";
+import { Calculator, User, Building2 } from "lucide-react";
 import type { Property } from "@shared/schema";
 
 interface CreateRomPilotModalProps {
@@ -24,12 +24,23 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess }: CreateRomPil
   const [notes, setNotes] = useState("");
   const [createdBy, setCreatedBy] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showBayConfig, setShowBayConfig] = useState(false);
+  const [bayConfigs, setBayConfigs] = useState<Array<{
+    id: string;
+    bayName: string;
+    squareFootage: number;
+  }>>([]);
 
   // Fetch properties for selection
   const { data: properties = [] } = useQuery<Property[]>({
     queryKey: ["/api/properties"],
     enabled: isOpen,
   });
+
+  // Remove duplicates from properties and ensure unique keys
+  const uniqueProperties = properties.filter((prop, index, self) => 
+    index === self.findIndex(p => p.propertyName === prop.propertyName)
+  );
 
   // Reset form when modal opens/closes
   useEffect(() => {
@@ -120,6 +131,23 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess }: CreateRomPil
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Property Selection */}
+          <div className="space-y-2">
+            <Label htmlFor="property">Property *</Label>
+            <Select value={property} onValueChange={setProperty}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a property" />
+              </SelectTrigger>
+              <SelectContent>
+                {uniqueProperties.map((prop) => (
+                  <SelectItem key={prop.id} value={prop.propertyName}>
+                    {prop.propertyName} - {prop.building}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Project Name */}
           <div className="space-y-2">
             <Label htmlFor="project-name">Project Name *</Label>
@@ -132,40 +160,124 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess }: CreateRomPil
             />
           </div>
 
-          {/* Property Selection */}
+          {/* Bay Configuration with Square Footage */}
           <div className="space-y-2">
-            <Label htmlFor="property">Property *</Label>
-            <Select value={property} onValueChange={setProperty}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a property" />
-              </SelectTrigger>
-              <SelectContent>
-                {properties.map((prop) => (
-                  <SelectItem key={prop.id} value={prop.propertyName}>
-                    {prop.propertyName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label>Bay Configuration & Square Footage</Label>
+            <div className="border rounded-lg p-4 bg-gray-50">
+              <div className="flex items-center justify-between mb-3">
+                <div className="space-y-1">
+                  <div className="text-sm font-medium text-gray-700">
+                    Total Square Footage: {squareFootage ? `${parseInt(squareFootage).toLocaleString()} SF` : "Not configured"}
+                  </div>
+                  {squareFootage && (
+                    <div className="text-xs text-gray-600">
+                      Estimated cost: ${(parseInt(squareFootage) * 50).toLocaleString()} (@ $50/SF)
+                    </div>
+                  )}
+                  {bayConfigs.length > 0 && (
+                    <div className="text-xs text-blue-600">
+                      {bayConfigs.length} bay{bayConfigs.length !== 1 ? 's' : ''} configured
+                    </div>
+                  )}
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowBayConfig(true)}
+                >
+                  <Building2 className="w-4 h-4 mr-1" />
+                  Configure Bays
+                </Button>
+              </div>
+              
+              <div className="text-xs text-gray-500">
+                Click "Configure Bays" to set up bay details and calculate total square footage
+              </div>
+            </div>
           </div>
 
-          {/* Square Footage */}
-          <div className="space-y-2">
-            <Label htmlFor="square-footage">Square Footage</Label>
-            <Input
-              id="square-footage"
-              type="number"
-              value={squareFootage}
-              onChange={(e) => setSquareFootage(e.target.value)}
-              placeholder="Enter square footage"
-              min="0"
-            />
-            {squareFootage && (
-              <p className="text-xs text-gray-600">
-                Estimated cost: ${(parseInt(squareFootage) * 50).toLocaleString()} (@ $50/SF)
-              </p>
-            )}
-          </div>
+          {/* Bay Configuration Modal */}
+          {showBayConfig && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+                <h3 className="text-lg font-semibold mb-4">Bay Configuration</h3>
+                
+                <div className="space-y-4 max-h-96 overflow-y-auto">
+                  {bayConfigs.map((bay, index) => (
+                    <div key={bay.id} className="border rounded p-3 bg-gray-50">
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="text-sm font-medium">Bay {index + 1}</div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            const newBays = bayConfigs.filter(b => b.id !== bay.id);
+                            setBayConfigs(newBays);
+                            const totalSF = newBays.reduce((sum, b) => sum + b.squareFootage, 0);
+                            setSquareFootage(totalSF.toString());
+                          }}
+                        >
+                          ×
+                        </Button>
+                      </div>
+                      <div className="space-y-2">
+                        <Input
+                          placeholder="Bay name"
+                          value={bay.bayName}
+                          onChange={(e) => {
+                            const newBays = bayConfigs.map(b => 
+                              b.id === bay.id ? { ...b, bayName: e.target.value } : b
+                            );
+                            setBayConfigs(newBays);
+                          }}
+                        />
+                        <Input
+                          type="number"
+                          placeholder="Square footage"
+                          value={bay.squareFootage || ""}
+                          onChange={(e) => {
+                            const sf = parseInt(e.target.value) || 0;
+                            const newBays = bayConfigs.map(b => 
+                              b.id === bay.id ? { ...b, squareFootage: sf } : b
+                            );
+                            setBayConfigs(newBays);
+                            const totalSF = newBays.reduce((sum, b) => sum + b.squareFootage, 0);
+                            setSquareFootage(totalSF.toString());
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex gap-3 mt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      const newBay = {
+                        id: Date.now().toString(),
+                        bayName: `Bay ${bayConfigs.length + 1}`,
+                        squareFootage: 0
+                      };
+                      setBayConfigs([...bayConfigs, newBay]);
+                    }}
+                  >
+                    Add Bay
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => setShowBayConfig(false)}
+                    className="flex-1"
+                  >
+                    Done
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Created By */}
           <div className="space-y-2">

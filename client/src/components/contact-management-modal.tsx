@@ -386,8 +386,12 @@ export function ContactManagementModal({ isOpen, onClose }: ContactManagementMod
                   />
 
                   <TagInput
-                    label="Tags (Optional)"
-                    placeholder="Type tag and press Enter (e.g., Development, Property Management)"
+                    label={`Tags (Optional)${form.watch("type") === "owner" ? " - Development tag available for Owners" : ""}`}
+                    placeholder={
+                      form.watch("type") === "owner" 
+                        ? "Type tag and press Enter (e.g., Development, Property Management)"
+                        : "Type tag and press Enter (e.g., Property Management, Leasing)"
+                    }
                     value={form.watch("tags")}
                     onChange={(tags: string[]) => form.setValue("tags", tags)}
                     suggestions={
@@ -545,8 +549,12 @@ export function ContactManagementModal({ isOpen, onClose }: ContactManagementMod
                   />
 
                   <TagInput
-                    label="Tags (Optional)"
-                    placeholder="Type tag and press Enter (e.g., Development, Property Management)"
+                    label={`Tags (Optional)${editForm.watch("type") === "owner" ? " - Development tag available for Owners" : ""}`}
+                    placeholder={
+                      editForm.watch("type") === "owner" 
+                        ? "Type tag and press Enter (e.g., Development, Property Management)"
+                        : "Type tag and press Enter (e.g., Property Management, Leasing)"
+                    }
                     value={editForm.watch("tags")}
                     onChange={(tags: string[]) => editForm.setValue("tags", tags)}
                     suggestions={

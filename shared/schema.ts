@@ -410,6 +410,7 @@ export const romPilotLineItems = pgTable("rom_pilot_line_items", {
   unitPrice: text("unit_price").notNull(),
   totalPrice: text("total_price").default("0"),
   notes: text("notes"),
+  category: text("category").default("tenant-improvements"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

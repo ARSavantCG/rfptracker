@@ -2,9 +2,10 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Calculator, Edit, Trash2, FileText } from "lucide-react";
+import { Plus, Calculator, Edit, Trash2, FileText, ListChecks } from "lucide-react";
 import Navigation from "@/components/navigation";
 import { CreateRomPilotModal } from "@/components/create-rom-pilot-modal";
+import { RomPilotScopeModal } from "@/components/rom-pilot-scope-modal";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 
@@ -21,6 +22,8 @@ interface RomPilot {
 
 export default function RomPilotPage() {
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [scopeModalOpen, setScopeModalOpen] = useState(false);
+  const [selectedRomPilot, setSelectedRomPilot] = useState<RomPilot | null>(null);
   const { toast } = useToast();
 
   const { data: romPilots = [], isLoading, refetch } = useQuery<RomPilot[]>({

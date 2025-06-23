@@ -246,13 +246,13 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess }: CreateRomPil
                     <div className="mb-4">
                       <h4 className="text-sm font-medium text-gray-700 mb-2">Building Layout</h4>
                       <p className="text-xs text-gray-500 mb-3">Click bays to select for rentable area calculation</p>
-                      <div className="flex flex-wrap gap-2 max-h-64 overflow-y-auto p-2 border rounded-lg bg-gray-50">
+                      <div className="grid grid-cols-8 gap-2 max-h-64 overflow-y-auto p-2 border rounded-lg bg-gray-50">
                         {propertyBayConfigs.map((bay) => {
                           const isSelected = bayConfigs.some(b => b.id === bay.id);
                           return (
                             <div
                               key={bay.id}
-                              className={`flex flex-col items-center justify-center w-16 h-16 border rounded cursor-pointer text-xs transition-all ${
+                              className={`flex flex-col items-center justify-center h-12 border rounded cursor-pointer text-xs transition-all ${
                                 isSelected
                                   ? 'bg-blue-500 text-white border-blue-600'
                                   : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
@@ -327,16 +327,17 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess }: CreateRomPil
           {/* Created By */}
           <div className="space-y-2">
             <Label htmlFor="created-by">Created By</Label>
-            <div className="relative">
-              <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                id="created-by"
-                value={createdBy}
-                onChange={(e) => setCreatedBy(e.target.value)}
-                placeholder="Your name (optional)"
-                className="pl-10"
-              />
-            </div>
+            <Select value={createdBy} onValueChange={setCreatedBy}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select user" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="John Mejia">John Mejia</SelectItem>
+                <SelectItem value="Sarah Johnson">Sarah Johnson</SelectItem>
+                <SelectItem value="Mike Chen">Mike Chen</SelectItem>
+                <SelectItem value="Lisa Rodriguez">Lisa Rodriguez</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Notes */}

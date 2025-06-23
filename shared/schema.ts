@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, timestamp, json, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, timestamp, json, jsonb, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -241,7 +241,7 @@ export const bidCollections = pgTable("bid_collections", {
   totalAmount: text("total_amount"),
   status: text("status").notNull().default("received"), // received, under-review, shortlisted, rejected, awarded
   notes: text("notes"),
-  attachments: json("attachments").$type<RfpFile[]>().default([]),
+  attachments: jsonb("attachments").$type<RfpFile[]>().default([]),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

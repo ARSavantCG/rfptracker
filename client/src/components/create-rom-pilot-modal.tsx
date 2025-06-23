@@ -81,15 +81,11 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess }: CreateRomPil
     setIsSubmitting(true);
 
     try {
-      // Calculate basic estimate based on square footage
-      const sf = parseInt(squareFootage) || 0;
-      const estimatePerSF = 50; // Basic $50/SF estimate
-      const totalEstimate = (sf * estimatePerSF).toString();
-
       const romPilotData = {
         projectName: projectName.trim(),
         property,
-        totalEstimate,
+        selectedBayConfigurations: bayConfigs,
+        totalEstimate: "0", // No pricing at creation - will be calculated in scope management
         notes: notes.trim() || null,
         createdBy: createdBy.trim() || null,
       };
@@ -108,7 +104,7 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess }: CreateRomPil
 
       toast({
         title: "Success",
-        description: "ROM Pilot created successfully",
+        description: "ROM Pilot created successfully. Use 'Manage Scope' to add pricing.",
       });
 
       onSuccess();

@@ -674,4 +674,71 @@ export class DatabaseStorage implements IStorage {
   }
 }
 
-export const storage = new DatabaseStorage();
+// Temporary in-memory storage for ROM Pilots until database schema is updated
+class MemoryRomPilotStorage {
+  private romPilots: Map<number, any> = new Map();
+  private nextId = 1;
+
+  getAllRomPilots(): Promise<any[]> {
+    return Promise.resolve(Array.from(this.romPilots.values()));
+  }
+
+  getRomPilot(id: number): Promise<any | undefined> {
+    return Promise.resolve(this.romPilots.get(id));
+  }
+
+  createRomPilot(data: any): Promise<any> {
+    const romPilot = {
+      id: this.nextId++,
+      ...data,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    this.romPilots.set(romPilot.id, romPilot);
+    return Promise.resolve(romPilot);
+  }
+
+  updateRomPilot(id: number, updates: any): Promise<any | undefined> {
+    const existing = this.romPilots.get(id);
+    if (!existing) return Promise.resolve(undefined);
+    
+    const updated = {
+      ...existing,
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    };
+    this.romPilots.set(id, updated);
+    return Promise.resolve(updated);
+  }
+
+  deleteRomPilot(id: number): Promise<boolean> {
+    return Promise.resolve(this.romPilots.delete(id));
+  }
+}
+
+const memoryRomPilotStorage = new MemoryRomPilotStorage();
+
+// Extended DatabaseStorage class with ROM Pilot methods
+class ExtendedDatabaseStorage extends DatabaseStorage {
+  async getAllRomPilots() {
+    return memoryRomPilotStorage.getAllRomPilots();
+  }
+
+  async getRomPilot(id: number) {
+    return memoryRomPilotStorage.getRomPilot(id);
+  }
+
+  async createRomPilot(data: any) {
+    return memoryRomPilotStorage.createRomPilot(data);
+  }
+
+  async updateRomPilot(id: number, updates: any) {
+    return memoryRomPilotStorage.updateRomPilot(id, updates);
+  }
+
+  async deleteRomPilot(id: number) {
+    return memoryRomPilotStorage.deleteRomPilot(id);
+  }
+}
+
+export const storage = new ExtendedDatabaseStorage();

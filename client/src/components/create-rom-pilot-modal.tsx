@@ -20,12 +20,9 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess }: CreateRomPil
   const { toast } = useToast();
   const [projectName, setProjectName] = useState("");
   const [property, setProperty] = useState("");
+  const [squareFootage, setSquareFootage] = useState("");
   const [notes, setNotes] = useState("");
   const [createdBy, setCreatedBy] = useState("");
-  const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
-  const [selectedBayConfigurations, setSelectedBayConfigurations] = useState<BayConfiguration[]>([]);
-  const [bayConfigModalOpen, setBayConfigModalOpen] = useState(false);
-  const [calculatedFloorArea, setCalculatedFloorArea] = useState<number>(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Fetch properties for selection
@@ -39,27 +36,11 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess }: CreateRomPil
     if (!isOpen) {
       setProjectName("");
       setProperty("");
+      setSquareFootage("");
       setNotes("");
       setCreatedBy("");
-      setSelectedProperty(null);
-      setSelectedBayConfigurations([]);
-      setCalculatedFloorArea(0);
     }
   }, [isOpen]);
-
-  // Update selected property when property changes
-  useEffect(() => {
-    if (property && properties.length > 0) {
-      const foundProperty = properties.find(p => p.propertyName === property);
-      setSelectedProperty(foundProperty || null);
-    }
-  }, [property, properties]);
-
-  const handleFloorAreaChange = (area: number, bayConfigs: BayConfiguration[]) => {
-    const roundedArea = Math.round(area);
-    setCalculatedFloorArea(roundedArea);
-    setSelectedBayConfigurations(bayConfigs);
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,11 +66,15 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess }: CreateRomPil
     setIsSubmitting(true);
 
     try {
+      // Calculate basic estimate based on square footage
+      const sf = parseInt(squareFootage) || 0;
+      const estimatePerSF = 50; // Basic $50/SF estimate
+      const totalEstimate = (sf * estimatePerSF).toString();
+
       const romPilotData = {
         projectName: projectName.trim(),
         property,
-        selectedBayConfigurations,
-        totalEstimate: "0", // Will be calculated based on scope items
+        totalEstimate,
         notes: notes.trim() || null,
         createdBy: createdBy.trim() || null,
       };
@@ -105,8 +90,6 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess }: CreateRomPil
       if (!response.ok) {
         throw new Error("Failed to create ROM Pilot");
       }
-
-      const createdPilot = await response.json();
 
       toast({
         title: "Success",
@@ -124,10 +107,6 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess }: CreateRomPil
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const formatArea = (area: number) => {
-    return area > 0 ? `${area.toLocaleString()} SF` : "No bays selected";
   };
 
   return (
@@ -156,44 +135,36 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess }: CreateRomPil
           {/* Property Selection */}
           <div className="space-y-2">
             <Label htmlFor="property">Property *</Label>
-            <PropertySelector
-              value={property}
-              onChange={setProperty}
-            />
+            <Select value={property} onValueChange={setProperty}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a property" />
+              </SelectTrigger>
+              <SelectContent>
+                {properties.map((prop) => (
+                  <SelectItem key={prop.id} value={prop.propertyName}>
+                    {prop.propertyName}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
-          {/* Bay Configuration */}
+          {/* Square Footage */}
           <div className="space-y-2">
-            <Label>Bay Configuration</Label>
-            <div className="border rounded-lg p-4 bg-gray-50">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center space-x-2">
-                  <Building className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm font-medium">
-                    Selected Area: {formatArea(calculatedFloorArea)}
-                  </span>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setBayConfigModalOpen(true)}
-                  disabled={!selectedProperty}
-                >
-                  {selectedBayConfigurations.length > 0 ? "Modify Bays" : "Select Bays"}
-                </Button>
-              </div>
-              
-              {selectedBayConfigurations.length > 0 && (
-                <div className="text-xs text-gray-600">
-                  {selectedBayConfigurations.length} bay{selectedBayConfigurations.length !== 1 ? 's' : ''} selected
-                </div>
-              )}
-              
-              {!selectedProperty && (
-                <p className="text-xs text-gray-500">Select a property first to configure bays</p>
-              )}
-            </div>
+            <Label htmlFor="square-footage">Square Footage</Label>
+            <Input
+              id="square-footage"
+              type="number"
+              value={squareFootage}
+              onChange={(e) => setSquareFootage(e.target.value)}
+              placeholder="Enter square footage"
+              min="0"
+            />
+            {squareFootage && (
+              <p className="text-xs text-gray-600">
+                Estimated cost: ${(parseInt(squareFootage) * 50).toLocaleString()} (@ $50/SF)
+              </p>
+            )}
           </div>
 
           {/* Created By */}
@@ -234,17 +205,6 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess }: CreateRomPil
           </div>
         </form>
       </DialogContent>
-
-      {/* Bay Configuration Modal */}
-      {selectedProperty && (
-        <BayConfigurationModal
-          isOpen={bayConfigModalOpen}
-          onClose={() => setBayConfigModalOpen(false)}
-          property={selectedProperty}
-          onFloorAreaChange={handleFloorAreaChange}
-          selectedBayConfigurations={selectedBayConfigurations}
-        />
-      )}
     </Dialog>
   );
 }

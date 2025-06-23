@@ -62,37 +62,40 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
 
   // Load existing line items when modal opens
   useEffect(() => {
-    if (isOpen && Array.isArray(existingLineItems) && existingLineItems.length > 0) {
-      const tenantItems: LineItem[] = [];
-      const designItems: LineItem[] = [];
-      
-      existingLineItems.forEach((item: any) => {
-        // Find the corresponding scope item for unit display
-        const scopeItem = scopeItems.find(si => si.id === item.scopeItemId);
+    if (isOpen) {
+      if (Array.isArray(existingLineItems) && existingLineItems.length > 0) {
+        const tenantItems: LineItem[] = [];
+        const designItems: LineItem[] = [];
         
-        const lineItem: LineItem = {
-          id: item.id,
-          scopeItemId: item.scopeItemId,
-          quantity: item.quantity?.toString() || "",
-          unitPrice: item.unitPrice || "0",
-          totalPrice: item.totalPrice || "0",
-          notes: item.notes || "",
-          category: item.category || 'tenant-improvements',
-          scopeItem: scopeItem,
-        };
+        existingLineItems.forEach((item: any) => {
+          // Find the corresponding scope item for unit display
+          const scopeItem = scopeItems.find(si => si.id === item.scopeItemId);
+          
+          const lineItem: LineItem = {
+            id: item.id,
+            scopeItemId: item.scopeItemId,
+            quantity: item.quantity?.toString() || "",
+            unitPrice: item.unitPrice || "",
+            totalPrice: item.totalPrice || "",
+            notes: item.notes || "",
+            category: item.category || 'tenant-improvements',
+            scopeItem: scopeItem,
+          };
+          
+          if (lineItem.category === 'tenant-improvements') {
+            tenantItems.push(lineItem);
+          } else {
+            designItems.push(lineItem);
+          }
+        });
         
-        if (lineItem.category === 'tenant-improvements') {
-          tenantItems.push(lineItem);
-        } else {
-          designItems.push(lineItem);
-        }
-      });
-      
-      setTenantImprovements(tenantItems);
-      setDesignSoftCosts(designItems);
-    } else if (isOpen) {
-      setTenantImprovements([]);
-      setDesignSoftCosts([]);
+        setTenantImprovements(tenantItems);
+        setDesignSoftCosts(designItems);
+      } else {
+        // Start with completely empty sections
+        setTenantImprovements([]);
+        setDesignSoftCosts([]);
+      }
     }
   }, [isOpen, existingLineItems, scopeItems]);
 
@@ -254,7 +257,7 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
                 </Label>
                 <Input
                   type="number"
-                  value={item.unitPrice || "0"}
+                  value={item.unitPrice || ""}
                   onChange={(e) => updateLineItem(category, index, 'unitPrice', e.target.value)}
                   className="h-8 text-xs"
                   placeholder="0.00"

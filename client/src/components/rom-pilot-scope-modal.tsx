@@ -223,9 +223,9 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="0">Custom Item</SelectItem>
-                    {scopeItems.map((scopeItem) => (
+                    {(category === 'tenant-improvements' ? tenantImprovementItems : designSoftCostItems).map((scopeItem) => (
                       <SelectItem key={scopeItem.id} value={scopeItem.id.toString()}>
-                        {scopeItem.name}
+                        {scopeItem.name} ({scopeItem.unit} @ ${scopeItem.unitPrice})
                       </SelectItem>
                     ))}
                   </SelectContent>

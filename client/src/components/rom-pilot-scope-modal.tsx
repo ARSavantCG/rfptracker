@@ -149,7 +149,7 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
   const saveLineItems = useMutation({
     mutationFn: async () => {
       const allLineItems = [...tenantImprovements, ...designSoftCosts];
-      return await apiRequest(`/api/rom-pilots/${romPilotId}/line-items/save`, "POST", { lineItems: allLineItems });
+      return await apiRequest(`/api/rom-pilots/${romPilotId}/line-items`, "POST", { lineItems: allLineItems });
     },
     onSuccess: () => {
       toast({ title: "Success", description: "ROM scope items saved successfully" });
@@ -211,7 +211,7 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
               <div className="col-span-3">
                 <Label className="text-xs font-medium text-gray-600">Scope Item</Label>
                 <Select
-                  value={item.scopeItemId.toString()}
+                  value={item.scopeItemId ? item.scopeItemId.toString() : "0"}
                   onValueChange={(value) => updateLineItem(category, index, 'scopeItemId', parseInt(value))}
                 >
                   <SelectTrigger className="h-8 text-xs">
@@ -232,7 +232,7 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
                 <Label className="text-xs font-medium text-gray-600">Quantity</Label>
                 <Input
                   type="number"
-                  value={item.quantity}
+                  value={item.quantity || "1"}
                   onChange={(e) => updateLineItem(category, index, 'quantity', e.target.value)}
                   className="h-8 text-xs"
                   placeholder="0"
@@ -243,7 +243,7 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
                 <Label className="text-xs font-medium text-gray-600">Unit Price</Label>
                 <Input
                   type="number"
-                  value={item.unitPrice}
+                  value={item.unitPrice || "0"}
                   onChange={(e) => updateLineItem(category, index, 'unitPrice', e.target.value)}
                   className="h-8 text-xs"
                   placeholder="0.00"

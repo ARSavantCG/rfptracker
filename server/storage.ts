@@ -740,6 +740,7 @@ export class DatabaseStorage implements IStorage {
             unitPrice: item.unitPrice || "0",
             totalPrice: item.totalPrice || "0",
             notes: item.notes || null,
+            category: item.category || 'tenant-improvements',
             updatedAt: new Date(),
           })
           .returning();

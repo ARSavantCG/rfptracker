@@ -193,7 +193,7 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess }: CreateRomPil
               </div>
               
               <div className="text-xs text-gray-500">
-                {!property ? "Select a property first to configure bays" : "Click to select bays for this ROM estimate"}
+                {!property ? "Select a property first to configure bays" : "Bay selection for project scope - pricing added in Step 2"}
               </div>
             </div>
           </div>

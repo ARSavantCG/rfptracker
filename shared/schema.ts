@@ -241,7 +241,7 @@ export const bidCollections = pgTable("bid_collections", {
   totalAmount: text("total_amount"),
   status: text("status").notNull().default("received"), // received, under-review, shortlisted, rejected, awarded
   notes: text("notes"),
-  attachments: jsonb("attachments").$type<RfpFile[]>().default([]),
+  attachments: json("attachments").$type<RfpFile[]>().default([]),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

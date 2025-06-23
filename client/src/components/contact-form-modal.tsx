@@ -212,29 +212,22 @@ export function ContactFormModal({ contact, trigger, onSuccess }: ContactFormMod
             />
           </div>
 
-          {/* PROMINENT TAGS SECTION */}
-          <div className="border-4 border-red-500 p-6 rounded-lg bg-red-50 space-y-4">
-            <h4 className="text-xl font-bold text-red-900 text-center">🏷️ CONTACT TAGS SECTION</h4>
-            <div className="space-y-2">
-              <Label className="text-red-900 font-bold">Add Tags</Label>
+          {/* Tags section - only show for Property Owner contacts */}
+          {formData.type === "owner" && (
+            <div className="space-y-2 border-t pt-4">
+              <Label className="text-sm font-medium">Tags</Label>
               <TagInput
                 label=""
-                placeholder="Type 'Development' and press Enter to add tag"
+                placeholder="Add tags (e.g., Development, Property Management)"
                 value={formData.tags || []}
                 onChange={(tags: string[]) => setFormData(prev => ({ ...prev, tags }))}
                 suggestions={["Development", "Property Management", "Leasing", "Operations", "Finance"]}
-                className="border-2 border-red-300"
               />
-              <div className="text-sm bg-white p-3 rounded border">
-                <p className="font-bold text-red-700">Available tags: Development, Property Management, Leasing, Operations, Finance</p>
-                {formData.type === "owner" && (
-                  <p className="text-green-700 font-bold mt-2">
-                    ✓ OWNER CONTACT - Development tag is appropriate for this contact type!
-                  </p>
-                )}
-              </div>
+              <p className="text-xs text-gray-500">
+                Tag this contact for easy filtering in RFP dropdowns
+              </p>
             </div>
-          </div>
+          )}
 
           <div className="flex justify-end space-x-2 pt-4">
             <Button

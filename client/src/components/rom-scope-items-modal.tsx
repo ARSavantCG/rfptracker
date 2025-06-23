@@ -68,7 +68,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
 
   // Units for pricing
   const units = [
-    "SF", "LF", "Each", "Hour", "Fixture", "Outlet", "Lot"
+    "SF", "LF", "Each", "Hour", "Fixture", "Outlet", "Lot", "%"
   ];
 
   // Create/Update mutations

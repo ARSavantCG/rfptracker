@@ -1942,7 +1942,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           <div style="background: ${bgColor}; padding: 15px; margin-bottom: 10px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
             <h2 style="margin: 0; font-size: 18px; font-weight: 600; color: #1f2937;">${title}</h2>
             <div style="font-size: 20px; font-weight: bold; color: #065f46;">
-              ${formatCurrency(categoryTotal)} <span style="font-size: 10px; font-style: italic; font-weight: normal; color: #999;">(${formatCurrency(categoryPerSF)} / sf)</span>
+              ${formatCurrency(categoryTotal)} <span style="font-size: 10px !important; font-style: italic; font-weight: normal; color: #999;">(${formatCurrency(categoryPerSF)} / sf)</span>
             </div>
           </div>
           
@@ -2068,7 +2068,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ${renderCategorySection("Design / Soft Costs / Other Fees", designSoftCosts, designSoftCostsTotal, "#fef3f2")}
 
         <div class="grand-total">
-          Grand Total: ${formatCurrency(grandTotal)} <span style="font-size: 12px; font-style: italic; font-weight: normal; color: #999;">(${formatCurrency(totalSquareFootage > 0 ? grandTotal / totalSquareFootage : 0)} / sf)</span>
+          Grand Total: ${formatCurrency(grandTotal)} <span style="font-size: 12px !important; font-style: italic; font-weight: normal; color: #999;">(${formatCurrency(totalSquareFootage > 0 ? grandTotal / totalSquareFootage : 0)} / sf)</span>
         </div>
       </body>
       </html>

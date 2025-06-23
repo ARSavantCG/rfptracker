@@ -6,6 +6,7 @@ import { Plus, Calculator, Edit, Trash2, FileText, ListChecks } from "lucide-rea
 import Navigation from "@/components/navigation";
 import { CreateRomPilotModal } from "@/components/create-rom-pilot-modal";
 import { RomPilotScopeModal } from "@/components/rom-pilot-scope-modal";
+import { RomScopeItemsModal } from "@/components/rom-scope-items-modal";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 
@@ -23,6 +24,7 @@ interface RomPilot {
 export default function RomPilotPage() {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [scopeModalOpen, setScopeModalOpen] = useState(false);
+  const [scopeItemsModalOpen, setScopeItemsModalOpen] = useState(false);
   const [selectedRomPilot, setSelectedRomPilot] = useState<RomPilot | null>(null);
   const { toast } = useToast();
 

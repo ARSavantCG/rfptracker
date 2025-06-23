@@ -1743,6 +1743,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/rom-scope-items", async (req, res) => {
+    try {
+      const scopeItem = await storage.createRomScopeItem(req.body);
+      res.status(201).json(scopeItem);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid scope item data" });
+    }
+  });
+
+  app.put("/api/rom-scope-items/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid ID" });
+      }
+
+      const scopeItem = await storage.updateRomScopeItem(id, req.body);
+      if (!scopeItem) {
+        return res.status(404).json({ message: "Scope item not found" });
+      }
+
+      res.json(scopeItem);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update scope item" });
+    }
+  });
+
+  app.delete("/api/rom-scope-items/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid ID" });
+      }
+
+      const deleted = await storage.deleteRomScopeItem(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Scope item not found" });
+      }
+
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete scope item" });
+    }
+  });
+
   // ROM Pilot Line Items endpoints
   app.get("/api/rom-pilots/:id/line-items", async (req, res) => {
     try {

@@ -749,6 +749,39 @@ export class DatabaseStorage implements IStorage {
     
     return savedItems;
   }
+
+  // ROM Scope Items methods
+  async getAllRomScopeItems(): Promise<RomScopeItem[]> {
+    return await db.select().from(romScopeItems).where(eq(romScopeItems.isActive, true));
+  }
+
+  async createRomScopeItem(scopeItem: InsertRomScopeItem): Promise<RomScopeItem> {
+    const [created] = await db
+      .insert(romScopeItems)
+      .values({
+        ...scopeItem,
+        updatedAt: new Date(),
+      })
+      .returning();
+    return created;
+  }
+
+  async updateRomScopeItem(id: number, updates: Partial<UpdateRomScopeItem>): Promise<RomScopeItem | undefined> {
+    const [updated] = await db
+      .update(romScopeItems)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(romScopeItems.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteRomScopeItem(id: number): Promise<boolean> {
+    const result = await db.delete(romScopeItems).where(eq(romScopeItems.id, id));
+    return (result.rowCount || 0) > 0;
+  }
 }
 
 // Temporary in-memory storage for ROM Pilots until database schema is updated

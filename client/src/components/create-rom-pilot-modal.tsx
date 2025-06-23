@@ -37,10 +37,12 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess }: CreateRomPil
     enabled: isOpen,
   });
 
-  // Remove duplicates from properties and ensure unique keys
-  const uniqueProperties = properties.filter((prop, index, self) => 
-    index === self.findIndex(p => p.propertyName === prop.propertyName)
-  );
+  // Use all properties without filtering since each has unique building info
+  const displayProperties = properties;
+
+  // Find selected property and its bay configurations
+  const selectedProperty = displayProperties.find(p => p.displayName === property);
+  const propertyBayConfigs = selectedProperty?.bayConfigurations || [];
 
   // Reset form when modal opens/closes
   useEffect(() => {
@@ -141,9 +143,9 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess }: CreateRomPil
                 <SelectValue placeholder="Select a property" />
               </SelectTrigger>
               <SelectContent>
-                {uniqueProperties.map((prop) => (
-                  <SelectItem key={prop.id} value={prop.propertyName}>
-                    {prop.propertyName} - {prop.building}
+                {displayProperties.map((prop) => (
+                  <SelectItem key={prop.id} value={prop.displayName}>
+                    {prop.displayName}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -162,23 +164,23 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess }: CreateRomPil
             />
           </div>
 
-          {/* Bay Configuration with Square Footage */}
+          {/* Bay Configuration */}
           <div className="space-y-2">
-            <Label>Bay Configuration & Square Footage</Label>
+            <Label>Bay Configuration</Label>
             <div className="border rounded-lg p-4 bg-gray-50">
               <div className="flex items-center justify-between mb-3">
                 <div className="space-y-1">
                   <div className="text-sm font-medium text-gray-700">
                     Total Square Footage: {squareFootage ? `${parseInt(squareFootage).toLocaleString()} SF` : "Not configured"}
                   </div>
-                  {squareFootage && (
-                    <div className="text-xs text-gray-600">
-                      Estimated cost: ${(parseInt(squareFootage) * 50).toLocaleString()} (@ $50/SF)
-                    </div>
-                  )}
                   {bayConfigs.length > 0 && (
                     <div className="text-xs text-blue-600">
-                      {bayConfigs.length} bay{bayConfigs.length !== 1 ? 's' : ''} configured
+                      {bayConfigs.length} bay{bayConfigs.length !== 1 ? 's' : ''} selected
+                    </div>
+                  )}
+                  {propertyBayConfigs.length > 0 && bayConfigs.length === 0 && (
+                    <div className="text-xs text-gray-600">
+                      {propertyBayConfigs.length} bay{propertyBayConfigs.length !== 1 ? 's' : ''} available for this property
                     </div>
                   )}
                 </div>
@@ -187,6 +189,7 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess }: CreateRomPil
                   variant="outline"
                   size="sm"
                   onClick={() => setShowBayConfig(true)}
+                  disabled={!property}
                 >
                   <Building2 className="w-4 h-4 mr-1" />
                   Configure Bays
@@ -194,7 +197,7 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess }: CreateRomPil
               </div>
               
               <div className="text-xs text-gray-500">
-                Click "Configure Bays" to set up bay details and calculate total square footage
+                {!property ? "Select a property first to configure bays" : "Click to select bays for this ROM estimate"}
               </div>
             </div>
           </div>
@@ -202,77 +205,82 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess }: CreateRomPil
           {/* Bay Configuration Modal */}
           {showBayConfig && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-                <h3 className="text-lg font-semibold mb-4">Bay Configuration</h3>
+              <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+                <h3 className="text-lg font-semibold mb-4">
+                  Bay Configuration - {selectedProperty?.propertyName || "Property"}
+                </h3>
                 
-                <div className="space-y-4 max-h-96 overflow-y-auto">
-                  {bayConfigs.map((bay, index) => (
-                    <div key={bay.id} className="border rounded p-3 bg-gray-50">
-                      <div className="flex justify-between items-start mb-2">
-                        <div className="text-sm font-medium">Bay {index + 1}</div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            const newBays = bayConfigs.filter(b => b.id !== bay.id);
-                            setBayConfigs(newBays);
-                            const totalSF = newBays.reduce((sum, b) => sum + b.squareFootage, 0);
-                            setSquareFootage(totalSF.toString());
-                          }}
-                        >
-                          ×
-                        </Button>
-                      </div>
-                      <div className="space-y-2">
-                        <Input
-                          placeholder="Bay name"
-                          value={bay.bayName}
-                          onChange={(e) => {
-                            const newBays = bayConfigs.map(b => 
-                              b.id === bay.id ? { ...b, bayName: e.target.value } : b
-                            );
-                            setBayConfigs(newBays);
-                          }}
-                        />
-                        <Input
-                          type="number"
-                          placeholder="Square footage"
-                          value={bay.squareFootage || ""}
-                          onChange={(e) => {
-                            const sf = parseInt(e.target.value) || 0;
-                            const newBays = bayConfigs.map(b => 
-                              b.id === bay.id ? { ...b, squareFootage: sf } : b
-                            );
-                            setBayConfigs(newBays);
-                            const totalSF = newBays.reduce((sum, b) => sum + b.squareFootage, 0);
-                            setSquareFootage(totalSF.toString());
-                          }}
-                        />
-                      </div>
+                {propertyBayConfigs.length > 0 ? (
+                  <div>
+                    <p className="text-sm text-gray-600 mb-4">
+                      Select bays to include in this ROM estimate:
+                    </p>
+                    <div className="space-y-2 max-h-96 overflow-y-auto">
+                      {propertyBayConfigs.map((bay) => {
+                        const isSelected = bayConfigs.some(b => b.id === bay.id);
+                        return (
+                          <div 
+                            key={bay.id} 
+                            className={`border rounded p-3 cursor-pointer transition-colors ${
+                              isSelected ? 'bg-blue-50 border-blue-300' : 'bg-gray-50 hover:bg-gray-100'
+                            }`}
+                            onClick={() => {
+                              if (isSelected) {
+                                // Remove bay
+                                const newBays = bayConfigs.filter(b => b.id !== bay.id);
+                                setBayConfigs(newBays);
+                                const totalSF = newBays.reduce((sum, b) => sum + b.squareFootage, 0);
+                                setSquareFootage(totalSF.toString());
+                              } else {
+                                // Add bay
+                                const newBay = {
+                                  id: bay.id,
+                                  bayName: bay.bayName,
+                                  squareFootage: bay.squareFootage
+                                };
+                                const newBays = [...bayConfigs, newBay];
+                                setBayConfigs(newBays);
+                                const totalSF = newBays.reduce((sum, b) => sum + b.squareFootage, 0);
+                                setSquareFootage(totalSF.toString());
+                              }
+                            }}
+                          >
+                            <div className="flex justify-between items-center">
+                              <div>
+                                <div className="font-medium">{bay.bayName}</div>
+                                <div className="text-sm text-gray-600">
+                                  {bay.squareFootage.toLocaleString()} SF
+                                </div>
+                              </div>
+                              <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                                isSelected ? 'bg-blue-500 border-blue-500' : 'border-gray-300'
+                              }`}>
+                                {isSelected && (
+                                  <div className="w-2 h-2 bg-white rounded"></div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500 mb-4">No bay configurations found for this property.</p>
+                    <p className="text-sm text-gray-400">Configure bays in the Properties section first.</p>
+                  </div>
+                )}
 
-                <div className="flex gap-3 mt-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      const newBay = {
-                        id: Date.now().toString(),
-                        bayName: `Bay ${bayConfigs.length + 1}`,
-                        squareFootage: 0
-                      };
-                      setBayConfigs([...bayConfigs, newBay]);
-                    }}
-                  >
-                    Add Bay
-                  </Button>
+                <div className="flex justify-between items-center mt-6 pt-4 border-t">
+                  <div className="text-sm text-gray-600">
+                    {bayConfigs.length > 0 && (
+                      <>Total: {bayConfigs.reduce((sum, b) => sum + b.squareFootage, 0).toLocaleString()} SF</>
+                    )}
+                  </div>
                   <Button
                     type="button"
                     onClick={() => setShowBayConfig(false)}
-                    className="flex-1"
                   >
                     Done
                   </Button>

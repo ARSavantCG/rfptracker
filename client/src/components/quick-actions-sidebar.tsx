@@ -188,21 +188,7 @@ export function QuickActionsSidebar({
 
           <Separator />
 
-          {/* Reports */}
-          <div>
-            <h3 className="text-sm font-medium text-gray-700 mb-3">Reports</h3>
-            <Link href="/reports">
-              <Button 
-                variant="outline" 
-                className="w-full justify-start"
-              >
-                <BarChart3 className="h-4 w-4 mr-2" />
-                Custom Reports
-              </Button>
-            </Link>
-          </div>
 
-          <Separator />
 
 
 

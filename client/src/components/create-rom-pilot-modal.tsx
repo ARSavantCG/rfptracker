@@ -99,20 +99,20 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess }: CreateRomPil
       });
 
       if (!response.ok) {
-        throw new Error("Failed to create ROM Pilot");
+        throw new Error("Failed to create ROM");
       }
 
       toast({
         title: "Success",
-        description: "ROM Pilot created successfully. Use 'Manage Scope' to add pricing.",
+        description: "ROM created successfully. Use 'Manage Scope' to add pricing.",
       });
 
       onSuccess();
     } catch (error) {
-      console.error("Error creating ROM Pilot:", error);
+      console.error("Error creating ROM:", error);
       toast({
         title: "Error",
-        description: "Failed to create ROM Pilot. Please try again.",
+        description: "Failed to create ROM. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -126,7 +126,7 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess }: CreateRomPil
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
             <Calculator className="h-5 w-5" />
-            <span>Create New ROM Pilot</span>
+            <span>Create New ROM</span>
           </DialogTitle>
         </DialogHeader>
 

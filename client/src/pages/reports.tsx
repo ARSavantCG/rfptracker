@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Download, FileText, Calendar, TrendingUp, Clock, CheckCircle, AlertTriangle, BarChart3 } from "lucide-react";
 import Navigation from "@/components/navigation";
+import { CustomReportModal } from "@/components/custom-report-modal";
 import { format, parseISO, isAfter, isBefore, addDays } from "date-fns";
 import type { RfpRequest } from "@shared/schema";
 
@@ -21,6 +22,7 @@ interface ReportFilters {
 export default function Reports() {
   const [filters, setFilters] = useState<ReportFilters>({});
   const [exportFormat, setExportFormat] = useState<"pdf" | "excel">("pdf");
+  const [customReportModalOpen, setCustomReportModalOpen] = useState(false);
 
   const { data: rfpRequests = [], isLoading } = useQuery<RfpRequest[]>({
     queryKey: ["/api/rfp-requests"],
@@ -65,7 +67,12 @@ export default function Reports() {
     setFilters({});
   };
 
-  const generateReport = async (reportType: "executive" | "detailed" | "historical") => {
+  const generateReport = async (reportType: "executive" | "detailed" | "historical" | "custom") => {
+    if (reportType === "custom") {
+      setCustomReportModalOpen(true);
+      return;
+    }
+    
     try {
       const url = `/api/reports/${reportType}`;
       const params = new URLSearchParams({
@@ -312,8 +319,45 @@ export default function Reports() {
               )}
             </CardContent>
           </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center space-x-2 text-lg">
+                <BarChart3 className="h-5 w-5" />
+                <span>Custom Report</span>
+              </CardTitle>
+              <p className="text-sm text-gray-600">
+                Build your own report with selected data fields
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="bg-gray-50 p-3 rounded">
+                <h4 className="font-medium text-gray-900 mb-1 text-sm">Customizable Fields</h4>
+                <ul className="space-y-1 text-sm text-gray-600">
+                  <li>• Choose any combination of data fields</li>
+                  <li>• Control column order and visibility</li>
+                  <li>• Apply current filters to data</li>
+                  <li>• Export in your preferred format</li>
+                </ul>
+              </div>
+              
+              <Button 
+                className="w-full flex items-center justify-center space-x-2" 
+                onClick={() => generateReport("custom")}
+              >
+                <Download className="h-4 w-4" />
+                <span>Build Custom Report</span>
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </div>
+
+      <CustomReportModal
+        isOpen={customReportModalOpen}
+        onClose={() => setCustomReportModalOpen(false)}
+        filters={filters}
+      />
     </div>
   );
 }

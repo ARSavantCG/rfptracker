@@ -1464,6 +1464,238 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Custom Report route
+  app.get("/api/reports/custom", async (req, res) => {
+    try {
+      const config = req.query.config ? JSON.parse(req.query.config as string) : {};
+      console.log("Generating custom report with config:", config);
+      
+      const { fields = [], title = "Custom Report", sortBy = "receivedOn", sortOrder = "desc", filters = {} } = config;
+      
+      if (fields.length === 0) {
+        return res.status(400).json({ message: "No fields specified for custom report" });
+      }
+      
+      // Fetch all RFPs from storage
+      let rfpData = await storage.getAllRfpRequests();
+      console.log("Fetched", rfpData.length, "RFPs from storage");
+      
+      // Apply filters to RFP data
+      if (filters.status && filters.status !== "all") {
+        rfpData = rfpData.filter(rfp => rfp.status === filters.status);
+      }
+      if (filters.property && filters.property !== "all") {
+        rfpData = rfpData.filter(rfp => rfp.property === filters.property);
+      }
+      if (filters.dueInDays && filters.dueInDays !== "all") {
+        const targetDate = new Date();
+        targetDate.setDate(targetDate.getDate() + parseInt(filters.dueInDays));
+        rfpData = rfpData.filter(rfp => {
+          const dueDate = new Date(rfp.internalDueDate);
+          return dueDate <= targetDate;
+        });
+      }
+
+      // Sort data
+      rfpData.sort((a: any, b: any) => {
+        let aValue = a[sortBy];
+        let bValue = b[sortBy];
+        
+        // Handle date fields
+        if (sortBy === 'receivedOn' || sortBy === 'internalDueDate') {
+          aValue = new Date(aValue).getTime();
+          bValue = new Date(bValue).getTime();
+        }
+        
+        // Handle numeric fields
+        if (typeof aValue === 'string' && !isNaN(Number(aValue))) {
+          aValue = Number(aValue);
+          bValue = Number(bValue);
+        }
+        
+        if (sortOrder === 'desc') {
+          return bValue > aValue ? 1 : -1;
+        } else {
+          return aValue > bValue ? 1 : -1;
+        }
+      });
+
+      // Create table headers
+      const fieldLabels: { [key: string]: string } = {
+        rfpNumber: "RFP Number",
+        property: "Property",
+        tenantName: "Tenant Name",
+        projectName: "Project Name",
+        rentableSF: "Rentable SF",
+        sentBy: "Sent By",
+        receivedOn: "Date Received",
+        internalDueDate: "Due Date",
+        daysUntilDue: "Days Until Due",
+        status: "Status",
+        workflowPhase: "Workflow Phase",
+        developmentContact: "Development Contact",
+        requestTypes: "Request Types",
+        confidential: "Confidential",
+        notes: "Notes"
+      };
+
+      const headers = fields.map((field: string) => fieldLabels[field] || field);
+
+      // Generate HTML report
+      const html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <title>${title}</title>
+          <style>
+            @page { size: A4 landscape; margin: 0.5in; }
+            @media print { .no-print { display: none !important; } }
+            body { font-family: 'Segoe UI', sans-serif; font-size: 12px; margin: 0; }
+            .no-print { background: #3b82f6; color: white; padding: 15px; text-align: center; margin-bottom: 20px; border-radius: 8px; }
+            .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #e5e7eb; padding-bottom: 15px; }
+            .header h1 { font-size: 24px; margin: 0; color: #1f2937; }
+            .header .subtitle { font-size: 14px; color: #6b7280; margin: 5px 0; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { border: 1px solid #e5e7eb; padding: 8px; text-align: left; }
+            th { background: #f9fafb; font-weight: 600; text-align: center; }
+            td { text-align: center; }
+            .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; color: white; display: inline-block; }
+            .status-received { background: #8B5CF6; }
+            .status-inprogress { background: #F59E0B; }
+            .status-completed { background: #10B981; }
+            .status-onhold { background: #EF4444; }
+            .status-in-progress { background: #F59E0B; }
+            .status-on-hold { background: #EF4444; }
+          </style>
+        </head>
+        <body>
+          <div class="no-print">
+            <strong>📄 Save as PDF:</strong> Press Ctrl+P (Windows/Linux) or Cmd+P (Mac), then select "Save as PDF" as your destination.
+            <br><small>This banner will not appear in the printed version.</small>
+          </div>
+          
+          <div class="header">
+            <h1>${title}</h1>
+            <div class="subtitle">Generated on ${new Date().toLocaleDateString()} • ${rfpData.length} records</div>
+          </div>
+          
+          <table>
+            <thead>
+              <tr>
+                ${headers.map(header => `<th>${header}</th>`).join('')}
+              </tr>
+            </thead>
+            <tbody>
+              ${(rfpData || []).map((rfp: any) => {
+                const cells = fields.map((field: string) => {
+                  let value = rfp[field];
+                  
+                  // Handle special field formatting
+                  switch (field) {
+                    case 'rentableSF':
+                      if (rfp.selectedBayConfigurations && rfp.selectedBayConfigurations.length > 0) {
+                        const totalArea = rfp.selectedBayConfigurations.reduce((sum: number, bay: any) => sum + (bay.rentableSquareFootage || bay.squareFootage || 0), 0);
+                        value = totalArea > 0 ? Math.round(totalArea).toLocaleString() : 'N/A';
+                      } else if (rfp.projectArea) {
+                        const sfMatch = rfp.projectArea.match(/(\d{1,3}(?:,\d{3})*)\s*SF/i);
+                        value = sfMatch ? Math.round(parseInt(sfMatch[1].replace(/,/g, ''))).toLocaleString() : 'N/A';
+                      } else {
+                        value = 'N/A';
+                      }
+                      break;
+                    case 'receivedOn':
+                    case 'internalDueDate':
+                      value = value ? new Date(value).toLocaleDateString() : 'N/A';
+                      break;
+                    case 'daysUntilDue':
+                      if (rfp.internalDueDate) {
+                        const dueDate = new Date(rfp.internalDueDate);
+                        const daysUntil = Math.ceil((dueDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+                        if (rfp.status === 'completed' || rfp.workflowPhase === 'award') {
+                          value = 'Completed';
+                        } else if (daysUntil < 0) {
+                          value = 'Overdue';
+                        } else {
+                          value = daysUntil.toString();
+                        }
+                      } else {
+                        value = 'N/A';
+                      }
+                      break;
+                    case 'status':
+                      let statusDisplay = value || 'N/A';
+                      let statusClass = 'status-received';
+                      
+                      // Use workflow phase for more detailed status if available
+                      if (rfp.workflowPhase) {
+                        switch (rfp.workflowPhase) {
+                          case 'invitation-to-bid':
+                            statusDisplay = 'Invitation to Bid';
+                            statusClass = 'status-inprogress';
+                            break;
+                          case 'bid-collection':
+                            statusDisplay = 'Bid Collection';
+                            statusClass = 'status-inprogress';
+                            break;
+                          case 'evaluation':
+                            statusDisplay = 'Evaluation';
+                            statusClass = 'status-inprogress';
+                            break;
+                          case 'award':
+                            statusDisplay = 'Award';
+                            statusClass = 'status-completed';
+                            break;
+                          default:
+                            statusDisplay = 'RFP Entry';
+                            statusClass = 'status-received';
+                        }
+                      }
+                      
+                      value = '<span class="status-badge ' + statusClass + '">' + statusDisplay + '</span>';
+                      break;
+                    case 'workflowPhase':
+                      const phaseLabels: { [key: string]: string } = {
+                        'rfp-entry': 'RFP Entry',
+                        'invitation-to-bid': 'Invitation to Bid',
+                        'bid-collection': 'Bid Collection',
+                        'evaluation': 'Evaluation',
+                        'award': 'Award'
+                      };
+                      value = phaseLabels[value] || value || 'N/A';
+                      break;
+                    case 'requestTypes':
+                      value = Array.isArray(value) ? value.join(', ') : (value || 'N/A');
+                      break;
+                    case 'confidential':
+                      value = value ? 'Yes' : 'No';
+                      break;
+                    default:
+                      value = value || 'N/A';
+                  }
+                  
+                  return '<td>' + value + '</td>';
+                });
+                
+                return '<tr>' + cells.join('') + '</tr>';
+              }).join('')}
+            </tbody>
+          </table>
+          
+          ${(rfpData || []).length === 0 ? '<p style="text-align: center; margin-top: 40px; color: #6b7280;">No RFPs found matching the current filters.</p>' : ''}
+        </body>
+        </html>
+      `;
+      
+      res.setHeader('Content-Type', 'text/html');
+      res.setHeader('Content-Disposition', 'inline; filename="custom-report.html"');
+      res.send(html);
+    } catch (error) {
+      console.error("Error generating custom report:", error);
+      res.status(500).json({ message: "Failed to generate custom report" });
+    }
+  });
+
   // Reports PDF generation
   app.post("/api/reports/detailed-report-pdf", async (req, res) => {
     try {

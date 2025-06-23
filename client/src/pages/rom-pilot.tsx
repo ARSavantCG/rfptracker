@@ -26,6 +26,7 @@ export default function RomPilotPage() {
   const [scopeModalOpen, setScopeModalOpen] = useState(false);
   const [scopeItemsModalOpen, setScopeItemsModalOpen] = useState(false);
   const [selectedRomPilot, setSelectedRomPilot] = useState<RomPilot | null>(null);
+  const [editingRomPilot, setEditingRomPilot] = useState<RomPilot | null>(null);
   const { toast } = useToast();
 
   const { data: romPilots = [], isLoading, refetch } = useQuery<RomPilot[]>({
@@ -146,11 +147,8 @@ export default function RomPilotPage() {
                         size="sm"
                         variant="ghost"
                         onClick={() => {
-                          // TODO: Implement edit functionality
-                          toast({
-                            title: "Coming Soon",
-                            description: "Edit functionality will be available soon",
-                          });
+                          setEditingRomPilot(pilot);
+                          setCreateModalOpen(true);
                         }}
                       >
                         <Edit className="h-4 w-4" />
@@ -208,11 +206,16 @@ export default function RomPilotPage() {
 
       <CreateRomPilotModal
         isOpen={createModalOpen}
-        onClose={() => setCreateModalOpen(false)}
+        onClose={() => {
+          setCreateModalOpen(false);
+          setEditingRomPilot(null);
+        }}
         onSuccess={() => {
           setCreateModalOpen(false);
+          setEditingRomPilot(null);
           refetch();
         }}
+        editingRomPilot={editingRomPilot}
       />
 
       {selectedRomPilot && (

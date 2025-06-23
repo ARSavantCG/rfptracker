@@ -63,6 +63,7 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
   // Load existing line items when modal opens
   useEffect(() => {
     if (isOpen) {
+      console.log("Loading existing line items:", existingLineItems);
       if (Array.isArray(existingLineItems) && existingLineItems.length > 0) {
         const tenantItems: LineItem[] = [];
         const designItems: LineItem[] = [];
@@ -84,7 +85,7 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
           
           if (lineItem.category === 'tenant-improvements') {
             tenantItems.push(lineItem);
-          } else {
+          } else if (lineItem.category === 'design-soft-costs') {
             designItems.push(lineItem);
           }
         });

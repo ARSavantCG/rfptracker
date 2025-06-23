@@ -215,14 +215,16 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess }: CreateRomPil
                     <p className="text-sm text-gray-600 mb-4">
                       Select bays to include in this ROM estimate:
                     </p>
-                    <div className="space-y-2 max-h-96 overflow-y-auto">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-96 overflow-y-auto">
                       {propertyBayConfigs.map((bay) => {
                         const isSelected = bayConfigs.some(b => b.id === bay.id);
                         return (
                           <div 
                             key={bay.id} 
-                            className={`border rounded p-3 cursor-pointer transition-colors ${
-                              isSelected ? 'bg-blue-50 border-blue-300' : 'bg-gray-50 hover:bg-gray-100'
+                            className={`border rounded-lg p-4 cursor-pointer transition-all hover:shadow-md ${
+                              isSelected 
+                                ? 'bg-blue-50 border-blue-500 shadow-md' 
+                                : 'bg-white border-gray-200 hover:border-gray-300'
                             }`}
                             onClick={() => {
                               if (isSelected) {
@@ -245,20 +247,20 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess }: CreateRomPil
                               }
                             }}
                           >
-                            <div className="flex justify-between items-center">
-                              <div>
-                                <div className="font-medium">{bay.bayName}</div>
-                                <div className="text-sm text-gray-600">
-                                  {bay.squareFootage.toLocaleString()} SF
-                                </div>
-                              </div>
-                              <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
-                                isSelected ? 'bg-blue-500 border-blue-500' : 'border-gray-300'
-                              }`}>
-                                {isSelected && (
-                                  <div className="w-2 h-2 bg-white rounded"></div>
-                                )}
-                              </div>
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="font-semibold text-gray-900">{bay.bayName}</div>
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => {}} // Handled by parent div onClick
+                                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                              />
+                            </div>
+                            <div className="text-sm text-gray-600 mb-1">
+                              {bay.squareFootage.toLocaleString()} SF
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {bay.standardDockDoors + bay.oversizedDockDoors} dock doors
                             </div>
                           </div>
                         );

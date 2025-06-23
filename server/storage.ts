@@ -133,6 +133,55 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  constructor() {
+    this.initializeDefaultScopeItems();
+  }
+
+  private async initializeDefaultScopeItems(): Promise<void> {
+    try {
+      // Check if scope items already exist
+      const existingItems = await db.select().from(romScopeItems).limit(1);
+      if (existingItems.length > 0) {
+        return; // Already initialized
+      }
+
+      // Create default scope items
+      const defaultScopeItems = [
+        { name: "Office Build-Out", description: "Standard office construction with partition walls, doors, and basic finishes", unit: "sf", unitPrice: "85.00", category: "office" },
+        { name: "Conference Room", description: "Conference room with A/V capabilities and glass partitions", unit: "sf", unitPrice: "120.00", category: "office" },
+        { name: "Reception Area", description: "Reception desk, waiting area, and custom millwork", unit: "sf", unitPrice: "95.00", category: "office" },
+        { name: "Break Room", description: "Employee break room with kitchenette and appliances", unit: "sf", unitPrice: "110.00", category: "office" },
+        { name: "Private Office", description: "Private office with upgraded finishes", unit: "sf", unitPrice: "90.00", category: "office" },
+        { name: "Open Office", description: "Open office space with workstations", unit: "sf", unitPrice: "75.00", category: "office" },
+        { name: "Warehouse Racking", description: "Heavy-duty warehouse racking system", unit: "lf", unitPrice: "150.00", category: "warehouse" },
+        { name: "Mezzanine", description: "Steel mezzanine construction", unit: "sf", unitPrice: "45.00", category: "warehouse" },
+        { name: "Dock Equipment", description: "Dock levelers, seals, and equipment", unit: "ea", unitPrice: "8500.00", category: "warehouse" },
+        { name: "Overhead Doors", description: "Sectional overhead doors", unit: "ea", unitPrice: "3200.00", category: "warehouse" },
+        { name: "HVAC System", description: "Heating, ventilation, and air conditioning", unit: "sf", unitPrice: "12.50", category: "general" },
+        { name: "Electrical Work", description: "Electrical rough-in and fixtures", unit: "sf", unitPrice: "8.75", category: "general" },
+        { name: "Plumbing", description: "Plumbing rough-in and fixtures", unit: "sf", unitPrice: "6.25", category: "general" },
+        { name: "Flooring - Carpet", description: "Commercial grade carpet installation", unit: "sf", unitPrice: "4.50", category: "general" },
+        { name: "Flooring - VCT", description: "Vinyl composite tile flooring", unit: "sf", unitPrice: "3.25", category: "general" },
+        { name: "Flooring - Concrete Polish", description: "Polished concrete flooring", unit: "sf", unitPrice: "8.00", category: "general" },
+        { name: "Paint & Wall Finishes", description: "Interior paint and wall coverings", unit: "sf", unitPrice: "2.75", category: "general" },
+        { name: "Fire Sprinkler System", description: "Fire protection sprinkler system", unit: "sf", unitPrice: "4.00", category: "general" },
+        { name: "Security System", description: "Access control and security cameras", unit: "sf", unitPrice: "3.50", category: "general" },
+        { name: "Data/Communications", description: "Network cabling and telecommunications", unit: "sf", unitPrice: "5.25", category: "general" }
+      ];
+
+      for (const item of defaultScopeItems) {
+        await db.insert(romScopeItems).values({
+          ...item,
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+      }
+    } catch (error) {
+      console.error("Error initializing scope items:", error);
+    }
+  }
+
   private async generateRfpNumber(): Promise<string> {
     const year = new Date().getFullYear();
     const count = await db.$count(rfpRequests);

@@ -1696,6 +1696,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ROM Pilot routes
+  app.get("/api/rom-pilots", async (req, res) => {
+    try {
+      const pilots = await storage.getAllRomPilots();
+      res.json(pilots);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch ROM pilots" });
+    }
+  });
+
+  app.post("/api/rom-pilots", async (req, res) => {
+    try {
+      const pilot = await storage.createRomPilot(req.body);
+      res.status(201).json(pilot);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid ROM pilot data" });
+    }
+  });
+
+  app.delete("/api/rom-pilots/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid ID" });
+      }
+
+      const deleted = await storage.deleteRomPilot(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "ROM pilot not found" });
+      }
+
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete ROM pilot" });
+    }
+  });
+
   // Reports PDF generation
   app.post("/api/reports/detailed-report-pdf", async (req, res) => {
     try {

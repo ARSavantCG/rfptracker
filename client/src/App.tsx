@@ -7,6 +7,7 @@ import Navigation from "@/components/navigation";
 import Dashboard from "@/pages/dashboard";
 import Contacts from "@/pages/contacts";
 import Properties from "@/pages/properties";
+import RomPilot from "@/pages/rom-pilot";
 import Reports from "@/pages/reports";
 import NotFound from "@/pages/not-found";
 
@@ -16,6 +17,7 @@ function Router() {
       <Route path="/" component={Dashboard} />
       <Route path="/contacts" component={Contacts} />
       <Route path="/properties" component={Properties} />
+      <Route path="/rom-pilot" component={RomPilot} />
       <Route path="/reports" component={Reports} />
       <Route component={NotFound} />
     </Switch>

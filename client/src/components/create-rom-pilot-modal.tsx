@@ -50,6 +50,8 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess }: CreateRomPil
       setSquareFootage("");
       setNotes("");
       setCreatedBy("");
+      setBayConfigs([]);
+      setShowBayConfig(false);
     }
   }, [isOpen]);
 

@@ -1324,8 +1324,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             table { width: 100%; border-collapse: collapse; margin-top: 20px; }
             th, td { border: 1px solid #e5e7eb; padding: 8px; text-align: left; }
             th { background: #f9fafb; font-weight: 600; }
-            th:nth-child(3), th:nth-child(4), th:nth-child(5) { width: 120px; }
-            td:nth-child(3), td:nth-child(4), td:nth-child(5) { width: 120px; }
+            th:nth-child(3) { width: 100px; text-align: right; }
+            td:nth-child(3) { width: 100px; text-align: right; }
+            th:nth-child(4), th:nth-child(5), th:nth-child(6) { width: 120px; }
+            td:nth-child(4), td:nth-child(5), td:nth-child(6) { width: 120px; }
             .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; color: white; display: inline-block; }
             .status-received { background: #8B5CF6; }
             .status-inprogress { background: #F59E0B; }
@@ -1351,6 +1353,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               <tr>
                 <th>RFP Number</th>
                 <th>Project Name</th>
+                <th>Rentable SF</th>
                 <th>Date Received</th>
                 <th>Due Date</th>
                 <th>Days Until Due</th>
@@ -1416,9 +1419,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 
                 const statusDisplay = '<span class="status-badge ' + phaseClass + '">' + phaseDisplay + '</span>';
                 
+                // Extract rentable SF from project area or selected bay configurations
+                let rentableSF = 'N/A';
+                if (rfp.selectedBayConfigurations && rfp.selectedBayConfigurations.length > 0) {
+                  const totalArea = rfp.selectedBayConfigurations.reduce((sum: number, bay: any) => sum + (bay.rentableSquareFootage || bay.squareFootage || 0), 0);
+                  if (totalArea > 0) {
+                    rentableSF = Math.round(totalArea).toLocaleString();
+                  }
+                } else if (rfp.projectArea) {
+                  // Try to extract SF from project area text
+                  const sfMatch = rfp.projectArea.match(/(\d{1,3}(?:,\d{3})*)\s*SF/i);
+                  if (sfMatch) {
+                    const sf = parseInt(sfMatch[1].replace(/,/g, ''));
+                    rentableSF = Math.round(sf).toLocaleString();
+                  }
+                }
+                
                 return '<tr>' +
                   '<td><strong>' + (rfp.rfpNumber || 'N/A') + '</strong></td>' +
                   '<td>' + (rfp.projectName || 'N/A').replace(/ - $/, '') + '</td>' +
+                  '<td>' + rentableSF + '</td>' +
                   '<td>' + receivedDate.toLocaleDateString() + '</td>' +
                   '<td>' + dueDateDisplay + '</td>' +
                   '<td>' + dayDisplay + '</td>' +

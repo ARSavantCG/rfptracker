@@ -63,13 +63,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
   // Categories for organization
   const categories = [
     "Tenant Improvements",
-    "Electrical",
-    "Plumbing", 
-    "HVAC",
-    "Doors & Windows",
-    "Site Work",
-    "Utilities",
-    "Other"
+    "Design / Soft Costs / Other Fees"
   ];
 
   // Units for pricing

@@ -218,7 +218,7 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
         </Button>
       </div>
 
-      {items.length === 0 ? (
+      {!isInitialized || items.length === 0 ? (
         <div className="text-center py-8 text-gray-500">
           <p>No items added yet</p>
           <p className="text-sm">Click "Add Item" to get started</p>

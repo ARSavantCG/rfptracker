@@ -15,7 +15,9 @@ import {
   insertBidLineItemSchema,
   updateBidLineItemSchema,
   insertPropertySchema,
-  updatePropertySchema
+  updatePropertySchema,
+  insertRomScopeItemSchema,
+  updateRomScopeItemSchema
 } from "@shared/schema";
 import { validateRfpForProgression, canAdvanceToPhase } from "./validation";
 import { generateRfpPdf, generatePdfFilename } from "./pdf-generator";

@@ -86,13 +86,23 @@ export default function RomPilotPage() {
             </p>
           </div>
           
-          <Button 
-            onClick={() => setCreateModalOpen(true)}
-            className="flex items-center space-x-2"
-          >
-            <Plus className="h-4 w-4" />
-            <span>New ROM Pilot</span>
-          </Button>
+          <div className="flex space-x-3">
+            <Button 
+              variant="outline"
+              onClick={() => setScopeItemsModalOpen(true)}
+              className="flex items-center space-x-2"
+            >
+              <ListChecks className="h-4 w-4" />
+              <span>Manage Scope Items</span>
+            </Button>
+            <Button 
+              onClick={() => setCreateModalOpen(true)}
+              className="flex items-center space-x-2"
+            >
+              <Plus className="h-4 w-4" />
+              <span>New ROM Pilot</span>
+            </Button>
+          </div>
         </div>
 
         {/* ROM Pilots Grid */}
@@ -216,6 +226,11 @@ export default function RomPilotPage() {
           romPilotName={selectedRomPilot.projectName}
         />
       )}
+
+      <RomScopeItemsModal
+        isOpen={scopeItemsModalOpen}
+        onClose={() => setScopeItemsModalOpen(false)}
+      />
     </div>
   );
 }

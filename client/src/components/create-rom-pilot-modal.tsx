@@ -212,59 +212,89 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess }: CreateRomPil
                 
                 {propertyBayConfigs.length > 0 ? (
                   <div>
-                    <p className="text-sm text-gray-600 mb-4">
-                      Select bays to include in this ROM estimate:
-                    </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-96 overflow-y-auto">
-                      {propertyBayConfigs.map((bay) => {
-                        const isSelected = bayConfigs.some(b => b.id === bay.id);
-                        return (
-                          <div 
-                            key={bay.id} 
-                            className={`border rounded-lg p-4 cursor-pointer transition-all hover:shadow-md ${
-                              isSelected 
-                                ? 'bg-blue-50 border-blue-500 shadow-md' 
-                                : 'bg-white border-gray-200 hover:border-gray-300'
-                            }`}
-                            onClick={() => {
-                              if (isSelected) {
-                                // Remove bay
-                                const newBays = bayConfigs.filter(b => b.id !== bay.id);
-                                setBayConfigs(newBays);
-                                const totalSF = newBays.reduce((sum, b) => sum + b.squareFootage, 0);
-                                setSquareFootage(totalSF.toString());
-                              } else {
-                                // Add bay
-                                const newBay = {
-                                  id: bay.id,
-                                  bayName: bay.bayName,
-                                  squareFootage: bay.squareFootage
-                                };
-                                const newBays = [...bayConfigs, newBay];
-                                setBayConfigs(newBays);
-                                const totalSF = newBays.reduce((sum, b) => sum + b.squareFootage, 0);
-                                setSquareFootage(totalSF.toString());
-                              }
-                            }}
-                          >
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="font-semibold text-gray-900">{bay.bayName}</div>
-                              <input
-                                type="checkbox"
-                                checked={isSelected}
-                                onChange={() => {}} // Handled by parent div onClick
-                                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-                              />
+                    <div className="flex items-center gap-4 mb-4">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const allBays = propertyBayConfigs.map(bay => ({
+                            id: bay.id,
+                            bayName: bay.bayName,
+                            squareFootage: bay.squareFootage
+                          }));
+                          setBayConfigs(allBays);
+                          const totalSF = allBays.reduce((sum, b) => sum + b.squareFootage, 0);
+                          setSquareFootage(totalSF.toString());
+                        }}
+                      >
+                        ✓ Select All
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setBayConfigs([]);
+                          setSquareFootage("0");
+                        }}
+                      >
+                        Clear All
+                      </Button>
+                    </div>
+
+                    <div className="mb-4">
+                      <h4 className="text-sm font-medium text-gray-700 mb-2">Building Layout</h4>
+                      <p className="text-xs text-gray-500 mb-3">Click bays to select for rentable area calculation</p>
+                      <div className="flex flex-wrap gap-2 max-h-64 overflow-y-auto p-2 border rounded-lg bg-gray-50">
+                        {propertyBayConfigs.map((bay) => {
+                          const isSelected = bayConfigs.some(b => b.id === bay.id);
+                          return (
+                            <div
+                              key={bay.id}
+                              className={`flex flex-col items-center justify-center w-16 h-16 border rounded cursor-pointer text-xs transition-all ${
+                                isSelected
+                                  ? 'bg-blue-500 text-white border-blue-600'
+                                  : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
+                              }`}
+                              onClick={() => {
+                                if (isSelected) {
+                                  // Remove bay
+                                  const newBays = bayConfigs.filter(b => b.id !== bay.id);
+                                  setBayConfigs(newBays);
+                                  const totalSF = newBays.reduce((sum, b) => sum + b.squareFootage, 0);
+                                  setSquareFootage(totalSF.toString());
+                                } else {
+                                  // Add bay
+                                  const newBay = {
+                                    id: bay.id,
+                                    bayName: bay.bayName,
+                                    squareFootage: bay.squareFootage
+                                  };
+                                  const newBays = [...bayConfigs, newBay];
+                                  setBayConfigs(newBays);
+                                  const totalSF = newBays.reduce((sum, b) => sum + b.squareFootage, 0);
+                                  setSquareFootage(totalSF.toString());
+                                }
+                              }}
+                            >
+                              <div className="font-semibold leading-tight">{bay.bayName}</div>
+                              <div className="text-xs leading-tight">
+                                {Math.round(bay.squareFootage / 1000)}K
+                              </div>
                             </div>
-                            <div className="text-sm text-gray-600 mb-1">
-                              {bay.squareFootage.toLocaleString()} SF
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              {bay.standardDockDoors + bay.oversizedDockDoors} dock doors
-                            </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                      <div className="text-sm">
+                        <span className="font-medium text-blue-900">Selected: {bayConfigs.length} bays</span>
+                      </div>
+                      <div className="text-sm text-blue-700">
+                        Total Area: {bayConfigs.reduce((sum, b) => sum + b.squareFootage, 0).toLocaleString()} SF
+                      </div>
                     </div>
                   </div>
                 ) : (
@@ -275,16 +305,19 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess }: CreateRomPil
                 )}
 
                 <div className="flex justify-between items-center mt-6 pt-4 border-t">
-                  <div className="text-sm text-gray-600">
-                    {bayConfigs.length > 0 && (
-                      <>Total: {bayConfigs.reduce((sum, b) => sum + b.squareFootage, 0).toLocaleString()} SF</>
-                    )}
-                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowBayConfig(false)}
+                  >
+                    Cancel
+                  </Button>
                   <Button
                     type="button"
                     onClick={() => setShowBayConfig(false)}
+                    className="bg-blue-600 hover:bg-blue-700"
                   >
-                    Done
+                    Confirm Selection
                   </Button>
                 </div>
               </div>

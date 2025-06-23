@@ -63,7 +63,6 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
   // Load existing line items when modal opens
   useEffect(() => {
     if (isOpen) {
-      console.log("Loading existing line items:", existingLineItems);
       if (Array.isArray(existingLineItems) && existingLineItems.length > 0) {
         const tenantItems: LineItem[] = [];
         const designItems: LineItem[] = [];
@@ -93,10 +92,14 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
         setTenantImprovements(tenantItems);
         setDesignSoftCosts(designItems);
       } else {
-        // Start with completely empty sections
+        // Start with completely empty sections - no default items
         setTenantImprovements([]);
         setDesignSoftCosts([]);
       }
+    } else {
+      // Reset state when modal closes
+      setTenantImprovements([]);
+      setDesignSoftCosts([]);
     }
   }, [isOpen, existingLineItems, scopeItems]);
 
@@ -257,11 +260,10 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
                   Unit Price {item.scopeItem?.unit ? `(${item.scopeItem.unit})` : ''}
                 </Label>
                 <Input
-                  type="number"
-                  value={item.unitPrice || ""}
-                  onChange={(e) => updateLineItem(category, index, 'unitPrice', e.target.value)}
-                  className="h-8 text-xs"
-                  placeholder="0.00"
+                  type="text"
+                  value={item.unitPrice ? `$${parseFloat(item.unitPrice).toFixed(2)}` : "$0.00"}
+                  className="h-8 text-xs bg-gray-100"
+                  readOnly
                 />
               </div>
 

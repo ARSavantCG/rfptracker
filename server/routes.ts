@@ -1735,6 +1735,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put("/api/rom-pilots/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid ROM Pilot ID" });
+      }
+
+      const pilot = await storage.updateRomPilot(id, req.body);
+      if (!pilot) {
+        return res.status(404).json({ message: "ROM pilot not found" });
+      }
+
+      res.json(pilot);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid ROM pilot data" });
+    }
+  });
+
   app.delete("/api/rom-pilots/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);

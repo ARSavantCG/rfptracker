@@ -95,7 +95,7 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
   const addLineItem = (category: 'tenant-improvements' | 'design-soft-costs') => {
     const newItem: LineItem = {
       scopeItemId: 0,
-      quantity: "1",
+      quantity: "",
       unitPrice: "0",
       totalPrice: "0",
       notes: "",

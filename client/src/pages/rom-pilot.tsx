@@ -100,7 +100,7 @@ export default function RomPilotPage() {
               className="flex items-center space-x-2"
             >
               <Plus className="h-4 w-4" />
-              <span>New ROM Pilot</span>
+              <span>New ROM</span>
             </Button>
           </div>
         </div>
@@ -117,7 +117,7 @@ export default function RomPilotPage() {
           ) : romPilots.length === 0 ? (
             <div className="col-span-full flex flex-col items-center justify-center py-12">
               <Calculator className="h-16 w-16 text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No ROM Pilots Yet</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No ROMs</h3>
               <p className="text-gray-500 text-center mb-6 max-w-md">
                 Get started by creating your first rough order of magnitude estimate. 
                 Select a property, configure bays, and add scope items with pricing.
@@ -127,7 +127,7 @@ export default function RomPilotPage() {
                 className="flex items-center space-x-2"
               >
                 <Plus className="h-4 w-4" />
-                <span>Create First ROM Pilot</span>
+                <span>Create First ROM</span>
               </Button>
             </div>
           ) : (

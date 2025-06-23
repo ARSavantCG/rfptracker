@@ -385,24 +385,23 @@ export function ContactManagementModal({ isOpen, onClose }: ContactManagementMod
                     )}
                   />
 
-                  <div className="space-y-1">
+                  <div className="border border-blue-200 p-3 rounded bg-blue-50 space-y-2">
+                    <h4 className="text-sm font-medium text-blue-900">Contact Tags</h4>
                     <TagInput
-                      label="Tags (Optional)"
-                      placeholder="Type tag and press Enter (e.g., Development, Property Management)"
-                      value={form.watch("tags")}
+                      label="Add Tags"
+                      placeholder="Type 'Development' or other tags and press Enter"
+                      value={form.watch("tags") || []}
                       onChange={(tags: string[]) => form.setValue("tags", tags)}
                       suggestions={["Development", "Property Management", "Leasing", "Operations", "Finance"]}
                     />
-                    {form.watch("type") === "owner" && (
-                      <p className="text-xs text-green-600">
-                        ✓ Development tag available for Owner contacts
-                      </p>
-                    )}
-                    {form.watch("type") !== "owner" && form.watch("type") && (
-                      <p className="text-xs text-gray-500">
-                        Development tag only available for Owner contacts
-                      </p>
-                    )}
+                    <div className="text-xs">
+                      <p className="text-blue-600">Available tags: Development, Property Management, Leasing, Operations, Finance</p>
+                      {form.watch("type") === "owner" && (
+                        <p className="text-green-600 font-medium">
+                          ✓ This is an Owner contact - Development tag is appropriate
+                        </p>
+                      )}
+                    </div>
                   </div>
 
                   <div className="flex justify-end gap-2 pt-3">
@@ -458,7 +457,7 @@ export function ContactManagementModal({ isOpen, onClose }: ContactManagementMod
         {/* Edit Contact Modal */}
         {editingContact && (
           <Dialog open={!!editingContact} onOpenChange={() => setEditingContact(null)}>
-            <DialogContent className="sm:max-w-[500px]">
+            <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Edit Contact</DialogTitle>
                 <DialogDescription>
@@ -552,24 +551,23 @@ export function ContactManagementModal({ isOpen, onClose }: ContactManagementMod
                     )}
                   />
 
-                  <div className="space-y-1">
+                  <div className="border border-blue-200 p-3 rounded bg-blue-50 space-y-2">
+                    <h4 className="text-sm font-medium text-blue-900">Contact Tags</h4>
                     <TagInput
-                      label="Tags (Optional)"
-                      placeholder="Type tag and press Enter (e.g., Development, Property Management)"
-                      value={editForm.watch("tags")}
+                      label="Add Tags"
+                      placeholder="Type 'Development' or other tags and press Enter"
+                      value={editForm.watch("tags") || []}
                       onChange={(tags: string[]) => editForm.setValue("tags", tags)}
                       suggestions={["Development", "Property Management", "Leasing", "Operations", "Finance"]}
                     />
-                    {editForm.watch("type") === "owner" && (
-                      <p className="text-xs text-green-600">
-                        ✓ Development tag available for Owner contacts
-                      </p>
-                    )}
-                    {editForm.watch("type") !== "owner" && editForm.watch("type") && (
-                      <p className="text-xs text-gray-500">
-                        Development tag only available for Owner contacts
-                      </p>
-                    )}
+                    <div className="text-xs">
+                      <p className="text-blue-600">Available tags: Development, Property Management, Leasing, Operations, Finance</p>
+                      {editForm.watch("type") === "owner" && (
+                        <p className="text-green-600 font-medium">
+                          ✓ This is an Owner contact - Development tag is appropriate
+                        </p>
+                      )}
+                    </div>
                   </div>
 
                   <div className="flex justify-end space-x-2 pt-4">

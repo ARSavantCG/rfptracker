@@ -10,13 +10,25 @@ import { useToast } from "@/hooks/use-toast";
 import { Calculator, User, Building2 } from "lucide-react";
 import type { Property } from "@shared/schema";
 
+interface RomPilot {
+  id: number;
+  projectName: string;
+  property: string;
+  totalEstimate: string;
+  notes?: string;
+  createdBy?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 interface CreateRomPilotModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  editingRomPilot?: RomPilot | null;
 }
 
-export function CreateRomPilotModal({ isOpen, onClose, onSuccess }: CreateRomPilotModalProps) {
+export function CreateRomPilotModal({ isOpen, onClose, onSuccess, editingRomPilot }: CreateRomPilotModalProps) {
   const { toast } = useToast();
   const [projectName, setProjectName] = useState("");
   const [property, setProperty] = useState("");
@@ -44,9 +56,15 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess }: CreateRomPil
   const selectedProperty = displayProperties.find(p => p.displayName === property);
   const propertyBayConfigs = selectedProperty?.bayConfigurations || [];
 
-  // Reset form when modal opens/closes
+  // Load existing ROM pilot data when editing
   useEffect(() => {
-    if (!isOpen) {
+    if (isOpen && editingRomPilot) {
+      setProjectName(editingRomPilot.projectName);
+      setProperty(editingRomPilot.property);
+      setNotes(editingRomPilot.notes || "");
+      setCreatedBy(editingRomPilot.createdBy || "");
+    } else if (isOpen && !editingRomPilot) {
+      // Reset form when creating new
       setProjectName("");
       setProperty("");
       setSquareFootage("");
@@ -55,7 +73,7 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess }: CreateRomPil
       setBayConfigs([]);
       setShowBayConfig(false);
     }
-  }, [isOpen]);
+  }, [isOpen, editingRomPilot]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,8 +108,12 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess }: CreateRomPil
         createdBy: createdBy.trim() || null,
       };
 
-      const response = await fetch("/api/rom-pilots", {
-        method: "POST",
+      const isEditing = !!editingRomPilot;
+      const url = isEditing ? `/api/rom-pilots/${editingRomPilot.id}` : "/api/rom-pilots";
+      const method = isEditing ? "PUT" : "POST";
+
+      const response = await fetch(url, {
+        method,
         headers: {
           "Content-Type": "application/json",
         },
@@ -99,12 +121,12 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess }: CreateRomPil
       });
 
       if (!response.ok) {
-        throw new Error("Failed to create ROM");
+        throw new Error(`Failed to ${isEditing ? 'update' : 'create'} ROM`);
       }
 
       toast({
         title: "Success",
-        description: "ROM created successfully. Use 'Manage Scope' to add pricing.",
+        description: `ROM ${isEditing ? 'updated' : 'created'} successfully. ${!isEditing ? "Use 'Manage Scope' to add pricing." : ""}`,
       });
 
       onSuccess();
@@ -126,7 +148,7 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess }: CreateRomPil
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
             <Calculator className="h-5 w-5" />
-            <span>Create New ROM</span>
+            <span>{editingRomPilot ? 'Edit ROM' : 'Create New ROM'}</span>
           </DialogTitle>
         </DialogHeader>
 

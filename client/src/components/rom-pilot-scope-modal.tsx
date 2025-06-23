@@ -57,7 +57,7 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
 
   // Fetch existing line items
   const { data: existingLineItems = [] } = useQuery({
-    queryKey: ["/api/rom-pilots", romPilotId, "line-items"],
+    queryKey: [`/api/rom-pilots/${romPilotId}/line-items`],
     enabled: isOpen,
   });
 
@@ -180,7 +180,7 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
     },
     onSuccess: () => {
       toast({ title: "Success", description: "ROM scope items saved successfully" });
-      queryClient.invalidateQueries({ queryKey: ["/api/rom-pilots", romPilotId, "line-items"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/rom-pilots/${romPilotId}/line-items`] });
       queryClient.invalidateQueries({ queryKey: ["/api/rom-pilots"] });
       onClose();
     },

@@ -146,6 +146,7 @@ export function ContactManagementModal({ isOpen, onClose }: ContactManagementMod
       phone: contact.phone || "",
       type: contact.type as "architect" | "contractor" | "owner" | "other",
       tags: contact.tags || [],
+      notes: contact.notes || "",
     });
   };
 
@@ -169,6 +170,7 @@ export function ContactManagementModal({ isOpen, onClose }: ContactManagementMod
       phone: "",
       type: undefined,
       tags: [],
+      notes: "",
     },
   });
 

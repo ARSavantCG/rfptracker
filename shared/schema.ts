@@ -128,9 +128,7 @@ export const insertContactSchema = createInsertSchema(contacts).omit({
   specialties: z.array(z.string()).default([]),
 });
 
-export const updateContactSchema = insertContactSchema.partial().extend({
-  id: z.number(),
-});
+export const updateContactSchema = insertContactSchema.partial();
 
 // Schemas for invitations
 export const insertInvitationSchema = createInsertSchema(invitations).omit({

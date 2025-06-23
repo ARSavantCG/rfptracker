@@ -600,7 +600,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(contact);
     } catch (error) {
       console.error("Contact update error:", error);
-      res.status(400).json({ message: "Invalid contact data", error: error.message });
+      res.status(400).json({ message: "Invalid contact data", error: error instanceof Error ? error.message : String(error) });
     }
   });
 

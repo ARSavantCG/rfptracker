@@ -462,7 +462,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                           <div className="text-lg font-semibold text-orange-600">
                             {Math.round(selectedBayConfigurations.reduce((sum, bay) => sum + (bay.mechanicalRoomAllocation || 0), 0)).toLocaleString()} SF
                           </div>
-                          <p className="text-xs text-gray-500">HVAC & building systems</p>
+                          <p className="text-xs text-gray-500">Building Systems</p>
                         </div>
                       </div>
 

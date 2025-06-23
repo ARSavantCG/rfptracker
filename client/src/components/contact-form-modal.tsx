@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit, Users } from "lucide-react";
+import { Plus, Edit, Users, Trash2 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { TagInput } from "@/components/ui/tag-input";
 import type { Contact, InsertContact } from "@shared/schema";
@@ -75,6 +75,26 @@ export function ContactFormModal({ contact, trigger, onSuccess }: ContactFormMod
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: () => apiRequest(`/api/contacts/${contact?.id}`, "DELETE"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
+      toast({
+        title: "Contact deleted",
+        description: "Contact has been successfully deleted.",
+      });
+      setOpen(false);
+      onSuccess?.();
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete contact. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const resetForm = () => {
     setFormData({
       name: "",
@@ -108,6 +128,12 @@ export function ContactFormModal({ contact, trigger, onSuccess }: ContactFormMod
 
   const handleInputChange = (field: keyof InsertContact, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleDelete = () => {
+    if (confirm(`Are you sure you want to delete ${contact?.name}? This action cannot be undone.`)) {
+      deleteMutation.mutate();
+    }
   };
 
   const defaultTrigger = isEdit ? (
@@ -229,26 +255,42 @@ export function ContactFormModal({ contact, trigger, onSuccess }: ContactFormMod
             </div>
           )}
 
-          <div className="flex justify-end space-x-2 pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={createMutation.isPending || updateMutation.isPending}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              {createMutation.isPending || updateMutation.isPending
-                ? "Saving..."
-                : isEdit
-                ? "Update Contact"
-                : "Create Contact"
-              }
-            </Button>
+          <div className="flex justify-between pt-4">
+            <div>
+              {isEdit && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleDelete}
+                  disabled={deleteMutation.isPending}
+                  className="text-red-600 border-red-300 hover:bg-red-50"
+                >
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  {deleteMutation.isPending ? "Deleting..." : "Delete"}
+                </Button>
+              )}
+            </div>
+            <div className="flex space-x-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={createMutation.isPending || updateMutation.isPending}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {createMutation.isPending || updateMutation.isPending
+                  ? "Saving..."
+                  : isEdit
+                  ? "Update Contact"
+                  : "Create Contact"
+                }
+              </Button>
+            </div>
           </div>
         </form>
       </DialogContent>

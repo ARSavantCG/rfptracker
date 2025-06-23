@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { TagInput } from "@/components/ui/tag-input";
 import { Plus, Building, User, Mail, Phone, Trash2, Users, Edit, Save, X } from "lucide-react";
 import type { Contact } from "@shared/schema";
 
@@ -24,6 +25,7 @@ const createContactSchema = insertContactSchema.extend({
   type: z.enum(["architect", "contractor", "owner", "other"], { 
     required_error: "Please select a contact type" 
   }),
+  tags: z.array(z.string()).default([]),
 });
 
 type CreateContactFormData = z.infer<typeof createContactSchema>;
@@ -46,6 +48,7 @@ export function ContactManagementModal({ isOpen, onClose }: ContactManagementMod
       company: "",
       phone: "",
       type: undefined,
+      tags: [],
     },
   });
 
@@ -367,6 +370,14 @@ export function ContactManagementModal({ isOpen, onClose }: ContactManagementMod
                         <FormMessage />
                       </FormItem>
                     )}
+                  />
+
+                  <TagInput
+                    label="Tags (Optional)"
+                    placeholder="Type tag and press Enter (e.g., Development, Property Management)"
+                    value={form.watch("tags")}
+                    onChange={(tags) => form.setValue("tags", tags)}
+                    suggestions={["Development", "Property Management", "Leasing", "Operations", "Finance"]}
                   />
 
                   <div className="flex justify-end gap-2 pt-3">

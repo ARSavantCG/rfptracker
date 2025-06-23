@@ -95,6 +95,7 @@ export const contacts = pgTable("contacts", {
   phone: text("phone"),
   company: text("company"),
   type: text("type").notNull(), // architect, contractor, consultant
+  tags: json("tags").$type<string[]>().default([]), // development, property-management, leasing, etc.
   specialties: json("specialties").$type<string[]>().default([]),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -123,6 +124,7 @@ export const insertContactSchema = createInsertSchema(contacts).omit({
   updatedAt: true,
 }).extend({
   type: z.enum(["architect", "contractor", "owner", "other"]),
+  tags: z.array(z.string()).default([]),
   specialties: z.array(z.string()).default([]),
 });
 

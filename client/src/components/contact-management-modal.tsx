@@ -8,6 +8,7 @@ import { insertContactSchema } from "@shared/schema";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +27,7 @@ const createContactSchema = insertContactSchema.extend({
     required_error: "Please select a contact type" 
   }),
   tags: z.array(z.string()).default([]),
+  notes: z.string().optional(),
 });
 
 type CreateContactFormData = z.infer<typeof createContactSchema>;
@@ -551,20 +553,40 @@ export function ContactManagementModal({ isOpen, onClose }: ContactManagementMod
                     )}
                   />
 
-                  <div className="border border-blue-200 p-3 rounded bg-blue-50 space-y-2">
-                    <h4 className="text-sm font-medium text-blue-900">Contact Tags</h4>
+                  <FormField
+                    control={editForm.control}
+                    name="notes"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm">Notes</FormLabel>
+                        <FormControl>
+                          <Textarea 
+                            placeholder="Additional notes or comments..."
+                            {...field}
+                            value={field.value || ""}
+                            className="h-20 text-sm resize-none"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="border border-red-300 p-4 rounded bg-red-50 space-y-3">
+                    <h4 className="text-lg font-bold text-red-900">🏷️ CONTACT TAGS</h4>
                     <TagInput
-                      label="Add Tags"
-                      placeholder="Type 'Development' or other tags and press Enter"
+                      label="Add Tags Here"
+                      placeholder="Type 'Development' and press Enter to add tag"
                       value={editForm.watch("tags") || []}
                       onChange={(tags: string[]) => editForm.setValue("tags", tags)}
                       suggestions={["Development", "Property Management", "Leasing", "Operations", "Finance"]}
+                      className="border-2 border-red-300"
                     />
-                    <div className="text-xs">
-                      <p className="text-blue-600">Available tags: Development, Property Management, Leasing, Operations, Finance</p>
+                    <div className="text-sm bg-white p-2 rounded border">
+                      <p className="font-medium text-red-700">Available tags: Development, Property Management, Leasing, Operations, Finance</p>
                       {editForm.watch("type") === "owner" && (
-                        <p className="text-green-600 font-medium">
-                          ✓ This is an Owner contact - Development tag is appropriate
+                        <p className="text-green-700 font-bold mt-1">
+                          ✓ OWNER CONTACT - Development tag available here!
                         </p>
                       )}
                     </div>

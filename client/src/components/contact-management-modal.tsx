@@ -461,7 +461,7 @@ export function ContactManagementModal({ isOpen, onClose }: ContactManagementMod
         {/* Edit Contact Modal */}
         {editingContact && (
           <Dialog open={!!editingContact} onOpenChange={() => setEditingContact(null)}>
-            <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+            <DialogContent className="sm:max-w-[700px] max-h-[95vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Edit Contact</DialogTitle>
                 <DialogDescription>
@@ -574,23 +574,26 @@ export function ContactManagementModal({ isOpen, onClose }: ContactManagementMod
                     )}
                   />
 
-                  <div className="border border-red-300 p-4 rounded bg-red-50 space-y-3">
-                    <h4 className="text-lg font-bold text-red-900">🏷️ CONTACT TAGS</h4>
-                    <TagInput
-                      label="Add Tags Here"
-                      placeholder="Type 'Development' and press Enter to add tag"
-                      value={editForm.watch("tags") || []}
-                      onChange={(tags: string[]) => editForm.setValue("tags", tags)}
-                      suggestions={["Development", "Property Management", "Leasing", "Operations", "Finance"]}
-                      className="border-2 border-red-300"
-                    />
-                    <div className="text-sm bg-white p-2 rounded border">
-                      <p className="font-medium text-red-700">Available tags: Development, Property Management, Leasing, Operations, Finance</p>
-                      {editForm.watch("type") === "owner" && (
-                        <p className="text-green-700 font-bold mt-1">
-                          ✓ OWNER CONTACT - Development tag available here!
-                        </p>
-                      )}
+                  {/* IMPORTANT: Tags section with prominent spacing */}
+                  <div className="pt-6 border-t-2 border-gray-200">
+                    <div className="border-4 border-red-500 p-6 rounded-lg bg-red-50 space-y-4">
+                      <h4 className="text-xl font-bold text-red-900 text-center">🏷️ CONTACT TAGS SECTION</h4>
+                      <TagInput
+                        label="Add Tags Here"
+                        placeholder="Type 'Development' and press Enter to add tag"
+                        value={editForm.watch("tags") || []}
+                        onChange={(tags: string[]) => editForm.setValue("tags", tags)}
+                        suggestions={["Development", "Property Management", "Leasing", "Operations", "Finance"]}
+                        className="border-2 border-red-300"
+                      />
+                      <div className="text-sm bg-white p-2 rounded border">
+                        <p className="font-medium text-red-700">Available tags: Development, Property Management, Leasing, Operations, Finance</p>
+                        {editForm.watch("type") === "owner" && (
+                          <p className="text-green-700 font-bold mt-1">
+                            ✓ OWNER CONTACT - Development tag available here!
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </div>
 

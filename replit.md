@@ -110,6 +110,7 @@ This is a full-stack web application for tracking and managing Request for Propo
 
 ## Changelog
 - June 23, 2025. Initial setup
+- June 23, 2025. ROM report generation enhanced with proper font size hierarchy for per-square-foot calculations (8px for category headers, 10px for Grand Total)
 
 ## User Preferences
 

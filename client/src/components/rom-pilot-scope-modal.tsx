@@ -50,6 +50,10 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
     enabled: isOpen,
   });
 
+  // Filter scope items by category
+  const tenantImprovementItems = scopeItems.filter(item => item.category === 'Tenant Improvements');
+  const designSoftCostItems = scopeItems.filter(item => item.category === 'Design / Soft Costs / Other Fees');
+
   // Fetch existing line items
   const { data: existingLineItems = [] } = useQuery({
     queryKey: ["/api/rom-pilots", romPilotId, "line-items"],

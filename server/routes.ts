@@ -588,7 +588,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid ID" });
       }
 
+      console.log("Updating contact with data:", JSON.stringify(req.body, null, 2));
       const parsed = updateContactSchema.parse(req.body);
+      console.log("Parsed contact data:", JSON.stringify(parsed, null, 2));
       const contact = await storage.updateContact(id, parsed);
       
       if (!contact) {
@@ -597,7 +599,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(contact);
     } catch (error) {
-      res.status(400).json({ message: "Invalid contact data" });
+      console.error("Contact update error:", error);
+      res.status(400).json({ message: "Invalid contact data", error: error.message });
     }
   });
 

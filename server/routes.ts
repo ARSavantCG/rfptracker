@@ -1846,6 +1846,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete("/api/rom-pilots/:id/line-items", async (req, res) => {
+    try {
+      const romPilotId = parseInt(req.params.id);
+      if (isNaN(romPilotId)) {
+        return res.status(400).json({ message: "Invalid ROM Pilot ID" });
+      }
+
+      await storage.saveRomPilotLineItems(romPilotId, []);
+      await storage.updateRomPilot(romPilotId, { totalEstimate: "0" });
+      
+      res.status(200).json({ message: "Line items cleared successfully" });
+    } catch (error) {
+      console.error("ROM line items delete error:", error);
+      res.status(500).json({ message: "Failed to clear line items" });
+    }
+  });
+
   // Reports PDF generation
   app.post("/api/reports/detailed-report-pdf", async (req, res) => {
     try {

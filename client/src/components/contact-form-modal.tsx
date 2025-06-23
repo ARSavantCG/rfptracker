@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit, Users } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import { TagInput } from "@/components/ui/tag-input";
 import type { Contact, InsertContact } from "@shared/schema";
 
 interface ContactFormModalProps {
@@ -26,6 +27,7 @@ export function ContactFormModal({ contact, trigger, onSuccess }: ContactFormMod
     company: contact?.company || "",
     type: (contact?.type as "architect" | "contractor" | "owner" | "other") || "contractor",
     notes: contact?.notes || "",
+    tags: contact?.tags || [],
   });
 
   const { toast } = useToast();
@@ -81,6 +83,7 @@ export function ContactFormModal({ contact, trigger, onSuccess }: ContactFormMod
       company: "",
       type: "contractor",
       notes: "",
+      tags: [],
     });
   };
 
@@ -124,7 +127,7 @@ export function ContactFormModal({ contact, trigger, onSuccess }: ContactFormMod
       <DialogTrigger asChild>
         {trigger || defaultTrigger}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[95vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
             <Users className="h-5 w-5 text-blue-600" />
@@ -207,6 +210,30 @@ export function ContactFormModal({ contact, trigger, onSuccess }: ContactFormMod
               placeholder="Additional notes or comments..."
               rows={3}
             />
+          </div>
+
+          {/* PROMINENT TAGS SECTION */}
+          <div className="border-4 border-red-500 p-6 rounded-lg bg-red-50 space-y-4">
+            <h4 className="text-xl font-bold text-red-900 text-center">🏷️ CONTACT TAGS SECTION</h4>
+            <div className="space-y-2">
+              <Label className="text-red-900 font-bold">Add Tags</Label>
+              <TagInput
+                label=""
+                placeholder="Type 'Development' and press Enter to add tag"
+                value={formData.tags || []}
+                onChange={(tags: string[]) => setFormData(prev => ({ ...prev, tags }))}
+                suggestions={["Development", "Property Management", "Leasing", "Operations", "Finance"]}
+                className="border-2 border-red-300"
+              />
+              <div className="text-sm bg-white p-3 rounded border">
+                <p className="font-bold text-red-700">Available tags: Development, Property Management, Leasing, Operations, Finance</p>
+                {formData.type === "owner" && (
+                  <p className="text-green-700 font-bold mt-2">
+                    ✓ OWNER CONTACT - Development tag is appropriate for this contact type!
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
 
           <div className="flex justify-end space-x-2 pt-4">

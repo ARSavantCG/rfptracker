@@ -381,9 +381,22 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Sent By</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Person who sent" {...field} />
-                    </FormControl>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select property owner" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {(contacts as Contact[])
+                          .filter((contact: Contact) => contact.type === "owner")
+                          .map((contact: Contact) => (
+                            <SelectItem key={contact.id} value={`${contact.name} - ${contact.company}`}>
+                              {contact.name} - {contact.company}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}

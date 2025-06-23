@@ -42,6 +42,7 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
   const queryClient = useQueryClient();
   const [tenantImprovements, setTenantImprovements] = useState<LineItem[]>([]);
   const [designSoftCosts, setDesignSoftCosts] = useState<LineItem[]>([]);
+  const [isInitialized, setIsInitialized] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Fetch scope items
@@ -62,7 +63,7 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
 
   // Load existing line items when modal opens
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && !isInitialized) {
       if (Array.isArray(existingLineItems) && existingLineItems.length > 0) {
         const tenantItems: LineItem[] = [];
         const designItems: LineItem[] = [];
@@ -96,12 +97,14 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
         setTenantImprovements([]);
         setDesignSoftCosts([]);
       }
-    } else {
+      setIsInitialized(true);
+    } else if (!isOpen) {
       // Reset state when modal closes
       setTenantImprovements([]);
       setDesignSoftCosts([]);
+      setIsInitialized(false);
     }
-  }, [isOpen, existingLineItems, scopeItems]);
+  }, [isOpen, existingLineItems, scopeItems, isInitialized]);
 
   const addLineItem = (category: 'tenant-improvements' | 'design-soft-costs') => {
     const newItem: LineItem = {

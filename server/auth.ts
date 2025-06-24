@@ -1,7 +1,16 @@
+/**
+ * RFP Tracker - Request for Proposals Management System
+ * Copyright (c) 2025 Savant Consulting Group LLC. All rights reserved.
+ * 
+ * This software is proprietary and confidential. Unauthorized copying, 
+ * distribution, or use of this software is strictly prohibited.
+ */
+
 import bcrypt from 'bcryptjs';
-import { users, type User } from '@shared/schema';
 import { db } from './db';
+import { users } from '@shared/schema';
 import { eq } from 'drizzle-orm';
+import { nanoid } from 'nanoid';
 
 export interface LoginCredentials {
   username: string;
@@ -10,74 +19,82 @@ export interface LoginCredentials {
 
 export interface CreateUserData {
   username: string;
-  email?: string;
   password: string;
+  email?: string;
   firstName?: string;
   lastName?: string;
-  role?: string;
+  role?: 'admin' | 'manager' | 'user';
   permissions?: string[];
 }
 
 export class AuthService {
-  static async hashPassword(password: string): Promise<string> {
-    const saltRounds = 12;
-    return bcrypt.hash(password, saltRounds);
-  }
+  private static readonly SALT_ROUNDS = 12;
 
-  static async verifyPassword(password: string, hashedPassword: string): Promise<boolean> {
-    return bcrypt.compare(password, hashedPassword);
-  }
-
-  static async authenticateUser(credentials: LoginCredentials): Promise<User | null> {
+  static async authenticateUser(credentials: LoginCredentials) {
     try {
+      const { username, password } = credentials;
+      
+      // Find user by username
       const [user] = await db
         .select()
         .from(users)
-        .where(eq(users.username, credentials.username))
+        .where(eq(users.username, username))
         .limit(1);
 
-      if (!user || !user.isActive) {
+      if (!user) {
         return null;
       }
 
-      const isPasswordValid = await this.verifyPassword(credentials.password, user.passwordHash);
+      // Verify password
+      const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
       if (!isPasswordValid) {
         return null;
       }
 
       // Return user without password hash
       const { passwordHash, ...userWithoutPassword } = user;
-      return userWithoutPassword as User;
+      return userWithoutPassword;
     } catch (error) {
       console.error('Authentication error:', error);
       return null;
     }
   }
 
-  static async createUser(userData: CreateUserData): Promise<User> {
-    const passwordHash = await this.hashPassword(userData.password);
-    
-    const [newUser] = await db
-      .insert(users)
-      .values({
-        id: `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        username: userData.username,
-        email: userData.email || null,
-        passwordHash,
-        firstName: userData.firstName || null,
-        lastName: userData.lastName || null,
-        role: userData.role || 'user',
-        permissions: userData.permissions || [],
-        isActive: true,
-      })
-      .returning();
+  static async createUser(userData: CreateUserData) {
+    try {
+      const { password, ...userInfo } = userData;
+      
+      // Hash password
+      const passwordHash = await bcrypt.hash(password, this.SALT_ROUNDS);
+      
+      // Create user record
+      const [newUser] = await db
+        .insert(users)
+        .values({
+          id: nanoid(),
+          username: userData.username,
+          passwordHash,
+          email: userData.email || null,
+          firstName: userData.firstName || null,
+          lastName: userData.lastName || null,
+          role: userData.role || 'user',
+          permissions: userData.permissions || [],
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .returning();
 
-    // Return user without password hash
-    const { passwordHash: _, ...userWithoutPassword } = newUser;
-    return userWithoutPassword as User;
+      // Return user without password hash
+      const { passwordHash: _, ...userWithoutPassword } = newUser;
+      return userWithoutPassword;
+    } catch (error) {
+      console.error('Create user error:', error);
+      throw error;
+    }
   }
 
-  static async getUserById(id: string): Promise<User | null> {
+  static async getUserById(id: string) {
     try {
       const [user] = await db
         .select()
@@ -91,10 +108,67 @@ export class AuthService {
 
       // Return user without password hash
       const { passwordHash, ...userWithoutPassword } = user;
-      return userWithoutPassword as User;
+      return userWithoutPassword;
     } catch (error) {
-      console.error('Get user error:', error);
+      console.error('Get user by ID error:', error);
       return null;
+    }
+  }
+
+  static async updateUser(id: string, updates: Partial<CreateUserData>) {
+    try {
+      const updateData: any = { ...updates };
+      
+      // Hash new password if provided
+      if (updates.password) {
+        updateData.passwordHash = await bcrypt.hash(updates.password, this.SALT_ROUNDS);
+        delete updateData.password;
+      }
+
+      updateData.updatedAt = new Date();
+
+      const [updatedUser] = await db
+        .update(users)
+        .set(updateData)
+        .where(eq(users.id, id))
+        .returning();
+
+      if (!updatedUser) {
+        return null;
+      }
+
+      // Return user without password hash
+      const { passwordHash, ...userWithoutPassword } = updatedUser;
+      return userWithoutPassword;
+    } catch (error) {
+      console.error('Update user error:', error);
+      throw error;
+    }
+  }
+
+  static async deleteUser(id: string) {
+    try {
+      const [deletedUser] = await db
+        .delete(users)
+        .where(eq(users.id, id))
+        .returning();
+
+      return !!deletedUser;
+    } catch (error) {
+      console.error('Delete user error:', error);
+      return false;
+    }
+  }
+
+  static async getAllUsers() {
+    try {
+      const allUsers = await db.select().from(users);
+      
+      // Return users without password hashes
+      return allUsers.map(({ passwordHash, ...user }) => user);
+    } catch (error) {
+      console.error('Get all users error:', error);
+      return [];
     }
   }
 }

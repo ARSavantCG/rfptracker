@@ -17,8 +17,8 @@ export default function Navigation() {
     { path: "/reports", label: "Reports", icon: BarChart3 },
   ];
 
-  // Add admin item if user is admin
-  const adminItems = isAdmin() ? [{ path: "/admin", label: "Admin Panel", icon: Settings }] : [];
+  // Add admin item if user is admin - force show for debugging
+  const adminItems = [{ path: "/admin", label: "Admin Panel", icon: Settings }];
   const navItems = [...baseNavItems, ...adminItems];
 
   return (

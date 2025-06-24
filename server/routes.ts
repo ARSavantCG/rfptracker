@@ -34,7 +34,7 @@ import {
 import { validateRfpForProgression, canAdvanceToPhase } from "./validation";
 import { AuthService } from "./auth";
 import { users, contacts } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { tokenStore } from "./token-auth";
 import bcrypt from "bcryptjs";
 import { nanoid } from "nanoid";
@@ -184,8 +184,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Try contact email login
-      // Try contact email login
-      const [contact] = await db.select().from(contacts).where(eq(contacts.email, username));
+      // Try contact email login (case-insensitive)
+      const [contact] = await db.select().from(contacts).where(eq(sql`LOWER(${contacts.email})`, username.toLowerCase()));
       
       if (!contact || !contact.hasSystemAccess || !contact.passwordHash) {
         return res.status(401).json({ message: "Invalid username or password" });

@@ -34,7 +34,7 @@ export default function Properties() {
     return groups;
   }, {} as Record<string, Property[]>);
 
-  // Sort buildings within each group
+  // Sort buildings within each group alphabetically (A first, then B, C, etc.)
   Object.keys(groupedProperties).forEach(baseName => {
     groupedProperties[baseName].sort((a, b) => {
       const buildingA = a.building || '';
@@ -131,35 +131,38 @@ export default function Properties() {
               return (
                 <div key={baseName} className="relative">
                   {/* Stacked Cards Container */}
-                  <div className="relative" style={{ minHeight: isMultiBuilding ? '320px' : 'auto' }}>
+                  <div className="relative" style={{ minHeight: isMultiBuilding ? '380px' : 'auto' }}>
                     {buildings.map((property, index) => {
                       const isVisible = isExpanded || index < 3;
-                      const stackOffset = isExpanded ? index * 16 : Math.min(index, 2) * 6;
-                      const zIndex = isExpanded ? buildings.length - index : (index === 0 ? 20 : 20 - index);
+                      // Reverse the visual stacking order: A in back (index 0), B on top (index 1), etc.
+                      const visualIndex = buildings.length - 1 - index;
+                      const stackOffset = isExpanded ? index * 16 : visualIndex * 12;
+                      const zIndex = isExpanded ? buildings.length - index : index + 1;
                       
                       return (
                         <Card 
                           key={property.id} 
                           className={`
-                            transition-all duration-300 ease-in-out
+                            transition-all duration-300 ease-in-out border-2
                             ${index > 0 && !isExpanded ? 'absolute' : 'relative'}
                             ${isVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}
-                            ${isMultiBuilding && index === 0 ? 'cursor-pointer' : ''}
+                            ${isMultiBuilding && !isExpanded ? 'cursor-pointer' : ''}
                             hover:shadow-lg
-                            ${isMultiBuilding && !isExpanded ? 'hover:scale-105' : ''}
+                            ${isMultiBuilding && !isExpanded ? 'hover:scale-[1.02]' : ''}
                             ${isExpanded && index > 0 ? 'mt-4' : ''}
+                            ${!isExpanded && index === 0 ? 'border-blue-200' : 'border-gray-200'}
                           `}
                           style={{
                             zIndex,
                             ...(index > 0 && !isExpanded ? {
-                              top: `${stackOffset}px`,
+                              top: `-${stackOffset}px`,
                               left: `${stackOffset}px`,
-                              right: `${stackOffset}px`,
-                              transform: `translateY(-${stackOffset * 2}px)`,
-                              boxShadow: `0 ${index * 2}px ${index * 4}px rgba(0,0,0,0.1)`
+                              right: `-${stackOffset}px`,
+                              transform: `rotate(${index * 1}deg)`,
+                              boxShadow: `0 ${index * 3}px ${index * 6}px rgba(0,0,0,0.15)`
                             } : {})
                           }}
-                          onClick={() => isMultiBuilding && index === 0 && !isExpanded ? togglePropertyExpansion(baseName) : undefined}
+                          onClick={() => isMultiBuilding && !isExpanded ? togglePropertyExpansion(baseName) : undefined}
                         >
                       <CardHeader>
                         <div className="flex items-start justify-between">
@@ -168,22 +171,22 @@ export default function Properties() {
                               <Building className="h-6 w-6 text-blue-600" />
                             </div>
                             <div>
-                              <CardTitle className="text-lg">
+                              <CardTitle className="text-lg font-bold">
                                 {property.propertyName || 'Unnamed Property'}
                               </CardTitle>
                               {property.building && (
-                                <p className="text-sm text-gray-600 mt-1">
-                                  Building {property.building}
-                                </p>
-                              )}
-                              {buildings.length > 1 && index === 0 && (
                                 <div className="flex items-center gap-2 mt-1">
+                                  <span className="text-lg font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                                    Building {property.building}
+                                  </span>
+                                </div>
+                              )}
+                              {buildings.length > 1 && index === 0 && !isExpanded && (
+                                <div className="flex items-center gap-2 mt-2">
                                   <p className="text-xs text-blue-600 font-medium">
-                                    {buildings.length} Buildings
+                                    {buildings.length} Buildings ({buildings.map(b => b.building).join(', ')})
                                   </p>
-                                  {!isExpanded && (
-                                    <ChevronDown className="h-3 w-3 text-blue-600" />
-                                  )}
+                                  <ChevronDown className="h-3 w-3 text-blue-600" />
                                 </div>
                               )}
                             </div>
@@ -242,32 +245,50 @@ export default function Properties() {
                     
                     {/* Expand/Collapse Button for Multi-Building Properties */}
                     {isMultiBuilding && (
-                      <div className="absolute -bottom-3 left-1/2 transform -translate-x-1/2 z-30">
+                      <div className="absolute -bottom-4 left-1/2 transform -translate-x-1/2 z-40">
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => togglePropertyExpansion(baseName)}
-                          className="bg-white shadow-md hover:shadow-lg px-3 py-1 text-xs"
+                          className="bg-white shadow-lg hover:shadow-xl px-4 py-2 text-sm font-medium border-2 border-blue-200"
                         >
                           {isExpanded ? (
                             <>
-                              <ChevronUp className="h-3 w-3 mr-1" />
-                              Stack
+                              <ChevronUp className="h-4 w-4 mr-1" />
+                              Stack Cards
                             </>
                           ) : (
                             <>
-                              <ChevronDown className="h-3 w-3 mr-1" />
-                              Expand ({buildings.length})
+                              <ChevronDown className="h-4 w-4 mr-1" />
+                              Expand All ({buildings.length})
                             </>
                           )}
                         </Button>
                       </div>
                     )}
                     
-                    {/* Show remaining buildings count if more than 3 and not expanded */}
-                    {buildings.length > 3 && !isExpanded && (
-                      <div className="absolute top-2 right-2 bg-blue-600 text-white text-xs px-2 py-1 rounded-full z-30 shadow-md">
-                        +{buildings.length - 3}
+                    {/* Show building indicators on the visible edge of stacked cards */}
+                    {!isExpanded && isMultiBuilding && (
+                      <div className="absolute top-2 right-2 z-40">
+                        <div className="flex flex-col gap-1">
+                          {buildings.slice(0, Math.min(buildings.length, 3)).map((building, idx) => (
+                            <div 
+                              key={building.id}
+                              className="bg-blue-600 text-white text-xs px-2 py-1 rounded shadow-md font-bold"
+                              style={{ 
+                                marginRight: `${idx * 8}px`,
+                                opacity: idx === 0 ? 1 : 0.8 - (idx * 0.2)
+                              }}
+                            >
+                              {building.building || 'Main'}
+                            </div>
+                          ))}
+                          {buildings.length > 3 && (
+                            <div className="bg-gray-600 text-white text-xs px-2 py-1 rounded shadow-md">
+                              +{buildings.length - 3}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )}
                 </div>

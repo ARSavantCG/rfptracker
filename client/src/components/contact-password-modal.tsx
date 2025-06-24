@@ -46,10 +46,7 @@ export default function ContactPasswordModal({
 
   const setPasswordMutation = useMutation({
     mutationFn: async ({ contactId, password }: { contactId: number; password: string }) => {
-      return apiRequest(`/api/admin/contacts/${contactId}/set-password`, {
-        method: 'POST',
-        body: { password },
-      });
+      return apiRequest(`/api/admin/contacts/${contactId}/set-password`, 'POST', { password });
     },
     onSuccess: () => {
       toast({
@@ -73,9 +70,7 @@ export default function ContactPasswordModal({
 
   const generatePasswordMutation = useMutation({
     mutationFn: async (contactId: number) => {
-      return apiRequest(`/api/admin/contacts/${contactId}/generate-password`, {
-        method: 'POST',
-      });
+      return apiRequest(`/api/admin/contacts/${contactId}/generate-password`, 'POST');
     },
     onSuccess: (data) => {
       setGeneratedPassword(data.tempPassword);

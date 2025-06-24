@@ -9,6 +9,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import session from "express-session";
+import connectPgSimple from "connect-pg-simple";
 import { storage } from "./storage";
 import { db } from "./db";
 import { 
@@ -85,10 +86,17 @@ const upload = multer({
 
 // Session middleware setup
 function setupSession(app: Express) {
+  const pgSession = connectPgSimple(session);
+  
   app.use(session({
+    store: new pgSession({
+      conString: process.env.DATABASE_URL,
+      tableName: 'sessions',
+      createTableIfMissing: true
+    }),
     secret: process.env.SESSION_SECRET || 'rfp-tracker-dev-secret-2024',
     resave: false,
-    saveUninitialized: true, // Changed to true to create sessions
+    saveUninitialized: false,
     rolling: true,
     cookie: {
       secure: false, // Set to true in production with HTTPS
@@ -147,7 +155,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Store user in session
       req.session.user = user;
       
-      // Force session save
+      // Force session save and regenerate
       req.session.save((err: any) => {
         if (err) {
           console.error("Session save error:", err);
@@ -155,7 +163,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         console.log("User logged in successfully:", { id: user.id, username: user.username });
-        console.log("Session after login:", { sessionId: req.session.id, hasUser: !!req.session.user });
+        console.log("Session saved with ID:", req.session.id);
         
         res.json({ user, message: "Login successful" });
       });

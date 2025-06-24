@@ -20,7 +20,9 @@ function SystemUsersAndContacts() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedContact, setSelectedContact] = useState<any>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [contactDialogOpen, setContactDialogOpen] = useState(false);
 
   const { data: users, isLoading: usersLoading } = useQuery<User[]>({
     queryKey: ["/api/admin/users"],
@@ -77,9 +79,40 @@ function SystemUsersAndContacts() {
     },
   });
 
+  const updateContactMutation = useMutation({
+    mutationFn: async ({ id, updates }: { id: number; updates: any }) => {
+      return await apiRequest(`/api/contacts/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(updates),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/authorized-contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
+      setContactDialogOpen(false);
+      setSelectedContact(null);
+      toast({
+        title: "Success",
+        description: "Contact permissions updated successfully",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleEditUser = (user: User) => {
     setSelectedUser(user);
     setEditDialogOpen(true);
+  };
+
+  const handleEditContact = (contact: any) => {
+    setSelectedContact(contact);
+    setContactDialogOpen(true);
   };
 
   const handleDeleteUser = (id: string) => {
@@ -221,6 +254,14 @@ function SystemUsersAndContacts() {
                   <Badge variant="default" className="bg-green-100 text-green-800">
                     Access Granted
                   </Badge>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleEditContact(contact)}
+                  >
+                    <Settings className="h-4 w-4 mr-1" />
+                    Permissions
+                  </Button>
                 </div>
               </div>
             ))}
@@ -250,6 +291,19 @@ function SystemUsersAndContacts() {
           }
         }}
         isSaving={updateUserMutation.isPending}
+      />
+
+      {/* Contact Permissions Dialog */}
+      <ContactPermissionsDialog
+        contact={selectedContact}
+        open={contactDialogOpen}
+        onOpenChange={setContactDialogOpen}
+        onSave={(updates) => {
+          if (selectedContact) {
+            updateContactMutation.mutate({ id: selectedContact.id, updates });
+          }
+        }}
+        isSaving={updateContactMutation.isPending}
       />
     </div>
   );

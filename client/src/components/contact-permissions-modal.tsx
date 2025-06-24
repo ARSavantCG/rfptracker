@@ -75,24 +75,24 @@ export function ContactPermissionsModal({ contact, isOpen, onClose }: ContactPer
     {
       id: 'rom',
       title: 'ROM Pilot',
-      description: 'Rough Order of Magnitude estimates',
-      icon: BarChart3,
+      description: 'Create and manage rough order of magnitude cost estimates',
+      icon: Calculator,
       permissions: [
-        { id: 'rom.view', label: 'View ROM Estimates' },
-        { id: 'rom.create', label: 'Create ROM Estimates' },
-        { id: 'rom.edit', label: 'Edit ROM Estimates' },
-        { id: 'rom.delete', label: 'Delete ROM Estimates' },
-        { id: 'rom.scope.manage', label: 'Manage Scope Items & Pricing' },
+        { id: 'rom.view', label: 'View' },
+        { id: 'rom.create', label: 'Create' },
+        { id: 'rom.edit', label: 'Edit' },
+        { id: 'rom.delete', label: 'Delete' },
+        { id: 'rom.scope.manage', label: 'Manage Scope Items' },
       ]
     },
     {
       id: 'reports',
-      title: 'Reports',
-      description: 'Generate and view reports',
+      title: 'Reports & Analytics',
+      description: 'Access executive summaries, financial reports, and historical data',
       icon: FileText,
       permissions: [
-        { id: 'reports.view', label: 'View Reports' },
-        { id: 'reports.generate', label: 'Generate Reports' },
+        { id: 'reports.view', label: 'View' },
+        { id: 'reports.generate', label: 'Generate' },
       ]
     },
     {

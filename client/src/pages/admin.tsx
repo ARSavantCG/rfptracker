@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { apiRequest } from "@/lib/queryClient";
 import Navigation from "@/components/navigation";
+import ContactPasswordModal from "@/components/contact-password-modal";
 import type { User, UserRole, Permission } from "@shared/schema";
 import { ROLE_PERMISSIONS } from "@shared/schema";
 
@@ -863,6 +864,8 @@ export default function Admin() {
           </Card>
         </div>
       </div>
+
+
     </div>
   );
 }

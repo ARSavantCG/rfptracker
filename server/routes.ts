@@ -88,6 +88,9 @@ const upload = multer({
 function setupSession(app: Express) {
   const pgSession = connectPgSimple(session);
   
+  // Trust proxy for Replit environment
+  app.set('trust proxy', 1);
+  
   app.use(session({
     store: new pgSession({
       conString: process.env.DATABASE_URL,
@@ -97,9 +100,10 @@ function setupSession(app: Express) {
     secret: process.env.SESSION_SECRET || 'rfp-tracker-dev-secret-2024',
     resave: false,
     saveUninitialized: false,
-    rolling: true,
+    rolling: false, // Disable rolling sessions
+    name: 'rfp-session', // Custom session name
     cookie: {
-      secure: false, // Set to true in production with HTTPS
+      secure: false, // Keep false for development
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
       sameSite: 'lax'
@@ -109,11 +113,10 @@ function setupSession(app: Express) {
 
 // Authentication middleware
 function requireAuth(req: any, res: any, next: any) {
-  console.log('Session check:', { 
-    hasSession: !!req.session, 
-    hasUser: !!(req.session && req.session.user),
+  console.log('Auth check:', { 
     sessionId: req.session?.id,
-    user: req.session?.user ? { id: req.session.user.id, username: req.session.user.username } : null
+    hasUser: !!(req.session && req.session.user),
+    cookies: req.headers.cookie
   });
   
   if (!req.session?.user) {
@@ -155,17 +158,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Store user in session
       req.session.user = user;
       
-      // Force session save and regenerate
-      req.session.save((err: any) => {
+      // Regenerate session for security
+      req.session.regenerate((err: any) => {
         if (err) {
-          console.error("Session save error:", err);
+          console.error("Session regenerate error:", err);
           return res.status(500).json({ message: "Session creation failed" });
         }
         
-        console.log("User logged in successfully:", { id: user.id, username: user.username });
-        console.log("Session saved with ID:", req.session.id);
+        // Store user again after regeneration
+        req.session.user = user;
         
-        res.json({ user, message: "Login successful" });
+        req.session.save((saveErr: any) => {
+          if (saveErr) {
+            console.error("Session save error:", saveErr);
+            return res.status(500).json({ message: "Session save failed" });
+          }
+          
+          console.log("Login successful - Session ID:", req.session.id);
+          res.json({ user, message: "Login successful" });
+        });
       });
     } catch (error) {
       console.error("Login error:", error);

@@ -55,6 +55,7 @@ export function ContactFormModal({ contact, trigger, onSuccess }: ContactFormMod
     mutationFn: (data: InsertContact) => apiRequest("/api/contacts", "POST", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/authorized-contacts"] });
       toast({
         title: "Contact created",
         description: "Contact has been successfully created.",

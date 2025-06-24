@@ -1,17 +1,38 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Home, FileText, BarChart3, Users, Building, Calculator, Settings } from "lucide-react";
+import { Home, FileText, BarChart3, Users, Building, Calculator, Settings, LogOut } from "lucide-react";
 import { usePermissions } from "@/hooks/usePermissions";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Navigation() {
   const [location] = useLocation();
   const { isAdmin } = usePermissions();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   const { data: currentUser } = useQuery({
     queryKey: ["/api/auth/user"],
     retry: false,
+  });
+
+  const logoutMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest('/api/auth/logout', 'POST');
+    },
+    onSuccess: () => {
+      queryClient.clear();
+      window.location.reload();
+    },
+    onError: () => {
+      toast({
+        title: "Logout Error",
+        description: "Failed to logout properly",
+        variant: "destructive",
+      });
+    },
   });
 
   // Base navigation items
@@ -57,22 +78,33 @@ export default function Navigation() {
           })}
         </div>
 
-        {/* User Profile */}
+        {/* User Profile Section */}
         {currentUser && (
-          <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-              <span className="text-white font-medium text-sm">
-                {currentUser.firstName?.[0] || currentUser.email?.[0]?.toUpperCase() || 'U'}
-              </span>
-            </div>
-            <div className="text-sm">
-              <div className="font-medium text-gray-900">
-                {currentUser.firstName || currentUser.email?.split('@')[0] || 'User'}
+          <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2">
+              <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                <span className="text-white font-medium text-sm">
+                  {currentUser.firstName?.[0] || currentUser.email?.[0]?.toUpperCase() || currentUser.username?.[0]?.toUpperCase() || 'U'}
+                </span>
               </div>
-              {isAdmin() && (
-                <div className="text-xs text-green-600 font-medium">Administrator</div>
-              )}
+              <div className="text-sm">
+                <div className="font-medium text-gray-900">
+                  {currentUser.firstName || currentUser.email?.split('@')[0] || currentUser.username || 'User'}
+                </div>
+                {isAdmin() && (
+                  <div className="text-xs text-green-600 font-medium">Administrator</div>
+                )}
+              </div>
             </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => logoutMutation.mutate()}
+              disabled={logoutMutation.isPending}
+              className="text-gray-600 hover:text-gray-900"
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
           </div>
         )}
       </div>

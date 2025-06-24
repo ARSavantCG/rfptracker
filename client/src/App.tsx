@@ -20,6 +20,7 @@ import RomPilot from "@/pages/rom-pilot";
 import Reports from "@/pages/reports";
 import Admin from "@/pages/admin";
 import Login from "@/pages/login";
+import ResetPassword from "@/pages/reset-password";
 import NotFound from "@/pages/not-found";
 import { useAuth } from "@/hooks/useAuth";
 

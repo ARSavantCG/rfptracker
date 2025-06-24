@@ -170,12 +170,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/auth/init-admin', async (req, res) => {
     try {
+      console.log("Checking for existing admin users...");
       const existingAdmin = await db.select().from(users).where(eq(users.role, 'admin')).limit(1);
       
       if (existingAdmin.length > 0) {
+        console.log("Admin user already exists");
         return res.status(400).json({ message: "Admin user already exists" });
       }
 
+      console.log("Creating admin user...");
       const adminUser = await AuthService.createUser({
         username: 'admin',
         password: 'admin123',
@@ -193,10 +196,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ]
       });
 
+      console.log("Admin user created successfully:", adminUser);
       res.json({ message: "Admin user created successfully", user: adminUser });
     } catch (error) {
       console.error("Init admin error:", error);
-      res.status(500).json({ message: "Failed to create admin user" });
+      console.error("Error stack:", error.stack);
+      res.status(500).json({ message: "Failed to create admin user", error: error.message });
     }
   });
   // Test route to debug multer

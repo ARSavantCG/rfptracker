@@ -62,34 +62,46 @@ export class AuthService {
 
   static async createUser(userData: CreateUserData) {
     try {
+      console.log('AuthService.createUser called with:', { ...userData, password: '[REDACTED]' });
+      
       const { password, ...userInfo } = userData;
       
       // Hash password
+      console.log('Hashing password...');
       const passwordHash = await bcrypt.hash(password, this.SALT_ROUNDS);
+      console.log('Password hashed successfully');
       
       // Create user record
+      const userRecord = {
+        id: nanoid(),
+        username: userData.username,
+        passwordHash,
+        email: userData.email || null,
+        firstName: userData.firstName || null,
+        lastName: userData.lastName || null,
+        role: userData.role || 'user',
+        permissions: userData.permissions || [],
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      
+      console.log('Inserting user record:', { ...userRecord, passwordHash: '[REDACTED]' });
+      
       const [newUser] = await db
         .insert(users)
-        .values({
-          id: nanoid(),
-          username: userData.username,
-          passwordHash,
-          email: userData.email || null,
-          firstName: userData.firstName || null,
-          lastName: userData.lastName || null,
-          role: userData.role || 'user',
-          permissions: userData.permissions || [],
-          isActive: true,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        })
+        .values(userRecord)
         .returning();
+
+      console.log('User created successfully:', { ...newUser, passwordHash: '[REDACTED]' });
 
       // Return user without password hash
       const { passwordHash: _, ...userWithoutPassword } = newUser;
       return userWithoutPassword;
     } catch (error) {
-      console.error('Create user error:', error);
+      console.error('Create user error details:', error);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
       throw error;
     }
   }

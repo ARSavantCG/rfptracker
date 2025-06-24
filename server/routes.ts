@@ -2200,6 +2200,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Development route to make current user admin
+  app.post('/api/dev/make-admin', async (req, res) => {
+    try {
+      const { userId } = req.body;
+      if (!userId) {
+        return res.status(400).json({ message: "User ID required" });
+      }
+      
+      const user = await storage.updateUser(userId, { role: 'admin' });
+      res.json({ message: "User promoted to admin", user });
+    } catch (error) {
+      console.error("Error promoting user:", error);
+      res.status(500).json({ message: "Failed to promote user" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

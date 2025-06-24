@@ -120,6 +120,7 @@ This is a full-stack web application for tracking and managing Request for Propo
 - June 24, 2025. Implemented auto-incrementing property IDs that suggest next available ID (highest + 1) for new properties
 - June 24, 2025. Fixed "Single building property" checkbox state persistence by adding isSingleBuilding database field and proper form data management
 - June 24, 2025. Implemented comprehensive user management system with role-based permissions (admin, manager, user) and admin control panel for user administration
+- June 24, 2025. Configured automatic admin role assignment during development for immediate access to admin controls
 
 ## User Preferences
 

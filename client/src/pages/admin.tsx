@@ -232,9 +232,8 @@ function SystemUsersAndContacts() {
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Badge variant="default">Owner</Badge>
-                  <Badge variant="default" className="bg-green-100 text-green-800">
-                    Access Granted
+                  <Badge variant="default" className="bg-blue-100 text-blue-800">
+                    User Role
                   </Badge>
                   <Button
                     variant="outline"

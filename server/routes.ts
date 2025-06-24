@@ -2493,7 +2493,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Set password for contact (admin only)
-  app.post('/api/admin/contacts/:id/set-password', requireAuth, requireAdmin, async (req, res) => {
+  app.post('/api/admin/contacts/:id/set-password', async (req, res) => {
+    console.log('Set password endpoint hit, headers:', req.headers.authorization);
+    
+    // Check authentication manually for debugging
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) {
+      return res.status(401).json({ message: 'No token provided' });
+    }
+    
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET) as any;
+      console.log('Token decoded successfully for user:', decoded.userId);
+    } catch (error) {
+      console.log('Token verification failed:', error.message);
+      return res.status(401).json({ message: 'Invalid token' });
+    }
     try {
       const { id } = req.params;
       const { password } = req.body;

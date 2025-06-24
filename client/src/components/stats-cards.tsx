@@ -79,19 +79,17 @@ export function StatsCards({ onStatusFilter }: StatsCardsProps) {
     },
   ];
 
-  // Prepare data for charts
+  // Prepare data for charts - always show all three main statuses
   const pieData = [
     { name: "Received", value: stats.received, color: "#8B5CF6" },
     { name: "In Progress", value: stats.inProgress, color: "#F59E0B" },
     { name: "Completed", value: stats.completed, color: "#10B981" },
-    { name: "On Hold", value: stats.onHold, color: "#EF4444" },
-  ].filter(item => item.value > 0);
+  ];
 
   const barData = [
     { name: "Received", count: stats.received, fill: "#8B5CF6" },
     { name: "In Progress", count: stats.inProgress, fill: "#F59E0B" },
     { name: "Completed", count: stats.completed, fill: "#10B981" },
-    { name: "On Hold", count: stats.onHold, fill: "#EF4444" },
   ];
 
   const COLORS = ["#8B5CF6", "#F59E0B", "#10B981", "#EF4444"];
@@ -115,8 +113,7 @@ export function StatsCards({ onStatusFilter }: StatsCardsProps) {
     const statusMap: Record<string, string> = {
       'Received': 'received',
       'In Progress': 'in-progress', 
-      'Completed': 'completed',
-      'On Hold': 'on-hold'
+      'Completed': 'completed'
     };
     
     return rfpRequests.filter((rfp: any) => rfp.status === statusMap[status]);
@@ -127,8 +124,7 @@ export function StatsCards({ onStatusFilter }: StatsCardsProps) {
       const statusMap: Record<string, string> = {
         'Received': 'received',
         'In Progress': 'in-progress', 
-        'Completed': 'completed',
-        'On Hold': 'on-hold'
+        'Completed': 'completed'
       };
       onStatusFilter(statusMap[data.name]);
     }
@@ -139,8 +135,7 @@ export function StatsCards({ onStatusFilter }: StatsCardsProps) {
       const statusMap: Record<string, string> = {
         'Received': 'received',
         'In Progress': 'in-progress', 
-        'Completed': 'completed',
-        'On Hold': 'on-hold'
+        'Completed': 'completed'
       };
       onStatusFilter(statusMap[data.name]);
     }
@@ -236,7 +231,7 @@ export function StatsCards({ onStatusFilter }: StatsCardsProps) {
                     style={{ backgroundColor: item.color }}
                   ></div>
                   <span className="text-xs text-gray-600 truncate flex-1">
-                    {item.name === 'In Progress' ? 'In Progress' : item.name.split(' ')[0]}
+                    {item.name}
                   </span>
                   <span className="text-xs font-medium text-gray-900">{item.value}</span>
                 </div>
@@ -262,13 +257,13 @@ export function StatsCards({ onStatusFilter }: StatsCardsProps) {
                   <CartesianGrid strokeDasharray="1 1" stroke="#f3f4f6" />
                   <XAxis 
                     dataKey="name" 
-                    tick={{ fontSize: 6 }}
+                    tick={{ fontSize: 8 }}
                     axisLine={false}
                     tickLine={false}
                     interval={0}
                     angle={-45}
                     textAnchor="end"
-                    height={25}
+                    height={30}
                   />
                   <YAxis 
                     tick={{ fontSize: 6 }}

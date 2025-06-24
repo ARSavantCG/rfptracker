@@ -218,14 +218,7 @@ export default function Dashboard() {
               >
                 Completed
               </button>
-              <button
-                onClick={() => setStatusFilter("on-hold")}
-                className={`px-2 py-1 text-xs rounded transition-all ${
-                  statusFilter === "on-hold" ? "bg-red-600 text-white" : "bg-red-100 text-red-600 hover:bg-red-200"
-                }`}
-              >
-                On Hold
-              </button>
+
             </div>
 
             {/* Compact Date Range */}

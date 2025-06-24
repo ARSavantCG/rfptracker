@@ -2264,7 +2264,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get contacts with system access (for user management)
   app.get('/api/admin/authorized-contacts', async (req, res) => {
     try {
+      console.log("Fetching authorized contacts...");
       const authorizedContacts = await storage.getAuthorizedContacts();
+      console.log("Found authorized contacts:", authorizedContacts);
       res.json(authorizedContacts);
     } catch (error) {
       console.error("Error fetching authorized contacts:", error);

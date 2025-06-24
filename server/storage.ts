@@ -889,12 +889,9 @@ class ExtendedDatabaseStorage extends DatabaseStorage {
 
   async getAuthorizedContacts(): Promise<Contact[]> {
     try {
-      const result = await db.select().from(contacts).where(
-        and(
-          eq(contacts.type, "owner"),
-          eq(contacts.hasSystemAccess, true)
-        )
-      );
+      // Get all owner contacts and filter by hasSystemAccess
+      const ownerContacts = await db.select().from(contacts).where(eq(contacts.type, "owner"));
+      const result = ownerContacts.filter(contact => contact.hasSystemAccess === true);
       console.log("Authorized contacts query result:", result);
       return result;
     } catch (error) {

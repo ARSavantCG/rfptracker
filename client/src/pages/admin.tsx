@@ -757,7 +757,7 @@ export default function Admin() {
 
   if (!isAdmin()) {
     return (
-      <div className="container mx-auto p-6">
+      <div className="max-w-7xl mx-auto p-6">
         <div className="text-center">
           <Shield className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
@@ -770,7 +770,7 @@ export default function Admin() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Navigation />
-      <div className="container mx-auto p-6 space-y-6">
+      <div className="max-w-7xl mx-auto p-6 space-y-6">
         <div className="flex items-center space-x-3">
           <Settings className="h-8 w-8 text-blue-600" />
           <div>

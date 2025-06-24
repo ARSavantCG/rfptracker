@@ -133,6 +133,7 @@ This is a full-stack web application for tracking and managing Request for Propo
 - June 24, 2025. Added admin user profile editing functionality with "Edit Profile" button in Admin Panel for updating names and email addresses
 - June 24, 2025. Removed duplicate admin user indicators from dashboard header, keeping only the navigation bar profile display for clean UI
 - June 24, 2025. Moved "Delete" button inside "Edit Profile" dialog as small, subtle button at bottom to prevent accidental deletion while maintaining functionality
+- June 24, 2025. Fixed horizontal alignment of Admin Panel to match other pages by changing container class from "container mx-auto" to "max-w-7xl mx-auto"
 
 ## User Preferences
 

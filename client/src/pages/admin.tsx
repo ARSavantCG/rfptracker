@@ -131,6 +131,34 @@ function SystemUsersAndContacts() {
     }
   };
 
+  const getContactRole = (contact: any) => {
+    if (!contact.permissions || contact.permissions.length === 0) {
+      return 'User';
+    }
+    
+    // Check for admin permissions
+    if (contact.permissions.includes('admin.access')) {
+      return 'Admin';
+    }
+    
+    // Check for manager-level permissions (can create/edit/delete)
+    const hasCreatePermissions = contact.permissions.some((p: string) => p.includes('.create'));
+    const hasEditPermissions = contact.permissions.some((p: string) => p.includes('.edit'));
+    const hasDeletePermissions = contact.permissions.some((p: string) => p.includes('.delete'));
+    
+    if (hasCreatePermissions && hasEditPermissions && hasDeletePermissions) {
+      return 'Manager';
+    }
+    
+    // If has mixed permissions, it's custom
+    if (hasCreatePermissions || hasEditPermissions || hasDeletePermissions) {
+      return 'Custom';
+    }
+    
+    // Otherwise just view permissions = User
+    return 'User';
+  };
+
   if (usersLoading || contactsLoading) {
     return (
       <div className="text-center py-8">
@@ -232,8 +260,8 @@ function SystemUsersAndContacts() {
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Badge variant="default" className="bg-blue-100 text-blue-800">
-                    User Role
+                  <Badge variant="default" className={getRoleBadgeColor(getContactRole(contact).toLowerCase())}>
+                    {getContactRole(contact)}
                   </Badge>
                   <Button
                     variant="outline"

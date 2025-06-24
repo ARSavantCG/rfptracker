@@ -58,7 +58,7 @@ import {
   type UpdateUser,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, sql, like, or } from "drizzle-orm";
+import { eq, desc, sql, like, or, and, asc, gte, lte } from "drizzle-orm";
 
 export interface IStorage {
   getRfpRequest(id: number): Promise<RfpRequest | undefined>;
@@ -888,12 +888,19 @@ class ExtendedDatabaseStorage extends DatabaseStorage {
   }
 
   async getAuthorizedContacts(): Promise<Contact[]> {
-    return await db.select().from(contacts).where(
-      and(
-        eq(contacts.type, "owner"),
-        eq(contacts.hasSystemAccess, true)
-      )
-    );
+    try {
+      const result = await db.select().from(contacts).where(
+        and(
+          eq(contacts.type, "owner"),
+          eq(contacts.hasSystemAccess, true)
+        )
+      );
+      console.log("Authorized contacts query result:", result);
+      return result;
+    } catch (error) {
+      console.error("Error in getAuthorizedContacts:", error);
+      throw error;
+    }
   }
 }
 

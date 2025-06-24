@@ -167,26 +167,6 @@ export default function Dashboard() {
                     {makeAdminMutation.isPending ? "Setting up..." : "Become Admin"}
                   </Button>
                 )}
-                
-                {currentUser && (
-                  <div className="flex items-center space-x-3">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-                        <span className="text-white font-medium text-sm">
-                          {currentUser.firstName?.[0] || currentUser.email?.[0]?.toUpperCase() || 'U'}
-                        </span>
-                      </div>
-                      <div className="text-sm">
-                        <div className="font-medium text-gray-900">
-                          {currentUser.firstName || currentUser.email?.split('@')[0] || 'User'}
-                        </div>
-                        {isAdmin() && (
-                          <div className="text-xs text-green-600 font-medium">Administrator</div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
 

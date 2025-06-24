@@ -130,6 +130,8 @@ This is a full-stack web application for tracking and managing Request for Propo
 - June 24, 2025. Improved contact card visual consistency by moving "System Access: Granted" badge below action buttons for better symmetry across all contact types
 - June 24, 2025. Fixed contact permissions save functionality by correcting API request format in mutation functions
 - June 24, 2025. Enhanced user profile display with clean circular avatar containing initials and professional styling, replacing basic "Admin Access Active" button with modern user indicator
+- June 24, 2025. Added admin user profile editing functionality with "Edit Profile" button in Admin Panel for updating names and email addresses
+- June 24, 2025. Removed duplicate admin user indicators from dashboard header, keeping only the navigation bar profile display for clean UI
 
 ## User Preferences
 

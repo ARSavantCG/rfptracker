@@ -1151,9 +1151,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid ID" });
       }
 
-      const result = updatePropertySchema.safeParse({ ...req.body, id });
+      const result = updatePropertySchema.safeParse(req.body);
       if (!result.success) {
         return res.status(400).json({ message: "Invalid input", errors: result.error.issues });
+      }
+
+      // If changing ID, check if new ID already exists
+      if (result.data.id && result.data.id !== id) {
+        const existingProperty = await storage.getProperty(result.data.id);
+        if (existingProperty) {
+          return res.status(400).json({ message: "Property ID already exists" });
+        }
       }
 
       const property = await storage.updateProperty(id, result.data);
@@ -1164,6 +1172,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(property);
     } catch (error) {
       console.error('Property update error:', error);
+      if (error.code === '23505') { // PostgreSQL unique violation
+        return res.status(400).json({ message: "Property ID already exists" });
+      }
       res.status(500).json({ message: "Failed to update property" });
     }
   });

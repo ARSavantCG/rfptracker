@@ -116,6 +116,7 @@ This is a full-stack web application for tracking and managing Request for Propo
 - June 24, 2025. Significantly reduced ROM card sizes for compact 4-column layout with smaller buttons per user preference
 - June 24, 2025. Further optimized ROM cards for ultra-compact layout supporting 5-6 cards per row with minimal spacing
 - June 24, 2025. Compressed Reports page cards to fit Executive Summary, Historical Pricing, and Custom Report in single row with smaller buttons
+- June 24, 2025. Added editable Property ID field to property edit form with validation to support application launch preparation
 
 ## User Preferences
 

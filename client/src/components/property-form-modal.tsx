@@ -242,6 +242,9 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
                   onChange={(e) => setFormData(prev => ({ ...prev, id: parseInt(e.target.value) || undefined }))}
                   placeholder="e.g. 1"
                 />
+                <p className="text-xs text-gray-500">
+                  Current ID: {property?.id}. Change only if needed for organization.
+                </p>
               </div>
             )}
             <div className={`space-y-2 ${isEdit ? 'col-span-2' : 'col-span-3'}`}>

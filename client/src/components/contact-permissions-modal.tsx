@@ -22,7 +22,7 @@ import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Settings, Shield, Users, Building, BarChart3, FileText, Workflow } from "lucide-react";
+import { Settings, Shield, Users, Building, BarChart3, FileText, Workflow, Calculator } from "lucide-react";
 
 interface Contact {
   id: number;

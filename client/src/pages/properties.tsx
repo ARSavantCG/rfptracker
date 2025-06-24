@@ -131,12 +131,12 @@ export default function Properties() {
               return (
                 <div key={baseName} className="relative">
                   {/* Stacked Cards Container */}
-                  <div className="relative" style={{ minHeight: isMultiBuilding ? '380px' : 'auto' }}>
+                  <div className="relative" style={{ minHeight: isMultiBuilding ? '400px' : 'auto' }}>
                     {buildings.map((property, index) => {
                       const isVisible = isExpanded || index < 3;
                       // Reverse the visual stacking order: A in back (index 0), B on top (index 1), etc.
                       const visualIndex = buildings.length - 1 - index;
-                      const stackOffset = isExpanded ? index * 16 : visualIndex * 12;
+                      const stackOffset = isExpanded ? index * 16 : visualIndex * 8;
                       const zIndex = isExpanded ? buildings.length - index : index + 1;
                       
                       return (
@@ -155,10 +155,10 @@ export default function Properties() {
                           style={{
                             zIndex,
                             ...(index > 0 && !isExpanded ? {
-                              top: `-${stackOffset}px`,
+                              top: `-${stackOffset * 3}px`,
                               left: `${stackOffset}px`,
                               right: `-${stackOffset}px`,
-                              transform: `rotate(${index * 1}deg)`,
+                              transform: `rotate(${index * 0.5}deg)`,
                               boxShadow: `0 ${index * 3}px ${index * 6}px rgba(0,0,0,0.15)`
                             } : {})
                           }}

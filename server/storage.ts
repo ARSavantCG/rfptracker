@@ -910,6 +910,34 @@ class ExtendedDatabaseStorage extends DatabaseStorage {
       throw error;
     }
   }
+
+  async getAllUsers(): Promise<User[]> {
+    return this.getUsers();
+  }
+
+  async updateUser(id: string, updates: UpdateUser): Promise<User | undefined> {
+    try {
+      const [user] = await db
+        .update(users)
+        .set({ ...updates, updatedAt: new Date() })
+        .where(eq(users.id, id))
+        .returning();
+      return user;
+    } catch (error) {
+      console.error("Error updating user:", error);
+      throw error;
+    }
+  }
+
+  async deleteUser(id: string): Promise<boolean> {
+    try {
+      const result = await db.delete(users).where(eq(users.id, id));
+      return result.rowCount! > 0;
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      throw error;
+    }
+  }
 }
 
 export const storage = new ExtendedDatabaseStorage();

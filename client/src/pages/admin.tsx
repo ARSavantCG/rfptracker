@@ -1,4 +1,5 @@
 import { useState } from "react";
+import React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -156,8 +157,8 @@ function SystemUsersAndContacts() {
                     size="sm"
                     onClick={() => handleEditUser(user)}
                   >
-                    <Edit className="h-4 w-4 mr-1" />
-                    Edit
+                    <Settings className="h-4 w-4 mr-1" />
+                    Permissions
                   </Button>
                   
                   <AlertDialog>
@@ -312,108 +313,199 @@ interface UserEditDialogProps {
 }
 
 function UserEditDialog({ user, open, onOpenChange, onSave, isSaving }: UserEditDialogProps) {
-  const [formData, setFormData] = useState({
-    role: user?.role || 'user',
-    isActive: user?.isActive ?? true,
-    permissions: user?.permissions || [],
-  });
+  const [role, setRole] = useState<UserRole>('user');
+  const [isActive, setIsActive] = useState(true);
+  const [permissions, setPermissions] = useState<Permission[]>([]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSave(formData);
-  };
+  // Update state when user changes
+  React.useEffect(() => {
+    if (user) {
+      setRole(user.role as UserRole);
+      setIsActive(user.isActive ?? true);
+      setPermissions(user.permissions || []);
+    }
+  }, [user]);
 
   const togglePermission = (permission: Permission) => {
-    setFormData(prev => ({
-      ...prev,
-      permissions: prev.permissions.includes(permission)
-        ? prev.permissions.filter(p => p !== permission)
-        : [...prev.permissions, permission]
-    }));
+    setPermissions(prev => 
+      prev.includes(permission)
+        ? prev.filter(p => p !== permission)
+        : [...prev, permission]
+    );
+  };
+
+  const applyRolePermissions = (newRole: UserRole) => {
+    setRole(newRole);
+    setPermissions(ROLE_PERMISSIONS[newRole] || []);
+  };
+
+  const handleSave = () => {
+    onSave({
+      role,
+      isActive,
+      permissions,
+    });
   };
 
   if (!user) return null;
 
-  const rolePermissions = ROLE_PERMISSIONS[formData.role as UserRole] || [];
-  const allPermissions: Permission[] = [
-    'rfp.create', 'rfp.edit', 'rfp.delete', 'rfp.view',
-    'properties.create', 'properties.edit', 'properties.delete', 'properties.view',
-    'contacts.create', 'contacts.edit', 'contacts.delete', 'contacts.view',
-    'reports.view', 'reports.generate',
-    'users.create', 'users.edit', 'users.delete', 'users.view',
-    'admin.access'
-  ];
+  const permissionCategories = {
+    'RFP Management': {
+      permissions: ['rfp.create', 'rfp.edit', 'rfp.delete', 'rfp.view'] as Permission[],
+      description: 'Control RFP creation, editing, and workflow management'
+    },
+    'Properties': {
+      permissions: ['properties.create', 'properties.edit', 'properties.delete', 'properties.view'] as Permission[],
+      description: 'Manage property configurations and bay calculations'
+    },
+    'Contacts': {
+      permissions: ['contacts.create', 'contacts.edit', 'contacts.delete', 'contacts.view'] as Permission[],
+      description: 'Handle contractor, architect, and ownership contact data'
+    },
+    'Reports & Analytics': {
+      permissions: ['reports.view', 'reports.generate'] as Permission[],
+      description: 'Access executive summaries, financial reports, and historical data'
+    },
+    'User Administration': {
+      permissions: ['users.create', 'users.edit', 'users.delete', 'users.view'] as Permission[],
+      description: 'Manage user accounts and permission assignments'
+    },
+    'System Administration': {
+      permissions: ['admin.access'] as Permission[],
+      description: 'Full system access and administrative controls'
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Edit User: {user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.email}</DialogTitle>
+          <DialogTitle className="flex items-center space-x-2">
+            <Settings className="h-5 w-5" />
+            <span>User Permissions - {user.firstName} {user.lastName}</span>
+          </DialogTitle>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Role</label>
-              <Select value={formData.role} onValueChange={(value) => setFormData(prev => ({ ...prev, role: value }))}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="user">User</SelectItem>
-                  <SelectItem value="manager">Manager</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Status</label>
-              <div className="flex items-center space-x-2 h-10">
-                <Checkbox 
-                  checked={formData.isActive}
-                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isActive: !!checked }))}
-                />
-                <span className="text-sm">Active</span>
+        <div className="space-y-6">
+          {/* User Info */}
+          <div className="bg-gray-50 rounded-lg p-4">
+            <div className="flex items-center space-x-3">
+              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                <span className="text-blue-600 font-medium text-lg">
+                  {user.firstName?.[0] || user.email?.[0] || 'U'}
+                </span>
+              </div>
+              <div>
+                <h3 className="font-medium text-gray-900">
+                  {user.firstName && user.lastName 
+                    ? `${user.firstName} ${user.lastName}`
+                    : user.email
+                  }
+                </h3>
+                <p className="text-sm text-gray-600">{user.email}</p>
               </div>
             </div>
           </div>
 
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium">Role Permissions</h3>
-            <div className="grid grid-cols-2 gap-2 p-4 bg-gray-50 rounded-lg">
-              {rolePermissions.map((permission) => (
-                <div key={permission} className="text-sm text-gray-600">
-                  {permission}
-                </div>
-              ))}
+          {/* Role Selection */}
+          <div className="space-y-3">
+            <label htmlFor="role" className="text-base font-medium">User Role</label>
+            <Select value={role} onValueChange={applyRolePermissions}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="admin">Admin - Full system access</SelectItem>
+                <SelectItem value="manager">Manager - Create and edit content</SelectItem>
+                <SelectItem value="user">User - View only access</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-sm text-gray-600">
+              Selecting a role applies default permissions. You can customize individual permissions below.
+            </p>
+          </div>
+
+          {/* Account Status */}
+          <div className="space-y-3">
+            <label className="text-base font-medium">Account Status</label>
+            <div className="flex items-center space-x-3">
+              <Checkbox
+                id="active"
+                checked={isActive}
+                onCheckedChange={(checked) => setIsActive(checked as boolean)}
+              />
+              <label htmlFor="active" className="text-sm">
+                Account Active - User can access the system
+              </label>
             </div>
           </div>
 
+          {/* Granular Permissions */}
           <div className="space-y-4">
-            <h3 className="text-lg font-medium">Additional Permissions</h3>
-            <div className="grid grid-cols-2 gap-2">
-              {allPermissions.filter(p => !rolePermissions.includes(p)).map((permission) => (
-                <div key={permission} className="flex items-center space-x-2">
-                  <Checkbox 
-                    checked={formData.permissions.includes(permission)}
-                    onCheckedChange={() => togglePermission(permission)}
-                  />
-                  <span className="text-sm">{permission}</span>
-                </div>
-              ))}
+            <label className="text-base font-medium">Granular Permissions</label>
+            <p className="text-sm text-gray-600">
+              Fine-tune what this user can access and modify in the system.
+            </p>
+            
+            <div className="space-y-4">
+              {Object.entries(permissionCategories).map(([category, { permissions: categoryPerms, description }]) => {
+                const hasAnyPermission = categoryPerms.some(perm => permissions.includes(perm));
+                const hasAllPermissions = categoryPerms.every(perm => permissions.includes(perm));
+                
+                return (
+                  <div key={category} className="border rounded-lg p-4 space-y-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h4 className="font-medium text-gray-900">{category}</h4>
+                        <p className="text-sm text-gray-600 mt-1">{description}</p>
+                      </div>
+                      <Badge 
+                        variant={hasAllPermissions ? "default" : hasAnyPermission ? "secondary" : "outline"}
+                        className="ml-3"
+                      >
+                        {hasAllPermissions ? "Full Access" : hasAnyPermission ? "Partial" : "No Access"}
+                      </Badge>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-2">
+                      {categoryPerms.map(permission => {
+                        const isChecked = permissions.includes(permission);
+                        const permissionLabel = permission.split('.')[1];
+                        const actionLabel = permissionLabel.charAt(0).toUpperCase() + permissionLabel.slice(1);
+                        
+                        return (
+                          <div key={permission} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={permission}
+                              checked={isChecked}
+                              onCheckedChange={() => togglePermission(permission)}
+                            />
+                            <label 
+                              htmlFor={permission} 
+                              className={`text-sm ${isChecked ? 'text-gray-900 font-medium' : 'text-gray-600'}`}
+                            >
+                              {actionLabel}
+                            </label>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
-          <div className="flex justify-end space-x-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          {/* Action Buttons */}
+          <div className="flex justify-end space-x-3 pt-4 border-t">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isSaving}>
-              {isSaving ? "Saving..." : "Save Changes"}
+            <Button onClick={handleSave} disabled={isSaving}>
+              {isSaving ? 'Saving Changes...' : 'Save Permissions'}
             </Button>
           </div>
-        </form>
+        </div>
       </DialogContent>
     </Dialog>
   );

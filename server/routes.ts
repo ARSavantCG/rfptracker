@@ -152,8 +152,8 @@ async function requireAdmin(req: any, res: any, next: any) {
     const user = await storage.getUser(req.userId);
     console.log('User found for admin check:', user?.username, 'role:', user?.role);
     
-    if (!user || (user.role !== 'admin' && !user.permissions?.includes('admin.access'))) {
-      console.log('Admin access denied for user:', user?.username);
+    if (!user || (user.role !== 'admin' && !(user.permissions && user.permissions.includes('admin.access')))) {
+      console.log('Admin access denied for user:', user?.username, 'role:', user?.role, 'permissions:', user?.permissions);
       return res.status(403).json({ message: "Admin access required" });
     }
     
@@ -2524,6 +2524,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { password } = req.body;
 
       console.log('Set password request for contact:', id, 'with password length:', password?.length);
+      console.log('Request userId:', req.userId);
 
       if (!password || password.length < 8) {
         return res.status(400).json({ message: 'Password must be at least 8 characters long' });

@@ -111,30 +111,21 @@ function setupSession(app: Express) {
 
 // Authentication middleware
 function requireAuth(req: any, res: any, next: any) {
-  console.log('requireAuth middleware hit, headers:', req.headers.authorization);
-  
   // Check for token in Authorization header
   const authHeader = req.headers.authorization;
   const token = authHeader && authHeader.startsWith('Bearer ') 
     ? authHeader.substring(7) 
     : null;
 
-  console.log('Extracted token:', token ? 'YES' : 'NO');
-
   if (!token) {
-    console.log('No token found in request');
     return res.status(401).json({ message: "Authentication required" });
   }
 
   const userId = tokenStore.getUserFromToken(token);
-  console.log('Token validation result - userId:', userId);
-  
   if (!userId) {
-    console.log('Token validation failed - invalid or expired');
     return res.status(401).json({ message: "Invalid or expired token" });
   }
 
-  console.log('Authentication successful for userId:', userId);
   req.userId = userId;
   next();
 }
@@ -193,14 +184,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Try contact email login
+      console.log('Attempting contact login for:', username);
       const [contact] = await db.select().from(contacts).where(eq(contacts.email, username));
       
+      console.log('Contact found:', contact ? 'YES' : 'NO');
+      console.log('Has system access:', contact?.hasSystemAccess);
+      console.log('Has password hash:', !!contact?.passwordHash);
+      
       if (!contact || !contact.hasSystemAccess || !contact.passwordHash) {
+        console.log('Contact login failed - missing requirements');
         return res.status(401).json({ message: "Invalid username or password" });
       }
 
       const isValidPassword = await bcrypt.compare(password, contact.passwordHash);
+      console.log('Password validation result:', isValidPassword);
+      
       if (!isValidPassword) {
+        console.log('Contact login failed - invalid password');
         return res.status(401).json({ message: "Invalid username or password" });
       }
 
@@ -2523,8 +2523,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const { password } = req.body;
 
-      console.log('Set password request for contact:', id, 'with password length:', password?.length);
-      console.log('Request userId:', req.userId);
+
 
       if (!password || password.length < 8) {
         return res.status(400).json({ message: 'Password must be at least 8 characters long' });
@@ -2543,7 +2542,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .set({ passwordHash })
         .where(eq(contacts.id, contactId));
 
-      console.log('Password set successfully for contact:', contactId);
+
       res.status(200).json({ success: true, message: 'Password set successfully' });
     } catch (error) {
       console.error('Set password error:', error);

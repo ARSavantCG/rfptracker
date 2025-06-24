@@ -15,7 +15,7 @@ export async function apiRequest(
   const token = localStorage.getItem('auth-token');
   const isFormData = data instanceof FormData;
   
-  console.log('Making API request to:', url, 'with token:', token ? 'YES' : 'NO');
+
   
   const res = await fetch(url, {
     method,

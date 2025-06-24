@@ -46,7 +46,7 @@ export default function ContactPasswordModal({
 
   const setPasswordMutation = useMutation({
     mutationFn: async ({ contactId, password }: { contactId: number; password: string }) => {
-      console.log('Setting password for contact:', contactId);
+
       return apiRequest(`/api/admin/contacts/${contactId}/set-password`, 'POST', { password });
     },
     onSuccess: () => {

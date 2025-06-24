@@ -12,6 +12,7 @@ import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { storage } from "./storage";
 import { db } from "./db";
+import jwt from "jsonwebtoken";
 import { 
   insertRfpRequestSchema, 
   updateRfpRequestSchema,
@@ -141,6 +142,8 @@ function requireAdmin(req: any, res: any, next: any) {
   
   next();
 }
+
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-here';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup session middleware

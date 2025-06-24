@@ -27,6 +27,7 @@ interface ContactPasswordModalProps {
     id: number;
     name: string;
     email: string;
+    passwordHash?: string;
   } | null;
   open: boolean;
   onClose: () => void;
@@ -50,9 +51,10 @@ export default function ContactPasswordModal({
       return apiRequest(`/api/admin/contacts/${contactId}/set-password`, 'POST', { password });
     },
     onSuccess: () => {
+      const isReset = contact?.passwordHash;
       toast({
-        title: "Password Set",
-        description: "Password has been set successfully",
+        title: isReset ? "Password Reset" : "Password Set",
+        description: isReset ? "Password has been reset successfully" : "Password has been set successfully",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/authorized-contacts'] });
       onClose();
@@ -139,10 +141,13 @@ export default function ContactPasswordModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <KeyRound className="h-5 w-5" />
-            Set Password for {contact.name}
+            {contact.passwordHash ? 'Reset Password' : 'Set Password'} for {contact.name}
           </DialogTitle>
           <DialogDescription>
-            Set a login password for {contact.email}
+            {contact.passwordHash 
+              ? `Reset the login password for ${contact.email}` 
+              : `Set a login password for ${contact.email}`
+            }
           </DialogDescription>
         </DialogHeader>
 

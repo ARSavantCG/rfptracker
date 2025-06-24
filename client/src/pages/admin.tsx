@@ -294,7 +294,7 @@ function SystemUsersAndContacts() {
                     }}
                   >
                     <KeyRound className="h-4 w-4 mr-1" />
-                    Set Password
+                    {contact.passwordHash ? 'Reset Password' : 'Set Password'}
                   </Button>
                 </div>
               </div>

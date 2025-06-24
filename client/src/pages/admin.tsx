@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -189,19 +189,19 @@ function SystemUsersAndContacts() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handleEditUser(user)}
+                    onClick={() => handleEditProfile(user)}
                   >
-                    <Settings className="h-4 w-4 mr-1" />
-                    Permissions
+                    <UserIcon className="h-4 w-4 mr-1" />
+                    Edit Profile
                   </Button>
                   
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handleEditProfile(user)}
+                    onClick={() => handleEditUser(user)}
                   >
-                    <UserIcon className="h-4 w-4 mr-1" />
-                    Edit Profile
+                    <Settings className="h-4 w-4 mr-1" />
+                    Permissions
                   </Button>
                 </div>
               </div>
@@ -641,6 +641,9 @@ function UserProfileDialog({ user, open, onOpenChange, onSave, onDelete, isSavin
             <UserIcon className="h-5 w-5" />
             <span>Edit User Profile</span>
           </DialogTitle>
+          <DialogDescription>
+            Update the user's name and contact information.
+          </DialogDescription>
         </DialogHeader>
         
         <div className="space-y-4">

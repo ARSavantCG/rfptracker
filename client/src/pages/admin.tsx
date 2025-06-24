@@ -34,9 +34,7 @@ function SystemUsersAndContacts() {
 
   const deleteUserMutation = useMutation({
     mutationFn: async (id: string) => {
-      await apiRequest(`/api/admin/users/${id}`, {
-        method: "DELETE",
-      });
+      await apiRequest(`/api/admin/users/${id}`, "DELETE");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
@@ -634,15 +632,26 @@ function UserEditDialog({ user, open, onOpenChange, onSave, isSaving }: UserEdit
   const [role, setRole] = useState<UserRole>('user');
   const [isActive, setIsActive] = useState(true);
   const [permissions, setPermissions] = useState<Permission[]>([]);
+  const [originalRole, setOriginalRole] = useState<UserRole>('user');
+  const [originalIsActive, setOriginalIsActive] = useState(true);
+  const [originalPermissions, setOriginalPermissions] = useState<Permission[]>([]);
 
-  // Update state when user changes
+  // Update state when user changes or dialog opens
   React.useEffect(() => {
-    if (user) {
-      setRole(user.role as UserRole);
-      setIsActive(user.isActive ?? true);
-      setPermissions(user.permissions || []);
+    if (user && open) {
+      const userRole = user.role as UserRole;
+      const userActive = user.isActive ?? true;
+      const userPerms = user.permissions || [];
+      
+      setRole(userRole);
+      setIsActive(userActive);
+      setPermissions([...userPerms]);
+      
+      setOriginalRole(userRole);
+      setOriginalIsActive(userActive);
+      setOriginalPermissions([...userPerms]);
     }
-  }, [user]);
+  }, [user, open]);
 
   const togglePermission = (permission: Permission) => {
     setPermissions(prev => 
@@ -663,6 +672,14 @@ function UserEditDialog({ user, open, onOpenChange, onSave, isSaving }: UserEdit
       isActive,
       permissions,
     });
+  };
+
+  const handleCancel = () => {
+    // Revert to original state
+    setRole(originalRole);
+    setIsActive(originalIsActive);
+    setPermissions([...originalPermissions]);
+    onOpenChange(false);
   };
 
   if (!user) return null;
@@ -695,7 +712,13 @@ function UserEditDialog({ user, open, onOpenChange, onSave, isSaving }: UserEdit
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(isOpen) => {
+      if (!isOpen) {
+        handleCancel();
+      } else {
+        onOpenChange(isOpen);
+      }
+    }}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">

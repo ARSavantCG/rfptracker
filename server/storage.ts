@@ -886,6 +886,15 @@ class ExtendedDatabaseStorage extends DatabaseStorage {
   async getContactsByType(type: string): Promise<Contact[]> {
     return await db.select().from(contacts).where(eq(contacts.type, type));
   }
+
+  async getAuthorizedContacts(): Promise<Contact[]> {
+    return await db.select().from(contacts).where(
+      and(
+        eq(contacts.type, "owner"),
+        eq(contacts.hasSystemAccess, true)
+      )
+    );
+  }
 }
 
 export const storage = new ExtendedDatabaseStorage();

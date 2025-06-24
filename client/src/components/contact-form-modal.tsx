@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,6 +34,22 @@ export function ContactFormModal({ contact, trigger, onSuccess }: ContactFormMod
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const isEdit = !!contact;
+
+  // Update form data when contact prop changes
+  useEffect(() => {
+    if (contact) {
+      setFormData({
+        name: contact.name,
+        email: contact.email,
+        phone: contact.phone || "",
+        company: contact.company || "",
+        type: contact.type as "architect" | "contractor" | "owner" | "other",
+        notes: contact.notes || "",
+        tags: contact.tags || [],
+        hasSystemAccess: contact.hasSystemAccess || false,
+      });
+    }
+  }, [contact]);
 
   const createMutation = useMutation({
     mutationFn: (data: InsertContact) => apiRequest("/api/contacts", "POST", data),

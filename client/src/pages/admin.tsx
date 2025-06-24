@@ -43,9 +43,14 @@ function AuthorizedContactsList() {
     );
   }
 
+  // Sort contacts alphabetically by name
+  const sortedContacts = [...authorizedContacts].sort((a, b) => 
+    a.name.localeCompare(b.name)
+  );
+
   return (
     <div className="space-y-4">
-      {authorizedContacts.map((contact: any) => (
+      {sortedContacts.map((contact: any) => (
         <div key={contact.id} className="flex items-center justify-between p-4 border rounded-lg">
           <div className="flex items-center space-x-4">
             <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">

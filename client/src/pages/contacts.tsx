@@ -26,7 +26,7 @@ export default function Contacts() {
     const matchesType = selectedType === "all" || contact.type === selectedType;
     
     return matchesSearch && matchesType;
-  }) || [];
+  }).sort((a, b) => a.name.localeCompare(b.name)) || [];
 
   const getContactTypeColor = (type: string) => {
     switch (type) {

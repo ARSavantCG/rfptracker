@@ -23,15 +23,18 @@ export default function Navigation() {
       return await apiRequest('/api/auth/logout', 'POST');
     },
     onSuccess: () => {
+      localStorage.removeItem('auth-token');
       queryClient.clear();
       window.location.reload();
     },
     onError: () => {
+      localStorage.removeItem('auth-token');
       toast({
         title: "Logout Error",
         description: "Failed to logout properly",
         variant: "destructive",
       });
+      window.location.reload();
     },
   });
 

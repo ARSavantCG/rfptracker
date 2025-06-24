@@ -34,6 +34,7 @@ import { validateRfpForProgression, canAdvanceToPhase } from "./validation";
 import { AuthService } from "./auth";
 import { users } from "@shared/schema";
 import { eq } from "drizzle-orm";
+import { tokenStore } from "./token-auth";
 import { generateRfpPdf, generatePdfFilename } from "./pdf-generator";
 import { generateDetailedReportPdf, generateReportFilename } from "./pdf-reports";
 import { generateHistoricalPricingPdf, generateHistoricalPricingFilename } from "./historical-pricing-reports";
@@ -107,15 +108,22 @@ function setupSession(app: Express) {
 
 // Authentication middleware
 function requireAuth(req: any, res: any, next: any) {
-  console.log('Auth check:', { 
-    sessionId: req.session?.id,
-    hasUser: !!(req.session && req.session.user),
-    cookies: req.headers.cookie
-  });
-  
-  if (!req.session?.user) {
+  // Check for token in Authorization header
+  const authHeader = req.headers.authorization;
+  const token = authHeader && authHeader.startsWith('Bearer ') 
+    ? authHeader.substring(7) 
+    : null;
+
+  if (!token) {
     return res.status(401).json({ message: "Authentication required" });
   }
+
+  const userId = tokenStore.getUserFromToken(token);
+  if (!userId) {
+    return res.status(401).json({ message: "Invalid or expired token" });
+  }
+
+  req.userId = userId;
   next();
 }
 
@@ -149,20 +157,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Invalid username or password" });
       }
 
-      // Store user in session
-      req.session.user = user;
+      // Generate authentication token
+      const token = tokenStore.generateToken(user.id);
       
-      // Save session explicitly
-      req.session.save((saveErr: any) => {
-        if (saveErr) {
-          console.error("Session save error:", saveErr);
-          return res.status(500).json({ message: "Session save failed" });
-        }
-        
-        console.log("Login successful - Session ID:", req.session.id);
-        console.log("Session data saved:", { hasUser: !!req.session.user });
-        
-        res.json({ user, message: "Login successful" });
+      console.log("Login successful - Token generated for user:", user.username);
+      
+      res.json({ 
+        user, 
+        token,
+        message: "Login successful" 
       });
     } catch (error) {
       console.error("Login error:", error);
@@ -171,19 +174,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post('/api/auth/logout', (req, res) => {
-    req.session?.destroy((err) => {
-      if (err) {
-        console.error("Logout error:", err);
-        return res.status(500).json({ message: "Logout failed" });
-      }
-      res.json({ message: "Logout successful" });
-    });
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.startsWith('Bearer ') 
+      ? authHeader.substring(7) 
+      : null;
+
+    if (token) {
+      tokenStore.removeToken(token);
+    }
+
+    res.json({ message: "Logout successful" });
   });
 
   app.get('/api/auth/user', requireAuth, async (req, res) => {
     try {
-      const sessionUser = (req.session as any).user;
-      const user = await AuthService.getUserById(sessionUser.id);
+      const user = await AuthService.getUserById((req as any).userId);
       
       if (!user) {
         return res.status(404).json({ message: "User not found" });

@@ -26,15 +26,19 @@ export default function Login({ onLoginSuccess }: LoginProps) {
     mutationFn: async (credentials: LoginCredentials) => {
       return await apiRequest('/api/auth/login', 'POST', credentials);
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      // Store the authentication token
+      if (data.token) {
+        localStorage.setItem('auth-token', data.token);
+      }
+      
       toast({
         title: "Login Successful",
         description: "Welcome to RFP Tracker",
       });
-      // Add a small delay to ensure session is properly established
-      setTimeout(() => {
-        window.location.href = '/';
-      }, 500);
+      
+      // Redirect to dashboard
+      onLoginSuccess();
     },
     onError: (error: Error) => {
       toast({

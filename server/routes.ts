@@ -2261,6 +2261,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get contacts with system access (for user management)
+  app.get('/api/admin/authorized-contacts', async (req, res) => {
+    try {
+      const contacts = await storage.getContactsByType('owner');
+      const authorizedContacts = contacts.filter(contact => contact.hasSystemAccess);
+      res.json(authorizedContacts);
+    } catch (error) {
+      console.error("Error fetching authorized contacts:", error);
+      res.status(500).json({ message: "Failed to fetch authorized contacts" });
+    }
+  });
+
   app.patch('/api/admin/users/:id', async (req, res) => {
     try {
       const { id } = req.params;

@@ -139,6 +139,7 @@ This is a full-stack web application for tracking and managing Request for Propo
 - June 24, 2025. Removed first-time admin setup flow from login page as admin user is now properly established and authentication system is production-ready
 - June 24, 2025. Added helpful tooltip to logout button in navigation header showing "Sign Out" on hover for better user experience and clarity
 - June 24, 2025. Implemented comprehensive user creation system with secure password generation, role-based permissions assignment, and credential sharing interface for onboarding new team members
+- June 24, 2025. Fixed tag dropdown positioning in contact forms to display above modal instead of below, preventing "Operations" and "Finance" tags from being cut off at bottom of dialog
 
 ## User Preferences
 

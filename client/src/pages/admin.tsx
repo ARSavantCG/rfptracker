@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Shield, Users, Settings, Edit, Trash2, CheckCircle, XCircle, User as UserIcon } from "lucide-react";
+import { Shield, Users, Settings, Edit, Trash2, CheckCircle, XCircle, User as UserIcon, KeyRound } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
@@ -26,6 +26,8 @@ function SystemUsersAndContacts() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
+  const [selectedContactForPassword, setSelectedContactForPassword] = useState<any>(null);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
 
   const { data: users, isLoading: usersLoading } = useQuery<User[]>({
     queryKey: ["/api/admin/users"],
@@ -282,6 +284,17 @@ function SystemUsersAndContacts() {
                     <Settings className="h-4 w-4 mr-1" />
                     Permissions
                   </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedContactForPassword(contact);
+                      setShowPasswordModal(true);
+                    }}
+                  >
+                    <KeyRound className="h-4 w-4 mr-1" />
+                    Set Password
+                  </Button>
                 </div>
               </div>
             ))}
@@ -340,6 +353,16 @@ function SystemUsersAndContacts() {
           isSaving={updateContactMutation.isPending}
         />
       )}
+
+      {/* Contact Password Modal */}
+      <ContactPasswordModal
+        contact={selectedContactForPassword}
+        open={showPasswordModal}
+        onClose={() => {
+          setShowPasswordModal(false);
+          setSelectedContactForPassword(null);
+        }}
+      />
     </div>
   );
 }

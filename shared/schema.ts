@@ -6,7 +6,7 @@
  * distribution, or use of this software is strictly prohibited.
  */
 
-import { pgTable, text, serial, integer, timestamp, json, jsonb, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, timestamp, json, jsonb, boolean, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -473,12 +473,14 @@ export type UpdateRomPilotLineItem = z.infer<typeof updateRomPilotLineItemSchema
 // User management types
 // User management table for admin system
 export const users = pgTable("users", {
-  id: text("id").primaryKey().notNull(),
-  email: text("email").unique(),
-  firstName: text("first_name"),
-  lastName: text("last_name"),
-  profileImageUrl: text("profile_image_url"),
-  role: text("role").notNull().default("user"), // admin, manager, user
+  id: varchar("id").primaryKey().notNull(),
+  username: varchar("username").unique().notNull(),
+  email: varchar("email").unique(),
+  passwordHash: varchar("password_hash").notNull(),
+  firstName: varchar("first_name"),
+  lastName: varchar("last_name"),
+  profileImageUrl: varchar("profile_image_url"),
+  role: varchar("role").notNull().default("user"), // admin, manager, user
   isActive: boolean("is_active").default(true),
   permissions: json("permissions").$type<Permission[]>().default([]),
   createdAt: timestamp("created_at").defaultNow(),

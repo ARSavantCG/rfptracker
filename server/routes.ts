@@ -28,6 +28,7 @@ import {
   updateRomScopeItemSchema
 } from "@shared/schema";
 import { validateRfpForProgression, canAdvanceToPhase } from "./validation";
+import { AuthService, type LoginCredentials, type CreateUserData } from "./auth";
 import { generateRfpPdf, generatePdfFilename } from "./pdf-generator";
 import { generateDetailedReportPdf, generateReportFilename } from "./pdf-reports";
 import { generateHistoricalPricingPdf, generateHistoricalPricingFilename } from "./historical-pricing-reports";
@@ -78,7 +79,44 @@ const upload = multer({
   },
 });
 
+// Session middleware setup
+function setupSession(app: Express) {
+  app.use(session({
+    secret: process.env.SESSION_SECRET || 'your-secret-key-change-in-production',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: false, // Set to true in production with HTTPS
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    }
+  }));
+}
+
+// Authentication middleware
+function requireAuth(req: any, res: any, next: any) {
+  if (!req.session?.user) {
+    return res.status(401).json({ message: "Authentication required" });
+  }
+  next();
+}
+
+function requireAdmin(req: any, res: any, next: any) {
+  if (!req.session?.user) {
+    return res.status(401).json({ message: "Authentication required" });
+  }
+  
+  const user = req.session.user;
+  if (user.role !== 'admin' && !user.permissions?.includes('admin.access')) {
+    return res.status(403).json({ message: "Admin access required" });
+  }
+  
+  next();
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Setup session middleware
+  setupSession(app);
   // Test route for debugging preview issues
   app.get("/test", (req, res) => {
     res.send(`

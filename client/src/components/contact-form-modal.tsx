@@ -28,6 +28,7 @@ export function ContactFormModal({ contact, trigger, onSuccess }: ContactFormMod
     type: (contact?.type as "architect" | "contractor" | "owner" | "other") || "contractor",
     notes: contact?.notes || "",
     tags: contact?.tags || [],
+    hasSystemAccess: contact?.hasSystemAccess || false,
   });
 
   const { toast } = useToast();
@@ -104,6 +105,7 @@ export function ContactFormModal({ contact, trigger, onSuccess }: ContactFormMod
       type: "contractor",
       notes: "",
       tags: [],
+      hasSystemAccess: false,
     });
   };
 
@@ -119,10 +121,16 @@ export function ContactFormModal({ contact, trigger, onSuccess }: ContactFormMod
       return;
     }
 
+    // Only allow system access for owner contacts
+    const finalData = {
+      ...formData,
+      hasSystemAccess: formData.type === "owner" ? formData.hasSystemAccess : false
+    };
+    
     if (isEdit) {
-      updateMutation.mutate(formData);
+      updateMutation.mutate(finalData);
     } else {
-      createMutation.mutate(formData as InsertContact);
+      createMutation.mutate(finalData as InsertContact);
     }
   };
 

@@ -16,6 +16,60 @@ import { apiRequest } from "@/lib/queryClient";
 import type { User, UserRole, Permission } from "@shared/schema";
 import { ROLE_PERMISSIONS } from "@shared/schema";
 
+function AuthorizedContactsList() {
+  const { data: authorizedContacts, isLoading } = useQuery({
+    queryKey: ["/api/admin/authorized-contacts"],
+  });
+
+  if (isLoading) {
+    return (
+      <div className="text-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+        <p className="text-gray-600 mt-2">Loading authorized contacts...</p>
+      </div>
+    );
+  }
+
+  if (!authorizedContacts?.length) {
+    return (
+      <div className="text-center py-8">
+        <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+        <p className="text-gray-600">No authorized contacts yet</p>
+        <p className="text-sm text-gray-500 mt-2">
+          Grant system access to owner contacts in the Contacts section
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {authorizedContacts.map((contact: any) => (
+        <div key={contact.id} className="flex items-center justify-between p-4 border rounded-lg">
+          <div className="flex items-center space-x-4">
+            <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+              <span className="text-purple-600 font-medium">
+                {contact.name?.[0] || 'U'}
+              </span>
+            </div>
+            <div>
+              <h3 className="font-medium text-gray-900">{contact.name}</h3>
+              <p className="text-sm text-gray-600">{contact.email}</p>
+              <p className="text-xs text-gray-500">{contact.company}</p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Badge variant="default">Owner</Badge>
+            <Badge variant="default" className="bg-green-100 text-green-800">
+              Access Granted
+            </Badge>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function Admin() {
   const { isAdmin } = usePermissions();
   const { toast } = useToast();
@@ -106,16 +160,18 @@ export default function Admin() {
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Users className="h-5 w-5" />
-            <span>User Management</span>
-          </CardTitle>
-          <CardDescription>
-            Manage user accounts, roles, and permissions
-          </CardDescription>
-        </CardHeader>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* System Users */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Users className="h-5 w-5" />
+              <span>System Users</span>
+            </CardTitle>
+            <CardDescription>
+              Manage admin and system user accounts
+            </CardDescription>
+          </CardHeader>
         <CardContent>
           {isLoading ? (
             <div className="text-center py-8">
@@ -205,6 +261,23 @@ export default function Admin() {
           )}
         </CardContent>
       </Card>
+
+      {/* Authorized Contacts */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <Shield className="h-5 w-5" />
+            <span>Authorized Contacts</span>
+          </CardTitle>
+          <CardDescription>
+            Owner contacts with system access permissions
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <AuthorizedContactsList />
+        </CardContent>
+      </Card>
+      </div>
 
       <UserEditDialog
         user={selectedUser}

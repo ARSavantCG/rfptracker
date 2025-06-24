@@ -68,24 +68,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
     },
   });
 
-  const initAdminMutation = useMutation({
-    mutationFn: async () => {
-      return await apiRequest('/api/auth/init-admin', 'POST');
-    },
-    onSuccess: () => {
-      toast({
-        title: "Admin User Created",
-        description: "Default admin user created. Username: admin, Password: admin123",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Setup Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
+
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -165,27 +148,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
           </CardContent>
         </Card>
 
-        {/* Development Helper */}
-        <Card className="border-dashed border-orange-200 bg-orange-50">
-          <CardContent className="pt-6">
-            <div className="text-center">
-              <p className="text-sm text-orange-800 mb-3">
-                First time setup? Create the default admin account
-              </p>
-              <Button
-                variant="outline"
-                onClick={() => initAdminMutation.mutate()}
-                disabled={initAdminMutation.isPending}
-                className="text-orange-700 border-orange-300 hover:bg-orange-100"
-              >
-                {initAdminMutation.isPending ? "Creating..." : "Create Admin User"}
-              </Button>
-              <p className="text-xs text-orange-600 mt-2">
-                Username: admin, Password: admin123
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+
       </div>
     </div>
   );

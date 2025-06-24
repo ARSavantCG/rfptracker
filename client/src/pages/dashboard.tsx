@@ -54,6 +54,30 @@ export default function Dashboard() {
     },
   });
 
+  // Auth and admin setup
+  const { data: currentUser } = useQuery({
+    queryKey: ["/api/auth/user"],
+    retry: false,
+  });
+
+  const makeAdminMutation = useMutation({
+    mutationFn: () => apiRequest("/api/dev/make-admin", "POST", { userId: currentUser?.id }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      toast({
+        title: "Success",
+        description: "You now have administrator privileges! The Admin Panel will appear in navigation.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to assign admin privileges",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Auto-refresh selected RFP when data changes
   useEffect(() => {
     if (selectedRfp && allRfps.length > 0) {
@@ -131,6 +155,29 @@ export default function Dashboard() {
               <div>
                 <h2 className="text-lg font-bold text-gray-900">Request for Proposals</h2>
                 <p className="text-xs text-gray-600">Track and manage RFP requests</p>
+              </div>
+              <div className="flex space-x-2">
+                {!isAdmin() && currentUser && (
+                  <Button 
+                    onClick={() => makeAdminMutation.mutate()}
+                    disabled={makeAdminMutation.isPending}
+                    className="bg-yellow-500 hover:bg-yellow-600 text-white"
+                  >
+                    <Crown className="h-4 w-4 mr-2" />
+                    {makeAdminMutation.isPending ? "Setting up..." : "Become Admin"}
+                  </Button>
+                )}
+                
+                {isAdmin() && (
+                  <Button 
+                    variant="outline"
+                    disabled
+                    className="border-green-500 text-green-600 bg-green-50"
+                  >
+                    <Settings className="h-4 w-4 mr-2" />
+                    Admin Access Active
+                  </Button>
+                )}
               </div>
             </div>
 

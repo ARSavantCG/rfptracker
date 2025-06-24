@@ -251,7 +251,7 @@ export function StatsCards({ onStatusFilter }: StatsCardsProps) {
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={barData}
-                  margin={{ top: 5, right: 8, left: 15, bottom: 40 }}
+                  margin={{ top: 5, right: 8, left: 15, bottom: 15 }}
                   onClick={handleBarClick}
                   reverseStackOrder={false}
                 >
@@ -264,7 +264,7 @@ export function StatsCards({ onStatusFilter }: StatsCardsProps) {
                     interval={0}
                     angle={-45}
                     textAnchor="end"
-                    height={40}
+                    height={15}
                   />
                   <YAxis 
                     tick={{ fontSize: 9 }}

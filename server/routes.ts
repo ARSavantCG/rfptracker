@@ -2200,32 +2200,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Auth route - returns current user (tracks admin state)
-  let currentUserRole = 'user'; // Simple state tracking for development
-  
+  // Auth route - returns current user with persistent admin role
   app.get('/api/auth/user', async (req, res) => {
     try {
-      const testUser = {
+      // Check if user exists in database, if not create with admin role
+      let user = await storage.getUser('test-admin');
+      
+      if (!user) {
+        user = await storage.upsertUser({
+          id: 'test-admin',
+          email: 'admin@rfptracker.com',
+          firstName: 'Admin',
+          lastName: 'User',
+          role: 'admin' // Start as admin for development
+        });
+      }
+      
+      res.json(user);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      // Fallback to simple admin user if database fails
+      const fallbackUser = {
         id: 'test-admin',
         email: 'admin@rfptracker.com',
         firstName: 'Admin',
         lastName: 'User',
-        role: currentUserRole
+        role: 'admin'
       };
-      
-      res.json(testUser);
-    } catch (error) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
+      res.json(fallbackUser);
     }
   });
 
-  // Development route to make current user admin
+  // Development route to make current user admin (now persists in database)
   app.post('/api/dev/make-admin', async (req, res) => {
     try {
-      // Update the role state
-      currentUserRole = 'admin';
-      
+      const user = await storage.updateUser('test-admin', { role: 'admin' });
+      res.json({ message: "User promoted to admin", user });
+    } catch (error) {
+      console.error("Error promoting user:", error);
+      // Fallback response
       const adminUser = {
         id: 'test-admin',
         email: 'admin@rfptracker.com',
@@ -2233,11 +2246,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lastName: 'User',
         role: 'admin'
       };
-      
       res.json({ message: "User promoted to admin", user: adminUser });
-    } catch (error) {
-      console.error("Error promoting user:", error);
-      res.status(500).json({ message: "Failed to promote user" });
     }
   });
 

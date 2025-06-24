@@ -400,6 +400,7 @@ function ContactPermissionsDialog({ contact, open, onOpenChange, onSave, isSavin
           'rfp.create', 'rfp.edit', 'rfp.delete', 'rfp.view',
           'properties.create', 'properties.edit', 'properties.delete', 'properties.view',
           'contacts.create', 'contacts.edit', 'contacts.delete', 'contacts.view',
+          'rom.create', 'rom.edit', 'rom.delete', 'rom.view', 'rom.scope.manage',
           'reports.view', 'reports.generate',
           'users.create', 'users.edit', 'users.delete', 'users.view',
           'admin.access'
@@ -410,6 +411,7 @@ function ContactPermissionsDialog({ contact, open, onOpenChange, onSave, isSavin
           'rfp.create', 'rfp.edit', 'rfp.view',
           'properties.create', 'properties.edit', 'properties.view',
           'contacts.create', 'contacts.edit', 'contacts.view',
+          'rom.create', 'rom.edit', 'rom.view',
           'reports.view', 'reports.generate',
           'users.view'
         ]);
@@ -419,6 +421,7 @@ function ContactPermissionsDialog({ contact, open, onOpenChange, onSave, isSavin
           'rfp.view',
           'properties.view',
           'contacts.view',
+          'rom.view',
           'reports.view'
         ]);
         break;

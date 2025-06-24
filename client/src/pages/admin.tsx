@@ -321,25 +321,30 @@ interface ContactPermissionsDialogProps {
 function ContactPermissionsDialog({ contact, open, onOpenChange, onSave, isSaving }: ContactPermissionsDialogProps) {
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [selectedRole, setSelectedRole] = useState<string>('custom');
+  const [originalPermissions, setOriginalPermissions] = useState<Permission[]>([]);
+  const [originalRole, setOriginalRole] = useState<string>('custom');
 
-  // Update state when contact changes
+  // Update state when contact changes or dialog opens
   useEffect(() => {
-    if (contact) {
-      setPermissions(contact.permissions || []);
+    if (contact && open) {
+      const currentPerms = contact.permissions || [];
+      setPermissions([...currentPerms]);
+      setOriginalPermissions([...currentPerms]);
       
       // Determine current role based on permissions
-      const currentPerms = contact.permissions || [];
+      let role = 'custom';
       if (currentPerms.length === 0) {
-        setSelectedRole('user');
+        role = 'user';
       } else if (currentPerms.includes('admin.access')) {
-        setSelectedRole('admin');
+        role = 'admin';
       } else if (currentPerms.includes('users.view') || currentPerms.includes('users.edit')) {
-        setSelectedRole('manager');
-      } else {
-        setSelectedRole('custom');
+        role = 'manager';
       }
+      
+      setSelectedRole(role);
+      setOriginalRole(role);
     }
-  }, [contact]);
+  }, [contact, open]);
 
   const togglePermission = (permission: Permission) => {
     setPermissions(prev => 
@@ -394,6 +399,13 @@ function ContactPermissionsDialog({ contact, open, onOpenChange, onSave, isSavin
     });
   };
 
+  const handleCancel = () => {
+    // Revert to original state
+    setPermissions([...originalPermissions]);
+    setSelectedRole(originalRole);
+    onOpenChange(false);
+  };
+
   if (!contact) return null;
 
   const permissionCategories = {
@@ -424,7 +436,13 @@ function ContactPermissionsDialog({ contact, open, onOpenChange, onSave, isSavin
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(isOpen) => {
+      if (!isOpen) {
+        handleCancel();
+      } else {
+        onOpenChange(isOpen);
+      }
+    }}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">

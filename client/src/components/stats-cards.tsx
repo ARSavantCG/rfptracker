@@ -247,23 +247,23 @@ export function StatsCards({ onStatusFilter }: StatsCardsProps) {
               <h3 className="text-xs font-semibold text-gray-900">Overview</h3>
             </div>
             
-            <div className="h-20">
+            <div className="h-24">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={barData}
-                  margin={{ top: 5, right: 2, left: 2, bottom: 7.5 }}
+                  margin={{ top: 5, right: 5, left: 5, bottom: 35 }}
                   onClick={handleBarClick}
                 >
                   <CartesianGrid strokeDasharray="1 1" stroke="#f3f4f6" />
                   <XAxis 
                     dataKey="name" 
-                    tick={{ fontSize: 8 }}
+                    tick={{ fontSize: 9 }}
                     axisLine={false}
                     tickLine={false}
                     interval={0}
                     angle={-45}
                     textAnchor="end"
-                    height={30}
+                    height={35}
                   />
                   <YAxis 
                     tick={{ fontSize: 6 }}

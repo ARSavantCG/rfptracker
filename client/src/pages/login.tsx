@@ -24,12 +24,29 @@ export default function Login({ onLoginSuccess }: LoginProps) {
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginCredentials) => {
-      return await apiRequest('/api/auth/login', 'POST', credentials);
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(credentials),
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(error || 'Login failed');
+      }
+      
+      return response.json();
     },
     onSuccess: (data) => {
+      console.log("Login response:", data);
+      
       // Store the authentication token
       if (data.token) {
         localStorage.setItem('auth-token', data.token);
+        console.log("Token stored successfully");
       }
       
       toast({
@@ -37,8 +54,10 @@ export default function Login({ onLoginSuccess }: LoginProps) {
         description: "Welcome to RFP Tracker",
       });
       
-      // Redirect to dashboard
-      onLoginSuccess();
+      // Force a page reload to ensure authentication state is properly established
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
     },
     onError: (error: Error) => {
       toast({

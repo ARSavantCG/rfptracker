@@ -106,6 +106,7 @@ export const contacts = pgTable("contacts", {
   tags: json("tags").$type<string[]>().default([]), // development, property-management, leasing, etc.
   specialties: json("specialties").$type<string[]>().default([]),
   notes: text("notes"),
+  hasSystemAccess: boolean("has_system_access").default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

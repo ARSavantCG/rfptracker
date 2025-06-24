@@ -148,18 +148,19 @@ export default function Properties() {
                             ${isVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}
                             ${isMultiBuilding && !isExpanded ? 'cursor-pointer' : ''}
                             hover:shadow-lg
-                            ${isMultiBuilding && !isExpanded ? 'hover:scale-[1.02]' : ''}
+                            ${isMultiBuilding && !isExpanded && index === 0 ? 'hover:scale-[1.02] hover:shadow-2xl' : ''}
                             ${isExpanded && index > 0 ? 'mt-4' : ''}
-                            ${!isExpanded && index === 0 ? 'border-blue-200' : 'border-gray-200'}
+                            ${!isExpanded && index === 0 ? 'border-blue-300 border-dashed' : 'border-gray-200'}
+                            ${!isExpanded && isMultiBuilding ? 'bg-gradient-to-br from-white to-blue-50' : 'bg-white'}
                           `}
                           style={{
                             zIndex,
                             ...(index > 0 && !isExpanded ? {
-                              top: `-${stackOffset * 3}px`,
+                              top: `-${stackOffset * 4}px`,
                               left: `${stackOffset}px`,
                               right: `-${stackOffset}px`,
-                              transform: `rotate(${index * 0.5}deg)`,
-                              boxShadow: `0 ${index * 3}px ${index * 6}px rgba(0,0,0,0.15)`
+                              transform: `rotate(${index * 0.3}deg)`,
+                              boxShadow: `0 ${index * 4}px ${index * 8}px rgba(0,0,0,0.2)`
                             } : {})
                           }}
                           onClick={() => isMultiBuilding && !isExpanded ? togglePropertyExpansion(baseName) : undefined}
@@ -250,7 +251,7 @@ export default function Properties() {
                           variant="outline"
                           size="sm"
                           onClick={() => togglePropertyExpansion(baseName)}
-                          className="bg-white shadow-lg hover:shadow-xl px-4 py-2 text-sm font-medium border-2 border-blue-200"
+                          className="bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg hover:shadow-xl px-4 py-2 text-sm font-medium border-2 border-blue-400 hover:from-blue-700 hover:to-blue-800"
                         >
                           {isExpanded ? (
                             <>
@@ -260,34 +261,45 @@ export default function Properties() {
                           ) : (
                             <>
                               <ChevronDown className="h-4 w-4 mr-1" />
-                              Expand All ({buildings.length})
+                              View All Buildings ({buildings.length})
                             </>
                           )}
                         </Button>
                       </div>
                     )}
                     
-                    {/* Show building indicators on the visible edge of stacked cards */}
+                    {/* Multiple Buildings Indicator - More Prominent */}
                     {!isExpanded && isMultiBuilding && (
-                      <div className="absolute top-2 right-2 z-40">
+                      <div className="absolute top-4 left-4 z-40">
+                        <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-3 py-2 rounded-lg shadow-lg font-bold text-sm border-2 border-white">
+                          <div className="flex items-center gap-2">
+                            <Building className="h-4 w-4" />
+                            <span>{buildings.length} Buildings</span>
+                          </div>
+                          <div className="text-xs mt-1 opacity-90">
+                            {buildings.map(b => b.building || 'Main').join(' • ')}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Building tabs on the side edge */}
+                    {!isExpanded && isMultiBuilding && (
+                      <div className="absolute left-0 top-1/2 transform -translate-y-1/2 z-40">
                         <div className="flex flex-col gap-1">
-                          {buildings.slice(0, Math.min(buildings.length, 3)).map((building, idx) => (
+                          {buildings.slice(0, Math.min(buildings.length, 4)).map((building, idx) => (
                             <div 
                               key={building.id}
-                              className="bg-blue-600 text-white text-xs px-2 py-1 rounded shadow-md font-bold"
+                              className="bg-blue-600 text-white text-xs px-3 py-2 font-bold shadow-lg border-r-4 border-blue-400"
                               style={{ 
-                                marginRight: `${idx * 8}px`,
-                                opacity: idx === 0 ? 1 : 0.8 - (idx * 0.2)
+                                marginLeft: `${idx * 6}px`,
+                                transform: `translateX(-${idx * 2}px)`,
+                                opacity: 1 - (idx * 0.1)
                               }}
                             >
-                              {building.building || 'Main'}
+                              {building.building || 'M'}
                             </div>
                           ))}
-                          {buildings.length > 3 && (
-                            <div className="bg-gray-600 text-white text-xs px-2 py-1 rounded shadow-md">
-                              +{buildings.length - 3}
-                            </div>
-                          )}
                         </div>
                       </div>
                     )}

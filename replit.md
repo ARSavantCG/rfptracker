@@ -125,6 +125,10 @@ This is a full-stack web application for tracking and managing Request for Propo
 - June 24, 2025. Implemented persistent admin role storage - admin privileges now survive app restarts and are stored in database
 - June 24, 2025. Added granular access control system - only "Owner" type contacts can have system access, with admin-controlled checkbox to grant/revoke access permissions
 - June 24, 2025. Successfully completed contact-based access control implementation - system access checkbox saves properly, authorized contacts display in Admin Panel, and permissions persist across sessions
+- June 24, 2025. Enhanced contact permissions dialog to match admin user interface with role dropdown (Admin, Manager, User, Custom) and granular permission controls
+- June 24, 2025. Implemented proper state management for permission changes - changes only persist when "Save Permissions" is clicked, Cancel/X reverts to original state
+- June 24, 2025. Improved contact card visual consistency by moving "System Access: Granted" badge below action buttons for better symmetry across all contact types
+- June 24, 2025. Fixed contact permissions save functionality by correcting API request format in mutation functions
 
 ## User Preferences
 

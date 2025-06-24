@@ -118,6 +118,7 @@ This is a full-stack web application for tracking and managing Request for Propo
 - June 24, 2025. Compressed Reports page cards to fit Executive Summary, Historical Pricing, and Custom Report in single row with smaller buttons
 - June 24, 2025. Added editable Property ID field to property edit form with validation to support application launch preparation
 - June 24, 2025. Implemented auto-incrementing property IDs that suggest next available ID (highest + 1) for new properties
+- June 24, 2025. Fixed "Single building property" checkbox state persistence by adding isSingleBuilding database field and proper form data management
 
 ## User Preferences
 

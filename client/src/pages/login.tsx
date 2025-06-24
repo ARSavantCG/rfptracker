@@ -31,7 +31,10 @@ export default function Login({ onLoginSuccess }: LoginProps) {
         title: "Login Successful",
         description: "Welcome to RFP Tracker",
       });
-      onLoginSuccess();
+      // Add a small delay to ensure session is properly established
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 500);
     },
     onError: (error: Error) => {
       toast({

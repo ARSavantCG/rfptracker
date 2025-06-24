@@ -294,17 +294,17 @@ function SystemUsersAndContacts() {
       />
 
       {/* Contact Permissions Dialog */}
-      <ContactPermissionsDialog
-        contact={selectedContact}
-        open={contactDialogOpen}
-        onOpenChange={setContactDialogOpen}
-        onSave={(updates) => {
-          if (selectedContact) {
+      {selectedContact && (
+        <ContactPermissionsDialog
+          contact={selectedContact}
+          open={contactDialogOpen}
+          onOpenChange={setContactDialogOpen}
+          onSave={(updates) => {
             updateContactMutation.mutate({ id: selectedContact.id, updates });
-          }
-        }}
-        isSaving={updateContactMutation.isPending}
-      />
+          }}
+          isSaving={updateContactMutation.isPending}
+        />
+      )}
     </div>
   );
 }

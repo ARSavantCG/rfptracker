@@ -107,6 +107,7 @@ export const contacts = pgTable("contacts", {
   specialties: json("specialties").$type<string[]>().default([]),
   notes: text("notes"),
   hasSystemAccess: boolean("has_system_access").default(false),
+  permissions: json("permissions").$type<Permission[]>().default([]),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

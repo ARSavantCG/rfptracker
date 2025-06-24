@@ -230,32 +230,32 @@ export default function Reports() {
         </Card>
 
         {/* Report Generation Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center space-x-2 text-lg">
-                <FileText className="h-5 w-5" />
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center space-x-2 text-base">
+                <FileText className="h-4 w-4" />
                 <span>Executive Summary</span>
               </CardTitle>
-              <p className="text-sm text-gray-600">
+              <p className="text-xs text-gray-600">
                 Status overview of all RFP projects
               </p>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="grid grid-cols-2 gap-2">
-                <div className="bg-gray-50 p-2 rounded text-center">
-                  <p className="text-xl font-bold text-gray-900">{metrics.total}</p>
+            <CardContent className="space-y-2">
+              <div className="grid grid-cols-2 gap-1">
+                <div className="bg-gray-50 p-1.5 rounded text-center">
+                  <p className="text-lg font-bold text-gray-900">{metrics.total}</p>
                   <p className="text-xs text-gray-600 uppercase font-medium">Total</p>
                 </div>
-                <div className="bg-yellow-50 p-2 rounded text-center">
-                  <p className="text-xl font-bold text-yellow-900">{metrics.inProgress}</p>
+                <div className="bg-yellow-50 p-1.5 rounded text-center">
+                  <p className="text-lg font-bold text-yellow-900">{metrics.inProgress}</p>
                   <p className="text-xs text-yellow-600 uppercase font-medium">Active</p>
                 </div>
               </div>
               
-              <div className="bg-gray-50 p-3 rounded">
-                <h4 className="font-medium text-gray-900 mb-1 text-sm">Includes</h4>
-                <ul className="space-y-0.5 text-xs text-gray-600">
+              <div className="bg-gray-50 p-2 rounded">
+                <h4 className="font-medium text-gray-900 mb-1 text-xs">Includes</h4>
+                <ul className="space-y-0 text-xs text-gray-600">
                   <li>• Status breakdown & timelines</li>
                   <li>• Due dates & priorities</li>
                   <li>• Performance metrics</li>
@@ -263,40 +263,40 @@ export default function Reports() {
               </div>
               
               <Button 
-                className="w-full flex items-center justify-center space-x-2" 
+                className="w-full h-8 text-xs" 
                 onClick={() => generateReport("executive")}
               >
-                <Download className="h-4 w-4" />
-                <span>Generate Report</span>
+                <Download className="h-3 w-3 mr-1" />
+                Generate Report
               </Button>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center space-x-2 text-lg">
-                <TrendingUp className="h-5 w-5" />
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center space-x-2 text-base">
+                <TrendingUp className="h-4 w-4" />
                 <span>Historical Pricing</span>
               </CardTitle>
-              <p className="text-sm text-gray-600">
+              <p className="text-xs text-gray-600">
                 Pricing analysis from completed projects
               </p>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="grid grid-cols-2 gap-2">
-                <div className="bg-gray-50 p-2 rounded text-center">
-                  <p className="text-xl font-bold text-gray-900">{metrics.completed}</p>
+            <CardContent className="space-y-2">
+              <div className="grid grid-cols-2 gap-1">
+                <div className="bg-gray-50 p-1.5 rounded text-center">
+                  <p className="text-lg font-bold text-gray-900">{metrics.completed}</p>
                   <p className="text-xs text-gray-600 uppercase font-medium">Complete</p>
                 </div>
-                <div className="bg-green-50 p-2 rounded text-center">
-                  <p className="text-xl font-bold text-green-900">PDF</p>
+                <div className="bg-green-50 p-1.5 rounded text-center">
+                  <p className="text-lg font-bold text-green-900">PDF</p>
                   <p className="text-xs text-green-600 uppercase font-medium">Format</p>
                 </div>
               </div>
               
-              <div className="bg-gray-50 p-3 rounded">
-                <h4 className="font-medium text-gray-900 mb-1 text-sm">Includes</h4>
-                <ul className="space-y-0.5 text-xs text-gray-600">
+              <div className="bg-gray-50 p-2 rounded">
+                <h4 className="font-medium text-gray-900 mb-1 text-xs">Includes</h4>
+                <ul className="space-y-0 text-xs text-gray-600">
                   <li>• Project pricing breakdown</li>
                   <li>• Contractor bid comparisons</li>
                   <li>• Line items by category</li>
@@ -304,16 +304,16 @@ export default function Reports() {
               </div>
               
               <Button 
-                className="w-full flex items-center justify-center space-x-2" 
+                className="w-full h-8 text-xs" 
                 disabled={metrics.completed === 0}
                 onClick={() => generateReport("historical")}
               >
-                <Download className="h-4 w-4" />
-                <span>Generate Report</span>
+                <Download className="h-3 w-3 mr-1" />
+                Generate Report
               </Button>
               
               {metrics.completed === 0 && (
-                <p className="text-xs text-gray-500 text-center">
+                <p className="text-xs text-gray-500 text-center mt-1">
                   No completed projects available
                 </p>
               )}
@@ -321,19 +321,19 @@ export default function Reports() {
           </Card>
 
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center space-x-2 text-lg">
-                <BarChart3 className="h-5 w-5" />
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center space-x-2 text-base">
+                <BarChart3 className="h-4 w-4" />
                 <span>Custom Report</span>
               </CardTitle>
-              <p className="text-sm text-gray-600">
+              <p className="text-xs text-gray-600">
                 Build your own report with selected data fields
               </p>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="bg-gray-50 p-3 rounded">
-                <h4 className="font-medium text-gray-900 mb-1 text-sm">Customizable Fields</h4>
-                <ul className="space-y-1 text-sm text-gray-600">
+            <CardContent className="space-y-2">
+              <div className="bg-gray-50 p-2 rounded">
+                <h4 className="font-medium text-gray-900 mb-1 text-xs">Customizable Fields</h4>
+                <ul className="space-y-0 text-xs text-gray-600">
                   <li>• Choose any combination of data fields</li>
                   <li>• Control column order and visibility</li>
                   <li>• Apply current filters to data</li>
@@ -342,11 +342,11 @@ export default function Reports() {
               </div>
               
               <Button 
-                className="w-full flex items-center justify-center space-x-2" 
+                className="w-full h-8 text-xs" 
                 onClick={() => generateReport("custom")}
               >
-                <Download className="h-4 w-4" />
-                <span>Build Custom Report</span>
+                <Download className="h-3 w-3 mr-1" />
+                Build Custom Report
               </Button>
             </CardContent>
           </Card>

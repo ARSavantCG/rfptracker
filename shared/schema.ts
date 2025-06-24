@@ -315,6 +315,7 @@ export const properties = pgTable("properties", {
   id: serial("id").primaryKey(),
   propertyName: text("property_name").notNull(),
   building: text("building").notNull(), // A, B, 1, 2, etc.
+  isSingleBuilding: boolean("is_single_building").default(false),
   streetAddress: text("street_address").notNull(),
   city: text("city").notNull(),
   state: text("state").notNull(),

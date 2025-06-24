@@ -25,6 +25,7 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
     id: property?.id || undefined,
     propertyName: property?.propertyName || "",
     building: property?.building || "",
+    isSingleBuilding: property?.isSingleBuilding || false,
     streetAddress: property?.streetAddress || "",
     city: property?.city || "",
     state: property?.state || "",
@@ -43,7 +44,6 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
   const [gridRows, setGridRows] = useState(property?.gridLayout?.rows || 1);
   const [gridColumns, setGridColumns] = useState(property?.gridLayout?.columns || 1);
   const [columnRanges, setColumnRanges] = useState<ColumnRange[]>(property?.columnRanges || []);
-  const [isSingleBuilding, setIsSingleBuilding] = useState(false);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -115,6 +115,7 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
       id: undefined,
       propertyName: "",
       building: "",
+      isSingleBuilding: false,
       streetAddress: "",
       city: "",
       state: "",
@@ -177,7 +178,7 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.propertyName || (!isSingleBuilding && !formData.building) || !formData.streetAddress || !formData.city || !formData.state || !formData.zip) {
+    if (!formData.propertyName || (!formData.isSingleBuilding && !formData.building) || !formData.streetAddress || !formData.city || !formData.state || !formData.zip) {
       toast({
         title: "Validation Error",
         description: "Please fill in all required fields.",
@@ -277,26 +278,25 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
               <div className="flex items-center space-x-2 mb-2">
                 <Checkbox
                   id="singleBuilding"
-                  checked={isSingleBuilding}
+                  checked={formData.isSingleBuilding}
                   onCheckedChange={(checked) => {
-                    setIsSingleBuilding(checked as boolean);
-                    if (checked) {
-                      handleInputChange("building", "");
-                    } else {
-                      handleInputChange("building", "");
-                    }
+                    setFormData(prev => ({ 
+                      ...prev, 
+                      isSingleBuilding: checked as boolean,
+                      building: checked ? "" : prev.building
+                    }));
                   }}
                 />
                 <Label htmlFor="singleBuilding" className="text-sm">Single building property</Label>
               </div>
-              <Label htmlFor="building">{isSingleBuilding ? "Building" : "Building *"}</Label>
+              <Label htmlFor="building">{formData.isSingleBuilding ? "Building" : "Building *"}</Label>
               <Input
                 id="building"
                 value={formData.building}
                 onChange={(e) => handleInputChange("building", e.target.value)}
-                placeholder={isSingleBuilding ? "Building number (optional)" : "e.g. A, B, 1, 2"}
-                required={!isSingleBuilding}
-                disabled={isSingleBuilding}
+                placeholder={formData.isSingleBuilding ? "Building number (optional)" : "e.g. A, B, 1, 2"}
+                required={!formData.isSingleBuilding}
+                disabled={formData.isSingleBuilding}
               />
             </div>
           </div>

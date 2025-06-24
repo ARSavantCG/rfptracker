@@ -45,6 +45,10 @@ function Router() {
   }
 
   if (!isAuthenticated) {
+    // Check if we're on the reset password page
+    if (window.location.pathname === '/reset-password' || window.location.search.includes('token=')) {
+      return <ResetPassword />;
+    }
     return <Login onLoginSuccess={() => window.location.reload()} />;
   }
 
@@ -56,6 +60,7 @@ function Router() {
       <Route path="/rom-pilot" component={RomPilot} />
       <Route path="/reports" component={Reports} />
       <Route path="/admin" component={Admin} />
+      <Route path="/reset-password" component={ResetPassword} />
       <Route component={NotFound} />
     </Switch>
   );

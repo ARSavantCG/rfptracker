@@ -145,7 +145,7 @@ function requireAdmin(req: any, res: any, next: any) {
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup session middleware
   setupSession(app);
-  // Authentication routes
+  // Authentication routes - supports both admin users and contact emails
   app.post('/api/auth/login', async (req, res) => {
     try {
       const { username, password } = req.body;
@@ -154,18 +154,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Username and password are required" });
       }
 
+      // First try admin user login
       const user = await AuthService.authenticateUser({ username, password });
-      if (!user) {
+      if (user) {
+        const token = tokenStore.generateToken(user.id);
+        console.log("Admin login successful - Token generated for user:", user.username);
+        
+        return res.json({ 
+          user, 
+          token,
+          message: "Login successful" 
+        });
+      }
+
+      // Try contact email login
+      const [contact] = await db.select().from(contacts).where(eq(contacts.email, username));
+      
+      if (!contact || !contact.hasSystemAccess || !contact.passwordHash) {
         return res.status(401).json({ message: "Invalid username or password" });
       }
 
-      // Generate authentication token
-      const token = tokenStore.generateToken(user.id);
-      
-      console.log("Login successful - Token generated for user:", user.username);
-      
+      const isValidPassword = await bcrypt.compare(password, contact.passwordHash);
+      if (!isValidPassword) {
+        return res.status(401).json({ message: "Invalid username or password" });
+      }
+
+      // Update last login
+      await db.update(contacts)
+        .set({ lastLogin: new Date() })
+        .where(eq(contacts.id, contact.id));
+
+      const token = tokenStore.generateToken(`contact_${contact.id}`);
+      console.log("Contact login successful - Token generated for:", contact.email);
+
       res.json({ 
-        user, 
+        user: {
+          id: `contact_${contact.id}`,
+          username: contact.email,
+          name: contact.name,
+          isAdmin: false,
+          isContact: true,
+          permissions: contact.permissions,
+          role: 'contact'
+        },
         token,
         message: "Login successful" 
       });
@@ -190,7 +221,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/auth/user', requireAuth, async (req, res) => {
     try {
-      const user = await AuthService.getUserById((req as any).userId);
+      const userId = (req as any).userId;
+      
+      // Check if it's a contact user
+      if (userId.startsWith('contact_')) {
+        const contactId = parseInt(userId.replace('contact_', ''));
+        const [contact] = await db.select().from(contacts).where(eq(contacts.id, contactId));
+        
+        if (!contact || !contact.hasSystemAccess) {
+          return res.status(404).json({ message: "Contact not found" });
+        }
+
+        return res.json({
+          id: userId,
+          username: contact.email,
+          name: contact.name,
+          isAdmin: false,
+          isContact: true,
+          permissions: contact.permissions,
+          role: 'contact'
+        });
+      }
+
+      // Regular admin user
+      const user = await AuthService.getUserById(userId);
       
       if (!user) {
         return res.status(404).json({ message: "User not found" });

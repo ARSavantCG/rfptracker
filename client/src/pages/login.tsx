@@ -144,6 +144,17 @@ export default function Login({ onLoginSuccess }: LoginProps) {
               >
                 {loginMutation.isPending ? "Signing In..." : "Sign In"}
               </Button>
+
+              <div className="text-center">
+                <Button
+                  type="button"
+                  variant="link"
+                  onClick={() => window.location.href = '/reset-password'}
+                  className="text-sm"
+                >
+                  Forgot your password?
+                </Button>
+              </div>
             </form>
           </CardContent>
         </Card>

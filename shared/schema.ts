@@ -108,6 +108,10 @@ export const contacts = pgTable("contacts", {
   notes: text("notes"),
   hasSystemAccess: boolean("has_system_access").default(false),
   permissions: json("permissions").$type<Permission[]>().default([]),
+  passwordHash: text("password_hash"),
+  resetToken: text("reset_token"),
+  resetTokenExpiry: timestamp("reset_token_expiry"),
+  lastLogin: timestamp("last_login"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

@@ -152,6 +152,9 @@ export interface IStorage {
   getAllUsers(): Promise<User[]>;
   updateUser(id: string, updates: UpdateUser): Promise<User | undefined>;
   deleteUser(id: string): Promise<boolean>;
+  
+  // Contact operations for access control
+  getContactsByType(type: string): Promise<Contact[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -878,6 +881,10 @@ class ExtendedDatabaseStorage extends DatabaseStorage {
 
   async deleteRomPilot(id: number) {
     return memoryRomPilotStorage.deleteRomPilot(id);
+  }
+
+  async getContactsByType(type: string): Promise<Contact[]> {
+    return await db.select().from(contacts).where(eq(contacts.contactType, type));
   }
 }
 

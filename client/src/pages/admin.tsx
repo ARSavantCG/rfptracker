@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Settings, Users, Shield, Edit, Trash2, CheckCircle, XCircle } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import Navigation from "@/components/navigation";
 import type { User, UserRole, Permission } from "@shared/schema";
 import { ROLE_PERMISSIONS } from "@shared/schema";
 
@@ -151,14 +152,16 @@ export default function Admin() {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center space-x-3">
-        <Settings className="h-8 w-8 text-blue-600" />
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Admin Panel</h1>
-          <p className="text-gray-600">Manage users, roles, and permissions</p>
+    <div className="min-h-screen bg-gray-50">
+      <Navigation />
+      <div className="container mx-auto p-6 space-y-6">
+        <div className="flex items-center space-x-3">
+          <Settings className="h-8 w-8 text-blue-600" />
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Admin Panel</h1>
+            <p className="text-gray-600">Manage users, roles, and permissions</p>
+          </div>
         </div>
-      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* System Users */}
@@ -290,6 +293,7 @@ export default function Admin() {
         }}
         isSaving={updateUserMutation.isPending}
       />
+      </div>
     </div>
   );
 }

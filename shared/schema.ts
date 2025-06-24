@@ -532,25 +532,3 @@ export type Permission =
 
 export type UserRole = 'admin' | 'manager' | 'user';
 
-export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
-  admin: [
-    'rfp.create', 'rfp.edit', 'rfp.delete', 'rfp.view',
-    'properties.create', 'properties.edit', 'properties.delete', 'properties.view',
-    'contacts.create', 'contacts.edit', 'contacts.delete', 'contacts.view',
-    'reports.view', 'reports.generate',
-    'users.create', 'users.edit', 'users.delete', 'users.view',
-    'admin.access'
-  ],
-  manager: [
-    'rfp.create', 'rfp.edit', 'rfp.view',
-    'properties.create', 'properties.edit', 'properties.view',
-    'contacts.create', 'contacts.edit', 'contacts.view',
-    'reports.view', 'reports.generate'
-  ],
-  user: [
-    'rfp.view',
-    'properties.view',
-    'contacts.view',
-    'reports.view'
-  ]
-};

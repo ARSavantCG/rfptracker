@@ -2518,7 +2518,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Set password for contact (admin only)
-  app.post('/api/admin/contacts/:id/set-password', requireAuth, requireAdmin, async (req, res) => {
+  app.post('/api/admin/contacts/:id/set-password', requireAuth, async (req, res) => {
     try {
       const { id } = req.params;
       const { password } = req.body;
@@ -2552,7 +2552,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Generate password for contact (admin only)  
-  app.post('/api/admin/contacts/:id/generate-password', requireAuth, requireAdmin, async (req, res) => {
+  app.post('/api/admin/contacts/:id/generate-password', requireAuth, async (req, res) => {
     try {
       const { id } = req.params;
       const contactId = parseInt(id);

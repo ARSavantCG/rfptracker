@@ -320,11 +320,24 @@ interface ContactPermissionsDialogProps {
 
 function ContactPermissionsDialog({ contact, open, onOpenChange, onSave, isSaving }: ContactPermissionsDialogProps) {
   const [permissions, setPermissions] = useState<Permission[]>([]);
+  const [selectedRole, setSelectedRole] = useState<string>('custom');
 
   // Update state when contact changes
   useEffect(() => {
     if (contact) {
       setPermissions(contact.permissions || []);
+      
+      // Determine current role based on permissions
+      const currentPerms = contact.permissions || [];
+      if (currentPerms.length === 0) {
+        setSelectedRole('user');
+      } else if (currentPerms.includes('admin.access')) {
+        setSelectedRole('admin');
+      } else if (currentPerms.includes('users.view') || currentPerms.includes('users.edit')) {
+        setSelectedRole('manager');
+      } else {
+        setSelectedRole('custom');
+      }
     }
   }, [contact]);
 
@@ -334,6 +347,45 @@ function ContactPermissionsDialog({ contact, open, onOpenChange, onSave, isSavin
         ? prev.filter(p => p !== permission)
         : [...prev, permission]
     );
+    setSelectedRole('custom'); // Switch to custom when manually changing permissions
+  };
+
+  const handleRoleChange = (role: string) => {
+    setSelectedRole(role);
+    
+    // Apply role-based permissions
+    switch (role) {
+      case 'admin':
+        setPermissions([
+          'rfp.create', 'rfp.edit', 'rfp.delete', 'rfp.view',
+          'properties.create', 'properties.edit', 'properties.delete', 'properties.view',
+          'contacts.create', 'contacts.edit', 'contacts.delete', 'contacts.view',
+          'reports.view', 'reports.generate',
+          'users.create', 'users.edit', 'users.delete', 'users.view',
+          'admin.access'
+        ]);
+        break;
+      case 'manager':
+        setPermissions([
+          'rfp.create', 'rfp.edit', 'rfp.view',
+          'properties.create', 'properties.edit', 'properties.view',
+          'contacts.create', 'contacts.edit', 'contacts.view',
+          'reports.view', 'reports.generate',
+          'users.view'
+        ]);
+        break;
+      case 'user':
+        setPermissions([
+          'rfp.view',
+          'properties.view',
+          'contacts.view',
+          'reports.view'
+        ]);
+        break;
+      case 'custom':
+        // Keep current permissions for custom
+        break;
+    }
   };
 
   const handleSave = () => {
@@ -404,11 +456,45 @@ function ContactPermissionsDialog({ contact, open, onOpenChange, onSave, isSavin
             </div>
           </div>
 
+          {/* User Role Selection */}
+          <div className="space-y-4">
+            <label className="text-base font-medium">User Role</label>
+            <Select value={selectedRole} onValueChange={handleRoleChange}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a role" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="admin">Admin - Full system access</SelectItem>
+                <SelectItem value="manager">Manager - Advanced access</SelectItem>
+                <SelectItem value="user">User - View only access</SelectItem>
+                <SelectItem value="custom">Custom - Manual permissions</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-sm text-gray-600">
+              Selecting a role applies default permissions. You can customize individual permissions below.
+            </p>
+          </div>
+
+          {/* Account Status */}
+          <div className="space-y-4">
+            <label className="text-base font-medium">Account Status</label>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="account-active"
+                checked={true}
+                disabled={true}
+              />
+              <label htmlFor="account-active" className="text-sm font-medium">
+                Account Active - User can access the system
+              </label>
+            </div>
+          </div>
+
           {/* Granular Permissions */}
           <div className="space-y-4">
-            <label className="text-base font-medium">System Permissions</label>
+            <label className="text-base font-medium">Granular Permissions</label>
             <p className="text-sm text-gray-600">
-              Configure what this ownership contact can access and modify in the system.
+              Fine-tune what this ownership contact can access and modify in the system.
             </p>
             
             <div className="space-y-4">

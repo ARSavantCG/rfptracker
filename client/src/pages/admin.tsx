@@ -589,6 +589,139 @@ function ContactPermissionsDialog({ contact, open, onOpenChange, onSave, isSavin
   );
 }
 
+interface UserProfileDialogProps {
+  user: User | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSave: (updates: Partial<User>) => void;
+  isSaving: boolean;
+}
+
+function UserProfileDialog({ user, open, onOpenChange, onSave, isSaving }: UserProfileDialogProps) {
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
+  const [originalFirstName, setOriginalFirstName] = useState('');
+  const [originalLastName, setOriginalLastName] = useState('');
+  const [originalEmail, setOriginalEmail] = useState('');
+
+  // Update state when user changes or dialog opens
+  React.useEffect(() => {
+    if (user && open) {
+      const userFirstName = user.firstName || '';
+      const userLastName = user.lastName || '';
+      const userEmail = user.email || '';
+      
+      setFirstName(userFirstName);
+      setLastName(userLastName);
+      setEmail(userEmail);
+      
+      setOriginalFirstName(userFirstName);
+      setOriginalLastName(userLastName);
+      setOriginalEmail(userEmail);
+    }
+  }, [user, open]);
+
+  const handleSave = () => {
+    onSave({
+      firstName: firstName.trim() || null,
+      lastName: lastName.trim() || null,
+      email: email.trim() || null,
+    });
+  };
+
+  const handleCancel = () => {
+    // Revert to original state
+    setFirstName(originalFirstName);
+    setLastName(originalLastName);
+    setEmail(originalEmail);
+    onOpenChange(false);
+  };
+
+  if (!user) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={(isOpen) => {
+      if (!isOpen) {
+        handleCancel();
+      } else {
+        onOpenChange(isOpen);
+      }
+    }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center space-x-2">
+            <UserIcon className="h-5 w-5" />
+            <span>Edit User Profile</span>
+          </DialogTitle>
+        </DialogHeader>
+        
+        <div className="space-y-4">
+          {/* User Info Display */}
+          <div className="bg-gray-50 rounded-lg p-4">
+            <div className="flex items-center space-x-3">
+              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                <span className="text-blue-600 font-medium text-lg">
+                  {firstName?.[0] || email?.[0] || 'U'}
+                </span>
+              </div>
+              <div>
+                <h3 className="font-medium text-gray-900">User Profile</h3>
+                <p className="text-sm text-gray-600">Update name and contact information</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Form Fields */}
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="firstName">First Name</Label>
+                <Input
+                  id="firstName"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  placeholder="Enter first name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lastName">Last Name</Label>
+                <Input
+                  id="lastName"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  placeholder="Enter last name"
+                />
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="email">Email Address</Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Enter email address"
+              />
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex justify-end space-x-3 pt-4 border-t">
+            <Button variant="outline" onClick={handleCancel}>
+              Cancel
+            </Button>
+            <Button onClick={handleSave} disabled={isSaving}>
+              {isSaving ? 'Saving...' : 'Save Profile'}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function Admin() {
   const { isAdmin } = usePermissions();
 

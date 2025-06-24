@@ -143,7 +143,7 @@ export default function RomPilotPage() {
         </div>
 
         {/* ROM Pilots Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {isLoading ? (
             <div className="col-span-full flex justify-center items-center py-12">
               <div className="text-center">
@@ -170,13 +170,13 @@ export default function RomPilotPage() {
           ) : (
             romPilots.map((pilot) => (
               <Card key={pilot.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader className="pb-3">
+                <CardHeader className="pb-2">
                   <div className="flex justify-between items-start">
                     <div className="flex-1 min-w-0">
-                      <CardTitle className="text-lg font-semibold truncate">
+                      <CardTitle className="text-sm font-semibold truncate leading-tight">
                         {pilot.projectName}
                       </CardTitle>
-                      <p className="text-sm text-gray-600 mt-1">{pilot.property}</p>
+                      <p className="text-xs text-gray-600 mt-1 truncate">{pilot.property}</p>
                     </div>
                     <div className="flex space-x-1 ml-2">
                       <Button
@@ -186,42 +186,43 @@ export default function RomPilotPage() {
                           setEditingRomPilot(pilot);
                           setCreateModalOpen(true);
                         }}
+                        className="h-6 w-6 p-0"
                       >
-                        <Edit className="h-4 w-4" />
+                        <Edit className="h-3 w-3" />
                       </Button>
                       <Button
                         size="sm"
                         variant="ghost"
                         onClick={() => deleteRomPilot(pilot.id)}
-                        className="text-red-600 hover:text-red-700"
+                        className="text-red-600 hover:text-red-700 h-6 w-6 p-0"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-3 w-3" />
                       </Button>
                     </div>
                   </div>
                 </CardHeader>
                 
-                <CardContent className="space-y-4">
-                  <div className="bg-green-50 p-3 rounded-lg">
-                    <p className="text-sm text-green-600 font-medium">Total Estimate</p>
-                    <p className="text-2xl font-bold text-green-800">
+                <CardContent className="space-y-2 pt-0">
+                  <div className="bg-green-50 p-2 rounded">
+                    <p className="text-xs text-green-600 font-medium">Total Estimate</p>
+                    <p className="text-lg font-bold text-green-800">
                       {formatCurrency(pilot.totalEstimate)}
                     </p>
                   </div>
                   
                   {pilot.notes && (
                     <div>
-                      <p className="text-sm text-gray-600 font-medium mb-1">Notes</p>
-                      <p className="text-sm text-gray-800 line-clamp-3">{pilot.notes}</p>
+                      <p className="text-xs text-gray-600 font-medium mb-1">Notes</p>
+                      <p className="text-xs text-gray-800 line-clamp-2">{pilot.notes}</p>
                     </div>
                   )}
                   
-                  <div className="flex justify-between items-center text-xs text-gray-500 pt-2 border-t">
-                    <span>Created {format(new Date(pilot.createdAt), "MMM d, yyyy")}</span>
-                    {pilot.createdBy && <span>by {pilot.createdBy}</span>}
+                  <div className="text-xs text-gray-500 pt-1 border-t">
+                    <span>{format(new Date(pilot.createdAt), "MMM d")}</span>
+                    {pilot.createdBy && <span className="ml-2">by {pilot.createdBy}</span>}
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
                     <Button 
                       variant="outline" 
                       size="sm" 
@@ -229,16 +230,18 @@ export default function RomPilotPage() {
                         setSelectedRomPilot(pilot);
                         setScopeModalOpen(true);
                       }}
+                      className="w-full h-6 text-xs px-2"
                     >
-                      <ListChecks className="h-4 w-4 mr-2" />
+                      <ListChecks className="h-3 w-3 mr-1" />
                       Manage Scope
                     </Button>
                     <Button 
                       variant="outline" 
                       size="sm" 
                       onClick={() => generateRomReport(pilot)}
+                      className="w-full h-6 text-xs px-2"
                     >
-                      <Download className="h-4 w-4 mr-2" />
+                      <Download className="h-3 w-3 mr-1" />
                       Generate Report
                     </Button>
                   </div>

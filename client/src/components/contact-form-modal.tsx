@@ -246,6 +246,27 @@ export function ContactFormModal({ contact, trigger, onSuccess }: ContactFormMod
             />
           </div>
 
+          {/* System Access - Only for Owner contacts */}
+          {formData.type === "owner" && (
+            <div className="space-y-3 p-4 border rounded-lg bg-purple-50">
+              <div className="flex items-center space-x-3">
+                <input
+                  type="checkbox"
+                  id="hasSystemAccess"
+                  checked={formData.hasSystemAccess || false}
+                  onChange={(e) => setFormData(prev => ({ ...prev, hasSystemAccess: e.target.checked }))}
+                  className="w-4 h-4 rounded border-gray-300"
+                />
+                <Label htmlFor="hasSystemAccess" className="text-sm font-medium">
+                  Grant System Access
+                </Label>
+              </div>
+              <p className="text-xs text-gray-600 ml-7">
+                Allow this owner contact to access the RFP Tracker system
+              </p>
+            </div>
+          )}
+
           {/* Tags section - only show for Property Owner contacts */}
           {formData.type === "owner" && (
             <div className="space-y-2 border-t pt-4">

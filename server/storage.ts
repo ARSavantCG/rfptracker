@@ -884,7 +884,7 @@ class ExtendedDatabaseStorage extends DatabaseStorage {
   }
 
   async getContactsByType(type: string): Promise<Contact[]> {
-    return await db.select().from(contacts).where(eq(contacts.contactType, type));
+    return await db.select().from(contacts).where(eq(contacts.type, type));
   }
 }
 

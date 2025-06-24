@@ -51,7 +51,11 @@ import {
   type RomPilotLineItem,
   type InsertRomPilotLineItem,
   type UpdateRomPilotLineItem,
-  type RfpFile 
+  type RfpFile,
+  users,
+  type User,
+  type UpsertUser,
+  type UpdateUser,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, like, or } from "drizzle-orm";
@@ -139,6 +143,15 @@ export interface IStorage {
   updateRomPilotLineItem(id: number, updates: Partial<UpdateRomPilotLineItem>): Promise<RomPilotLineItem | undefined>;
   deleteRomPilotLineItem(id: number): Promise<boolean>;
   saveRomPilotLineItems(romPilotId: number, lineItems: any[]): Promise<any[]>;
+
+  // User operations
+  // (IMPORTANT) these user operations are mandatory for Replit Auth.
+  getUser(id: string): Promise<User | undefined>;
+  upsertUser(user: UpsertUser): Promise<User>;
+  // Admin user management
+  getAllUsers(): Promise<User[]>;
+  updateUser(id: string, updates: UpdateUser): Promise<User | undefined>;
+  deleteUser(id: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {

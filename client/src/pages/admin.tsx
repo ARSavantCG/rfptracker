@@ -56,10 +56,7 @@ function SystemUsersAndContacts() {
 
   const updateUserMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<User> }) => {
-      return await apiRequest(`/api/admin/users/${id}`, {
-        method: "PATCH",
-        body: JSON.stringify(updates),
-      });
+      return await apiRequest(`/api/admin/users/${id}`, "PATCH", updates);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
@@ -81,10 +78,7 @@ function SystemUsersAndContacts() {
 
   const updateContactMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: number; updates: any }) => {
-      return await apiRequest(`/api/contacts/${id}`, {
-        method: "PATCH",
-        body: JSON.stringify(updates),
-      });
+      return await apiRequest(`/api/contacts/${id}`, "PATCH", updates);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/authorized-contacts"] });

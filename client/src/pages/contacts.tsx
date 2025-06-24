@@ -264,6 +264,15 @@ export default function Contacts() {
                     </div>
                   )}
                   
+                  {/* System Access Badge for Owner contacts */}
+                  {contact.type === "owner" && (
+                    <div className="mt-2">
+                      <Badge variant={contact.hasSystemAccess ? "default" : "secondary"} className="text-xs">
+                        {contact.hasSystemAccess ? "System Access: Granted" : "System Access: Denied"}
+                      </Badge>
+                    </div>
+                  )}
+                  
                   <div className="flex space-x-1 mt-3">
                     <ContactFormModal 
                       contact={contact}

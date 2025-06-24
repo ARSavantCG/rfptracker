@@ -119,19 +119,84 @@ function requireAdmin(req: any, res: any, next: any) {
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup session middleware
   setupSession(app);
-  // Test route for debugging preview issues
-  app.get("/test", (req, res) => {
-    res.send(`
-      <!DOCTYPE html>
-      <html>
-      <head><title>Test</title></head>
-      <body>
-        <h1>Server is working!</h1>
-        <p>Time: ${new Date().toISOString()}</p>
-        <a href="/">Go to main app</a>
-      </body>
-      </html>
-    `);
+  // Authentication routes
+  app.post('/api/auth/login', async (req, res) => {
+    try {
+      const { username, password } = req.body;
+      
+      if (!username || !password) {
+        return res.status(400).json({ message: "Username and password are required" });
+      }
+
+      const user = await AuthService.authenticateUser({ username, password });
+      if (!user) {
+        return res.status(401).json({ message: "Invalid username or password" });
+      }
+
+      (req.session as any).user = user;
+      res.json({ user, message: "Login successful" });
+    } catch (error) {
+      console.error("Login error:", error);
+      res.status(500).json({ message: "Login failed" });
+    }
+  });
+
+  app.post('/api/auth/logout', (req, res) => {
+    req.session?.destroy((err) => {
+      if (err) {
+        console.error("Logout error:", err);
+        return res.status(500).json({ message: "Logout failed" });
+      }
+      res.json({ message: "Logout successful" });
+    });
+  });
+
+  app.get('/api/auth/user', requireAuth, async (req, res) => {
+    try {
+      const sessionUser = (req.session as any).user;
+      const user = await AuthService.getUserById(sessionUser.id);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      res.json(user);
+    } catch (error) {
+      console.error("Get user error:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  app.post('/api/auth/init-admin', async (req, res) => {
+    try {
+      const existingAdmin = await db.select().from(users).where(eq(users.role, 'admin')).limit(1);
+      
+      if (existingAdmin.length > 0) {
+        return res.status(400).json({ message: "Admin user already exists" });
+      }
+
+      const adminUser = await AuthService.createUser({
+        username: 'admin',
+        password: 'admin123',
+        email: 'admin@rfptracker.com',
+        firstName: 'Admin',
+        lastName: 'User',
+        role: 'admin',
+        permissions: [
+          'admin.access',
+          'users.view', 'users.edit', 'users.create', 'users.delete',
+          'rfp.create', 'rfp.edit', 'rfp.view', 'rfp.delete',
+          'properties.create', 'properties.edit', 'properties.view', 'properties.delete',
+          'contacts.create', 'contacts.edit', 'contacts.view', 'contacts.delete',
+          'reports.view', 'reports.generate'
+        ]
+      });
+
+      res.json({ message: "Admin user created successfully", user: adminUser });
+    } catch (error) {
+      console.error("Init admin error:", error);
+      res.status(500).json({ message: "Failed to create admin user" });
+    }
   });
   // Test route to debug multer
   app.post("/api/test-upload", upload.array("files"), (req, res) => {

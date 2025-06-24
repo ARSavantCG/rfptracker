@@ -112,7 +112,7 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
 
   const resetForm = () => {
     setFormData({
-      id: !property ? nextIdData?.nextId : undefined,
+      id: undefined,
       propertyName: "",
       building: "",
       streetAddress: "",
@@ -196,8 +196,12 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
     if (isEdit) {
       updateMutation.mutate(submitData);
     } else {
-      const { id, ...createData } = submitData;
-      createMutation.mutate(createData as InsertProperty);
+      // For new properties, use the next available ID if not manually set
+      const finalData = {
+        ...submitData,
+        id: submitData.id || nextIdData?.nextId
+      };
+      createMutation.mutate(finalData as InsertProperty);
     }
   };
 
@@ -243,10 +247,10 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
               <Input
                 id="propertyId"
                 type="number"
-                value={formData.id || (isEdit ? "" : nextIdData?.nextId || "")}
+                value={formData.id || (!isEdit && nextIdData?.nextId ? nextIdData.nextId : "")}
                 onChange={(e) => setFormData(prev => ({ ...prev, id: parseInt(e.target.value) || undefined }))}
-                placeholder="Auto-assigned"
-                disabled={!isEdit && !nextIdData?.nextId}
+                placeholder={!isEdit ? "Auto-assigned" : "Enter ID"}
+                readOnly={!isEdit && !!nextIdData?.nextId}
               />
               <p className="text-xs text-gray-500">
                 {isEdit 

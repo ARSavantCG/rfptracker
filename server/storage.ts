@@ -109,6 +109,7 @@ export interface IStorage {
   // Property management
   getAllProperties(): Promise<Property[]>;
   getProperty(id: number): Promise<Property | undefined>;
+  getNextPropertyId(): Promise<number>;
   createProperty(property: InsertProperty): Promise<Property>;
   updateProperty(id: number, updates: Partial<UpdateProperty>): Promise<Property | undefined>;
   deleteProperty(id: number): Promise<boolean>;

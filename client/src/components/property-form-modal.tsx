@@ -8,10 +8,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit, Building, Trash2, Grid } from "lucide-react";
+import { Plus, Edit, Building, Trash2 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
-import { nanoid } from "nanoid";
-import type { Property, InsertProperty, PropertyBay, ColumnRange } from "@shared/schema";
+import type { Property, InsertProperty } from "@shared/schema";
 
 interface PropertyFormModalProps {
   property?: Property;
@@ -30,8 +29,6 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
     city: property?.city || "",
     state: property?.state || "",
     zip: property?.zip || "",
-    bays: property?.bays || [],
-    gridLayout: property?.gridLayout || { rows: 1, columns: 1 },
   });
 
   // Fetch next property ID for new properties
@@ -40,10 +37,7 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
     enabled: !property && open, // Only fetch when creating new property and modal is open
   });
 
-  const [bays, setBays] = useState<PropertyBay[]>(property?.bays || []);
-  const [gridRows, setGridRows] = useState(property?.gridLayout?.rows || 1);
-  const [gridColumns, setGridColumns] = useState(property?.gridLayout?.columns || 1);
-  const [columnRanges, setColumnRanges] = useState<ColumnRange[]>(property?.columnRanges || []);
+
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -120,59 +114,7 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
       city: "",
       state: "",
       zip: "",
-      bays: [],
-      gridLayout: { rows: 1, columns: 1 },
     });
-    setBays([]);
-    setGridRows(1);
-    setGridColumns(1);
-    setColumnRanges([]);
-  };
-
-  const addBay = () => {
-    const newBay: PropertyBay = {
-      id: nanoid(),
-      bayNumber: `Bay ${bays.length + 1}`,
-      squareFootage: 0,
-      type: 'warehouse',
-    };
-    setBays([...bays, newBay]);
-  };
-
-  const updateBay = (bayId: string, updates: Partial<PropertyBay>) => {
-    setBays(bays.map(bay => bay.id === bayId ? { ...bay, ...updates } : bay));
-  };
-
-  const removeBay = (bayId: string) => {
-    setBays(bays.filter(bay => bay.id !== bayId));
-  };
-
-  const updateGridDimensions = (rows: number, columns: number) => {
-    setGridRows(rows);
-    setGridColumns(columns);
-    setFormData(prev => ({
-      ...prev,
-      gridLayout: { rows, columns }
-    }));
-  };
-
-  const addColumnRange = () => {
-    const newRange: ColumnRange = {
-      id: nanoid(),
-      startColumn: columnRanges.length + 1,
-      endColumn: columnRanges.length + 2,
-      squareFootage: 0,
-      description: `Between columns ${columnRanges.length + 1}-${columnRanges.length + 2}`
-    };
-    setColumnRanges([...columnRanges, newRange]);
-  };
-
-  const updateColumnRange = (rangeId: string, updates: Partial<ColumnRange>) => {
-    setColumnRanges(columnRanges.map(range => range.id === rangeId ? { ...range, ...updates } : range));
-  };
-
-  const removeColumnRange = (rangeId: string) => {
-    setColumnRanges(columnRanges.filter(range => range.id !== rangeId));
   };
 
   const handleSubmit = (e: React.FormEvent) => {

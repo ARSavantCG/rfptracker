@@ -2505,7 +2505,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const decoded = jwt.verify(token, JWT_SECRET) as any;
       console.log('Token decoded successfully for user:', decoded.userId);
-    } catch (error) {
+    } catch (error: any) {
       console.log('Token verification failed:', error.message);
       return res.status(401).json({ message: 'Invalid token' });
     }

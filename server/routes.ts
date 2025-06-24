@@ -139,17 +139,30 @@ function requireAuth(req: any, res: any, next: any) {
   next();
 }
 
-function requireAdmin(req: any, res: any, next: any) {
-  if (!req.session?.user) {
+async function requireAdmin(req: any, res: any, next: any) {
+  console.log('requireAdmin middleware hit, userId:', req.userId);
+  
+  if (!req.userId) {
+    console.log('No userId found in requireAdmin');
     return res.status(401).json({ message: "Authentication required" });
   }
   
-  const user = req.session.user;
-  if (user.role !== 'admin' && !user.permissions?.includes('admin.access')) {
-    return res.status(403).json({ message: "Admin access required" });
+  try {
+    // Get user from database to check admin permissions
+    const user = await storage.getUser(req.userId);
+    console.log('User found for admin check:', user?.username, 'role:', user?.role);
+    
+    if (!user || (user.role !== 'admin' && !user.permissions?.includes('admin.access'))) {
+      console.log('Admin access denied for user:', user?.username);
+      return res.status(403).json({ message: "Admin access required" });
+    }
+    
+    console.log('Admin authorization successful for user:', user.username);
+    next();
+  } catch (error) {
+    console.error('Error in requireAdmin middleware:', error);
+    return res.status(500).json({ message: "Internal server error" });
   }
-  
-  next();
 }
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-here';

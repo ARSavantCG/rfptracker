@@ -1,8 +1,11 @@
-import { useAuth } from "./useAuth";
+import { useQuery } from "@tanstack/react-query";
 import { Permission, ROLE_PERMISSIONS, UserRole } from "@shared/schema";
 
 export function usePermissions() {
-  const { user } = useAuth();
+  const { data: user } = useQuery({
+    queryKey: ["/api/auth/user"],
+    retry: false,
+  });
 
   const hasPermission = (permission: Permission): boolean => {
     if (!user) return false;

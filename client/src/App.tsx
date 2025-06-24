@@ -17,6 +17,7 @@ import Contacts from "@/pages/contacts";
 import Properties from "@/pages/properties";
 import RomPilot from "@/pages/rom-pilot";
 import Reports from "@/pages/reports";
+import Admin from "@/pages/admin";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -27,6 +28,7 @@ function Router() {
       <Route path="/properties" component={Properties} />
       <Route path="/rom-pilot" component={RomPilot} />
       <Route path="/reports" component={Reports} />
+      <Route path="/admin" component={Admin} />
       <Route component={NotFound} />
     </Switch>
   );

@@ -1,10 +1,12 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Home, FileText, BarChart3, Users, Building, Calculator } from "lucide-react";
+import { Home, FileText, BarChart3, Users, Building, Calculator, Settings } from "lucide-react";
+import { usePermissions } from "@/hooks/usePermissions";
 import { cn } from "@/lib/utils";
 
 export default function Navigation() {
   const [location] = useLocation();
+  const { isAdmin } = usePermissions();
 
   const navItems = [
     { path: "/", label: "Dashboard", icon: Home },
@@ -12,6 +14,7 @@ export default function Navigation() {
     { path: "/properties", label: "Properties", icon: Building },
     { path: "/rom-pilot", label: "ROM Pilot", icon: Calculator },
     { path: "/reports", label: "Reports", icon: BarChart3 },
+    ...(isAdmin() ? [{ path: "/admin", label: "Admin", icon: Settings }] : []),
   ];
 
   return (

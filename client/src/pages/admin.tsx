@@ -203,36 +203,6 @@ function SystemUsersAndContacts() {
                     <UserIcon className="h-4 w-4 mr-1" />
                     Edit Profile
                   </Button>
-                  
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <Trash2 className="h-4 w-4 mr-1" />
-                        Delete
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Delete User</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Are you sure you want to delete this user? This action cannot be undone.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                          className="bg-red-600 hover:bg-red-700"
-                          onClick={() => handleDeleteUser(user.id)}
-                        >
-                          Delete
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
                 </div>
               </div>
             ))}
@@ -302,6 +272,21 @@ function SystemUsersAndContacts() {
         }}
         isSaving={updateUserMutation.isPending}
       />
+
+      {/* User Profile Dialog */}
+      {selectedUser && (
+        <UserProfileDialog
+          user={selectedUser}
+          open={profileDialogOpen}
+          onOpenChange={setProfileDialogOpen}
+          onSave={(updates) => {
+            updateUserMutation.mutate({ id: selectedUser.id, updates });
+          }}
+          onDelete={(userId) => deleteUserMutation.mutate(userId)}
+          isSaving={updateUserMutation.isPending}
+          isDeleting={deleteUserMutation.isPending}
+        />
+      )}
 
       {/* Contact Permissions Dialog */}
       {selectedContact && (
@@ -594,10 +579,12 @@ interface UserProfileDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSave: (updates: Partial<User>) => void;
+  onDelete: (userId: string) => void;
   isSaving: boolean;
+  isDeleting: boolean;
 }
 
-function UserProfileDialog({ user, open, onOpenChange, onSave, isSaving }: UserProfileDialogProps) {
+function UserProfileDialog({ user, open, onOpenChange, onSave, onDelete, isSaving, isDeleting }: UserProfileDialogProps) {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -708,13 +695,53 @@ function UserProfileDialog({ user, open, onOpenChange, onSave, isSaving }: UserP
           </div>
 
           {/* Action Buttons */}
-          <div className="flex justify-end space-x-3 pt-4 border-t">
-            <Button variant="outline" onClick={handleCancel}>
-              Cancel
-            </Button>
-            <Button onClick={handleSave} disabled={isSaving}>
-              {isSaving ? 'Saving...' : 'Save Profile'}
-            </Button>
+          <div className="pt-4 border-t space-y-4">
+            <div className="flex justify-end space-x-3">
+              <Button variant="outline" onClick={handleCancel}>
+                Cancel
+              </Button>
+              <Button onClick={handleSave} disabled={isSaving}>
+                {isSaving ? 'Saving...' : 'Save Profile'}
+              </Button>
+            </div>
+            
+            {/* Delete User Section - Small and at bottom */}
+            <div className="pt-4 border-t border-gray-100">
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs text-red-500 hover:text-red-600 hover:bg-red-50 h-6 px-2"
+                    disabled={isDeleting}
+                  >
+                    <Trash2 className="h-3 w-3 mr-1" />
+                    Delete User Account
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete User Account</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Are you sure you want to permanently delete this user account? This action cannot be undone and will remove all associated data.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => {
+                        onDelete(user.id);
+                        onOpenChange(false);
+                      }}
+                      className="bg-red-600 hover:bg-red-700"
+                      disabled={isDeleting}
+                    >
+                      {isDeleting ? 'Deleting...' : 'Delete User'}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
           </div>
         </div>
       </DialogContent>

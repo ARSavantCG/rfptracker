@@ -10,6 +10,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import session from "express-session";
 import { storage } from "./storage";
+import { db } from "./db";
 import { 
   insertRfpRequestSchema, 
   updateRfpRequestSchema,

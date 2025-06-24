@@ -13,7 +13,8 @@ import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Settings, Users, Shield, Edit, Trash2, CheckCircle, XCircle } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
-import type { User, UserRole, Permission, ROLE_PERMISSIONS } from "@shared/schema";
+import type { User, UserRole, Permission } from "@shared/schema";
+import { ROLE_PERMISSIONS } from "@shared/schema";
 
 export default function Admin() {
   const { isAdmin } = usePermissions();

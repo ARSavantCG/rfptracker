@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { Permission, ROLE_PERMISSIONS, UserRole } from "@shared/schema";
+import { Permission, UserRole } from "@shared/schema";
+import { ROLE_PERMISSIONS } from "@shared/schema";
 
 export function usePermissions() {
   const { data: user } = useQuery({
@@ -24,7 +25,8 @@ export function usePermissions() {
   };
 
   const isAdmin = (): boolean => {
-    return hasRole('admin');
+    if (!user) return false;
+    return user.role === 'admin';
   };
 
   const isManager = (): boolean => {

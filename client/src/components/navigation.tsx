@@ -8,14 +8,18 @@ export default function Navigation() {
   const [location] = useLocation();
   const { isAdmin } = usePermissions();
 
-  const navItems = [
+  // Base navigation items
+  const baseNavItems = [
     { path: "/", label: "Dashboard", icon: Home },
     { path: "/contacts", label: "Contacts", icon: Users },
     { path: "/properties", label: "Properties", icon: Building },
     { path: "/rom-pilot", label: "ROM Pilot", icon: Calculator },
     { path: "/reports", label: "Reports", icon: BarChart3 },
-    ...(isAdmin() ? [{ path: "/admin", label: "Admin", icon: Settings }] : []),
   ];
+
+  // Add admin item if user is admin
+  const adminItems = isAdmin() ? [{ path: "/admin", label: "Admin Panel", icon: Settings }] : [];
+  const navItems = [...baseNavItems, ...adminItems];
 
   return (
     <nav className="bg-white border-b border-gray-200 px-6 py-3">

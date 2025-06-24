@@ -142,21 +142,31 @@ function SystemUsersAndContacts() {
       return 'Admin';
     }
     
-    // Check for manager-level permissions (can create/edit/delete)
+    // Check for manager-level permissions (can create/edit/delete across all areas)
     const hasCreatePermissions = contact.permissions.some((p: string) => p.includes('.create'));
     const hasEditPermissions = contact.permissions.some((p: string) => p.includes('.edit'));
     const hasDeletePermissions = contact.permissions.some((p: string) => p.includes('.delete'));
     
+    // Full manager has all three types across multiple areas
     if (hasCreatePermissions && hasEditPermissions && hasDeletePermissions) {
-      return 'Manager';
+      const createCount = contact.permissions.filter((p: string) => p.includes('.create')).length;
+      const editCount = contact.permissions.filter((p: string) => p.includes('.edit')).length;
+      const deleteCount = contact.permissions.filter((p: string) => p.includes('.delete')).length;
+      
+      // If they have comprehensive permissions (3+ of each type), they're a manager
+      if (createCount >= 3 && editCount >= 3 && deleteCount >= 3) {
+        return 'Manager';
+      }
     }
     
-    // If has mixed permissions, it's custom
-    if (hasCreatePermissions || hasEditPermissions || hasDeletePermissions) {
+    // If has any create/edit/delete permissions or special permissions like reports.generate, it's custom
+    if (hasCreatePermissions || hasEditPermissions || hasDeletePermissions || 
+        contact.permissions.includes('reports.generate') || 
+        contact.permissions.includes('users.view')) {
       return 'Custom';
     }
     
-    // Otherwise just view permissions = User
+    // Otherwise just basic view permissions = User
     return 'User';
   };
 

@@ -199,7 +199,7 @@ function SystemUsersAndContacts() {
                     <p className="text-sm text-gray-600">{user.email}</p>
                     <div className="flex items-center space-x-2 mt-1">
                       <Badge className={getRoleBadgeColor(user.role)}>
-                        {user.role}
+                        {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
                       </Badge>
                       {user.isActive ? (
                         <div className="flex items-center text-green-600 text-sm">

@@ -6,7 +6,7 @@ export function usePermissions() {
   const { data: user } = useQuery({
     queryKey: ["/api/auth/user"],
     retry: false,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 1000, // 1 second for development
   });
 
   const hasPermission = (permission: Permission): boolean => {

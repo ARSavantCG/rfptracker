@@ -2200,16 +2200,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Auth route - returns current user or creates one
+  // Auth route - returns current user (tracks admin state)
+  let currentUserRole = 'user'; // Simple state tracking for development
+  
   app.get('/api/auth/user', async (req, res) => {
     try {
-      // For development, return a simple test user
       const testUser = {
         id: 'test-admin',
         email: 'admin@rfptracker.com',
         firstName: 'Admin',
         lastName: 'User',
-        role: 'user'
+        role: currentUserRole
       };
       
       res.json(testUser);
@@ -2222,7 +2223,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Development route to make current user admin
   app.post('/api/dev/make-admin', async (req, res) => {
     try {
-      // For development, just return admin user
+      // Update the role state
+      currentUserRole = 'admin';
+      
       const adminUser = {
         id: 'test-admin',
         email: 'admin@rfptracker.com',

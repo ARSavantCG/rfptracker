@@ -2,7 +2,7 @@
 
 ## RFP Tracker - Request for Proposals Management System
 
-**Copyright (c) 2025 [YOUR NAME/ENTITY]. All rights reserved.**
+**Copyright (c) 2025 Savant Consulting Group LLC. All rights reserved.**
 
 This software is proprietary and confidential. Unauthorized copying, distribution, modification, or use of this software, in whole or in part, is strictly prohibited without explicit written permission from the copyright holder.
 

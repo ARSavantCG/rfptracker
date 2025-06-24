@@ -6,7 +6,6 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit, Building, Trash2 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
@@ -37,8 +36,6 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
     enabled: !property && open, // Only fetch when creating new property and modal is open
   });
 
-
-
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const isEdit = !!property;
@@ -48,37 +45,37 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/properties"] });
       toast({
-        title: "Property created",
-        description: "Property has been successfully created.",
+        title: "Success",
+        description: "Property created successfully",
       });
       setOpen(false);
-      onSuccess?.();
       resetForm();
+      onSuccess?.();
     },
-    onError: () => {
+    onError: (error: any) => {
       toast({
         title: "Error",
-        description: "Failed to create property. Please try again.",
+        description: error.message || "Failed to create property",
         variant: "destructive",
       });
     },
   });
 
   const updateMutation = useMutation({
-    mutationFn: (data: Partial<InsertProperty>) => apiRequest(`/api/properties/${property?.id}`, "PATCH", data),
+    mutationFn: (data: InsertProperty) => apiRequest(`/api/properties/${property?.id}`, "PATCH", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/properties"] });
       toast({
-        title: "Property updated",
-        description: "Property has been successfully updated.",
+        title: "Success",
+        description: "Property updated successfully",
       });
       setOpen(false);
       onSuccess?.();
     },
-    onError: () => {
+    onError: (error: any) => {
       toast({
         title: "Error",
-        description: "Failed to update property. Please try again.",
+        description: error.message || "Failed to update property",
         variant: "destructive",
       });
     },
@@ -89,16 +86,16 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/properties"] });
       toast({
-        title: "Property deleted",
-        description: "Property has been successfully deleted.",
+        title: "Success",
+        description: "Property deleted successfully",
       });
       setOpen(false);
       onSuccess?.();
     },
-    onError: () => {
+    onError: (error: any) => {
       toast({
         title: "Error",
-        description: "Failed to delete property. Please try again.",
+        description: error.message || "Failed to delete property",
         variant: "destructive",
       });
     },
@@ -129,22 +126,25 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
       return;
     }
 
-    const submitData = {
-      ...formData,
-      bays,
-      gridLayout: { rows: gridRows, columns: gridColumns },
-      columnRanges,
+    // Generate display name
+    const displayName = `${formData.propertyName}${formData.building ? ` - Building ${formData.building}` : ''}, ${formData.streetAddress}, ${formData.city}, ${formData.state} ${formData.zip}`;
+
+    const propertyData: InsertProperty = {
+      id: formData.id,
+      propertyName: formData.propertyName!,
+      building: formData.building || "",
+      isSingleBuilding: formData.isSingleBuilding || false,
+      streetAddress: formData.streetAddress!,
+      city: formData.city!,
+      state: formData.state!,
+      zip: formData.zip!,
+      displayName: displayName,
     };
 
     if (isEdit) {
-      updateMutation.mutate(submitData);
+      updateMutation.mutate(propertyData);
     } else {
-      // For new properties, use the next available ID if not manually set
-      const finalData = {
-        ...submitData,
-        id: submitData.id || nextIdData?.nextId
-      };
-      createMutation.mutate(finalData as InsertProperty);
+      createMutation.mutate(propertyData);
     }
   };
 
@@ -202,13 +202,14 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
                 }
               </p>
             </div>
+            
             <div className="col-span-2 space-y-2">
               <Label htmlFor="propertyName">Property Name *</Label>
               <Input
                 id="propertyName"
                 value={formData.propertyName}
                 onChange={(e) => handleInputChange("propertyName", e.target.value)}
-                placeholder="e.g. MG Westside"
+                placeholder="Bridge Point Gratigny"
                 required
               />
             </div>
@@ -241,17 +242,17 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
                 disabled={formData.isSingleBuilding}
               />
             </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="streetAddress">Street Address *</Label>
-            <Input
-              id="streetAddress"
-              value={formData.streetAddress}
-              onChange={(e) => handleInputChange("streetAddress", e.target.value)}
-              placeholder="123 Main Street"
-              required
-            />
+            
+            <div className="space-y-2">
+              <Label htmlFor="streetAddress">Street Address *</Label>
+              <Input
+                id="streetAddress"
+                value={formData.streetAddress}
+                onChange={(e) => handleInputChange("streetAddress", e.target.value)}
+                placeholder="4700 NW 135th Ave"
+                required
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-3 gap-4">
@@ -273,7 +274,6 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
                 value={formData.state}
                 onChange={(e) => handleInputChange("state", e.target.value)}
                 placeholder="FL"
-                maxLength={2}
                 required
               />
             </div>
@@ -300,278 +300,54 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
             </p>
           </div>
 
-          {/* Bay Management Section */}
-          <div className="space-y-4 border-t pt-4">
-            <div className="flex items-center justify-between">
-              <Label className="text-base font-medium">Bay Configuration</Label>
-              <Button type="button" variant="outline" size="sm" onClick={addBay}>
-                <Plus className="h-4 w-4 mr-1" />
-                Add Bay
-              </Button>
-            </div>
-            
-            {/* Grid Layout Controls */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="gridRows">Grid Rows</Label>
-                <Input
-                  id="gridRows"
-                  type="number"
-                  min="1"
-                  max="50"
-                  value={gridRows}
-                  onChange={(e) => updateGridDimensions(parseInt(e.target.value) || 1, gridColumns)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="gridColumns">Grid Columns</Label>
-                <Input
-                  id="gridColumns"
-                  type="number"
-                  min="1"
-                  max="50"
-                  value={gridColumns}
-                  onChange={(e) => updateGridDimensions(gridRows, parseInt(e.target.value) || 1)}
-                />
-                <p className="text-xs text-gray-500">
-                  Enter up to 50 columns (e.g., 23 for your project)
-                </p>
-              </div>
-            </div>
-
-            {/* Bay List */}
-            {bays.length > 0 && (
-              <div className="space-y-3 max-h-40 overflow-y-auto">
-                <div className="grid grid-cols-12 gap-2 text-xs font-medium text-gray-600 px-3">
-                  <div className="col-span-2">Bay Name</div>
-                  <div className="col-span-1">Sq Ft</div>
-                  <div className="col-span-2">Type</div>
-                  <div className="col-span-2">Area Label</div>
-                  <div className="col-span-1">Column</div>
-                  <div className="col-span-3">Notes</div>
-                  <div className="col-span-1"></div>
-                </div>
-                {bays.map((bay) => (
-                  <div key={bay.id} className="grid grid-cols-12 gap-2 items-center p-3 border rounded-lg">
-                    <div className="col-span-2">
-                      <Input
-                        value={bay.bayNumber}
-                        onChange={(e) => updateBay(bay.id, { bayNumber: e.target.value })}
-                        placeholder="Bay Name"
-                        className="h-8"
-                      />
-                    </div>
-                    <div className="col-span-1">
-                      <Input
-                        type="number"
-                        value={bay.squareFootage}
-                        onChange={(e) => updateBay(bay.id, { squareFootage: parseInt(e.target.value) || 0 })}
-                        placeholder="Sq Ft"
-                        className="h-8"
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <Select
-                        value={bay.type}
-                        onValueChange={(value: 'office' | 'warehouse' | 'retail' | 'mixed') => 
-                          updateBay(bay.id, { type: value })
-                        }
-                      >
-                        <SelectTrigger className="h-8">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="office">Office</SelectItem>
-                          <SelectItem value="warehouse">Warehouse</SelectItem>
-                          <SelectItem value="retail">Retail</SelectItem>
-                          <SelectItem value="mixed">Mixed</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="col-span-2">
-                      <Input
-                        value={bay.areaLabel || ''}
-                        onChange={(e) => updateBay(bay.id, { areaLabel: e.target.value })}
-                        placeholder="Area (e.g., Loading Dock)"
-                        className="h-8"
-                      />
-                    </div>
-                    <div className="col-span-1">
-                      <Input
-                        value={bay.columnLabel || ''}
-                        onChange={(e) => updateBay(bay.id, { columnLabel: e.target.value })}
-                        placeholder="Col (A, 1)"
-                        className="h-8"
-                      />
-                    </div>
-                    <div className="col-span-3">
-                      <Input
-                        value={bay.notes || ''}
-                        onChange={(e) => updateBay(bay.id, { notes: e.target.value })}
-                        placeholder="Notes"
-                        className="h-8"
-                      />
-                    </div>
-                    <div className="col-span-1">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => removeBay(bay.id)}
-                        className="h-8 w-8 p-0"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Column Range Management Section */}
-          <div className="space-y-4 border-t pt-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <Label className="text-base font-medium">Column Ranges for Rentable Area</Label>
-                <p className="text-sm text-gray-600 mt-1">
-                  Define column ranges and their square footages for automatic rentable area calculation
-                </p>
-              </div>
-              <Button type="button" variant="outline" size="sm" onClick={addColumnRange}>
-                <Plus className="h-4 w-4 mr-1" />
-                Add Range
-              </Button>
-            </div>
-
-            {/* Column Range List */}
-            {columnRanges.length > 0 && (
-              <div className="space-y-3 max-h-40 overflow-y-auto">
-                <div className="grid grid-cols-12 gap-2 text-xs font-medium text-gray-600 px-3">
-                  <div className="col-span-2">Start Column</div>
-                  <div className="col-span-2">End Column</div>
-                  <div className="col-span-2">Square Footage</div>
-                  <div className="col-span-5">Description</div>
-                  <div className="col-span-1"></div>
-                </div>
-                {columnRanges.map((range) => (
-                  <div key={range.id} className="grid grid-cols-12 gap-2 items-center p-3 border rounded-lg">
-                    <div className="col-span-2">
-                      <Input
-                        type="number"
-                        value={range.startColumn}
-                        onChange={(e) => updateColumnRange(range.id, { startColumn: parseInt(e.target.value) || 1 })}
-                        placeholder="Start"
-                        className="h-8"
-                        min="1"
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <Input
-                        type="number"
-                        value={range.endColumn}
-                        onChange={(e) => updateColumnRange(range.id, { endColumn: parseInt(e.target.value) || 2 })}
-                        placeholder="End"
-                        className="h-8"
-                        min="1"
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <Input
-                        type="number"
-                        value={range.squareFootage}
-                        onChange={(e) => updateColumnRange(range.id, { squareFootage: parseInt(e.target.value) || 0 })}
-                        placeholder="Square Feet"
-                        className="h-8"
-                      />
-                    </div>
-                    <div className="col-span-5">
-                      <Input
-                        value={range.description || ''}
-                        onChange={(e) => updateColumnRange(range.id, { description: e.target.value })}
-                        placeholder="e.g., Between columns 1-2"
-                        className="h-8"
-                      />
-                    </div>
-                    <div className="col-span-1">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => removeColumnRange(range.id)}
-                        className="h-8 w-8 p-0"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {columnRanges.length === 0 && (
-              <div className="text-center py-6 text-gray-500 border-2 border-dashed border-gray-300 rounded-lg">
-                <p className="font-medium">No column ranges defined</p>
-                <p className="text-sm">Add column ranges to enable automatic rentable area calculation for RFPs</p>
-              </div>
-            )}
-          </div>
-
           <div className="flex justify-between pt-4">
-            {/* Delete button for edit mode */}
-            {isEdit && property && (
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
-                    disabled={deleteMutation.isPending}
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    {deleteMutation.isPending ? "Deleting..." : "Delete Property"}
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Delete Property</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Are you sure you want to delete "{property.propertyName}
-                      {property.building ? ` - Building ${property.building}` : ''}"? 
-                      This action cannot be undone and will remove all associated bay configurations.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={handleDelete}
-                      className="bg-red-600 hover:bg-red-700"
-                    >
+            <div>
+              {isEdit && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button type="button" variant="destructive" size="sm">
+                      <Trash2 className="h-4 w-4 mr-1" />
                       Delete Property
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            )}
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete Property</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Are you sure you want to delete "{property?.propertyName}"? This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction 
+                        className="bg-red-600 hover:bg-red-700"
+                        onClick={handleDelete}
+                        disabled={deleteMutation.isPending}
+                      >
+                        {deleteMutation.isPending ? "Deleting..." : "Delete"}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
+            </div>
             
-            <div className="flex space-x-2 ml-auto">
-              <Button
-                type="button"
-                variant="outline"
+            <div className="flex space-x-2">
+              <Button 
+                type="button" 
+                variant="outline" 
                 onClick={() => setOpen(false)}
               >
                 Cancel
               </Button>
-              <Button
-                type="submit"
+              <Button 
+                type="submit" 
                 disabled={createMutation.isPending || updateMutation.isPending}
                 className="bg-blue-600 hover:bg-blue-700"
               >
                 {createMutation.isPending || updateMutation.isPending
-                  ? "Saving..."
-                  : isEdit
-                  ? "Update Property"
-                  : "Create Property"
+                  ? (isEdit ? "Updating..." : "Creating...")
+                  : (isEdit ? "Update Property" : "Create Property")
                 }
               </Button>
             </div>

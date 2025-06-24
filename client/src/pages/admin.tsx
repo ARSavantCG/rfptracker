@@ -8,7 +8,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Shield, Users, Settings, Edit, Trash2, CheckCircle, XCircle } from "lucide-react";
+import { Shield, Users, Settings, Edit, Trash2, CheckCircle, XCircle, User as UserIcon } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { apiRequest } from "@/lib/queryClient";
@@ -22,6 +24,7 @@ function SystemUsersAndContacts() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [selectedContact, setSelectedContact] = useState<any>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [profileDialogOpen, setProfileDialogOpen] = useState(false);
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
 
   const { data: users, isLoading: usersLoading } = useQuery<User[]>({
@@ -59,6 +62,7 @@ function SystemUsersAndContacts() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
       setEditDialogOpen(false);
+      setProfileDialogOpen(false);
       setSelectedUser(null);
       toast({
         title: "Success",
@@ -100,6 +104,11 @@ function SystemUsersAndContacts() {
   const handleEditUser = (user: User) => {
     setSelectedUser(user);
     setEditDialogOpen(true);
+  };
+
+  const handleEditProfile = (user: User) => {
+    setSelectedUser(user);
+    setProfileDialogOpen(true);
   };
 
   const handleEditContact = (contact: any) => {
@@ -184,6 +193,15 @@ function SystemUsersAndContacts() {
                   >
                     <Settings className="h-4 w-4 mr-1" />
                     Permissions
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleEditProfile(user)}
+                  >
+                    <UserIcon className="h-4 w-4 mr-1" />
+                    Edit Profile
                   </Button>
                   
                   <AlertDialog>

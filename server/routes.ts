@@ -32,9 +32,11 @@ import {
 } from "@shared/schema";
 import { validateRfpForProgression, canAdvanceToPhase } from "./validation";
 import { AuthService } from "./auth";
-import { users } from "@shared/schema";
+import { users, contacts } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { tokenStore } from "./token-auth";
+import bcrypt from "bcryptjs";
+import { nanoid } from "nanoid";
 import { generateRfpPdf, generatePdfFilename } from "./pdf-generator";
 import { generateDetailedReportPdf, generateReportFilename } from "./pdf-reports";
 import { generateHistoricalPricingPdf, generateHistoricalPricingFilename } from "./historical-pricing-reports";

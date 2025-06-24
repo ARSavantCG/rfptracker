@@ -12,6 +12,7 @@ import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 // Apply urlencoded middleware only to non-multipart routes
 app.use((req, res, next) => {
   if (req.path === '/api/rfp-requests' && req.method === 'POST') {

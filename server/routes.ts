@@ -2492,6 +2492,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Set password for contact (admin only)
+  app.post('/api/admin/contacts/:id/set-password', requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { password } = req.body;
+
+      console.log('Set password request for contact:', id, 'with password length:', password?.length);
+
+      if (!password || password.length < 8) {
+        return res.status(400).json({ message: 'Password must be at least 8 characters long' });
+      }
+
+      const contactId = parseInt(id);
+      const [contact] = await db.select().from(contacts).where(eq(contacts.id, contactId));
+
+      if (!contact || contact.type !== 'owner' || !contact.hasSystemAccess) {
+        return res.status(404).json({ message: 'Contact not found or not authorized for system access' });
+      }
+
+      const passwordHash = await bcrypt.hash(password, 12);
+
+      await db.update(contacts)
+        .set({ passwordHash })
+        .where(eq(contacts.id, contactId));
+
+      console.log('Password set successfully for contact:', contactId);
+      res.status(200).json({ success: true, message: 'Password set successfully' });
+    } catch (error) {
+      console.error('Set password error:', error);
+      res.status(500).json({ message: 'Failed to set password' });
+    }
+  });
+
+  // Generate password for contact (admin only)
+  app.post('/api/admin/contacts/:id/generate-password', requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const contactId = parseInt(id);
+      
+      const [contact] = await db.select().from(contacts).where(eq(contacts.id, contactId));
+
+      if (!contact || contact.type !== 'owner' || !contact.hasSystemAccess) {
+        return res.status(404).json({ message: 'Contact not found or not authorized for system access' });
+      }
+
+      // Generate secure random password
+      const tempPassword = Math.random().toString(36).slice(-12) + Math.random().toString(36).slice(-12);
+      const passwordHash = await bcrypt.hash(tempPassword, 12);
+
+      await db.update(contacts)
+        .set({ passwordHash })
+        .where(eq(contacts.id, contactId));
+
+      res.status(200).json({ 
+        success: true, 
+        message: 'Password generated successfully',
+        tempPassword 
+      });
+    } catch (error) {
+      console.error('Generate password error:', error);
+      res.status(500).json({ message: 'Failed to generate password' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

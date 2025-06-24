@@ -157,7 +157,7 @@ export default function Dashboard() {
                 <p className="text-xs text-gray-600">Track and manage RFP requests</p>
               </div>
               <div className="flex space-x-2">
-                {!isAdmin() && currentUser && (
+                {currentUser && !isAdmin() && (
                   <Button 
                     onClick={() => makeAdminMutation.mutate()}
                     disabled={makeAdminMutation.isPending}
@@ -168,7 +168,7 @@ export default function Dashboard() {
                   </Button>
                 )}
                 
-                {isAdmin() && (
+                {currentUser && isAdmin() && (
                   <Button 
                     variant="outline"
                     disabled
@@ -177,6 +177,13 @@ export default function Dashboard() {
                     <Settings className="h-4 w-4 mr-2" />
                     Admin Access Active
                   </Button>
+                )}
+                
+                {/* Debug info */}
+                {currentUser && (
+                  <div className="text-xs text-gray-500 flex items-center">
+                    User: {currentUser.email} | Role: {currentUser.role}
+                  </div>
                 )}
               </div>
             </div>

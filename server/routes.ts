@@ -2200,6 +2200,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Auth route - returns current user or creates one
+  app.get('/api/auth/user', async (req, res) => {
+    try {
+      // For development, create a test user
+      const testUser = await storage.upsertUser({
+        id: 'test-admin',
+        email: 'admin@rfptracker.com',
+        firstName: 'Admin',
+        lastName: 'User',
+        role: 'user' // Start as regular user
+      });
+      
+      res.json(testUser);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
   // Development route to make current user admin
   app.post('/api/dev/make-admin', async (req, res) => {
     try {

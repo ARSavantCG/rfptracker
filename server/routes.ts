@@ -86,19 +86,28 @@ const upload = multer({
 // Session middleware setup
 function setupSession(app: Express) {
   app.use(session({
-    secret: process.env.SESSION_SECRET || 'your-secret-key-change-in-production',
+    secret: process.env.SESSION_SECRET || 'rfp-tracker-dev-secret-2024',
     resave: false,
-    saveUninitialized: false,
+    saveUninitialized: true, // Changed to true to create sessions
+    rolling: true,
     cookie: {
       secure: false, // Set to true in production with HTTPS
       httpOnly: true,
-      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      sameSite: 'lax'
     }
   }));
 }
 
 // Authentication middleware
 function requireAuth(req: any, res: any, next: any) {
+  console.log('Session check:', { 
+    hasSession: !!req.session, 
+    hasUser: !!(req.session && req.session.user),
+    sessionId: req.session?.id,
+    user: req.session?.user ? { id: req.session.user.id, username: req.session.user.username } : null
+  });
+  
   if (!req.session?.user) {
     return res.status(401).json({ message: "Authentication required" });
   }
@@ -135,8 +144,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Invalid username or password" });
       }
 
-      (req.session as any).user = user;
-      res.json({ user, message: "Login successful" });
+      // Store user in session
+      req.session.user = user;
+      
+      // Force session save
+      req.session.save((err: any) => {
+        if (err) {
+          console.error("Session save error:", err);
+          return res.status(500).json({ message: "Session creation failed" });
+        }
+        
+        console.log("User logged in successfully:", { id: user.id, username: user.username });
+        console.log("Session after login:", { sessionId: req.session.id, hasUser: !!req.session.user });
+        
+        res.json({ user, message: "Login successful" });
+      });
     } catch (error) {
       console.error("Login error:", error);
       res.status(500).json({ message: "Login failed" });
@@ -171,15 +193,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/auth/init-admin', async (req, res) => {
     try {
-      console.log("Checking for existing admin users...");
       const existingAdmin = await db.select().from(users).where(eq(users.role, 'admin')).limit(1);
       
       if (existingAdmin.length > 0) {
-        console.log("Admin user already exists");
         return res.status(400).json({ message: "Admin user already exists" });
       }
 
-      console.log("Creating admin user...");
       const adminUser = await AuthService.createUser({
         username: 'admin',
         password: 'admin123',
@@ -197,12 +216,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ]
       });
 
-      console.log("Admin user created successfully:", adminUser);
       res.json({ message: "Admin user created successfully", user: adminUser });
     } catch (error) {
       console.error("Init admin error:", error);
-      console.error("Error stack:", error.stack);
-      res.status(500).json({ message: "Failed to create admin user", error: error.message });
+      res.status(500).json({ message: "Failed to create admin user" });
     }
   });
   // Test route to debug multer

@@ -62,14 +62,10 @@ export class AuthService {
 
   static async createUser(userData: CreateUserData) {
     try {
-      console.log('AuthService.createUser called with:', { ...userData, password: '[REDACTED]' });
-      
       const { password, ...userInfo } = userData;
       
       // Hash password
-      console.log('Hashing password...');
       const passwordHash = await bcrypt.hash(password, this.SALT_ROUNDS);
-      console.log('Password hashed successfully');
       
       // Create user record
       const userRecord = {
@@ -86,14 +82,10 @@ export class AuthService {
         updatedAt: new Date(),
       };
       
-      console.log('Inserting user record:', { ...userRecord, passwordHash: '[REDACTED]' });
-      
       const [newUser] = await db
         .insert(users)
         .values(userRecord)
         .returning();
-
-      console.log('User created successfully:', { ...newUser, passwordHash: '[REDACTED]' });
 
       // Return user without password hash
       const { passwordHash: _, ...userWithoutPassword } = newUser;

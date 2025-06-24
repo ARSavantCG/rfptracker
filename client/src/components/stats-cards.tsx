@@ -251,8 +251,9 @@ export function StatsCards({ onStatusFilter }: StatsCardsProps) {
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={barData}
-                  margin={{ top: 10, right: 8, left: 15, bottom: 40 }}
+                  margin={{ top: 5, right: 8, left: 15, bottom: 40 }}
                   onClick={handleBarClick}
+                  reverseStackOrder={false}
                 >
                   <CartesianGrid strokeDasharray="1 1" stroke="#f3f4f6" />
                   <XAxis 
@@ -271,7 +272,8 @@ export function StatsCards({ onStatusFilter }: StatsCardsProps) {
                     tickLine={false}
                     width={20}
                     allowDecimals={false}
-                    domain={[0, (dataMax: number) => Math.max(2, Math.ceil(dataMax * 1.1))]}
+                    domain={[0, 'dataMax']}
+                    type="number"
                   />
                   <Tooltip content={<CustomTooltip />} />
                   <Bar 

@@ -33,6 +33,8 @@ function SystemUsersAndContacts() {
 
   const { data: authorizedContacts, isLoading: contactsLoading } = useQuery({
     queryKey: ["/api/admin/authorized-contacts"],
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
 
   const deleteUserMutation = useMutation({

@@ -141,6 +141,7 @@ This is a full-stack web application for tracking and managing Request for Propo
 - June 24, 2025. Implemented comprehensive user creation system with secure password generation, role-based permissions assignment, and credential sharing interface for onboarding new team members
 - June 24, 2025. Fixed tag dropdown positioning in contact forms to display above modal instead of below, preventing "Operations" and "Finance" tags from being cut off at bottom of dialog
 - June 24, 2025. Fixed Admin Panel cache invalidation to immediately update authorized contacts list when new contacts are created or existing contacts are modified with system access
+- June 24, 2025. Implemented granular ROM permissions system with "rom.scope.manage" permission to control who can modify master scope items and pricing while allowing broader access to ROM creation using pre-configured scope items
 
 ## User Preferences
 

@@ -161,44 +161,44 @@ export function StatsCards({ onStatusFilter }: StatsCardsProps) {
       {/* Force All Three Boxes Side by Side */}
       <div className="grid grid-cols-3 gap-3">
         
-        {/* Project Status - Ultra Compact */}
-        <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
-          <h3 className="text-xs font-semibold text-gray-900 mb-2">Status</h3>
-          <div className="space-y-1">
+        {/* Project Status - Compact */}
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <h3 className="text-sm font-semibold text-gray-900 mb-3">Status</h3>
+          <div className="space-y-2">
             {cards.map((card, index) => (
               <div 
                 key={index} 
-                className="flex items-center justify-between cursor-pointer hover:bg-gray-50 p-1 rounded transition-colors"
+                className="flex items-center justify-between cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors"
                 onClick={() => handleCardClick(card.title)}
               >
-                <div className="flex items-center space-x-1">
-                  <div className={`w-4 h-4 ${card.bgColor} rounded flex items-center justify-center flex-shrink-0`}>
-                    <i className={`${card.icon} ${card.iconColor} text-xs`}></i>
+                <div className="flex items-center space-x-2">
+                  <div className={`w-5 h-5 ${card.bgColor} rounded flex items-center justify-center flex-shrink-0`}>
+                    <i className={`${card.icon} ${card.iconColor} text-sm`}></i>
                   </div>
-                  <span className="text-xs font-medium text-gray-700 truncate">{card.title}</span>
+                  <span className="text-sm font-medium text-gray-700 truncate">{card.title}</span>
                 </div>
-                <span className="text-sm font-bold text-gray-900">{card.value}</span>
+                <span className="text-lg font-bold text-gray-900">{card.value}</span>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Status Distribution - Ultra Compact */}
+        {/* Status Distribution - Compact */}
         {stats.total > 0 && (
-          <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
-            <div className="flex items-center justify-between mb-1">
-              <h3 className="text-xs font-semibold text-gray-900">Distribution</h3>
+          <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-semibold text-gray-900">Distribution</h3>
             </div>
             
-            <div className="h-12">
+            <div className="h-20">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={pieData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={6}
-                    outerRadius={20}
+                    innerRadius={12}
+                    outerRadius={35}
                     fill="#8884d8"
                     dataKey="value"
                     onClick={handlePieClick}
@@ -218,65 +218,65 @@ export function StatsCards({ onStatusFilter }: StatsCardsProps) {
               </ResponsiveContainer>
             </div>
 
-            {/* Ultra Compact Legend - Show All Items */}
-            <div className="space-y-0.5 mt-1">
+            {/* Compact Legend - Show All Items */}
+            <div className="space-y-1 mt-2">
               {pieData.map((item, index) => (
                 <div 
                   key={index} 
-                  className="flex items-center space-x-1 cursor-pointer hover:bg-gray-50 rounded px-1 py-0.5 transition-colors"
+                  className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 rounded px-2 py-1 transition-colors"
                   onClick={() => handlePieClick(item)}
                 >
                   <div 
-                    className="w-1.5 h-1.5 rounded-full flex-shrink-0" 
+                    className="w-2 h-2 rounded-full flex-shrink-0" 
                     style={{ backgroundColor: item.color }}
                   ></div>
-                  <span className="text-xs text-gray-600 truncate flex-1">
+                  <span className="text-sm text-gray-600 truncate flex-1">
                     {item.name}
                   </span>
-                  <span className="text-xs font-medium text-gray-900">{item.value}</span>
+                  <span className="text-sm font-medium text-gray-900">{item.value}</span>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {/* Status Overview - Ultra Compact */}
+        {/* Status Overview - Compact */}
         {stats.total > 0 && (
-          <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
-            <div className="flex items-center justify-between mb-1">
-              <h3 className="text-xs font-semibold text-gray-900">Overview</h3>
+          <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-semibold text-gray-900">Overview</h3>
             </div>
             
-            <div className="h-24">
+            <div className="h-32">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={barData}
-                  margin={{ top: 5, right: 5, left: 5, bottom: 35 }}
+                  margin={{ top: 10, right: 8, left: 15, bottom: 40 }}
                   onClick={handleBarClick}
                 >
                   <CartesianGrid strokeDasharray="1 1" stroke="#f3f4f6" />
                   <XAxis 
                     dataKey="name" 
-                    tick={{ fontSize: 9 }}
+                    tick={{ fontSize: 10 }}
                     axisLine={false}
                     tickLine={false}
                     interval={0}
                     angle={-45}
                     textAnchor="end"
-                    height={35}
+                    height={40}
                   />
                   <YAxis 
-                    tick={{ fontSize: 6 }}
+                    tick={{ fontSize: 9 }}
                     axisLine={false}
                     tickLine={false}
-                    width={12}
+                    width={20}
                     allowDecimals={false}
-                    domain={[0, (dataMax: number) => Math.max(2, dataMax + 1)]}
+                    domain={[0, (dataMax: number) => Math.max(2, Math.ceil(dataMax * 1.1))]}
                   />
                   <Tooltip content={<CustomTooltip />} />
                   <Bar 
                     dataKey="count" 
-                    radius={[1, 1, 0, 0]}
+                    radius={[2, 2, 0, 0]}
                     stroke="none"
                     className="cursor-pointer"
                     onClick={handleBarClick}

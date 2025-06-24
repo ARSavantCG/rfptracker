@@ -145,6 +145,7 @@ This is a full-stack web application for tracking and managing Request for Propo
 - June 24, 2025. Restructured permission system to align with main navigation tabs (Contacts, Properties, ROM Pilot, Reports, Admin Panel) with Create/Delete/Edit/View sub-permissions and added RFP workflow step restrictions (rfp.step.1 through rfp.step.6) to limit user progression through specific workflow phases
 - June 24, 2025. Updated dashboard statistics to always show all three main statuses (Received, In Progress, Completed) in Distribution chart even when counts are 0, and removed "On Hold" status from Overview section per user preference
 - June 24, 2025. Fixed Overview chart text clipping by increasing chart height and adjusting margins to properly display "In Progress" and "Completed" labels
+- June 24, 2025. Increased height and improved spacing of all dashboard stats cards to better accommodate higher numbers and improve visual readability for scaling data
 
 ## User Preferences
 

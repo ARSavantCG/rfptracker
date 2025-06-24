@@ -134,6 +134,7 @@ export const insertContactSchema = createInsertSchema(contacts).omit({
   type: z.enum(["architect", "contractor", "owner", "other"]),
   tags: z.array(z.string()).default([]),
   specialties: z.array(z.string()).default([]),
+  hasSystemAccess: z.boolean().optional(),
 });
 
 export const updateContactSchema = insertContactSchema.partial();

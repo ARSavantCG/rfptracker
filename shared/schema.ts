@@ -470,6 +470,53 @@ export type InsertRomPilotLineItem = z.infer<typeof insertRomPilotLineItemSchema
 export type UpdateRomPilotLineItem = z.infer<typeof updateRomPilotLineItemSchema>;
 
 // User management types
+// User management table for admin system
+export const users = pgTable("users", {
+  id: text("id").primaryKey().notNull(),
+  email: text("email").unique(),
+  firstName: text("first_name"),
+  lastName: text("last_name"),
+  profileImageUrl: text("profile_image_url"),
+  role: text("role").notNull().default("user"), // admin, manager, user
+  isActive: boolean("is_active").default(true),
+  permissions: json("permissions").$type<Permission[]>().default([]),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export type Permission = 
+  | 'rfp.create' | 'rfp.edit' | 'rfp.delete' | 'rfp.view'
+  | 'properties.create' | 'properties.edit' | 'properties.delete' | 'properties.view'
+  | 'contacts.create' | 'contacts.edit' | 'contacts.delete' | 'contacts.view'
+  | 'reports.view' | 'reports.generate'
+  | 'users.create' | 'users.edit' | 'users.delete' | 'users.view'
+  | 'admin.access';
+
+export type UserRole = 'admin' | 'manager' | 'user';
+
+export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
+  admin: [
+    'rfp.create', 'rfp.edit', 'rfp.delete', 'rfp.view',
+    'properties.create', 'properties.edit', 'properties.delete', 'properties.view',
+    'contacts.create', 'contacts.edit', 'contacts.delete', 'contacts.view',
+    'reports.view', 'reports.generate',
+    'users.create', 'users.edit', 'users.delete', 'users.view',
+    'admin.access'
+  ],
+  manager: [
+    'rfp.create', 'rfp.edit', 'rfp.view',
+    'properties.create', 'properties.edit', 'properties.view',
+    'contacts.create', 'contacts.edit', 'contacts.view',
+    'reports.view', 'reports.generate'
+  ],
+  user: [
+    'rfp.view',
+    'properties.view',
+    'contacts.view',
+    'reports.view'
+  ]
+};
+
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
 export type UpdateUser = Partial<Omit<User, 'id' | 'createdAt'>>;

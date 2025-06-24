@@ -899,6 +899,17 @@ class ExtendedDatabaseStorage extends DatabaseStorage {
       throw error;
     }
   }
+
+  async getUsers(): Promise<User[]> {
+    try {
+      const result = await db.select().from(users);
+      console.log("Users query result:", result);
+      return result;
+    } catch (error) {
+      console.error("Error in getUsers:", error);
+      throw error;
+    }
+  }
 }
 
 export const storage = new ExtendedDatabaseStorage();

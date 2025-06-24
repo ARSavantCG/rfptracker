@@ -543,6 +543,13 @@ export class DatabaseStorage implements IStorage {
     return property || undefined;
   }
 
+  async getNextPropertyId(): Promise<number> {
+    const [result] = await db
+      .select({ maxId: sql<number>`COALESCE(MAX(id), 0)` })
+      .from(properties);
+    return (result?.maxId || 0) + 1;
+  }
+
   async createProperty(property: InsertProperty): Promise<Property> {
     const buildingPart = property.building ? ` - Building ${property.building}` : '';
     const displayName = `${property.propertyName}${buildingPart}, ${property.streetAddress}, ${property.city}, ${property.state} ${property.zip}`;

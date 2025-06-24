@@ -327,7 +327,6 @@ export const properties = pgTable("properties", {
 });
 
 export const insertPropertySchema = createInsertSchema(properties).omit({
-  id: true,
   displayName: true,
   createdAt: true,
   updatedAt: true,

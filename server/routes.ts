@@ -1089,6 +1089,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/properties/next-id", async (req, res) => {
+    try {
+      const nextId = await storage.getNextPropertyId();
+      res.json({ nextId });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get next property ID" });
+    }
+  });
+
   app.post("/api/properties", async (req, res) => {
     try {
       const result = insertPropertySchema.safeParse(req.body);

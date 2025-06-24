@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,6 +31,12 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
     zip: property?.zip || "",
     bays: property?.bays || [],
     gridLayout: property?.gridLayout || { rows: 1, columns: 1 },
+  });
+
+  // Fetch next property ID for new properties
+  const { data: nextIdData } = useQuery({
+    queryKey: ["/api/properties/next-id"],
+    enabled: !property && open, // Only fetch when creating new property and modal is open
   });
 
   const [bays, setBays] = useState<PropertyBay[]>(property?.bays || []);
@@ -106,7 +112,7 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
 
   const resetForm = () => {
     setFormData({
-      id: undefined,
+      id: !property ? nextIdData?.nextId : undefined,
       propertyName: "",
       building: "",
       streetAddress: "",
@@ -232,22 +238,24 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
         
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-3 gap-4">
-            {isEdit && (
-              <div className="space-y-2">
-                <Label htmlFor="propertyId">Property ID</Label>
-                <Input
-                  id="propertyId"
-                  type="number"
-                  value={formData.id || ""}
-                  onChange={(e) => setFormData(prev => ({ ...prev, id: parseInt(e.target.value) || undefined }))}
-                  placeholder="e.g. 1"
-                />
-                <p className="text-xs text-gray-500">
-                  Current ID: {property?.id}. Change only if needed for organization.
-                </p>
-              </div>
-            )}
-            <div className={`space-y-2 ${isEdit ? 'col-span-2' : 'col-span-3'}`}>
+            <div className="space-y-2">
+              <Label htmlFor="propertyId">Property ID</Label>
+              <Input
+                id="propertyId"
+                type="number"
+                value={formData.id || (isEdit ? "" : nextIdData?.nextId || "")}
+                onChange={(e) => setFormData(prev => ({ ...prev, id: parseInt(e.target.value) || undefined }))}
+                placeholder="Auto-assigned"
+                disabled={!isEdit && !nextIdData?.nextId}
+              />
+              <p className="text-xs text-gray-500">
+                {isEdit 
+                  ? `Current ID: ${property?.id}. Change only if needed for organization.`
+                  : `Next available ID: ${nextIdData?.nextId || 'Loading...'}`
+                }
+              </p>
+            </div>
+            <div className="col-span-2 space-y-2">
               <Label htmlFor="propertyName">Property Name *</Label>
               <Input
                 id="propertyName"

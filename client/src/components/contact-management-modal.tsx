@@ -40,6 +40,8 @@ interface ContactManagementModalProps {
 export function ContactManagementModal({ isOpen, onClose }: ContactManagementModalProps) {
   const [activeTab, setActiveTab] = useState("add");
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
+  const [permissionsContact, setPermissionsContact] = useState<Contact | null>(null);
+  const [isPermissionsModalOpen, setIsPermissionsModalOpen] = useState(false);
   const { toast } = useToast();
 
   const form = useForm<CreateContactFormData>({
@@ -181,6 +183,11 @@ export function ContactManagementModal({ isOpen, onClose }: ContactManagementMod
   const others = (contacts as Contact[]).filter((contact: Contact) => contact.type === "other");
 
   const [expandedContact, setExpandedContact] = useState<number | null>(null);
+
+  const handlePermissions = (contact: Contact) => {
+    setPermissionsContact(contact);
+    setIsPermissionsModalOpen(true);
+  };
 
   const ContactList = ({ contacts, title, icon: Icon }: { 
     contacts: Contact[]; 

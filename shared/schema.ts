@@ -334,7 +334,7 @@ export const insertPropertySchema = createInsertSchema(properties).omit({
 });
 
 export const updatePropertySchema = insertPropertySchema.partial().extend({
-  id: z.number(),
+  id: z.number().optional(),
 });
 
 export type Property = typeof properties.$inferSelect;

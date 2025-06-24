@@ -22,6 +22,7 @@ interface PropertyFormModalProps {
 export function PropertyFormModal({ property, trigger, onSuccess }: PropertyFormModalProps) {
   const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState<Partial<InsertProperty>>({
+    id: property?.id || undefined,
     propertyName: property?.propertyName || "",
     building: property?.building || "",
     streetAddress: property?.streetAddress || "",
@@ -105,6 +106,7 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
 
   const resetForm = () => {
     setFormData({
+      id: undefined,
       propertyName: "",
       building: "",
       streetAddress: "",
@@ -188,7 +190,8 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
     if (isEdit) {
       updateMutation.mutate(submitData);
     } else {
-      createMutation.mutate(submitData as InsertProperty);
+      const { id, ...createData } = submitData;
+      createMutation.mutate(createData as InsertProperty);
     }
   };
 
@@ -228,8 +231,20 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
+          <div className="grid grid-cols-3 gap-4">
+            {isEdit && (
+              <div className="space-y-2">
+                <Label htmlFor="propertyId">Property ID</Label>
+                <Input
+                  id="propertyId"
+                  type="number"
+                  value={formData.id || ""}
+                  onChange={(e) => setFormData(prev => ({ ...prev, id: parseInt(e.target.value) || undefined }))}
+                  placeholder="e.g. 1"
+                />
+              </div>
+            )}
+            <div className={`space-y-2 ${isEdit ? 'col-span-2' : 'col-span-3'}`}>
               <Label htmlFor="propertyName">Property Name *</Label>
               <Input
                 id="propertyName"
@@ -239,6 +254,9 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
                 required
               />
             </div>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
             
             <div className="space-y-2">
               <div className="flex items-center space-x-2 mb-2">

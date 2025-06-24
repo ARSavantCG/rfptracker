@@ -1,3 +1,11 @@
+/**
+ * RFP Tracker - Request for Proposals Management System
+ * Copyright (c) 2025. All rights reserved.
+ * 
+ * This software is proprietary and confidential. Unauthorized copying, 
+ * distribution, or use of this software is strictly prohibited.
+ */
+
 import { pgTable, text, serial, integer, timestamp, json, jsonb, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";

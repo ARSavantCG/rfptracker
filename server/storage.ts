@@ -1,3 +1,11 @@
+/**
+ * RFP Tracker - Request for Proposals Management System
+ * Copyright (c) 2025. All rights reserved.
+ * 
+ * This software is proprietary and confidential. Unauthorized copying, 
+ * distribution, or use of this software is strictly prohibited.
+ */
+
 import { 
   rfpRequests, 
   contacts, 

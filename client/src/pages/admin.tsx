@@ -309,7 +309,171 @@ function SystemUsersAndContacts() {
   );
 }
 
+// Contact Permissions Dialog Component
+interface ContactPermissionsDialogProps {
+  contact: any;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSave: (updates: any) => void;
+  isSaving: boolean;
+}
 
+function ContactPermissionsDialog({ contact, open, onOpenChange, onSave, isSaving }: ContactPermissionsDialogProps) {
+  const [permissions, setPermissions] = useState<Permission[]>([]);
+
+  // Update state when contact changes
+  useEffect(() => {
+    if (contact) {
+      setPermissions(contact.permissions || []);
+    }
+  }, [contact]);
+
+  const togglePermission = (permission: Permission) => {
+    setPermissions(prev => 
+      prev.includes(permission)
+        ? prev.filter(p => p !== permission)
+        : [...prev, permission]
+    );
+  };
+
+  const handleSave = () => {
+    onSave({
+      permissions,
+    });
+  };
+
+  if (!contact) return null;
+
+  const permissionCategories = {
+    'RFP Management': {
+      permissions: ['rfp.create', 'rfp.edit', 'rfp.delete', 'rfp.view'] as Permission[],
+      description: 'Control RFP creation, editing, and workflow management'
+    },
+    'Properties': {
+      permissions: ['properties.create', 'properties.edit', 'properties.delete', 'properties.view'] as Permission[],
+      description: 'Manage property configurations and bay calculations'
+    },
+    'Contacts': {
+      permissions: ['contacts.create', 'contacts.edit', 'contacts.delete', 'contacts.view'] as Permission[],
+      description: 'Handle contractor, architect, and ownership contact data'
+    },
+    'Reports & Analytics': {
+      permissions: ['reports.view', 'reports.generate'] as Permission[],
+      description: 'Access executive summaries, financial reports, and historical data'
+    },
+    'User Administration': {
+      permissions: ['users.create', 'users.edit', 'users.delete', 'users.view'] as Permission[],
+      description: 'Manage user accounts and permission assignments'
+    },
+    'System Administration': {
+      permissions: ['admin.access'] as Permission[],
+      description: 'Full system access and administrative controls'
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center space-x-2">
+            <Settings className="h-5 w-5" />
+            <span>Contact Permissions - {contact.name}</span>
+          </DialogTitle>
+        </DialogHeader>
+        
+        <div className="space-y-6">
+          {/* Contact Info */}
+          <div className="bg-gray-50 rounded-lg p-4">
+            <div className="flex items-center space-x-3">
+              <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                <span className="text-purple-600 font-medium text-lg">
+                  {contact.name?.[0] || 'C'}
+                </span>
+              </div>
+              <div>
+                <h3 className="font-medium text-gray-900">{contact.name}</h3>
+                <p className="text-sm text-gray-600">{contact.email}</p>
+                <p className="text-xs text-gray-500">{contact.company}</p>
+                <div className="flex items-center space-x-2 mt-1">
+                  <Badge variant="default">Owner</Badge>
+                  <Badge variant="default" className="bg-green-100 text-green-800">
+                    System Access
+                  </Badge>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Granular Permissions */}
+          <div className="space-y-4">
+            <label className="text-base font-medium">System Permissions</label>
+            <p className="text-sm text-gray-600">
+              Configure what this ownership contact can access and modify in the system.
+            </p>
+            
+            <div className="space-y-4">
+              {Object.entries(permissionCategories).map(([category, { permissions: categoryPerms, description }]) => {
+                const hasAnyPermission = categoryPerms.some(perm => permissions.includes(perm));
+                const hasAllPermissions = categoryPerms.every(perm => permissions.includes(perm));
+                
+                return (
+                  <div key={category} className="border rounded-lg p-4 space-y-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h4 className="font-medium text-gray-900">{category}</h4>
+                        <p className="text-sm text-gray-600 mt-1">{description}</p>
+                      </div>
+                      <Badge 
+                        variant={hasAllPermissions ? "default" : hasAnyPermission ? "secondary" : "outline"}
+                        className="ml-3"
+                      >
+                        {hasAllPermissions ? "Full Access" : hasAnyPermission ? "Partial" : "No Access"}
+                      </Badge>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-2">
+                      {categoryPerms.map(permission => {
+                        const isChecked = permissions.includes(permission);
+                        const permissionLabel = permission.split('.')[1];
+                        const actionLabel = permissionLabel.charAt(0).toUpperCase() + permissionLabel.slice(1);
+                        
+                        return (
+                          <div key={permission} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={permission}
+                              checked={isChecked}
+                              onCheckedChange={() => togglePermission(permission)}
+                            />
+                            <label 
+                              htmlFor={permission} 
+                              className={`text-sm ${isChecked ? 'text-gray-900 font-medium' : 'text-gray-600'}`}
+                            >
+                              {actionLabel}
+                            </label>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex justify-end space-x-3 pt-4 border-t">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSave} disabled={isSaving}>
+              {isSaving ? 'Saving Changes...' : 'Save Permissions'}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 export default function Admin() {
   const { isAdmin } = usePermissions();

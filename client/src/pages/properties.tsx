@@ -190,14 +190,16 @@ export default function Properties() {
                               )}
                             </div>
                           </div>
-                          <PropertyFormModal 
-                            property={property}
-                            trigger={
-                              <Button variant="outline" size="sm">
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                            }
-                          />
+                          <div className="flex gap-1">
+                            <PropertyFormModal 
+                              property={property}
+                              trigger={
+                                <Button variant="outline" size="sm">
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              }
+                            />
+                          </div>
                         </div>
                       </CardHeader>
                       <CardContent>

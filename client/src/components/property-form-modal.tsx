@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit, Building, Trash2, Grid } from "lucide-react";
@@ -77,6 +78,26 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
       toast({
         title: "Error",
         description: "Failed to update property. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => apiRequest(`/api/properties/${property?.id}`, "DELETE"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/properties"] });
+      toast({
+        title: "Property deleted",
+        description: "Property has been successfully deleted.",
+      });
+      setOpen(false);
+      onSuccess?.();
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete property. Please try again.",
         variant: "destructive",
       });
     },
@@ -173,6 +194,12 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
 
   const handleInputChange = (field: keyof InsertProperty, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleDelete = () => {
+    if (property?.id) {
+      deleteMutation.mutate();
+    }
   };
 
   const defaultTrigger = isEdit ? (
@@ -515,26 +542,64 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
             )}
           </div>
 
-          <div className="flex justify-end space-x-2 pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={createMutation.isPending || updateMutation.isPending}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              {createMutation.isPending || updateMutation.isPending
-                ? "Saving..."
-                : isEdit
-                ? "Update Property"
-                : "Create Property"
-              }
-            </Button>
+          <div className="flex justify-between pt-4">
+            {/* Delete button for edit mode */}
+            {isEdit && property && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
+                    disabled={deleteMutation.isPending}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    {deleteMutation.isPending ? "Deleting..." : "Delete Property"}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete Property</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Are you sure you want to delete "{property.propertyName}
+                      {property.building ? ` - Building ${property.building}` : ''}"? 
+                      This action cannot be undone and will remove all associated bay configurations.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleDelete}
+                      className="bg-red-600 hover:bg-red-700"
+                    >
+                      Delete Property
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+            
+            <div className="flex space-x-2 ml-auto">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={createMutation.isPending || updateMutation.isPending}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {createMutation.isPending || updateMutation.isPending
+                  ? "Saving..."
+                  : isEdit
+                  ? "Update Property"
+                  : "Create Property"
+                }
+              </Button>
+            </div>
           </div>
         </form>
       </DialogContent>

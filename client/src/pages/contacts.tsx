@@ -264,15 +264,6 @@ export default function Contacts() {
                     </div>
                   )}
                   
-                  {/* System Access Badge for Owner contacts */}
-                  {contact.type === "owner" && (
-                    <div className="mt-2">
-                      <Badge variant={contact.hasSystemAccess ? "default" : "secondary"} className="text-xs">
-                        {contact.hasSystemAccess ? "System Access: Granted" : "System Access: Denied"}
-                      </Badge>
-                    </div>
-                  )}
-                  
                   <div className="flex space-x-1 mt-3">
                     <ContactFormModal 
                       contact={contact}
@@ -289,6 +280,15 @@ export default function Contacts() {
                       <Phone className="h-3 w-3" />
                     </Button>
                   </div>
+                  
+                  {/* System Access Badge for Owner contacts - positioned below action buttons */}
+                  {contact.type === "owner" && (
+                    <div className="mt-2 flex justify-center">
+                      <Badge variant={contact.hasSystemAccess ? "default" : "secondary"} className="text-xs">
+                        {contact.hasSystemAccess ? "System Access: Granted" : "System Access: Denied"}
+                      </Badge>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             ))}

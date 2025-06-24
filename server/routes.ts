@@ -184,23 +184,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Try contact email login
-      console.log('Attempting contact login for:', username);
+      // Try contact email login
       const [contact] = await db.select().from(contacts).where(eq(contacts.email, username));
       
-      console.log('Contact found:', contact ? 'YES' : 'NO');
-      console.log('Has system access:', contact?.hasSystemAccess);
-      console.log('Has password hash:', !!contact?.passwordHash);
-      
       if (!contact || !contact.hasSystemAccess || !contact.passwordHash) {
-        console.log('Contact login failed - missing requirements');
         return res.status(401).json({ message: "Invalid username or password" });
       }
 
       const isValidPassword = await bcrypt.compare(password, contact.passwordHash);
-      console.log('Password validation result:', isValidPassword);
-      
       if (!isValidPassword) {
-        console.log('Contact login failed - invalid password');
         return res.status(401).json({ message: "Invalid username or password" });
       }
 

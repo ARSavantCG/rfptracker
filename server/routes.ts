@@ -111,21 +111,30 @@ function setupSession(app: Express) {
 
 // Authentication middleware
 function requireAuth(req: any, res: any, next: any) {
+  console.log('requireAuth middleware hit, headers:', req.headers.authorization);
+  
   // Check for token in Authorization header
   const authHeader = req.headers.authorization;
   const token = authHeader && authHeader.startsWith('Bearer ') 
     ? authHeader.substring(7) 
     : null;
 
+  console.log('Extracted token:', token ? 'YES' : 'NO');
+
   if (!token) {
+    console.log('No token found in request');
     return res.status(401).json({ message: "Authentication required" });
   }
 
   const userId = tokenStore.getUserFromToken(token);
+  console.log('Token validation result - userId:', userId);
+  
   if (!userId) {
+    console.log('Token validation failed - invalid or expired');
     return res.status(401).json({ message: "Invalid or expired token" });
   }
 
+  console.log('Authentication successful for userId:', userId);
   req.userId = userId;
   next();
 }

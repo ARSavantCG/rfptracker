@@ -157,16 +157,7 @@ export default function Dashboard() {
                 <p className="text-xs text-gray-600">Track and manage RFP requests</p>
               </div>
               <div className="flex space-x-2">
-                {currentUser && !isAdmin() && (
-                  <Button 
-                    onClick={() => makeAdminMutation.mutate()}
-                    disabled={makeAdminMutation.isPending}
-                    className="bg-yellow-500 hover:bg-yellow-600 text-white"
-                  >
-                    <Crown className="h-4 w-4 mr-2" />
-                    {makeAdminMutation.isPending ? "Setting up..." : "Become Admin"}
-                  </Button>
-                )}
+
               </div>
             </div>
 

@@ -28,7 +28,9 @@ import {
   updateRomScopeItemSchema
 } from "@shared/schema";
 import { validateRfpForProgression, canAdvanceToPhase } from "./validation";
-import { AuthService, type LoginCredentials, type CreateUserData } from "./auth";
+import { AuthService } from "./auth";
+import { users } from "@shared/schema";
+import { eq } from "drizzle-orm";
 import { generateRfpPdf, generatePdfFilename } from "./pdf-generator";
 import { generateDetailedReportPdf, generateReportFilename } from "./pdf-reports";
 import { generateHistoricalPricingPdf, generateHistoricalPricingFilename } from "./historical-pricing-reports";

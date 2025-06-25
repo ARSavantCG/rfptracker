@@ -1,0 +1,2 @@
+# Keep uploads directory structure
+# Files in this directory are ignored by git but the directory structure is preserved

@@ -431,10 +431,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         formData.confidential = false; // default to false
       }
 
-      // Map rfpRequest to sentBy (the field name changed)
-      if (formData.rfpRequest && !formData.sentBy) {
-        formData.sentBy = formData.rfpRequest;
-      }
+      // Ensure sentBy field is present (frontend should send this directly now)
 
       // Parse with schema first, then convert dates for database
       const parsed = insertRfpRequestSchema.parse(formData);

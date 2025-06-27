@@ -24,7 +24,7 @@ const createRfpSchema = z.object({
   property: z.string().min(1, "Property is required"),
   tenantName: z.string().min(1, "Tenant name is required"),
   projectName: z.string().min(1, "Project name is required"),
-  rfpRequest: z.string().min(1, "RFP request is required"),
+  sentBy: z.string().min(1, "RFP request is required"),
   receivedOn: z.string().min(1, "Received on date is required"),
   internalDueDate: z.string().min(1, "Internal due date is required"),
 
@@ -63,7 +63,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
       property: "",
       tenantName: "",
       projectName: "",
-      rfpRequest: "",
+      sentBy: "",
       receivedOn: "",
       internalDueDate: "",
       developmentContact: "",
@@ -71,6 +71,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
       confidential: false,
       requestTypes: [],
       notes: "",
+      areaBreakdown: [],
     },
   });
 
@@ -289,7 +290,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
 
               <FormField
                 control={form.control}
-                name="rfpRequest"
+                name="sentBy"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>RFP Request *</FormLabel>

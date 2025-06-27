@@ -130,7 +130,7 @@ export function BidCollectionTable({ rfp }: BidCollectionTableProps) {
               <Button 
                 variant="outline"
                 onClick={() => {
-                  const token = localStorage.getItem('authToken');
+                  const token = localStorage.getItem('auth-token');
                   const printUrl = `/api/rfp-requests/${rfp.id}/bid-collections/pdf`;
                   // Open PDF with authentication
                   fetch(printUrl, {
@@ -139,13 +139,15 @@ export function BidCollectionTable({ rfp }: BidCollectionTableProps) {
                     }
                   }).then(response => {
                     if (response.ok) {
-                      return response.blob();
+                      return response.text();
                     } else {
                       throw new Error('Authentication failed');
                     }
-                  }).then(blob => {
+                  }).then(html => {
+                    const blob = new Blob([html], { type: 'text/html' });
                     const url = window.URL.createObjectURL(blob);
                     window.open(url, '_blank');
+                    setTimeout(() => window.URL.revokeObjectURL(url), 100);
                   }).catch(error => {
                     console.error('Print error:', error);
                     toast({

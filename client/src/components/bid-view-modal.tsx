@@ -61,7 +61,7 @@ export function BidViewModal({ isOpen, onClose, bid }: BidViewModalProps) {
             variant="outline"
             size="sm"
             onClick={() => {
-              const token = localStorage.getItem('authToken');
+              const token = localStorage.getItem('auth-token');
               console.log('Frontend - retrieved token:', token ? `${token.substring(0, 8)}...` : 'none');
               
               if (!token) {

@@ -8,6 +8,7 @@ import { Plus, Edit, Eye, FileText, Download, ArrowRight } from "lucide-react";
 import { BidCollectionModal } from "./bid-collection-modal";
 import { BidViewModal } from "./bid-view-modal";
 import { useToast } from "@/hooks/use-toast";
+import { formatDate } from "@/lib/utils";
 import type { RfpRequest, BidCollection } from "@shared/schema";
 
 interface BidCollectionTableProps {
@@ -52,26 +53,7 @@ export function BidCollectionTable({ rfp }: BidCollectionTableProps) {
     }).format(num);
   };
 
-  const formatDate = (date: Date) => {
-    // Parse the date string directly to avoid timezone conversion issues
-    const dateStr = date.toString();
-    if (dateStr.includes('T')) {
-      const datePart = dateStr.split('T')[0];
-      const [year, month, day] = datePart.split('-');
-      const localDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-      return localDate.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-      });
-    }
-    // Fallback for other date formats
-    return new Date(date).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  };
+
 
   // Workflow advancement mutation
   const advanceToEvaluationMutation = useMutation({

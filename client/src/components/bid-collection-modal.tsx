@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Plus, Trash2, Upload, FileText, Save, X, Download } from "lucide-react";
 import { FileUpload } from "./file-upload";
 import { useToast } from "@/hooks/use-toast";
+import { formatDate } from "@/lib/utils";
 import type { RfpRequest, Contact, BidCollection, BidLineItem } from "@shared/schema";
 
 const bidCollectionSchema = z.object({

@@ -2,6 +2,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { FileText } from "lucide-react";
+import { formatDate } from "@/lib/utils";
 import type { BidCollection, BidLineItem } from "@shared/schema";
 import { useQuery } from "@tanstack/react-query";
 
@@ -18,26 +19,7 @@ export function BidViewModal({ isOpen, onClose, bid }: BidViewModalProps) {
     enabled: isOpen && !!bid?.id,
   });
 
-  const formatDate = (date: Date | string) => {
-    // Parse the date string directly to avoid timezone conversion issues
-    const dateStr = date.toString();
-    if (dateStr.includes('T')) {
-      const datePart = dateStr.split('T')[0];
-      const [year, month, day] = datePart.split('-');
-      const localDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-      return localDate.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      });
-    }
-    // Fallback for other date formats
-    return new Date(date).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  };
+
 
   const formatCurrency = (amount: string | null) => {
     if (!amount) return "TBD";

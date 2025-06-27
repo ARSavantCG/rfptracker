@@ -109,6 +109,7 @@ export interface IStorage {
   createBidLineItem(lineItem: InsertBidLineItem): Promise<BidLineItem>;
   updateBidLineItem(id: number, updates: Partial<UpdateBidLineItem>): Promise<BidLineItem | undefined>;
   deleteBidLineItem(id: number): Promise<boolean>;
+  deleteBidLineItemsByBidCollection(bidCollectionId: number): Promise<boolean>;
 
   // Property management
   getAllProperties(): Promise<Property[]>;
@@ -547,6 +548,11 @@ export class DatabaseStorage implements IStorage {
 
   async deleteBidLineItem(id: number): Promise<boolean> {
     const result = await db.delete(bidLineItems).where(eq(bidLineItems.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  async deleteBidLineItemsByBidCollection(bidCollectionId: number): Promise<boolean> {
+    const result = await db.delete(bidLineItems).where(eq(bidLineItems.bidCollectionId, bidCollectionId));
     return (result.rowCount || 0) > 0;
   }
 

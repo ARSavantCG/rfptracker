@@ -1269,6 +1269,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put("/api/rfp-requests/:rfpId/bid-collections/:id", upload.any(), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid ID" });
+      }
+
+      const bidData = JSON.parse(req.body.bidData || '{}');
+      const lineItems = JSON.parse(req.body.lineItems || '[]');
+      
+      // Convert date string back to Date object
+      if (bidData.submissionDate) {
+        bidData.submissionDate = new Date(bidData.submissionDate);
+      }
+      
+      // Handle file attachments - filter for attachment fields only
+      const fileArray = req.files as Express.Multer.File[] || [];
+      const attachments = fileArray
+        .filter(file => file.fieldname.startsWith('attachment_'))
+        .map(file => ({
+          id: nanoid(),
+          name: file.originalname,
+          size: file.size,
+          type: file.mimetype,
+          uploadedAt: new Date().toISOString(),
+          path: file.filename,
+        }));
+
+      const bidCollection = await storage.updateBidCollection(id, {
+        ...bidData,
+        attachments
+      });
+
+      if (!bidCollection) {
+        return res.status(404).json({ message: "Bid collection not found" });
+      }
+
+      // Update line items - first delete existing ones, then create new ones
+      await storage.deleteBidLineItemsByBidCollection(id);
+      if (lineItems.length > 0) {
+        for (const item of lineItems) {
+          await storage.createBidLineItem({
+            ...item,
+            bidCollectionId: id
+          });
+        }
+      }
+
+      res.json(bidCollection);
+    } catch (error) {
+      console.error("Bid collection update error:", error);
+      res.status(400).json({ message: "Failed to update bid collection" });
+    }
+  });
+
   app.delete("/api/rfp-requests/:rfpId/bid-collections/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);

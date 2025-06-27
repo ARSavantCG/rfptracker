@@ -1,758 +1,557 @@
+/**
+ * RFP Tracker - Request for Proposals Management System
+ * Copyright (c) 2025 Savant Consulting Group LLC. All rights reserved.
+ * 
+ * This software is proprietary and confidential. Unauthorized copying, 
+ * distribution, or use of this software is strictly prohibited.
+ */
+
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, AlertCircle, Download, FileText, ArrowRight, X, Plus, Trash2, Edit2, CalendarIcon } from "lucide-react";
-import { nanoid } from "nanoid";
-import { format } from "date-fns";
-import { cn } from "@/lib/utils";
+import { Plus, X, Save } from "lucide-react";
+import { apiRequest } from "@/lib/queryClient";
 import type { RfpRequest, Contact } from "@shared/schema";
+import { nanoid } from "nanoid";
 
-const areaLineItemSchema = z.object({
-  id: z.string(),
-  description: z.string().min(1, "Area description is required"),
-  squareFootage: z.string().min(1, "Square footage is required"),
-  notes: z.string().optional(),
-});
-
-const validationFormSchema = z.object({
-  contractorDueDate: z.string().min(1, "Contractor due date is required"),
-  architectDueDate: z.string().min(1, "Architect due date is required"),
+const validationSchema = z.object({
   generalContractor: z.string().optional(),
   architect: z.string().optional(),
+  officeAreaExisting: z.string().optional(),
+  officeAreaNew: z.string().optional(),
   warehouseArea: z.string().optional(),
   warehouseNotes: z.string().optional(),
-  areaBreakdown: z.array(areaLineItemSchema),
-  requestTypes: z.array(z.string()).min(1, "At least one request type is required"),
+  projectAddress: z.string().optional(),
+  projectSize: z.string().optional(),
+  estimatedValue: z.string().optional(),
+  timelineRequirements: z.string().optional(),
+  specialRequirements: z.string().optional(),
+  contactPerson: z.string().optional(),
+  contactEmail: z.string().optional(),
+  dueDate: z.string().optional(),
   projectDescription: z.string().optional(),
   documentsLink: z.string().optional(),
+  areaBreakdown: z.array(z.object({
+    id: z.string(),
+    description: z.string(),
+    squareFootage: z.string(),
+    notes: z.string().optional()
+  })).optional().default([]),
 });
 
-type ValidationFormData = z.infer<typeof validationFormSchema>;
+type ValidationFormData = z.infer<typeof validationSchema>;
 
 interface RfpValidationModalProps {
   isOpen: boolean;
   onClose: () => void;
   rfp: RfpRequest | null;
-  onValidationComplete: () => void;
-}
-
-interface ValidationResult {
-  isValid: boolean;
-  errors: string[];
-  completionPercentage: number;
+  onValidationComplete?: () => void;
 }
 
 export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete }: RfpValidationModalProps) {
-  const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
-  const [isEditingTotalArea, setIsEditingTotalArea] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const form = useForm<ValidationFormData>({
+    resolver: zodResolver(validationSchema),
+    defaultValues: {
+      generalContractor: "",
+      architect: "",
+      officeAreaExisting: "",
+      officeAreaNew: "",
+      warehouseArea: "",
+      warehouseNotes: "",
+      projectAddress: "",
+      projectSize: "",
+      estimatedValue: "",
+      timelineRequirements: "",
+      specialRequirements: "",
+      contactPerson: "",
+      contactEmail: "",
+      dueDate: "",
+      projectDescription: "",
+      documentsLink: "",
+      areaBreakdown: [],
+    },
+  });
 
   const { data: contacts = [] } = useQuery<Contact[]>({
     queryKey: ["/api/contacts"],
   });
 
-  // Filter contacts by type
-  const contractors = contacts.filter(contact => contact.type === "contractor");
-  const architects = contacts.filter(contact => contact.type === "architect");
-
-  const form = useForm<ValidationFormData>({
-    resolver: zodResolver(validationFormSchema),
-    defaultValues: {
-      contractorDueDate: "",
-      architectDueDate: "",
-      generalContractor: "",
-      architect: "",
-      warehouseArea: "",
-      warehouseNotes: "",
-      areaBreakdown: [],
-      requestTypes: ["pricing", "schedule", "space-plan"],
-      projectDescription: "",
-      documentsLink: "",
-    },
-  });
-
-  // Pre-populate form with existing RFP data
+  // Load existing validation data when RFP changes
   useEffect(() => {
     if (rfp && isOpen) {
-      // Extract numeric value from project area string and round to whole number
-      const projectAreaValue = rfp.projectArea ? 
-        Math.round(parseFloat(rfp.projectArea.replace(/[^\d.,]/g, '').replace(/,/g, ''))).toString() : "";
-      
-      console.log('Populating form with RFP data:', { 
-        projectArea: rfp.projectArea, 
-        extracted: projectAreaValue,
-        isEmpty: !projectAreaValue 
-      });
-      
-      // Convert existing office areas to area breakdown format
-      const areaBreakdown = [];
-      if (rfp.officeAreaExisting) {
-        areaBreakdown.push({
-          id: nanoid(),
-          description: "Office Area (Existing)",
-          squareFootage: rfp.officeAreaExisting,
-          notes: ""
-        });
-      }
-      if (rfp.officeAreaNew) {
-        areaBreakdown.push({
-          id: nanoid(),
-          description: "Office Area (New Construction)",
-          squareFootage: rfp.officeAreaNew,
-          notes: ""
-        });
-      }
-
       form.reset({
-        contractorDueDate: rfp.contractorDueDate ? new Date(rfp.contractorDueDate).toISOString().split('T')[0] : "",
-        architectDueDate: rfp.architectDueDate ? new Date(rfp.architectDueDate).toISOString().split('T')[0] : "",
         generalContractor: rfp.generalContractor || "",
         architect: rfp.architect || "",
-        warehouseArea: rfp.warehouseArea || projectAreaValue,
-        warehouseNotes: (rfp as any).warehouseNotes || "",
-        areaBreakdown: (rfp as any).areaBreakdown || areaBreakdown,
-        requestTypes: rfp.requestTypes || ["pricing", "schedule", "space-plan"],
+        officeAreaExisting: rfp.officeAreaExisting || "",
+        officeAreaNew: rfp.officeAreaNew || "",
+        warehouseArea: rfp.warehouseArea || "",
+        warehouseNotes: rfp.warehouseNotes || "",
+        projectAddress: rfp.projectAddress || "",
+        projectSize: rfp.projectSize || "",
+        estimatedValue: rfp.estimatedValue || "",
+        timelineRequirements: rfp.timelineRequirements || "",
+        specialRequirements: rfp.specialRequirements || "",
+        contactPerson: rfp.contactPerson || "",
+        contactEmail: rfp.contactEmail || "",
+        dueDate: rfp.dueDate ? new Date(rfp.dueDate).toISOString().split('T')[0] : "",
         projectDescription: rfp.projectDescription || "",
         documentsLink: rfp.documentsLink || "",
+        areaBreakdown: rfp.areaBreakdown || [],
       });
-      
-      // Use saved warehouse area if available, otherwise default to project area
-      const warehouseAreaValue = rfp.warehouseArea || projectAreaValue;
-      form.setValue('warehouseArea', warehouseAreaValue);
     }
   }, [rfp, isOpen, form]);
 
-  const validateMutation = useMutation({
+  const updateMutation = useMutation({
     mutationFn: async (data: ValidationFormData) => {
       if (!rfp) throw new Error("No RFP selected");
-      return apiRequest("/api/rfp-requests/validate", "POST", {
-        rfpId: rfp.id,
+
+      const response = await apiRequest(`/api/rfp-requests/${rfp.id}`, "PATCH", {
         ...data,
+        dueDate: data.dueDate ? new Date(data.dueDate) : undefined,
       });
+      return response.json();
     },
-    onSuccess: async (result) => {
-      setValidationResult(result);
-      
-      if (result.isValid) {
-        // Update the RFP with validation data and advance workflow phase
-        const formData = form.getValues();
-        await apiRequest(`/api/rfp-requests/${rfp?.id}`, "PATCH", {
-          workflowPhase: "invitation-to-bid",
-          status: "in-progress",
-          contractorDueDate: new Date(formData.contractorDueDate).toISOString(),
-          architectDueDate: new Date(formData.architectDueDate).toISOString(),
-          generalContractor: formData.generalContractor,
-          architect: formData.architect,
-          warehouseArea: formData.warehouseArea,
-          warehouseNotes: formData.warehouseNotes,
-          areaBreakdown: formData.areaBreakdown,
-          requestTypes: formData.requestTypes,
-          projectDescription: formData.projectDescription,
-          documentsLink: formData.documentsLink,
-        });
-        
-        queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
-        
-        toast({
-          title: "Validation Complete",
-          description: "RFP validated successfully. Advancing to invitation phase.",
-        });
-        
-        // Close this modal and trigger the invitation modal
-        onClose();
-        onValidationComplete();
-      } else {
-        toast({
-          title: "Validation Issues Found",
-          description: `${result.errors.length} issues need to be addressed before proceeding.`,
-          variant: "destructive",
-        });
-      }
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
+      toast({
+        title: "Success",
+        description: "RFP validation details updated successfully",
+      });
+      handleClose();
+      onValidationComplete?.();
     },
     onError: (error) => {
       toast({
-        title: "Validation Failed",
-        description: "An error occurred during validation.",
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update RFP validation",
         variant: "destructive",
       });
     },
   });
 
   const onSubmit = (data: ValidationFormData) => {
-    validateMutation.mutate(data);
+    updateMutation.mutate(data);
   };
 
   const handleClose = () => {
-    setValidationResult(null);
     form.reset();
     onClose();
+  };
+
+  const addAreaBreakdown = () => {
+    const currentBreakdown = form.getValues("areaBreakdown") || [];
+    form.setValue("areaBreakdown", [
+      ...currentBreakdown,
+      {
+        id: nanoid(),
+        description: "",
+        squareFootage: "",
+        notes: ""
+      }
+    ]);
+  };
+
+  const removeAreaBreakdown = (index: number) => {
+    const currentBreakdown = form.getValues("areaBreakdown") || [];
+    form.setValue("areaBreakdown", currentBreakdown.filter((_, i) => i !== index));
+  };
+
+  const updateAreaBreakdown = (index: number, field: keyof ValidationFormData["areaBreakdown"][0], value: string) => {
+    const currentBreakdown = form.getValues("areaBreakdown") || [];
+    const updatedBreakdown = [...currentBreakdown];
+    if (updatedBreakdown[index]) {
+      updatedBreakdown[index] = { ...updatedBreakdown[index], [field]: value };
+      form.setValue("areaBreakdown", updatedBreakdown);
+    }
   };
 
   if (!rfp) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Issuance to General Contractor and/or Architect
-          </DialogTitle>
-          <DialogDescription>
-            Complete the details needed to generate requests for your General Contractor and/or Architect
-          </DialogDescription>
+          <DialogTitle className="text-xl">RFP Validation - {rfp.projectName}</DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            {/* Due Dates - Side by Side */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="contractorDueDate"
-                render={({ field }) => {
-                  return (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>Contractor Due Date</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant={"outline"}
-                              className={cn(
-                                "w-full pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
-                              )}
-                            >
-                              {field.value ? (
-                                (() => {
-                                  const [year, month, day] = field.value.split('-');
-                                  const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-                                  return format(date, "PPP");
-                                })()
-                              ) : (
-                                <span>Pick a date</span>
-                              )}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            today={undefined}
-                            selected={field.value ? (() => {
-                              const [year, month, day] = field.value.split('-');
-                              return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-                            })() : undefined}
-                            onSelect={(date) => {
-                              if (date) {
-                                const year = date.getFullYear();
-                                const month = String(date.getMonth() + 1).padStart(2, '0');
-                                const day = String(date.getDate()).padStart(2, '0');
-                                const dateString = `${year}-${month}-${day}`;
-                                field.onChange(dateString);
-                                // Auto-populate architect due date if it's empty
-                                if (!form.getValues('architectDueDate')) {
-                                  form.setValue('architectDueDate', dateString);
-                                }
-                              } else {
-                                field.onChange("");
-                              }
-                            }}
-                            disabled={(date) => {
-                              const today = new Date();
-                              today.setHours(0, 0, 0, 0);
-                              return date < today || date < new Date("1900-01-01");
-                            }}
-                          />
-                          {rfp?.internalDueDate && (
-                            <div className="p-3 border-t bg-blue-50">
-                              <p className="text-xs text-blue-600 font-medium">
-                                📅 Internal Due: {format(new Date(rfp.internalDueDate), "MMM d, yyyy")}
-                              </p>
-                            </div>
-                          )}
-                        </PopoverContent>
-                      </Popover>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            {/* Contact Information */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium text-gray-900 border-b pb-2">Project Contacts</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="generalContractor"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>General Contractor</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select general contractor" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {contacts
+                            .filter((contact) => contact.type === "contractor")
+                            .map((contact) => (
+                              <SelectItem key={contact.id} value={`${contact.name} - ${contact.company}`}>
+                                {contact.name} - {contact.company}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
-                  );
-                }}
-              />
+                  )}
+                />
 
-              <FormField
-                control={form.control}
-                name="architectDueDate"
-                render={({ field }) => {
-                  return (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>Architect Due Date</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant={"outline"}
-                              className={cn(
-                                "w-full pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
-                              )}
-                            >
-                              {field.value ? (
-                                (() => {
-                                  const [year, month, day] = field.value.split('-');
-                                  const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-                                  return format(date, "PPP");
-                                })()
-                              ) : (
-                                <span>Pick a date</span>
-                              )}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            today={undefined}
-                            selected={field.value ? (() => {
-                              const [year, month, day] = field.value.split('-');
-                              return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-                            })() : undefined}
-                            onSelect={(date) => {
-                              if (date) {
-                                const year = date.getFullYear();
-                                const month = String(date.getMonth() + 1).padStart(2, '0');
-                                const day = String(date.getDate()).padStart(2, '0');
-                                const dateString = `${year}-${month}-${day}`;
-                                field.onChange(dateString);
-                              } else {
-                                field.onChange("");
-                              }
-                            }}
-                            disabled={(date) => {
-                              const today = new Date();
-                              today.setHours(0, 0, 0, 0);
-                              return date < today || date < new Date("1900-01-01");
-                            }}
-                          />
-                          {rfp?.internalDueDate && (
-                            <div className="p-3 border-t bg-blue-50">
-                              <p className="text-xs text-blue-600 font-medium">
-                                📅 Internal Due: {format(new Date(rfp.internalDueDate), "MMM d, yyyy")}
-                              </p>
-                            </div>
-                          )}
-                        </PopoverContent>
-                      </Popover>
+                <FormField
+                  control={form.control}
+                  name="architect"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Architect</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select architect" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {contacts
+                            .filter((contact) => contact.type === "architect")
+                            .map((contact) => (
+                              <SelectItem key={contact.id} value={`${contact.name} - ${contact.company}`}>
+                                {contact.name} - {contact.company}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
-                  );
-                }}
-              />
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="contactPerson"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Contact Person</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Primary contact person" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="contactEmail"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Contact Email</FormLabel>
+                      <FormControl>
+                        <Input type="email" placeholder="contact@example.com" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             </div>
 
-            {/* General Contractor and Architect - Side by Side */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Project Details */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium text-gray-900 border-b pb-2">Project Details</h3>
+              
               <FormField
                 control={form.control}
-                name="generalContractor"
+                name="projectDescription"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>General Contractor</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select general contractor" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {contractors.map((contractor) => (
-                          <SelectItem key={contractor.id} value={contractor.name}>
-                            {contractor.name} - {contractor.company}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="architect"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Architect</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select architect" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {architects.map((architect) => (
-                          <SelectItem key={architect.id} value={architect.name}>
-                            {architect.name} - {architect.company}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            {/* Total Rentable Area */}
-            <FormField
-              control={form.control}
-              name="warehouseArea"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Total Rentable Area (What tenant pays rent on)</FormLabel>
-                  <div className="flex gap-2">
+                    <FormLabel>Project Description</FormLabel>
                     <FormControl>
-                      <Input 
+                      <Textarea 
+                        placeholder="Detailed project description..."
+                        className="min-h-[100px]"
                         {...field}
-                        value={field.value ? parseInt(field.value).toLocaleString() : ''}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/,/g, '');
-                          field.onChange(value);
-                        }}
-                        placeholder="Enter total area in sq ft" 
-                        readOnly={!isEditingTotalArea}
-                        className={!isEditingTotalArea ? "bg-gray-50" : ""}
                       />
                     </FormControl>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setIsEditingTotalArea(!isEditingTotalArea)}
-                      className="flex items-center gap-1"
-                    >
-                      <Edit2 className="h-4 w-4" />
-                      {isEditingTotalArea ? "Lock" : "Edit"}
-                    </Button>
-                  </div>
-                  <FormMessage />
-                  <p className="text-sm text-gray-500">From Step 1: {rfp.projectArea} - use edit button to modify if needed</p>
-                </FormItem>
-              )}
-            />
-
-            {/* Area Breakdown */}
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-semibold">Area Breakdown</h3>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    const currentBreakdown = form.getValues('areaBreakdown');
-                    form.setValue('areaBreakdown', [
-                      ...currentBreakdown,
-                      {
-                        id: nanoid(),
-                        description: '',
-                        squareFootage: '',
-                        notes: ''
-                      }
-                    ]);
-                  }}
-                  className="flex items-center gap-2"
-                >
-                  <Plus className="h-4 w-4" />
-                  Add Area
-                </Button>
-              </div>
-
-              <FormField
-                control={form.control}
-                name="areaBreakdown"
-                render={({ field }) => (
-                  <FormItem>
-                    <div className="space-y-3">
-                      {/* Headers - only show once */}
-                      {field.value.length > 0 && (
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 px-3">
-                          <FormLabel className="text-sm font-medium">Area Description</FormLabel>
-                          <FormLabel className="text-sm font-medium">Square Footage</FormLabel>
-                          <FormLabel className="text-sm font-medium">Notes</FormLabel>
-                        </div>
-                      )}
-                      
-                      {field.value.map((item, index) => (
-                        <div key={item.id} className="grid grid-cols-1 lg:grid-cols-3 gap-3 p-3 bg-white rounded border">
-                          <div>
-                            <Input
-                              placeholder="e.g., Office Area (Existing), Conference Room, etc."
-                              value={item.description}
-                              onChange={(e) => {
-                                const newBreakdown = [...field.value];
-                                newBreakdown[index] = { ...item, description: e.target.value };
-                                field.onChange(newBreakdown);
-                              }}
-                            />
-                          </div>
-                          <div>
-                            <Input
-                              placeholder="sq ft"
-                              value={item.squareFootage}
-                              onChange={(e) => {
-                                const newBreakdown = [...field.value];
-                                newBreakdown[index] = { ...item, squareFootage: e.target.value };
-                                field.onChange(newBreakdown);
-                              }}
-                            />
-                          </div>
-                          <div className="flex gap-2 items-end">
-                            <div className="flex-1">
-                              <Input
-                                placeholder="e.g., Clear height requirements TBD, Renovation level TBD"
-                                value={item.notes}
-                                onChange={(e) => {
-                                  const newBreakdown = [...field.value];
-                                  newBreakdown[index] = { ...item, notes: e.target.value };
-                                  field.onChange(newBreakdown);
-                                }}
-                              />
-                            </div>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                const newBreakdown = field.value.filter((_, i) => i !== index);
-                                field.onChange(newBreakdown);
-                              }}
-                              className="text-red-500 hover:text-red-700"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                      
-                      {field.value.length === 0 && (
-                        <div className="text-center py-6 text-gray-500">
-                          <p className="mb-2">No areas added yet</p>
-                          <p className="text-sm">Some tenants don't need any office areas - add as needed</p>
-                        </div>
-                      )}
-                    </div>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              {/* Area Calculations */}
-              <div className="space-y-2 text-sm mt-4 border-t pt-4">
-                <div className="flex justify-between font-medium">
-                  <span>Total Rentable Area:</span>
-                  <span>{Math.round(parseInt(form.watch('warehouseArea') || '0')).toLocaleString()} sq ft</span>
-                </div>
-                {(form.watch('areaBreakdown') || []).map((item, index) => (
-                  <div key={item.id} className="grid grid-cols-3 gap-2 text-sm">
-                    <span>- {item.description || `Area ${index + 1}`}</span>
-                    <span className="text-right">{Math.round(parseInt(item.squareFootage || '0')).toLocaleString()} sq ft</span>
-                    <span className="text-gray-600 text-xs">{item.notes || ''}</span>
-                  </div>
-                ))}
-                <div className="flex justify-between font-medium border-t pt-2">
-                  <span>Remaining Warehouse Area:</span>
-                  <span>
-                    {(() => {
-                      const formValues = form.getValues();
-                      const totalRentable = Math.round(parseInt(formValues.warehouseArea || '0'));
-                      const areaBreakdownTotal = (formValues.areaBreakdown || []).reduce((sum, item) => sum + Math.round(parseInt(item.squareFootage || '0')), 0);
-                      
-                      // Check if office areas exist in area breakdown items
-                      const officeAreas = (formValues.areaBreakdown || [])
-                        .filter(item => item.description?.toLowerCase().includes('office'))
-                        .reduce((sum, item) => sum + Math.round(parseInt(item.squareFootage || '0')), 0);
-                      
-                      const remainingWarehouse = Math.max(0, totalRentable - areaBreakdownTotal);
-                      return remainingWarehouse.toLocaleString();
-                    })()} sq ft
-                  </span>
-                </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="projectAddress"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Project Address</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Project address" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="dueDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Due Date</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="projectSize"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Project Size</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., 50,000 SF" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="estimatedValue"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Estimated Value</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., $2,500,000" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
             </div>
 
-            {/* Warehouse Notes */}
-            <FormField
-              control={form.control}
-              name="warehouseNotes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Warehouse Notes</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="e.g., Clear height requirements TBD" />
-                  </FormControl>
-                  <FormMessage />
-                  <p className="text-sm text-gray-500">Notes that will appear in the PDF for the warehouse area</p>
-                </FormItem>
-              )}
-            />
-
-            {/* Request Types */}
-            <FormField
-              control={form.control}
-              name="requestTypes"
-              render={() => (
-                <FormItem>
-                  <FormLabel>Request (Pricing, Schedule, Space Plan)</FormLabel>
-                  <div className="flex flex-wrap gap-4">
-                    {[
-                      { id: "pricing", label: "Pricing" },
-                      { id: "schedule", label: "Schedule" },
-                      { id: "space-plan", label: "Space Plan" },
-                    ].map((item) => (
-                      <FormField
-                        key={item.id}
-                        control={form.control}
-                        name="requestTypes"
-                        render={({ field }) => {
-                          return (
-                            <FormItem
-                              key={item.id}
-                              className="flex flex-row items-start space-x-3 space-y-0"
-                            >
-                              <FormControl>
-                                <Checkbox
-                                  checked={field.value?.includes(item.id)}
-                                  onCheckedChange={(checked) => {
-                                    return checked
-                                      ? field.onChange([...field.value, item.id])
-                                      : field.onChange(
-                                          field.value?.filter(
-                                            (value) => value !== item.id
-                                          )
-                                        )
-                                  }}
-                                />
-                              </FormControl>
-                              <FormLabel className="font-normal">
-                                {item.label}
-                              </FormLabel>
-                            </FormItem>
-                          )
-                        }}
-                      />
-                    ))}
-                  </div>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Project Description */}
-            <FormField
-              control={form.control}
-              name="projectDescription"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Project Description (Optional)</FormLabel>
-                  <FormControl>
-                    <Textarea {...field} placeholder="Additional project details..." />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Documents Link */}
-            <FormField
-              control={form.control}
-              name="documentsLink"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Documents Link (Optional)</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="https://..." />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Validation Results */}
-            {validationResult && (
-              <div className={`p-4 rounded-lg border ${
-                validationResult.isValid ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
-              }`}>
-                <div className="flex items-center gap-2 mb-2">
-                  {validationResult.isValid ? (
-                    <CheckCircle className="h-5 w-5 text-green-600" />
-                  ) : (
-                    <AlertCircle className="h-5 w-5 text-red-600" />
+            {/* Area Information */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium text-gray-900 border-b pb-2">Area Information</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <FormField
+                  control={form.control}
+                  name="warehouseArea"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Warehouse Area (SF)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., 45,000" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
                   )}
-                  <h4 className="font-semibold">
-                    {validationResult.isValid ? 'Validation Passed' : 'Validation Issues'}
-                  </h4>
-                </div>
-                {!validationResult.isValid && (
-                  <ul className="list-disc list-inside space-y-1 text-sm">
-                    {validationResult.errors.map((error, index) => (
-                      <li key={index} className="text-red-700">{error}</li>
-                    ))}
-                  </ul>
-                )}
-                <div className="mt-2">
-                  <div className="text-sm text-gray-600">
-                    Completion: {validationResult.completionPercentage}%
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
-                    <div 
-                      className={`h-2 rounded-full ${
-                        validationResult.isValid ? 'bg-green-600' : 'bg-red-600'
-                      }`}
-                      style={{ width: `${validationResult.completionPercentage}%` }}
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
+                />
 
-            {/* Action Buttons */}
-            <div className="flex gap-2 pt-4 justify-end">
-              <Button 
-                type="submit" 
-                disabled={validateMutation.isPending}
-                size="sm"
-              >
-                {validateMutation.isPending ? (
-                  "Validating..."
-                ) : validationResult?.isValid ? (
-                  <>
-                    <ArrowRight className="h-4 w-4 mr-2" />
-                    Proceed to Invitations
-                  </>
-                ) : (
-                  "Validate & Continue"
+                <FormField
+                  control={form.control}
+                  name="officeAreaExisting"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Existing Office Area (SF)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., 2,500" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="officeAreaNew"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>New Office Area (SF)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., 2,500" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name="warehouseNotes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Warehouse Notes</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Additional warehouse area notes..."
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
                 )}
-              </Button>
-              <Button type="button" variant="outline" size="sm" onClick={handleClose}>
+              />
+
+              {/* Area Breakdown */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-medium">Area Breakdown</h4>
+                  <Button
+                    type="button"
+                    onClick={addAreaBreakdown}
+                    variant="outline"
+                    size="sm"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Area
+                  </Button>
+                </div>
+
+                {form.watch("areaBreakdown")?.map((area, index) => (
+                  <div key={area.id} className="grid grid-cols-12 gap-2 items-end">
+                    <div className="col-span-4">
+                      <label className="text-sm font-medium">Description</label>
+                      <Input
+                        value={area.description}
+                        onChange={(e) => updateAreaBreakdown(index, "description", e.target.value)}
+                        placeholder="e.g., Office Space"
+                      />
+                    </div>
+                    <div className="col-span-3">
+                      <label className="text-sm font-medium">Square Footage</label>
+                      <Input
+                        value={area.squareFootage}
+                        onChange={(e) => updateAreaBreakdown(index, "squareFootage", e.target.value)}
+                        placeholder="e.g., 5000"
+                      />
+                    </div>
+                    <div className="col-span-4">
+                      <label className="text-sm font-medium">Notes</label>
+                      <Input
+                        value={area.notes || ""}
+                        onChange={(e) => updateAreaBreakdown(index, "notes", e.target.value)}
+                        placeholder="Additional notes"
+                      />
+                    </div>
+                    <div className="col-span-1">
+                      <Button
+                        type="button"
+                        onClick={() => removeAreaBreakdown(index)}
+                        variant="outline"
+                        size="sm"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Additional Information */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium text-gray-900 border-b pb-2">Additional Requirements</h3>
+              
+              <FormField
+                control={form.control}
+                name="timelineRequirements"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Timeline Requirements</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Project timeline and milestone requirements..."
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="specialRequirements"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Special Requirements</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Special construction requirements, certifications, etc..."
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="documentsLink"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Documents Link</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Link to additional project documents"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="flex justify-end space-x-2 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleClose}
+                disabled={updateMutation.isPending}
+              >
                 <X className="h-4 w-4 mr-2" />
                 Cancel
+              </Button>
+              <Button type="submit" disabled={updateMutation.isPending}>
+                <Save className="h-4 w-4 mr-2" />
+                {updateMutation.isPending ? "Saving..." : "Save Validation Details"}
               </Button>
             </div>
           </form>

@@ -601,14 +601,5 @@ export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
 export type UpdateUser = Partial<Omit<User, 'id' | 'createdAt'>>;
 
-// Permission system
-export type Permission = 
-  | 'rfp.create' | 'rfp.edit' | 'rfp.delete' | 'rfp.view'
-  | 'properties.create' | 'properties.edit' | 'properties.delete' | 'properties.view'
-  | 'contacts.create' | 'contacts.edit' | 'contacts.delete' | 'contacts.view'
-  | 'reports.view' | 'reports.generate'
-  | 'users.create' | 'users.edit' | 'users.delete' | 'users.view'
-  | 'admin.access';
 
-export type UserRole = 'admin' | 'manager' | 'user';
 

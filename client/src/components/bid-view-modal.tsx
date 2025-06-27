@@ -133,22 +133,35 @@ export function BidViewModal({ isOpen, onClose, bid }: BidViewModalProps) {
           )}
 
           {/* Attachments */}
-          {bid.attachments && bid.attachments.length > 0 && (
-            <div>
-              <h3 className="text-lg font-semibold mb-3">Attachments</h3>
-              <div className="space-y-2">
-                {bid.attachments.map((file, index) => (
-                  <div key={index} className="flex items-center gap-2 p-2 border rounded-lg">
-                    <FileText className="h-4 w-4 text-gray-400" />
-                    <span className="flex-1">{file.name}</span>
-                    <span className="text-sm text-gray-500">
-                      {Math.round(file.size / 1024)} KB
-                    </span>
-                  </div>
-                ))}
+          {(() => {
+            // Parse attachments if they're stored as string
+            let attachments = bid.attachments;
+            if (typeof attachments === 'string') {
+              try {
+                attachments = JSON.parse(attachments);
+              } catch (e) {
+                console.error('Failed to parse attachments:', e);
+                attachments = [];
+              }
+            }
+            
+            return attachments && Array.isArray(attachments) && attachments.length > 0 && (
+              <div>
+                <h3 className="text-lg font-semibold mb-3">Attachments</h3>
+                <div className="space-y-2">
+                  {attachments.map((file, index) => (
+                    <div key={index} className="flex items-center gap-2 p-2 border rounded-lg">
+                      <FileText className="h-4 w-4 text-gray-400" />
+                      <span className="flex-1">{file.name}</span>
+                      <span className="text-sm text-gray-500">
+                        {Math.round(file.size / 1024)} KB
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
       </DialogContent>
     </Dialog>

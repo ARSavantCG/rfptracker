@@ -12,6 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Edit, Trash2, Save, X, ArrowRight, Copy, FileDown, Upload, Package, Users, ChevronUp, ChevronDown, GripVertical } from "lucide-react";
 import { EvaluationAttachments } from "./evaluation-attachments";
+import { EvaluationBudgetHistory } from "./evaluation-budget-history";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import { useToast } from "@/hooks/use-toast";
 import { formatDate } from "@/lib/utils";

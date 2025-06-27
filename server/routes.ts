@@ -3497,6 +3497,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // RFP Generation History routes
+  // Evaluation Budget History routes
+  app.get('/api/rfp-requests/:rfpId/evaluation-budget-history', requireAuth, async (req, res) => {
+    try {
+      const rfpId = parseInt(req.params.rfpId);
+      const history = await storage.getEvaluationBudgetHistory(rfpId);
+      res.json(history);
+    } catch (error) {
+      console.error("Error fetching evaluation budget history:", error);
+      res.status(500).json({ message: "Failed to fetch evaluation budget history" });
+    }
+  });
+
+  app.post('/api/rfp-requests/:rfpId/evaluation-budget-history', requireAuth, async (req, res) => {
+    try {
+      const rfpId = parseInt(req.params.rfpId);
+      const { reportName, generatedContent, notes } = req.body;
+      const generatedBy = req.user?.username || 'Unknown';
+      
+      const historyItem = await storage.createEvaluationBudgetHistory({
+        rfpId,
+        reportName,
+        generatedBy,
+        generatedContent,
+        notes
+      });
+      
+      res.json(historyItem);
+    } catch (error) {
+      console.error("Error creating evaluation budget history:", error);
+      res.status(500).json({ message: "Failed to create evaluation budget history" });
+    }
+  });
+
+  app.patch('/api/evaluation-budget-history/:id', requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { reportName, notes } = req.body;
+      
+      const updated = await storage.updateEvaluationBudgetHistory(id, { reportName, notes });
+      if (!updated) {
+        return res.status(404).json({ message: "Evaluation budget history item not found" });
+      }
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating evaluation budget history:", error);
+      res.status(500).json({ message: "Failed to update evaluation budget history" });
+    }
+  });
+
+  app.get('/api/evaluation-budget-history/:id/view', requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const history = await storage.getEvaluationBudgetHistory(0); // Get by ID instead
+      const item = history.find(h => h.id === id);
+      
+      if (!item) {
+        return res.status(404).json({ message: "Evaluation budget history item not found" });
+      }
+      
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.send(item.generatedContent);
+    } catch (error) {
+      console.error("Error viewing evaluation budget history item:", error);
+      res.status(500).json({ message: "Failed to view evaluation budget history item" });
+    }
+  });
+
+  app.delete('/api/evaluation-budget-history/:id', requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteEvaluationBudgetHistory(id);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Evaluation budget history item not found" });
+      }
+      
+      res.json({ message: "Evaluation budget history item deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting evaluation budget history:", error);
+      res.status(500).json({ message: "Failed to delete evaluation budget history item" });
+    }
+  });
+
   app.get('/api/rfp-requests/:rfpId/generation-history', requireAuth, async (req, res) => {
     try {
       const rfpId = parseInt(req.params.rfpId);

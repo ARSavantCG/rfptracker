@@ -88,10 +88,26 @@ export function EvaluationAttachments({ rfpId }: EvaluationAttachmentsProps) {
   });
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('File input change event triggered');
     const files = event.target.files;
-    if (files) {
+    console.log('Files detected:', files ? files.length : 0);
+    if (files && files.length > 0) {
       const fileArray = Array.from(files);
       setAttachedFiles(prev => [...prev, ...fileArray]);
+      console.log('Files selected:', fileArray.map(f => f.name));
+    }
+    // Reset the input value to allow selecting the same file again
+    event.target.value = '';
+  };
+
+  const handleUploadAreaClick = () => {
+    console.log('Upload area clicked');
+    const fileInput = document.getElementById('schedule-upload') as HTMLInputElement;
+    if (fileInput) {
+      console.log('File input found, triggering click');
+      fileInput.click();
+    } else {
+      console.log('File input not found');
     }
   };
 
@@ -119,29 +135,30 @@ export function EvaluationAttachments({ rfpId }: EvaluationAttachmentsProps) {
       </CardHeader>
       <CardContent className="space-y-4">
         {/* File Upload Section */}
-        <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+        <div 
+          onClick={handleUploadAreaClick}
+          className="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-400 transition-colors cursor-pointer"
+        >
           <div className="text-center">
             <Upload className="mx-auto h-8 w-8 text-gray-400" />
             <div className="mt-2">
-              <label htmlFor="schedule-upload" className="cursor-pointer">
-                <span className="text-sm font-medium text-blue-600 hover:text-blue-500">
-                  Click to upload files
-                </span>
-                <input
-                  id="schedule-upload"
-                  type="file"
-                  multiple
-                  className="sr-only"
-                  onChange={handleFileSelect}
-                  accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg,.msg"
-                />
-              </label>
+              <span className="text-sm font-medium text-blue-600 hover:text-blue-500">
+                Click to upload files
+              </span>
             </div>
             <p className="text-xs text-gray-500 mt-1">
               PDF, Word, Excel, PowerPoint, Images, or Outlook files up to 10MB
             </p>
           </div>
         </div>
+        <input
+          id="schedule-upload"
+          type="file"
+          multiple
+          className="hidden"
+          onChange={handleFileSelect}
+          accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg,.msg"
+        />
 
         {/* New Files to Upload */}
         {attachedFiles.length > 0 && (

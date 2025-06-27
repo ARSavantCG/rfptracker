@@ -30,16 +30,8 @@ const validationSchema = z.object({
   officeAreaNew: z.string().optional(),
   warehouseArea: z.string().optional(),
   warehouseNotes: z.string().optional(),
-  projectAddress: z.string().optional(),
-  projectSize: z.string().optional(),
-  estimatedValue: z.string().optional(),
-  timelineRequirements: z.string().optional(),
-  specialRequirements: z.string().optional(),
   contactPerson: z.string().optional(),
   contactEmail: z.string().optional(),
-  dueDate: z.string().optional(),
-  projectDescription: z.string().optional(),
-  documentsLink: z.string().optional(),
   areaBreakdown: z.array(z.object({
     id: z.string(),
     description: z.string(),
@@ -117,16 +109,8 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
         officeAreaNew: rfp.officeAreaNew || "",
         warehouseArea: rfp.warehouseArea || "",
         warehouseNotes: rfp.warehouseNotes || "",
-        projectAddress: rfp.projectAddress || "",
-        projectSize: rfp.projectSize || "",
-        estimatedValue: rfp.estimatedValue || "",
-        timelineRequirements: rfp.timelineRequirements || "",
-        specialRequirements: rfp.specialRequirements || "",
         contactPerson: rfp.contactPerson || contactDetails.name || "",
         contactEmail: rfp.contactEmail || contactDetails.email || "",
-        dueDate: rfp.dueDate ? new Date(rfp.dueDate).toISOString().split('T')[0] : "",
-        projectDescription: rfp.projectDescription || "",
-        documentsLink: rfp.documentsLink || "",
         areaBreakdown: rfp.areaBreakdown || [],
       });
     }
@@ -298,88 +282,7 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
               </div>
             </div>
 
-            {/* Project Details */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium text-gray-900 border-b pb-2">Project Details</h3>
-              
-              <FormField
-                control={form.control}
-                name="projectDescription"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Project Description</FormLabel>
-                    <FormControl>
-                      <Textarea 
-                        placeholder="Detailed project description..."
-                        className="min-h-[100px]"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="projectAddress"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Project Address</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Project address" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="dueDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Due Date</FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="projectSize"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Project Size</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., 50,000 SF" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="estimatedValue"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Estimated Value</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., $2,500,000" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </div>
 
             {/* Area Information */}
             <div className="space-y-4">
@@ -520,61 +423,7 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
               </div>
             </div>
 
-            {/* Additional Information */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium text-gray-900 border-b pb-2">Additional Requirements</h3>
-              
-              <FormField
-                control={form.control}
-                name="timelineRequirements"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Timeline Requirements</FormLabel>
-                    <FormControl>
-                      <Textarea 
-                        placeholder="Project timeline and milestone requirements..."
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
 
-              <FormField
-                control={form.control}
-                name="specialRequirements"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Special Requirements</FormLabel>
-                    <FormControl>
-                      <Textarea 
-                        placeholder="Special construction requirements, certifications, etc..."
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="documentsLink"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Documents Link</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="Link to additional project documents"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
 
             <div className="flex justify-end space-x-2 pt-4">
               <Button

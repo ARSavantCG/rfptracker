@@ -111,7 +111,41 @@ function generateBidCollectionHtml(bidCollection: any, rfp: any, lineItems: any[
               <span class="info-label">Company:</span> ${bidCollection.contractorCompany}
             </div>
             <div class="info-item">
-              <span class="info-label">Submission Date:</span> ${bidCollection.submissionDate ? new Date(bidCollection.submissionDate + 'T00:00:00').toLocaleDateString('en-US') : 'N/A'}
+              <span class="info-label">Submission Date:</span> ${(() => {
+                if (!bidCollection.submissionDate) return 'N/A';
+                try {
+                  // Log the date value for debugging
+                  console.log('PDF Date Debug - Original value:', bidCollection.submissionDate, 'Type:', typeof bidCollection.submissionDate);
+                  
+                  const dateValue = bidCollection.submissionDate;
+                  let date;
+                  
+                  if (typeof dateValue === 'string') {
+                    // If it's already in YYYY-MM-DD format, parse directly
+                    if (dateValue.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                      date = new Date(dateValue + 'T00:00:00');
+                    } else {
+                      date = new Date(dateValue);
+                    }
+                  } else if (dateValue instanceof Date) {
+                    date = dateValue;
+                  } else {
+                    date = new Date(dateValue);
+                  }
+                  
+                  console.log('PDF Date Debug - Parsed date:', date, 'Valid:', !isNaN(date.getTime()));
+                  
+                  // Check if date is valid
+                  if (isNaN(date.getTime())) {
+                    return 'Invalid Date';
+                  }
+                  
+                  return date.toLocaleDateString('en-US');
+                } catch (error) {
+                  console.error('Date parsing error:', error, 'Original value:', bidCollection.submissionDate);
+                  return 'Invalid Date';
+                }
+              })()}
             </div>
             <div class="info-item">
               <span class="info-label">Total Amount:</span> $${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}

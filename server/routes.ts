@@ -3355,15 +3355,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // 4. Evaluation Budget files
-      const evaluationAttachments = await storage.getEvaluationBudgetAttachments(rfpId);
-      if (evaluationAttachments && evaluationAttachments.length > 0) {
-        for (const file of evaluationAttachments) {
-          const filePath = path.join(uploadsDir, file.filename);
-          if (fs.existsSync(filePath)) {
-            archive.file(filePath, { name: `4-Evaluation-Budget/${file.originalName}` });
-            hasFiles = true;
+      try {
+        const evaluationAttachments = await storage.getEvaluationBudgetAttachments(rfpId);
+        console.log(`Found ${evaluationAttachments?.length || 0} evaluation attachments for RFP ${rfpId}`);
+        if (evaluationAttachments && evaluationAttachments.length > 0) {
+          for (const file of evaluationAttachments) {
+            const filePath = path.join(uploadsDir, file.filename);
+            console.log(`Checking evaluation file: ${filePath}`);
+            if (fs.existsSync(filePath)) {
+              archive.file(filePath, { name: `4-Evaluation-Budget/${file.originalName}` });
+              hasFiles = true;
+              console.log(`Added evaluation file: ${file.originalName}`);
+            } else {
+              console.log(`Evaluation file not found on disk: ${filePath}`);
+            }
           }
         }
+      } catch (error) {
+        console.error('Error collecting evaluation attachments:', error);
+      }
+
+      // 5. Invitation to Bid files (check if any contractor documents exist)
+      try {
+        const invitationToBid = await storage.getInvitationToBid(rfpId);
+        if (invitationToBid && invitationToBid.contractorDocs && invitationToBid.contractorDocs.length > 0) {
+          for (const file of invitationToBid.contractorDocs) {
+            const filePath = path.join(uploadsDir, file.path || file.name);
+            if (fs.existsSync(filePath)) {
+              archive.file(filePath, { name: `2-Invitation-to-Bid/${file.name}` });
+              hasFiles = true;
+            }
+          }
+        }
+      } catch (error) {
+        console.log('No invitation to bid files or method not available');
       }
 
       // If no files found, add a readme

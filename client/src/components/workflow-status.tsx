@@ -14,6 +14,7 @@ interface WorkflowStatusProps {
   onOpenInvitationModal?: (rfp: RfpRequest) => void;
   onOpenBidCollection?: (rfp: RfpRequest) => void;
   onOpenEvaluation?: (rfp: RfpRequest) => void;
+  onViewDetails?: (rfp: RfpRequest) => void;
 }
 
 const workflowPhases = [
@@ -54,7 +55,7 @@ const workflowPhases = [
   }
 ];
 
-export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValidateRfp, onOpenInvitationModal, onOpenBidCollection, onOpenEvaluation }: WorkflowStatusProps) {
+export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValidateRfp, onOpenInvitationModal, onOpenBidCollection, onOpenEvaluation, onViewDetails }: WorkflowStatusProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -141,6 +142,18 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValida
         <Badge variant="outline" className="text-xs">
           Phase {currentPhaseIndex + 1} of {workflowPhases.length}
         </Badge>
+      </div>
+      
+      {/* View Details Button */}
+      <div className="mb-4">
+        <Button
+          onClick={() => onViewDetails?.(rfp)}
+          variant="outline"
+          className="w-full px-3 py-2 text-sm font-medium flex items-center justify-center gap-2"
+        >
+          <FileText className="h-4 w-4" />
+          View RFP Details
+        </Button>
       </div>
 
       <div className="space-y-3">

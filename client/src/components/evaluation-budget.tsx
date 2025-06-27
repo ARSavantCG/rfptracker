@@ -67,8 +67,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     quantity: 0,
     unit: "",
     unitPrice: "",
-    totalPrice: "",
-    notes: ""
+    totalPrice: ""
   });
   
   // Assembly creation state
@@ -458,7 +457,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
       return;
     }
 
-    if (!newAssemblyCategory || newAssemblyCategory === '') {
+    if (!newAssemblyCategory || newAssemblyCategory.trim() === '') {
       toast({
         title: "Error",
         description: "Please select a category for the assembly.",
@@ -1683,7 +1682,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                 <Button onClick={() => addNewItem(category)} size="sm">
                   Add
                 </Button>
-                <Button onClick={() => setNewItemCategory(null)} variant="outline" size="sm">
+                <Button onClick={() => setNewItemCategory("")} variant="outline" size="sm">
                   Cancel
                 </Button>
               </div>

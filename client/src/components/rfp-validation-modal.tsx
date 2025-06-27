@@ -274,16 +274,26 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                       <span>Total Rentable Area:</span>
                       <span className="font-medium">
                         {(() => {
-                          // Debug: Check multiple possible area fields
+                          // Check multiple possible area fields
                           const warehouseArea = rfp.warehouseArea;
                           const projectArea = rfp.projectArea;
+                          
+                          // Check if bay configurations contain calculated area
+                          let calculatedArea = 0;
+                          if (rfp.selectedBayConfigurations && rfp.selectedBayConfigurations.length > 0) {
+                            calculatedArea = rfp.selectedBayConfigurations.reduce((total, bay) => {
+                              return total + (bay.rentableSquareFootage || 0);
+                            }, 0);
+                          }
+                          
                           console.log('Debug - warehouseArea:', warehouseArea);
                           console.log('Debug - projectArea:', projectArea);
-                          console.log('Debug - full RFP object:', rfp);
+                          console.log('Debug - calculatedArea from bays:', calculatedArea);
+                          console.log('Debug - selectedBayConfigurations:', rfp.selectedBayConfigurations);
                           
-                          // Use warehouseArea if available, otherwise projectArea as fallback
-                          const totalArea = warehouseArea || projectArea;
-                          return totalArea ? parseInt(totalArea).toLocaleString() : 0;
+                          // Priority: calculated area from bays > warehouseArea > projectArea
+                          const totalArea = calculatedArea > 0 ? calculatedArea : (warehouseArea || projectArea);
+                          return totalArea ? parseInt(totalArea.toString()).toLocaleString() : 0;
                         })()} SF
                       </span>
                     </div>
@@ -307,8 +317,18 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                           // Use same logic as above for consistency
                           const warehouseArea = rfp.warehouseArea;
                           const projectArea = rfp.projectArea;
-                          const totalArea = warehouseArea || projectArea;
-                          const totalRentable = parseInt(totalArea || "0");
+                          
+                          // Check if bay configurations contain calculated area
+                          let calculatedArea = 0;
+                          if (rfp.selectedBayConfigurations && rfp.selectedBayConfigurations.length > 0) {
+                            calculatedArea = rfp.selectedBayConfigurations.reduce((total, bay) => {
+                              return total + (bay.rentableSquareFootage || 0);
+                            }, 0);
+                          }
+                          
+                          // Priority: calculated area from bays > warehouseArea > projectArea
+                          const totalArea = calculatedArea > 0 ? calculatedArea : (warehouseArea || projectArea);
+                          const totalRentable = parseInt(totalArea.toString() || "0");
                           const additionalAreas = form.watch("areaBreakdown").reduce((sum, area) => 
                             sum + parseInt(area.squareFootage || "0"), 0);
                           const remaining = totalRentable - additionalAreas;

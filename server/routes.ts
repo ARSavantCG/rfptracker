@@ -541,7 +541,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete RFP request
-  app.delete("/api/rfp-requests/:id", async (req, res) => {
+  app.delete("/api/rfp-requests/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -565,7 +565,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "RFP request not found" });
       }
 
-      res.status(204).send();
+      res.status(200).json({ message: "RFP request deleted successfully" });
     } catch (error) {
       console.error('Delete RFP error:', error);
       res.status(500).json({ 

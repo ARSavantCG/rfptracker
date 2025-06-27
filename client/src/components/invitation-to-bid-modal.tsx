@@ -12,7 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
-import { FileText, Download, Users, Save, X, CheckCircle, Plus, Trash2 } from "lucide-react";
+import { FileText, Download, Users, Save, X, CheckCircle, Plus, Trash2, ChevronUp, ChevronDown } from "lucide-react";
 import type { RfpRequest, Property, Contact } from "@shared/schema";
 
 const invitationFormSchema = z.object({
@@ -135,6 +135,51 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
     control: form.control,
     name: "contractorMilestones",
   });
+
+  // Reorder functions for scope of work items
+  const moveScopeUp = (index: number) => {
+    if (index === 0) return;
+    const items = form.getValues("scopeOfWork");
+    [items[index - 1], items[index]] = [items[index], items[index - 1]];
+    form.setValue("scopeOfWork", items);
+  };
+
+  const moveScopeDown = (index: number) => {
+    const items = form.getValues("scopeOfWork");
+    if (index === items.length - 1) return;
+    [items[index], items[index + 1]] = [items[index + 1], items[index]];
+    form.setValue("scopeOfWork", items);
+  };
+
+  // Reorder functions for architect milestones
+  const moveArchitectMilestoneUp = (index: number) => {
+    if (index === 0) return;
+    const items = form.getValues("architectMilestones");
+    [items[index - 1], items[index]] = [items[index], items[index - 1]];
+    form.setValue("architectMilestones", items);
+  };
+
+  const moveArchitectMilestoneDown = (index: number) => {
+    const items = form.getValues("architectMilestones");
+    if (index === items.length - 1) return;
+    [items[index], items[index + 1]] = [items[index + 1], items[index]];
+    form.setValue("architectMilestones", items);
+  };
+
+  // Reorder functions for contractor milestones
+  const moveContractorMilestoneUp = (index: number) => {
+    if (index === 0) return;
+    const items = form.getValues("contractorMilestones");
+    [items[index - 1], items[index]] = [items[index], items[index - 1]];
+    form.setValue("contractorMilestones", items);
+  };
+
+  const moveContractorMilestoneDown = (index: number) => {
+    const items = form.getValues("contractorMilestones");
+    if (index === items.length - 1) return;
+    [items[index], items[index + 1]] = [items[index + 1], items[index]];
+    form.setValue("contractorMilestones", items);
+  };
 
   // Watch checkbox values to enable/disable Generate RFPs button
   const watchedValues = form.watch([
@@ -659,7 +704,8 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                 <div className="space-y-2">
                   {/* Column Headers */}
                   <div className="grid grid-cols-12 gap-4 pb-2 border-b text-sm font-medium text-gray-600">
-                    <div className="col-span-6">Description</div>
+                    <div className="col-span-1">Order</div>
+                    <div className="col-span-5">Description</div>
                     <div className="col-span-2">Quantity</div>
                     <div className="col-span-3">Unit</div>
                     <div className="col-span-1"></div>
@@ -668,7 +714,31 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                   {/* Scope Items */}
                   {scopeFields.map((field, index) => (
                     <div key={field.id} className="grid grid-cols-12 gap-4 items-center">
-                      <div className="col-span-6">
+                      <div className="col-span-1">
+                        <div className="flex flex-col gap-1">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => moveScopeUp(index)}
+                            disabled={index === 0}
+                            className="h-6 w-6 p-0"
+                          >
+                            <ChevronUp className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => moveScopeDown(index)}
+                            disabled={index === scopeFields.length - 1}
+                            className="h-6 w-6 p-0"
+                          >
+                            <ChevronDown className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="col-span-5">
                         <FormField
                           control={form.control}
                           name={`scopeOfWork.${index}.description`}
@@ -765,14 +835,39 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                     <div className="space-y-2">
                       {/* Column Headers */}
                       <div className="grid grid-cols-12 gap-2 pb-2 border-b text-sm font-medium text-gray-600">
-                        <div className="col-span-11">Milestone Request</div>
+                        <div className="col-span-1">Order</div>
+                        <div className="col-span-10">Milestone Request</div>
                         <div className="col-span-1"></div>
                       </div>
 
                       {/* Milestone Items */}
                       {architectMilestoneFields.map((field, index) => (
                         <div key={field.id} className="grid grid-cols-12 gap-2 items-center">
-                          <div className="col-span-11">
+                          <div className="col-span-1">
+                            <div className="flex flex-col gap-1">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => moveArchitectMilestoneUp(index)}
+                                disabled={index === 0}
+                                className="h-6 w-6 p-0"
+                              >
+                                <ChevronUp className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => moveArchitectMilestoneDown(index)}
+                                disabled={index === architectMilestoneFields.length - 1}
+                                className="h-6 w-6 p-0"
+                              >
+                                <ChevronDown className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                          <div className="col-span-10">
                             <FormField
                               control={form.control}
                               name={`architectMilestones.${index}.description`}
@@ -828,14 +923,39 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                     <div className="space-y-2">
                       {/* Column Headers */}
                       <div className="grid grid-cols-12 gap-2 pb-2 border-b text-sm font-medium text-gray-600">
-                        <div className="col-span-11">Milestone Request</div>
+                        <div className="col-span-1">Order</div>
+                        <div className="col-span-10">Milestone Request</div>
                         <div className="col-span-1"></div>
                       </div>
 
                       {/* Milestone Items */}
                       {contractorMilestoneFields.map((field, index) => (
                         <div key={field.id} className="grid grid-cols-12 gap-2 items-center">
-                          <div className="col-span-11">
+                          <div className="col-span-1">
+                            <div className="flex flex-col gap-1">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => moveContractorMilestoneUp(index)}
+                                disabled={index === 0}
+                                className="h-6 w-6 p-0"
+                              >
+                                <ChevronUp className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => moveContractorMilestoneDown(index)}
+                                disabled={index === contractorMilestoneFields.length - 1}
+                                className="h-6 w-6 p-0"
+                              >
+                                <ChevronDown className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                          <div className="col-span-10">
                             <FormField
                               control={form.control}
                               name={`contractorMilestones.${index}.description`}

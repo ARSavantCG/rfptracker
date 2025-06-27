@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Trash2, Upload, FileText, Save, X, Download, ChevronUp, ChevronDown, GripVertical } from "lucide-react";
-import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
+import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
 import { FileUpload } from "./file-upload";
 import { useToast } from "@/hooks/use-toast";
 import { formatDate } from "@/lib/utils";
@@ -29,12 +29,12 @@ const bidCollectionSchema = z.object({
 });
 
 const lineItemSchema = z.object({
-  category: z.string().optional(),
+  category: z.string().default("General"),
   description: z.string().min(1, "Description is required"),
-  quantity: z.string().optional(),
-  unit: z.string().optional(),
-  unitPrice: z.string().optional(),
-  totalPrice: z.string().min(1, "Total price is required"),
+  quantity: z.string(),
+  unit: z.string(),
+  unitPrice: z.string(),
+  totalPrice: z.string(),
   notes: z.string().optional(),
 });
 
@@ -118,36 +118,17 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
         }));
         setLineItems(formattedLineItems);
       }
-      
-      // Load existing attachments and convert to display format
-      if (bidCollection.attachments) {
-        let existingAttachments = bidCollection.attachments;
-        if (typeof existingAttachments === 'string') {
-          try {
-            existingAttachments = JSON.parse(existingAttachments);
-          } catch (e) {
-            console.error('Failed to parse existing attachments:', e);
-            existingAttachments = [];
-          }
-        }
-        
-        // Create File objects from existing attachment data for display
-        const attachmentFiles = existingAttachments.map((attachment: any) => {
-          // Create a mock File object for display purposes
-          const file = new File([''], attachment.name, { type: attachment.type });
-          // Add custom properties to track this is an existing file
-          Object.defineProperty(file, 'isExisting', { value: true, writable: false });
-          Object.defineProperty(file, 'id', { value: attachment.id, writable: false });
-          Object.defineProperty(file, 'size', { value: attachment.size, writable: false });
-          return file;
-        });
-        
-        setAttachments(attachmentFiles);
-      } else {
-        setAttachments([]);
+
+      // Load existing attachments
+      if (bidCollection.attachments && Array.isArray(bidCollection.attachments)) {
+        const existingFiles = bidCollection.attachments.map((attachment: any) => ({
+          ...attachment,
+          isExisting: true
+        }));
+        setAttachments(existingFiles);
       }
     } else if (!bidCollection && isOpen) {
-      // Reset to defaults for new bid collection
+      // Reset form for new bid collection
       form.reset({
         contractorId: 0,
         contractorName: "",
@@ -161,41 +142,39 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
       setLineItems([]);
       setAttachments([]);
     }
-  }, [bidCollection, isOpen, form, existingLineItems]);
+  }, [bidCollection, form, isOpen, existingLineItems]);
 
-  // Create/Update bid collection mutation
+  // Reset attachments when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setAttachments([]);
+    }
+  }, [isOpen]);
+
   const saveBidMutation = useMutation({
     mutationFn: async (data: BidCollectionFormData & { lineItems: LineItemFormData[], attachments: File[] }) => {
-      // Prepare bid data object (excluding lineItems and attachments)
-      const bidData = {
-        contractorId: data.contractorId,
-        contractorName: data.contractorName,
-        contractorCompany: data.contractorCompany,
-        contractorEmail: data.contractorEmail,
-        submissionDate: data.submissionDate, // Keep as string for the API
-        totalAmount: data.totalAmount,
-        status: data.status,
-        notes: data.notes,
-      };
-      
       const url = bidCollection 
         ? `/api/rfp-requests/${rfp?.id}/bid-collections/${bidCollection.id}`
         : `/api/rfp-requests/${rfp?.id}/bid-collections`;
 
-      let response;
-
-      // Use FormData for both create and update to handle file uploads
       const formData = new FormData();
       
-      // Add bid collection data as JSON string
-      formData.append('bidData', JSON.stringify(bidData));
+      // Add main bid collection data
+      formData.append('contractorId', data.contractorId.toString());
+      formData.append('contractorName', data.contractorName);
+      formData.append('contractorCompany', data.contractorCompany);
+      formData.append('contractorEmail', data.contractorEmail);
+      formData.append('submissionDate', data.submissionDate);
+      formData.append('totalAmount', data.totalAmount || '');
+      formData.append('status', data.status);
+      formData.append('notes', data.notes || '');
       
-      // Add line items as JSON string
+      // Add line items
       formData.append('lineItems', JSON.stringify(data.lineItems));
       
-      // Add only new attachments (filter out existing ones)
-      const newAttachments = data.attachments.filter((file: any) => !file.isExisting);
-      newAttachments.forEach((file, index) => {
+      // Add new file attachments
+      const newFiles = data.attachments.filter((file: any) => !file.isExisting);
+      newFiles.forEach((file, index) => {
         formData.append(`attachment_${index}`, file);
       });
 
@@ -203,17 +182,22 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
       const existingAttachments = data.attachments.filter((file: any) => file.isExisting);
       formData.append('existingAttachments', JSON.stringify(existingAttachments));
 
+      let response;
       if (bidCollection) {
-        // For updates, use PUT with FormData
         response = await fetch(url, {
           method: 'PUT',
           body: formData,
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+          }
         });
       } else {
-        // For creation, use POST with FormData
         response = await fetch(url, {
           method: 'POST',
           body: formData,
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+          }
         });
       }
 
@@ -242,7 +226,6 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
   });
 
   const onSubmit = (data: BidCollectionFormData) => {
-    // Ensure contractorId is a number
     const submissionData = {
       ...data,
       contractorId: parseInt(data.contractorId.toString()),
@@ -293,13 +276,13 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
     setLineItems(updated);
   };
 
-  const handleDragEnd = (result: any) => {
+  const handleDragEnd = (result: DropResult) => {
     if (!result.destination) return;
 
     const items = Array.from(lineItems);
     const [reorderedItem] = items.splice(result.source.index, 1);
     items.splice(result.destination.index, 0, reorderedItem);
-
+    
     setLineItems(items);
   };
 
@@ -329,17 +312,6 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
     return lineItems.reduce((sum, item) => {
       return sum + parseFloat(item.totalPrice || '0');
     }, 0).toFixed(2);
-  };
-
-  const formatCurrency = (value: string | number) => {
-    const num = typeof value === 'string' ? parseFloat(value) : value;
-    if (isNaN(num)) return '';
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(num);
   };
 
   const formatCurrencyForDisplay = (value: string | number) => {
@@ -399,21 +371,15 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                     >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select bidder (contractor or architect)" />
+                          <SelectValue placeholder="Select contractor or architect..." />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {allBidders.length > 0 ? (
-                          allBidders.map((bidder) => (
-                            <SelectItem key={bidder.id} value={bidder.id.toString()}>
-                              {bidder.name} - {bidder.company} ({bidder.type})
-                            </SelectItem>
-                          ))
-                        ) : (
-                          <div className="px-2 py-1 text-sm text-gray-500">
-                            No bidders available
-                          </div>
-                        )}
+                        {allBidders.map((bidder) => (
+                          <SelectItem key={bidder.id} value={bidder.id.toString()}>
+                            {bidder.name} ({bidder.company}) - {bidder.type}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -421,7 +387,6 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                 )}
               />
 
-              {/* Submission Date */}
               <FormField
                 control={form.control}
                 name="submissionDate"
@@ -436,61 +401,12 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                 )}
               />
 
-              {/* Status */}
-              <FormField
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Status</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="received">Received</SelectItem>
-                        <SelectItem value="under-review">Under Review</SelectItem>
-                        <SelectItem value="shortlisted">Shortlisted</SelectItem>
-                        <SelectItem value="rejected">Rejected</SelectItem>
-                        <SelectItem value="awarded">Awarded</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Total Amount */}
-              <FormField
-                control={form.control}
-                name="totalAmount"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Total Amount</FormLabel>
-                    <FormControl>
-                      <Input 
-                        {...field} 
-                        placeholder="Calculated from line items"
-                        value={formatCurrencyForDisplay(calculateTotal())}
-                        readOnly
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            {/* Contractor Details */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <FormField
                 control={form.control}
                 name="contractorName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Contractor Name</FormLabel>
+                    <FormLabel>Contact Name</FormLabel>
                     <FormControl>
                       <Input {...field} readOnly className="bg-gray-50" />
                     </FormControl>
@@ -603,67 +519,67 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                                       </div>
                                     </div>
                                   </TableCell>
-                        <TableCell>
-                          <Input
-                            value={item.description}
-                            onChange={(e) => updateLineItem(index, 'description', e.target.value)}
-                            placeholder="Description"
-                            className="min-w-[200px]"
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Input
-                            value={item.quantity ? parseFloat(item.quantity || '0').toLocaleString('en-US') : ''}
-                            onChange={(e) => {
-                              const value = e.target.value.replace(/,/g, '');
-                              updateLineItem(index, 'quantity', value);
-                            }}
-                            placeholder=""
-                            type="text"
-                            className="w-[90px] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                            style={{ MozAppearance: 'textfield' }}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Input
-                            value={item.unit}
-                            onChange={(e) => updateLineItem(index, 'unit', e.target.value)}
-                            placeholder="ea, sf, lf"
-                            className="w-[80px]"
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Input
-                            value={item.unitPrice ? `$${parseFloat(item.unitPrice || '0').toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}
-                            onChange={(e) => {
-                              const value = e.target.value.replace(/[$,]/g, '');
-                              updateLineItem(index, 'unitPrice', value);
-                            }}
-                            placeholder="$0.00"
-                            type="text"
-                            className="w-[120px]"
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Input
-                            value={item.totalPrice ? `$${parseFloat(item.totalPrice || '0').toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}
-                            onChange={(e) => {
-                              const value = e.target.value.replace(/[$,]/g, '');
-                              updateLineItem(index, 'totalPrice', value);
-                            }}
-                            placeholder="$0.00"
-                            type="text"
-                            className="w-[120px]"
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Input
-                            value={item.notes}
-                            onChange={(e) => updateLineItem(index, 'notes', e.target.value)}
-                            placeholder="Notes"
-                            className="min-w-[150px]"
-                          />
-                        </TableCell>
+                                  <TableCell>
+                                    <Input
+                                      value={item.description}
+                                      onChange={(e) => updateLineItem(index, 'description', e.target.value)}
+                                      placeholder="Description"
+                                      className="min-w-[200px]"
+                                    />
+                                  </TableCell>
+                                  <TableCell>
+                                    <Input
+                                      value={item.quantity ? parseFloat(item.quantity || '0').toLocaleString('en-US') : ''}
+                                      onChange={(e) => {
+                                        const value = e.target.value.replace(/,/g, '');
+                                        updateLineItem(index, 'quantity', value);
+                                      }}
+                                      placeholder=""
+                                      type="text"
+                                      className="w-[90px] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                      style={{ MozAppearance: 'textfield' }}
+                                    />
+                                  </TableCell>
+                                  <TableCell>
+                                    <Input
+                                      value={item.unit}
+                                      onChange={(e) => updateLineItem(index, 'unit', e.target.value)}
+                                      placeholder="ea, sf, lf"
+                                      className="w-[80px]"
+                                    />
+                                  </TableCell>
+                                  <TableCell>
+                                    <Input
+                                      value={item.unitPrice ? `$${parseFloat(item.unitPrice || '0').toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}
+                                      onChange={(e) => {
+                                        const value = e.target.value.replace(/[$,]/g, '');
+                                        updateLineItem(index, 'unitPrice', value);
+                                      }}
+                                      placeholder="$0.00"
+                                      type="text"
+                                      className="w-[120px]"
+                                    />
+                                  </TableCell>
+                                  <TableCell>
+                                    <Input
+                                      value={item.totalPrice ? `$${parseFloat(item.totalPrice || '0').toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}
+                                      onChange={(e) => {
+                                        const value = e.target.value.replace(/[$,]/g, '');
+                                        updateLineItem(index, 'totalPrice', value);
+                                      }}
+                                      placeholder="$0.00"
+                                      type="text"
+                                      className="w-[120px]"
+                                    />
+                                  </TableCell>
+                                  <TableCell>
+                                    <Input
+                                      value={item.notes}
+                                      onChange={(e) => updateLineItem(index, 'notes', e.target.value)}
+                                      placeholder="Notes"
+                                      className="min-w-[150px]"
+                                    />
+                                  </TableCell>
                                   <TableCell>
                                     <Button
                                       type="button"
@@ -720,7 +636,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                 onFilesSelected={setAttachments}
                 initialFiles={attachments}
                 multiple={true}
-                accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.msg,.eml"
                 className="border border-gray-200 rounded px-2 py-1 text-xs bg-gray-50"
               />
               {attachments.length > 0 && (
@@ -757,7 +673,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                 ) : (
                   <>
                     <Save className="h-4 w-4 mr-2" />
-                    {bidCollection ? 'Update' : 'Save'} Bid
+                    {bidCollection ? 'Update' : 'Create'} Bid Collection
                   </>
                 )}
               </Button>

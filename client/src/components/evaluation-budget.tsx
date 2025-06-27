@@ -147,15 +147,19 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     const assemblyId = assemblyLineItem.id;
 
     setBudgetData(prev => {
-      const updatedCategory = prev[newAssemblyCategory].map(item => {
-        if (selectedItemsArray.includes(item.id)) {
-          return { ...item, assemblyId: assemblyId };
-        }
-        return item;
-      });
+      const categoryItems = prev[newAssemblyCategory];
+      const nonAssembledItems = categoryItems.filter(item => !selectedItemsArray.includes(item.id));
+      const assembledItems = categoryItems.filter(item => selectedItemsArray.includes(item.id)).map(item => ({
+        ...item,
+        assemblyId: assemblyId
+      }));
 
-      // Add the assembly line item to the category
-      updatedCategory.push(assemblyLineItem);
+      // Group items: non-assembled items first, then assembly line item, then assembled items
+      const updatedCategory = [
+        ...nonAssembledItems,
+        assemblyLineItem,
+        ...assembledItems
+      ];
 
       return {
         ...prev,
@@ -268,6 +272,10 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
 
   const calculateCategoryTotal = (items: EvaluationLineItem[]) => {
     return items.reduce((total, item) => {
+      // Exclude items that are part of an assembly (they have assemblyId)
+      if (item.assemblyId) {
+        return total;
+      }
       const price = parseFloat(item.totalPrice) || 0;
       return total + price;
     }, 0);
@@ -279,10 +287,10 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
   ) => {
     let total = 0;
     
-    // Add items from this category that are not rolled up elsewhere
+    // Add items from this category that are not rolled up elsewhere and not part of an assembly
     const categoryItems = budgetData[category];
     categoryItems.forEach(item => {
-      if (!budgetData.lineItemRollups[item.id]) {
+      if (!budgetData.lineItemRollups[item.id] && !item.assemblyId) {
         total += parseFloat(item.totalPrice) || 0;
       }
     });

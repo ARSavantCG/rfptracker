@@ -183,6 +183,7 @@ This is a full-stack web application for tracking and managing Request for Propo
 - June 27, 2025. Fixed hardcoded project name bug in evaluation budget header - now correctly displays actual RFP project name (e.g., "Bridge Point Gratigny") instead of showing "Oakley & Sons 3 @ MG Westside - A" for all projects
 - June 27, 2025. Fixed scroll jumping issue when toggling line item rollup checkboxes and dropdown selections in evaluation budget - page now maintains exact scroll position during state changes for improved user experience
 - June 27, 2025. Implemented comprehensive custom assembly system for grouping related line items - users can select multiple items via checkboxes and create custom assemblies like "Dock Package" or "Demising Wall Package" using "+Add Assembly" button positioned next to "+Add Item", creating new line items with calculated totals while marking component items with strikethrough styling similar to rollup functionality
+- June 27, 2025. Enhanced assembly system with proper cost redistribution and item grouping - assemblies now redistribute costs without adding new costs to project totals, assembled items are visually grouped near their assembly line item, and all cost calculation functions exclude assembled items to prevent double-counting while maintaining accurate project totals
 
 ## User Preferences
 

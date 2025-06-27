@@ -53,10 +53,13 @@ export function BidCollectionTable({ rfp }: BidCollectionTableProps) {
   };
 
   const formatDate = (date: Date) => {
-    return new Date(date).toLocaleDateString('en-US', {
+    // Create a new date object and format in user's timezone
+    const dateObj = new Date(date);
+    return dateObj.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
+      timeZone: 'America/New_York', // Use Eastern Time to match PDF generation
     });
   };
 

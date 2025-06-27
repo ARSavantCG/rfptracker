@@ -167,6 +167,7 @@ This is a full-stack web application for tracking and managing Request for Propo
 - June 27, 2025. Enhanced file upload component to support proper multiple file selection and fixed file state isolation between different bid forms - each bid now maintains separate file attachments without cross-contamination
 - June 27, 2025. Fixed file attachment display in bid edit forms - existing attachments now properly load and display in edit modal, while preserving existing files when adding new attachments during updates
 - June 27, 2025. Implemented proper file deletion functionality in bid attachments - removed files are now permanently deleted from database, and attachment counts synchronize correctly between table view and edit forms
+- June 27, 2025. Fixed project name typo from "Bridge Point Grangry" to "Bridge Point Gratigny" in RFP database and corrected date formatting to use Eastern Time consistently across all bid collection views
 
 ## User Preferences
 

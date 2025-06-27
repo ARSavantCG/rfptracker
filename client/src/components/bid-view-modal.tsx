@@ -23,6 +23,7 @@ export function BidViewModal({ isOpen, onClose, bid }: BidViewModalProps) {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
+      timeZone: 'America/New_York', // Use Eastern Time to match PDF generation
     });
   };
 

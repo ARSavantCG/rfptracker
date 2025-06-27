@@ -958,9 +958,9 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
 
     <div class="grand-total">
         <h2>Grand Total: ${formatCurrency(grandTotal)} <span style="font-size: 50%; font-weight: normal;">${(() => {
-          const totalArea = rfp?.projectArea ? parseInt(rfp.projectArea) : 0;
+          const totalArea = rfp?.warehouseArea ? parseInt(rfp.warehouseArea) : 0;
           const pricePerSf = totalArea > 0 ? grandTotal / totalArea : 0;
-          return pricePerSf > 0 ? '($' + new Intl.NumberFormat('en-US').format(parseFloat(pricePerSf.toFixed(2))) + '/sf)' : '';
+          return pricePerSf > 0 ? '($' + pricePerSf.toFixed(2) + '/sf)' : '';
         })()}</span></h2>
         ${budgetData.hasExistingImprovements && !budgetData.includeExistingInTotal ? 
           '<p style="margin: 10px 0 0 0; font-size: 14px; opacity: 0.9;">* Existing improvements tracked separately for financial modeling</p>' : ''
@@ -1011,7 +1011,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     </div>
     ` : ''}
 
-    ${(budgetData.customAssemblies || []).length > 0 ? `
+    ${(budgetData.customAssemblies && budgetData.customAssemblies.length > 0) ? `
     <div class="rollup-summary-section">
         <h3 class="rollup-summary-title">Assembly Summary</h3>
         <p class="rollup-summary-description">The following line items are grouped into assemblies:</p>

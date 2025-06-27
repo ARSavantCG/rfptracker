@@ -188,6 +188,7 @@ This is a full-stack web application for tracking and managing Request for Propo
 - June 27, 2025. Implemented "Assembly Group" column in evaluation budget tables to clearly identify which assembly each strikethrough line item belongs to - provides user visibility into cost groupings when drag-and-drop assembly movement proved technically challenging, ensuring users can track where costs are included (e.g., "Paint Demising Wall (1 Side)" shows "Demising Wall Assembly")
 - June 27, 2025. Enhanced evaluation budget container width management - uses full width when evaluation view is active to accommodate all table columns without cutoff, reverts to standard max-w-7xl layout for other views
 - June 27, 2025. Implemented visual distinction between cost grouping types - assembled items display with strikethrough only, while rolled-up items show strikethrough + italics, providing clear differentiation between assembly redistributed costs and rollup consolidated costs
+- June 27, 2025. Fixed unit price calculation display in evaluation budget - unit prices now show distributed amounts that reflect actual cost per unit after rollups and assemblies, replacing static original unit prices with dynamically calculated values using calculateDistributedUnitPrice function
 
 ## User Preferences
 

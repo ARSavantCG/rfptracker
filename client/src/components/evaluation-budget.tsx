@@ -1472,7 +1472,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                                   </TableCell>
                                   <TableCell>
                                     <span className={`${isAssembled ? 'line-through opacity-60' : ''}`}>
-                                      {formatCurrency(item.unitPrice)}
+                                      {formatCurrency(calculateDistributedUnitPrice(item))}
                                     </span>
                                   </TableCell>
                                   {!newItemCategory && (

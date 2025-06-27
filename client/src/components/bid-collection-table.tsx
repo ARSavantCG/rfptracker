@@ -186,7 +186,17 @@ export function BidCollectionTable({ rfp }: BidCollectionTableProps) {
                         <div className="flex items-center gap-1">
                           <FileText className="h-4 w-4 text-gray-400" />
                           <span className="text-sm text-gray-600">
-                            {bid.attachments?.length || 0} files
+                            {(() => {
+                              let attachments = bid.attachments;
+                              if (typeof attachments === 'string') {
+                                try {
+                                  attachments = JSON.parse(attachments);
+                                } catch (e) {
+                                  attachments = [];
+                                }
+                              }
+                              return Array.isArray(attachments) ? attachments.length : 0;
+                            })()} files
                           </span>
                         </div>
                       </TableCell>
@@ -206,7 +216,17 @@ export function BidCollectionTable({ rfp }: BidCollectionTableProps) {
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
-                          {bid.attachments && bid.attachments.length > 0 && (
+                          {(() => {
+                            let attachments = bid.attachments;
+                            if (typeof attachments === 'string') {
+                              try {
+                                attachments = JSON.parse(attachments);
+                              } catch (e) {
+                                attachments = [];
+                              }
+                            }
+                            return Array.isArray(attachments) && attachments.length > 0;
+                          })() && (
                             <Button
                               variant="ghost"
                               size="sm"

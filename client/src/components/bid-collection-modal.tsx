@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Trash2, Upload, FileText, Save, X, Download } from "lucide-react";
+import { Plus, Trash2, Upload, FileText, Save, X, Download, ChevronUp, ChevronDown } from "lucide-react";
 import { FileUpload } from "./file-upload";
 import { useToast } from "@/hooks/use-toast";
 import { formatDate } from "@/lib/utils";
@@ -278,6 +278,20 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
     setLineItems(lineItems.filter((_, i) => i !== index));
   };
 
+  const moveLineItemUp = (index: number) => {
+    if (index === 0) return;
+    const updated = [...lineItems];
+    [updated[index - 1], updated[index]] = [updated[index], updated[index - 1]];
+    setLineItems(updated);
+  };
+
+  const moveLineItemDown = (index: number) => {
+    if (index === lineItems.length - 1) return;
+    const updated = [...lineItems];
+    [updated[index], updated[index + 1]] = [updated[index + 1], updated[index]];
+    setLineItems(updated);
+  };
+
   const updateLineItem = (index: number, field: keyof LineItemFormData, value: string) => {
     const updated = [...lineItems];
     updated[index] = { ...updated[index], [field]: value };
@@ -525,6 +539,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-[70px]">Order</TableHead>
                       <TableHead>Description</TableHead>
                       <TableHead>Qty</TableHead>
                       <TableHead>Unit</TableHead>
@@ -537,6 +552,30 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                   <TableBody>
                     {lineItems.map((item, index) => (
                       <TableRow key={index}>
+                        <TableCell>
+                          <div className="flex flex-col gap-1">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => moveLineItemUp(index)}
+                              disabled={index === 0}
+                              className="h-6 w-6 p-0"
+                            >
+                              <ChevronUp className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => moveLineItemDown(index)}
+                              disabled={index === lineItems.length - 1}
+                              className="h-6 w-6 p-0"
+                            >
+                              <ChevronDown className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </TableCell>
                         <TableCell>
                           <Input
                             value={item.description}

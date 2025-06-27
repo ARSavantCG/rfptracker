@@ -511,18 +511,6 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     }, 0);
   };
 
-  const handleItemSelection = (itemId: string, checked: boolean) => {
-    setSelectedItems(prev => {
-      const newSet = new Set(prev);
-      if (checked) {
-        newSet.add(itemId);
-      } else {
-        newSet.delete(itemId);
-      }
-      return newSet;
-    });
-  };
-
   const generateReportPreview = async (hideDesignCosts: boolean) => {
     if (!rfp) return;
     
@@ -1091,20 +1079,19 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
             <Plus className="h-4 w-4 mr-1" />
             Add Item
           </Button>
-          {selectedItems.size > 0 && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                setNewAssemblyCategory(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements');
-                setShowAssemblyCreator(true);
-              }}
-              className="h-8"
-            >
-              <Package className="h-4 w-4 mr-1" />
-              Create Assembly
-            </Button>
-          )}
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              setNewAssemblyCategory(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements');
+              setShowAssemblyCreator(true);
+            }}
+            className="h-8"
+            disabled={selectedItems.size === 0}
+          >
+            <Package className="h-4 w-4 mr-1" />
+            Add Assembly
+          </Button>
         </div>
       </CardHeader>
       <CardContent>

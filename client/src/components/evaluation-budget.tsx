@@ -1190,15 +1190,34 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
       const draggedItem = items.find(item => item.id === draggableId);
       if (!draggedItem) return prev;
 
-      // Check if this item is part of an assembly
-      const assembly = prev.customAssemblies.find(a => a.items.includes(draggableId) || draggableId === a.id);
+      // Check if this item has an assemblyId (it's a component) or if other items have this item's ID as assemblyId (it's a header)
+      const draggedItemData = items.find(item => item.id === draggableId);
+      const isAssemblyComponent = draggedItemData?.assemblyId;
+      const isAssemblyHeader = items.some(item => item.assemblyId === draggableId);
       
-      if (assembly) {
-        // Move entire assembly as a group
-        const assemblyItems = [draggableId, ...assembly.items];
-        const assemblyIndices = assemblyItems.map(id => items.findIndex(i => i.id === id)).sort((a, b) => a - b);
+      if (isAssemblyComponent || isAssemblyHeader) {
+        // Determine the assembly header ID
+        let assemblyHeaderId: string;
         
-        // Remove assembly items from their current positions
+        if (isAssemblyComponent) {
+          // If dragging a component, get its assembly header
+          assemblyHeaderId = draggedItemData.assemblyId;
+        } else {
+          // If dragging the header itself
+          assemblyHeaderId = draggableId;
+        }
+        
+        // Get all items belonging to this assembly (header + all components)
+        const allAssemblyItems = items.filter(item => 
+          item.id === assemblyHeaderId || item.assemblyId === assemblyHeaderId
+        );
+        
+        // Get their current indices
+        const assemblyIndices = allAssemblyItems
+          .map(item => items.findIndex(i => i.id === item.id))
+          .sort((a, b) => a - b);
+        
+        // Remove all assembly items from their current positions
         const assemblyItemsData = assemblyIndices.map(idx => items[idx]);
         const filteredItems = items.filter((_, idx) => !assemblyIndices.includes(idx));
         
@@ -1210,7 +1229,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
           }
         }
         
-        // Insert assembly items at new position
+        // Insert all assembly items at new position (maintaining order: header first, then components)
         filteredItems.splice(newIndex, 0, ...assemblyItemsData);
         
         return { ...prev, [sourceCategory]: filteredItems };

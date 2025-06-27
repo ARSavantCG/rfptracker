@@ -185,6 +185,227 @@ function generateBidCollectionHtml(bidCollection: any, rfp: any, lineItems: any[
     </html>
   `;
 }
+
+// Generate HTML for all bid collections PDF
+function generateAllBidCollectionsHtml(rfp: any, allBidsData: any[]) {
+  const currentDate = new Date().toLocaleDateString('en-US', {
+    timeZone: 'America/New_York',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+
+  // Calculate bid comparison data
+  const bidSummary = allBidsData.map(({ bid, lineItems }) => {
+    const totalAmount = lineItems.reduce((sum, item) => sum + parseFloat(item.totalPrice || '0'), 0);
+    return {
+      contractor: bid.contractorName,
+      company: bid.contractorCompany,
+      totalAmount,
+      status: bid.status,
+      submissionDate: bid.submissionDate,
+      lineItemCount: lineItems.length
+    };
+  }).sort((a, b) => a.totalAmount - b.totalAmount);
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>All Bid Collections - ${rfp.rfpNumber}</title>
+      <style>
+        @page { size: A4; margin: 0.75in; }
+        @media print { .no-print { display: none !important; } }
+        body { font-family: 'Segoe UI', sans-serif; font-size: 12px; margin: 0; line-height: 1.4; }
+        .no-print { background: #3b82f6; color: white; padding: 15px; text-align: center; margin-bottom: 20px; border-radius: 8px; }
+        .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #e5e7eb; padding-bottom: 20px; }
+        .header h1 { font-size: 24px; margin: 0; color: #1f2937; }
+        .header .subtitle { font-size: 14px; color: #6b7280; margin: 10px 0; }
+        .section { margin-bottom: 30px; page-break-inside: avoid; }
+        .section-title { font-size: 18px; font-weight: 600; color: #1f2937; margin-bottom: 15px; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px; }
+        .subsection-title { font-size: 16px; font-weight: 600; color: #1f2937; margin: 20px 0 10px 0; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; }
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+        .info-item { margin-bottom: 8px; }
+        .info-label { font-weight: 600; color: #374151; }
+        .info-value { color: #6b7280; }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        th, td { border: 1px solid #e5e7eb; padding: 8px; text-align: left; }
+        th { background: #f9fafb; font-weight: 600; font-size: 11px; }
+        td { font-size: 11px; }
+        .currency { text-align: right; }
+        .total-row { background: #f3f4f6; font-weight: 600; }
+        .bid-section { margin-bottom: 40px; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; }
+        .bid-header { background: #f9fafb; margin: -20px -20px 20px -20px; padding: 15px 20px; border-radius: 8px 8px 0 0; }
+        .summary-table th { background: #1f2937; color: white; }
+        .rank-1 { background: #dcfce7; }
+        .rank-2 { background: #fef3c7; }
+        .rank-3 { background: #fecaca; }
+      </style>
+    </head>
+    <body>
+      <div class="no-print">
+        <strong>📄 Save as PDF:</strong> Press Ctrl+P (Windows/Linux) or Cmd+P (Mac), then select "Save as PDF" as your destination.
+        <br><small>This banner will not appear in the printed version.</small>
+      </div>
+      
+      <div class="header">
+        <h1>Bid Collection Summary</h1>
+        <div class="subtitle">RFP ${rfp.rfpNumber} - ${rfp.projectName}</div>
+        <div class="subtitle">Generated on ${currentDate} • ${allBidsData.length} bids received</div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Project Information</div>
+        <div class="info-grid">
+          <div>
+            <div class="info-item">
+              <span class="info-label">RFP Number:</span> ${rfp.rfpNumber}
+            </div>
+            <div class="info-item">
+              <span class="info-label">Property:</span> ${rfp.property}
+            </div>
+            <div class="info-item">
+              <span class="info-label">Project Name:</span> ${rfp.projectName}
+            </div>
+            <div class="info-item">
+              <span class="info-label">Tenant:</span> ${rfp.tenantName}
+            </div>
+          </div>
+          <div>
+            <div class="info-item">
+              <span class="info-label">Bids Received:</span> ${allBidsData.length}
+            </div>
+            <div class="info-item">
+              <span class="info-label">Lowest Bid:</span> $${bidSummary[0]?.totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2 }) || 'N/A'}
+            </div>
+            <div class="info-item">
+              <span class="info-label">Highest Bid:</span> $${bidSummary[bidSummary.length - 1]?.totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2 }) || 'N/A'}
+            </div>
+            <div class="info-item">
+              <span class="info-label">Average Bid:</span> $${bidSummary.length > 0 ? (bidSummary.reduce((sum, bid) => sum + bid.totalAmount, 0) / bidSummary.length).toLocaleString('en-US', { minimumFractionDigits: 2 }) : 'N/A'}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Bid Comparison Summary</div>
+        <table class="summary-table">
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Contractor</th>
+              <th>Company</th>
+              <th>Total Amount</th>
+              <th>Status</th>
+              <th>Submission Date</th>
+              <th>Line Items</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${bidSummary.map((bid, index) => `
+              <tr class="${index === 0 ? 'rank-1' : index === 1 ? 'rank-2' : index === 2 ? 'rank-3' : ''}">
+                <td style="text-align: center; font-weight: 600;">${index + 1}</td>
+                <td><strong>${bid.contractor}</strong></td>
+                <td>${bid.company}</td>
+                <td class="currency"><strong>$${bid.totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong></td>
+                <td>${bid.status.replace('-', ' ').toUpperCase()}</td>
+                <td>${new Date(bid.submissionDate).toLocaleDateString('en-US', { timeZone: 'America/New_York' })}</td>
+                <td style="text-align: center;">${bid.lineItemCount}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+
+      ${allBidsData.map(({ bid, lineItems }, index) => {
+        const totalAmount = lineItems.reduce((sum, item) => sum + parseFloat(item.totalPrice || '0'), 0);
+        const rank = bidSummary.findIndex(b => b.contractor === bid.contractorName) + 1;
+        
+        return `
+          <div class="bid-section">
+            <div class="bid-header">
+              <h3 style="margin: 0; color: #1f2937;">Bid #${index + 1} - ${bid.contractorName} (Rank #${rank})</h3>
+              <div style="color: #6b7280; font-size: 12px; margin-top: 5px;">${bid.contractorCompany} • Total: $${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+            </div>
+
+            <div class="subsection-title">Contractor Information</div>
+            <div class="info-grid">
+              <div>
+                <div class="info-item">
+                  <span class="info-label">Contractor:</span> ${bid.contractorName}
+                </div>
+                <div class="info-item">
+                  <span class="info-label">Company:</span> ${bid.contractorCompany}
+                </div>
+              </div>
+              <div>
+                <div class="info-item">
+                  <span class="info-label">Email:</span> ${bid.contractorEmail}
+                </div>
+                <div class="info-item">
+                  <span class="info-label">Submission Date:</span> ${new Date(bid.submissionDate).toLocaleDateString('en-US', { timeZone: 'America/New_York' })}
+                </div>
+              </div>
+            </div>
+
+            <div class="subsection-title">Line Items Breakdown</div>
+            <table>
+              <thead>
+                <tr>
+                  <th style="width: 40%;">Description</th>
+                  <th style="width: 12%;">Quantity</th>
+                  <th style="width: 10%;">Unit</th>
+                  <th style="width: 15%;">Unit Price</th>
+                  <th style="width: 15%;">Total Price</th>
+                  <th style="width: 8%;">Notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${lineItems.map(item => `
+                  <tr>
+                    <td>${item.description || ''}</td>
+                    <td class="currency">${item.quantity ? parseFloat(item.quantity).toLocaleString('en-US') : ''}</td>
+                    <td>${item.unit || ''}</td>
+                    <td class="currency">${item.unitPrice ? '$' + parseFloat(item.unitPrice).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''}</td>
+                    <td class="currency">${item.totalPrice ? '$' + parseFloat(item.totalPrice).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''}</td>
+                    <td>${item.notes || ''}</td>
+                  </tr>
+                `).join('')}
+                <tr class="total-row">
+                  <td colspan="4" style="text-align: right;"><strong>Bid Total:</strong></td>
+                  <td class="currency"><strong>$${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></td>
+                  <td></td>
+                </tr>
+              </tbody>
+            </table>
+
+            ${bid.notes ? `
+              <div class="subsection-title">Notes</div>
+              <div style="background: #f9fafb; padding: 15px; border-radius: 6px; border: 1px solid #e5e7eb; margin-bottom: 15px;">
+                ${bid.notes.replace(/\n/g, '<br>')}
+              </div>
+            ` : ''}
+
+            ${bid.attachments && bid.attachments.length > 0 ? `
+              <div class="subsection-title">Attachments</div>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px;">
+                ${bid.attachments.map((file: any) => `
+                  <div style="padding: 8px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 4px;">
+                    <strong>${file.name}</strong> (${(file.size / 1024).toFixed(1)} KB)
+                  </div>
+                `).join('')}
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('')}
+
+    </body>
+    </html>
+  `;
+}
 import { generateDetailedReportPdf, generateReportFilename } from "./pdf-reports";
 import { generateHistoricalPricingPdf, generateHistoricalPricingFilename } from "./historical-pricing-reports";
 import multer from "multer";
@@ -2793,6 +3014,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Generate password error:', error);
       res.status(500).json({ message: 'Failed to generate password' });
+    }
+  });
+
+  // Generate all bid collections PDF for an RFP
+  app.get("/api/rfp-requests/:id/bid-collections/pdf", requireAuth, async (req, res) => {
+    try {
+      const rfpId = parseInt(req.params.id);
+
+      if (isNaN(rfpId)) {
+        return res.status(400).json({ message: "Invalid RFP ID" });
+      }
+
+      const rfp = await storage.getRfpRequest(rfpId);
+      if (!rfp) {
+        return res.status(404).json({ message: "RFP not found" });
+      }
+
+      const bidCollections = await storage.getBidCollectionsByRfpId(rfpId);
+      if (!bidCollections || bidCollections.length === 0) {
+        return res.status(404).json({ message: "No bid collections found" });
+      }
+
+      // Get line items for all bids
+      const allBidsData = await Promise.all(
+        bidCollections.map(async (bid) => {
+          const lineItems = await storage.getBidLineItemsByBid(bid.id);
+          return { bid, lineItems };
+        })
+      );
+
+      // Generate HTML for all bid collections
+      const html = generateAllBidCollectionsHtml(rfp, allBidsData);
+      
+      res.setHeader('Content-Type', 'text/html');
+      res.setHeader('Content-Disposition', `inline; filename="all-bids-${rfp.rfpNumber}.html"`);
+      res.send(html);
+    } catch (error) {
+      console.error("All bid collections PDF generation error:", error);
+      res.status(500).json({ message: "Failed to generate all bid collections PDF" });
     }
   });
 

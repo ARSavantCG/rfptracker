@@ -1,7 +1,8 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { FileText } from "lucide-react";
+import { FileText, Printer } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/utils";
 import type { BidCollection, BidLineItem } from "@shared/schema";
 import { useQuery } from "@tanstack/react-query";
@@ -52,7 +53,21 @@ export function BidViewModal({ isOpen, onClose, bid }: BidViewModalProps) {
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Bid Details - {bid.contractorName}</DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle>Bid Details - {bid.contractorName}</DialogTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const printUrl = `/api/bid-collections/${bid.id}/pdf`;
+                window.open(printUrl, '_blank');
+              }}
+              className="flex items-center gap-2"
+            >
+              <Printer className="h-4 w-4" />
+              Print/PDF
+            </Button>
+          </div>
         </DialogHeader>
 
         <div className="space-y-6">

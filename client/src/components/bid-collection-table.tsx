@@ -4,7 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Edit, Eye, FileText, Download, ArrowRight } from "lucide-react";
+import { Plus, Edit, Eye, FileText, Download, ArrowRight, Printer } from "lucide-react";
 import { BidCollectionModal } from "./bid-collection-modal";
 import { BidViewModal } from "./bid-view-modal";
 import { useToast } from "@/hooks/use-toast";
@@ -210,6 +210,17 @@ export function BidCollectionTable({ rfp }: BidCollectionTableProps) {
                             onClick={() => handleEditBid(bid)}
                           >
                             <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              const printUrl = `/api/bid-collections/${bid.id}/pdf`;
+                              window.open(printUrl, '_blank');
+                            }}
+                            title="Print/PDF"
+                          >
+                            <Printer className="h-4 w-4" />
                           </Button>
                           {(() => {
                             let attachments = bid.attachments;

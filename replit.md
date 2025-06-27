@@ -166,6 +166,7 @@ This is a full-stack web application for tracking and managing Request for Propo
 - June 27, 2025. Fixed MulterError file upload issue in bid collection by changing multer configuration from array("attachments") to any() and updating file processing to handle attachment_0, attachment_1 field names - file uploads now work correctly for bid submissions
 - June 27, 2025. Enhanced file upload component to support proper multiple file selection and fixed file state isolation between different bid forms - each bid now maintains separate file attachments without cross-contamination
 - June 27, 2025. Fixed file attachment display in bid edit forms - existing attachments now properly load and display in edit modal, while preserving existing files when adding new attachments during updates
+- June 27, 2025. Implemented proper file deletion functionality in bid attachments - removed files are now permanently deleted from database, and attachment counts synchronize correctly between table view and edit forms
 
 ## User Preferences
 

@@ -3333,17 +3333,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // 2. Invitation to Bid files
+      // 2. Invitation to Bid files (if this field exists in your schema)
       const invitationToBid = await storage.getInvitationToBid(rfpId);
-      if (invitationToBid && invitationToBid.contractorDocs && invitationToBid.contractorDocs.length > 0) {
-        for (const file of invitationToBid.contractorDocs) {
-          const filePath = path.join(uploadsDir, file.path || file.name);
-          if (fs.existsSync(filePath)) {
-            archive.file(filePath, { name: `2-Invitation-to-Bid/${file.name}` });
-            hasFiles = true;
-          }
-        }
-      }
+      // Note: Skip this section if contractorDocs field doesn't exist in the schema
 
       // 3. Bid Collection files (contractor submissions)
       const bidCollections = await storage.getBidCollectionsByRfp(rfpId);
@@ -3366,7 +3358,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const evaluationAttachments = await storage.getEvaluationBudgetAttachments(rfpId);
       if (evaluationAttachments && evaluationAttachments.length > 0) {
         for (const file of evaluationAttachments) {
-          const filePath = path.join(uploadsDir, file.fileName);
+          const filePath = path.join(uploadsDir, file.filename);
           if (fs.existsSync(filePath)) {
             archive.file(filePath, { name: `4-Evaluation-Budget/${file.originalName}` });
             hasFiles = true;

@@ -241,19 +241,9 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
               
               {/* Files Section */}
               <div>
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="font-medium text-gray-900">
-                    Attached Files ({rfp.files.length})
-                  </h4>
-                  <button
-                    onClick={() => handleDownloadAllFiles(rfp.id, rfp.rfpNumber)}
-                    className="px-3 py-1 text-xs font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 flex items-center gap-1"
-                    title="Download all files from all workflow steps"
-                  >
-                    <i className="fas fa-download"></i>
-                    Download All Files
-                  </button>
-                </div>
+                <h4 className="font-medium text-gray-900 mb-3">
+                  Attached Files ({rfp.files.length})
+                </h4>
                 <div className="space-y-2">
                   {rfp.files.map((file) => (
                     <div key={file.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -322,6 +312,14 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
                   </>
                 ) : (
                   <>
+                    <button
+                      onClick={() => handleDownloadAllFiles(rfp.id, rfp.rfpNumber)}
+                      className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 flex items-center gap-2"
+                      title="Download all files from all workflow steps"
+                    >
+                      <i className="fas fa-download"></i>
+                      Download All Files
+                    </button>
                     <button
                       onClick={() => setShowInvitationModal(true)}
                       className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 flex items-center gap-2"

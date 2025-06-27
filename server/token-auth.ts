@@ -7,47 +7,65 @@
  */
 
 import { nanoid } from 'nanoid';
+import { db } from './db';
+import { sql } from 'drizzle-orm';
 
-// Simple in-memory token store for development
+// Database-backed token store for persistence across restarts
 class TokenStore {
-  private tokens = new Map<string, { userId: string, createdAt: Date }>();
-
-  generateToken(userId: string): string {
+  async generateToken(userId: string): Promise<string> {
     const token = nanoid(32);
-    this.tokens.set(token, { userId, createdAt: new Date() });
+    const createdAt = new Date();
     
-    // Clean up old tokens (older than 24 hours)
-    this.cleanup();
+    // Store token in database
+    await db.execute(sql`
+      INSERT INTO auth_tokens (token, user_id, created_at, expires_at)
+      VALUES (${token}, ${userId}, ${createdAt}, ${new Date(createdAt.getTime() + 24 * 60 * 60 * 1000)})
+    `);
+    
+    // Clean up expired tokens
+    await this.cleanup();
     
     return token;
   }
 
-  getUserFromToken(token: string): string | null {
-    const tokenData = this.tokens.get(token);
-    if (!tokenData) return null;
+  async getUserFromToken(token: string): Promise<string | null> {
+    try {
+      const result = await db.execute(sql`
+        SELECT user_id, expires_at 
+        FROM auth_tokens 
+        WHERE token = ${token} AND expires_at > NOW()
+      `);
 
-    // Check if token is expired (24 hours)
-    const now = new Date();
-    const diff = now.getTime() - tokenData.createdAt.getTime();
-    if (diff > 24 * 60 * 60 * 1000) {
-      this.tokens.delete(token);
+      if (result.rows.length === 0) {
+        return null;
+      }
+
+      return result.rows[0].user_id as string;
+    } catch (error) {
+      console.error('Token validation error:', error);
       return null;
     }
-
-    return tokenData.userId;
   }
 
-  removeToken(token: string): boolean {
-    return this.tokens.delete(token);
+  async removeToken(token: string): Promise<boolean> {
+    try {
+      const result = await db.execute(sql`
+        DELETE FROM auth_tokens WHERE token = ${token}
+      `);
+      return (result.rowCount || 0) > 0;
+    } catch (error) {
+      console.error('Token removal error:', error);
+      return false;
+    }
   }
 
-  private cleanup() {
-    const now = new Date();
-    for (const [token, data] of this.tokens.entries()) {
-      const diff = now.getTime() - data.createdAt.getTime();
-      if (diff > 24 * 60 * 60 * 1000) {
-        this.tokens.delete(token);
-      }
+  private async cleanup() {
+    try {
+      await db.execute(sql`
+        DELETE FROM auth_tokens WHERE expires_at < NOW()
+      `);
+    } catch (error) {
+      console.error('Token cleanup error:', error);
     }
   }
 }

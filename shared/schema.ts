@@ -430,6 +430,15 @@ export const romPilotLineItems = pgTable("rom_pilot_line_items", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// Authentication tokens table for persistent session management
+export const authTokens = pgTable("auth_tokens", {
+  id: serial("id").primaryKey(),
+  token: varchar("token", { length: 64 }).notNull().unique(),
+  userId: varchar("user_id", { length: 32 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+});
+
 // ROM Pilot Insert/Update Schemas
 export const insertRomPilotSchema = createInsertSchema(romPilots).omit({
   id: true,

@@ -88,7 +88,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
 
   // Mutation for logging evaluation budget history
   const logHistoryMutation = useMutation({
-    mutationFn: async (historyData: { rfpId: number; reportName: string; notes?: string }) => {
+    mutationFn: async (historyData: { rfpId: number; reportName: string; generatedContent: string; notes?: string }) => {
       const response = await fetch(`/api/rfp-requests/${historyData.rfpId}/evaluation-budget/history`, {
         method: 'POST',
         headers: {
@@ -106,9 +106,11 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     },
     onSuccess: () => {
       // Refresh the history list after successful logging
-      queryClient.invalidateQueries({ 
-        queryKey: [`/api/rfp-requests/${rfp?.id}/evaluation-budget-history`] 
-      });
+      if (rfp?.id) {
+        queryClient.invalidateQueries({ 
+          queryKey: [`/api/rfp-requests/${rfp.id}/evaluation-budget-history`] 
+        });
+      }
     },
     onError: (error) => {
       console.error('Failed to log evaluation budget history:', error);
@@ -1224,6 +1226,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
       logHistoryMutation.mutate({
         rfpId: rfp.id,
         reportName: `Evaluation Budget Report${hideDesignCosts ? ' (Design Costs Hidden)' : ''}`,
+        generatedContent: reportHtml,
         notes: `Generated on ${currentDate}. Grand Total: ${formatCurrency(grandTotal)}`
       });
     }

@@ -101,7 +101,7 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
       if (!rfp) throw new Error("No RFP selected");
 
       const response = await apiRequest(`/api/rfp-requests/${rfp.id}`, "PATCH", data);
-      return response.json();
+      return response;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });

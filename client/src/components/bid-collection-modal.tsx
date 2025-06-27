@@ -646,6 +646,21 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                     <div key={index} className="flex items-center gap-1 px-1 py-0.5 bg-blue-50 border border-blue-200 rounded text-xs">
                       <FileText className="h-2 w-2" />
                       <span className="max-w-[100px] truncate">{file.name}</span>
+                      {/* Show download button for existing files */}
+                      {bidCollection && file.id && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() => {
+                            const downloadUrl = `/api/bid-collections/${bidCollection.id}/attachments/${file.id}`;
+                            window.open(downloadUrl, '_blank');
+                          }}
+                          className="h-3 w-3 p-0 hover:bg-blue-100"
+                          title="Download file"
+                        >
+                          <Download className="h-2 w-2" />
+                        </Button>
+                      )}
                       <Button
                         type="button"
                         variant="ghost"

@@ -39,6 +39,152 @@ import { tokenStore } from "./token-auth";
 import bcrypt from "bcryptjs";
 import { nanoid } from "nanoid";
 import { generateRfpPdf, generatePdfFilename } from "./pdf-generator";
+
+// Generate HTML for bid collection PDF
+function generateBidCollectionHtml(bidCollection: any, rfp: any, lineItems: any[]) {
+  const totalAmount = lineItems.reduce((sum, item) => sum + parseFloat(item.totalPrice || '0'), 0);
+  
+  const currentDate = new Date().toLocaleDateString('en-US', {
+    timeZone: 'America/New_York',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>Bid Collection - ${bidCollection.contractorName}</title>
+      <style>
+        @page { size: A4; margin: 0.75in; }
+        @media print { .no-print { display: none !important; } }
+        body { font-family: 'Segoe UI', sans-serif; font-size: 12px; margin: 0; line-height: 1.4; }
+        .no-print { background: #3b82f6; color: white; padding: 15px; text-align: center; margin-bottom: 20px; border-radius: 8px; }
+        .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #e5e7eb; padding-bottom: 20px; }
+        .header h1 { font-size: 24px; margin: 0; color: #1f2937; }
+        .header .subtitle { font-size: 14px; color: #6b7280; margin: 10px 0; }
+        .section { margin-bottom: 25px; }
+        .section-title { font-size: 16px; font-weight: 600; color: #1f2937; margin-bottom: 10px; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; }
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+        .info-item { margin-bottom: 8px; }
+        .info-label { font-weight: 600; color: #374151; }
+        .info-value { color: #6b7280; }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        th, td { border: 1px solid #e5e7eb; padding: 10px; text-align: left; }
+        th { background: #f9fafb; font-weight: 600; }
+        .currency { text-align: right; }
+        .total-row { background: #f3f4f6; font-weight: 600; }
+        .attachments { margin-top: 20px; }
+        .attachment-item { padding: 8px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 4px; margin: 5px 0; }
+      </style>
+    </head>
+    <body>
+      <div class="no-print">
+        <strong>📄 Save as PDF:</strong> Press Ctrl+P (Windows/Linux) or Cmd+P (Mac), then select "Save as PDF" as your destination.
+        <br><small>This banner will not appear in the printed version.</small>
+      </div>
+      
+      <div class="header">
+        <h1>Bid Collection</h1>
+        <div class="subtitle">RFP ${rfp.rfpNumber} - ${rfp.projectName}</div>
+        <div class="subtitle">Generated on ${currentDate}</div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Project Information</div>
+        <div class="info-grid">
+          <div>
+            <div class="info-item">
+              <span class="info-label">RFP Number:</span> ${rfp.rfpNumber}
+            </div>
+            <div class="info-item">
+              <span class="info-label">Property:</span> ${rfp.property}
+            </div>
+            <div class="info-item">
+              <span class="info-label">Project Name:</span> ${rfp.projectName}
+            </div>
+            <div class="info-item">
+              <span class="info-label">Tenant:</span> ${rfp.tenantName}
+            </div>
+          </div>
+          <div>
+            <div class="info-item">
+              <span class="info-label">Contractor:</span> ${bidCollection.contractorName}
+            </div>
+            <div class="info-item">
+              <span class="info-label">Company:</span> ${bidCollection.contractorCompany}
+            </div>
+            <div class="info-item">
+              <span class="info-label">Email:</span> ${bidCollection.contractorEmail}
+            </div>
+            <div class="info-item">
+              <span class="info-label">Submission Date:</span> ${new Date(bidCollection.submissionDate).toLocaleDateString('en-US', { timeZone: 'America/New_York' })}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Bid Line Items</div>
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 40%;">Description</th>
+              <th style="width: 12%;">Quantity</th>
+              <th style="width: 10%;">Unit</th>
+              <th style="width: 15%;">Unit Price</th>
+              <th style="width: 15%;">Total Price</th>
+              <th style="width: 8%;">Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${lineItems.map(item => `
+              <tr>
+                <td>${item.description || ''}</td>
+                <td class="currency">${item.quantity ? parseFloat(item.quantity).toLocaleString('en-US') : ''}</td>
+                <td>${item.unit || ''}</td>
+                <td class="currency">${item.unitPrice ? '$' + parseFloat(item.unitPrice).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''}</td>
+                <td class="currency">${item.totalPrice ? '$' + parseFloat(item.totalPrice).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''}</td>
+                <td>${item.notes || ''}</td>
+              </tr>
+            `).join('')}
+            <tr class="total-row">
+              <td colspan="4" style="text-align: right;"><strong>Total Bid Amount:</strong></td>
+              <td class="currency"><strong>$${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></td>
+              <td></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      ${bidCollection.notes ? `
+        <div class="section">
+          <div class="section-title">Notes</div>
+          <div style="background: #f9fafb; padding: 15px; border-radius: 6px; border: 1px solid #e5e7eb;">
+            ${bidCollection.notes.replace(/\n/g, '<br>')}
+          </div>
+        </div>
+      ` : ''}
+
+      ${bidCollection.attachments && bidCollection.attachments.length > 0 ? `
+        <div class="section">
+          <div class="section-title">Attachments</div>
+          <div class="attachments">
+            ${bidCollection.attachments.map((file: any) => `
+              <div class="attachment-item">
+                <strong>${file.name}</strong> (${(file.size / 1024).toFixed(1)} KB)
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      ` : ''}
+
+    </body>
+    </html>
+  `;
+}
 import { generateDetailedReportPdf, generateReportFilename } from "./pdf-reports";
 import { generateHistoricalPricingPdf, generateHistoricalPricingFilename } from "./historical-pricing-reports";
 import multer from "multer";
@@ -2647,6 +2793,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Generate password error:', error);
       res.status(500).json({ message: 'Failed to generate password' });
+    }
+  });
+
+  // Generate bid collection PDF
+  app.get("/api/bid-collections/:id/pdf", requireAuth, async (req, res) => {
+    try {
+      const bidCollectionId = parseInt(req.params.id);
+
+      if (isNaN(bidCollectionId)) {
+        return res.status(400).json({ message: "Invalid bid collection ID" });
+      }
+
+      const bidCollection = await storage.getBidCollection(bidCollectionId);
+      if (!bidCollection) {
+        return res.status(404).json({ message: "Bid collection not found" });
+      }
+
+      const rfp = await storage.getRfpRequest(bidCollection.rfpId);
+      if (!rfp) {
+        return res.status(404).json({ message: "RFP not found" });
+      }
+
+      const lineItems = await storage.getBidLineItemsByBid(bidCollectionId);
+      
+      // Generate HTML for bid collection
+      const html = generateBidCollectionHtml(bidCollection, rfp, lineItems);
+      
+      res.setHeader('Content-Type', 'text/html');
+      res.setHeader('Content-Disposition', `inline; filename="bid-collection-${bidCollection.contractorName.replace(/\s+/g, '-')}.html"`);
+      res.send(html);
+    } catch (error) {
+      console.error("Bid collection PDF generation error:", error);
+      res.status(500).json({ message: "Failed to generate bid collection PDF" });
+    }
+  });
+
+  // Download bid collection attachment
+  app.get("/api/bid-collections/:id/attachments/:fileId", requireAuth, async (req, res) => {
+    try {
+      const bidCollectionId = parseInt(req.params.id);
+      const fileId = req.params.fileId;
+
+      if (isNaN(bidCollectionId)) {
+        return res.status(400).json({ message: "Invalid bid collection ID" });
+      }
+
+      const bidCollection = await storage.getBidCollection(bidCollectionId);
+      if (!bidCollection) {
+        return res.status(404).json({ message: "Bid collection not found" });
+      }
+
+      const file = bidCollection.attachments?.find((f: any) => f.id === fileId);
+      if (!file) {
+        return res.status(404).json({ message: "File not found" });
+      }
+
+      const filePath = path.join(uploadsDir, file.path || file.name);
+      if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ message: "File not found on disk" });
+      }
+
+      res.download(filePath, file.name);
+    } catch (error) {
+      console.error("Download error:", error);
+      res.status(500).json({ message: "Failed to download file" });
     }
   });
 

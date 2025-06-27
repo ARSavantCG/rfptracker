@@ -86,6 +86,35 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
+  // Mutation for logging evaluation budget history
+  const logHistoryMutation = useMutation({
+    mutationFn: async (historyData: { rfpId: number; reportName: string; notes?: string }) => {
+      const response = await fetch(`/api/rfp-requests/${historyData.rfpId}/evaluation-budget/history`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('auth-token')}`,
+        },
+        body: JSON.stringify(historyData),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to log evaluation budget history');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      // Refresh the history list after successful logging
+      queryClient.invalidateQueries({ 
+        queryKey: [`/api/rfp-requests/${rfp?.id}/evaluation-budget-history`] 
+      });
+    },
+    onError: (error) => {
+      console.error('Failed to log evaluation budget history:', error);
+    },
+  });
+
   // Load existing budget evaluation attachments
   const { data: budgetAttachments } = useQuery({
     queryKey: [`/api/rfp-requests/${rfp?.id}/evaluation-budget/attachments`],
@@ -1188,6 +1217,15 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     if (newWindow) {
       newWindow.document.write(reportHtml);
       newWindow.document.close();
+    }
+
+    // Automatically log this report generation to history
+    if (rfp?.id) {
+      logHistoryMutation.mutate({
+        rfpId: rfp.id,
+        reportName: `Evaluation Budget Report${hideDesignCosts ? ' (Design Costs Hidden)' : ''}`,
+        notes: `Generated on ${currentDate}. Grand Total: ${formatCurrency(grandTotal)}`
+      });
     }
   };
 

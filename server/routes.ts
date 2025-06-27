@@ -44,7 +44,6 @@ import { generateHistoricalPricingPdf, generateHistoricalPricingFilename } from 
 import multer from "multer";
 import path from "path";
 import fs from "fs";
-import { nanoid } from "nanoid";
 
 // Create uploads directory if it doesn't exist
 const uploadsDir = path.join(process.cwd(), "uploads");
@@ -113,7 +112,7 @@ function setupSession(app: Express) {
 }
 
 // Authentication middleware
-function requireAuth(req: any, res: any, next: any) {
+async function requireAuth(req: any, res: any, next: any) {
   // Check for token in Authorization header
   const authHeader = req.headers.authorization;
   const token = authHeader && authHeader.startsWith('Bearer ') 
@@ -124,7 +123,7 @@ function requireAuth(req: any, res: any, next: any) {
     return res.status(401).json({ message: "Authentication required" });
   }
 
-  const userId = tokenStore.getUserFromToken(token);
+  const userId = await tokenStore.getUserFromToken(token);
   if (!userId) {
     return res.status(401).json({ message: "Invalid or expired token" });
   }
@@ -176,7 +175,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // First try admin user login
       const user = await AuthService.authenticateUser({ username, password });
       if (user) {
-        const token = tokenStore.generateToken(user.id);
+        const token = await tokenStore.generateToken(user.id);
         console.log("Admin login successful - Token generated for user:", user.username);
         
         return res.json({ 
@@ -204,7 +203,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .set({ lastLogin: new Date() })
         .where(eq(contacts.id, contact.id));
 
-      const token = tokenStore.generateToken(`contact_${contact.id}`);
+      const token = await tokenStore.generateToken(`contact_${contact.id}`);
       console.log("Contact login successful - Token generated for:", contact.email);
 
       res.json({ 
@@ -226,14 +225,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/auth/logout', (req, res) => {
+  app.post('/api/auth/logout', async (req, res) => {
     const authHeader = req.headers.authorization;
     const token = authHeader && authHeader.startsWith('Bearer ') 
       ? authHeader.substring(7) 
       : null;
 
     if (token) {
-      tokenStore.removeToken(token);
+      await tokenStore.removeToken(token);
     }
 
     res.json({ message: "Logout successful" });

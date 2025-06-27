@@ -1190,7 +1190,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/rfp-requests/:id/bid-collections", upload.array("attachments"), async (req, res) => {
+  app.post("/api/rfp-requests/:id/bid-collections", upload.any(), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -1205,15 +1205,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         bidData.submissionDate = new Date(bidData.submissionDate);
       }
       
-      // Handle file attachments
-      const attachments = (req.files as Express.Multer.File[] || []).map(file => ({
-        id: nanoid(),
-        name: file.originalname,
-        size: file.size,
-        type: file.mimetype,
-        uploadedAt: new Date().toISOString(),
-        path: file.filename,
-      }));
+      // Handle file attachments - filter for attachment fields only
+      const fileArray = req.files as Express.Multer.File[] || [];
+      const attachments = fileArray
+        .filter(file => file.fieldname.startsWith('attachment_'))
+        .map(file => ({
+          id: nanoid(),
+          name: file.originalname,
+          size: file.size,
+          type: file.mimetype,
+          uploadedAt: new Date().toISOString(),
+          path: file.filename,
+        }));
 
       const bidCollection = await storage.createBidCollection({
         ...bidData,

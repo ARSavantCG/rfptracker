@@ -100,9 +100,6 @@ function generateBidCollectionHtml(bidCollection: any, rfp: any, lineItems: any[
               <span class="info-label">RFP Number:</span> ${rfp.rfpNumber}
             </div>
             <div class="info-item">
-              <span class="info-label">Property:</span> ${rfp.property}
-            </div>
-            <div class="info-item">
               <span class="info-label">Project Name:</span> ${rfp.projectName}
             </div>
             <div class="info-item">
@@ -114,13 +111,10 @@ function generateBidCollectionHtml(bidCollection: any, rfp: any, lineItems: any[
               <span class="info-label">Company:</span> ${bidCollection.contractorCompany}
             </div>
             <div class="info-item">
-              <span class="info-label">Submission Date:</span> ${new Date(bidCollection.submissionDate).toLocaleDateString('en-US', { timeZone: 'America/New_York' })}
+              <span class="info-label">Submission Date:</span> ${bidCollection.submissionDate ? new Date(bidCollection.submissionDate + 'T00:00:00').toLocaleDateString('en-US') : 'N/A'}
             </div>
             <div class="info-item">
               <span class="info-label">Total Amount:</span> $${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </div>
-            <div class="info-item">
-              <span class="info-label">Status:</span> ${bidCollection.status.replace('-', ' ').toUpperCase()}
             </div>
           </div>
         </div>
@@ -259,9 +253,6 @@ function generateAllBidCollectionsHtml(rfp: any, allBidsData: any[]) {
               <span class="info-label">RFP Number:</span> ${rfp.rfpNumber}
             </div>
             <div class="info-item">
-              <span class="info-label">Property:</span> ${rfp.property}
-            </div>
-            <div class="info-item">
               <span class="info-label">Project Name:</span> ${rfp.projectName}
             </div>
             <div class="info-item">
@@ -293,7 +284,6 @@ function generateAllBidCollectionsHtml(rfp: any, allBidsData: any[]) {
               <th>Rank</th>
               <th>Company</th>
               <th>Total Amount</th>
-              <th>Status</th>
               <th>Submission Date</th>
               <th>Line Items</th>
             </tr>
@@ -304,8 +294,7 @@ function generateAllBidCollectionsHtml(rfp: any, allBidsData: any[]) {
                 <td style="text-align: center; font-weight: 600;">${index + 1}</td>
                 <td><strong>${bid.company}</strong></td>
                 <td class="currency"><strong>$${bid.totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong></td>
-                <td>${bid.status.replace('-', ' ').toUpperCase()}</td>
-                <td>${new Date(bid.submissionDate).toLocaleDateString('en-US', { timeZone: 'America/New_York' })}</td>
+                <td>${bid.submissionDate ? new Date(bid.submissionDate + 'T00:00:00').toLocaleDateString('en-US') : 'N/A'}</td>
                 <td style="text-align: center;">${bid.lineItemCount}</td>
               </tr>
             `).join('')}
@@ -331,13 +320,10 @@ function generateAllBidCollectionsHtml(rfp: any, allBidsData: any[]) {
                   <span class="info-label">Company:</span> ${bid.contractorCompany}
                 </div>
                 <div class="info-item">
-                  <span class="info-label">Submission Date:</span> ${new Date(bid.submissionDate).toLocaleDateString('en-US', { timeZone: 'America/New_York' })}
+                  <span class="info-label">Submission Date:</span> ${bid.submissionDate ? new Date(bid.submissionDate + 'T00:00:00').toLocaleDateString('en-US') : 'N/A'}
                 </div>
               </div>
               <div>
-                <div class="info-item">
-                  <span class="info-label">Status:</span> ${bid.status.replace('-', ' ').toUpperCase()}
-                </div>
                 <div class="info-item">
                   <span class="info-label">Total Amount:</span> $${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                 </div>

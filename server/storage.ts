@@ -19,6 +19,7 @@ import {
   romPilots,
   romScopeItems,
   romPilotLineItems,
+  rfpGenerationHistory,
   type RfpRequest, 
   type InsertRfpRequest, 
   type UpdateRfpRequest,
@@ -48,6 +49,8 @@ import {
   type RomPilot,
   type InsertRomPilot,
   type UpdateRomPilot,
+  type RfpGenerationHistory,
+  type InsertRfpGenerationHistory,
   type RomScopeItem,
   type InsertRomScopeItem,
   type UpdateRomScopeItem,
@@ -171,6 +174,12 @@ export interface IStorage {
   getEvaluationBudgetAttachments(rfpId: number): Promise<EvaluationBudgetAttachment[]>;
   getEvaluationBudgetAttachment(attachmentId: number): Promise<EvaluationBudgetAttachment | undefined>;
   deleteEvaluationBudgetAttachment(attachmentId: number): Promise<boolean>;
+
+  // RFP Generation History management
+  getRfpGenerationHistory(rfpId: number): Promise<RfpGenerationHistory[]>;
+  getGenerationHistoryItem(id: number): Promise<RfpGenerationHistory | undefined>;
+  createGenerationHistoryItem(historyItem: InsertRfpGenerationHistory): Promise<RfpGenerationHistory>;
+  deleteGenerationHistoryItem(id: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -860,6 +869,36 @@ export class DatabaseStorage implements IStorage {
 
   async deleteRomScopeItem(id: number): Promise<boolean> {
     const result = await db.delete(romScopeItems).where(eq(romScopeItems.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  // RFP Generation History methods
+  async getRfpGenerationHistory(rfpId: number): Promise<RfpGenerationHistory[]> {
+    return await db
+      .select()
+      .from(rfpGenerationHistory)
+      .where(eq(rfpGenerationHistory.rfpId, rfpId))
+      .orderBy(desc(rfpGenerationHistory.generatedAt));
+  }
+
+  async getGenerationHistoryItem(id: number): Promise<RfpGenerationHistory | undefined> {
+    const [item] = await db
+      .select()
+      .from(rfpGenerationHistory)
+      .where(eq(rfpGenerationHistory.id, id));
+    return item || undefined;
+  }
+
+  async createGenerationHistoryItem(historyItem: InsertRfpGenerationHistory): Promise<RfpGenerationHistory> {
+    const [created] = await db
+      .insert(rfpGenerationHistory)
+      .values(historyItem)
+      .returning();
+    return created;
+  }
+
+  async deleteGenerationHistoryItem(id: number): Promise<boolean> {
+    const result = await db.delete(rfpGenerationHistory).where(eq(rfpGenerationHistory.id, id));
     return (result.rowCount || 0) > 0;
   }
 }

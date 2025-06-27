@@ -235,6 +235,29 @@ export type InvitationToBid = typeof invitationToBid.$inferSelect;
 export type InsertInvitationToBid = z.infer<typeof insertInvitationToBidSchema>;
 export type UpdateInvitationToBid = z.infer<typeof updateInvitationToBidSchema>;
 
+// RFP Generation History table
+export const rfpGenerationHistory = pgTable("rfp_generation_history", {
+  id: serial("id").primaryKey(),
+  rfpId: integer("rfp_id").notNull().references(() => rfpRequests.id),
+  generationType: text("generation_type").notNull(), // "contractor" or "architect"
+  generatedBy: text("generated_by").notNull(), // user who generated it
+  generatedAt: timestamp("generated_at").defaultNow().notNull(),
+  // Store the data that was used to generate this version
+  invitationData: json("invitation_data").$type<InvitationToBid>().notNull(),
+  // Store the HTML content that was generated
+  generatedContent: text("generated_content").notNull(),
+  title: text("title").notNull(), // e.g., "Contractor RFP - Bridge Point Gratigny - Dec 27, 2025"
+  notes: text("notes"), // Optional notes about this generation
+});
+
+export const insertRfpGenerationHistorySchema = createInsertSchema(rfpGenerationHistory).omit({
+  id: true,
+  generatedAt: true,
+});
+
+export type RfpGenerationHistory = typeof rfpGenerationHistory.$inferSelect;
+export type InsertRfpGenerationHistory = z.infer<typeof insertRfpGenerationHistorySchema>;
+
 export type RfpFile = {
   id: string;
   name: string;

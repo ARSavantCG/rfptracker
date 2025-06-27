@@ -1369,6 +1369,17 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                                 </div>
                               </TableCell>
 
+                              {/* Assembly Group Column */}
+                              <TableCell className="text-sm text-gray-600">
+                                {item.assemblyId ? (
+                                  // Find the assembly header name
+                                  (() => {
+                                    const assemblyHeader = items.find(i => i.id === item.assemblyId);
+                                    return assemblyHeader ? assemblyHeader.description : 'Unknown Assembly';
+                                  })()
+                                ) : ''}
+                              </TableCell>
+
                               {/* Rollup Select */}
                               <TableCell className="text-center">
                                 <Select
@@ -1387,31 +1398,9 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                                 </Select>
                               </TableCell>
 
-                              {/* Assembly Group Column */}
-                              <TableCell className="text-sm text-gray-600">
-                                {item.assemblyId ? (
-                                  // Find the assembly header name
-                                  (() => {
-                                    const assemblyHeader = items.find(i => i.id === item.assemblyId);
-                                    return assemblyHeader ? assemblyHeader.description : 'Unknown Assembly';
-                                  })()
-                                ) : ''}
-                              </TableCell>
-
                               {/* Editable cells vs Display cells */}
                               {editingItem === item.id ? (
                                 <>
-                                  {/* Assembly Group Column - Edit Mode */}
-                                  <TableCell className="text-sm text-gray-600">
-                                    {item.assemblyId ? (
-                                      // Find the assembly header name
-                                      (() => {
-                                        const assemblyHeader = items.find(i => i.id === item.assemblyId);
-                                        return assemblyHeader ? assemblyHeader.description : 'Unknown Assembly';
-                                      })()
-                                    ) : ''}
-                                  </TableCell>
-                                  
                                   <TableCell>
                                     <Input
                                       value={item.description}
@@ -1469,17 +1458,6 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                                 </>
                               ) : (
                                 <>
-                                  {/* Assembly Group Column - Display Mode */}
-                                  <TableCell className="text-sm text-gray-600">
-                                    {item.assemblyId ? (
-                                      // Find the assembly header name
-                                      (() => {
-                                        const assemblyHeader = items.find(i => i.id === item.assemblyId);
-                                        return assemblyHeader ? assemblyHeader.description : 'Unknown Assembly';
-                                      })()
-                                    ) : ''}
-                                  </TableCell>
-                                  
                                   <TableCell>
                                     <span className={`${isAssembled ? 'line-through opacity-60' : ''}`}>
                                       {item.description}
@@ -1627,7 +1605,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-none">
       <Card>
         <CardHeader>
           <CardTitle>Budget Evaluation - {rfp?.projectName || 'Project'}</CardTitle>

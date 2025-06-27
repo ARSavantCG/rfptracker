@@ -16,6 +16,7 @@ import {
   properties,
   evaluationBudgets,
   evaluationBudgetAttachments,
+  evaluationBudgetHistory,
   romPilots,
   romScopeItems,
   romPilotLineItems,
@@ -46,6 +47,8 @@ import {
   type UpdateEvaluationBudget,
   type EvaluationBudgetAttachment,
   type InsertEvaluationBudgetAttachment,
+  type EvaluationBudgetHistory,
+  type InsertEvaluationBudgetHistory,
   type RomPilot,
   type InsertRomPilot,
   type UpdateRomPilot,
@@ -900,6 +903,48 @@ export class DatabaseStorage implements IStorage {
   async deleteGenerationHistoryItem(id: number): Promise<boolean> {
     const result = await db.delete(rfpGenerationHistory).where(eq(rfpGenerationHistory.id, id));
     return (result.rowCount || 0) > 0;
+  }
+
+  // Evaluation Budget History methods
+  async createEvaluationBudgetHistory(historyData: {
+    rfpId: number;
+    reportName: string;
+    generatedBy: string;
+    generatedContent: string;
+    notes?: string;
+  }) {
+    const [history] = await db
+      .insert(evaluationBudgetHistory)
+      .values(historyData)
+      .returning();
+    return history;
+  }
+
+  async getEvaluationBudgetHistory(rfpId: number) {
+    return await db
+      .select()
+      .from(evaluationBudgetHistory)
+      .where(eq(evaluationBudgetHistory.rfpId, rfpId))
+      .orderBy(desc(evaluationBudgetHistory.createdAt));
+  }
+
+  async updateEvaluationBudgetHistory(id: number, updates: { reportName?: string; notes?: string }) {
+    const [updated] = await db
+      .update(evaluationBudgetHistory)
+      .set(updates)
+      .where(eq(evaluationBudgetHistory.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteEvaluationBudgetHistory(id: number): Promise<boolean> {
+    try {
+      const result = await db.delete(evaluationBudgetHistory).where(eq(evaluationBudgetHistory.id, id));
+      return (result.rowCount || 0) > 0;
+    } catch (error) {
+      console.error("Error deleting evaluation budget history:", error);
+      return false;
+    }
   }
 }
 

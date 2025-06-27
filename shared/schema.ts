@@ -411,6 +411,25 @@ export const insertEvaluationBudgetAttachmentSchema = createInsertSchema(evaluat
 export type EvaluationBudgetAttachment = typeof evaluationBudgetAttachments.$inferSelect;
 export type InsertEvaluationBudgetAttachment = z.infer<typeof insertEvaluationBudgetAttachmentSchema>;
 
+// Evaluation Budget History Table
+export const evaluationBudgetHistory = pgTable("evaluation_budget_history", {
+  id: serial("id").primaryKey(),
+  rfpId: integer("rfp_id").notNull().references(() => rfpRequests.id, { onDelete: "cascade" }),
+  reportName: varchar("report_name", { length: 255 }).notNull(),
+  generatedBy: varchar("generated_by", { length: 255 }).notNull(),
+  generatedContent: text("generated_content").notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertEvaluationBudgetHistorySchema = createInsertSchema(evaluationBudgetHistory).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type EvaluationBudgetHistory = typeof evaluationBudgetHistory.$inferSelect;
+export type InsertEvaluationBudgetHistory = z.infer<typeof insertEvaluationBudgetHistorySchema>;
+
 export type EvaluationLineItem = {
   id: string;
   description: string;

@@ -248,24 +248,36 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
               sortedRequests.map((request) => (
                 <tr 
                   key={request.id} 
-                  className={`hover:bg-gray-50 transition-colors cursor-pointer h-12 ${
+                  className={`hover:bg-gray-50 transition-colors ${
                     selectedRfpId === request.id ? 'bg-blue-50' : ''
                   }`}
                   style={{
+                    height: '48px',
                     borderLeft: selectedRfpId === request.id ? '4px solid #3b82f6' : '4px solid transparent'
                   }}
-                  onClick={() => onSelectRfp?.(request)}
                 >
-                  <td className="px-3 py-2 whitespace-nowrap text-xs font-medium text-gray-900">
+                  <td 
+                    className="px-3 py-3 whitespace-nowrap text-xs font-medium text-gray-900 cursor-pointer"
+                    onClick={() => onSelectRfp?.(request)}
+                  >
                     {request.rfpNumber}
                   </td>
-                  <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-900">
+                  <td 
+                    className="px-3 py-3 whitespace-nowrap text-xs text-gray-900 cursor-pointer"
+                    onClick={() => onSelectRfp?.(request)}
+                  >
                     {request.tenantName}
                   </td>
-                  <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-900">
+                  <td 
+                    className="px-3 py-3 whitespace-nowrap text-xs text-gray-900 cursor-pointer"
+                    onClick={() => onSelectRfp?.(request)}
+                  >
                     {getPropertyDisplayName(request.property)}
                   </td>
-                  <td className="px-3 py-2 whitespace-nowrap">
+                  <td 
+                    className="px-3 py-3 whitespace-nowrap cursor-pointer"
+                    onClick={() => onSelectRfp?.(request)}
+                  >
                     <span
                       className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
                         request.status === "received" 
@@ -293,26 +305,38 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
                        request.status.charAt(0).toUpperCase() + request.status.slice(1)}
                     </span>
                   </td>
-                  <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-500">
+                  <td 
+                    className="px-3 py-3 whitespace-nowrap text-xs text-gray-500 cursor-pointer"
+                    onClick={() => onSelectRfp?.(request)}
+                  >
                     {formatDate(request.receivedOn)}
                   </td>
-                  <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-500">
+                  <td 
+                    className="px-3 py-3 whitespace-nowrap text-xs text-gray-500 cursor-pointer"
+                    onClick={() => onSelectRfp?.(request)}
+                  >
                     <div className="flex items-center space-x-1">
                       <i className="fas fa-paperclip text-gray-400 text-xs"></i>
                       <span>{fileCounts[request.id] || request.files.length}</span>
                     </div>
                   </td>
-                  <td className="px-3 py-2 whitespace-nowrap text-xs">
+                  <td className="px-3 py-3 whitespace-nowrap text-xs">
                     <div className="flex items-center space-x-1">
                       <button 
-                        onClick={() => onEditRfp(request)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEditRfp(request);
+                        }}
                         className="text-green-600 hover:text-green-700 p-1"
                         title="Edit project"
                       >
                         <i className="fas fa-edit text-xs"></i>
                       </button>
                       <button 
-                        onClick={() => handleDelete(request)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(request);
+                        }}
                         disabled={deleteMutation.isPending}
                         className="text-red-600 hover:text-red-700 disabled:opacity-50 p-1"
                         title="Delete"

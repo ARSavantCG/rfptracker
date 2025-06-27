@@ -298,9 +298,61 @@ export function BidCollectionTable({ rfp }: BidCollectionTableProps) {
                               variant="ghost"
                               size="sm"
                               onClick={() => {
-                                // TODO: Implement attachment download
-                                console.log("Download attachments for bid:", bid.id);
+                                let attachments = bid.attachments;
+                                if (typeof attachments === 'string') {
+                                  try {
+                                    attachments = JSON.parse(attachments);
+                                  } catch (e) {
+                                    attachments = [];
+                                  }
+                                }
+                                
+                                if (Array.isArray(attachments) && attachments.length > 0) {
+                                  // Download each attachment
+                                  attachments.forEach((file: any) => {
+                                    if (file.id) {
+                                      const token = localStorage.getItem('auth-token');
+                                      const downloadUrl = `/api/bid-collections/${bid.id}/attachments/${file.id}`;
+                                      
+                                      // Create a temporary link to download with authentication
+                                      fetch(downloadUrl, {
+                                        headers: {
+                                          'Authorization': `Bearer ${token}`
+                                        }
+                                      }).then(response => {
+                                        if (response.ok) {
+                                          return response.blob();
+                                        } else {
+                                          throw new Error('Download failed');
+                                        }
+                                      }).then(blob => {
+                                        const url = window.URL.createObjectURL(blob);
+                                        const a = document.createElement('a');
+                                        a.href = url;
+                                        a.download = file.name;
+                                        document.body.appendChild(a);
+                                        a.click();
+                                        document.body.removeChild(a);
+                                        window.URL.revokeObjectURL(url);
+                                      }).catch(error => {
+                                        console.error('Download error:', error);
+                                        toast({
+                                          title: "Download Error",
+                                          description: `Failed to download ${file.name}`,
+                                          variant: "destructive",
+                                        });
+                                      });
+                                    }
+                                  });
+                                } else {
+                                  toast({
+                                    title: "No Attachments",
+                                    description: "This bid has no attachments to download.",
+                                    variant: "destructive",
+                                  });
+                                }
                               }}
+                              title="Download All Attachments"
                             >
                               <Download className="h-4 w-4" />
                             </Button>

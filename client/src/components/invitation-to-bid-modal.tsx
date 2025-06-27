@@ -256,14 +256,12 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
       
       // Save or update invitation to bid record
       if (existingInvitation) {
-        const response = await apiRequest(`/api/rfp-requests/${rfp.id}/invitation-to-bid`, "PATCH", transformedData);
-        return response.json();
+        return await apiRequest(`/api/rfp-requests/${rfp.id}/invitation-to-bid`, "PATCH", transformedData);
       } else {
-        const response = await apiRequest("/api/invitation-to-bid", "POST", {
+        return await apiRequest("/api/invitation-to-bid", "POST", {
           rfpId: rfp.id,
           ...transformedData,
         });
-        return response.json();
       }
     },
     onSuccess: (updatedInvitation) => {

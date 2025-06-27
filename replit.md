@@ -156,6 +156,8 @@ This is a full-stack web application for tracking and managing Request for Propo
 - June 27, 2025. Resolved file upload validation error blocking RFP creation by expanding allowed file types to include Microsoft Outlook .msg files and other business document formats
 - June 27, 2025. Fixed "Remaining Warehouse Area" calculation to properly subtract office areas (existing and new) from total rentable area in RFP validation modal
 - June 27, 2025. Fixed RFP validation error caused by double JSON parsing in frontend mutation - validation now processes successfully and advances workflow phases correctly
+- June 27, 2025. Resolved authentication token persistence regression by implementing database-backed token storage - tokens now survive server restarts, eliminating constant re-authentication issues
+- June 27, 2025. Fixed invitation-to-bid save error "response.json is not a function" by removing duplicate JSON parsing in frontend API calls
 
 ## User Preferences
 

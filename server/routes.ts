@@ -78,6 +78,9 @@ const upload = multer({
       "image/jpeg",
       "image/jpg",
       "image/png",
+      "application/vnd.ms-outlook", // .msg files
+      "application/octet-stream", // Generic binary files including .msg
+      "text/plain", // .txt files
     ];
     
     if (allowedTypes.includes(file.mimetype)) {

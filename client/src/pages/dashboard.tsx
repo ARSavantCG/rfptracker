@@ -104,6 +104,15 @@ export default function Dashboard() {
     setIsEditModalOpen(true);
   };
 
+  const handleSelectRfp = (rfp: RfpRequest) => {
+    // If clicking the same RFP that's already selected, unselect it
+    if (selectedRfp && selectedRfp.id === rfp.id) {
+      setSelectedRfp(null);
+    } else {
+      setSelectedRfp(rfp);
+    }
+  };
+
   const handleAdvanceToInvitation = (rfp: RfpRequest) => {
     setWorkflowRfp(rfp);
     setIsInvitationModalOpen(true);
@@ -306,7 +315,7 @@ export default function Dashboard() {
                 searchQuery={searchQuery}
                 statusFilter={statusFilter}
                 onEditRfp={handleEditRfp}
-                onSelectRfp={setSelectedRfp}
+                onSelectRfp={handleSelectRfp}
                 selectedRfpId={selectedRfp?.id}
               />
             )}

@@ -198,6 +198,7 @@ This is a full-stack web application for tracking and managing Request for Propo
 - June 27, 2025. Fixed evaluation budget attachment upload issue by resolving database column name conflict - removed duplicate "file_size" column and properly configured "size" column with NOT NULL constraint to match schema definition, enabling successful file upload functionality for team schedules and internal documents
 - June 27, 2025. Fixed file download authentication issue in evaluation budget attachments - replaced insecure window.open() with proper token-based fetch API authentication, enabling secure file downloads with automatic filename preservation for team collaboration during budget evaluation phase
 - June 27, 2025. Cleaned up RFP Detail Modal interface by removing duplicate project information field and misleading individual file displays - replaced with comprehensive file count showing total across all workflow stages and clear guidance to use "Download All Files" button for accessing complete file collection organized by workflow phase
+- June 27, 2025. Synchronized FILES column in main RFP table with comprehensive file count API - main table now displays accurate total file count (5) matching detail modal instead of showing only initial RFP files (1), and fixed field alignment in RFP Detail Modal using flex layout to ensure "Last Updated:" and "Request Type:" display at consistent heights for professional appearance
 
 ## User Preferences
 

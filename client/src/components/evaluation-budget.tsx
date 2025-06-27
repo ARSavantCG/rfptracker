@@ -1011,30 +1011,83 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     </div>
     ` : ''}
 
-    ${(budgetData.customAssemblies && budgetData.customAssemblies.length > 0) ? `
+    ${(() => {
+      // Check for assembled items across all categories
+      const allItems = [
+        ...budgetData.tenantImprovements,
+        ...budgetData.designSoftCosts,
+        ...budgetData.existingImprovements
+      ];
+      const assembledItems = allItems.filter(item => item.assemblyId);
+      const hasAssemblies = assembledItems.length > 0 || (budgetData.customAssemblies && budgetData.customAssemblies.length > 0);
+      
+      return hasAssemblies;
+    })() ? `
     <div class="rollup-summary-section">
         <h3 class="rollup-summary-title">Assembly Summary</h3>
         <p class="rollup-summary-description">The following line items are grouped into assemblies:</p>
         <div class="rollup-summary-content">
-            ${(budgetData.customAssemblies || []).map(assembly => {
-              const componentItems = assembly.items.map(componentId => {
-                const allItems = [
-                  ...budgetData.tenantImprovements,
-                  ...budgetData.designSoftCosts,
-                  ...budgetData.existingImprovements
-                ];
-                const item = allItems.find(i => i.id === componentId);
-                return item;
-              }).filter(Boolean);
+            ${(() => {
+              // Group items by their assembly
+              const allItems = [
+                ...budgetData.tenantImprovements,
+                ...budgetData.designSoftCosts,
+                ...budgetData.existingImprovements
+              ];
+              const assembledItems = allItems.filter(item => item.assemblyId);
+              const assembliesByName: Record<string, any[]> = {};
               
-              return componentItems.map(item => {
-                if (!item) return '';
-                return `<div class="rollup-summary-item">
-                  <span class="rollup-item-name"><strong>${item.description}</strong> (${formatCurrency(parseFloat(item.totalPrice) || 0)})</span>
-                  <span class="rollup-item-target">→ Grouped in ${assembly.name}</span>
-                </div>`;
+              // Group by assembly name/ID and find assembly display names
+              assembledItems.forEach(item => {
+                const assemblyId = item.assemblyId;
+                if (assemblyId) {
+                  if (!assembliesByName[assemblyId]) {
+                    assembliesByName[assemblyId] = [];
+                  }
+                  assembliesByName[assemblyId].push(item);
+                }
+              });
+              
+              // Find assembly names from budgetData.assemblies or use fallback
+              const getAssemblyDisplayName = (assemblyId: string): string => {
+                if (!assemblyId) return 'Unknown Assembly';
+                
+                // Check if there's a custom assembly with this ID
+                if (budgetData.customAssemblies) {
+                  const customAssembly = budgetData.customAssemblies.find((a: any) => a.id === assemblyId);
+                  if (customAssembly) {
+                    return customAssembly.name;
+                  }
+                }
+                
+                // Check if there's an assembly in the assemblies object
+                if (budgetData.assemblies) {
+                  const assemblyEntry = Object.entries(budgetData.assemblies).find(([name, data]: [string, any]) => 
+                    data && data.components && Array.isArray(data.components) && data.components.some((componentId: string) => 
+                      assembledItems.some((item: any) => item.id === componentId)
+                    )
+                  );
+                  if (assemblyEntry) {
+                    return assemblyEntry[0];
+                  }
+                }
+                
+                // Fallback to a user-friendly name based on timestamp
+                const timestamp = assemblyId.replace('assembly_', '');
+                return `Assembly ${timestamp.slice(-4)}`;
+              };
+              
+              // Generate summary for each assembly
+              return Object.entries(assembliesByName).map(([assemblyId, items]) => {
+                const assemblyDisplayName = getAssemblyDisplayName(assemblyId);
+                return items.map((item: any) => `
+                  <div class="rollup-summary-item">
+                    <span class="rollup-item-name"><strong>${item.description}</strong> (${formatCurrency(parseFloat(item.totalPrice) || 0)})</span>
+                    <span class="rollup-item-target">→ Grouped in ${assemblyDisplayName}</span>
+                  </div>
+                `).join('');
               }).join('');
-            }).join('')}
+            })()}
         </div>
     </div>
     ` : ''}

@@ -1178,7 +1178,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Budget Evaluation - Oakley & Sons 3 @ MG Westside - A</CardTitle>
+          <CardTitle>Budget Evaluation - {rfp?.projectName || 'Project'}</CardTitle>
         </CardHeader>
       </Card>
 

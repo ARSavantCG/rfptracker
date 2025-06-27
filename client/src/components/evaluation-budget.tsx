@@ -10,9 +10,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Edit, Trash2, Save, X, ArrowRight, Copy, FileDown, Upload, Package, Users } from "lucide-react";
+import { Plus, Edit, Trash2, Save, X, ArrowRight, Copy, FileDown, Upload, Package, Users, ChevronUp, ChevronDown, GripVertical } from "lucide-react";
+import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import { useToast } from "@/hooks/use-toast";
 import { formatDate } from "@/lib/utils";
+import { nanoid } from "nanoid";
 import type { RfpRequest, BidCollection, BidLineItem } from "@shared/schema";
 
 interface EvaluationLineItem {
@@ -1098,6 +1100,129 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     saveAndAdvanceMutation.mutate();
   };
 
+  // Move item up/down functions
+  const moveItemUp = (category: 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', index: number) => {
+    if (index === 0) return;
+    
+    setBudgetData(prev => {
+      const items = [...prev[category]];
+      const item = items[index];
+      
+      // Check if this item is part of an assembly or is an assembly header
+      const assembly = prev.customAssemblies.find(a => a.items.includes(item.id) || item.id === a.id);
+      
+      if (assembly) {
+        // Move entire assembly as a group
+        const assemblyItems = [item.id, ...assembly.items];
+        const assemblyIndices = assemblyItems.map(id => items.findIndex(i => i.id === id)).sort((a, b) => a - b);
+        const minIndex = assemblyIndices[0];
+        
+        if (minIndex === 0) return prev; // Can't move up if already at top
+        
+        // Remove assembly items from their current positions
+        const assemblyItemsData = assemblyIndices.map(idx => items[idx]);
+        const filteredItems = items.filter((_, idx) => !assemblyIndices.includes(idx));
+        
+        // Insert assembly items at new position
+        const newIndex = minIndex - 1;
+        filteredItems.splice(newIndex, 0, ...assemblyItemsData);
+        
+        return { ...prev, [category]: filteredItems };
+      } else {
+        // Move single item
+        [items[index], items[index - 1]] = [items[index - 1], items[index]];
+        return { ...prev, [category]: items };
+      }
+    });
+  };
+
+  const moveItemDown = (category: 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', index: number) => {
+    setBudgetData(prev => {
+      const items = [...prev[category]];
+      
+      if (index === items.length - 1) return prev;
+      
+      const item = items[index];
+      
+      // Check if this item is part of an assembly or is an assembly header
+      const assembly = prev.customAssemblies.find(a => a.items.includes(item.id) || item.id === a.id);
+      
+      if (assembly) {
+        // Move entire assembly as a group
+        const assemblyItems = [item.id, ...assembly.items];
+        const assemblyIndices = assemblyItems.map(id => items.findIndex(i => i.id === id)).sort((a, b) => a - b);
+        const maxIndex = assemblyIndices[assemblyIndices.length - 1];
+        
+        if (maxIndex === items.length - 1) return prev; // Can't move down if already at bottom
+        
+        // Remove assembly items from their current positions
+        const assemblyItemsData = assemblyIndices.map(idx => items[idx]);
+        const filteredItems = items.filter((_, idx) => !assemblyIndices.includes(idx));
+        
+        // Insert assembly items at new position
+        const newIndex = maxIndex - assemblyIndices.length + 2;
+        filteredItems.splice(newIndex, 0, ...assemblyItemsData);
+        
+        return { ...prev, [category]: filteredItems };
+      } else {
+        // Move single item
+        [items[index], items[index + 1]] = [items[index + 1], items[index]];
+        return { ...prev, [category]: items };
+      }
+    });
+  };
+
+  // Drag and drop handler
+  const handleDragEnd = (result: any) => {
+    if (!result.destination) return;
+
+    const { source, destination, draggableId } = result;
+    
+    // Extract category from droppableId (format: "category-droppable")
+    const sourceCategory = source.droppableId.replace('-droppable', '') as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements';
+    const destinationCategory = destination.droppableId.replace('-droppable', '') as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements';
+
+    // Don't allow moving between categories for now
+    if (sourceCategory !== destinationCategory) return;
+
+    setBudgetData(prev => {
+      const items = [...prev[sourceCategory]];
+      const draggedItem = items.find(item => item.id === draggableId);
+      if (!draggedItem) return prev;
+
+      // Check if this item is part of an assembly
+      const assembly = prev.customAssemblies.find(a => a.items.includes(draggableId) || draggableId === a.id);
+      
+      if (assembly) {
+        // Move entire assembly as a group
+        const assemblyItems = [draggableId, ...assembly.items];
+        const assemblyIndices = assemblyItems.map(id => items.findIndex(i => i.id === id)).sort((a, b) => a - b);
+        
+        // Remove assembly items from their current positions
+        const assemblyItemsData = assemblyIndices.map(idx => items[idx]);
+        const filteredItems = items.filter((_, idx) => !assemblyIndices.includes(idx));
+        
+        // Calculate new insertion point accounting for removed items
+        let newIndex = destination.index;
+        for (const removedIndex of assemblyIndices.sort((a, b) => b - a)) {
+          if (removedIndex < destination.index) {
+            newIndex--;
+          }
+        }
+        
+        // Insert assembly items at new position
+        filteredItems.splice(newIndex, 0, ...assemblyItemsData);
+        
+        return { ...prev, [sourceCategory]: filteredItems };
+      } else {
+        // Move single item
+        const [movedItem] = items.splice(source.index, 1);
+        items.splice(destination.index, 0, movedItem);
+        return { ...prev, [sourceCategory]: items };
+      }
+    });
+  };
+
   const renderCategoryTable = (title: string, items: EvaluationLineItem[], category: 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', total: number) => {
     const totalWithRollups = calculateCategoryTotalWithRollups(category);
     
@@ -1139,141 +1264,224 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         {items.length === 0 && !newItemCategory ? (
           <p className="text-gray-500 text-center py-4">No items added yet</p>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-8 text-center">Assembly</TableHead>
-                <TableHead className="w-12 text-center">Rollup</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead className="w-32">Quantity (Unit)</TableHead>
-                <TableHead className="w-24">Unit Price</TableHead>
-                {!newItemCategory && <TableHead className="w-24">Total</TableHead>}
-                <TableHead className="w-24">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {items.map((item) => (
-                <TableRow key={item.id}>
-                  {editingItem === item.id ? (
-                    <>
-                      <TableCell>
-                        <div className="flex items-center justify-center">
-                          <Checkbox
-                            checked={selectedItems.has(item.id)}
-                            onCheckedChange={(checked) => handleItemSelection(item.id, !!checked)}
-                          />
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Select
-                          value={budgetData.lineItemRollups[item.id] || 'none'}
-                          onValueChange={(value) => handleLineItemRollup(item.id, category, value as any)}
-                        >
-                          <SelectTrigger className="w-full text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">None</SelectItem>
-                            <SelectItem value="tenantImprovements">TI</SelectItem>
-                            <SelectItem value="designSoftCosts">Design</SelectItem>
-                            <SelectItem value="tiAndDesign">TI & Design</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell>
-                        <Input
-                          value={item.description}
-                          onChange={(e) => updateItem(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', item.id, { description: e.target.value })}
-                          className="text-sm"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          <Input
-                            type="number"
-                            value={item.quantity}
-                            onChange={(e) => {
-                              const quantity = parseInt(e.target.value) || 1;
-                              updateItem(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', item.id, { quantity });
-                            }}
-                            className="w-16 text-sm"
-                          />
-                          <Input
-                            value={item.unit}
-                            onChange={(e) => updateItem(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', item.id, { unit: e.target.value })}
-                            className="w-16 text-sm"
-                            placeholder="Unit"
-                          />
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={item.unitPrice}
-                          onChange={(e) => updateItem(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', item.id, { unitPrice: e.target.value })}
-                          className="text-sm"
-                        />
-                      </TableCell>
-                      {!newItemCategory && <TableCell className="font-medium">{formatCurrency(item.totalPrice)}</TableCell>}
-                      <TableCell>
-                        <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setEditingItem(null)}
-                          >
-                            <Save className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setEditingItem(null)}
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </>
-                  ) : (
-                    <>
-                      <TableCell>
-                        <div className="flex items-center justify-center">
-                          <Checkbox
-                            checked={selectedItems.has(item.id)}
-                            onCheckedChange={(checked) => handleItemSelection(item.id, !!checked)}
-                          />
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Checkbox
-                            checked={!!budgetData.lineItemRollups[item.id]}
-                            onCheckedChange={(checked) => {
-                              // Preserve scroll position
-                              const scrollY = window.scrollY;
-                              
-                              if (checked) {
-                                // Default to rolling up to tenant improvements
-                                handleLineItemRollup(item.id, category, 'tenantImprovements');
-                              } else {
-                                handleLineItemRollup(item.id, category, 'none');
-                              }
-                              
-                              // Restore scroll position after state update
-                              requestAnimationFrame(() => {
-                                window.scrollTo(0, scrollY);
-                              });
-                            }}
-                          />
-                          {budgetData.lineItemRollups[item.id] && (
-                            <Select
-                              value={budgetData.lineItemRollups[item.id]}
-                              onValueChange={(value) => {
-                                // Preserve scroll position
-                                const scrollY = window.scrollY;
-                                
-                                handleLineItemRollup(item.id, category, value as any);
+          <DragDropContext onDragEnd={handleDragEnd}>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-8 text-center">Order</TableHead>
+                  <TableHead className="w-8 text-center">Assembly</TableHead>
+                  <TableHead className="w-12 text-center">Rollup</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead className="w-32">Quantity (Unit)</TableHead>
+                  <TableHead className="w-24">Unit Price</TableHead>
+                  {!newItemCategory && <TableHead className="w-24">Total</TableHead>}
+                  <TableHead className="w-24">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <Droppable droppableId={`${category}-droppable`}>
+                {(provided) => (
+                  <TableBody ref={provided.innerRef} {...provided.droppableProps}>
+                    {items.map((item, index) => {
+                      const isAssembled = item.assemblyId;
+                      const isRolledUp = budgetData.lineItemRollups[item.id];
+                      
+                      return (
+                        <Draggable key={item.id} draggableId={item.id} index={index}>
+                          {(provided, snapshot) => (
+                            <TableRow 
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              style={{
+                                ...provided.draggableProps.style,
+                                backgroundColor: snapshot.isDragging ? '#f8f9fa' : 'transparent',
+                                textDecoration: isAssembled ? 'line-through' : 'none',
+                                opacity: isAssembled ? 0.6 : 1,
+                              }}
+                              className={isRolledUp ? 'bg-blue-50' : ''}
+                            >
+                              {/* Order Controls */}
+                              <TableCell className="text-center">
+                                <div className="flex flex-col items-center gap-1" {...provided.dragHandleProps}>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => moveItemUp(category, index)}
+                                    disabled={index === 0}
+                                    className="h-6 w-6 p-0"
+                                  >
+                                    <ChevronUp className="h-3 w-3" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => moveItemDown(category, index)}
+                                    disabled={index === items.length - 1}
+                                    className="h-6 w-6 p-0"
+                                  >
+                                    <ChevronDown className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+
+                              {/* Assembly Checkbox */}
+                              <TableCell className="text-center">
+                                <div className="flex items-center justify-center">
+                                  <Checkbox
+                                    checked={selectedItems.has(item.id)}
+                                    onCheckedChange={(checked) => handleItemSelection(item.id, !!checked)}
+                                  />
+                                </div>
+                              </TableCell>
+
+                              {/* Rollup Select */}
+                              <TableCell className="text-center">
+                                <Select
+                                  value={budgetData.lineItemRollups[item.id] || 'none'}
+                                  onValueChange={(value) => handleLineItemRollup(item.id, category, value as any)}
+                                >
+                                  <SelectTrigger className="w-full text-xs">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="none">None</SelectItem>
+                                    <SelectItem value="tenantImprovements">TI</SelectItem>
+                                    <SelectItem value="designSoftCosts">Design</SelectItem>
+                                    <SelectItem value="tiAndDesign">TI & Design</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </TableCell>
+
+                              {/* Editable cells vs Display cells */}
+                              {editingItem === item.id ? (
+                                <>
+                                  <TableCell>
+                                    <Input
+                                      value={item.description}
+                                      onChange={(e) => updateItem(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', item.id, { description: e.target.value })}
+                                      className="text-sm"
+                                    />
+                                  </TableCell>
+                                  <TableCell>
+                                    <div className="flex gap-1">
+                                      <Input
+                                        type="number"
+                                        value={item.quantity}
+                                        onChange={(e) => {
+                                          const quantity = parseInt(e.target.value) || 1;
+                                          updateItem(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', item.id, { quantity });
+                                        }}
+                                        className="w-16 text-sm"
+                                      />
+                                      <Input
+                                        value={item.unit}
+                                        onChange={(e) => updateItem(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', item.id, { unit: e.target.value })}
+                                        className="w-16 text-sm"
+                                        placeholder="Unit"
+                                      />
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      value={item.unitPrice}
+                                      onChange={(e) => updateItem(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', item.id, { unitPrice: e.target.value })}
+                                      className="text-sm"
+                                    />
+                                  </TableCell>
+                                  {!newItemCategory && <TableCell className="font-medium">{formatCurrency(item.totalPrice)}</TableCell>}
+                                  <TableCell>
+                                    <div className="flex gap-1">
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => setEditingItem(null)}
+                                      >
+                                        <Save className="h-3 w-3" />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => setEditingItem(null)}
+                                      >
+                                        <X className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  </TableCell>
+                                </>
+                              ) : (
+                                <>
+                                  <TableCell>
+                                    <span className={`${isAssembled ? 'line-through opacity-60' : ''}`}>
+                                      {item.description}
+                                    </span>
+                                  </TableCell>
+                                  <TableCell>
+                                    <span className={`${isAssembled ? 'line-through opacity-60' : ''}`}>
+                                      {new Intl.NumberFormat('en-US').format(item.quantity)} {item.unit}
+                                    </span>
+                                  </TableCell>
+                                  <TableCell>
+                                    <span className={`${isAssembled ? 'line-through opacity-60' : ''}`}>
+                                      {formatCurrency(item.unitPrice)}
+                                    </span>
+                                  </TableCell>
+                                  {!newItemCategory && (
+                                    <TableCell className="font-medium">
+                                      <span className={`${isAssembled ? 'line-through opacity-60' : ''}`}>
+                                        {formatCurrency(calculateDistributedCosts(item))}
+                                      </span>
+                                    </TableCell>
+                                  )}
+                                  <TableCell>
+                                    <div className="flex gap-1">
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => setEditingItem(item.id)}
+                                      >
+                                        <Edit className="h-3 w-3" />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => {
+                                          const categoryType = category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements';
+                                          const duplicatedItem: EvaluationLineItem = {
+                                            ...item,
+                                            id: nanoid(),
+                                            description: `${item.description} (Copy)`,
+                                          };
+                                          setBudgetData(prev => ({
+                                            ...prev,
+                                            [categoryType]: [...prev[categoryType], duplicatedItem],
+                                          }));
+                                        }}
+                                      >
+                                        <Copy className="h-3 w-3" />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => deleteItem(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', item.id)}
+                                      >
+                                        <Trash2 className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  </TableCell>
+                                </>
+                              )}
+                            </TableRow>
+                          )}
+                        </Draggable>
+                      );
+                    })}
+                    {provided.placeholder}
+                  </TableBody>
+                )}
+              </Droppable>
+            </Table>
+          </DragDropContext>
                                 
                                 // Restore scroll position after state update
                                 requestAnimationFrame(() => {

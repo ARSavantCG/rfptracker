@@ -26,10 +26,6 @@ import { nanoid } from "nanoid";
 const validationSchema = z.object({
   generalContractor: z.string().optional(),
   architect: z.string().optional(),
-  officeAreaExisting: z.string().optional(),
-  officeAreaNew: z.string().optional(),
-  warehouseArea: z.string().optional(),
-  warehouseNotes: z.string().optional(),
   contactPerson: z.string().optional(),
   contactEmail: z.string().optional(),
   areaBreakdown: z.array(z.object({
@@ -58,20 +54,8 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
     defaultValues: {
       generalContractor: "",
       architect: "",
-      officeAreaExisting: "",
-      officeAreaNew: "",
-      warehouseArea: "",
-      warehouseNotes: "",
-      projectAddress: "",
-      projectSize: "",
-      estimatedValue: "",
-      timelineRequirements: "",
-      specialRequirements: "",
       contactPerson: "",
       contactEmail: "",
-      dueDate: "",
-      projectDescription: "",
-      documentsLink: "",
       areaBreakdown: [],
     },
   });
@@ -105,10 +89,6 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
       form.reset({
         generalContractor: rfp.generalContractor || "",
         architect: rfp.architect || "",
-        officeAreaExisting: rfp.officeAreaExisting || "",
-        officeAreaNew: rfp.officeAreaNew || "",
-        warehouseArea: rfp.warehouseArea || "",
-        warehouseNotes: rfp.warehouseNotes || "",
         contactPerson: rfp.contactPerson || contactDetails.name || "",
         contactEmail: rfp.contactEmail || contactDetails.email || "",
         areaBreakdown: rfp.areaBreakdown || [],
@@ -120,10 +100,7 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
     mutationFn: async (data: ValidationFormData) => {
       if (!rfp) throw new Error("No RFP selected");
 
-      const response = await apiRequest(`/api/rfp-requests/${rfp.id}`, "PATCH", {
-        ...data,
-        dueDate: data.dueDate ? new Date(data.dueDate) : undefined,
-      });
+      const response = await apiRequest(`/api/rfp-requests/${rfp.id}`, "PATCH", data);
       return response.json();
     },
     onSuccess: () => {
@@ -288,66 +265,53 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
             <div className="space-y-4">
               <h3 className="text-lg font-medium text-gray-900 border-b pb-2">Area Information</h3>
               
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <FormField
-                  control={form.control}
-                  name="warehouseArea"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Warehouse Area (SF)</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., 45,000" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="officeAreaExisting"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Existing Office Area (SF)</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., 2,500" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="officeAreaNew"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>New Office Area (SF)</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., 2,500" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <FormField
-                control={form.control}
-                name="warehouseNotes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Warehouse Notes</FormLabel>
-                    <FormControl>
-                      <Textarea 
-                        placeholder="Additional warehouse area notes..."
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {/* Rentable Area Calculation */}
+              {rfp && (
+                <div className="bg-blue-50 p-4 rounded-lg border">
+                  <h4 className="text-sm font-medium text-gray-900 mb-2">Rentable Area Calculation</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span>Total Project Area:</span>
+                      <span className="font-medium">{rfp.projectArea ? parseInt(rfp.projectArea).toLocaleString() : 0} SF</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Existing Office Area:</span>
+                      <span className="font-medium">{rfp.officeAreaExisting ? parseInt(rfp.officeAreaExisting).toLocaleString() : 0} SF</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>New Office Area:</span>
+                      <span className="font-medium">{rfp.officeAreaNew ? parseInt(rfp.officeAreaNew).toLocaleString() : 0} SF</span>
+                    </div>
+                    {form.watch("areaBreakdown").length > 0 && (
+                      <>
+                        <div className="border-t pt-2">
+                          <span className="text-gray-600">Additional Areas:</span>
+                          {form.watch("areaBreakdown").map((area, index) => (
+                            <div key={area.id} className="flex justify-between ml-4">
+                              <span>• {area.description || `Area ${index + 1}`}:</span>
+                              <span className="font-medium">{area.squareFootage ? parseInt(area.squareFootage).toLocaleString() : 0} SF</span>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                    <div className="border-t pt-2 flex justify-between font-semibold text-gray-900">
+                      <span>Remaining Warehouse Area:</span>
+                      <span>
+                        {(() => {
+                          const totalProject = parseInt(rfp.projectArea || "0");
+                          const existingOffice = parseInt(rfp.officeAreaExisting || "0");
+                          const newOffice = parseInt(rfp.officeAreaNew || "0");
+                          const additionalAreas = form.watch("areaBreakdown").reduce((sum, area) => 
+                            sum + parseInt(area.squareFootage || "0"), 0);
+                          const remaining = totalProject - existingOffice - newOffice - additionalAreas;
+                          return remaining.toLocaleString();
+                        })()} SF
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Area Breakdown */}
               <div className="space-y-3">

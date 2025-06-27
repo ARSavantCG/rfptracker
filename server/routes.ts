@@ -1167,8 +1167,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.send(pdfBuffer);
       } else {
         // Return HTML for preview/printing (existing behavior)
-        const htmlContent = await generateRfpPdf(pdfOptions);
-        res.setHeader('Content-Type', 'text/html');
+        const htmlBuffer = await generateRfpPdf(pdfOptions);
+        const htmlContent = htmlBuffer.toString('utf8');
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
         res.send(htmlContent);
       }
     } catch (error) {

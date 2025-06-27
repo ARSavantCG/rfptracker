@@ -88,9 +88,28 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
     queryKey: ["/api/contacts"],
   });
 
+  // Helper function to extract contact details from development contact
+  const getDevelopmentContactDetails = (developmentContact: string) => {
+    if (!developmentContact) return { name: "", email: "", phone: "" };
+    
+    // Extract just the name part (before " - " if it exists)
+    const contactName = developmentContact.split(' - ')[0].trim();
+    
+    // Find matching contact in the database
+    const contact = contacts.find(c => c.name.toLowerCase() === contactName.toLowerCase());
+    
+    return {
+      name: contact?.name || contactName,
+      email: contact?.email || "",
+      phone: contact?.phone || ""
+    };
+  };
+
   // Load existing validation data when RFP changes
   useEffect(() => {
     if (rfp && isOpen) {
+      const contactDetails = getDevelopmentContactDetails(rfp.developmentContact || "");
+      
       form.reset({
         generalContractor: rfp.generalContractor || "",
         architect: rfp.architect || "",
@@ -103,15 +122,15 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
         estimatedValue: rfp.estimatedValue || "",
         timelineRequirements: rfp.timelineRequirements || "",
         specialRequirements: rfp.specialRequirements || "",
-        contactPerson: rfp.contactPerson || rfp.developmentContact || "",
-        contactEmail: rfp.contactEmail || "",
+        contactPerson: rfp.contactPerson || contactDetails.name || "",
+        contactEmail: rfp.contactEmail || contactDetails.email || "",
         dueDate: rfp.dueDate ? new Date(rfp.dueDate).toISOString().split('T')[0] : "",
         projectDescription: rfp.projectDescription || "",
         documentsLink: rfp.documentsLink || "",
         areaBreakdown: rfp.areaBreakdown || [],
       });
     }
-  }, [rfp, isOpen, form]);
+  }, [rfp, isOpen, form, contacts]);
 
   const updateMutation = useMutation({
     mutationFn: async (data: ValidationFormData) => {

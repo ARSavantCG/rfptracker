@@ -106,8 +106,12 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
         formData.append('files', file);
       });
       
+      const token = localStorage.getItem('auth_token');
       const response = await fetch('/api/rfp-requests/with-files', {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
         body: formData,
       });
       

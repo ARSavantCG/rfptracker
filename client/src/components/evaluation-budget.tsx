@@ -630,11 +630,9 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
       
       // Calculate total with rollups
       const total = calculateCategoryTotalWithRollups(categoryType as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements');
-      // Calculate remaining warehouse area (total - existing office - new office)
+      // Use project area as rentable area
       const totalArea = rfp?.projectArea ? parseInt(rfp.projectArea) : 0;
-      const existingOfficeArea = rfp?.officeAreaExisting ? parseInt(rfp.officeAreaExisting) : 0;
-      const newOfficeArea = rfp?.officeAreaNew ? parseInt(rfp.officeAreaNew) : 0;
-      const rentableArea = totalArea - existingOfficeArea - newOfficeArea;
+      const rentableArea = totalArea;
       const isTenantImprovements = categoryType === 'tenantImprovements';
       
       return `
@@ -671,7 +669,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                             <td>${item.unit}</td>
                             <td class="currency">${formatCurrency(unitPrice)}</td>
                             <td class="currency">${formatCurrency(totalPrice)}</td>
-                            <td class="currency">${pricePerSf > 0 ? '$' + pricePerSf.toFixed(2) : 'N/A'}</td>
+                            <td class="currency">${pricePerSf > 0 ? '$' + new Intl.NumberFormat('en-US').format(parseFloat(pricePerSf.toFixed(2))) : 'N/A'}</td>
                         </tr>
                         `;
                       }).join('')}
@@ -888,12 +886,9 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     </div>
     
     <div style="text-align: right; margin-bottom: 20px; padding-right: 20px;">
-        <p style="margin: 0; font-size: 14px; color: #666;"><strong>Remaining Warehouse Area:</strong> ${(() => {
+        <p style="margin: 0; font-size: 14px; color: #666;"><strong>Rentable Area:</strong> ${(() => {
           const totalArea = rfp?.projectArea ? parseInt(rfp.projectArea) : 0;
-          const existingOfficeArea = rfp?.officeAreaExisting ? parseInt(rfp.officeAreaExisting) : 0;
-          const newOfficeArea = rfp?.officeAreaNew ? parseInt(rfp.officeAreaNew) : 0;
-          const remainingArea = totalArea - existingOfficeArea - newOfficeArea;
-          return remainingArea > 0 ? new Intl.NumberFormat('en-US').format(remainingArea) + ' sf' : 'N/A';
+          return totalArea > 0 ? new Intl.NumberFormat('en-US').format(totalArea) + ' sf' : 'N/A';
         })()}</p>
     </div>
 

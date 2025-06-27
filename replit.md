@@ -155,6 +155,7 @@ This is a full-stack web application for tracking and managing Request for Propo
 - June 26, 2025. Fixed RFP deletion JSON parsing error by correcting authentication token consistency and improving API response format for successful delete operations
 - June 27, 2025. Resolved file upload validation error blocking RFP creation by expanding allowed file types to include Microsoft Outlook .msg files and other business document formats
 - June 27, 2025. Fixed "Remaining Warehouse Area" calculation to properly subtract office areas (existing and new) from total rentable area in RFP validation modal
+- June 27, 2025. Fixed RFP validation error caused by double JSON parsing in frontend mutation - validation now processes successfully and advances workflow phases correctly
 
 ## User Preferences
 

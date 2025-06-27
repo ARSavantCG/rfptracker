@@ -144,8 +144,7 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
         ...data,
       });
     },
-    onSuccess: async (response) => {
-      const result = await response.json();
+    onSuccess: async (result) => {
       setValidationResult(result);
       
       if (result.isValid) {

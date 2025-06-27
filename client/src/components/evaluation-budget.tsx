@@ -630,7 +630,11 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
       
       // Calculate total with rollups
       const total = calculateCategoryTotalWithRollups(categoryType as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements');
-      const rentableArea = rfp?.projectArea ? parseInt(rfp.projectArea) : 0;
+      // Calculate remaining warehouse area (total - existing office - new office)
+      const totalArea = rfp?.projectArea ? parseInt(rfp.projectArea) : 0;
+      const existingOfficeArea = rfp?.officeAreaExisting ? parseInt(rfp.officeAreaExisting) : 0;
+      const newOfficeArea = rfp?.officeAreaNew ? parseInt(rfp.officeAreaNew) : 0;
+      const rentableArea = totalArea - existingOfficeArea - newOfficeArea;
       const isTenantImprovements = categoryType === 'tenantImprovements';
       
       return `
@@ -884,14 +888,27 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     </div>
     
     <div style="text-align: right; margin-bottom: 20px; padding-right: 20px;">
-        <p style="margin: 0; font-size: 14px; color: #666;"><strong>Rentable Area:</strong> ${rfp?.projectArea ? new Intl.NumberFormat('en-US').format(parseInt(rfp.projectArea)) + ' sf' : 'N/A'}</p>
+        <p style="margin: 0; font-size: 14px; color: #666;"><strong>Remaining Warehouse Area:</strong> ${(() => {
+          const totalArea = rfp?.projectArea ? parseInt(rfp.projectArea) : 0;
+          const existingOfficeArea = rfp?.officeAreaExisting ? parseInt(rfp.officeAreaExisting) : 0;
+          const newOfficeArea = rfp?.officeAreaNew ? parseInt(rfp.officeAreaNew) : 0;
+          const remainingArea = totalArea - existingOfficeArea - newOfficeArea;
+          return remainingArea > 0 ? new Intl.NumberFormat('en-US').format(remainingArea) + ' sf' : 'N/A';
+        })()}</p>
     </div>
 
     ${renderCategorySection("Tenant Improvements", budgetData.tenantImprovements, "tenantImprovements")}
     ${!hideDesignCosts ? renderCategorySection("Design / Soft Costs / Other Fees", budgetData.designSoftCosts, "designSoftCosts") : ''}
 
     <div class="grand-total">
-        <h2>Grand Total: ${formatCurrency(grandTotal)}</h2>
+        <h2>Grand Total: ${formatCurrency(grandTotal)} ${(() => {
+          const totalArea = rfp?.projectArea ? parseInt(rfp.projectArea) : 0;
+          const existingOfficeArea = rfp?.officeAreaExisting ? parseInt(rfp.officeAreaExisting) : 0;
+          const newOfficeArea = rfp?.officeAreaNew ? parseInt(rfp.officeAreaNew) : 0;
+          const remainingArea = totalArea - existingOfficeArea - newOfficeArea;
+          const pricePerSf = remainingArea > 0 ? grandTotal / remainingArea : 0;
+          return pricePerSf > 0 ? '($' + pricePerSf.toFixed(2) + '/sf)' : '';
+        })()}</h2>
         ${budgetData.hasExistingImprovements && !budgetData.includeExistingInTotal ? 
           '<p style="margin: 10px 0 0 0; font-size: 14px; opacity: 0.9;">* Existing improvements tracked separately for financial modeling</p>' : ''
         }

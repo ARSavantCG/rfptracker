@@ -39,6 +39,9 @@ import { tokenStore } from "./token-auth";
 import bcrypt from "bcryptjs";
 import { nanoid } from "nanoid";
 import { generateRfpPdf, generatePdfFilename } from "./pdf-generator";
+import archiver from "archiver";
+import fs from "fs";
+import path from "path";
 
 // Generate HTML for bid collection PDF
 function generateBidCollectionHtml(bidCollection: any, rfp: any, lineItems: any[]) {
@@ -3287,6 +3290,101 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Download error:", error);
       res.status(500).json({ message: "Failed to download file" });
+    }
+  });
+
+  // Download all files for an RFP as organized zip
+  app.get("/api/rfp-requests/:id/download-all-files", requireAuth, async (req, res) => {
+    try {
+      const rfpId = parseInt(req.params.id);
+
+      if (isNaN(rfpId)) {
+        return res.status(400).json({ message: "Invalid RFP ID" });
+      }
+
+      const rfp = await storage.getRfpRequest(rfpId);
+      if (!rfp) {
+        return res.status(404).json({ message: "RFP not found" });
+      }
+
+      // Create zip archive
+      const archive = archiver('zip', {
+        zlib: { level: 9 } // compression level
+      });
+
+      // Set response headers
+      const zipFilename = `RFP-${rfp.rfpNumber}-All-Files.zip`;
+      res.setHeader('Content-Type', 'application/zip');
+      res.setHeader('Content-Disposition', `attachment; filename="${zipFilename}"`);
+      
+      // Pipe archive to response
+      archive.pipe(res);
+
+      let hasFiles = false;
+
+      // 1. RFP Entry files (original RFP documents)
+      if (rfp.files && rfp.files.length > 0) {
+        for (const file of rfp.files) {
+          const filePath = path.join(uploadsDir, file.path || file.name);
+          if (fs.existsSync(filePath)) {
+            archive.file(filePath, { name: `1-RFP-Entry/${file.name}` });
+            hasFiles = true;
+          }
+        }
+      }
+
+      // 2. Invitation to Bid files
+      const invitationToBid = await storage.getInvitationToBid(rfpId);
+      if (invitationToBid && invitationToBid.contractorDocs && invitationToBid.contractorDocs.length > 0) {
+        for (const file of invitationToBid.contractorDocs) {
+          const filePath = path.join(uploadsDir, file.path || file.name);
+          if (fs.existsSync(filePath)) {
+            archive.file(filePath, { name: `2-Invitation-to-Bid/${file.name}` });
+            hasFiles = true;
+          }
+        }
+      }
+
+      // 3. Bid Collection files (contractor submissions)
+      const bidCollections = await storage.getBidCollectionsByRfp(rfpId);
+      if (bidCollections && bidCollections.length > 0) {
+        for (const bid of bidCollections) {
+          if (bid.attachments && bid.attachments.length > 0) {
+            for (const file of bid.attachments) {
+              const filePath = path.join(uploadsDir, file.path || file.name);
+              if (fs.existsSync(filePath)) {
+                const contractorFolder = bid.contractorCompany.replace(/[^a-zA-Z0-9-]/g, '-');
+                archive.file(filePath, { name: `3-Bid-Collection/${contractorFolder}/${file.name}` });
+                hasFiles = true;
+              }
+            }
+          }
+        }
+      }
+
+      // 4. Evaluation Budget files
+      const evaluationAttachments = await storage.getEvaluationBudgetAttachments(rfpId);
+      if (evaluationAttachments && evaluationAttachments.length > 0) {
+        for (const file of evaluationAttachments) {
+          const filePath = path.join(uploadsDir, file.fileName);
+          if (fs.existsSync(filePath)) {
+            archive.file(filePath, { name: `4-Evaluation-Budget/${file.originalName}` });
+            hasFiles = true;
+          }
+        }
+      }
+
+      // If no files found, add a readme
+      if (!hasFiles) {
+        archive.append('No files have been uploaded for this RFP yet.', { name: 'README.txt' });
+      }
+
+      // Finalize the archive
+      await archive.finalize();
+
+    } catch (error) {
+      console.error("Download all files error:", error);
+      res.status(500).json({ message: "Failed to create zip file" });
     }
   });
 

@@ -84,6 +84,43 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
     }
   };
 
+  const handleDownloadAllFiles = async (rfpId: number, rfpNumber: string) => {
+    try {
+      const token = localStorage.getItem('auth-token');
+      const response = await fetch(`/api/rfp-requests/${rfpId}/download-all-files`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to download files');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `RFP-${rfpNumber}-All-Files.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast({
+        title: "Success",
+        description: "All files downloaded successfully",
+      });
+    } catch (error) {
+      console.error('Download all files error:', error);
+      toast({
+        title: "Download Failed",
+        description: "Could not download all files. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleStatusUpdate = () => {
     if (editStatus && editStatus !== rfp.status) {
       updateStatusMutation.mutate(editStatus);
@@ -204,9 +241,19 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
               
               {/* Files Section */}
               <div>
-                <h4 className="font-medium text-gray-900 mb-3">
-                  Attached Files ({rfp.files.length})
-                </h4>
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-medium text-gray-900">
+                    Attached Files ({rfp.files.length})
+                  </h4>
+                  <button
+                    onClick={() => handleDownloadAllFiles(rfp.id, rfp.rfpNumber)}
+                    className="px-3 py-1 text-xs font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 flex items-center gap-1"
+                    title="Download all files from all workflow steps"
+                  >
+                    <i className="fas fa-download"></i>
+                    Download All Files
+                  </button>
+                </div>
                 <div className="space-y-2">
                   {rfp.files.map((file) => (
                     <div key={file.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">

@@ -485,9 +485,22 @@ export class DatabaseStorage implements IStorage {
 
   // Workflow phase management
   async advanceWorkflowPhase(rfpId: number, newPhase: string): Promise<RfpRequest | undefined> {
+    // Determine the appropriate status based on the workflow phase
+    let newStatus = "in-progress"; // Default status for most phases
+    
+    if (newPhase === "rfp-entry") {
+      newStatus = "received";
+    } else if (newPhase === "publish") {
+      newStatus = "completed";
+    }
+    
     const [updated] = await db
       .update(rfpRequests)
-      .set({ workflowPhase: newPhase, updatedAt: new Date() })
+      .set({ 
+        workflowPhase: newPhase, 
+        status: newStatus,
+        updatedAt: new Date() 
+      })
       .where(eq(rfpRequests.id, rfpId))
       .returning();
     return updated || undefined;

@@ -1190,27 +1190,41 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
       const draggedItem = items.find(item => item.id === draggableId);
       if (!draggedItem) return prev;
 
+      // Debug logging to understand the data structure
+      console.log('Drag operation details:', {
+        draggableId,
+        draggedItemData: items.find(item => item.id === draggableId),
+        allItems: items.map(item => ({ id: item.id, description: item.description, assemblyId: item.assemblyId })),
+        customAssemblies: prev.customAssemblies
+      });
+
       // Check if this item has an assemblyId (it's a component) or if other items have this item's ID as assemblyId (it's a header)
       const draggedItemData = items.find(item => item.id === draggableId);
-      const isAssemblyComponent = draggedItemData?.assemblyId;
+      const isAssemblyComponent = !!draggedItemData?.assemblyId;
       const isAssemblyHeader = items.some(item => item.assemblyId === draggableId);
       
       if (isAssemblyComponent || isAssemblyHeader) {
+        console.log('Assembly drag detected:', { isAssemblyComponent, isAssemblyHeader });
+        
         // Determine the assembly header ID
         let assemblyHeaderId: string;
         
         if (isAssemblyComponent) {
           // If dragging a component, get its assembly header
-          assemblyHeaderId = draggedItemData.assemblyId;
+          assemblyHeaderId = draggedItemData.assemblyId!;
         } else {
           // If dragging the header itself
           assemblyHeaderId = draggableId;
         }
         
+        console.log('Assembly header ID:', assemblyHeaderId);
+        
         // Get all items belonging to this assembly (header + all components)
         const allAssemblyItems = items.filter(item => 
           item.id === assemblyHeaderId || item.assemblyId === assemblyHeaderId
         );
+        
+        console.log('All assembly items to move:', allAssemblyItems.map(item => ({ id: item.id, description: item.description })));
         
         // Get their current indices
         const assemblyIndices = allAssemblyItems

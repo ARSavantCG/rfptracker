@@ -30,7 +30,7 @@ export const rfpRequests = pgTable("rfp_requests", {
   
   // System fields
   status: text("status").notNull().default("received"), // received, in-progress, completed, on-hold
-  workflowPhase: text("workflow_phase").notNull().default("rfp-entry"), // rfp-entry, invitation-to-bid, bid-collection, evaluation, award, publish
+  workflowPhase: text("workflow_phase").notNull().default("rfp-entry"), // rfp-entry, rfp-validation, invitation-to-bid, bid-collection, evaluation, publish
   notes: text("notes"),
   files: json("files").$type<RfpFile[]>().notNull().default([]),
   selectedBayConfigurations: json("selected_bay_configurations").$type<BayConfiguration[]>().default([]),
@@ -88,7 +88,7 @@ export const insertRfpRequestSchema = createInsertSchema(rfpRequests).omit({
 
 export const updateRfpRequestSchema = insertRfpRequestSchema.partial().extend({
   id: z.number(),
-  workflowPhase: z.enum(["rfp-entry", "invitation-to-bid", "bid-collection", "evaluation", "award"]).optional(),
+  workflowPhase: z.enum(["rfp-entry", "rfp-validation", "invitation-to-bid", "bid-collection", "evaluation", "publish"]).optional(),
   status: z.enum(["received", "in-progress", "completed", "on-hold"]).optional(),
 });
 

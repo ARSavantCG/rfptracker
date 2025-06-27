@@ -26,6 +26,13 @@ const workflowPhases = [
     description: "Initial RFP data collection"
   },
   { 
+    key: "rfp-validation", 
+    label: "RFP Validation", 
+    icon: ClipboardCheck, 
+    color: "bg-green-100 text-green-700 border-green-300",
+    description: "Review and edit validation details"
+  },
+  { 
     key: "invitation-to-bid", 
     label: "Invitation to Bid", 
     icon: Users, 
@@ -126,6 +133,8 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValida
   const handlePhaseClick = (phase: any) => {
     if (phase.key === "rfp-entry" && onEditRfp) {
       onEditRfp(rfp);
+    } else if (phase.key === "rfp-validation" && onValidateRfp) {
+      onValidateRfp(rfp);
     } else if (phase.key === "invitation-to-bid" && onOpenInvitationModal) {
       onOpenInvitationModal(rfp);
     } else if (phase.key === "bid-collection" && onOpenBidCollection) {
@@ -163,7 +172,7 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValida
           const isCompleted = index < currentPhaseIndex;
           const isNext = index === currentPhaseIndex + 1;
 
-          const isClickable = (isActive || isCompleted) && (phase.key === "rfp-entry" || phase.key === "invitation-to-bid" || phase.key === "bid-collection" || phase.key === "evaluation");
+          const isClickable = (isActive || isCompleted) && (phase.key === "rfp-entry" || phase.key === "rfp-validation" || phase.key === "invitation-to-bid" || phase.key === "bid-collection" || phase.key === "evaluation");
           
           return (
             <div
@@ -203,15 +212,25 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValida
       <div className="mt-4 pt-4 border-t border-gray-200 space-y-2">
         {actualWorkflowPhase === "rfp-entry" && (
           <Button
-            onClick={() => onValidateRfp?.(rfp)}
-            variant="outline"
+            onClick={handleAdvancePhase}
+            disabled={advancePhaseMutation.isPending}
             className="w-auto px-3 py-1 text-sm"
-            disabled={!!rfp.isValidated && rfp.status === "in-progress"}
           >
-            <ClipboardCheck className="h-4 w-4 mr-2" />
-            {!!rfp.isValidated && rfp.status === "in-progress" 
-              ? "RFP Validated ✓" 
-              : "Validate RFP & Generate Documents"}
+            {advancePhaseMutation.isPending
+              ? "Advancing..."
+              : "Advance to RFP Validation"}
+          </Button>
+        )}
+        
+        {actualWorkflowPhase === "rfp-validation" && (
+          <Button
+            onClick={handleAdvancePhase}
+            disabled={advancePhaseMutation.isPending}
+            className="w-auto px-3 py-1 text-sm"
+          >
+            {advancePhaseMutation.isPending
+              ? "Advancing..."
+              : "Advance to Invitation to Bid"}
           </Button>
         )}
         

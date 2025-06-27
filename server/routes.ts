@@ -349,28 +349,25 @@ function generateAllBidCollectionsHtml(rfp: any, allBidsData: any[]) {
               <thead>
                 <tr>
                   <th style="width: 40%;">Description</th>
-                  <th style="width: 12%;">Quantity</th>
+                  <th style="width: 15%;">Quantity</th>
                   <th style="width: 10%;">Unit</th>
                   <th style="width: 15%;">Unit Price</th>
-                  <th style="width: 15%;">Total Price</th>
-                  <th style="width: 8%;">Notes</th>
+                  <th style="width: 20%;">Total Price</th>
                 </tr>
               </thead>
               <tbody>
-                ${lineItems.map(item => `
+                ${lineItems.map((item: any) => `
                   <tr>
                     <td>${item.description || ''}</td>
                     <td class="currency">${item.quantity ? parseFloat(item.quantity).toLocaleString('en-US') : ''}</td>
                     <td>${item.unit || ''}</td>
                     <td class="currency">${item.unitPrice ? '$' + parseFloat(item.unitPrice).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''}</td>
                     <td class="currency">${item.totalPrice ? '$' + parseFloat(item.totalPrice).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''}</td>
-                    <td>${item.notes || ''}</td>
                   </tr>
                 `).join('')}
                 <tr class="total-row">
                   <td colspan="4" style="text-align: right;"><strong>Bid Total:</strong></td>
                   <td class="currency"><strong>$${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></td>
-                  <td></td>
                 </tr>
               </tbody>
             </table>

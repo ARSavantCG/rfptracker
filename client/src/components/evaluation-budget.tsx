@@ -1304,15 +1304,15 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
               <Table className="min-w-full">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-8 text-center">Order</TableHead>
-                  <TableHead className="w-8 text-center">Assembly</TableHead>
-                  <TableHead className="w-32">Assembly Group</TableHead>
-                  <TableHead className="w-12 text-center">Rollup</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead className="w-32">Quantity (Unit)</TableHead>
-                  <TableHead className="w-24">Unit Price</TableHead>
-                  {!newItemCategory && <TableHead className="w-24">Total</TableHead>}
-                  <TableHead className="w-24">Actions</TableHead>
+                  <TableHead className="w-12 text-center">Order</TableHead>
+                  <TableHead className="w-12 text-center">Assembly</TableHead>
+                  <TableHead className="w-36">Assembly Group</TableHead>
+                  <TableHead className="w-16 text-center">Rollup</TableHead>
+                  <TableHead className="min-w-48">Description</TableHead>
+                  <TableHead className="w-36">Quantity (Unit)</TableHead>
+                  <TableHead className="w-32">Unit Price</TableHead>
+                  {!newItemCategory && <TableHead className="w-32">Total</TableHead>}
+                  <TableHead className="w-32">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <Droppable droppableId={`${category}-droppable`}>
@@ -1607,7 +1607,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
   }
 
   return (
-    <div className="space-y-6 max-w-none">
+    <div className="space-y-6 w-full max-w-none">
       <Card>
         <CardHeader>
           <CardTitle>Budget Evaluation - {rfp?.projectName || 'Project'}</CardTitle>

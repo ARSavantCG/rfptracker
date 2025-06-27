@@ -9,6 +9,7 @@ import { PropertyManagementModal } from "@/components/property-management-modal"
 import { WorkflowStatus } from "@/components/workflow-status";
 import { InvitationToBidModal } from "@/components/invitation-to-bid-modal";
 import { RfpValidationModal } from "@/components/rfp-validation-modal";
+import { RfpDetailModal } from "@/components/rfp-detail-modal";
 import { BidCollectionTable } from "@/components/bid-collection-table";
 import { EvaluationBudget } from "@/components/evaluation-budget";
 import { FinancialSummary } from "@/components/financial-summary";
@@ -38,11 +39,13 @@ export default function Dashboard() {
   const [isPropertyModalOpen, setIsPropertyModalOpen] = useState(false);
   const [isInvitationModalOpen, setIsInvitationModalOpen] = useState(false);
   const [isValidationModalOpen, setIsValidationModalOpen] = useState(false);
+  const [isRfpDetailModalOpen, setIsRfpDetailModalOpen] = useState(false);
   const [showBidCollection, setShowBidCollection] = useState(false);
   const [showEvaluation, setShowEvaluation] = useState(false);
   const [selectedRfp, setSelectedRfp] = useState<RfpRequest | null>(null);
   const [workflowRfp, setWorkflowRfp] = useState<RfpRequest | null>(null);
   const [validationRfp, setValidationRfp] = useState<RfpRequest | null>(null);
+  const [detailRfp, setDetailRfp] = useState<RfpRequest | null>(null);
 
   // Fetch all RFPs to keep selected RFP data fresh
   const { data: allRfps = [] } = useQuery<RfpRequest[]>({
@@ -123,6 +126,11 @@ export default function Dashboard() {
   const handleOpenEvaluation = (rfp: RfpRequest) => {
     setShowBidCollection(false);
     setShowEvaluation(true);
+  };
+
+  const handleViewDetails = (rfp: RfpRequest) => {
+    setDetailRfp(rfp);
+    setIsRfpDetailModalOpen(true);
   };
 
   const clearFilters = () => {
@@ -316,6 +324,7 @@ export default function Dashboard() {
                   onOpenInvitationModal={handleOpenInvitationModal}
                   onOpenBidCollection={handleOpenBidCollection}
                   onOpenEvaluation={handleOpenEvaluation}
+                  onViewDetails={handleViewDetails}
                 />
               </div>
             </div>
@@ -364,6 +373,15 @@ export default function Dashboard() {
           }
           setValidationRfp(null);
         }}
+      />
+
+      <RfpDetailModal
+        isOpen={isRfpDetailModalOpen}
+        onClose={() => {
+          setIsRfpDetailModalOpen(false);
+          setDetailRfp(null);
+        }}
+        rfp={detailRfp}
       />
 
       {/* Bid Collection View */}

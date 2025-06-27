@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
@@ -21,6 +22,8 @@ const invitationFormSchema = z.object({
   generateContractorRfp: z.boolean().default(false),
   generateBrokerArchitectRfp: z.boolean().default(false),
   generateBrokerContractorRfp: z.boolean().default(false),
+  selectedContractor: z.string().optional(),
+  selectedArchitect: z.string().optional(),
   projectScope: z.string().min(1, "Project scope is required"),
   projectLocation: z.string().min(1, "Project location is required"),
   contractorDueDate: z.string().min(1, "Contractor due date is required"),
@@ -270,6 +273,8 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
         generateContractorRfp: false,
         generateBrokerArchitectRfp: false,
         generateBrokerContractorRfp: false,
+        selectedContractor: rfp.generalContractor || "",
+        selectedArchitect: rfp.architect || "",
         projectScope: cleanProjectName(rfp.projectName),
         projectLocation: getPropertyAddress(rfp.property) || "",
         contractorDueDate: rfp.contractorDueDate ? new Date(rfp.contractorDueDate).toISOString().split('T')[0] : "",
@@ -690,6 +695,68 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                       <FormControl>
                         <Input type="date" {...field} />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+
+            {/* Contractor and Architect Selection */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium">Contractor and Architect Selection</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="selectedContractor"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>General Contractor</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select contractor" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="">No contractor selected</SelectItem>
+                          {contacts
+                            .filter(contact => contact.type === 'contractor')
+                            .map(contact => (
+                              <SelectItem key={contact.id} value={contact.name}>
+                                {contact.name} {contact.company && `(${contact.company})`}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="selectedArchitect"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Architect</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select architect" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="">No architect selected</SelectItem>
+                          {contacts
+                            .filter(contact => contact.type === 'architect')
+                            .map(contact => (
+                              <SelectItem key={contact.id} value={contact.name}>
+                                {contact.name} {contact.company && `(${contact.company})`}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}

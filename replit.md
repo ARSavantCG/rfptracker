@@ -158,6 +158,7 @@ This is a full-stack web application for tracking and managing Request for Propo
 - June 27, 2025. Fixed RFP validation error caused by double JSON parsing in frontend mutation - validation now processes successfully and advances workflow phases correctly
 - June 27, 2025. Resolved authentication token persistence regression by implementing database-backed token storage - tokens now survive server restarts, eliminating constant re-authentication issues
 - June 27, 2025. Fixed invitation-to-bid save error "response.json is not a function" by removing duplicate JSON parsing in frontend API calls
+- June 27, 2025. Removed "Facility Details" section from both Architect and Contractor RFP PDF generation per user request - documents now cleaner without bay configuration tables
 
 ## User Preferences
 

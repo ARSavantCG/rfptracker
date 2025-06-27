@@ -8,9 +8,21 @@ export function cn(...inputs: ClassValue[]) {
 export function formatDate(date: string | Date): string {
   if (!date) return 'N/A';
   
-  const dateObj = new Date(date);
+  // Parse the date string directly to avoid timezone conversion issues
+  const dateStr = date.toString();
+  if (dateStr.includes('T')) {
+    const datePart = dateStr.split('T')[0];
+    const [year, month, day] = datePart.split('-');
+    const localDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    return localDate.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  }
   
-  // Check if the date is valid
+  // Fallback for other date formats
+  const dateObj = new Date(date);
   if (isNaN(dateObj.getTime())) {
     console.warn('Invalid date passed to formatDate:', date);
     return 'Invalid Date';

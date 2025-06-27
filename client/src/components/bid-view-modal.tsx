@@ -19,11 +19,23 @@ export function BidViewModal({ isOpen, onClose, bid }: BidViewModalProps) {
   });
 
   const formatDate = (date: Date | string) => {
+    // Parse the date string directly to avoid timezone conversion issues
+    const dateStr = date.toString();
+    if (dateStr.includes('T')) {
+      const datePart = dateStr.split('T')[0];
+      const [year, month, day] = datePart.split('-');
+      const localDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      return localDate.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
+    }
+    // Fallback for other date formats
     return new Date(date).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
-      timeZone: 'America/New_York', // Use Eastern Time to match PDF generation
     });
   };
 

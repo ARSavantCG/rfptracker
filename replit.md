@@ -190,6 +190,7 @@ This is a full-stack web application for tracking and managing Request for Propo
 - June 27, 2025. Implemented visual distinction between cost grouping types - assembled items display with strikethrough only, while rolled-up items show strikethrough + italics, providing clear differentiation between assembly redistributed costs and rollup consolidated costs
 - June 27, 2025. Fixed unit price calculation display in evaluation budget - unit prices now show distributed amounts that reflect actual cost per unit after rollups and assemblies, replacing static original unit prices with dynamically calculated values using calculateDistributedUnitPrice function
 - June 27, 2025. Completed comprehensive evaluation budget report fixes - resolved invalid date generation by implementing Eastern Time formatting without UTC conversion, added comma formatting to quantity displays for improved readability, corrected rentable area calculation to properly subtract office areas from total project area, and enhanced grand total styling to include per-square-foot cost in parentheses for professional financial presentation
+- June 27, 2025. Fixed critical rentable area calculation error in evaluation budget reports - corrected improper use of projectArea field (causing 200,000+ sf discrepancy) by replacing with warehouseArea field throughout PDF generation and per-square-foot calculations to display accurate rentable area values
 
 ## User Preferences
 

@@ -648,8 +648,8 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
       
       // Calculate total with rollups
       const total = calculateCategoryTotalWithRollups(categoryType as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements');
-      // Use project area as rentable area
-      const totalArea = rfp?.projectArea ? parseInt(rfp.projectArea) : 0;
+      // Use warehouse area as rentable area
+      const totalArea = rfp?.warehouseArea ? parseInt(rfp.warehouseArea) : 0;
       const rentableArea = totalArea;
       const isTenantImprovements = categoryType === 'tenantImprovements';
       
@@ -945,7 +945,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     
     <div style="text-align: right; margin-bottom: 20px; padding-right: 20px;">
         <p style="margin: 0; font-size: 14px; color: #666;"><strong>Rentable Area:</strong> ${(() => {
-          const totalArea = rfp?.projectArea ? parseInt(rfp.projectArea) : 0;
+          const totalArea = rfp?.warehouseArea ? parseInt(rfp.warehouseArea) : 0;
           return totalArea > 0 ? new Intl.NumberFormat('en-US').format(totalArea) + ' sf' : 'N/A';
         })()}</p>
     </div>

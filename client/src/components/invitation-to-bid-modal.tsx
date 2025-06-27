@@ -149,6 +149,8 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
       scopeOfWork: [],
       architectMilestones: [],
       contractorMilestones: [],
+      selectedContractor: "none",
+      selectedArchitect: "none",
     },
   });
 
@@ -298,6 +300,8 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
       // Merge with existing invitation data if available
       const formValues = existingInvitation ? {
         ...defaultValues,
+        selectedContractor: existingInvitation.selectedContractor || defaultValues.selectedContractor,
+        selectedArchitect: existingInvitation.selectedArchitect || defaultValues.selectedArchitect,
         contractorDueDate: existingInvitation.contractorDueDate ? 
           new Date(existingInvitation.contractorDueDate).toISOString().split('T')[0] : defaultValues.contractorDueDate,
         architectDueDate: existingInvitation.architectDueDate ? 

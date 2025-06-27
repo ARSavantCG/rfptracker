@@ -117,18 +117,51 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
   const createAssembly = () => {
     if (!newAssemblyName.trim() || selectedItems.size === 0 || !newAssemblyCategory) return;
 
-    const assemblyId = `assembly_${Date.now()}`;
-    const newAssembly: CustomAssembly = {
-      id: assemblyId,
-      name: newAssemblyName.trim(),
-      category: newAssemblyCategory,
-      items: Array.from(selectedItems)
+    const selectedItemsArray = Array.from(selectedItems);
+    const categoryItems = budgetData[newAssemblyCategory];
+    const itemsToAssemble = categoryItems.filter(item => selectedItemsArray.includes(item.id));
+    
+    if (itemsToAssemble.length === 0) return;
+
+    // Calculate totals from selected items
+    const totalPrice = itemsToAssemble.reduce((sum, item) => sum + (parseFloat(item.totalPrice) || 0), 0);
+    const firstItem = itemsToAssemble[0];
+    const quantity = firstItem.quantity;
+    const unitPrice = quantity > 0 ? (totalPrice / quantity) : totalPrice;
+
+    // Create the assembly line item
+    const assemblyLineItem: EvaluationLineItem = {
+      id: `assembly_${Date.now()}`,
+      description: newAssemblyName.trim(),
+      quantity: quantity,
+      unit: firstItem.unit,
+      unitPrice: unitPrice.toFixed(2),
+      totalPrice: totalPrice.toFixed(2),
+      bidCollectionId: firstItem.bidCollectionId,
+      bidLineItemId: firstItem.bidLineItemId,
+      isRolledUp: false,
+      assemblyId: undefined
     };
 
-    setBudgetData(prev => ({
-      ...prev,
-      customAssemblies: [...prev.customAssemblies, newAssembly]
-    }));
+    // Mark selected items as part of this assembly (for visual strikethrough)
+    const assemblyId = assemblyLineItem.id;
+
+    setBudgetData(prev => {
+      const updatedCategory = prev[newAssemblyCategory].map(item => {
+        if (selectedItemsArray.includes(item.id)) {
+          return { ...item, assemblyId: assemblyId };
+        }
+        return item;
+      });
+
+      // Add the assembly line item to the category
+      updatedCategory.push(assemblyLineItem);
+
+      return {
+        ...prev,
+        [newAssemblyCategory]: updatedCategory
+      };
+    });
 
     // Clear assembly creation state
     setSelectedItems(new Set());
@@ -1264,7 +1297,9 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                         </div>
                       </TableCell>
                       <TableCell className={budgetData.lineItemRollups[item.id] ? "text-gray-500 italic" : ""}>
-                        {item.description}
+                        <span className={item.assemblyId ? "line-through text-gray-500" : ""}>
+                          {item.description}
+                        </span>
                         {budgetData.lineItemRollups[item.id] && (
                           <span className="text-xs text-blue-600 ml-2">
                             → Rolling to {budgetData.lineItemRollups[item.id] === 'tenantImprovements' ? 'Tenant Improvements' : 
@@ -1283,13 +1318,13 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                           </span>
                         )}
                       </TableCell>
-                      <TableCell className={budgetData.lineItemRollups[item.id] ? "text-gray-500 italic line-through" : ""}>
+                      <TableCell className={budgetData.lineItemRollups[item.id] || item.assemblyId ? "text-gray-500 italic line-through" : ""}>
                         {item.quantity ? parseFloat(item.quantity).toLocaleString('en-US') : ''} {item.unit}
                       </TableCell>
-                      <TableCell className={budgetData.lineItemRollups[item.id] ? "text-gray-500 italic line-through" : ""}>
+                      <TableCell className={budgetData.lineItemRollups[item.id] || item.assemblyId ? "text-gray-500 italic line-through" : ""}>
                         {formatCurrency(calculateDistributedUnitPrice(item))}
                       </TableCell>
-                      {!newItemCategory && <TableCell className={`font-medium ${budgetData.lineItemRollups[item.id] ? "text-gray-500 italic line-through" : ""}`}>
+                      {!newItemCategory && <TableCell className={`font-medium ${budgetData.lineItemRollups[item.id] || item.assemblyId ? "text-gray-500 italic line-through" : ""}`}>
                         {formatCurrency(calculateDistributedCosts(item))}
                       </TableCell>}
                       <TableCell>

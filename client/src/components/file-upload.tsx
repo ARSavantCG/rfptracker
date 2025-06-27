@@ -19,13 +19,15 @@ export function FileUpload({
   initialFiles = [],
 }: FileUploadProps) {
   const [isDragOver, setIsDragOver] = useState(false);
-  const [selectedFiles, setSelectedFiles] = useState<File[]>(initialFiles);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Sync internal state with external prop
+  // Initialize files only once on mount
   useEffect(() => {
-    setSelectedFiles(initialFiles);
-  }, [initialFiles]);
+    if (initialFiles.length > 0 && selectedFiles.length === 0) {
+      setSelectedFiles(initialFiles);
+    }
+  }, []);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -48,6 +50,8 @@ export function FileUpload({
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     handleFiles(files);
+    // Clear the input value to allow selecting the same files again
+    e.target.value = '';
   };
 
   const handleFiles = (files: File[]) => {

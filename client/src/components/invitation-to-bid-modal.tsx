@@ -78,7 +78,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
 
   // Fetch RFP generation history
   const { data: generationHistory = [], refetch: refetchHistory } = useQuery({
-    queryKey: ["/api/rfp-requests", rfp?.id, "generation-history"],
+    queryKey: [`/api/rfp-requests/${rfp?.id}/generation-history`],
     enabled: !!rfp?.id,
   });
 

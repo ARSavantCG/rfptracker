@@ -1286,7 +1286,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Handle file attachments - filter for attachment fields only
       const fileArray = req.files as Express.Multer.File[] || [];
-      const attachments = fileArray
+      const newAttachments = fileArray
         .filter(file => file.fieldname.startsWith('attachment_'))
         .map(file => ({
           id: nanoid(),
@@ -1297,9 +1297,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           path: file.filename,
         }));
 
+      // Get existing bid collection to preserve existing attachments
+      const existingBid = await storage.getBidCollection(id);
+      const existingAttachments = existingBid?.attachments || [];
+      
+      // Combine existing and new attachments
+      const allAttachments = [...existingAttachments, ...newAttachments];
+
       const bidCollection = await storage.updateBidCollection(id, {
         ...bidData,
-        attachments
+        attachments: allAttachments
       });
 
       if (!bidCollection) {

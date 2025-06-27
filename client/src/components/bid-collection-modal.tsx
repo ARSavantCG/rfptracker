@@ -10,7 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Trash2, Upload, FileText, Save, X, Download, ChevronUp, ChevronDown } from "lucide-react";
+import { Plus, Trash2, Upload, FileText, Save, X, Download, ChevronUp, ChevronDown, GripVertical } from "lucide-react";
+import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import { FileUpload } from "./file-upload";
 import { useToast } from "@/hooks/use-toast";
 import { formatDate } from "@/lib/utils";
@@ -292,6 +293,16 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
     setLineItems(updated);
   };
 
+  const handleDragEnd = (result: any) => {
+    if (!result.destination) return;
+
+    const items = Array.from(lineItems);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+
+    setLineItems(items);
+  };
+
   const updateLineItem = (index: number, field: keyof LineItemFormData, value: string) => {
     const updated = [...lineItems];
     updated[index] = { ...updated[index], [field]: value };
@@ -536,46 +547,62 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
               </div>
 
               <div className="border rounded-lg overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[70px]">Order</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Qty</TableHead>
-                      <TableHead>Unit</TableHead>
-                      <TableHead>Unit Price</TableHead>
-                      <TableHead>Total Price</TableHead>
-                      <TableHead>Notes</TableHead>
-                      <TableHead className="w-[50px]"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {lineItems.map((item, index) => (
-                      <TableRow key={index}>
-                        <TableCell>
-                          <div className="flex flex-col gap-1">
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => moveLineItemUp(index)}
-                              disabled={index === 0}
-                              className="h-6 w-6 p-0"
-                            >
-                              <ChevronUp className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => moveLineItemDown(index)}
-                              disabled={index === lineItems.length - 1}
-                              className="h-6 w-6 p-0"
-                            >
-                              <ChevronDown className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        </TableCell>
+                <DragDropContext onDragEnd={handleDragEnd}>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[70px]">Order</TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead>Qty</TableHead>
+                        <TableHead>Unit</TableHead>
+                        <TableHead>Unit Price</TableHead>
+                        <TableHead>Total Price</TableHead>
+                        <TableHead>Notes</TableHead>
+                        <TableHead className="w-[50px]"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <Droppable droppableId="lineItems">
+                      {(provided) => (
+                        <TableBody {...provided.droppableProps} ref={provided.innerRef}>
+                          {lineItems.map((item, index) => (
+                            <Draggable key={`item-${index}`} draggableId={`item-${index}`} index={index}>
+                              {(provided) => (
+                                <TableRow 
+                                  ref={provided.innerRef}
+                                  {...provided.draggableProps}
+                                >
+                                  <TableCell>
+                                    <div className="flex items-center gap-1">
+                                      <div className="flex flex-col gap-1">
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => moveLineItemUp(index)}
+                                          disabled={index === 0}
+                                          className="h-6 w-6 p-0"
+                                        >
+                                          <ChevronUp className="h-3 w-3" />
+                                        </Button>
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => moveLineItemDown(index)}
+                                          disabled={index === lineItems.length - 1}
+                                          className="h-6 w-6 p-0"
+                                        >
+                                          <ChevronDown className="h-3 w-3" />
+                                        </Button>
+                                      </div>
+                                      <div 
+                                        {...provided.dragHandleProps}
+                                        className="cursor-grab active:cursor-grabbing p-1 hover:bg-gray-100 rounded"
+                                      >
+                                        <GripVertical className="h-4 w-4 text-gray-400" />
+                                      </div>
+                                    </div>
+                                  </TableCell>
                         <TableCell>
                           <Input
                             value={item.description}
@@ -637,20 +664,26 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                             className="min-w-[150px]"
                           />
                         </TableCell>
-                        <TableCell>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeLineItem(index)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                                  <TableCell>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => removeLineItem(index)}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </TableCell>
+                                </TableRow>
+                              )}
+                            </Draggable>
+                          ))}
+                          {provided.placeholder}
+                        </TableBody>
+                      )}
+                    </Droppable>
+                  </Table>
+                </DragDropContext>
               </div>
 
               <div className="flex justify-end">

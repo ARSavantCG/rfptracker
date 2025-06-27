@@ -126,6 +126,12 @@ export interface IStorage {
   getEvaluationBudget(rfpId: number): Promise<EvaluationBudget | undefined>;
   createEvaluationBudget(budget: InsertEvaluationBudget): Promise<EvaluationBudget>;
   updateEvaluationBudget(rfpId: number, updates: Partial<UpdateEvaluationBudget>): Promise<EvaluationBudget | undefined>;
+  
+  // Evaluation Budget Attachment management
+  getEvaluationBudgetAttachments(rfpId: number): Promise<EvaluationBudgetAttachment[]>;
+  getEvaluationBudgetAttachment(attachmentId: number): Promise<EvaluationBudgetAttachment | undefined>;
+  createEvaluationBudgetAttachment(attachment: InsertEvaluationBudgetAttachment): Promise<EvaluationBudgetAttachment>;
+  deleteEvaluationBudgetAttachment(attachmentId: number): Promise<boolean>;
 
   // ROM Pilot management
   getAllRomPilots(): Promise<RomPilot[]>;

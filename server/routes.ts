@@ -1977,6 +1977,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get evaluation budget attachments (alternative route)
+  app.get("/api/evaluation-budget-attachments/:rfpId", requireAuth, async (req, res) => {
+    try {
+      const rfpId = parseInt(req.params.rfpId);
+      if (isNaN(rfpId)) {
+        return res.status(400).json({ message: "Invalid RFP ID" });
+      }
+
+      const attachments = await storage.getEvaluationBudgetAttachments(rfpId);
+      res.json(attachments);
+    } catch (error) {
+      console.error('Evaluation budget attachments fetch error:', error);
+      res.status(500).json({ message: "Failed to fetch attachments" });
+    }
+  });
+
+  // Upload evaluation budget attachments (alternative route)
+  app.post("/api/evaluation-budget-attachments", requireAuth, upload.any(), async (req, res) => {
+    try {
+      const rfpId = parseInt(req.body.rfpId);
+      if (isNaN(rfpId)) {
+        return res.status(400).json({ message: "Invalid RFP ID" });
+      }
+
+      const files = req.files as Express.Multer.File[];
+      if (!files || files.length === 0) {
+        return res.status(400).json({ message: "No files uploaded" });
+      }
+
+      const savedAttachments = [];
+      for (const file of files) {
+        const attachment = await storage.createEvaluationBudgetAttachment({
+          rfpId,
+          filename: file.filename,
+          originalName: file.originalname,
+          fileSize: file.size,
+          mimeType: file.mimetype,
+        });
+        savedAttachments.push(attachment);
+      }
+
+      res.status(201).json({ 
+        message: "Files uploaded successfully",
+        attachments: savedAttachments
+      });
+    } catch (error) {
+      console.error('Evaluation budget attachment upload error:', error);
+      res.status(500).json({ message: "Failed to upload files" });
+    }
+  });
+
+  // Download evaluation budget attachment
+  app.get("/api/evaluation-budget-attachments/:attachmentId/download", requireAuth, async (req, res) => {
+    try {
+      const attachmentId = parseInt(req.params.attachmentId);
+      if (isNaN(attachmentId)) {
+        return res.status(400).json({ message: "Invalid attachment ID" });
+      }
+
+      const attachment = await storage.getEvaluationBudgetAttachment(attachmentId);
+      if (!attachment) {
+        return res.status(404).json({ message: "Attachment not found" });
+      }
+
+      const filePath = path.join(uploadsDir, attachment.filename);
+      if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ message: "File not found on disk" });
+      }
+
+      res.download(filePath, attachment.originalName);
+    } catch (error) {
+      console.error('Evaluation budget attachment download error:', error);
+      res.status(500).json({ message: "Failed to download attachment" });
+    }
+  });
+
   // Delete evaluation budget attachment
   app.delete("/api/evaluation-budget-attachments/:attachmentId", requireAuth, async (req, res) => {
     try {

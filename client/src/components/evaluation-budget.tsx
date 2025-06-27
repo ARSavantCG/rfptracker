@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Edit, Trash2, Save, X, ArrowRight, Copy, FileDown, Upload, Package, Users, ChevronUp, ChevronDown, GripVertical } from "lucide-react";
+import { EvaluationAttachments } from "./evaluation-attachments";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import { useToast } from "@/hooks/use-toast";
 import { formatDate } from "@/lib/utils";
@@ -2200,7 +2201,9 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         </CardContent>
       </Card>
 
-    </div>
+      {/* File Attachments */}
+      <EvaluationAttachments rfpId={rfp?.id} />
+
       {/* Assembly Creation Dialog */}
       <Dialog open={showAssemblyCreator} onOpenChange={setShowAssemblyCreator}>
         <DialogContent className="max-w-md">

@@ -52,6 +52,7 @@ interface EvaluationBudgetData {
   notes: string;
   lineItemRollups: Record<string, 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements' | 'tiAndDesign'>;
   customAssemblies: CustomAssembly[];
+  assemblies: Record<string, { total: number; components: string[] }>;
 }
 
 interface EvaluationBudgetProps {
@@ -222,6 +223,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     notes: "",
     lineItemRollups: {},
     customAssemblies: [],
+    assemblies: {},
   });
 
   // Initialize budget with saved data or bid line items data
@@ -656,7 +658,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                       </tr>
                   </thead>
                   <tbody>
-                      ${allItemsForCategory.map(item => {
+                      ${allItemsForCategory.filter(item => !item.assemblyId).map(item => {
                         // Use distributed costs that include rollups for all items
                         const totalPrice = calculateDistributedCosts(item);
                         // Use distributed unit price that includes rollups
@@ -669,6 +671,27 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                             <td>${item.unit}</td>
                             <td class="currency">${formatCurrency(unitPrice)}</td>
                             <td class="currency">${formatCurrency(totalPrice)}</td>
+                            <td class="currency">${pricePerSf > 0 ? '$' + new Intl.NumberFormat('en-US').format(parseFloat(pricePerSf.toFixed(2))) : 'N/A'}</td>
+                        </tr>
+                        `;
+                      }).join('')}
+                      
+                      ${Object.entries(budgetData.assemblies || {}).filter(([name, data]) => {
+                        // Show assemblies that belong to this category
+                        const assemblyItems = data.components.map(id => {
+                          const allItems = [...budgetData.tenantImprovements, ...budgetData.designSoftCosts, ...budgetData.existingImprovements];
+                          return allItems.find(item => item.id === id);
+                        }).filter(Boolean);
+                        return assemblyItems.some(item => allItemsForCategory.includes(item));
+                      }).map(([assemblyName, assemblyData]) => {
+                        const pricePerSf = rentableArea > 0 ? assemblyData.total / rentableArea : 0;
+                        return `
+                        <tr>
+                            <td><strong>${assemblyName}</strong></td>
+                            <td>1</td>
+                            <td>assembly</td>
+                            <td class="currency">${formatCurrency(assemblyData.total)}</td>
+                            <td class="currency">${formatCurrency(assemblyData.total)}</td>
                             <td class="currency">${pricePerSf > 0 ? '$' + new Intl.NumberFormat('en-US').format(parseFloat(pricePerSf.toFixed(2))) : 'N/A'}</td>
                         </tr>
                         `;
@@ -715,7 +738,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                             <td>${item.unit}</td>
                             <td class="currency">${formatCurrency(parseFloat(item.unitPrice) || 0)}</td>
                             <td class="currency">${formatCurrency(totalPrice)}</td>
-                            <td class="currency">${pricePerSf > 0 ? '$' + pricePerSf.toFixed(2) : 'N/A'}</td>
+                            <td class="currency">${pricePerSf > 0 ? '$' + new Intl.NumberFormat('en-US').format(parseFloat(pricePerSf.toFixed(2))) : 'N/A'}</td>
                         </tr>
                         `;
                       }).join('')}
@@ -896,14 +919,11 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     ${!hideDesignCosts ? renderCategorySection("Design / Soft Costs / Other Fees", budgetData.designSoftCosts, "designSoftCosts") : ''}
 
     <div class="grand-total">
-        <h2>Grand Total: ${formatCurrency(grandTotal)} ${(() => {
+        <h2>Grand Total: ${formatCurrency(grandTotal)} <span style="font-size: 50%; font-weight: normal;">${(() => {
           const totalArea = rfp?.projectArea ? parseInt(rfp.projectArea) : 0;
-          const existingOfficeArea = rfp?.officeAreaExisting ? parseInt(rfp.officeAreaExisting) : 0;
-          const newOfficeArea = rfp?.officeAreaNew ? parseInt(rfp.officeAreaNew) : 0;
-          const remainingArea = totalArea - existingOfficeArea - newOfficeArea;
-          const pricePerSf = remainingArea > 0 ? grandTotal / remainingArea : 0;
-          return pricePerSf > 0 ? '($' + pricePerSf.toFixed(2) + '/sf)' : '';
-        })()}</h2>
+          const pricePerSf = totalArea > 0 ? grandTotal / totalArea : 0;
+          return pricePerSf > 0 ? '($' + new Intl.NumberFormat('en-US').format(parseFloat(pricePerSf.toFixed(2))) + '/sf)' : '';
+        })()}</span></h2>
         ${budgetData.hasExistingImprovements && !budgetData.includeExistingInTotal ? 
           '<p style="margin: 10px 0 0 0; font-size: 14px; opacity: 0.9;">* Existing improvements tracked separately for financial modeling</p>' : ''
         }
@@ -947,6 +967,31 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
               return `<div class="rollup-summary-item">
                 <span class="rollup-item-name"><strong>${item.description}</strong> (${formatCurrency(item.totalPrice)})</span>
                 <span class="rollup-item-target">→ Rolling to ${targetName}</span>
+              </div>`;
+            }).join('')}
+        </div>
+    </div>
+    ` : ''}
+
+    ${Object.keys(budgetData.assemblies || {}).length > 0 ? `
+    <div class="assembly-summary-section">
+        <h3 class="assembly-summary-title">Assembly Summary</h3>
+        <p class="assembly-summary-description">The following line items are grouped into assemblies:</p>
+        <div class="assembly-summary-content">
+            ${Object.entries(budgetData.assemblies || {}).map(([assemblyName, assemblyData]) => {
+              return `<div class="assembly-summary-item">
+                <div class="assembly-name"><strong>${assemblyName}</strong> (${formatCurrency(assemblyData.total)})</div>
+                <div class="assembly-components">
+                  ${assemblyData.components.map(componentId => {
+                    const allItems = [
+                      ...budgetData.tenantImprovements,
+                      ...budgetData.designSoftCosts,
+                      ...budgetData.existingImprovements
+                    ];
+                    const item = allItems.find(i => i.id === componentId);
+                    return item ? `<div class="assembly-component">• ${item.description} (${formatCurrency(item.totalPrice)})</div>` : '';
+                  }).join('')}
+                </div>
               </div>`;
             }).join('')}
         </div>

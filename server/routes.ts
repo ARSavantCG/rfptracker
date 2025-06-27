@@ -3031,7 +3031,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "RFP not found" });
       }
 
-      const bidCollections = await storage.getBidCollectionsByRfpId(rfpId);
+      const bidCollections = await storage.getBidCollectionsByRfp(rfpId);
       if (!bidCollections || bidCollections.length === 0) {
         return res.status(404).json({ message: "No bid collections found" });
       }

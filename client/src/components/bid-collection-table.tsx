@@ -126,6 +126,19 @@ export function BidCollectionTable({ rfp }: BidCollectionTableProps) {
               <Plus className="h-4 w-4 mr-2" />
               Add New Bid
             </Button>
+            {bidCollections && (bidCollections as BidCollection[]).length > 0 && (
+              <Button 
+                variant="outline"
+                onClick={() => {
+                  const printUrl = `/api/rfp-requests/${rfp.id}/bid-collections/pdf`;
+                  window.open(printUrl, '_blank');
+                }}
+                className="flex items-center gap-2"
+              >
+                <Printer className="h-4 w-4" />
+                Print All Bids
+              </Button>
+            )}
             {rfp.workflowPhase === 'bid-collection' && bidCollections && (bidCollections as BidCollection[]).length > 0 && (
               <Button 
                 onClick={handleAdvanceToEvaluation}

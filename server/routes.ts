@@ -1554,7 +1554,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           rfpId: id,
           generationType: recipientType === "architect" || recipientType === "broker-architect" ? "architect" : "contractor",
           generatedBy,
-          invitationData: invitationToBid,
+          invitationData: invitationToBid || {},
           generatedContent: htmlContent,
           title: `${recipientType === "architect" || recipientType === "broker-architect" ? "Architect" : "Contractor"} RFP - ${rfp.projectName} - ${new Date().toLocaleDateString()}`,
           notes: `Generated for ${recipientType}${recipientName ? ` - ${recipientName}` : ''}${recipientCompany ? ` (${recipientCompany})` : ''}`

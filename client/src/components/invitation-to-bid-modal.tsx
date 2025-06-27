@@ -85,7 +85,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
   // Delete generation history item mutation
   const deleteHistoryMutation = useMutation({
     mutationFn: async (historyId: number) => {
-      await apiRequest(`/api/rfp-generation-history/${historyId}`, "DELETE");
+      await apiRequest(`/api/generation-history/${historyId}`, "DELETE");
     },
     onSuccess: () => {
       refetchHistory();

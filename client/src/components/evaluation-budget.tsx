@@ -629,16 +629,19 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     const renderCategorySection = (title: string, items: EvaluationLineItem[], categoryType?: string) => {
       if (items.length === 0) return '';
       
-      // Filter items based on rollup configuration
+      // Filter items based on rollup configuration - EXCLUDE rolled up items from main tables
       const filteredItems = items.filter(item => {
         const rollupTarget = budgetData.lineItemRollups[item.id];
-        if (!rollupTarget) {
-          // Item is not rolled up, include it in its original category
-          return true;
+        // If item is rolled up, don't show it in any main table
+        if (rollupTarget) {
+          return false;
         }
-        // Item is rolled up, only include it in the target category
-        return rollupTarget === categoryType || 
-               (rollupTarget === 'tiAndDesign' && (categoryType === 'tenantImprovements' || categoryType === 'designSoftCosts'));
+        // If item is assembled, don't show it in main table either
+        if (item.assemblyId) {
+          return false;
+        }
+        // Only show items that are not rolled up or assembled
+        return true;
       });
       
       // Don't add rolled-in items as separate line items - they should be distributed within existing items
@@ -1008,13 +1011,13 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     </div>
     ` : ''}
 
-    ${Object.keys(budgetData.assemblies || {}).length > 0 ? `
+    ${(budgetData.customAssemblies || []).length > 0 ? `
     <div class="rollup-summary-section">
         <h3 class="rollup-summary-title">Assembly Summary</h3>
         <p class="rollup-summary-description">The following line items are grouped into assemblies:</p>
         <div class="rollup-summary-content">
-            ${Object.entries(budgetData.assemblies || {}).map(([assemblyName, assemblyData]) => {
-              const componentItems = assemblyData.components.map(componentId => {
+            ${(budgetData.customAssemblies || []).map(assembly => {
+              const componentItems = assembly.items.map(componentId => {
                 const allItems = [
                   ...budgetData.tenantImprovements,
                   ...budgetData.designSoftCosts,
@@ -1028,7 +1031,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                 if (!item) return '';
                 return `<div class="rollup-summary-item">
                   <span class="rollup-item-name"><strong>${item.description}</strong> (${formatCurrency(parseFloat(item.totalPrice) || 0)})</span>
-                  <span class="rollup-item-target">→ Grouped in ${assemblyName}</span>
+                  <span class="rollup-item-target">→ Grouped in ${assembly.name}</span>
                 </div>`;
               }).join('');
             }).join('')}

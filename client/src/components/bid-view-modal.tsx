@@ -70,13 +70,15 @@ export function BidViewModal({ isOpen, onClose, bid }: BidViewModalProps) {
                 }
               }).then(response => {
                 if (response.ok) {
-                  return response.blob();
+                  return response.text();
                 } else {
                   throw new Error('Authentication failed');
                 }
-              }).then(blob => {
+              }).then(html => {
+                const blob = new Blob([html], { type: 'text/html' });
                 const url = window.URL.createObjectURL(blob);
                 window.open(url, '_blank');
+                setTimeout(() => window.URL.revokeObjectURL(url), 100);
               }).catch(error => {
                 console.error('Print error:', error);
                 alert('Unable to generate PDF. Please try logging in again.');

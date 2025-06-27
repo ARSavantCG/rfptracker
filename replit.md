@@ -173,6 +173,9 @@ This is a full-stack web application for tracking and managing Request for Propo
 - June 27, 2025. Added line item reordering functionality to pricing breakdown table with up/down arrow buttons - users can now reorganize bid line items by clicking ChevronUp/ChevronDown buttons in new Order column, with disabled states for first/last items and real-time visual updates
 - June 27, 2025. Implemented comprehensive system-wide drag and drop functionality using react-beautiful-dnd library - all list components across bid collection modal, invitation-to-bid modal, and ROM pilot scope modal now support intuitive drag and drop reordering positioned between up/down chevron arrows for maximum user experience flexibility
 - June 27, 2025. Fixed modal layout width constraints and column sizing in bid collection modal - expanded to 95% viewport width with optimized column widths to prevent Notes column cutoff and ensure "+ Add" button and total amount display properly
+- June 27, 2025. Removed "Category" column and "Bidder Name" field from bid collection interface per user request - streamlined display now shows only Company and Submission Date for cleaner professional appearance
+- June 27, 2025. Added "Unit" column next to "Quantity" in all bid views and PDF generation with proper comma formatting for large numbers to improve readability of square footage values
+- June 27, 2025. Fixed PDF generation authentication issues for both individual bid PDFs and "Print All Bids" functionality - replaced simple window.open() with proper Bearer token authentication using fetch API to resolve "Invalid or expired token" errors
 
 ## User Preferences
 

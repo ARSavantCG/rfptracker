@@ -89,7 +89,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
   // Mutation for logging evaluation budget history
   const logHistoryMutation = useMutation({
     mutationFn: async (historyData: { rfpId: number; reportName: string; generatedContent: string; notes?: string }) => {
-      const response = await fetch(`/api/rfp-requests/${historyData.rfpId}/evaluation-budget/history`, {
+      const response = await fetch(`/api/rfp-requests/${historyData.rfpId}/evaluation-budget-history`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -804,6 +804,32 @@ export class DatabaseStorage implements IStorage {
     return savedItems;
   }
 
+  // Evaluation Budget Attachment implementation
+  async getEvaluationBudgetAttachments(rfpId: number): Promise<EvaluationBudgetAttachment[]> {
+    return await db.select().from(evaluationBudgetAttachments).where(eq(evaluationBudgetAttachments.rfpId, rfpId));
+  }
+
+  async getEvaluationBudgetAttachment(attachmentId: number): Promise<EvaluationBudgetAttachment | undefined> {
+    const [attachment] = await db.select().from(evaluationBudgetAttachments).where(eq(evaluationBudgetAttachments.id, attachmentId));
+    return attachment || undefined;
+  }
+
+  async createEvaluationBudgetAttachment(attachment: InsertEvaluationBudgetAttachment): Promise<EvaluationBudgetAttachment> {
+    const [created] = await db
+      .insert(evaluationBudgetAttachments)
+      .values({
+        ...attachment,
+        uploadedAt: new Date(),
+      })
+      .returning();
+    return created;
+  }
+
+  async deleteEvaluationBudgetAttachment(attachmentId: number): Promise<boolean> {
+    const result = await db.delete(evaluationBudgetAttachments).where(eq(evaluationBudgetAttachments.id, attachmentId));
+    return result.rowCount > 0;
+  }
+
   // ROM Scope Items methods
   async getAllRomScopeItems(): Promise<RomScopeItem[]> {
     return await db.select().from(romScopeItems).where(eq(romScopeItems.isActive, true));

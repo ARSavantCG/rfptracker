@@ -2012,7 +2012,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           rfpId,
           filename: file.filename,
           originalName: file.originalname,
-          fileSize: file.size,
+          size: file.size,
           mimeType: file.mimetype,
         });
         savedAttachments.push(attachment);

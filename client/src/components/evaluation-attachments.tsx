@@ -67,9 +67,7 @@ export function EvaluationAttachments({ rfpId }: EvaluationAttachmentsProps) {
 
   const deleteMutation = useMutation({
     mutationFn: async (attachmentId: number) => {
-      await apiRequest(`/api/evaluation-budget-attachments/${attachmentId}`, {
-        method: "DELETE",
-      });
+      await apiRequest(`/api/evaluation-budget-attachments/${attachmentId}`, "DELETE");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ 

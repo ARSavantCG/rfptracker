@@ -1545,6 +1545,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Generated HTML length:", htmlContent.length);
       console.log("HTML starts with:", htmlContent.substring(0, 100));
       
+      // Save to generation history
+      try {
+        const user = (req as any).user;
+        const generatedBy = user?.email || user?.username || 'Unknown';
+        
+        const historyItem = {
+          rfpId: id,
+          generationType: recipientType === "architect" || recipientType === "broker-architect" ? "architect" : "contractor",
+          generatedBy,
+          invitationData: invitationToBid,
+          generatedContent: htmlContent,
+          title: `${recipientType === "architect" || recipientType === "broker-architect" ? "Architect" : "Contractor"} RFP - ${rfp.projectName} - ${new Date().toLocaleDateString()}`,
+          notes: `Generated for ${recipientType}${recipientName ? ` - ${recipientName}` : ''}${recipientCompany ? ` (${recipientCompany})` : ''}`
+        };
+        
+        await storage.createGenerationHistoryItem(historyItem);
+        console.log("Saved generation history item");
+      } catch (historyError) {
+        console.error("Failed to save generation history:", historyError);
+        // Don't fail the request if history saving fails
+      }
+      
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.setHeader('Pragma', 'no-cache');
@@ -3463,6 +3485,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Download all files error:", error);
       res.status(500).json({ message: "Failed to create zip file" });
+    }
+  });
+
+  // RFP Generation History routes
+  app.get('/api/rfp-requests/:rfpId/generation-history', requireAuth, async (req, res) => {
+    try {
+      const rfpId = parseInt(req.params.rfpId);
+      const history = await storage.getRfpGenerationHistory(rfpId);
+      res.json(history);
+    } catch (error) {
+      console.error("Error fetching generation history:", error);
+      res.status(500).json({ message: "Failed to fetch generation history" });
+    }
+  });
+
+  app.get('/api/generation-history/:id', requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const item = await storage.getGenerationHistoryItem(id);
+      if (!item) {
+        return res.status(404).json({ message: "Generation history item not found" });
+      }
+      res.json(item);
+    } catch (error) {
+      console.error("Error fetching generation history item:", error);
+      res.status(500).json({ message: "Failed to fetch generation history item" });
+    }
+  });
+
+  app.get('/api/generation-history/:id/view', requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const item = await storage.getGenerationHistoryItem(id);
+      if (!item) {
+        return res.status(404).json({ message: "Generation history item not found" });
+      }
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.send(item.generatedContent);
+    } catch (error) {
+      console.error("Error viewing generation history item:", error);
+      res.status(500).json({ message: "Failed to view generation history item" });
+    }
+  });
+
+  app.delete('/api/generation-history/:id', requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteGenerationHistoryItem(id);
+      if (!success) {
+        return res.status(404).json({ message: "Generation history item not found" });
+      }
+      res.json({ message: "Generation history item deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting generation history item:", error);
+      res.status(500).json({ message: "Failed to delete generation history item" });
     }
   });
 

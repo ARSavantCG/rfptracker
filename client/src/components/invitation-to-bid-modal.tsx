@@ -76,6 +76,35 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
     queryKey: ["/api/contacts"],
   });
 
+  // Fetch RFP generation history
+  const { data: generationHistory = [], refetch: refetchHistory } = useQuery({
+    queryKey: ["/api/rfp-requests", rfp?.id, "generation-history"],
+    enabled: !!rfp?.id,
+  });
+
+  // Delete generation history item mutation
+  const deleteHistoryMutation = useMutation({
+    mutationFn: async (historyId: number) => {
+      await apiRequest(`/api/rfp-generation-history/${historyId}`, {
+        method: "DELETE",
+      });
+    },
+    onSuccess: () => {
+      refetchHistory();
+      toast({
+        title: "Success",
+        description: "Generation history item deleted successfully",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to delete generation history item",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Helper function to get property address
   const getPropertyAddress = (propertyId: string) => {
     const property = properties.find(p => p.id.toString() === propertyId);

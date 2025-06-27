@@ -1557,7 +1557,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           invitationData: invitationToBid || null,
           generatedContent: htmlContent,
           title: `${recipientType === "architect" || recipientType === "broker-architect" ? "Architect" : "Contractor"} RFP - ${rfp.projectName} - ${new Date().toLocaleDateString()}`,
-          notes: `Generated for ${recipientType}${recipientName ? ` - ${recipientName}` : ''}${recipientCompany ? ` (${recipientCompany})` : ''}`
+          notes: recipientName && recipientCompany ? `${recipientName} (${recipientCompany})` : recipientName || recipientCompany || null
         };
         
         console.log("Attempting to save generation history item:", {

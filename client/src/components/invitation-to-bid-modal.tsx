@@ -351,9 +351,9 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
       const transformedData = {
         projectScope: data.projectScope,
         projectLocation: data.projectLocation,
-        bidSubmissionDeadline: new Date(data.contractorDueDate), // Use contractor due date as default
-        contractorDueDate: new Date(data.contractorDueDate),
-        architectDueDate: new Date(data.architectDueDate),
+        bidSubmissionDeadline: data.contractorDueDate || null,
+        contractorDueDate: data.contractorDueDate || null,
+        architectDueDate: data.architectDueDate || null,
         contactForQuestions: `${data.contactPerson} - ${data.contactEmail || ''} - ${data.contactPhone || ''}`,
         projectDescription: data.projectDescription,
         documentsLink: data.documentsLink,
@@ -361,6 +361,9 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
         scopeOfWork: data.scopeOfWork,
         architectMilestones: data.architectMilestones,
         contractorMilestones: data.contractorMilestones,
+        // Include contractor and architect selections
+        selectedContractor: data.selectedContractor !== 'none' ? data.selectedContractor : null,
+        selectedArchitect: data.selectedArchitect !== 'none' ? data.selectedArchitect : null,
       };
       
       // Save or update invitation to bid record

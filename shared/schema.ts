@@ -199,6 +199,8 @@ export const invitationToBid = pgTable("invitation_to_bid", {
   scopeOfWork: json("scope_of_work").$type<{description: string, quantity: number, unit: string}[]>().default([]),
   architectMilestones: json("architect_milestones").$type<{description: string}[]>().default([]),
   contractorMilestones: json("contractor_milestones").$type<{description: string}[]>().default([]),
+  selectedContractor: text("selected_contractor"),
+  selectedArchitect: text("selected_architect"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -210,9 +212,9 @@ export const insertInvitationToBidSchema = createInsertSchema(invitationToBid).o
 }).extend({
   projectScope: z.string().default(""),
   projectLocation: z.string().default(""),
-  bidSubmissionDeadline: z.string().optional().transform((val) => val && val.trim() ? new Date(val) : new Date()),
-  contractorDueDate: z.string().optional().transform((val) => val && val.trim() ? new Date(val) : undefined),
-  architectDueDate: z.string().optional().transform((val) => val && val.trim() ? new Date(val) : undefined),
+  bidSubmissionDeadline: z.union([z.string(), z.null()]).optional().transform((val) => val && typeof val === 'string' && val.trim() ? new Date(val) : new Date()),
+  contractorDueDate: z.union([z.string(), z.null()]).optional().transform((val) => val && typeof val === 'string' && val.trim() ? new Date(val) : undefined),
+  architectDueDate: z.union([z.string(), z.null()]).optional().transform((val) => val && typeof val === 'string' && val.trim() ? new Date(val) : undefined),
   projectStartDate: z.string().optional().transform((val) => val && val.trim() ? new Date(val) : undefined),
   projectEndDate: z.string().optional().transform((val) => val && val.trim() ? new Date(val) : undefined),
   siteVisitScheduled: z.string().optional().transform((val) => val && val.trim() ? new Date(val) : undefined),

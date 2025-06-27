@@ -1508,6 +1508,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                   <TableHead className="w-36">Quantity (Unit)</TableHead>
                   <TableHead className="w-32">Unit Price</TableHead>
                   {!newItemCategory && <TableHead className="w-32">Total</TableHead>}
+                  <TableHead className="w-24 text-center">$/SF</TableHead>
                   <TableHead className="w-32">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -1635,6 +1636,17 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                                     />
                                   </TableCell>
                                   {!newItemCategory && <TableCell className="font-medium">{formatCurrency(item.totalPrice)}</TableCell>}
+                                  <TableCell className="text-center">
+                                    {(() => {
+                                      const totalCost = parseFloat(item.totalPrice) || 0;
+                                      const warehouseArea = parseFloat(rfp?.warehouseArea || '0');
+                                      if (warehouseArea > 0) {
+                                        const perSF = totalCost / warehouseArea;
+                                        return `$${perSF.toFixed(2)}`;
+                                      }
+                                      return 'N/A';
+                                    })()}
+                                  </TableCell>
                                   <TableCell>
                                     <div className="flex gap-1">
                                       <Button
@@ -1678,6 +1690,19 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                                       </span>
                                     </TableCell>
                                   )}
+                                  <TableCell className="text-center">
+                                    <span className={`${isAssembled ? 'line-through opacity-60' : ''}`}>
+                                      {(() => {
+                                        const totalCost = calculateDistributedCosts(item);
+                                        const warehouseArea = parseFloat(rfp?.warehouseArea || '0');
+                                        if (warehouseArea > 0) {
+                                          const perSF = totalCost / warehouseArea;
+                                          return `$${perSF.toFixed(2)}`;
+                                        }
+                                        return 'N/A';
+                                      })()}
+                                    </span>
+                                  </TableCell>
                                   <TableCell>
                                     <div className="flex gap-1">
                                       <Button
@@ -1732,7 +1757,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
 
         {newItemCategory === category && (
           <div className="mt-4 p-4 border rounded-lg bg-gray-50">
-            <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-8 gap-4">
               <div className="md:col-span-3">
                 <Label>Description</Label>
                 <Input
@@ -1776,6 +1801,20 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                   onChange={(e) => setNewItem(prev => ({ ...prev, totalPrice: e.target.value }))}
                   placeholder="0.00"
                 />
+              </div>
+              <div>
+                <Label>$/SF</Label>
+                <div className="h-10 flex items-center justify-center text-sm text-gray-500 bg-gray-100 rounded border">
+                  {(() => {
+                    const totalPrice = parseFloat(newItem.totalPrice || '0');
+                    const warehouseArea = parseFloat(rfp?.warehouseArea || '0');
+                    if (warehouseArea > 0 && totalPrice > 0) {
+                      const perSF = totalPrice / warehouseArea;
+                      return `$${perSF.toFixed(2)}`;
+                    }
+                    return 'N/A';
+                  })()}
+                </div>
               </div>
               <div className="flex items-end gap-2">
                 <Button onClick={() => addNewItem(category)} size="sm">

@@ -1912,6 +1912,83 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         </Card>
       )}
 
+      {/* Assembly Summary */}
+      {(() => {
+        const allItems = [
+          ...budgetData.tenantImprovements,
+          ...budgetData.designSoftCosts,
+          ...budgetData.existingImprovements
+        ];
+        const assembledItems = allItems.filter(item => item.assemblyId);
+        
+        if (assembledItems.length === 0) return null;
+        
+        const assembliesByName: Record<string, any[]> = {};
+        
+        assembledItems.forEach(item => {
+          const assemblyId = item.assemblyId;
+          if (assemblyId) {
+            if (!assembliesByName[assemblyId]) {
+              assembliesByName[assemblyId] = [];
+            }
+            assembliesByName[assemblyId].push(item);
+          }
+        });
+        
+        const getAssemblyDisplayName = (assemblyId: string): string => {
+          if (!assemblyId) return 'Unknown Assembly';
+          
+          if (budgetData.customAssemblies) {
+            const customAssembly = budgetData.customAssemblies.find((a: any) => a.id === assemblyId);
+            if (customAssembly) {
+              return customAssembly.name;
+            }
+          }
+          
+          if (budgetData.assemblies) {
+            const assemblyEntry = Object.entries(budgetData.assemblies).find(([name, data]: [string, any]) => 
+              data && data.components && Array.isArray(data.components) && data.components.some((componentId: string) => 
+                assembledItems.some((item: any) => item.id === componentId)
+              )
+            );
+            if (assemblyEntry) {
+              return assemblyEntry[0];
+            }
+          }
+          
+          const timestamp = assemblyId.replace('assembly_', '');
+          return `Assembly ${timestamp.slice(-4)}`;
+        };
+        
+        return (
+          <Card className="bg-green-50 border-green-200">
+            <CardHeader>
+              <CardTitle className="text-lg text-green-800">Assembly Summary</CardTitle>
+              <p className="text-sm text-green-600">
+                The following items are grouped into custom assemblies:
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {Object.entries(assembliesByName).map(([assemblyId, items]) => {
+                  const assemblyDisplayName = getAssemblyDisplayName(assemblyId);
+                  return items.map((item: any) => (
+                    <div key={item.id} className="flex justify-between items-center text-sm">
+                      <span className="text-gray-700">
+                        <strong>{item.description}</strong> ({formatCurrency(parseFloat(item.totalPrice) || 0)})
+                      </span>
+                      <span className="text-green-600">
+                        → Grouped in {assemblyDisplayName}
+                      </span>
+                    </div>
+                  ));
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })()}
+
       {/* Preview Report */}
       <Card>
         <CardHeader>

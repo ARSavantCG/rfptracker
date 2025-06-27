@@ -12,7 +12,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
-import { FileText, Download, Users, Save, X, CheckCircle, Plus, Trash2, ChevronUp, ChevronDown } from "lucide-react";
+import { FileText, Download, Users, Save, X, CheckCircle, Plus, Trash2, ChevronUp, ChevronDown, GripVertical } from "lucide-react";
+import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
 import type { RfpRequest, Property, Contact } from "@shared/schema";
 
 const invitationFormSchema = z.object({
@@ -178,6 +179,37 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
     const items = form.getValues("contractorMilestones");
     if (index === items.length - 1) return;
     [items[index], items[index + 1]] = [items[index + 1], items[index]];
+    form.setValue("contractorMilestones", items);
+  };
+
+  // Drag and drop handlers
+  const handleScopeOfWorkDragEnd = (result: DropResult) => {
+    if (!result.destination) return;
+
+    const items = [...form.getValues("scopeOfWork")];
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+    
+    form.setValue("scopeOfWork", items);
+  };
+
+  const handleArchitectMilestonesDragEnd = (result: DropResult) => {
+    if (!result.destination) return;
+
+    const items = [...form.getValues("architectMilestones")];
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+    
+    form.setValue("architectMilestones", items);
+  };
+
+  const handleContractorMilestonesDragEnd = (result: DropResult) => {
+    if (!result.destination) return;
+
+    const items = [...form.getValues("contractorMilestones")];
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+    
     form.setValue("contractorMilestones", items);
   };
 
@@ -701,43 +733,61 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
               )}
 
               {scopeFields.length > 0 && (
-                <div className="space-y-2">
-                  {/* Column Headers */}
-                  <div className="grid grid-cols-12 gap-4 pb-2 border-b text-sm font-medium text-gray-600">
-                    <div className="col-span-1">Order</div>
-                    <div className="col-span-5">Description</div>
-                    <div className="col-span-2">Quantity</div>
-                    <div className="col-span-3">Unit</div>
-                    <div className="col-span-1"></div>
-                  </div>
+                <DragDropContext onDragEnd={handleScopeOfWorkDragEnd}>
+                  <div className="space-y-2">
+                    {/* Column Headers */}
+                    <div className="grid grid-cols-12 gap-4 pb-2 border-b text-sm font-medium text-gray-600">
+                      <div className="col-span-1">Order</div>
+                      <div className="col-span-5">Description</div>
+                      <div className="col-span-2">Quantity</div>
+                      <div className="col-span-3">Unit</div>
+                      <div className="col-span-1"></div>
+                    </div>
 
-                  {/* Scope Items */}
-                  {scopeFields.map((field, index) => (
-                    <div key={field.id} className="grid grid-cols-12 gap-4 items-center">
-                      <div className="col-span-1">
-                        <div className="flex flex-col gap-1">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => moveScopeUp(index)}
-                            disabled={index === 0}
-                            className="h-6 w-6 p-0"
-                          >
-                            <ChevronUp className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => moveScopeDown(index)}
-                            disabled={index === scopeFields.length - 1}
-                            className="h-6 w-6 p-0"
-                          >
-                            <ChevronDown className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
+                    <Droppable droppableId="scopeOfWork">
+                      {(provided) => (
+                        <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-2">
+                          {/* Scope Items */}
+                          {scopeFields.map((field, index) => (
+                            <Draggable key={field.id} draggableId={field.id} index={index}>
+                              {(provided) => (
+                                <div 
+                                  ref={provided.innerRef}
+                                  {...provided.draggableProps}
+                                  className="grid grid-cols-12 gap-4 items-center"
+                                >
+                                  <div className="col-span-1">
+                                    <div className="flex items-center gap-1">
+                                      <div className="flex flex-col gap-1">
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => moveScopeUp(index)}
+                                          disabled={index === 0}
+                                          className="h-6 w-6 p-0"
+                                        >
+                                          <ChevronUp className="h-3 w-3" />
+                                        </Button>
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => moveScopeDown(index)}
+                                          disabled={index === scopeFields.length - 1}
+                                          className="h-6 w-6 p-0"
+                                        >
+                                          <ChevronDown className="h-3 w-3" />
+                                        </Button>
+                                      </div>
+                                      <div 
+                                        {...provided.dragHandleProps}
+                                        className="cursor-grab active:cursor-grabbing p-1 hover:bg-gray-100 rounded"
+                                      >
+                                        <GripVertical className="h-4 w-4 text-gray-400" />
+                                      </div>
+                                    </div>
+                                  </div>
                       <div className="col-span-5">
                         <FormField
                           control={form.control}
@@ -773,34 +823,41 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                         />
                       </div>
 
-                      <div className="col-span-3">
-                        <FormField
-                          control={form.control}
-                          name={`scopeOfWork.${index}.unit`}
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormControl>
-                                <Input {...field} placeholder="sq ft, each, etc." />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
+                                  <div className="col-span-3">
+                                    <FormField
+                                      control={form.control}
+                                      name={`scopeOfWork.${index}.unit`}
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <FormControl>
+                                            <Input {...field} placeholder="sq ft, each, etc." />
+                                          </FormControl>
+                                          <FormMessage />
+                                        </FormItem>
+                                      )}
+                                    />
+                                  </div>
 
-                      <div className="col-span-1">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => removeScope(index)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                                  <div className="col-span-1">
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => removeScope(index)}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              )}
+                            </Draggable>
+                          ))}
+                          {provided.placeholder}
+                        </div>
+                      )}
+                    </Droppable>
+                  </div>
+                </DragDropContext>
               )}
             </div>
 

@@ -153,6 +153,7 @@ This is a full-stack web application for tracking and managing Request for Propo
 - June 26, 2025. Fixed RFP creation authentication error by adding requireAuth middleware to file upload endpoint and implementing proper token-based authentication in frontend form submission
 - June 26, 2025. Implemented comprehensive GitHub Actions CI/CD pipeline with automated testing, security scanning, build validation, and professional development workflow documentation
 - June 26, 2025. Fixed RFP deletion JSON parsing error by correcting authentication token consistency and improving API response format for successful delete operations
+- June 27, 2025. Resolved file upload validation error blocking RFP creation by expanding allowed file types to include Microsoft Outlook .msg files and other business document formats
 
 ## User Preferences
 

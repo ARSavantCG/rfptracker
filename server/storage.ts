@@ -177,6 +177,13 @@ export interface IStorage {
   getEvaluationBudgetAttachments(rfpId: number): Promise<EvaluationBudgetAttachment[]>;
   getEvaluationBudgetAttachment(attachmentId: number): Promise<EvaluationBudgetAttachment | undefined>;
   deleteEvaluationBudgetAttachment(attachmentId: number): Promise<boolean>;
+  
+  // Evaluation Budget History
+  createEvaluationBudgetHistory(history: InsertEvaluationBudgetHistory): Promise<EvaluationBudgetHistory>;
+  getEvaluationBudgetHistory(rfpId: number): Promise<EvaluationBudgetHistory[]>;
+  getEvaluationBudgetHistoryById(id: number): Promise<EvaluationBudgetHistory | undefined>;
+  updateEvaluationBudgetHistory(id: number, updates: Partial<EvaluationBudgetHistory>): Promise<EvaluationBudgetHistory | undefined>;
+  deleteEvaluationBudgetHistory(id: number): Promise<boolean>;
 
   // RFP Generation History management
   getRfpGenerationHistory(rfpId: number): Promise<RfpGenerationHistory[]>;
@@ -926,6 +933,30 @@ export class DatabaseStorage implements IStorage {
       .from(evaluationBudgetHistory)
       .where(eq(evaluationBudgetHistory.rfpId, rfpId))
       .orderBy(desc(evaluationBudgetHistory.createdAt));
+  }
+
+  async getEvaluationBudgetHistoryById(id: number) {
+    const [item] = await db
+      .select()
+      .from(evaluationBudgetHistory)
+      .where(eq(evaluationBudgetHistory.id, id));
+    return item;
+  }
+
+  async updateEvaluationBudgetHistory(id: number, updates: Partial<EvaluationBudgetHistory>) {
+    const [updated] = await db
+      .update(evaluationBudgetHistory)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(evaluationBudgetHistory.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteEvaluationBudgetHistory(id: number): Promise<boolean> {
+    const result = await db
+      .delete(evaluationBudgetHistory)
+      .where(eq(evaluationBudgetHistory.id, id));
+    return (result.rowCount || 0) > 0;
   }
 
   async updateEvaluationBudgetHistory(id: number, updates: { reportName?: string; notes?: string }) {

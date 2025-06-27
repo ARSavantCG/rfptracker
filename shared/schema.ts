@@ -420,6 +420,7 @@ export const evaluationBudgetHistory = pgTable("evaluation_budget_history", {
   generatedContent: text("generated_content").notNull(),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const insertEvaluationBudgetHistorySchema = createInsertSchema(evaluationBudgetHistory).omit({

@@ -3550,8 +3550,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/evaluation-budget-history/:id/view', requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const history = await storage.getEvaluationBudgetHistory(0); // Get by ID instead
-      const item = history.find(h => h.id === id);
+      const item = await storage.getEvaluationBudgetHistoryById(id);
       
       if (!item) {
         return res.status(404).json({ message: "Evaluation budget history item not found" });

@@ -345,7 +345,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[95vw] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-[98vw] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {bidCollection ? 'Edit' : 'New'} Bid Collection - {rfp.projectName}
@@ -466,15 +466,15 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                 <DragDropContext onDragEnd={handleDragEnd}>
                   <Table>
                     <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-[80px]">Order</TableHead>
-                        <TableHead className="w-[250px]">Description</TableHead>
-                        <TableHead className="w-[80px]">Qty</TableHead>
-                        <TableHead className="w-[80px]">Unit</TableHead>
-                        <TableHead className="w-[120px]">Unit Price</TableHead>
-                        <TableHead className="w-[120px]">Total Price</TableHead>
-                        <TableHead className="w-[150px]">Notes</TableHead>
-                        <TableHead className="w-[50px]"></TableHead>
+                      <TableRow className="text-xs">
+                        <TableHead className="w-[70px] text-xs">Order</TableHead>
+                        <TableHead className="w-[200px] text-xs">Description</TableHead>
+                        <TableHead className="w-[70px] text-xs">Qty</TableHead>
+                        <TableHead className="w-[60px] text-xs">Unit</TableHead>
+                        <TableHead className="w-[100px] text-xs">Unit Price</TableHead>
+                        <TableHead className="w-[110px] text-xs">Total Price</TableHead>
+                        <TableHead className="w-[120px] text-xs">Notes</TableHead>
+                        <TableHead className="w-[40px]"></TableHead>
                       </TableRow>
                     </TableHeader>
                     <Droppable droppableId="lineItems">
@@ -486,6 +486,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                                 <TableRow 
                                   ref={provided.innerRef}
                                   {...provided.draggableProps}
+                                  className="text-xs"
                                 >
                                   <TableCell>
                                     <div className="flex items-center gap-1">
@@ -524,7 +525,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                                       value={item.description}
                                       onChange={(e) => updateLineItem(index, 'description', e.target.value)}
                                       placeholder="Description"
-                                      className="min-w-[200px]"
+                                      className="w-full text-xs h-8"
                                     />
                                   </TableCell>
                                   <TableCell>
@@ -536,7 +537,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                                       }}
                                       placeholder=""
                                       type="text"
-                                      className="w-[90px] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                      className="w-full text-xs h-8 text-right [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                       style={{ MozAppearance: 'textfield' }}
                                     />
                                   </TableCell>
@@ -545,7 +546,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                                       value={item.unit}
                                       onChange={(e) => updateLineItem(index, 'unit', e.target.value)}
                                       placeholder="ea, sf, lf"
-                                      className="w-[80px]"
+                                      className="w-full text-xs h-8"
                                     />
                                   </TableCell>
                                   <TableCell>

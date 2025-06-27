@@ -117,9 +117,33 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
         setLineItems(formattedLineItems);
       }
       
-      // Load existing attachments - note: these are database records, not File objects
-      // For editing, we'll show attachment info but won't load actual files
-      setAttachments([]);
+      // Load existing attachments and convert to display format
+      if (bidCollection.attachments) {
+        let existingAttachments = bidCollection.attachments;
+        if (typeof existingAttachments === 'string') {
+          try {
+            existingAttachments = JSON.parse(existingAttachments);
+          } catch (e) {
+            console.error('Failed to parse existing attachments:', e);
+            existingAttachments = [];
+          }
+        }
+        
+        // Create File objects from existing attachment data for display
+        const attachmentFiles = existingAttachments.map((attachment: any) => {
+          // Create a mock File object for display purposes
+          const file = new File([''], attachment.name, { type: attachment.type });
+          // Add custom properties to track this is an existing file
+          Object.defineProperty(file, 'isExisting', { value: true, writable: false });
+          Object.defineProperty(file, 'id', { value: attachment.id, writable: false });
+          Object.defineProperty(file, 'size', { value: attachment.size, writable: false });
+          return file;
+        });
+        
+        setAttachments(attachmentFiles);
+      } else {
+        setAttachments([]);
+      }
     } else if (!bidCollection && isOpen) {
       // Reset to defaults for new bid collection
       form.reset({
@@ -167,8 +191,9 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
       // Add line items as JSON string
       formData.append('lineItems', JSON.stringify(data.lineItems));
       
-      // Add attachments
-      data.attachments.forEach((file, index) => {
+      // Add only new attachments (filter out existing ones)
+      const newAttachments = data.attachments.filter((file: any) => !file.isExisting);
+      newAttachments.forEach((file, index) => {
         formData.append(`attachment_${index}`, file);
       });
 

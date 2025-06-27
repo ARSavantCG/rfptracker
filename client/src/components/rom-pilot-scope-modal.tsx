@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Trash2, Plus, Calculator, Save, ChevronUp, ChevronDown } from "lucide-react";
+import { Trash2, Plus, Calculator, Save, ChevronUp, ChevronDown, GripVertical } from "lucide-react";
+import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -189,6 +190,57 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
     return calculateCategoryTotal(tenantImprovements) + calculateCategoryTotal(designSoftCosts);
   };
 
+  // Drag and drop handlers
+  const handleTenantImprovementsDragEnd = (result: DropResult) => {
+    if (!result.destination) return;
+
+    const items = Array.from(tenantImprovements);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+    
+    setTenantImprovements(items);
+  };
+
+  const handleDesignSoftCostsDragEnd = (result: DropResult) => {
+    if (!result.destination) return;
+
+    const items = Array.from(designSoftCosts);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+    
+    setDesignSoftCosts(items);
+  };
+
+  // Reorder functions for line items
+  const moveLineItemUp = (category: 'tenant-improvements' | 'design-soft-costs', index: number) => {
+    if (index === 0) return;
+    
+    if (category === 'tenant-improvements') {
+      const items = [...tenantImprovements];
+      [items[index - 1], items[index]] = [items[index], items[index - 1]];
+      setTenantImprovements(items);
+    } else {
+      const items = [...designSoftCosts];
+      [items[index - 1], items[index]] = [items[index], items[index - 1]];
+      setDesignSoftCosts(items);
+    }
+  };
+
+  const moveLineItemDown = (category: 'tenant-improvements' | 'design-soft-costs', index: number) => {
+    const items = category === 'tenant-improvements' ? tenantImprovements : designSoftCosts;
+    if (index === items.length - 1) return;
+    
+    if (category === 'tenant-improvements') {
+      const updatedItems = [...tenantImprovements];
+      [updatedItems[index], updatedItems[index + 1]] = [updatedItems[index + 1], updatedItems[index]];
+      setTenantImprovements(updatedItems);
+    } else {
+      const updatedItems = [...designSoftCosts];
+      [updatedItems[index], updatedItems[index + 1]] = [updatedItems[index + 1], updatedItems[index]];
+      setDesignSoftCosts(updatedItems);
+    }
+  };
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -224,95 +276,143 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
           <p className="text-sm">Click "Add Item" to get started</p>
         </div>
       ) : (
-        <div className="space-y-3">
-          {items.map((item, index) => (
-            <div key={index} className="grid grid-cols-12 gap-3 items-start p-4 border rounded-lg bg-gray-50">
-              <div className="col-span-3">
-                <Label className="text-xs font-medium text-gray-600">Scope Item</Label>
-                <Select
-                  value={item.scopeItemId ? item.scopeItemId.toString() : "0"}
-                  onValueChange={(value) => updateLineItem(category, index, 'scopeItemId', parseInt(value))}
-                >
-                  <SelectTrigger className="h-8 text-xs">
-                    <SelectValue placeholder="Select item" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="0">Custom Item</SelectItem>
-                    {(category === 'tenant-improvements' ? tenantImprovementItems : designSoftCostItems).map((scopeItem) => (
-                      <SelectItem key={scopeItem.id} value={scopeItem.id.toString()}>
-                        {scopeItem.name} ({scopeItem.unit} @ ${scopeItem.unitPrice})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+        <DragDropContext onDragEnd={category === 'tenant-improvements' ? handleTenantImprovementsDragEnd : handleDesignSoftCostsDragEnd}>
+          <Droppable droppableId={`${category}-items`}>
+            {(provided) => (
+              <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-3">
+                {items.map((item, index) => (
+                  <Draggable key={`${category}-${index}`} draggableId={`${category}-${index}`} index={index}>
+                    {(provided) => (
+                      <div 
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        className="grid grid-cols-12 gap-3 items-start p-4 border rounded-lg bg-gray-50"
+                      >
+                        <div className="col-span-1">
+                          <div className="flex items-center gap-1">
+                            <div className="flex flex-col gap-1">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => moveLineItemUp(category, index)}
+                                disabled={index === 0}
+                                className="h-6 w-6 p-0"
+                              >
+                                <ChevronUp className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => moveLineItemDown(category, index)}
+                                disabled={index === items.length - 1}
+                                className="h-6 w-6 p-0"
+                              >
+                                <ChevronDown className="h-3 w-3" />
+                              </Button>
+                            </div>
+                            <div 
+                              {...provided.dragHandleProps}
+                              className="cursor-grab active:cursor-grabbing p-1 hover:bg-gray-100 rounded"
+                            >
+                              <GripVertical className="h-4 w-4 text-gray-400" />
+                            </div>
+                          </div>
+                        </div>
 
-              <div className="col-span-2">
-                <Label className="text-xs font-medium text-gray-600">Quantity</Label>
-                <Input
-                  type="number"
-                  value={item.quantity || ""}
-                  onChange={(e) => updateLineItem(category, index, 'quantity', e.target.value)}
-                  className="h-8 text-xs"
-                  placeholder="0"
-                />
-              </div>
+                        <div className="col-span-3">
+                          <Label className="text-xs font-medium text-gray-600">Scope Item</Label>
+                          <Select
+                            value={item.scopeItemId ? item.scopeItemId.toString() : "0"}
+                            onValueChange={(value) => updateLineItem(category, index, 'scopeItemId', parseInt(value))}
+                          >
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue placeholder="Select item" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="0">Custom Item</SelectItem>
+                              {(category === 'tenant-improvements' ? tenantImprovementItems : designSoftCostItems).map((scopeItem) => (
+                                <SelectItem key={scopeItem.id} value={scopeItem.id.toString()}>
+                                  {scopeItem.name} ({scopeItem.unit} @ ${scopeItem.unitPrice})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
 
-              <div className="col-span-2">
-                <Label className="text-xs font-medium text-gray-600">
-                  Unit Price {item.scopeItem?.unit ? `(${item.scopeItem.unit})` : ''}
-                </Label>
-                <Input
-                  type="text"
-                  value={item.unitPrice ? `$${parseFloat(item.unitPrice).toFixed(2)}` : "$0.00"}
-                  className="h-8 text-xs bg-gray-100"
-                  readOnly
-                />
-              </div>
+                        <div className="col-span-2">
+                          <Label className="text-xs font-medium text-gray-600">Quantity</Label>
+                          <Input
+                            type="number"
+                            value={item.quantity || ""}
+                            onChange={(e) => updateLineItem(category, index, 'quantity', e.target.value)}
+                            className="h-8 text-xs"
+                            placeholder="0"
+                          />
+                        </div>
 
-              <div className="col-span-2">
-                <Label className="text-xs font-medium text-gray-600">Total</Label>
-                <Input
-                  value={formatCurrency(parseFloat(item.totalPrice) || 0)}
-                  className="h-8 text-xs bg-gray-100"
-                  readOnly
-                />
-              </div>
+                        <div className="col-span-2">
+                          <Label className="text-xs font-medium text-gray-600">
+                            Unit Price {item.scopeItem?.unit ? `(${item.scopeItem.unit})` : ''}
+                          </Label>
+                          <Input
+                            type="text"
+                            value={item.unitPrice ? `$${parseFloat(item.unitPrice).toFixed(2)}` : "$0.00"}
+                            className="h-8 text-xs bg-gray-100"
+                            readOnly
+                          />
+                        </div>
 
-              <div className="col-span-2">
-                <Label className="text-xs font-medium text-gray-600">Notes</Label>
-                <Input
-                  value={item.notes || ""}
-                  onChange={(e) => updateLineItem(category, index, 'notes', e.target.value)}
-                  className="h-8 text-xs"
-                  placeholder="Optional notes"
-                />
-              </div>
+                        <div className="col-span-2">
+                          <Label className="text-xs font-medium text-gray-600">Total</Label>
+                          <Input
+                            value={formatCurrency(parseFloat(item.totalPrice) || 0)}
+                            className="h-8 text-xs bg-gray-100"
+                            readOnly
+                          />
+                        </div>
 
-              <div className="col-span-1 flex justify-end pt-5">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => removeLineItem(category, index)}
-                  className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          ))}
+                        <div className="col-span-2">
+                          <Label className="text-xs font-medium text-gray-600">Notes</Label>
+                          <Input
+                            value={item.notes || ""}
+                            onChange={(e) => updateLineItem(category, index, 'notes', e.target.value)}
+                            className="h-8 text-xs"
+                            placeholder="Optional notes"
+                          />
+                        </div>
 
-          {items.length > 0 && (
-            <div className="flex justify-end pt-2">
-              <div className="text-right">
-                <p className="text-sm font-medium text-gray-600">
-                  {title} Subtotal: {formatCurrency(calculateCategoryTotal(items))}
-                </p>
+                        <div className="col-span-1 flex justify-end pt-5">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeLineItem(category, index)}
+                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </Draggable>
+                ))}
+                {provided.placeholder}
+
+                {items.length > 0 && (
+                  <div className="flex justify-end pt-2">
+                    <div className="text-right">
+                      <p className="text-sm font-medium text-gray-600">
+                        {title} Subtotal: {formatCurrency(calculateCategoryTotal(items))}
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </Droppable>
+        </DragDropContext>
       )}
     </div>
   );

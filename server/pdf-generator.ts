@@ -8,7 +8,8 @@ function formatDate(date: string | Date): string {
     weekday: 'long', 
     year: 'numeric', 
     month: 'long', 
-    day: 'numeric' 
+    day: 'numeric',
+    timeZone: 'America/New_York'
   });
 }
 

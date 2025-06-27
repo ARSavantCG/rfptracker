@@ -62,7 +62,6 @@ export function BidViewModal({ isOpen, onClose, bid }: BidViewModalProps) {
             size="sm"
             onClick={() => {
               const token = localStorage.getItem('auth-token');
-              console.log('Frontend - retrieved token:', token ? `${token.substring(0, 8)}...` : 'none');
               
               if (!token) {
                 alert('No authentication token found. Please log in again.');
@@ -70,7 +69,6 @@ export function BidViewModal({ isOpen, onClose, bid }: BidViewModalProps) {
               }
               
               const printUrl = `/api/bid-collections/${bid.id}/pdf`;
-              console.log('Frontend - making request to:', printUrl);
               
               // Open PDF with authentication
               fetch(printUrl, {
@@ -78,7 +76,6 @@ export function BidViewModal({ isOpen, onClose, bid }: BidViewModalProps) {
                   'Authorization': `Bearer ${token}`
                 }
               }).then(response => {
-                console.log('Frontend - response status:', response.status);
                 if (response.ok) {
                   return response.text();
                 } else {

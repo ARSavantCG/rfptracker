@@ -252,7 +252,7 @@ export function BidCollectionTable({ rfp }: BidCollectionTableProps) {
                             variant="ghost"
                             size="sm"
                             onClick={() => {
-                              const token = localStorage.getItem('authToken');
+                              const token = localStorage.getItem('auth-token');
                               const printUrl = `/api/bid-collections/${bid.id}/pdf`;
                               // Open PDF with authentication
                               fetch(printUrl, {

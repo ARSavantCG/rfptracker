@@ -477,23 +477,16 @@ async function requireAuth(req: any, res: any, next: any) {
     ? authHeader.substring(7) 
     : null;
 
-  console.log('Auth middleware - token received:', token ? `${token.substring(0, 8)}...` : 'none');
-
   if (!token) {
-    console.log('Auth middleware - no token provided');
     return res.status(401).json({ message: "Authentication required" });
   }
 
   const userId = await tokenStore.getUserFromToken(token);
-  console.log('Auth middleware - userId from token:', userId);
-  
   if (!userId) {
-    console.log('Auth middleware - token validation failed');
     return res.status(401).json({ message: "Invalid or expired token" });
   }
 
   req.userId = userId;
-  console.log('Auth middleware - success for userId:', userId);
   next();
 }
 

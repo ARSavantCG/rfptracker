@@ -442,44 +442,62 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                   </Button>
                 </div>
 
-                {form.watch("areaBreakdown")?.map((area, index) => (
-                  <div key={area.id} className="grid grid-cols-12 gap-2 items-end">
-                    <div className="col-span-4">
-                      <label className="text-sm font-medium">Description</label>
-                      <Input
-                        value={area.description}
-                        onChange={(e) => updateAreaBreakdown(index, "description", e.target.value)}
-                        placeholder="e.g., Office Space"
-                      />
+                {form.watch("areaBreakdown")?.length > 0 && (
+                  <div className="space-y-2">
+                    {/* Column Headers - Show only once */}
+                    <div className="grid grid-cols-12 gap-2 items-center">
+                      <div className="col-span-4">
+                        <label className="text-sm font-medium text-gray-700">Description</label>
+                      </div>
+                      <div className="col-span-3">
+                        <label className="text-sm font-medium text-gray-700">Square Footage</label>
+                      </div>
+                      <div className="col-span-4">
+                        <label className="text-sm font-medium text-gray-700">Notes</label>
+                      </div>
+                      <div className="col-span-1">
+                        {/* Empty space for remove button column */}
+                      </div>
                     </div>
-                    <div className="col-span-3">
-                      <label className="text-sm font-medium">Square Footage</label>
-                      <Input
-                        value={area.squareFootage}
-                        onChange={(e) => updateAreaBreakdown(index, "squareFootage", e.target.value)}
-                        placeholder="e.g., 5000"
-                      />
-                    </div>
-                    <div className="col-span-4">
-                      <label className="text-sm font-medium">Notes</label>
-                      <Input
-                        value={area.notes || ""}
-                        onChange={(e) => updateAreaBreakdown(index, "notes", e.target.value)}
-                        placeholder="Additional notes"
-                      />
-                    </div>
-                    <div className="col-span-1">
-                      <Button
-                        type="button"
-                        onClick={() => removeAreaBreakdown(index)}
-                        variant="outline"
-                        size="sm"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
+
+                    {/* Area Items */}
+                    {form.watch("areaBreakdown")?.map((area, index) => (
+                      <div key={area.id} className="grid grid-cols-12 gap-2 items-center">
+                        <div className="col-span-4">
+                          <Input
+                            value={area.description}
+                            onChange={(e) => updateAreaBreakdown(index, "description", e.target.value)}
+                            placeholder="e.g., Office Space"
+                          />
+                        </div>
+                        <div className="col-span-3">
+                          <Input
+                            value={area.squareFootage}
+                            onChange={(e) => updateAreaBreakdown(index, "squareFootage", e.target.value)}
+                            placeholder="e.g., 5000"
+                          />
+                        </div>
+                        <div className="col-span-4">
+                          <Input
+                            value={area.notes || ""}
+                            onChange={(e) => updateAreaBreakdown(index, "notes", e.target.value)}
+                            placeholder="Additional notes"
+                          />
+                        </div>
+                        <div className="col-span-1">
+                          <Button
+                            type="button"
+                            onClick={() => removeAreaBreakdown(index)}
+                            variant="outline"
+                            size="sm"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                )}
               </div>
             </div>
 

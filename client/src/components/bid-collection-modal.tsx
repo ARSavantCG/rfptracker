@@ -53,6 +53,8 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
   const queryClient = useQueryClient();
   const [attachments, setAttachments] = useState<File[]>([]);
   const [lineItems, setLineItems] = useState<LineItemFormData[]>([]);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [originalLineItem, setOriginalLineItem] = useState<LineItemFormData | null>(null);
 
   const form = useForm<BidCollectionFormData>({
     resolver: zodResolver(bidCollectionSchema),
@@ -308,6 +310,32 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
     form.setValue('totalAmount', total.toFixed(2));
   };
 
+  const startEditing = (index: number) => {
+    setEditingIndex(index);
+    setOriginalLineItem({ ...lineItems[index] });
+  };
+
+  const cancelEditing = () => {
+    if (editingIndex !== null && originalLineItem) {
+      const updated = [...lineItems];
+      updated[editingIndex] = { ...originalLineItem };
+      setLineItems(updated);
+      
+      // Recalculate total after reverting
+      const total = updated.reduce((sum, item) => {
+        return sum + parseFloat(item.totalPrice || '0');
+      }, 0);
+      form.setValue('totalAmount', total.toFixed(2));
+    }
+    setEditingIndex(null);
+    setOriginalLineItem(null);
+  };
+
+  const saveEditing = () => {
+    setEditingIndex(null);
+    setOriginalLineItem(null);
+  };
+
   const calculateTotal = () => {
     return lineItems.reduce((sum, item) => {
       return sum + parseFloat(item.totalPrice || '0');
@@ -523,7 +551,10 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                                   <TableCell>
                                     <Input
                                       value={item.description}
-                                      onChange={(e) => updateLineItem(index, 'description', e.target.value)}
+                                      onChange={(e) => {
+                                        if (editingIndex === null) startEditing(index);
+                                        updateLineItem(index, 'description', e.target.value);
+                                      }}
                                       placeholder="Description"
                                       className="w-full text-xs h-8"
                                     />
@@ -532,6 +563,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                                     <Input
                                       value={item.quantity ? parseFloat(item.quantity || '0').toLocaleString('en-US') : ''}
                                       onChange={(e) => {
+                                        if (editingIndex === null) startEditing(index);
                                         const value = e.target.value.replace(/,/g, '');
                                         updateLineItem(index, 'quantity', value);
                                       }}
@@ -544,7 +576,10 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                                   <TableCell>
                                     <Input
                                       value={item.unit}
-                                      onChange={(e) => updateLineItem(index, 'unit', e.target.value)}
+                                      onChange={(e) => {
+                                        if (editingIndex === null) startEditing(index);
+                                        updateLineItem(index, 'unit', e.target.value);
+                                      }}
                                       placeholder="ea, sf, lf"
                                       className="w-full text-xs h-8"
                                     />
@@ -582,14 +617,37 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                                     />
                                   </TableCell>
                                   <TableCell>
-                                    <Button
-                                      type="button"
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => removeLineItem(index)}
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </Button>
+                                    {editingIndex === index ? (
+                                      <div className="flex gap-1">
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={saveEditing}
+                                          className="h-6 w-6 p-0 text-green-600 hover:text-green-700"
+                                        >
+                                          <Save className="h-3 w-3" />
+                                        </Button>
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={cancelEditing}
+                                          className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                                        >
+                                          <X className="h-3 w-3" />
+                                        </Button>
+                                      </div>
+                                    ) : (
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => removeLineItem(index)}
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    )}
                                   </TableCell>
                                 </TableRow>
                               )}

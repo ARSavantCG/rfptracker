@@ -1156,11 +1156,13 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                 <TableRow key={item.id}>
                   {editingItem === item.id ? (
                     <>
-                      <TableCell className="text-center">
-                        <Checkbox
-                          checked={selectedItems.has(item.id)}
-                          onCheckedChange={(checked) => handleItemSelection(item.id, !!checked)}
-                        />
+                      <TableCell>
+                        <div className="flex items-center justify-center">
+                          <Checkbox
+                            checked={selectedItems.has(item.id)}
+                            onCheckedChange={(checked) => handleItemSelection(item.id, !!checked)}
+                          />
+                        </div>
                       </TableCell>
                       <TableCell>
                         <Select
@@ -1235,11 +1237,13 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                     </>
                   ) : (
                     <>
-                      <TableCell className="text-center">
-                        <Checkbox
-                          checked={selectedItems.has(item.id)}
-                          onCheckedChange={(checked) => handleItemSelection(item.id, !!checked)}
-                        />
+                      <TableCell>
+                        <div className="flex items-center justify-center">
+                          <Checkbox
+                            checked={selectedItems.has(item.id)}
+                            onCheckedChange={(checked) => handleItemSelection(item.id, !!checked)}
+                          />
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">

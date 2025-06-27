@@ -243,7 +243,7 @@ export const rfpGenerationHistory = pgTable("rfp_generation_history", {
   generatedBy: text("generated_by").notNull(), // user who generated it
   generatedAt: timestamp("generated_at").defaultNow().notNull(),
   // Store the data that was used to generate this version
-  invitationData: json("invitation_data").$type<InvitationToBid>().notNull(),
+  invitationData: json("invitation_data"),
   // Store the HTML content that was generated
   generatedContent: text("generated_content").notNull(),
   title: text("title").notNull(), // e.g., "Contractor RFP - Bridge Point Gratigny - Dec 27, 2025"

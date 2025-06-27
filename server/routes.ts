@@ -1554,16 +1554,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
           rfpId: id,
           generationType: recipientType === "architect" || recipientType === "broker-architect" ? "architect" : "contractor",
           generatedBy,
-          invitationData: invitationToBid || {},
+          invitationData: invitationToBid || null,
           generatedContent: htmlContent,
           title: `${recipientType === "architect" || recipientType === "broker-architect" ? "Architect" : "Contractor"} RFP - ${rfp.projectName} - ${new Date().toLocaleDateString()}`,
           notes: `Generated for ${recipientType}${recipientName ? ` - ${recipientName}` : ''}${recipientCompany ? ` (${recipientCompany})` : ''}`
         };
         
-        await storage.createGenerationHistoryItem(historyItem);
-        console.log("Saved generation history item");
+        console.log("Attempting to save generation history item:", {
+          rfpId: historyItem.rfpId,
+          generationType: historyItem.generationType,
+          generatedBy: historyItem.generatedBy,
+          title: historyItem.title
+        });
+        
+        const saved = await storage.createGenerationHistoryItem(historyItem);
+        console.log("Successfully saved generation history item with ID:", saved.id);
       } catch (historyError) {
         console.error("Failed to save generation history:", historyError);
+        console.error("Error details:", historyError.message, historyError.stack);
         // Don't fail the request if history saving fails
       }
       

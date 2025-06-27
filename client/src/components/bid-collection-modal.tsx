@@ -547,11 +547,14 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                         </TableCell>
                         <TableCell>
                           <Input
-                            value={item.quantity}
-                            onChange={(e) => updateLineItem(index, 'quantity', e.target.value)}
+                            value={item.quantity ? parseFloat(item.quantity || '0').toLocaleString('en-US') : ''}
+                            onChange={(e) => {
+                              const value = e.target.value.replace(/,/g, '');
+                              updateLineItem(index, 'quantity', value);
+                            }}
                             placeholder=""
                             type="text"
-                            className="w-[80px] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            className="w-[90px] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                             style={{ MozAppearance: 'textfield' }}
                           />
                         </TableCell>

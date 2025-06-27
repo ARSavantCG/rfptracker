@@ -1482,98 +1482,6 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
               </Droppable>
             </Table>
           </DragDropContext>
-                                
-                                // Restore scroll position after state update
-                                requestAnimationFrame(() => {
-                                  window.scrollTo(0, scrollY);
-                                });
-                              }}
-                            >
-                              <SelectTrigger className="w-16 h-6 text-xs">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="tenantImprovements">TI</SelectItem>
-                                <SelectItem value="designSoftCosts">Design</SelectItem>
-                                <SelectItem value="tiAndDesign">TI & Design</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className={budgetData.lineItemRollups[item.id] ? "text-gray-500 italic" : ""}>
-                        <span className={item.assemblyId ? "line-through text-gray-500" : ""}>
-                          {item.description}
-                        </span>
-                        {budgetData.lineItemRollups[item.id] && (
-                          <span className="text-xs text-blue-600 ml-2">
-                            → Rolling to {budgetData.lineItemRollups[item.id] === 'tenantImprovements' ? 'Tenant Improvements' : 
-                              budgetData.lineItemRollups[item.id] === 'designSoftCosts' ? 'Design/Soft Costs' : 
-                              budgetData.lineItemRollups[item.id] === 'tiAndDesign' ? (() => {
-                                const tiTotal = calculateCategoryTotal(budgetData.tenantImprovements);
-                                const designTotal = calculateCategoryTotal(budgetData.designSoftCosts);
-                                const combinedTotal = tiTotal + designTotal;
-                                if (combinedTotal > 0) {
-                                  const tiPercent = Math.round((tiTotal / combinedTotal) * 100);
-                                  const designPercent = Math.round((designTotal / combinedTotal) * 100);
-                                  return `TI & Design (${tiPercent}%/${designPercent}%)`;
-                                }
-                                return 'TI & Design (50%/50%)';
-                              })() : 'Existing Improvements'}
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell className={budgetData.lineItemRollups[item.id] || item.assemblyId ? "text-gray-500 italic line-through" : ""}>
-                        {item.quantity ? parseFloat(item.quantity).toLocaleString('en-US') : ''} {item.unit}
-                      </TableCell>
-                      <TableCell className={budgetData.lineItemRollups[item.id] || item.assemblyId ? "text-gray-500 italic line-through" : ""}>
-                        {formatCurrency(calculateDistributedUnitPrice(item))}
-                      </TableCell>
-                      {!newItemCategory && <TableCell className={`font-medium ${budgetData.lineItemRollups[item.id] || item.assemblyId ? "text-gray-500 italic line-through" : ""}`}>
-                        {formatCurrency(calculateDistributedCosts(item))}
-                      </TableCell>}
-                      <TableCell>
-                        <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setEditingItem(item.id)}
-                          >
-                            <Edit className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              const categoryType = category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements';
-                              const duplicatedItem: EvaluationLineItem = {
-                                ...item,
-                                id: `${categoryType}-${Date.now()}`,
-                                description: `${item.description} (Copy)`
-                              };
-                              setBudgetData(prev => ({
-                                ...prev,
-                                [categoryType]: [...prev[categoryType], duplicatedItem],
-                              }));
-                            }}
-                          >
-                            <Copy className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => deleteItem(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', item.id)}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </>
-                  )}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
         )}
 
         {newItemCategory === category && (
@@ -1595,13 +1503,12 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                   onChange={(e) => setNewItem(prev => ({ ...prev, quantity: parseInt(e.target.value) || 1 }))}
                 />
               </div>
-              <div className="md:col-span-1">
+              <div>
                 <Label>Unit</Label>
                 <Input
                   value={newItem.unit || ""}
                   onChange={(e) => setNewItem(prev => ({ ...prev, unit: e.target.value }))}
-                  placeholder="ea, sq ft, lf, etc."
-                  className="max-w-20"
+                  placeholder="sf, ea, etc."
                 />
               </div>
               <div>
@@ -1614,25 +1521,22 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                   placeholder="0.00"
                 />
               </div>
+              <div>
+                <Label>Total Price</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={newItem.totalPrice || ""}
+                  onChange={(e) => setNewItem(prev => ({ ...prev, totalPrice: e.target.value }))}
+                  placeholder="0.00"
+                />
+              </div>
               <div className="flex items-end gap-2">
-                <Button
-                  size="sm"
-                  onClick={() => addNewItem(category)}
-                  className="h-9"
-                >
-                  <Save className="h-4 w-4 mr-1" />
+                <Button onClick={() => addNewItem(category)} size="sm">
                   Add
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setNewItemCategory("");
-                    setNewItem({});
-                  }}
-                  className="h-9"
-                >
-                  <X className="h-4 w-4" />
+                <Button onClick={() => setNewItemCategory(null)} variant="outline" size="sm">
+                  Cancel
                 </Button>
               </div>
             </div>

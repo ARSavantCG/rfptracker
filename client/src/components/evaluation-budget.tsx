@@ -1045,7 +1045,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                         )}
                       </TableCell>
                       <TableCell className={budgetData.lineItemRollups[item.id] ? "text-gray-500 italic line-through" : ""}>
-                        {item.quantity} {item.unit}
+                        {item.quantity ? parseFloat(item.quantity).toLocaleString('en-US') : ''} {item.unit}
                       </TableCell>
                       <TableCell className={budgetData.lineItemRollups[item.id] ? "text-gray-500 italic line-through" : ""}>
                         {formatCurrency(calculateDistributedUnitPrice(item))}

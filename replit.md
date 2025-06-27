@@ -179,6 +179,7 @@ This is a full-stack web application for tracking and managing Request for Propo
 - June 27, 2025. Resolved authentication token mismatch causing PDF generation failures - corrected token key from 'authToken' to 'auth-token' to match login system storage, enabling successful PDF generation for individual bids and modal Print/PDF buttons
 - June 27, 2025. Cleaned up bid collection PDF reports per user requirements - permanently removed "Property: 1" and "Status: RECEIVED" fields from all reports, fixed timezone conversion issues by using proper date string parsing to ensure Eastern Time display without UTC conversion problems
 - June 27, 2025. Implemented comprehensive line item editing cancel/save functionality in bid collection modal - users can now cancel changes while editing any line item field (description, quantity, unit, unit price, total price, notes) with red X button to revert to original values or green checkmark to save changes, eliminating the previous issue of being unable to cancel edits
+- June 27, 2025. Fixed quantity display formatting in evaluation budget component to show comma separators for large numbers - quantities now display as "10,000 sf." instead of "10000 sf." for improved readability in the Quantity (Unit) column
 
 ## User Preferences
 

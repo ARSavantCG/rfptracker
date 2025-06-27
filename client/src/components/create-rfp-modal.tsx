@@ -116,7 +116,9 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
       });
       
       if (!response.ok) {
-        throw new Error('Failed to create RFP request');
+        const errorData = await response.text();
+        console.error('RFP creation failed:', response.status, errorData);
+        throw new Error(`Failed to create RFP request: ${response.status} - ${errorData}`);
       }
       
       return response.json();
@@ -131,11 +133,22 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
       handleClose();
     },
     onError: (error) => {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to create RFP request",
-        variant: "destructive",
-      });
+      const errorMessage = error instanceof Error ? error.message : "Failed to create RFP request";
+      
+      // Check if it's an authentication error
+      if (errorMessage.includes('401') || errorMessage.includes('Unauthorized')) {
+        toast({
+          title: "Session Expired",
+          description: "Please log out and log back in to continue",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      }
     },
   });
 

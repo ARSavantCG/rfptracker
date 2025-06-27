@@ -171,11 +171,11 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
                 <div className="bg-gray-50 rounded-lg p-4">
                   <h4 className="font-medium text-gray-900 mb-3">Request Information</h4>
                   <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
+                    <div className="flex items-start">
                       <span className="text-gray-500">Last Updated:</span>
                       <span className="ml-2 text-gray-900">{formatDate(rfp.updatedAt)}</span>
                     </div>
-                    <div>
+                    <div className="flex items-start">
                       <span className="text-gray-500">Request Type:</span>
                       <span className="ml-2 text-gray-900">
                         {rfp.requestTypes.map(type => 

@@ -46,11 +46,17 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
     queryFn: async () => {
       if (rfpRequests.length === 0) return {};
       
+      const token = localStorage.getItem('auth-token');
       const counts: Record<number, number> = {};
       await Promise.all(
         rfpRequests.map(async (rfp) => {
           try {
-            const response = await fetch(`/api/rfp-requests/${rfp.id}/file-count`);
+            const response = await fetch(`/api/rfp-requests/${rfp.id}/file-count`, {
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+              },
+            });
             if (response.ok) {
               const data = await response.json();
               counts[rfp.id] = data.totalFiles;

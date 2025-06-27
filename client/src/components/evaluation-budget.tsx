@@ -1142,23 +1142,8 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-8">
-                  <Checkbox
-                    checked={items.length > 0 && items.every(item => selectedItems.has(item.id))}
-                    onCheckedChange={(checked) => {
-                      if (checked) {
-                        setSelectedItems(prev => new Set([...prev, ...items.map(item => item.id)]));
-                      } else {
-                        setSelectedItems(prev => {
-                          const newSet = new Set(prev);
-                          items.forEach(item => newSet.delete(item.id));
-                          return newSet;
-                        });
-                      }
-                    }}
-                  />
-                </TableHead>
-                <TableHead className="w-12">Rollup</TableHead>
+                <TableHead className="w-8 text-center">Assembly</TableHead>
+                <TableHead className="w-12 text-center">Rollup</TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead className="w-32">Quantity (Unit)</TableHead>
                 <TableHead className="w-24">Unit Price</TableHead>
@@ -1171,7 +1156,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                 <TableRow key={item.id}>
                   {editingItem === item.id ? (
                     <>
-                      <TableCell>
+                      <TableCell className="text-center">
                         <Checkbox
                           checked={selectedItems.has(item.id)}
                           onCheckedChange={(checked) => handleItemSelection(item.id, !!checked)}
@@ -1250,7 +1235,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                     </>
                   ) : (
                     <>
-                      <TableCell>
+                      <TableCell className="text-center">
                         <Checkbox
                           checked={selectedItems.has(item.id)}
                           onCheckedChange={(checked) => handleItemSelection(item.id, !!checked)}

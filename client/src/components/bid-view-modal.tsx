@@ -130,6 +130,7 @@ export function BidViewModal({ isOpen, onClose, bid }: BidViewModalProps) {
                     <TableRow>
                       <TableHead>Description</TableHead>
                       <TableHead>Quantity</TableHead>
+                      <TableHead>Unit</TableHead>
                       <TableHead>Unit Price</TableHead>
                       <TableHead className="text-right">Total</TableHead>
                     </TableRow>
@@ -139,6 +140,7 @@ export function BidViewModal({ isOpen, onClose, bid }: BidViewModalProps) {
                       <TableRow key={index}>
                         <TableCell className="font-medium">{item.description}</TableCell>
                         <TableCell>{item.quantity ? parseFloat(item.quantity).toLocaleString('en-US') : ''}</TableCell>
+                        <TableCell>{item.unit || ''}</TableCell>
                         <TableCell>{formatCurrency(item.unitPrice)}</TableCell>
                         <TableCell className="text-right font-medium">
                           {formatCurrency(item.totalPrice)}

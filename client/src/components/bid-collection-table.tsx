@@ -130,8 +130,30 @@ export function BidCollectionTable({ rfp }: BidCollectionTableProps) {
               <Button 
                 variant="outline"
                 onClick={() => {
+                  const token = localStorage.getItem('authToken');
                   const printUrl = `/api/rfp-requests/${rfp.id}/bid-collections/pdf`;
-                  window.open(printUrl, '_blank');
+                  // Open PDF with authentication
+                  fetch(printUrl, {
+                    headers: {
+                      'Authorization': `Bearer ${token}`
+                    }
+                  }).then(response => {
+                    if (response.ok) {
+                      return response.blob();
+                    } else {
+                      throw new Error('Authentication failed');
+                    }
+                  }).then(blob => {
+                    const url = window.URL.createObjectURL(blob);
+                    window.open(url, '_blank');
+                  }).catch(error => {
+                    console.error('Print error:', error);
+                    toast({
+                      title: "Print Error",
+                      description: "Unable to generate PDF. Please try logging in again.",
+                      variant: "destructive",
+                    });
+                  });
                 }}
                 className="flex items-center gap-2"
               >

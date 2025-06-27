@@ -132,11 +132,10 @@ function generateBidCollectionHtml(bidCollection: any, rfp: any, lineItems: any[
           <thead>
             <tr>
               <th style="width: 40%;">Description</th>
-              <th style="width: 12%;">Quantity</th>
+              <th style="width: 15%;">Quantity</th>
               <th style="width: 10%;">Unit</th>
               <th style="width: 15%;">Unit Price</th>
-              <th style="width: 15%;">Total Price</th>
-              <th style="width: 8%;">Notes</th>
+              <th style="width: 20%;">Total Price</th>
             </tr>
           </thead>
           <tbody>
@@ -147,13 +146,11 @@ function generateBidCollectionHtml(bidCollection: any, rfp: any, lineItems: any[
                 <td>${item.unit || ''}</td>
                 <td class="currency">${item.unitPrice ? '$' + parseFloat(item.unitPrice).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''}</td>
                 <td class="currency">${item.totalPrice ? '$' + parseFloat(item.totalPrice).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''}</td>
-                <td>${item.notes || ''}</td>
               </tr>
             `).join('')}
             <tr class="total-row">
               <td colspan="4" style="text-align: right;"><strong>Total Bid Amount:</strong></td>
               <td class="currency"><strong>$${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></td>
-              <td></td>
             </tr>
           </tbody>
         </table>
@@ -197,9 +194,8 @@ function generateAllBidCollectionsHtml(rfp: any, allBidsData: any[]) {
 
   // Calculate bid comparison data
   const bidSummary = allBidsData.map(({ bid, lineItems }) => {
-    const totalAmount = lineItems.reduce((sum, item) => sum + parseFloat(item.totalPrice || '0'), 0);
+    const totalAmount = lineItems.reduce((sum: number, item: any) => sum + parseFloat(item.totalPrice || '0'), 0);
     return {
-      contractor: bid.contractorName,
       company: bid.contractorCompany,
       totalAmount,
       status: bid.status,
@@ -295,7 +291,6 @@ function generateAllBidCollectionsHtml(rfp: any, allBidsData: any[]) {
           <thead>
             <tr>
               <th>Rank</th>
-              <th>Contractor</th>
               <th>Company</th>
               <th>Total Amount</th>
               <th>Status</th>
@@ -307,8 +302,7 @@ function generateAllBidCollectionsHtml(rfp: any, allBidsData: any[]) {
             ${bidSummary.map((bid, index) => `
               <tr class="${index === 0 ? 'rank-1' : index === 1 ? 'rank-2' : index === 2 ? 'rank-3' : ''}">
                 <td style="text-align: center; font-weight: 600;">${index + 1}</td>
-                <td><strong>${bid.contractor}</strong></td>
-                <td>${bid.company}</td>
+                <td><strong>${bid.company}</strong></td>
                 <td class="currency"><strong>$${bid.totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong></td>
                 <td>${bid.status.replace('-', ' ').toUpperCase()}</td>
                 <td>${new Date(bid.submissionDate).toLocaleDateString('en-US', { timeZone: 'America/New_York' })}</td>
@@ -320,32 +314,32 @@ function generateAllBidCollectionsHtml(rfp: any, allBidsData: any[]) {
       </div>
 
       ${allBidsData.map(({ bid, lineItems }, index) => {
-        const totalAmount = lineItems.reduce((sum, item) => sum + parseFloat(item.totalPrice || '0'), 0);
-        const rank = bidSummary.findIndex(b => b.contractor === bid.contractorName) + 1;
+        const totalAmount = lineItems.reduce((sum: number, item: any) => sum + parseFloat(item.totalPrice || '0'), 0);
+        const rank = bidSummary.findIndex(b => b.company === bid.contractorCompany) + 1;
         
         return `
           <div class="bid-section">
             <div class="bid-header">
-              <h3 style="margin: 0; color: #1f2937;">Bid #${index + 1} - ${bid.contractorName} (Rank #${rank})</h3>
-              <div style="color: #6b7280; font-size: 12px; margin-top: 5px;">${bid.contractorCompany} • Total: $${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+              <h3 style="margin: 0; color: #1f2937;">Bid #${index + 1} - ${bid.contractorCompany} (Rank #${rank})</h3>
+              <div style="color: #6b7280; font-size: 12px; margin-top: 5px;">Total: $${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
             </div>
 
-            <div class="subsection-title">Contractor Information</div>
+            <div class="subsection-title">Company Information</div>
             <div class="info-grid">
               <div>
                 <div class="info-item">
-                  <span class="info-label">Contractor:</span> ${bid.contractorName}
+                  <span class="info-label">Company:</span> ${bid.contractorCompany}
                 </div>
                 <div class="info-item">
-                  <span class="info-label">Company:</span> ${bid.contractorCompany}
+                  <span class="info-label">Submission Date:</span> ${new Date(bid.submissionDate).toLocaleDateString('en-US', { timeZone: 'America/New_York' })}
                 </div>
               </div>
               <div>
                 <div class="info-item">
-                  <span class="info-label">Email:</span> ${bid.contractorEmail}
+                  <span class="info-label">Status:</span> ${bid.status.replace('-', ' ').toUpperCase()}
                 </div>
                 <div class="info-item">
-                  <span class="info-label">Submission Date:</span> ${new Date(bid.submissionDate).toLocaleDateString('en-US', { timeZone: 'America/New_York' })}
+                  <span class="info-label">Total Amount:</span> $${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                 </div>
               </div>
             </div>

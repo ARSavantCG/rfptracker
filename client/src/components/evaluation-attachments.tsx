@@ -111,6 +111,38 @@ export function EvaluationAttachments({ rfpId }: EvaluationAttachmentsProps) {
     }
   };
 
+  const handleDownload = async (attachmentId: number, originalName: string) => {
+    try {
+      const token = localStorage.getItem('auth-token');
+      const response = await fetch(`/api/evaluation-budget-attachments/${attachmentId}/download`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to download file');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = originalName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Download error:', error);
+      toast({
+        title: "Download Failed",
+        description: "Could not download the file. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const removeAttachedFile = (index: number) => {
     setAttachedFiles(prev => prev.filter((_, i) => i !== index));
   };
@@ -198,7 +230,7 @@ export function EvaluationAttachments({ rfpId }: EvaluationAttachmentsProps) {
                   <Button
                     size="sm"
                     variant="ghost"
-                    onClick={() => window.open(`/api/evaluation-budget-attachments/${attachment.id}/download`, '_blank')}
+                    onClick={() => handleDownload(attachment.id, attachment.originalName)}
                     className="h-6 w-6 p-0 text-blue-500 hover:text-blue-700"
                   >
                     <FileDown className="h-3 w-3" />

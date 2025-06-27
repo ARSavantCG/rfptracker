@@ -690,7 +690,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                             <td>${item.unit}</td>
                             <td class="currency">${formatCurrency(unitPrice)}</td>
                             <td class="currency">${formatCurrency(totalPrice)}</td>
-                            <td class="currency">${pricePerSf > 0 ? '$' + new Intl.NumberFormat('en-US').format(parseFloat(pricePerSf.toFixed(2))) : 'N/A'}</td>
+                            <td class="currency">${pricePerSf > 0 ? '$' + pricePerSf.toFixed(2) : 'N/A'}</td>
                         </tr>
                         `;
                       }).join('')}

@@ -380,6 +380,14 @@ export const evaluationBudgetAttachments = pgTable("evaluation_budget_attachment
   uploadedAt: timestamp("uploaded_at").defaultNow().notNull(),
 });
 
+export const insertEvaluationBudgetAttachmentSchema = createInsertSchema(evaluationBudgetAttachments).omit({
+  id: true,
+  uploadedAt: true,
+});
+
+export type EvaluationBudgetAttachment = typeof evaluationBudgetAttachments.$inferSelect;
+export type InsertEvaluationBudgetAttachment = z.infer<typeof insertEvaluationBudgetAttachmentSchema>;
+
 export type EvaluationLineItem = {
   id: string;
   description: string;

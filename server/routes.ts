@@ -1926,6 +1926,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Evaluation Budget Attachments routes
+  app.post("/api/rfp-requests/:rfpId/evaluation-budget/attachments", requireAuth, upload.any(), async (req, res) => {
+    try {
+      const rfpId = parseInt(req.params.rfpId);
+      if (isNaN(rfpId)) {
+        return res.status(400).json({ message: "Invalid RFP ID" });
+      }
+
+      const files = req.files as Express.Multer.File[];
+      if (!files || files.length === 0) {
+        return res.status(400).json({ message: "No files uploaded" });
+      }
+
+      const savedAttachments = [];
+      for (const file of files) {
+        const attachment = await storage.createEvaluationBudgetAttachment({
+          rfpId,
+          filename: file.filename,
+          originalName: file.originalname,
+          size: file.size,
+          mimeType: file.mimetype,
+        });
+        savedAttachments.push(attachment);
+      }
+
+      res.status(201).json({ 
+        message: "Files uploaded successfully",
+        attachments: savedAttachments
+      });
+    } catch (error) {
+      console.error('Evaluation budget attachment upload error:', error);
+      res.status(500).json({ message: "Failed to upload files" });
+    }
+  });
+
+  // Get evaluation budget attachments
+  app.get("/api/rfp-requests/:rfpId/evaluation-budget/attachments", requireAuth, async (req, res) => {
+    try {
+      const rfpId = parseInt(req.params.rfpId);
+      if (isNaN(rfpId)) {
+        return res.status(400).json({ message: "Invalid RFP ID" });
+      }
+
+      const attachments = await storage.getEvaluationBudgetAttachments(rfpId);
+      res.json(attachments);
+    } catch (error) {
+      console.error('Evaluation budget attachments fetch error:', error);
+      res.status(500).json({ message: "Failed to fetch attachments" });
+    }
+  });
+
+  // Delete evaluation budget attachment
+  app.delete("/api/evaluation-budget-attachments/:attachmentId", requireAuth, async (req, res) => {
+    try {
+      const attachmentId = parseInt(req.params.attachmentId);
+      if (isNaN(attachmentId)) {
+        return res.status(400).json({ message: "Invalid attachment ID" });
+      }
+
+      const attachment = await storage.getEvaluationBudgetAttachment(attachmentId);
+      if (!attachment) {
+        return res.status(404).json({ message: "Attachment not found" });
+      }
+
+      // Delete file from disk
+      const filePath = path.join(uploadsDir, attachment.filename);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+
+      const deleted = await storage.deleteEvaluationBudgetAttachment(attachmentId);
+      if (!deleted) {
+        return res.status(404).json({ message: "Attachment not found" });
+      }
+
+      res.status(200).json({ message: "Attachment deleted successfully" });
+    } catch (error) {
+      console.error('Evaluation budget attachment delete error:', error);
+      res.status(500).json({ message: "Failed to delete attachment" });
+    }
+  });
+
   // Financial Summary PDF generation
   app.post("/api/rfp-requests/:rfpId/financial-summary-pdf", async (req, res) => {
     try {

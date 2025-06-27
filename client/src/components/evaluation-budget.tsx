@@ -2257,7 +2257,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
           )}
 
           {/* Existing Attachments */}
-          {budgetAttachments && budgetAttachments.length > 0 && (
+          {Array.isArray(budgetAttachments) && budgetAttachments.length > 0 && (
             <div className="space-y-2">
               <Label className="text-sm font-medium">Attached Files:</Label>
               {budgetAttachments.map((attachment: any) => (

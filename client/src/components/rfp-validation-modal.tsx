@@ -168,99 +168,6 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {/* Contact Information */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium text-gray-900 border-b pb-2">Project Contacts</h3>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="generalContractor"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>General Contractor</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select general contractor" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {contacts
-                            .filter((contact) => contact.type === "contractor")
-                            .map((contact) => (
-                              <SelectItem key={contact.id} value={`${contact.name} - ${contact.company}`}>
-                                {contact.name} - {contact.company}
-                              </SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="architect"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Architect</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select architect" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {contacts
-                            .filter((contact) => contact.type === "architect")
-                            .map((contact) => (
-                              <SelectItem key={contact.id} value={`${contact.name} - ${contact.company}`}>
-                                {contact.name} - {contact.company}
-                              </SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="contactPerson"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Contact Person</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Primary contact person" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="contactEmail"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Contact Email</FormLabel>
-                      <FormControl>
-                        <Input type="email" placeholder="contact@example.com" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </div>
-
-
-
             {/* Area Information */}
             <div className="space-y-4">
               <h3 className="text-lg font-medium text-gray-900 border-b pb-2">Area Information</h3>
@@ -327,8 +234,8 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                           }
                           
                           // Priority: calculated area from bays > warehouseArea > projectArea
-                          const totalArea = calculatedArea > 0 ? calculatedArea : (warehouseArea || projectArea);
-                          const totalRentable = parseInt(totalArea.toString() || "0");
+                          const totalArea = calculatedArea > 0 ? calculatedArea : (warehouseArea || projectArea || "0");
+                          const totalRentable = parseInt(totalArea.toString());
                           const additionalAreas = form.watch("areaBreakdown").reduce((sum, area) => 
                             sum + parseInt(area.squareFootage || "0"), 0);
                           const remaining = totalRentable - additionalAreas;

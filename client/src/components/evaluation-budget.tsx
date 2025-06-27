@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Edit, Trash2, Save, X, ArrowRight, Copy, FileDown, Upload } from "lucide-react";
+import { Plus, Edit, Trash2, Save, X, ArrowRight, Copy, FileDown, Upload, Package, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatDate } from "@/lib/utils";
 import type { RfpRequest, BidCollection, BidLineItem } from "@shared/schema";
@@ -25,6 +25,14 @@ interface EvaluationLineItem {
   bidLineItemId?: number;
   isRolledUp?: boolean;
   rollupTarget?: 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements';
+  assemblyId?: string;
+}
+
+interface CustomAssembly {
+  id: string;
+  name: string;
+  category: 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements';
+  items: string[]; // Array of line item IDs
 }
 
 interface EvaluationBudgetData {
@@ -40,6 +48,7 @@ interface EvaluationBudgetData {
   grandTotal: string;
   notes: string;
   lineItemRollups: Record<string, 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements' | 'tiAndDesign'>;
+  customAssemblies: CustomAssembly[];
 }
 
 interface EvaluationBudgetProps {
@@ -50,6 +59,10 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
   const [editingItem, setEditingItem] = useState<string | null>(null);
   const [newItemCategory, setNewItemCategory] = useState<string>("");
   const [newItem, setNewItem] = useState<Partial<EvaluationLineItem>>({});
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [showAssemblyCreator, setShowAssemblyCreator] = useState(false);
+  const [newAssemblyName, setNewAssemblyName] = useState("");
+  const [newAssemblyCategory, setNewAssemblyCategory] = useState<'tenantImprovements' | 'designSoftCosts' | 'existingImprovements'>('tenantImprovements');
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -121,6 +134,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     grandTotal: "0.00",
     notes: "",
     lineItemRollups: {},
+    customAssemblies: [],
   });
 
   // Initialize budget with saved data or bid line items data
@@ -140,6 +154,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         grandTotal: (existingBudget as any).grandTotal || "0.00",
         notes: (existingBudget as any).notes || "",
         lineItemRollups: (existingBudget as any).lineItemRollups || {},
+        customAssemblies: (existingBudget as any).customAssemblies || [],
       });
     } else if (allBidLineItems && Array.isArray(allBidLineItems) && allBidLineItems.length > 0) {
       // Initialize with bid line items if no saved budget exists

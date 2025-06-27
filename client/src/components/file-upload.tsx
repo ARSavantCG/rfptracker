@@ -50,11 +50,24 @@ export function FileUpload({
         alert(`File ${file.name} is too large. Maximum size is ${formatFileSize(maxSize)}.`);
         return false;
       }
+      
+      // Check for duplicates
+      const isDuplicate = selectedFiles.some(existingFile => 
+        existingFile.name === file.name && existingFile.size === file.size
+      );
+      
+      if (isDuplicate) {
+        alert(`File ${file.name} is already selected.`);
+        return false;
+      }
+      
       return true;
     });
 
-    setSelectedFiles(validFiles);
-    onFilesSelected(validFiles);
+    // Add new files to existing ones instead of replacing
+    const updatedFiles = [...selectedFiles, ...validFiles];
+    setSelectedFiles(updatedFiles);
+    onFilesSelected(updatedFiles);
   };
 
   const removeFile = (index: number) => {

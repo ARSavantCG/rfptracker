@@ -116,6 +116,10 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
         }));
         setLineItems(formattedLineItems);
       }
+      
+      // Load existing attachments - note: these are database records, not File objects
+      // For editing, we'll show attachment info but won't load actual files
+      setAttachments([]);
     } else if (!bidCollection && isOpen) {
       // Reset to defaults for new bid collection
       form.reset({
@@ -136,8 +140,6 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
   // Create/Update bid collection mutation
   const saveBidMutation = useMutation({
     mutationFn: async (data: BidCollectionFormData & { lineItems: LineItemFormData[], attachments: File[] }) => {
-      const formData = new FormData();
-      
       // Prepare bid data object (excluding lineItems and attachments)
       const bidData = {
         contractorId: data.contractorId,
@@ -150,37 +152,34 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
         notes: data.notes,
       };
       
-      const method = bidCollection ? 'PUT' : 'POST';
       const url = bidCollection 
         ? `/api/rfp-requests/${rfp?.id}/bid-collections/${bidCollection.id}`
         : `/api/rfp-requests/${rfp?.id}/bid-collections`;
 
       let response;
 
+      // Use FormData for both create and update to handle file uploads
+      const formData = new FormData();
+      
+      // Add bid collection data as JSON string
+      formData.append('bidData', JSON.stringify(bidData));
+      
+      // Add line items as JSON string
+      formData.append('lineItems', JSON.stringify(data.lineItems));
+      
+      // Add attachments
+      data.attachments.forEach((file, index) => {
+        formData.append(`attachment_${index}`, file);
+      });
+
       if (bidCollection) {
-        // For updates, send JSON data
+        // For updates, use PUT with FormData
         response = await fetch(url, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(bidData),
+          method: 'PUT',
+          body: formData,
         });
       } else {
-        // For creation, use FormData for file uploads
-        const formData = new FormData();
-        
-        // Add bid collection data as JSON string
-        formData.append('bidData', JSON.stringify(bidData));
-        
-        // Add line items as JSON string
-        formData.append('lineItems', JSON.stringify(data.lineItems));
-        
-        // Add attachments
-        data.attachments.forEach((file, index) => {
-          formData.append(`attachment_${index}`, file);
-        });
-
+        // For creation, use POST with FormData
         response = await fetch(url, {
           method: 'POST',
           body: formData,
@@ -585,6 +584,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
             <div className="space-y-1">
               <h4 className="text-xs font-medium text-gray-600">Attachments</h4>
               <FileUpload
+                key={bidCollection?.id || 'new-bid'}
                 onFilesSelected={setAttachments}
                 initialFiles={attachments}
                 multiple={true}

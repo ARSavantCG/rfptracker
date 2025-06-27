@@ -1009,25 +1009,28 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     ` : ''}
 
     ${Object.keys(budgetData.assemblies || {}).length > 0 ? `
-    <div class="assembly-summary-section">
-        <h3 class="assembly-summary-title">Assembly Summary</h3>
-        <p class="assembly-summary-description">The following line items are grouped into assemblies:</p>
-        <div class="assembly-summary-content">
+    <div class="rollup-summary-section">
+        <h3 class="rollup-summary-title">Assembly Summary</h3>
+        <p class="rollup-summary-description">The following line items are grouped into assemblies:</p>
+        <div class="rollup-summary-content">
             ${Object.entries(budgetData.assemblies || {}).map(([assemblyName, assemblyData]) => {
-              return `<div class="assembly-summary-item">
-                <div class="assembly-name"><strong>${assemblyName}</strong> (${formatCurrency(assemblyData.total)})</div>
-                <div class="assembly-components">
-                  ${assemblyData.components.map(componentId => {
-                    const allItems = [
-                      ...budgetData.tenantImprovements,
-                      ...budgetData.designSoftCosts,
-                      ...budgetData.existingImprovements
-                    ];
-                    const item = allItems.find(i => i.id === componentId);
-                    return item ? `<div class="assembly-component">• ${item.description} (${formatCurrency(item.totalPrice)})</div>` : '';
-                  }).join('')}
-                </div>
-              </div>`;
+              const componentItems = assemblyData.components.map(componentId => {
+                const allItems = [
+                  ...budgetData.tenantImprovements,
+                  ...budgetData.designSoftCosts,
+                  ...budgetData.existingImprovements
+                ];
+                const item = allItems.find(i => i.id === componentId);
+                return item;
+              }).filter(Boolean);
+              
+              return componentItems.map(item => {
+                if (!item) return '';
+                return `<div class="rollup-summary-item">
+                  <span class="rollup-item-name"><strong>${item.description}</strong> (${formatCurrency(parseFloat(item.totalPrice) || 0)})</span>
+                  <span class="rollup-item-target">→ Grouped in ${assemblyName}</span>
+                </div>`;
+              }).join('');
             }).join('')}
         </div>
     </div>

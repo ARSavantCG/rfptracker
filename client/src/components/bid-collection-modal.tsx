@@ -306,6 +306,28 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
     }, 0).toFixed(2);
   };
 
+  const formatCurrency = (value: string | number) => {
+    const num = typeof value === 'string' ? parseFloat(value) : value;
+    if (isNaN(num)) return '';
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(num);
+  };
+
+  const formatCurrencyForDisplay = (value: string | number) => {
+    const num = typeof value === 'string' ? parseFloat(value) : value;
+    if (isNaN(num)) return '$0.00';
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(num);
+  };
+
   const importFromScopeOfWork = () => {
     if (!invitationToBid || !(invitationToBid as any)?.scopeOfWork) return;
     
@@ -426,7 +448,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                       <Input 
                         {...field} 
                         placeholder="Calculated from line items"
-                        value={calculateTotal()}
+                        value={formatCurrencyForDisplay(calculateTotal())}
                         readOnly
                       />
                     </FormControl>
@@ -527,9 +549,10 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                           <Input
                             value={item.quantity}
                             onChange={(e) => updateLineItem(index, 'quantity', e.target.value)}
-                            placeholder="0"
-                            type="number"
-                            className="w-[80px]"
+                            placeholder=""
+                            type="text"
+                            className="w-[80px] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            style={{ MozAppearance: 'textfield' }}
                           />
                         </TableCell>
                         <TableCell>
@@ -542,22 +565,26 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                         </TableCell>
                         <TableCell>
                           <Input
-                            value={item.unitPrice}
-                            onChange={(e) => updateLineItem(index, 'unitPrice', e.target.value)}
-                            placeholder="0.00"
-                            type="number"
-                            step="0.01"
-                            className="w-[100px]"
+                            value={item.unitPrice ? `$${parseFloat(item.unitPrice || '0').toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}
+                            onChange={(e) => {
+                              const value = e.target.value.replace(/[$,]/g, '');
+                              updateLineItem(index, 'unitPrice', value);
+                            }}
+                            placeholder="$0.00"
+                            type="text"
+                            className="w-[120px]"
                           />
                         </TableCell>
                         <TableCell>
                           <Input
-                            value={item.totalPrice}
-                            onChange={(e) => updateLineItem(index, 'totalPrice', e.target.value)}
-                            placeholder="0.00"
-                            type="number"
-                            step="0.01"
-                            className="w-[100px]"
+                            value={item.totalPrice ? `$${parseFloat(item.totalPrice || '0').toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}
+                            onChange={(e) => {
+                              const value = e.target.value.replace(/[$,]/g, '');
+                              updateLineItem(index, 'totalPrice', value);
+                            }}
+                            placeholder="$0.00"
+                            type="text"
+                            className="w-[120px]"
                           />
                         </TableCell>
                         <TableCell>
@@ -586,7 +613,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
 
               <div className="flex justify-end">
                 <div className="text-lg font-semibold">
-                  Total: ${calculateTotal()}
+                  Total: {formatCurrencyForDisplay(calculateTotal())}
                 </div>
               </div>
             </div>

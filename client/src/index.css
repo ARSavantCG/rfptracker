@@ -45,6 +45,17 @@ html {
   font-size: 14px; /* Reduce base font size from 16px to 14px */
 }
 
+/* Remove spinner arrows from number inputs */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
 /* Calendar styling overrides - comprehensive approach */
 .rdp-day:focus,
 .rdp-day:focus-visible,

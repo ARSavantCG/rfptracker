@@ -197,6 +197,10 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
         formData.append(`attachment_${index}`, file);
       });
 
+      // Send information about existing files to keep
+      const existingAttachments = data.attachments.filter((file: any) => file.isExisting);
+      formData.append('existingAttachments', JSON.stringify(existingAttachments));
+
       if (bidCollection) {
         // For updates, use PUT with FormData
         response = await fetch(url, {

@@ -271,16 +271,8 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                   <h4 className="text-sm font-medium text-gray-900 mb-2">Rentable Area Calculation</h4>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span>Total Project Area:</span>
-                      <span className="font-medium">{rfp.projectArea ? parseInt(rfp.projectArea).toLocaleString() : 0} SF</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Existing Office Area:</span>
-                      <span className="font-medium">{rfp.officeAreaExisting ? parseInt(rfp.officeAreaExisting).toLocaleString() : 0} SF</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>New Office Area:</span>
-                      <span className="font-medium">{rfp.officeAreaNew ? parseInt(rfp.officeAreaNew).toLocaleString() : 0} SF</span>
+                      <span>Total Rentable Area:</span>
+                      <span className="font-medium">{rfp.warehouseArea ? parseInt(rfp.warehouseArea).toLocaleString() : 0} SF</span>
                     </div>
                     {form.watch("areaBreakdown").length > 0 && (
                       <>
@@ -296,15 +288,13 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                       </>
                     )}
                     <div className="border-t pt-2 flex justify-between font-semibold text-gray-900">
-                      <span>Remaining Warehouse Area:</span>
+                      <span>Remaining Rentable Area:</span>
                       <span>
                         {(() => {
-                          const totalProject = parseInt(rfp.projectArea || "0");
-                          const existingOffice = parseInt(rfp.officeAreaExisting || "0");
-                          const newOffice = parseInt(rfp.officeAreaNew || "0");
+                          const totalRentable = parseInt(rfp.warehouseArea || "0");
                           const additionalAreas = form.watch("areaBreakdown").reduce((sum, area) => 
                             sum + parseInt(area.squareFootage || "0"), 0);
-                          const remaining = totalProject - existingOffice - newOffice - additionalAreas;
+                          const remaining = totalRentable - additionalAreas;
                           return remaining.toLocaleString();
                         })()} SF
                       </span>
@@ -358,9 +348,14 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                         </div>
                         <div className="col-span-3">
                           <Input
-                            value={area.squareFootage}
-                            onChange={(e) => updateAreaBreakdown(index, "squareFootage", e.target.value)}
-                            placeholder="e.g., 5000"
+                            value={area.squareFootage ? parseInt(area.squareFootage.replace(/,/g, "")).toLocaleString() : ""}
+                            onChange={(e) => {
+                              const value = e.target.value.replace(/,/g, "");
+                              if (value === "" || /^\d+$/.test(value)) {
+                                updateAreaBreakdown(index, "squareFootage", value);
+                              }
+                            }}
+                            placeholder="e.g., 5,000"
                           />
                         </div>
                         <div className="col-span-4">

@@ -49,10 +49,7 @@ export function EvaluationBudgetHistory({ rfpId }: EvaluationBudgetHistoryProps)
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, reportName, notes }: { id: number; reportName: string; notes?: string }) => {
-      return await apiRequest(`/api/evaluation-budget-history/${id}`, {
-        method: "PATCH",
-        body: { reportName, notes },
-      });
+      return await apiRequest(`/api/evaluation-budget-history/${id}`, "PATCH", { reportName, notes });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/rfp-requests/${rfpId}/evaluation-budget-history`] });
@@ -74,9 +71,7 @@ export function EvaluationBudgetHistory({ rfpId }: EvaluationBudgetHistoryProps)
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      return await apiRequest(`/api/evaluation-budget-history/${id}`, {
-        method: "DELETE",
-      });
+      return await apiRequest(`/api/evaluation-budget-history/${id}`, "DELETE");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/rfp-requests/${rfpId}/evaluation-budget-history`] });

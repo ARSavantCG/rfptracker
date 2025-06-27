@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -2204,6 +2205,9 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
 
       {/* File Attachments */}
       <EvaluationAttachments rfpId={rfp?.id} />
+
+      {/* Evaluation Budget History */}
+      <EvaluationBudgetHistory rfpId={rfp?.id} />
 
       {/* Assembly Creation Dialog */}
       <Dialog open={showAssemblyCreator} onOpenChange={setShowAssemblyCreator}>

@@ -558,7 +558,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                                       }}
                                       placeholder="$0.00"
                                       type="text"
-                                      className="w-[120px]"
+                                      className="w-full text-xs h-8 text-right"
                                     />
                                   </TableCell>
                                   <TableCell>
@@ -570,7 +570,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                                       }}
                                       placeholder="$0.00"
                                       type="text"
-                                      className="w-[120px]"
+                                      className="w-full text-xs h-8 text-right"
                                     />
                                   </TableCell>
                                   <TableCell>
@@ -578,7 +578,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                                       value={item.notes}
                                       onChange={(e) => updateLineItem(index, 'notes', e.target.value)}
                                       placeholder="Notes"
-                                      className="min-w-[150px]"
+                                      className="w-full text-xs h-8"
                                     />
                                   </TableCell>
                                   <TableCell>

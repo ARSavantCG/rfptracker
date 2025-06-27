@@ -186,6 +186,8 @@ This is a full-stack web application for tracking and managing Request for Propo
 - June 27, 2025. Enhanced assembly system with proper cost redistribution and item grouping - assemblies now redistribute costs without adding new costs to project totals, assembled items are visually grouped near their assembly line item, and all cost calculation functions exclude assembled items to prevent double-counting while maintaining accurate project totals
 - June 27, 2025. Added "Assembly" column header next to "Rollup" in evaluation budget tables and fixed checkbox alignment issues - both assembly and rollup checkboxes now properly center-aligned for consistent visual appearance
 - June 27, 2025. Implemented "Assembly Group" column in evaluation budget tables to clearly identify which assembly each strikethrough line item belongs to - provides user visibility into cost groupings when drag-and-drop assembly movement proved technically challenging, ensuring users can track where costs are included (e.g., "Paint Demising Wall (1 Side)" shows "Demising Wall Assembly")
+- June 27, 2025. Enhanced evaluation budget container width management - uses full width when evaluation view is active to accommodate all table columns without cutoff, reverts to standard max-w-7xl layout for other views
+- June 27, 2025. Implemented visual distinction between cost grouping types - assembled items display with strikethrough only, while rolled-up items show strikethrough + italics, providing clear differentiation between assembly redistributed costs and rollup consolidated costs
 
 ## User Preferences
 

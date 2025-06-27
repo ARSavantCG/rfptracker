@@ -1331,8 +1331,9 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                               style={{
                                 ...provided.draggableProps.style,
                                 backgroundColor: snapshot.isDragging ? '#f8f9fa' : 'transparent',
-                                textDecoration: isAssembled ? 'line-through' : 'none',
-                                opacity: isAssembled ? 0.6 : 1,
+                                textDecoration: (isAssembled || isRolledUp) ? 'line-through' : 'none',
+                                fontStyle: isRolledUp ? 'italic' : 'normal',
+                                opacity: (isAssembled || isRolledUp) ? 0.6 : 1,
                               }}
                               className={isRolledUp ? 'bg-blue-50' : ''}
                             >

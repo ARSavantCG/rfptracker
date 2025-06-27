@@ -273,8 +273,8 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
         generateContractorRfp: false,
         generateBrokerArchitectRfp: false,
         generateBrokerContractorRfp: false,
-        selectedContractor: rfp.generalContractor || "",
-        selectedArchitect: rfp.architect || "",
+        selectedContractor: rfp.generalContractor || "none",
+        selectedArchitect: rfp.architect || "none",
         projectScope: cleanProjectName(rfp.projectName),
         projectLocation: getPropertyAddress(rfp.property) || "",
         contractorDueDate: rfp.contractorDueDate ? new Date(rfp.contractorDueDate).toISOString().split('T')[0] : "",
@@ -719,7 +719,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">No contractor selected</SelectItem>
+                          <SelectItem value="none">No contractor selected</SelectItem>
                           {contacts
                             .filter(contact => contact.type === 'contractor')
                             .map(contact => (
@@ -747,7 +747,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">No architect selected</SelectItem>
+                          <SelectItem value="none">No architect selected</SelectItem>
                           {contacts
                             .filter(contact => contact.type === 'architect')
                             .map(contact => (

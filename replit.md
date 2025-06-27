@@ -210,6 +210,7 @@ This is a full-stack web application for tracking and managing Request for Propo
 - June 27, 2025. Successfully implemented comprehensive 6-step workflow system replacing previous 5-step workflow - added new "RFP Validation" phase between "RFP Entry" and "Invitation to Bid" with dedicated validation modal for editing project details, contact assignments, area calculations, and requirements before proceeding to bid invitations
 - June 27, 2025. Enhanced RFP Validation modal user interface by fixing Area Breakdown section to display column headers (Description, Square Footage, Notes) only once above all area items instead of repeating headers for each individual area entry
 - June 27, 2025. Successfully completed 6-step workflow system implementation - fixed backend validation to properly recognize "rfp-validation" phase in all API endpoints, enabling smooth workflow progression from RFP Entry to RFP Validation phase with comprehensive validation modal for editing project details before proceeding to bid invitations
+- June 27, 2025. Fixed RFP validation API response handling error and added contractor/architect dropdown selections to invitation-to-bid modal (step 3) - dropdowns populate with filtered contacts and include proper "none" values to prevent Select component runtime errors
 
 ## User Preferences
 

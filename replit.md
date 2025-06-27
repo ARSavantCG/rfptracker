@@ -162,6 +162,7 @@ This is a full-stack web application for tracking and managing Request for Propo
 - June 27, 2025. Fixed PDF date display to use Eastern Time (America/New_York) instead of UTC - dates now correctly show user's local timezone
 - June 27, 2025. Fixed PDF generation corruption issue by reverting to HTML output for browser-based PDF conversion - eliminates character encoding problems with Puppeteer binary PDF generation
 - June 27, 2025. Resolved HTML character encoding corruption by properly converting Buffer to UTF-8 string with correct Content-Type headers - PDFs now display clean, readable content
+- June 27, 2025. Completely fixed PDF generation corruption by removing Puppeteer dependency and ensuring clean HTML string output - documents now generate as proper HTML with Eastern Time dates and no facility details
 
 ## User Preferences
 

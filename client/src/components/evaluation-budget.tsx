@@ -1299,8 +1299,9 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         {items.length === 0 && !newItemCategory ? (
           <p className="text-gray-500 text-center py-4">No items added yet</p>
         ) : (
-          <DragDropContext onDragEnd={handleDragEnd}>
-            <Table>
+          <div className="overflow-x-auto">
+            <DragDropContext onDragEnd={handleDragEnd}>
+              <Table className="min-w-full">
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-8 text-center">Order</TableHead>
@@ -1529,6 +1530,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
               </Droppable>
             </Table>
           </DragDropContext>
+          </div>
         )}
 
         {newItemCategory === category && (
@@ -1591,7 +1593,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         )}
       </CardContent>
     </Card>
-    );
+  );
   };
 
   if (!rfp) {

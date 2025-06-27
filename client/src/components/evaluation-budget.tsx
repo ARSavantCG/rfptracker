@@ -346,6 +346,135 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     return tiTotal + designTotal + existingTotal;
   };
 
+  // Assembly management functions
+  const createCustomAssembly = () => {
+    if (!newAssemblyName.trim() || selectedItems.size === 0) {
+      toast({
+        title: "Error",
+        description: "Please enter an assembly name and select at least one item.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const assemblyId = `assembly-${Date.now()}`;
+    const newAssembly: CustomAssembly = {
+      id: assemblyId,
+      name: newAssemblyName.trim(),
+      category: newAssemblyCategory,
+      items: Array.from(selectedItems),
+    };
+
+    setBudgetData(prev => ({
+      ...prev,
+      customAssemblies: [...prev.customAssemblies, newAssembly],
+    }));
+
+    // Update selected line items to include assembly ID
+    setBudgetData(prev => {
+      const updateCategory = (items: EvaluationLineItem[]) => 
+        items.map(item => 
+          selectedItems.has(item.id) 
+            ? { ...item, assemblyId }
+            : item
+        );
+
+      return {
+        ...prev,
+        tenantImprovements: updateCategory(prev.tenantImprovements),
+        designSoftCosts: updateCategory(prev.designSoftCosts),
+        existingImprovements: updateCategory(prev.existingImprovements),
+      };
+    });
+
+    // Reset form
+    setNewAssemblyName("");
+    setSelectedItems(new Set());
+    setShowAssemblyCreator(false);
+    
+    toast({
+      title: "Assembly Created",
+      description: `"${newAssemblyName}" assembly created with ${selectedItems.size} items.`,
+    });
+  };
+
+  const removeFromAssembly = (itemId: string, assemblyId: string) => {
+    setBudgetData(prev => {
+      const updateCategory = (items: EvaluationLineItem[]) => 
+        items.map(item => 
+          item.id === itemId && item.assemblyId === assemblyId
+            ? { ...item, assemblyId: undefined }
+            : item
+        );
+
+      // Check if assembly becomes empty
+      const allItems = [
+        ...updateCategory(prev.tenantImprovements),
+        ...updateCategory(prev.designSoftCosts),
+        ...updateCategory(prev.existingImprovements),
+      ];
+      
+      const assemblyHasItems = allItems.some(item => item.assemblyId === assemblyId);
+      
+      return {
+        ...prev,
+        tenantImprovements: updateCategory(prev.tenantImprovements),
+        designSoftCosts: updateCategory(prev.designSoftCosts),
+        existingImprovements: updateCategory(prev.existingImprovements),
+        customAssemblies: assemblyHasItems 
+          ? prev.customAssemblies 
+          : prev.customAssemblies.filter(a => a.id !== assemblyId),
+      };
+    });
+  };
+
+  const deleteAssembly = (assemblyId: string) => {
+    setBudgetData(prev => {
+      const updateCategory = (items: EvaluationLineItem[]) => 
+        items.map(item => 
+          item.assemblyId === assemblyId
+            ? { ...item, assemblyId: undefined }
+            : item
+        );
+
+      return {
+        ...prev,
+        tenantImprovements: updateCategory(prev.tenantImprovements),
+        designSoftCosts: updateCategory(prev.designSoftCosts),
+        existingImprovements: updateCategory(prev.existingImprovements),
+        customAssemblies: prev.customAssemblies.filter(a => a.id !== assemblyId),
+      };
+    });
+  };
+
+  const getAssemblyItems = (assemblyId: string) => {
+    const allItems = [
+      ...budgetData.tenantImprovements,
+      ...budgetData.designSoftCosts,
+      ...budgetData.existingImprovements,
+    ];
+    return allItems.filter(item => item.assemblyId === assemblyId);
+  };
+
+  const calculateAssemblyTotal = (assemblyId: string) => {
+    const assemblyItems = getAssemblyItems(assemblyId);
+    return assemblyItems.reduce((total, item) => {
+      return total + (parseFloat(item.totalPrice) || 0);
+    }, 0);
+  };
+
+  const handleItemSelection = (itemId: string, checked: boolean) => {
+    setSelectedItems(prev => {
+      const newSet = new Set(prev);
+      if (checked) {
+        newSet.add(itemId);
+      } else {
+        newSet.delete(itemId);
+      }
+      return newSet;
+    });
+  };
+
   const generateReportPreview = async (hideDesignCosts: boolean) => {
     if (!rfp) return;
     
@@ -914,6 +1043,20 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
             <Plus className="h-4 w-4 mr-1" />
             Add Item
           </Button>
+          {selectedItems.size > 0 && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setNewAssemblyCategory(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements');
+                setShowAssemblyCreator(true);
+              }}
+              className="h-8"
+            >
+              <Package className="h-4 w-4 mr-1" />
+              Create Assembly
+            </Button>
+          )}
         </div>
       </CardHeader>
       <CardContent>
@@ -923,6 +1066,22 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-8">
+                  <Checkbox
+                    checked={items.length > 0 && items.every(item => selectedItems.has(item.id))}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setSelectedItems(prev => new Set([...prev, ...items.map(item => item.id)]));
+                      } else {
+                        setSelectedItems(prev => {
+                          const newSet = new Set(prev);
+                          items.forEach(item => newSet.delete(item.id));
+                          return newSet;
+                        });
+                      }
+                    }}
+                  />
+                </TableHead>
                 <TableHead className="w-12">Rollup</TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead className="w-32">Quantity (Unit)</TableHead>
@@ -936,6 +1095,12 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                 <TableRow key={item.id}>
                   {editingItem === item.id ? (
                     <>
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedItems.has(item.id)}
+                          onCheckedChange={(checked) => handleItemSelection(item.id, !!checked)}
+                        />
+                      </TableCell>
                       <TableCell>
                         <Select
                           value={budgetData.lineItemRollups[item.id] || 'none'}
@@ -1009,6 +1174,12 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                     </>
                   ) : (
                     <>
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedItems.has(item.id)}
+                          onCheckedChange={(checked) => handleItemSelection(item.id, !!checked)}
+                        />
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Checkbox

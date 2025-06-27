@@ -171,6 +171,7 @@ This is a full-stack web application for tracking and managing Request for Propo
 - June 27, 2025. Completed comprehensive timezone fix by implementing centralized formatDate function in utils.ts and systematically updating all date display components (bid-collection-table, bid-view-modal, bid-collection-modal, properties page, evaluation-budget, financial-summary) to prevent UTC conversion issues - dates now consistently display correctly across entire application
 - June 27, 2025. Enhanced bid collection form UI with professional input formatting - removed spinner arrows from quantity inputs, added currency formatting ($, commas) to unit price and total price fields, implemented comma formatting for quantity fields to handle large numbers like square footage in thousands, and applied global CSS to ensure consistent number input styling across application
 - June 27, 2025. Added line item reordering functionality to pricing breakdown table with up/down arrow buttons - users can now reorganize bid line items by clicking ChevronUp/ChevronDown buttons in new Order column, with disabled states for first/last items and real-time visual updates
+- June 27, 2025. Implemented comprehensive system-wide drag and drop functionality using react-beautiful-dnd library - all list components across bid collection modal, invitation-to-bid modal, and ROM pilot scope modal now support intuitive drag and drop reordering positioned between up/down chevron arrows for maximum user experience flexibility
 
 ## User Preferences
 

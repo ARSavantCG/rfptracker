@@ -159,6 +159,12 @@ export interface IStorage {
   
   // Contact operations for access control
   getContactsByType(type: string): Promise<Contact[]>;
+  
+  // Evaluation Budget Attachments
+  createEvaluationBudgetAttachment(attachment: InsertEvaluationBudgetAttachment): Promise<EvaluationBudgetAttachment>;
+  getEvaluationBudgetAttachments(rfpId: number): Promise<EvaluationBudgetAttachment[]>;
+  getEvaluationBudgetAttachment(attachmentId: number): Promise<EvaluationBudgetAttachment | undefined>;
+  deleteEvaluationBudgetAttachment(attachmentId: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -946,6 +952,37 @@ class ExtendedDatabaseStorage extends DatabaseStorage {
       console.error("Error deleting user:", error);
       throw error;
     }
+  }
+
+  // Evaluation Budget Attachments
+  async createEvaluationBudgetAttachment(attachment: InsertEvaluationBudgetAttachment): Promise<EvaluationBudgetAttachment> {
+    const [created] = await db
+      .insert(evaluationBudgetAttachments)
+      .values(attachment)
+      .returning();
+    return created;
+  }
+
+  async getEvaluationBudgetAttachments(rfpId: number): Promise<EvaluationBudgetAttachment[]> {
+    return await db
+      .select()
+      .from(evaluationBudgetAttachments)
+      .where(eq(evaluationBudgetAttachments.rfpId, rfpId));
+  }
+
+  async getEvaluationBudgetAttachment(attachmentId: number): Promise<EvaluationBudgetAttachment | undefined> {
+    const [attachment] = await db
+      .select()
+      .from(evaluationBudgetAttachments)
+      .where(eq(evaluationBudgetAttachments.id, attachmentId));
+    return attachment || undefined;
+  }
+
+  async deleteEvaluationBudgetAttachment(attachmentId: number): Promise<boolean> {
+    const result = await db
+      .delete(evaluationBudgetAttachments)
+      .where(eq(evaluationBudgetAttachments.id, attachmentId));
+    return result.rowCount! > 0;
   }
 }
 

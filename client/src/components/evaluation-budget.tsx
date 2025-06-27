@@ -68,7 +68,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [showAssemblyCreator, setShowAssemblyCreator] = useState(false);
   const [newAssemblyName, setNewAssemblyName] = useState("");
-  const [newAssemblyCategory, setNewAssemblyCategory] = useState<'tenantImprovements' | 'designSoftCosts' | 'existingImprovements' | null>(null);
+  const [newAssemblyCategory, setNewAssemblyCategory] = useState<'tenantImprovements' | 'designSoftCosts' | 'existingImprovements' | ''>('');
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -244,6 +244,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         notes: (existingBudget as any).notes || "",
         lineItemRollups: (existingBudget as any).lineItemRollups || {},
         customAssemblies: (existingBudget as any).customAssemblies || [],
+        assemblies: (existingBudget as any).assemblies || {},
       });
     } else if (allBidLineItems && Array.isArray(allBidLineItems) && allBidLineItems.length > 0) {
       // Initialize with bid line items if no saved budget exists
@@ -682,7 +683,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                           const allItems = [...budgetData.tenantImprovements, ...budgetData.designSoftCosts, ...budgetData.existingImprovements];
                           return allItems.find(item => item.id === id);
                         }).filter(Boolean);
-                        return assemblyItems.some(item => allItemsForCategory.includes(item));
+                        return assemblyItems.some(item => item && allItemsForCategory.includes(item));
                       }).map(([assemblyName, assemblyData]) => {
                         const pricePerSf = rentableArea > 0 ? assemblyData.total / rentableArea : 0;
                         return `
@@ -728,7 +729,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                       </tr>
                   </thead>
                   <tbody>
-                      ${budgetData.existingImprovements.map(item => {
+                      ${budgetData.existingImprovements.filter(item => !item.assemblyId).map(item => {
                         const totalPrice = parseFloat(item.totalPrice) || 0;
                         const pricePerSf = rentableArea > 0 ? totalPrice / rentableArea : 0;
                         return `
@@ -738,6 +739,25 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                             <td>${item.unit}</td>
                             <td class="currency">${formatCurrency(parseFloat(item.unitPrice) || 0)}</td>
                             <td class="currency">${formatCurrency(totalPrice)}</td>
+                            <td class="currency">${pricePerSf > 0 ? '$' + new Intl.NumberFormat('en-US').format(parseFloat(pricePerSf.toFixed(2))) : 'N/A'}</td>
+                        </tr>
+                        `;
+                      }).join('')}
+                      
+                      ${Object.entries(budgetData.assemblies || {}).filter(([name, data]) => {
+                        const assemblyItems = data.components.map(id => {
+                          return budgetData.existingImprovements.find(item => item.id === id);
+                        }).filter(Boolean);
+                        return assemblyItems.length > 0;
+                      }).map(([assemblyName, assemblyData]) => {
+                        const pricePerSf = rentableArea > 0 ? assemblyData.total / rentableArea : 0;
+                        return `
+                        <tr>
+                            <td><strong>${assemblyName}</strong></td>
+                            <td>1</td>
+                            <td>assembly</td>
+                            <td class="currency">${formatCurrency(assemblyData.total)}</td>
+                            <td class="currency">${formatCurrency(assemblyData.total)}</td>
                             <td class="currency">${pricePerSf > 0 ? '$' + new Intl.NumberFormat('en-US').format(parseFloat(pricePerSf.toFixed(2))) : 'N/A'}</td>
                         </tr>
                         `;
@@ -1908,7 +1928,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
               onClick={() => {
                 setShowAssemblyCreator(false);
                 setNewAssemblyName("");
-                setNewAssemblyCategory(null);
+                setNewAssemblyCategory('');
               }}
             >
               Cancel

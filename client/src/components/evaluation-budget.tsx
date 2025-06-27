@@ -62,7 +62,14 @@ interface EvaluationBudgetProps {
 export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
   const [editingItem, setEditingItem] = useState<string | null>(null);
   const [newItemCategory, setNewItemCategory] = useState<string>("");
-  const [newItem, setNewItem] = useState<Partial<EvaluationLineItem>>({});
+  const [newItem, setNewItem] = useState<Partial<EvaluationLineItem>>({
+    description: "",
+    quantity: 0,
+    unit: "",
+    unitPrice: "",
+    totalPrice: "",
+    notes: ""
+  });
   
   // Assembly creation state
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
@@ -173,7 +180,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     // Clear assembly creation state
     setSelectedItems(new Set());
     setNewAssemblyName("");
-    setNewAssemblyCategory(null);
+    setNewAssemblyCategory('');
     setShowAssemblyCreator(false);
   };
 
@@ -451,11 +458,20 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
       return;
     }
 
+    if (!newAssemblyCategory || newAssemblyCategory === '') {
+      toast({
+        title: "Error",
+        description: "Please select a category for the assembly.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const assemblyId = `assembly-${Date.now()}`;
     const newAssembly: CustomAssembly = {
       id: assemblyId,
       name: newAssemblyName.trim(),
-      category: newAssemblyCategory,
+      category: newAssemblyCategory as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements',
       items: Array.from(selectedItems),
     };
 

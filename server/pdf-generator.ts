@@ -356,9 +356,50 @@ function generateFinancialSummaryHtml(options: PdfGenerationOptions, dates: any)
 export async function generateRfpPdf(options: PdfGenerationOptions): Promise<Buffer> {
   const html = generateRfpHtml(options);
   
-  // For now, return optimized HTML that browsers can convert to PDF
-  // This allows the client-side print functionality to work properly
-  return Buffer.from(html, 'utf8');
+  const browser = await puppeteer.launch({
+    headless: true,
+    executablePath: '/nix/store/zi4f80l169xlmivz8vja8wlphq74qqk0-chromium-125.0.6422.141/bin/chromium',
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-accelerated-2d-canvas',
+      '--no-first-run',
+      '--no-zygote',
+      '--single-process',
+      '--disable-gpu',
+      '--disable-web-security',
+      '--disable-features=VizDisplayCompositor'
+    ]
+  });
+
+  try {
+    const page = await browser.newPage();
+    
+    // Clear any cache and set fresh timezone
+    await page.setCacheEnabled(false);
+    await page.emulateTimezone('America/New_York');
+    
+    await page.setContent(html, { 
+      waitUntil: 'networkidle0',
+      timeout: 30000
+    });
+    
+    const pdf = await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      margin: {
+        top: '1in',
+        right: '1in',
+        bottom: '1in',
+        left: '1in'
+      }
+    });
+
+    return Buffer.from(pdf);
+  } finally {
+    await browser.close();
+  }
 }
 
 function generateRfpHtml(options: PdfGenerationOptions): string {
@@ -803,8 +844,6 @@ function generateArchitectRfpHtml(options: PdfGenerationOptions, dates: any): st
         </div>
       </div>
       
-      ${getBayConfigurationSection(rfp)}
-      
       ${getMilestoneRequestsSection(invitationToBid, 'architect')}
       
       <div class="section">
@@ -1014,8 +1053,6 @@ function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dates: an
         </ul>
       </div>
       ` : ''}
-
-      ${getBayConfigurationSection(rfp)}
 
       <div class="section">
         <div class="section-title">Requested Deliverables</div>

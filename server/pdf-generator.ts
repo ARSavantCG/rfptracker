@@ -1200,8 +1200,6 @@ function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, dates: a
 
       ${scopeOfWorkHtml}
 
-      ${getBayConfigurationSection(rfp)}
-
       <div class="section">
         <div class="section-title">Requested Deliverables</div>
         <ul>

@@ -7,6 +7,7 @@ import { useState } from "react";
 import Navigation from "@/components/navigation";
 import { PropertyFormModal } from "@/components/property-form-modal";
 import BayConfigurationManager from "@/components/bay-configuration-manager";
+import { formatDate } from "@/lib/utils";
 import type { Property, BayConfiguration } from "@shared/schema";
 
 export default function Properties() {
@@ -220,7 +221,7 @@ export default function Properties() {
                           <div className="text-xs text-gray-400 pt-2 border-t">
                             <p>Property ID: {property.id}</p>
                             {property.createdAt && (
-                              <p>Added: {new Date(property.createdAt).toLocaleDateString()}</p>
+                              <p>Added: {formatDate(property.createdAt)}</p>
                             )}
                           </div>
                         </div>

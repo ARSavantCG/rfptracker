@@ -11,6 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Edit, Trash2, Save, X, ArrowRight, Copy, FileDown, Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { formatDate } from "@/lib/utils";
 import type { RfpRequest, BidCollection, BidLineItem } from "@shared/schema";
 
 interface EvaluationLineItem {
@@ -333,7 +334,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
   const generateReportPreview = async (hideDesignCosts: boolean) => {
     if (!rfp) return;
     
-    const currentDate = new Date().toLocaleDateString();
+    const currentDate = formatDate(new Date());
     
     // Calculate grand total for report (sum of category totals with rollups)
     const tiTotal = calculateCategoryTotalWithRollups('tenantImprovements');

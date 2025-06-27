@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FileDown, Printer, Edit, Save, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { formatDate } from "@/lib/utils";
 import type { RfpRequest, BidCollection, BidLineItem } from "@shared/schema";
 
 interface FinancialSummaryProps {

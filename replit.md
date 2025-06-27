@@ -197,6 +197,7 @@ This is a full-stack web application for tracking and managing Request for Propo
 - June 27, 2025. Implemented comprehensive file attachment system for Budget Evaluation stage - added EvaluationAttachments component with drag-and-drop upload interface, created backend API routes for file upload/download/delete operations, added database storage methods for evaluation budget attachments, and fixed missing "size" column in evaluation_budget_attachments table to enable teams to share schedules and internal documents alongside budget reports
 - June 27, 2025. Fixed evaluation budget attachment upload issue by resolving database column name conflict - removed duplicate "file_size" column and properly configured "size" column with NOT NULL constraint to match schema definition, enabling successful file upload functionality for team schedules and internal documents
 - June 27, 2025. Fixed file download authentication issue in evaluation budget attachments - replaced insecure window.open() with proper token-based fetch API authentication, enabling secure file downloads with automatic filename preservation for team collaboration during budget evaluation phase
+- June 27, 2025. Cleaned up RFP Detail Modal interface by removing duplicate project information field and misleading individual file displays - replaced with comprehensive file count showing total across all workflow stages and clear guidance to use "Download All Files" button for accessing complete file collection organized by workflow phase
 
 ## User Preferences
 

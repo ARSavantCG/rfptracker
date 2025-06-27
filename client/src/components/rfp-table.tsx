@@ -40,6 +40,33 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
     queryKey: ["/api/properties"],
   });
 
+  // Fetch file counts for all RFPs
+  const { data: fileCounts = {} } = useQuery({
+    queryKey: ["/api/rfp-file-counts"],
+    queryFn: async () => {
+      if (rfpRequests.length === 0) return {};
+      
+      const counts: Record<number, number> = {};
+      await Promise.all(
+        rfpRequests.map(async (rfp) => {
+          try {
+            const response = await fetch(`/api/rfp-requests/${rfp.id}/file-count`);
+            if (response.ok) {
+              const data = await response.json();
+              counts[rfp.id] = data.totalFiles;
+            } else {
+              counts[rfp.id] = rfp.files.length; // fallback
+            }
+          } catch {
+            counts[rfp.id] = rfp.files.length; // fallback
+          }
+        })
+      );
+      return counts;
+    },
+    enabled: rfpRequests.length > 0,
+  });
+
   // Helper function to get property name with building
   const getPropertyDisplayName = (propertyId: string) => {
     const property = properties.find(p => p.id.toString() === propertyId);
@@ -263,7 +290,7 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
                   <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-500">
                     <div className="flex items-center space-x-1">
                       <i className="fas fa-paperclip text-gray-400 text-xs"></i>
-                      <span>{request.files.length}</span>
+                      <span>{fileCounts[request.id] || request.files.length}</span>
                     </div>
                   </td>
                   <td className="px-3 py-2 whitespace-nowrap text-xs">

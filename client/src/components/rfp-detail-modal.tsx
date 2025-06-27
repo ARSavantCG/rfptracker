@@ -172,16 +172,6 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
                   <h4 className="font-medium text-gray-900 mb-3">Request Information</h4>
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <span className="text-gray-500">Project:</span>
-                      <span className="ml-2 text-gray-900">{rfp.projectName}</span>
-                    </div>
-                    {rfp.dueDate && (
-                      <div>
-                        <span className="text-gray-500">Due Date:</span>
-                        <span className="ml-2 text-gray-900">{formatDate(rfp.dueDate)}</span>
-                      </div>
-                    )}
-                    <div>
                       <span className="text-gray-500">Last Updated:</span>
                       <span className="ml-2 text-gray-900">{formatDate(rfp.updatedAt)}</span>
                     </div>
@@ -193,6 +183,12 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
                         ).join(', ')}
                       </span>
                     </div>
+                    {rfp.dueDate && (
+                      <div>
+                        <span className="text-gray-500">Due Date:</span>
+                        <span className="ml-2 text-gray-900">{formatDate(rfp.dueDate)}</span>
+                      </div>
+                    )}
                     {rfp.contactPerson && (
                       <div>
                         <span className="text-gray-500">Contact:</span>
@@ -240,44 +236,10 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
                   </div>
                 )}
                 
-                <div className="space-y-2">
-                  {rfp.files.map((file) => (
-                    <div key={file.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        <i className={getFileIcon(file.type)}></i>
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">{file.name}</p>
-                          <p className="text-xs text-gray-500">
-                            {formatFileSize(file.size)} • {formatDate(file.uploadedAt)}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <button 
-                          onClick={() => handleDownloadFile(file.id, file.name)}
-                          className="text-blue-600 hover:text-blue-700"
-                          title="Download"
-                        >
-                          <i className="fas fa-download"></i>
-                        </button>
-                        <button 
-                          onClick={() => handleDeleteFile(file.id, file.name)}
-                          className="text-red-600 hover:text-red-700"
-                          title="Delete"
-                          disabled={deleteFileMutation.isPending}
-                        >
-                          <i className="fas fa-trash"></i>
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                  
-                  {rfp.files.length === 0 && (
-                    <div className="text-center py-8 text-gray-500">
-                      <i className="fas fa-folder-open text-2xl mb-2"></i>
-                      <p className="text-sm">No files attached</p>
-                    </div>
-                  )}
+                <div className="text-center py-6 text-gray-600">
+                  <i className="fas fa-folder-open text-3xl mb-3 text-gray-400"></i>
+                  <p className="text-sm mb-2">Use "Download All Files" button below to access all {fileCountData?.totalFiles || rfp.files.length} files</p>
+                  <p className="text-xs text-gray-500">Files are organized by workflow stage for easy navigation</p>
                 </div>
               </div>
             </div>

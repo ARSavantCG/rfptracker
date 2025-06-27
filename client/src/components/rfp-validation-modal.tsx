@@ -570,7 +570,7 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                   <span>Total Rentable Area:</span>
                   <span>{Math.round(parseInt(form.watch('warehouseArea') || '0')).toLocaleString()} sq ft</span>
                 </div>
-                {form.watch('areaBreakdown').map((item, index) => (
+                {(form.watch('areaBreakdown') || []).map((item, index) => (
                   <div key={item.id} className="grid grid-cols-3 gap-2 text-sm">
                     <span>- {item.description || `Area ${index + 1}`}</span>
                     <span className="text-right">{Math.round(parseInt(item.squareFootage || '0')).toLocaleString()} sq ft</span>
@@ -580,10 +580,19 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                 <div className="flex justify-between font-medium border-t pt-2">
                   <span>Remaining Warehouse Area:</span>
                   <span>
-                    {Math.max(0, 
-                      Math.round(parseInt(form.watch('warehouseArea') || '0')) - 
-                      form.watch('areaBreakdown').reduce((sum, item) => sum + Math.round(parseInt(item.squareFootage || '0')), 0)
-                    ).toLocaleString()} sq ft
+                    {(() => {
+                      const formValues = form.getValues();
+                      const totalRentable = Math.round(parseInt(formValues.warehouseArea || '0'));
+                      const areaBreakdownTotal = (formValues.areaBreakdown || []).reduce((sum, item) => sum + Math.round(parseInt(item.squareFootage || '0')), 0);
+                      
+                      // Check if office areas exist in area breakdown items
+                      const officeAreas = (formValues.areaBreakdown || [])
+                        .filter(item => item.description?.toLowerCase().includes('office'))
+                        .reduce((sum, item) => sum + Math.round(parseInt(item.squareFootage || '0')), 0);
+                      
+                      const remainingWarehouse = Math.max(0, totalRentable - areaBreakdownTotal);
+                      return remainingWarehouse.toLocaleString();
+                    })()} sq ft
                   </span>
                 </div>
               </div>

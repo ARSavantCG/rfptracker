@@ -1214,6 +1214,8 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         totalExistingImprovements: calculateCategoryTotal(budgetData.existingImprovements).toFixed(2),
         grandTotal: calculateGrandTotal().toFixed(2),
         notes: budgetData.notes,
+        lineItemRollups: budgetData.lineItemRollups,
+        assemblies: budgetData.assemblies,
       };
 
       await fetch(`/api/rfp-requests/${rfp.id}/evaluation-budget`, {
@@ -1257,6 +1259,8 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         totalExistingImprovements: calculateCategoryTotal(budgetData.existingImprovements).toFixed(2),
         grandTotal: calculateGrandTotal().toFixed(2),
         notes: budgetData.notes,
+        lineItemRollups: budgetData.lineItemRollups,
+        assemblies: budgetData.assemblies,
       };
 
       await fetch(`/api/rfp-requests/${rfp.id}/evaluation-budget`, {

@@ -199,6 +199,8 @@ This is a full-stack web application for tracking and managing Request for Propo
 - June 27, 2025. Fixed file download authentication issue in evaluation budget attachments - replaced insecure window.open() with proper token-based fetch API authentication, enabling secure file downloads with automatic filename preservation for team collaboration during budget evaluation phase
 - June 27, 2025. Cleaned up RFP Detail Modal interface by removing duplicate project information field and misleading individual file displays - replaced with comprehensive file count showing total across all workflow stages and clear guidance to use "Download All Files" button for accessing complete file collection organized by workflow phase
 - June 27, 2025. Synchronized FILES column in main RFP table with comprehensive file count API - main table now displays accurate total file count (5) matching detail modal instead of showing only initial RFP files (1), and fixed field alignment in RFP Detail Modal using flex layout to ensure "Last Updated:" and "Request Type:" display at consistent heights for professional appearance
+- June 27, 2025. Implemented click-to-deselect functionality for RFP selection - users can now click an already-selected RFP to unselect it and hide the Workflow Status panel, providing clean navigation control without requiring tab switching
+- June 27, 2025. Fixed table row height consistency issue - all RFP table rows now maintain uniform height (48px) regardless of selection state using fixed height class and transparent borders, preventing visual confusion when selecting/deselecting multiple RFPs
 
 ## User Preferences
 

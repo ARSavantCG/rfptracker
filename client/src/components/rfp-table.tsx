@@ -248,9 +248,12 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
               sortedRequests.map((request) => (
                 <tr 
                   key={request.id} 
-                  className={`hover:bg-gray-50 transition-colors cursor-pointer ${
-                    selectedRfpId === request.id ? 'bg-blue-50 border-l-4 border-blue-500' : ''
+                  className={`hover:bg-gray-50 transition-colors cursor-pointer h-12 ${
+                    selectedRfpId === request.id ? 'bg-blue-50' : ''
                   }`}
+                  style={{
+                    borderLeft: selectedRfpId === request.id ? '4px solid #3b82f6' : '4px solid transparent'
+                  }}
                   onClick={() => onSelectRfp?.(request)}
                 >
                   <td className="px-3 py-2 whitespace-nowrap text-xs font-medium text-gray-900">

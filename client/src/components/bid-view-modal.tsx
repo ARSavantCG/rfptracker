@@ -62,17 +62,27 @@ export function BidViewModal({ isOpen, onClose, bid }: BidViewModalProps) {
             size="sm"
             onClick={() => {
               const token = localStorage.getItem('authToken');
+              console.log('Frontend - retrieved token:', token ? `${token.substring(0, 8)}...` : 'none');
+              
+              if (!token) {
+                alert('No authentication token found. Please log in again.');
+                return;
+              }
+              
               const printUrl = `/api/bid-collections/${bid.id}/pdf`;
+              console.log('Frontend - making request to:', printUrl);
+              
               // Open PDF with authentication
               fetch(printUrl, {
                 headers: {
                   'Authorization': `Bearer ${token}`
                 }
               }).then(response => {
+                console.log('Frontend - response status:', response.status);
                 if (response.ok) {
                   return response.text();
                 } else {
-                  throw new Error('Authentication failed');
+                  throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
               }).then(html => {
                 const blob = new Blob([html], { type: 'text/html' });
@@ -81,7 +91,7 @@ export function BidViewModal({ isOpen, onClose, bid }: BidViewModalProps) {
                 setTimeout(() => window.URL.revokeObjectURL(url), 100);
               }).catch(error => {
                 console.error('Print error:', error);
-                alert('Unable to generate PDF. Please try logging in again.');
+                alert(`Unable to generate PDF: ${error.message}. Please try logging in again.`);
               });
             }}
             className="flex items-center gap-2"

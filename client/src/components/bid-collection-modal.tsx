@@ -588,6 +588,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                                     <Input
                                       value={item.unitPrice ? `$${parseFloat(item.unitPrice || '0').toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}
                                       onChange={(e) => {
+                                        if (editingIndex === null) startEditing(index);
                                         const value = e.target.value.replace(/[$,]/g, '');
                                         updateLineItem(index, 'unitPrice', value);
                                       }}
@@ -600,6 +601,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                                     <Input
                                       value={item.totalPrice ? `$${parseFloat(item.totalPrice || '0').toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}
                                       onChange={(e) => {
+                                        if (editingIndex === null) startEditing(index);
                                         const value = e.target.value.replace(/[$,]/g, '');
                                         updateLineItem(index, 'totalPrice', value);
                                       }}
@@ -611,7 +613,10 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                                   <TableCell>
                                     <Input
                                       value={item.notes}
-                                      onChange={(e) => updateLineItem(index, 'notes', e.target.value)}
+                                      onChange={(e) => {
+                                        if (editingIndex === null) startEditing(index);
+                                        updateLineItem(index, 'notes', e.target.value);
+                                      }}
                                       placeholder="Notes"
                                       className="w-full text-xs h-8"
                                     />

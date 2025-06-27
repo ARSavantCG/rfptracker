@@ -629,6 +629,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="rfp-entry">RFP Entry</SelectItem>
+                        <SelectItem value="rfp-validation">RFP Validation</SelectItem>
                         <SelectItem value="invitation-to-bid">Invitation to Bid</SelectItem>
                         <SelectItem value="bid-collection">Bid Collection</SelectItem>
                         <SelectItem value="evaluation">Evaluation</SelectItem>

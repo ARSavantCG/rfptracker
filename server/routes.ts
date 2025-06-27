@@ -1124,6 +1124,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const id = parseInt(req.params.id);
       const { recipientType, recipientName, recipientCompany, returnType = "html" } = req.body;
       
+      console.log("PDF generation request:", { id, recipientType, returnType });
+      
       if (isNaN(id)) {
         return res.status(400).json({ message: "Invalid ID" });
       }
@@ -1155,23 +1157,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         recipientCompany
       };
 
-      if (returnType === "pdf") {
-        // Generate actual PDF for download
-        const pdfBuffer = await generateRfpPdf(pdfOptions);
-        const filename = generatePdfFilename(rfp, recipientType);
-        
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-        res.setHeader('Content-Length', pdfBuffer.length);
-        
-        res.send(pdfBuffer);
-      } else {
-        // Return HTML for preview/printing (existing behavior)
-        const htmlBuffer = await generateRfpPdf(pdfOptions);
-        const htmlContent = htmlBuffer.toString('utf8');
-        res.setHeader('Content-Type', 'text/html; charset=utf-8');
-        res.send(htmlContent);
-      }
+      // Always return HTML for now to avoid encoding issues
+      const htmlBuffer = await generateRfpPdf(pdfOptions);
+      const htmlContent = htmlBuffer.toString('utf8');
+      
+      console.log("Generated HTML length:", htmlContent.length);
+      console.log("HTML starts with:", htmlContent.substring(0, 100));
+      
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      res.send(htmlContent);
     } catch (error) {
       console.error("PDF generation error:", error);
       res.status(500).json({ message: "Failed to generate PDF" });

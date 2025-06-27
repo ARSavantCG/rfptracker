@@ -1,6 +1,5 @@
 import { createWriteStream } from "fs";
 import { promisify } from "util";
-import puppeteer from "puppeteer";
 
 function formatDate(date: string | Date): string {
   const d = new Date(date);
@@ -354,11 +353,29 @@ function generateFinancialSummaryHtml(options: PdfGenerationOptions, dates: any)
 }
 
 export async function generateRfpPdf(options: PdfGenerationOptions): Promise<Buffer> {
-  const html = generateRfpHtml(options);
-  
-  // Return HTML for browser-based PDF generation to avoid encoding issues
-  // The client will handle the PDF conversion through browser print functionality
-  return Buffer.from(html, 'utf8');
+  try {
+    const html = generateRfpHtml(options);
+    
+    // Ensure clean UTF-8 encoding
+    const cleanHtml = html.replace(/[\u0000-\u0008\u000B-\u000C\u000E-\u001F\u007F-\u009F]/g, '');
+    
+    // Return HTML for browser-based PDF generation
+    return Buffer.from(cleanHtml, 'utf8');
+  } catch (error) {
+    console.error('PDF generation error:', error);
+    // Return a simple fallback HTML
+    const fallbackHtml = `
+      <!DOCTYPE html>
+      <html>
+      <head><meta charset="UTF-8"><title>RFP Document</title></head>
+      <body>
+        <h1>RFP Document Generation Error</h1>
+        <p>Please try again or contact support.</p>
+      </body>
+      </html>
+    `;
+    return Buffer.from(fallbackHtml, 'utf8');
+  }
 }
 
 function generateRfpHtml(options: PdfGenerationOptions): string {

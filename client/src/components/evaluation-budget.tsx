@@ -999,18 +999,36 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                           <Checkbox
                             checked={!!budgetData.lineItemRollups[item.id]}
                             onCheckedChange={(checked) => {
+                              // Preserve scroll position
+                              const scrollY = window.scrollY;
+                              
                               if (checked) {
                                 // Default to rolling up to tenant improvements
                                 handleLineItemRollup(item.id, category, 'tenantImprovements');
                               } else {
                                 handleLineItemRollup(item.id, category, 'none');
                               }
+                              
+                              // Restore scroll position after state update
+                              requestAnimationFrame(() => {
+                                window.scrollTo(0, scrollY);
+                              });
                             }}
                           />
                           {budgetData.lineItemRollups[item.id] && (
                             <Select
                               value={budgetData.lineItemRollups[item.id]}
-                              onValueChange={(value) => handleLineItemRollup(item.id, category, value as any)}
+                              onValueChange={(value) => {
+                                // Preserve scroll position
+                                const scrollY = window.scrollY;
+                                
+                                handleLineItemRollup(item.id, category, value as any);
+                                
+                                // Restore scroll position after state update
+                                requestAnimationFrame(() => {
+                                  window.scrollTo(0, scrollY);
+                                });
+                              }}
                             >
                               <SelectTrigger className="w-16 h-6 text-xs">
                                 <SelectValue />

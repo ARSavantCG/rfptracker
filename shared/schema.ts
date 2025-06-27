@@ -365,6 +365,19 @@ export const evaluationBudgets = pgTable("evaluation_budgets", {
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  lineItemRollups: json("line_item_rollups").$type<Record<string, 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements' | 'tiAndDesign'>>().default({}),
+  assemblies: json("assemblies").$type<Record<string, { total: number; components: string[] }>>().default({}),
+});
+
+// Evaluation Budget Attachments table
+export const evaluationBudgetAttachments = pgTable("evaluation_budget_attachments", {
+  id: serial("id").primaryKey(),
+  rfpId: integer("rfp_id").references(() => rfpRequests.id, { onDelete: "cascade" }).notNull(),
+  filename: text("filename").notNull(),
+  originalName: text("original_name").notNull(),
+  size: integer("size").notNull(),
+  mimeType: text("mime_type").notNull(),
+  uploadedAt: timestamp("uploaded_at").defaultNow().notNull(),
 });
 
 export type EvaluationLineItem = {

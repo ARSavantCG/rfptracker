@@ -75,9 +75,54 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
   const [showAssemblyCreator, setShowAssemblyCreator] = useState(false);
   const [newAssemblyName, setNewAssemblyName] = useState("");
   const [newAssemblyCategory, setNewAssemblyCategory] = useState<'tenantImprovements' | 'designSoftCosts' | 'existingImprovements' | ''>('');
+  
+  // File attachment state for Budget Evaluation stage
+  const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
+  const [existingAttachments, setExistingAttachments] = useState<any[]>([]);
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  // Load existing budget evaluation attachments
+  const { data: budgetAttachments } = useQuery({
+    queryKey: [`/api/rfp-requests/${rfp?.id}/evaluation-budget/attachments`],
+    enabled: !!rfp?.id,
+  });
+
+  // File handling functions
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    setAttachedFiles(prev => [...prev, ...files]);
+  };
+
+  const removeAttachedFile = (index: number) => {
+    setAttachedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const deleteExistingAttachment = async (attachmentId: number) => {
+    try {
+      const response = await fetch(`/api/evaluation-budget-attachments/${attachmentId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth-token')}`,
+        },
+      });
+      
+      if (!response.ok) throw new Error('Failed to delete attachment');
+      
+      setExistingAttachments(prev => prev.filter(att => att.id !== attachmentId));
+      toast({
+        title: "File Deleted",
+        description: "The attachment has been removed successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Delete Failed",
+        description: "Failed to delete the attachment. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   // Handle line item rollup
   const handleLineItemRollup = (
@@ -1222,9 +1267,29 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('auth-token')}`,
         },
         body: JSON.stringify(budgetPayload),
       });
+
+      // Upload new files if any
+      if (attachedFiles.length > 0) {
+        const formData = new FormData();
+        attachedFiles.forEach((file, index) => {
+          formData.append(`attachment_${index}`, file);
+        });
+        formData.append('rfpId', rfp.id.toString());
+
+        await fetch(`/api/rfp-requests/${rfp.id}/evaluation-budget/attachments`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('auth-token')}`,
+          },
+          body: formData,
+        });
+        
+        setAttachedFiles([]);
+      }
     },
     onSuccess: () => {
       toast({
@@ -1267,9 +1332,29 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('auth-token')}`,
         },
         body: JSON.stringify(budgetPayload),
       });
+
+      // Upload new files if any
+      if (attachedFiles.length > 0) {
+        const formData = new FormData();
+        attachedFiles.forEach((file, index) => {
+          formData.append(`attachment_${index}`, file);
+        });
+        formData.append('rfpId', rfp.id.toString());
+
+        await fetch(`/api/rfp-requests/${rfp.id}/evaluation-budget/attachments`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('auth-token')}`,
+          },
+          body: formData,
+        });
+        
+        setAttachedFiles([]);
+      }
 
       await fetch(`/api/rfp-requests/${rfp.id}/workflow-phase`, {
         method: 'PATCH',
@@ -2112,6 +2197,94 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
           <p className="text-xs text-gray-500 mt-2 text-center">
             Report format is based on your "Hide Design Costs" checkbox setting and line item rollups.
           </p>
+        </CardContent>
+      </Card>
+
+      {/* File Attachments Section */}
+      <Card>
+        <CardHeader>
+          <div className="text-center">
+            <Label className="text-lg font-semibold">Team Schedules & Documents</Label>
+            <p className="text-sm text-gray-600 mt-2">
+              Attach schedules and internal documents to share with your team alongside the evaluation budget report
+            </p>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* File Upload Section */}
+          <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+            <div className="text-center">
+              <Upload className="mx-auto h-8 w-8 text-gray-400" />
+              <div className="mt-2">
+                <label htmlFor="schedule-upload" className="cursor-pointer">
+                  <span className="text-sm font-medium text-blue-600 hover:text-blue-500">
+                    Click to upload files
+                  </span>
+                  <input
+                    id="schedule-upload"
+                    type="file"
+                    multiple
+                    className="sr-only"
+                    onChange={handleFileSelect}
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg,.msg"
+                  />
+                </label>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                PDF, Word, Excel, PowerPoint, Images, or Outlook files up to 10MB
+              </p>
+            </div>
+          </div>
+
+          {/* New Files to Upload */}
+          {attachedFiles.length > 0 && (
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Files to Upload:</Label>
+              {attachedFiles.map((file, index) => (
+                <div key={index} className="flex items-center justify-between bg-blue-50 p-2 rounded">
+                  <span className="text-sm text-blue-700">{file.name}</span>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => removeAttachedFile(index)}
+                    className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Existing Attachments */}
+          {budgetAttachments && budgetAttachments.length > 0 && (
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Attached Files:</Label>
+              {budgetAttachments.map((attachment: any) => (
+                <div key={attachment.id} className="flex items-center justify-between bg-green-50 p-2 rounded">
+                  <span className="text-sm text-green-700">{attachment.filename}</span>
+                  <div className="flex gap-1">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => window.open(`/uploads/${attachment.filename}`, '_blank')}
+                      className="h-6 w-6 p-0 text-blue-500 hover:text-blue-700"
+                    >
+                      <FileDown className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => deleteExistingAttachment(attachment.id)}
+                      className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 

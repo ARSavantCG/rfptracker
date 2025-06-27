@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Edit, Trash2, Save, X, ArrowRight, Copy, FileDown, Upload, Package, Users } from "lucide-react";
@@ -59,10 +60,12 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
   const [editingItem, setEditingItem] = useState<string | null>(null);
   const [newItemCategory, setNewItemCategory] = useState<string>("");
   const [newItem, setNewItem] = useState<Partial<EvaluationLineItem>>({});
+  
+  // Assembly creation state
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [showAssemblyCreator, setShowAssemblyCreator] = useState(false);
   const [newAssemblyName, setNewAssemblyName] = useState("");
-  const [newAssemblyCategory, setNewAssemblyCategory] = useState<'tenantImprovements' | 'designSoftCosts' | 'existingImprovements'>('tenantImprovements');
+  const [newAssemblyCategory, setNewAssemblyCategory] = useState<'tenantImprovements' | 'designSoftCosts' | 'existingImprovements' | null>(null);
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -87,6 +90,51 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         lineItemRollups: newLineItemRollups,
       };
     });
+  };
+
+  // Assembly helper functions
+  const handleItemSelection = (itemId: string, checked: boolean) => {
+    setSelectedItems(prev => {
+      const newSet = new Set(prev);
+      if (checked) {
+        newSet.add(itemId);
+      } else {
+        newSet.delete(itemId);
+      }
+      return newSet;
+    });
+  };
+
+  const findItemById = (itemId: string): EvaluationLineItem | null => {
+    const allItems = [
+      ...budgetData.tenantImprovements,
+      ...budgetData.designSoftCosts,
+      ...budgetData.existingImprovements
+    ];
+    return allItems.find(item => item.id === itemId) || null;
+  };
+
+  const createAssembly = () => {
+    if (!newAssemblyName.trim() || selectedItems.size === 0 || !newAssemblyCategory) return;
+
+    const assemblyId = `assembly_${Date.now()}`;
+    const newAssembly: CustomAssembly = {
+      id: assemblyId,
+      name: newAssemblyName.trim(),
+      category: newAssemblyCategory,
+      items: Array.from(selectedItems)
+    };
+
+    setBudgetData(prev => ({
+      ...prev,
+      customAssemblies: [...prev.customAssemblies, newAssembly]
+    }));
+
+    // Clear assembly creation state
+    setSelectedItems(new Set());
+    setNewAssemblyName("");
+    setNewAssemblyCategory(null);
+    setShowAssemblyCreator(false);
   };
 
   // Load existing evaluation budget data
@@ -1577,6 +1625,60 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
           {saveAndAdvanceMutation.isPending ? "Saving..." : "Save & Continue to Team Review"}
         </Button>
       </div>
+      {/* Assembly Creation Dialog */}
+      <Dialog open={showAssemblyCreator} onOpenChange={setShowAssemblyCreator}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create Custom Assembly</DialogTitle>
+            <DialogDescription>
+              Group selected line items under a custom assembly name like "Dock Package" or "Demising Wall Package".
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="assemblyName">Assembly Name</Label>
+              <Input
+                id="assemblyName"
+                value={newAssemblyName}
+                onChange={(e) => setNewAssemblyName(e.target.value)}
+                placeholder="e.g., Dock Package, Demising Wall Package"
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label>Selected Items ({selectedItems.size})</Label>
+              <div className="mt-2 space-y-1 max-h-40 overflow-y-auto border rounded p-2">
+                {Array.from(selectedItems).map(itemId => {
+                  const item = findItemById(itemId);
+                  return item ? (
+                    <div key={itemId} className="text-sm text-gray-700">
+                      {item.description}
+                    </div>
+                  ) : null;
+                })}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowAssemblyCreator(false);
+                setNewAssemblyName("");
+                setNewAssemblyCategory(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={createAssembly}
+              disabled={!newAssemblyName.trim() || selectedItems.size === 0}
+            >
+              Create Assembly
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

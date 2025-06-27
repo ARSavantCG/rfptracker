@@ -3293,6 +3293,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get comprehensive file count for an RFP from all workflow stages
+  app.get("/api/rfp-requests/:id/file-count", requireAuth, async (req, res) => {
+    try {
+      const rfpId = parseInt(req.params.id);
+
+      if (isNaN(rfpId)) {
+        return res.status(400).json({ message: "Invalid RFP ID" });
+      }
+
+      const rfp = await storage.getRfpRequest(rfpId);
+      if (!rfp) {
+        return res.status(404).json({ message: "RFP not found" });
+      }
+
+      let totalFiles = 0;
+      const filesByStage = {
+        rfpEntry: 0,
+        invitationToBid: 0,
+        bidCollection: 0,
+        evaluationBudget: 0
+      };
+
+      // 1. RFP Entry files
+      if (rfp.files && rfp.files.length > 0) {
+        filesByStage.rfpEntry = rfp.files.length;
+        totalFiles += rfp.files.length;
+      }
+
+      // 2. Bid Collection files
+      const bidCollections = await storage.getBidCollectionsByRfp(rfpId);
+      if (bidCollections && bidCollections.length > 0) {
+        for (const bid of bidCollections) {
+          if (bid.attachments && bid.attachments.length > 0) {
+            filesByStage.bidCollection += bid.attachments.length;
+            totalFiles += bid.attachments.length;
+          }
+        }
+      }
+
+      // 3. Evaluation Budget files
+      try {
+        const evaluationAttachments = await storage.getEvaluationBudgetAttachments(rfpId);
+        if (evaluationAttachments && evaluationAttachments.length > 0) {
+          filesByStage.evaluationBudget = evaluationAttachments.length;
+          totalFiles += evaluationAttachments.length;
+        }
+      } catch (error) {
+        console.log('No evaluation attachments found');
+      }
+
+      res.json({
+        totalFiles,
+        filesByStage
+      });
+
+    } catch (error) {
+      console.error("File count error:", error);
+      res.status(500).json({ message: "Failed to count files" });
+    }
+  });
+
   // Download all files for an RFP as organized zip
   app.get("/api/rfp-requests/:id/download-all-files", requireAuth, async (req, res) => {
     try {

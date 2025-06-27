@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { formatDate, formatFileSize, getFileIcon, getStatusColor } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -18,6 +18,12 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
   const [showInvitationModal, setShowInvitationModal] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Get comprehensive file count from all workflow stages
+  const { data: fileCountData } = useQuery({
+    queryKey: [`/api/rfp-requests/${rfp?.id}/file-count`],
+    enabled: !!rfp?.id,
+  });
 
   const updateStatusMutation = useMutation({
     mutationFn: async (newStatus: string) => {
@@ -149,7 +155,7 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">{rfp.rfpNumber} Details</h3>
-                <p className="text-sm text-gray-600">{rfp.client} - {rfp.project}</p>
+                <p className="text-sm text-gray-600">{rfp.projectName}</p>
               </div>
               <button 
                 onClick={onClose}
@@ -166,35 +172,8 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
                   <h4 className="font-medium text-gray-900 mb-3">Request Information</h4>
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <span className="text-gray-500">Client:</span>
-                      <span className="ml-2 text-gray-900">{rfp.client}</span>
-                    </div>
-                    <div>
                       <span className="text-gray-500">Project:</span>
-                      <span className="ml-2 text-gray-900">{rfp.project}</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Status:</span>
-                      {isEditing ? (
-                        <select
-                          value={editStatus}
-                          onChange={(e) => setEditStatus(e.target.value)}
-                          className="ml-2 text-sm border border-gray-300 rounded px-2 py-1"
-                        >
-                          <option value="received">Received</option>
-                          <option value="in-progress">In Progress</option>
-                          <option value="completed">Completed</option>
-                          <option value="on-hold">On Hold</option>
-                        </select>
-                      ) : (
-                        <span className={`ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(rfp.status)}`}>
-                          {rfp.status.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                        </span>
-                      )}
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Received:</span>
-                      <span className="ml-2 text-gray-900">{formatDate(rfp.dateReceived)}</span>
+                      <span className="ml-2 text-gray-900">{rfp.projectName}</span>
                     </div>
                     {rfp.dueDate && (
                       <div>
@@ -242,8 +221,25 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
               {/* Files Section */}
               <div>
                 <h4 className="font-medium text-gray-900 mb-3">
-                  Attached Files ({rfp.files.length})
+                  Attached Files ({fileCountData?.totalFiles || rfp.files.length})
+                  {fileCountData && fileCountData.totalFiles > rfp.files.length && (
+                    <span className="text-xs text-gray-500 ml-2">
+                      ({rfp.files.length} initial + {fileCountData.totalFiles - rfp.files.length} from workflow stages)
+                    </span>
+                  )}
                 </h4>
+                {fileCountData && fileCountData.totalFiles > rfp.files.length && (
+                  <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+                    <h5 className="text-sm font-medium text-blue-900 mb-2">File Distribution Across Workflow Stages:</h5>
+                    <div className="grid grid-cols-2 gap-2 text-xs text-blue-800">
+                      <div>RFP Entry: {fileCountData.filesByStage.rfpEntry}</div>
+                      <div>Bid Collection: {fileCountData.filesByStage.bidCollection}</div>
+                      <div>Evaluation Budget: {fileCountData.filesByStage.evaluationBudget}</div>
+                      <div>Total: {fileCountData.totalFiles} files</div>
+                    </div>
+                  </div>
+                )}
+                
                 <div className="space-y-2">
                   {rfp.files.map((file) => (
                     <div key={file.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">

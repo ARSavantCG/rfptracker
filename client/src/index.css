@@ -45,6 +45,19 @@ html {
   font-size: 14px; /* Reduce base font size from 16px to 14px */
 }
 
+/* Fix table row height consistency */
+.rfp-table tbody tr {
+  height: 48px !important;
+  min-height: 48px !important;  
+  max-height: 48px !important;
+  box-sizing: border-box !important;
+}
+
+.rfp-table tbody td {
+  vertical-align: middle !important;
+  box-sizing: border-box !important;
+}
+
 /* Remove spinner arrows from number inputs */
 input[type="number"]::-webkit-outer-spin-button,
 input[type="number"]::-webkit-inner-spin-button {

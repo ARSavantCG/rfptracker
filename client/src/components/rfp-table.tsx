@@ -189,7 +189,7 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
         <h2 className="text-sm font-semibold text-gray-900">RFP Requests</h2>
       </div>
       <div className="overflow-x-auto max-w-full">
-        <table className="w-full divide-y divide-gray-200" style={{ minWidth: '800px' }}>
+        <table className="rfp-table w-full divide-y divide-gray-200" style={{ minWidth: '800px' }}>
           <thead className="bg-gray-50">
             <tr>
               <th 
@@ -249,11 +249,12 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
                 <tr 
                   key={request.id} 
                   className={`hover:bg-gray-50 transition-colors ${
-                    selectedRfpId === request.id ? 'bg-blue-50' : ''
+                    selectedRfpId === request.id ? 'bg-blue-50 border-l-4 border-blue-500' : 'border-l-4 border-transparent'
                   }`}
                   style={{
                     height: '48px',
-                    borderLeft: selectedRfpId === request.id ? '4px solid #3b82f6' : '4px solid transparent'
+                    minHeight: '48px',
+                    maxHeight: '48px'
                   }}
                 >
                   <td 

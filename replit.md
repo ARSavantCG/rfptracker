@@ -202,6 +202,7 @@ This is a full-stack web application for tracking and managing Request for Propo
 - June 27, 2025. Implemented click-to-deselect functionality for RFP selection - users can now click an already-selected RFP to unselect it and hide the Workflow Status panel, providing clean navigation control without requiring tab switching
 - June 27, 2025. Fixed table row height consistency issue - all RFP table rows now maintain uniform height (48px) regardless of selection state using fixed height class and transparent borders, preventing visual confusion when selecting/deselecting multiple RFPs
 - June 27, 2025. Improved RFP table click behavior - moved click handlers from row-level to individual cells with proper event isolation for action buttons, preventing accidental header clicks and ensuring precise selection control for better user experience
+- June 27, 2025. Resolved table row height inconsistency with comprehensive CSS solution - implemented forced 48px height using !important declarations, proper box-sizing, and vertical centering to eliminate layout shifts during RFP selection/deselection for stable professional interface
 
 ## User Preferences
 

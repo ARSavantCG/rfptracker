@@ -168,6 +168,7 @@ This is a full-stack web application for tracking and managing Request for Propo
 - June 27, 2025. Fixed file attachment display in bid edit forms - existing attachments now properly load and display in edit modal, while preserving existing files when adding new attachments during updates
 - June 27, 2025. Implemented proper file deletion functionality in bid attachments - removed files are now permanently deleted from database, and attachment counts synchronize correctly between table view and edit forms
 - June 27, 2025. Fixed project name typo from "Bridge Point Grangry" to "Bridge Point Gratigny" in RFP database and resolved timezone conversion issues causing submission dates to display incorrectly - dates now parse directly from database strings to prevent timezone shifts from affecting date display
+- June 27, 2025. Completed comprehensive timezone fix by implementing centralized formatDate function in utils.ts and systematically updating all date display components (bid-collection-table, bid-view-modal, bid-collection-modal, properties page, evaluation-budget, financial-summary) to prevent UTC conversion issues - dates now consistently display correctly across entire application
 
 ## User Preferences
 

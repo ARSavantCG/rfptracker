@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { formatFileSize } from "@/lib/utils";
 
 interface FileUploadProps {
@@ -7,6 +7,7 @@ interface FileUploadProps {
   accept?: string;
   maxSize?: number; // in bytes
   className?: string;
+  initialFiles?: File[]; // Allow external state control
 }
 
 export function FileUpload({
@@ -15,10 +16,16 @@ export function FileUpload({
   accept = ".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg",
   maxSize = 10 * 1024 * 1024, // 10MB
   className = "",
+  initialFiles = [],
 }: FileUploadProps) {
   const [isDragOver, setIsDragOver] = useState(false);
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>(initialFiles);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Sync internal state with external prop
+  useEffect(() => {
+    setSelectedFiles(initialFiles);
+  }, [initialFiles]);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();

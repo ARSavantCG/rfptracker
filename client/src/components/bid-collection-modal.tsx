@@ -129,6 +129,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
         notes: "",
       });
       setLineItems([]);
+      setAttachments([]);
     }
   }, [bidCollection, isOpen, form, existingLineItems]);
 
@@ -585,6 +586,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
               <h4 className="text-xs font-medium text-gray-600">Attachments</h4>
               <FileUpload
                 onFilesSelected={setAttachments}
+                initialFiles={attachments}
                 multiple={true}
                 accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
                 className="border border-gray-200 rounded px-2 py-1 text-xs bg-gray-50"

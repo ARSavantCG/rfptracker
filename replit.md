@@ -164,6 +164,7 @@ This is a full-stack web application for tracking and managing Request for Propo
 - June 27, 2025. Resolved HTML character encoding corruption by properly converting Buffer to UTF-8 string with correct Content-Type headers - PDFs now display clean, readable content
 - June 27, 2025. Completely fixed PDF generation corruption by removing Puppeteer dependency and ensuring clean HTML string output - documents now generate as proper HTML with Eastern Time dates and no facility details
 - June 27, 2025. Fixed MulterError file upload issue in bid collection by changing multer configuration from array("attachments") to any() and updating file processing to handle attachment_0, attachment_1 field names - file uploads now work correctly for bid submissions
+- June 27, 2025. Enhanced file upload component to support proper multiple file selection and fixed file state isolation between different bid forms - each bid now maintains separate file attachments without cross-contamination
 
 ## User Preferences
 

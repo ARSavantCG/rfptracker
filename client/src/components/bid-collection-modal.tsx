@@ -345,7 +345,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-[95vw] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {bidCollection ? 'Edit' : 'New'} Bid Collection - {rfp.projectName}
@@ -467,13 +467,13 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-[70px]">Order</TableHead>
-                        <TableHead>Description</TableHead>
-                        <TableHead>Qty</TableHead>
-                        <TableHead>Unit</TableHead>
-                        <TableHead>Unit Price</TableHead>
-                        <TableHead>Total Price</TableHead>
-                        <TableHead>Notes</TableHead>
+                        <TableHead className="w-[80px]">Order</TableHead>
+                        <TableHead className="w-[250px]">Description</TableHead>
+                        <TableHead className="w-[80px]">Qty</TableHead>
+                        <TableHead className="w-[80px]">Unit</TableHead>
+                        <TableHead className="w-[120px]">Unit Price</TableHead>
+                        <TableHead className="w-[120px]">Total Price</TableHead>
+                        <TableHead className="w-[150px]">Notes</TableHead>
                         <TableHead className="w-[50px]"></TableHead>
                       </TableRow>
                     </TableHeader>
@@ -602,8 +602,8 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                 </DragDropContext>
               </div>
 
-              <div className="flex justify-end">
-                <div className="text-lg font-semibold">
+              <div className="flex justify-end mt-4 p-3 bg-gray-50 rounded-lg">
+                <div className="text-lg font-semibold text-gray-900">
                   Total: {formatCurrencyForDisplay(calculateTotal())}
                 </div>
               </div>

@@ -56,7 +56,7 @@ function generateBidCollectionHtml(bidCollection: any, rfp: any, lineItems: any[
     <html>
     <head>
       <meta charset="utf-8">
-      <title>Bid Collection - ${bidCollection.contractorName}</title>
+      <title>Bid Collection - ${bidCollection.contractorCompany}</title>
       <style>
         @page { size: A4; margin: 0.75in; }
         @media print { .no-print { display: none !important; } }
@@ -111,16 +111,16 @@ function generateBidCollectionHtml(bidCollection: any, rfp: any, lineItems: any[
           </div>
           <div>
             <div class="info-item">
-              <span class="info-label">Contractor:</span> ${bidCollection.contractorName}
-            </div>
-            <div class="info-item">
               <span class="info-label">Company:</span> ${bidCollection.contractorCompany}
             </div>
             <div class="info-item">
-              <span class="info-label">Email:</span> ${bidCollection.contractorEmail}
+              <span class="info-label">Submission Date:</span> ${new Date(bidCollection.submissionDate).toLocaleDateString('en-US', { timeZone: 'America/New_York' })}
             </div>
             <div class="info-item">
-              <span class="info-label">Submission Date:</span> ${new Date(bidCollection.submissionDate).toLocaleDateString('en-US', { timeZone: 'America/New_York' })}
+              <span class="info-label">Total Amount:</span> $${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </div>
+            <div class="info-item">
+              <span class="info-label">Status:</span> ${bidCollection.status.replace('-', ' ').toUpperCase()}
             </div>
           </div>
         </div>

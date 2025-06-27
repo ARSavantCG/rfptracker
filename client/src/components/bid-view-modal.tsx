@@ -53,37 +53,48 @@ export function BidViewModal({ isOpen, onClose, bid }: BidViewModalProps) {
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle>Bid Details - {bid.contractorName}</DialogTitle>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                const printUrl = `/api/bid-collections/${bid.id}/pdf`;
-                window.open(printUrl, '_blank');
-              }}
-              className="flex items-center gap-2"
-            >
-              <Printer className="h-4 w-4" />
-              Print/PDF
-            </Button>
-          </div>
+          <DialogTitle>Bid Details - {bid.contractorCompany}</DialogTitle>
         </DialogHeader>
+        
+        <div className="flex justify-end mb-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const token = localStorage.getItem('authToken');
+              const printUrl = `/api/bid-collections/${bid.id}/pdf`;
+              // Open PDF with authentication
+              fetch(printUrl, {
+                headers: {
+                  'Authorization': `Bearer ${token}`
+                }
+              }).then(response => {
+                if (response.ok) {
+                  return response.blob();
+                } else {
+                  throw new Error('Authentication failed');
+                }
+              }).then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                window.open(url, '_blank');
+              }).catch(error => {
+                console.error('Print error:', error);
+                alert('Unable to generate PDF. Please try logging in again.');
+              });
+            }}
+            className="flex items-center gap-2"
+          >
+            <Printer className="h-4 w-4" />
+            Print/PDF
+          </Button>
+        </div>
 
         <div className="space-y-6">
-          {/* Bidder Information */}
+          {/* Company Information */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
             <div>
-              <label className="text-sm font-medium text-gray-600">Bidder Name</label>
-              <p className="text-lg font-semibold">{bid.contractorName}</p>
-            </div>
-            <div>
               <label className="text-sm font-medium text-gray-600">Company</label>
-              <p className="text-lg">{bid.contractorCompany}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-600">Email</label>
-              <p className="text-lg">{bid.contractorEmail}</p>
+              <p className="text-lg font-semibold">{bid.contractorCompany}</p>
             </div>
             <div>
               <label className="text-sm font-medium text-gray-600">Submission Date</label>
@@ -117,7 +128,6 @@ export function BidViewModal({ isOpen, onClose, bid }: BidViewModalProps) {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Category</TableHead>
                       <TableHead>Description</TableHead>
                       <TableHead>Quantity</TableHead>
                       <TableHead>Unit Price</TableHead>
@@ -127,9 +137,8 @@ export function BidViewModal({ isOpen, onClose, bid }: BidViewModalProps) {
                   <TableBody>
                     {(lineItems as BidLineItem[]).map((item, index) => (
                       <TableRow key={index}>
-                        <TableCell className="font-medium">{item.category}</TableCell>
-                        <TableCell>{item.description}</TableCell>
-                        <TableCell>{item.quantity}</TableCell>
+                        <TableCell className="font-medium">{item.description}</TableCell>
+                        <TableCell>{item.quantity ? parseFloat(item.quantity).toLocaleString('en-US') : ''}</TableCell>
                         <TableCell>{formatCurrency(item.unitPrice)}</TableCell>
                         <TableCell className="text-right font-medium">
                           {formatCurrency(item.totalPrice)}

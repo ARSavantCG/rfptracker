@@ -557,7 +557,12 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
   const generateReportPreview = async (hideDesignCosts: boolean) => {
     if (!rfp) return;
     
-    const currentDate = formatDate(new Date());
+    const currentDate = new Date().toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      timeZone: 'America/New_York'
+    });
     
     // Calculate grand total for report (sum of category totals with rollups)
     const tiTotal = calculateCategoryTotalWithRollups('tenantImprovements');
@@ -658,7 +663,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                         return `
                         <tr>
                             <td>${item.description}</td>
-                            <td>${item.quantity}</td>
+                            <td>${new Intl.NumberFormat('en-US').format(item.quantity)}</td>
                             <td>${item.unit}</td>
                             <td class="currency">${formatCurrency(unitPrice)}</td>
                             <td class="currency">${formatCurrency(totalPrice)}</td>
@@ -704,7 +709,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                         return `
                         <tr>
                             <td>${item.description}</td>
-                            <td>${item.quantity}</td>
+                            <td>${new Intl.NumberFormat('en-US').format(item.quantity)}</td>
                             <td>${item.unit}</td>
                             <td class="currency">${formatCurrency(parseFloat(item.unitPrice) || 0)}</td>
                             <td class="currency">${formatCurrency(totalPrice)}</td>

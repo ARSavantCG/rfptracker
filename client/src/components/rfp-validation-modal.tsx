@@ -103,7 +103,7 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
         estimatedValue: rfp.estimatedValue || "",
         timelineRequirements: rfp.timelineRequirements || "",
         specialRequirements: rfp.specialRequirements || "",
-        contactPerson: rfp.contactPerson || "",
+        contactPerson: rfp.contactPerson || rfp.developmentContact || "",
         contactEmail: rfp.contactEmail || "",
         dueDate: rfp.dueDate ? new Date(rfp.dueDate).toISOString().split('T')[0] : "",
         projectDescription: rfp.projectDescription || "",

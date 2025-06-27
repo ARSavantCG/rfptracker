@@ -272,7 +272,20 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span>Total Rentable Area:</span>
-                      <span className="font-medium">{rfp.warehouseArea ? parseInt(rfp.warehouseArea).toLocaleString() : 0} SF</span>
+                      <span className="font-medium">
+                        {(() => {
+                          // Debug: Check multiple possible area fields
+                          const warehouseArea = rfp.warehouseArea;
+                          const projectArea = rfp.projectArea;
+                          console.log('Debug - warehouseArea:', warehouseArea);
+                          console.log('Debug - projectArea:', projectArea);
+                          console.log('Debug - full RFP object:', rfp);
+                          
+                          // Use warehouseArea if available, otherwise projectArea as fallback
+                          const totalArea = warehouseArea || projectArea;
+                          return totalArea ? parseInt(totalArea).toLocaleString() : 0;
+                        })()} SF
+                      </span>
                     </div>
                     {form.watch("areaBreakdown").length > 0 && (
                       <>
@@ -291,7 +304,11 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                       <span>Remaining Rentable Area:</span>
                       <span>
                         {(() => {
-                          const totalRentable = parseInt(rfp.warehouseArea || "0");
+                          // Use same logic as above for consistency
+                          const warehouseArea = rfp.warehouseArea;
+                          const projectArea = rfp.projectArea;
+                          const totalArea = warehouseArea || projectArea;
+                          const totalRentable = parseInt(totalArea || "0");
                           const additionalAreas = form.watch("areaBreakdown").reduce((sum, area) => 
                             sum + parseInt(area.squareFootage || "0"), 0);
                           const remaining = totalRentable - additionalAreas;

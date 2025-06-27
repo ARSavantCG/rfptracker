@@ -184,21 +184,9 @@ export function EvaluationBudgetHistory({ rfpId }: EvaluationBudgetHistoryProps)
                 <div key={item.id} className="flex items-center justify-between p-3 border rounded-lg">
                   <div className="flex-1">
                     <div className="font-medium">{item.reportName}</div>
-                    <div className="text-sm text-muted-foreground flex items-center gap-4">
-                      <span className="flex items-center gap-1">
-                        <User className="h-3 w-3" />
-                        {item.generatedBy}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {formatDate(item.createdAt)}
-                      </span>
+                    <div className="text-sm text-muted-foreground">
+                      {item.notes || `Generated on ${formatDate(item.createdAt)}`}
                     </div>
-                    {item.notes && (
-                      <div className="text-sm text-muted-foreground mt-1">
-                        {item.notes}
-                      </div>
-                    )}
                   </div>
                   <div className="flex items-center gap-2">
                     <Button

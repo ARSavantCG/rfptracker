@@ -1305,6 +1305,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                 <TableRow>
                   <TableHead className="w-8 text-center">Order</TableHead>
                   <TableHead className="w-8 text-center">Assembly</TableHead>
+                  <TableHead className="w-32">Assembly Group</TableHead>
                   <TableHead className="w-12 text-center">Rollup</TableHead>
                   <TableHead>Description</TableHead>
                   <TableHead className="w-32">Quantity (Unit)</TableHead>
@@ -1386,9 +1387,31 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                                 </Select>
                               </TableCell>
 
+                              {/* Assembly Group Column */}
+                              <TableCell className="text-sm text-gray-600">
+                                {item.assemblyId ? (
+                                  // Find the assembly header name
+                                  (() => {
+                                    const assemblyHeader = items.find(i => i.id === item.assemblyId);
+                                    return assemblyHeader ? assemblyHeader.description : 'Unknown Assembly';
+                                  })()
+                                ) : ''}
+                              </TableCell>
+
                               {/* Editable cells vs Display cells */}
                               {editingItem === item.id ? (
                                 <>
+                                  {/* Assembly Group Column - Edit Mode */}
+                                  <TableCell className="text-sm text-gray-600">
+                                    {item.assemblyId ? (
+                                      // Find the assembly header name
+                                      (() => {
+                                        const assemblyHeader = items.find(i => i.id === item.assemblyId);
+                                        return assemblyHeader ? assemblyHeader.description : 'Unknown Assembly';
+                                      })()
+                                    ) : ''}
+                                  </TableCell>
+                                  
                                   <TableCell>
                                     <Input
                                       value={item.description}
@@ -1446,6 +1469,17 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                                 </>
                               ) : (
                                 <>
+                                  {/* Assembly Group Column - Display Mode */}
+                                  <TableCell className="text-sm text-gray-600">
+                                    {item.assemblyId ? (
+                                      // Find the assembly header name
+                                      (() => {
+                                        const assemblyHeader = items.find(i => i.id === item.assemblyId);
+                                        return assemblyHeader ? assemblyHeader.description : 'Unknown Assembly';
+                                      })()
+                                    ) : ''}
+                                  </TableCell>
+                                  
                                   <TableCell>
                                     <span className={`${isAssembled ? 'line-through opacity-60' : ''}`}>
                                       {item.description}

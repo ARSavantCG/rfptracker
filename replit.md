@@ -185,6 +185,7 @@ This is a full-stack web application for tracking and managing Request for Propo
 - June 27, 2025. Implemented comprehensive custom assembly system for grouping related line items - users can select multiple items via checkboxes and create custom assemblies like "Dock Package" or "Demising Wall Package" using "+Add Assembly" button positioned next to "+Add Item", creating new line items with calculated totals while marking component items with strikethrough styling similar to rollup functionality
 - June 27, 2025. Enhanced assembly system with proper cost redistribution and item grouping - assemblies now redistribute costs without adding new costs to project totals, assembled items are visually grouped near their assembly line item, and all cost calculation functions exclude assembled items to prevent double-counting while maintaining accurate project totals
 - June 27, 2025. Added "Assembly" column header next to "Rollup" in evaluation budget tables and fixed checkbox alignment issues - both assembly and rollup checkboxes now properly center-aligned for consistent visual appearance
+- June 27, 2025. Implemented "Assembly Group" column in evaluation budget tables to clearly identify which assembly each strikethrough line item belongs to - provides user visibility into cost groupings when drag-and-drop assembly movement proved technically challenging, ensuring users can track where costs are included (e.g., "Paint Demising Wall (1 Side)" shows "Demising Wall Assembly")
 
 ## User Preferences
 

@@ -682,7 +682,17 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                     <FormItem>
                       <FormLabel>Contractor Due Date</FormLabel>
                       <FormControl>
-                        <Input type="date" {...field} />
+                        <Input 
+                          type="date" 
+                          {...field} 
+                          onChange={(e) => {
+                            field.onChange(e);
+                            // Auto-populate architect due date with contractor date
+                            if (e.target.value) {
+                              form.setValue("architectDueDate", e.target.value);
+                            }
+                          }}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

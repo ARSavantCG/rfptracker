@@ -355,6 +355,10 @@ export const properties = pgTable("properties", {
   displayName: text("display_name").notNull(), // Computed field like "Property Name - Building A, 123 Main St, New York, NY 10001"
   bayConfigurations: json("bay_configurations").$type<BayConfiguration[]>().default([]), // Simple bay configurations with square footage
   mechanicalRoomSquareFootage: integer("mechanical_room_square_footage").default(0), // Total mechanical room square footage for allocation
+  standardParking: integer("standard_parking").default(0),
+  accessibleParking: integer("accessible_parking").default(0),
+  evParking: integer("ev_parking").default(0),
+  trailerParking: integer("trailer_parking").default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

@@ -212,6 +212,8 @@ This is a full-stack web application for tracking and managing Request for Propo
 - June 27, 2025. Successfully completed 6-step workflow system implementation - fixed backend validation to properly recognize "rfp-validation" phase in all API endpoints, enabling smooth workflow progression from RFP Entry to RFP Validation phase with comprehensive validation modal for editing project details before proceeding to bid invitations
 - June 27, 2025. Fixed RFP validation API response handling error and added contractor/architect dropdown selections to invitation-to-bid modal (step 3) - dropdowns populate with filtered contacts and include proper "none" values to prevent Select component runtime errors
 - June 30, 2025. Implemented comprehensive door count tracking functionality for evaluation budget reports - added oversized and regular door input fields to evaluation budget interface, updated database schema with door count fields, integrated door data into save mutations, and enhanced PDF report headers to display door configuration information (total doors with breakdown of oversized vs regular) for improved area-specific cost analysis
+- June 30, 2025. Added "Internal Due Date" column to RFP Requests table next to "Received On" column with sortable functionality and proper date formatting
+- June 30, 2025. Removed redundant "Door Information" section from evaluation budget reports as door counts are already displayed in header to eliminate duplicate information
 
 ## User Preferences
 

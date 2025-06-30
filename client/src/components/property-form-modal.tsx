@@ -28,6 +28,10 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
     city: property?.city || "",
     state: property?.state || "",
     zip: property?.zip || "",
+    standardParking: property?.standardParking || 0,
+    accessibleParking: property?.accessibleParking || 0,
+    evParking: property?.evParking || 0,
+    trailerParking: property?.trailerParking || 0,
   });
 
   // Fetch next property ID for new properties
@@ -111,6 +115,10 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
       city: "",
       state: "",
       zip: "",
+      standardParking: 0,
+      accessibleParking: 0,
+      evParking: 0,
+      trailerParking: 0,
     });
   };
 
@@ -138,7 +146,10 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
       city: formData.city!,
       state: formData.state!,
       zip: formData.zip!,
-      displayName: displayName,
+      standardParking: formData.standardParking || 0,
+      accessibleParking: formData.accessibleParking || 0,
+      evParking: formData.evParking || 0,
+      trailerParking: formData.trailerParking || 0,
     };
 
     if (isEdit) {

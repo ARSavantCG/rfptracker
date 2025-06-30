@@ -56,6 +56,8 @@ interface EvaluationBudgetData {
   lineItemRollups: Record<string, 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements' | 'tiAndDesign'>;
   customAssemblies: CustomAssembly[];
   assemblies: Record<string, { total: number; components: string[] }>;
+  oversizedDoors: number;
+  regularDoors: number;
 }
 
 interface EvaluationBudgetProps {
@@ -309,6 +311,8 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     lineItemRollups: {},
     customAssemblies: [],
     assemblies: {},
+    oversizedDoors: 0,
+    regularDoors: 0,
   });
 
   // Initialize budget with saved data or bid line items data
@@ -330,6 +334,8 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         lineItemRollups: (existingBudget as any).lineItemRollups || {},
         customAssemblies: (existingBudget as any).customAssemblies || [],
         assemblies: (existingBudget as any).assemblies || {},
+        oversizedDoors: (existingBudget as any).oversizedDoors || 0,
+        regularDoors: (existingBudget as any).regularDoors || 0,
       });
     } else if (allBidLineItems && Array.isArray(allBidLineItems) && allBidLineItems.length > 0) {
       // Initialize with bid line items if no saved budget exists

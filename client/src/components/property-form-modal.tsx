@@ -38,11 +38,13 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
   const calculateParkingRatio = () => {
     const totalRegularParking = (formData.standardParking || 0) + (formData.accessibleParking || 0) + (formData.evParking || 0);
     
-    // Calculate rentable square footage from bay configurations
+    // Calculate rentable square footage from bay configurations and mechanical rooms
     const bayConfigurations = property?.bayConfigurations || [];
-    const totalRentableSquareFootage = bayConfigurations.reduce((total, bay) => {
+    const baySquareFootage = bayConfigurations.reduce((total, bay) => {
       return total + (bay.squareFootage || 0);
     }, 0);
+    const mechanicalRoomSquareFootage = property?.mechanicalRoomSquareFootage || 0;
+    const totalRentableSquareFootage = baySquareFootage + mechanicalRoomSquareFootage;
 
     if (totalRentableSquareFootage === 0) return "0.00";
     

@@ -65,9 +65,11 @@ export default function Properties() {
 
   const getTotalRentableArea = (property: Property): number => {
     const bayConfigurations = property.bayConfigurations as BayConfiguration[] || [];
-    return bayConfigurations.reduce((total, bay) => {
+    const baySquareFootage = bayConfigurations.reduce((total, bay) => {
       return total + (bay.squareFootage || 0);
     }, 0);
+    const mechanicalRoomSquareFootage = property.mechanicalRoomSquareFootage || 0;
+    return baySquareFootage + mechanicalRoomSquareFootage;
   };
 
   const calculateParkingRatio = (property: Property): string => {

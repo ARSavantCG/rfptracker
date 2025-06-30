@@ -1156,6 +1156,13 @@ class ExtendedDatabaseStorage extends DatabaseStorage {
   }
 
   // Executed Leases management
+  async getAllExecutedLeases(): Promise<ExecutedLease[]> {
+    return await db
+      .select()
+      .from(executedLeases)
+      .orderBy(desc(executedLeases.leaseStartDate));
+  }
+
   async getExecutedLeases(propertyId: number): Promise<ExecutedLease[]> {
     return await db
       .select()

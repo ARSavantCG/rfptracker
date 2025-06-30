@@ -3635,6 +3635,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Executed Leases API routes
+  app.get('/api/executed-leases/all', requireAuth, async (req, res) => {
+    try {
+      const leases = await storage.getAllExecutedLeases();
+      res.json(leases);
+    } catch (error) {
+      console.error("Error fetching all executed leases:", error);
+      res.status(500).json({ message: "Failed to fetch all executed leases" });
+    }
+  });
+
   app.get('/api/properties/:propertyId/executed-leases', requireAuth, async (req, res) => {
     try {
       const { propertyId } = req.params;

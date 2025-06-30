@@ -20,6 +20,11 @@ export default function Properties() {
     queryKey: ["/api/properties"],
   });
 
+  // Query for executed leases for all properties
+  const { data: allExecutedLeases } = useQuery({
+    queryKey: ["/api/executed-leases/all"],
+  });
+
   const filteredProperties = properties?.filter(property =>
     property.propertyName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     property.building?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -345,7 +350,7 @@ export default function Properties() {
                               </div>
 
                               {/* Parking Ratio */}
-                              <div className="text-sm bg-blue-50 p-2 rounded">
+                              <div className="text-sm bg-blue-50 p-2 rounded mb-3">
                                 <div className="flex justify-between items-center">
                                   <span className="text-gray-600">Parking Ratio:</span>
                                   <span className="font-medium text-blue-700">
@@ -353,6 +358,68 @@ export default function Properties() {
                                   </span>
                                 </div>
                               </div>
+
+                              {/* Executed Leases */}
+                              {(() => {
+                                const propertyLeases = allExecutedLeases?.filter(
+                                  (lease: any) => lease.propertyId === property.id
+                                ) || [];
+                                
+                                return (
+                                  <div>
+                                    <div className="text-sm text-gray-600 mb-2 flex justify-between items-center">
+                                      <span>Executed Leases:</span>
+                                      <span className="text-xs text-gray-500">({propertyLeases.length})</span>
+                                    </div>
+                                    {propertyLeases.length === 0 ? (
+                                      <div className="text-xs text-gray-400 italic text-center py-2">
+                                        No executed leases
+                                      </div>
+                                    ) : (
+                                      <div className="space-y-2 max-h-32 overflow-y-auto">
+                                        {propertyLeases.map((lease: any) => {
+                                          // Calculate rentable area for assigned bays
+                                          const assignedBayConfigs = property.bayConfigurations?.filter(
+                                            (bay: any) => lease.assignedBays?.includes(bay.id)
+                                          ) || [];
+                                          const totalRentableArea = assignedBayConfigs.reduce(
+                                            (total: number, bay: any) => total + (bay.rentableSquareFootage || bay.squareFootage || 0),
+                                            0
+                                          );
+                                          
+                                          // Calculate total parking for lease
+                                          const totalParking = (lease.standardParking || 0) + 
+                                                             (lease.accessibleParking || 0) + 
+                                                             (lease.evParking || 0) + 
+                                                             (lease.trailerParking || 0);
+                                          
+                                          return (
+                                            <div key={lease.id} className="bg-gray-50 p-2 rounded text-xs">
+                                              <div className="font-medium text-gray-900 mb-1">
+                                                {lease.tenantName}
+                                              </div>
+                                              <div className="grid grid-cols-2 gap-1 text-gray-600">
+                                                <div>
+                                                  <span className="text-gray-500">Area:</span>
+                                                  <span className="ml-1 font-medium">
+                                                    {totalRentableArea.toLocaleString()} SF
+                                                  </span>
+                                                </div>
+                                                <div>
+                                                  <span className="text-gray-500">Parking:</span>
+                                                  <span className="ml-1 font-medium">
+                                                    {totalParking} spaces
+                                                  </span>
+                                                </div>
+                                              </div>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })()}
                             </div>
                           )}
                         </div>

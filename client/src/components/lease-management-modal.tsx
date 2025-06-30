@@ -66,7 +66,7 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
     },
   });
 
-  const { data: leases = [], isLoading } = useQuery({
+  const { data: leases = [], isLoading } = useQuery<ExecutedLease[]>({
     queryKey: [`/api/properties/${property.id}/executed-leases`],
     enabled: isOpen,
   });

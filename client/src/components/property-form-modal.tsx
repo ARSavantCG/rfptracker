@@ -305,7 +305,7 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
           <div className="space-y-4">
             <div className="border-t pt-4">
               <h4 className="text-sm font-medium text-gray-900 mb-3">Parking Information</h4>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-4 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="standardParking">Standard Parking</Label>
                   <Input

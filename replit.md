@@ -214,6 +214,7 @@ This is a full-stack web application for tracking and managing Request for Propo
 - June 30, 2025. Implemented comprehensive door count tracking functionality for evaluation budget reports - added oversized and regular door input fields to evaluation budget interface, updated database schema with door count fields, integrated door data into save mutations, and enhanced PDF report headers to display door configuration information (total doors with breakdown of oversized vs regular) for improved area-specific cost analysis
 - June 30, 2025. Added "Internal Due Date" column to RFP Requests table next to "Received On" column with sortable functionality and proper date formatting
 - June 30, 2025. Removed redundant "Door Information" section from evaluation budget reports as door counts are already displayed in header to eliminate duplicate information
+- June 30, 2025. Added comprehensive parking information fields to property add/edit forms - Standard Parking, Accessible Parking, EV Parking, and Trailer Parking displayed in single horizontal row layout with database schema integration
 
 ## User Preferences
 

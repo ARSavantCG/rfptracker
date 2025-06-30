@@ -123,8 +123,6 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
     setEditingLease(lease);
     form.reset({
       tenantName: lease.tenantName,
-      leaseStartDate: lease.leaseStartDate.toISOString().split('T')[0],
-      leaseEndDate: lease.leaseEndDate ? lease.leaseEndDate.toISOString().split('T')[0] : "",
       assignedBays: lease.assignedBays || [],
       standardParking: lease.standardParking || 0,
       accessibleParking: lease.accessibleParking || 0,
@@ -181,49 +179,19 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
               <CardContent>
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="tenantName"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Tenant Name</FormLabel>
-                            <FormControl>
-                              <Input {...field} placeholder="Enter tenant name" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <div className="grid grid-cols-2 gap-2">
-                        <FormField
-                          control={form.control}
-                          name="leaseStartDate"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Start Date</FormLabel>
-                              <FormControl>
-                                <Input type="date" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="leaseEndDate"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>End Date (Optional)</FormLabel>
-                              <FormControl>
-                                <Input type="date" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                    </div>
+                    <FormField
+                      control={form.control}
+                      name="tenantName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Tenant Name</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="Enter tenant name" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
                     {/* Bay Assignment */}
                     <FormField

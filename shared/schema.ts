@@ -443,8 +443,6 @@ export const executedLeases = pgTable("executed_leases", {
   id: serial("id").primaryKey(),
   propertyId: integer("property_id").notNull(),
   tenantName: text("tenant_name").notNull(),
-  leaseStartDate: timestamp("lease_start_date").notNull(),
-  leaseEndDate: timestamp("lease_end_date"),
   assignedBays: text("assigned_bays").array().notNull().default([]), // Bay IDs like ["A1", "A2", "B3"]
   standardParking: integer("standard_parking").default(0),
   accessibleParking: integer("accessible_parking").default(0),

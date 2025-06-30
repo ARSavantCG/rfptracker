@@ -1160,7 +1160,7 @@ class ExtendedDatabaseStorage extends DatabaseStorage {
     return await db
       .select()
       .from(executedLeases)
-      .orderBy(desc(executedLeases.leaseStartDate));
+      .orderBy(desc(executedLeases.tenantName));
   }
 
   async getExecutedLeases(propertyId: number): Promise<ExecutedLease[]> {
@@ -1168,7 +1168,7 @@ class ExtendedDatabaseStorage extends DatabaseStorage {
       .select()
       .from(executedLeases)
       .where(eq(executedLeases.propertyId, propertyId))
-      .orderBy(desc(executedLeases.leaseStartDate));
+      .orderBy(desc(executedLeases.tenantName));
   }
 
   async createExecutedLease(lease: InsertExecutedLease): Promise<ExecutedLease> {

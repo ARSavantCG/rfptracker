@@ -3662,8 +3662,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const leaseData = { 
         ...req.body, 
         propertyId: parseInt(propertyId),
-        leaseStartDate: new Date(req.body.leaseStartDate),
-        leaseEndDate: req.body.leaseEndDate ? new Date(req.body.leaseEndDate) : null,
         assignedBays: Array.isArray(req.body.assignedBays) ? req.body.assignedBays : [],
       };
       const lease = await storage.createExecutedLease(leaseData);
@@ -3679,8 +3677,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const updateData = { 
         ...req.body,
-        leaseStartDate: req.body.leaseStartDate ? new Date(req.body.leaseStartDate) : undefined,
-        leaseEndDate: req.body.leaseEndDate ? new Date(req.body.leaseEndDate) : null,
         assignedBays: req.body.assignedBays ? (Array.isArray(req.body.assignedBays) ? req.body.assignedBays : []) : undefined,
       };
       const lease = await storage.updateExecutedLease(parseInt(id), updateData);

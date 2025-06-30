@@ -3659,7 +3659,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/properties/:propertyId/executed-leases', requireAuth, async (req, res) => {
     try {
       const { propertyId } = req.params;
-      const leaseData = { ...req.body, propertyId: parseInt(propertyId) };
+      const leaseData = { 
+        ...req.body, 
+        propertyId: parseInt(propertyId),
+        leaseStartDate: new Date(req.body.leaseStartDate),
+        leaseEndDate: req.body.leaseEndDate ? new Date(req.body.leaseEndDate) : null,
+      };
       const lease = await storage.createExecutedLease(leaseData);
       res.json(lease);
     } catch (error) {
@@ -3671,7 +3676,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch('/api/executed-leases/:id', requireAuth, async (req, res) => {
     try {
       const { id } = req.params;
-      const lease = await storage.updateExecutedLease(parseInt(id), req.body);
+      const updateData = { 
+        ...req.body,
+        leaseStartDate: req.body.leaseStartDate ? new Date(req.body.leaseStartDate) : undefined,
+        leaseEndDate: req.body.leaseEndDate ? new Date(req.body.leaseEndDate) : null,
+      };
+      const lease = await storage.updateExecutedLease(parseInt(id), updateData);
       res.json(lease);
     } catch (error) {
       console.error("Error updating executed lease:", error);

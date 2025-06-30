@@ -225,6 +225,7 @@ This is a full-stack web application for tracking and managing Request for Propo
 - June 30, 2025. Added comprehensive "Executed Leases" section to Property Info dropdown displaying tenant names, individual lease areas and parking, plus "Available Space" summary showing remaining rentable area and remaining parking after accounting for all executed leases
 - June 30, 2025. Enhanced remaining space calculations to include separate trailer parking tracking - Available Space section now displays remaining rentable area, remaining standard parking, and remaining trailer parking as distinct values for precise space allocation management
 - June 30, 2025. Added trailer parking ratio calculation to Property Info section - displays trailer parking per 1,000 SF alongside regular parking ratio for comprehensive parking density analysis
+- June 30, 2025. Fixed executed lease creation date handling error - resolved "value.toISOString is not a function" error by implementing proper date string to Date object conversion in backend API routes for both create and update operations
 
 ## User Preferences
 

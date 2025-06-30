@@ -73,12 +73,7 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
 
   const createMutation = useMutation({
     mutationFn: async (data: LeaseFormData) => {
-      const formattedData = {
-        ...data,
-        leaseStartDate: new Date(data.leaseStartDate),
-        leaseEndDate: data.leaseEndDate ? new Date(data.leaseEndDate) : null,
-      };
-      return apiRequest(`/api/properties/${property.id}/executed-leases`, "POST", formattedData);
+      return apiRequest(`/api/properties/${property.id}/executed-leases`, "POST", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/properties/${property.id}/executed-leases`] });
@@ -93,12 +88,7 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
 
   const updateMutation = useMutation({
     mutationFn: async (data: LeaseFormData) => {
-      const formattedData = {
-        ...data,
-        leaseStartDate: new Date(data.leaseStartDate),
-        leaseEndDate: data.leaseEndDate ? new Date(data.leaseEndDate) : null,
-      };
-      return apiRequest(`/api/executed-leases/${editingLease!.id}`, "PATCH", formattedData);
+      return apiRequest(`/api/executed-leases/${editingLease!.id}`, "PATCH", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/properties/${property.id}/executed-leases`] });

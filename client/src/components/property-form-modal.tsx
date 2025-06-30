@@ -34,6 +34,22 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
     trailerParking: property?.trailerParking || 0,
   });
 
+  // Calculate parking ratio
+  const calculateParkingRatio = () => {
+    const totalRegularParking = (formData.standardParking || 0) + (formData.accessibleParking || 0) + (formData.evParking || 0);
+    
+    // Calculate rentable square footage from bay configurations
+    const bayConfigurations = property?.bayConfigurations || [];
+    const totalRentableSquareFootage = bayConfigurations.reduce((total, bay) => {
+      return total + (bay.squareFootage || 0);
+    }, 0);
+
+    if (totalRentableSquareFootage === 0) return "0.00";
+    
+    const ratio = totalRegularParking / totalRentableSquareFootage;
+    return (ratio * 1000).toFixed(2); // Convert to per 1000 sf format
+  };
+
   // Fetch next property ID for new properties
   const { data: nextIdData } = useQuery({
     queryKey: ["/api/properties/next-id"],
@@ -352,6 +368,20 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
                     onChange={(e) => setFormData(prev => ({ ...prev, trailerParking: parseInt(e.target.value) || 0 }))}
                     placeholder="0"
                   />
+                </div>
+              </div>
+              
+              {/* Parking Ratio Display */}
+              <div className="mt-3 pt-3 border-t border-gray-200">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="font-medium text-gray-700">Parking Ratio:</span>
+                  <span className="text-gray-900 font-mono">
+                    {calculateParkingRatio()} spaces per 1,000 SF
+                  </span>
+                </div>
+                <div className="text-xs text-gray-500 mt-1">
+                  Based on {((formData.standardParking || 0) + (formData.accessibleParking || 0) + (formData.evParking || 0))} parking spaces 
+                  (excludes trailer parking)
                 </div>
               </div>
             </div>

@@ -315,10 +315,22 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     regularDoors: 0,
   });
 
+  // Calculate door counts from bay configuration data
+  const calculateDoorCounts = () => {
+    if (!rfp?.selectedBayConfigurations) return { oversized: 0, regular: 0 };
+    
+    const oversizedTotal = rfp.selectedBayConfigurations.reduce((sum, bay) => sum + (bay.oversizedDockDoors || 0), 0);
+    const regularTotal = rfp.selectedBayConfigurations.reduce((sum, bay) => sum + (bay.standardDockDoors || 0), 0);
+    
+    return { oversized: oversizedTotal, regular: regularTotal };
+  };
+
   // Initialize budget with saved data or bid line items data
   useEffect(() => {
+    const doorCounts = calculateDoorCounts();
+    
     if (existingBudget) {
-      // Load saved budget data
+      // Load saved budget data but override door counts with current bay configuration
       setBudgetData({
         tenantImprovements: (existingBudget as any).tenantImprovements || [],
         designSoftCosts: (existingBudget as any).designSoftCosts || [],
@@ -334,8 +346,8 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         lineItemRollups: (existingBudget as any).lineItemRollups || {},
         customAssemblies: (existingBudget as any).customAssemblies || [],
         assemblies: (existingBudget as any).assemblies || {},
-        oversizedDoors: (existingBudget as any).oversizedDoors || 0,
-        regularDoors: (existingBudget as any).regularDoors || 0,
+        oversizedDoors: doorCounts.oversized,
+        regularDoors: doorCounts.regular,
       });
     } else if (allBidLineItems && Array.isArray(allBidLineItems) && allBidLineItems.length > 0) {
       // Initialize with bid line items if no saved budget exists
@@ -354,9 +366,18 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         ...prev,
         tenantImprovements: initialItems as EvaluationLineItem[],
         separateDesignCosts: false,
+        oversizedDoors: doorCounts.oversized,
+        regularDoors: doorCounts.regular,
+      }));
+    } else {
+      // Initialize with door counts even if no other data
+      setBudgetData(prev => ({
+        ...prev,
+        oversizedDoors: doorCounts.oversized,
+        regularDoors: doorCounts.regular,
       }));
     }
-  }, [existingBudget, allBidLineItems, bidCollections]);
+  }, [existingBudget, allBidLineItems, bidCollections, rfp?.selectedBayConfigurations]);
 
   const formatCurrency = (amount: string | number) => {
     const num = typeof amount === 'string' ? parseFloat(amount) : amount;

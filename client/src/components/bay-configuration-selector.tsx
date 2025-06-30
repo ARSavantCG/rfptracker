@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Calculator, Grid3x3 } from "lucide-react";
-import type { Property, BayConfiguration } from "@shared/schema";
+import type { Property, BayConfiguration, ExecutedLease } from "@shared/schema";
 
 interface BayConfigurationSelectorProps {
   property: Property;
@@ -19,6 +20,15 @@ export default function BayConfigurationSelector({
   const [selectedBayIds, setSelectedBayIds] = useState<string[]>(
     initialSelectedBays.map(bay => bay.id)
   );
+
+  // Fetch executed leases for this property to exclude leased bays
+  const { data: executedLeases = [] } = useQuery<ExecutedLease[]>({
+    queryKey: ['/api/properties', property.id, 'executed-leases'],
+    enabled: !!property.id
+  });
+
+  // Get list of all bay IDs that are already leased
+  const leasedBayIds = executedLeases.flatMap(lease => lease.assignedBays || []);
 
   const bayConfigurations = property.bayConfigurations || [];
 
@@ -52,6 +62,9 @@ export default function BayConfigurationSelector({
   };
 
   const toggleBaySelection = (bayId: string) => {
+    // Don't allow selection of leased bays
+    if (leasedBayIds.includes(bayId)) return;
+    
     const newSelection = selectedBayIds.includes(bayId)
       ? selectedBayIds.filter(id => id !== bayId)
       : [...selectedBayIds, bayId];
@@ -64,7 +77,11 @@ export default function BayConfigurationSelector({
   };
 
   const selectAllBays = () => {
-    setSelectedBayIds(individualBays.map(bay => bay.id));
+    // Only select available (non-leased) bays
+    const availableBayIds = individualBays
+      .filter(bay => !leasedBayIds.includes(bay.id))
+      .map(bay => bay.id);
+    setSelectedBayIds(availableBayIds);
   };
 
   const totalArea = calculateTotalArea();
@@ -110,21 +127,25 @@ export default function BayConfigurationSelector({
         <div className="bg-gray-50 p-3 rounded-lg">
           <div className="mb-2">
             <Label className="text-sm font-medium text-gray-700">Building Layout</Label>
-            <p className="text-xs text-gray-500">Click bays to select for rentable area calculation</p>
+            <p className="text-xs text-gray-500">Click bays to select for rentable area calculation. Red bays are already leased and unavailable.</p>
           </div>
           
           {/* Single row layout representing building */}
           <div className="flex gap-0.5 justify-start overflow-x-auto pb-1">
             {individualBays.map((bay) => {
               const isSelected = selectedBayIds.includes(bay.id);
+              const isLeased = leasedBayIds.includes(bay.id);
               return (
                 <Button
                   key={bay.id}
                   variant={isSelected ? "default" : "outline"}
+                  disabled={isLeased}
                   className={`h-20 w-16 flex flex-col items-center justify-center text-xs p-2 flex-shrink-0 ${
-                    isSelected 
-                      ? "bg-orange-600 hover:bg-orange-700 text-white border-orange-700" 
-                      : "hover:bg-orange-50 border-orange-200 bg-white"
+                    isLeased
+                      ? "bg-red-100 border-red-300 text-red-600 cursor-not-allowed opacity-60"
+                      : isSelected 
+                        ? "bg-orange-600 hover:bg-orange-700 text-white border-orange-700" 
+                        : "hover:bg-orange-50 border-orange-200 bg-white"
                   }`}
                   onClick={() => toggleBaySelection(bay.id)}
                 >
@@ -135,6 +156,11 @@ export default function BayConfigurationSelector({
                   {(bay.standardDockDoors > 0 || bay.oversizedDockDoors > 0) && (
                     <div className="text-xs opacity-60 leading-tight mt-1">
                       {bay.standardDockDoors + bay.oversizedDockDoors} Doors
+                    </div>
+                  )}
+                  {isLeased && (
+                    <div className="text-xs text-red-700 font-medium mt-1">
+                      LEASED
                     </div>
                   )}
                 </Button>

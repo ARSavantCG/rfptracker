@@ -1368,8 +1368,10 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         notes: budgetData.notes,
         lineItemRollups: budgetData.lineItemRollups,
         assemblies: budgetData.assemblies,
-        oversizedDoors: budgetData.oversizedDoors,
-        regularDoors: budgetData.regularDoors,
+        metadata: { 
+          oversizedDoors: budgetData.oversizedDoors, 
+          regularDoors: budgetData.regularDoors 
+        },
       };
 
       await fetch(`/api/rfp-requests/${rfp.id}/evaluation-budget`, {
@@ -1435,8 +1437,10 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         notes: budgetData.notes,
         lineItemRollups: budgetData.lineItemRollups,
         assemblies: budgetData.assemblies,
-        oversizedDoors: budgetData.oversizedDoors,
-        regularDoors: budgetData.regularDoors,
+        metadata: { 
+          oversizedDoors: budgetData.oversizedDoors, 
+          regularDoors: budgetData.regularDoors 
+        },
       };
 
       await fetch(`/api/rfp-requests/${rfp.id}/evaluation-budget`, {

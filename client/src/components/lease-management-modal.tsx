@@ -319,7 +319,9 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
                                 type="number"
                                 min="0"
                                 {...field}
-                                onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                                value={field.value || ""}
+                                onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                                placeholder=""
                               />
                             </FormControl>
                             <FormMessage />
@@ -337,7 +339,9 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
                                 type="number"
                                 min="0"
                                 {...field}
-                                onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                                value={field.value || ""}
+                                onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                                placeholder=""
                               />
                             </FormControl>
                             <FormMessage />
@@ -355,7 +359,9 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
                                 type="number"
                                 min="0"
                                 {...field}
-                                onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                                value={field.value || ""}
+                                onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                                placeholder=""
                               />
                             </FormControl>
                             <FormMessage />
@@ -373,7 +379,9 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
                                 type="number"
                                 min="0"
                                 {...field}
-                                onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                                value={field.value || ""}
+                                onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                                placeholder=""
                               />
                             </FormControl>
                             <FormMessage />

@@ -159,7 +159,7 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
     }
   };
 
-  const handleInputChange = (field: keyof InsertProperty, value: string) => {
+  const handleInputChange = (field: keyof InsertProperty, value: string | number) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -298,6 +298,62 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
                 placeholder="33313"
                 required
               />
+            </div>
+          </div>
+
+          {/* Parking Information */}
+          <div className="space-y-4">
+            <div className="border-t pt-4">
+              <h4 className="text-sm font-medium text-gray-900 mb-3">Parking Information</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="standardParking">Standard Parking</Label>
+                  <Input
+                    id="standardParking"
+                    type="number"
+                    min="0"
+                    value={formData.standardParking || 0}
+                    onChange={(e) => setFormData(prev => ({ ...prev, standardParking: parseInt(e.target.value) || 0 }))}
+                    placeholder="0"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="accessibleParking">Accessible Parking</Label>
+                  <Input
+                    id="accessibleParking"
+                    type="number"
+                    min="0"
+                    value={formData.accessibleParking || 0}
+                    onChange={(e) => setFormData(prev => ({ ...prev, accessibleParking: parseInt(e.target.value) || 0 }))}
+                    placeholder="0"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="evParking">EV Parking</Label>
+                  <Input
+                    id="evParking"
+                    type="number"
+                    min="0"
+                    value={formData.evParking || 0}
+                    onChange={(e) => setFormData(prev => ({ ...prev, evParking: parseInt(e.target.value) || 0 }))}
+                    placeholder="0"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="trailerParking">Trailer Parking</Label>
+                  <Input
+                    id="trailerParking"
+                    type="number"
+                    min="0"
+                    value={formData.trailerParking || 0}
+                    onChange={(e) => setFormData(prev => ({ ...prev, trailerParking: parseInt(e.target.value) || 0 }))}
+                    placeholder="0"
+                  />
+                </div>
+              </div>
             </div>
           </div>
 

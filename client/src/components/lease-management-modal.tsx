@@ -285,6 +285,32 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
                               ))}
                             </div>
                           </FormControl>
+                          
+                          {/* Rentable Area Calculator */}
+                          {field.value.length > 0 && (
+                            <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                              <div className="text-sm font-medium text-blue-800 mb-2">Selected Bays Summary</div>
+                              <div className="space-y-1 text-sm text-blue-700">
+                                {field.value.map((bayId: string) => {
+                                  const bay = availableBays.find(b => b.id === bayId);
+                                  return bay ? (
+                                    <div key={bayId} className="flex justify-between">
+                                      <span>{bay.bayName}</span>
+                                      <span>{(bay.rentableSquareFootage || bay.squareFootage).toLocaleString()} SF</span>
+                                    </div>
+                                  ) : null;
+                                })}
+                                <div className="border-t border-blue-300 pt-2 mt-2 font-semibold flex justify-between">
+                                  <span>Total Rentable Area:</span>
+                                  <span>{field.value.reduce((total: number, bayId: string) => {
+                                    const bay = availableBays.find(b => b.id === bayId);
+                                    return total + (bay ? (bay.rentableSquareFootage || bay.squareFootage) : 0);
+                                  }, 0).toLocaleString()} SF</span>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                          
                           <FormMessage />
                         </FormItem>
                       )}

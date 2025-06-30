@@ -387,8 +387,16 @@ export default function Properties() {
                                 const totalPropertyParking = (property.standardParking || 0) + 
                                                            (property.accessibleParking || 0) + 
                                                            (property.evParking || 0);
+                                const totalPropertyTrailerParking = property.trailerParking || 0;
+                                
+                                // Calculate totals for leased trailer parking separately
+                                const totalLeasedTrailerParking = propertyLeases.reduce((total: number, lease: any) => {
+                                  return total + (lease.trailerParking || 0);
+                                }, 0);
+                                
                                 const remainingArea = totalPropertyArea - totalLeasedArea;
-                                const remainingParking = totalPropertyParking - totalLeasedParking;
+                                const remainingParking = totalPropertyParking - (totalLeasedParking - totalLeasedTrailerParking);
+                                const remainingTrailerParking = totalPropertyTrailerParking - totalLeasedTrailerParking;
                                 
                                 return (
                                   <div>
@@ -447,18 +455,28 @@ export default function Properties() {
                                     <div className="mt-3 pt-3 border-t border-gray-200">
                                       <div className="text-sm text-gray-600 mb-2">Available Space:</div>
                                       <div className="bg-green-50 p-2 rounded text-xs">
-                                        <div className="grid grid-cols-2 gap-1 text-gray-700">
-                                          <div>
-                                            <span className="text-gray-500">Remaining Area:</span>
-                                            <span className="ml-1 font-semibold text-green-700">
-                                              {remainingArea.toLocaleString()} SF
-                                            </span>
+                                        <div className="grid grid-cols-1 gap-2 text-gray-700">
+                                          <div className="grid grid-cols-2 gap-1">
+                                            <div>
+                                              <span className="text-gray-500">Remaining Area:</span>
+                                              <span className="ml-1 font-semibold text-green-700">
+                                                {remainingArea.toLocaleString()} SF
+                                              </span>
+                                            </div>
+                                            <div>
+                                              <span className="text-gray-500">Remaining Parking:</span>
+                                              <span className="ml-1 font-semibold text-green-700">
+                                                {remainingParking} spaces
+                                              </span>
+                                            </div>
                                           </div>
-                                          <div>
-                                            <span className="text-gray-500">Remaining Parking:</span>
-                                            <span className="ml-1 font-semibold text-green-700">
-                                              {remainingParking} spaces
-                                            </span>
+                                          <div className="grid grid-cols-1">
+                                            <div>
+                                              <span className="text-gray-500">Remaining Trailer Parking:</span>
+                                              <span className="ml-1 font-semibold text-green-700">
+                                                {remainingTrailerParking} spaces
+                                              </span>
+                                            </div>
                                           </div>
                                         </div>
                                       </div>

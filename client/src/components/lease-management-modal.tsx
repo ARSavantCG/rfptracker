@@ -27,8 +27,6 @@ import type { Property, ExecutedLease, BayConfiguration } from "@shared/schema";
 
 const leaseFormSchema = z.object({
   tenantName: z.string().min(1, "Tenant name is required"),
-  leaseStartDate: z.string().min(1, "Lease start date is required"),
-  leaseEndDate: z.string().optional(),
   assignedBays: z.array(z.string()).min(1, "At least one bay must be assigned"),
   standardParking: z.number().min(0).default(0),
   accessibleParking: z.number().min(0).default(0),
@@ -55,8 +53,6 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
     resolver: zodResolver(leaseFormSchema),
     defaultValues: {
       tenantName: "",
-      leaseStartDate: "",
-      leaseEndDate: "",
       assignedBays: [],
       standardParking: 0,
       accessibleParking: 0,

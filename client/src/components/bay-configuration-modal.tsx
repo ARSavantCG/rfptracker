@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -11,7 +12,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Grid3x3, Check } from "lucide-react";
-import type { Property, BayConfiguration } from "@shared/schema";
+import type { Property, BayConfiguration, ExecutedLease } from "@shared/schema";
 
 interface BayConfigurationModalProps {
   isOpen: boolean;
@@ -30,6 +31,15 @@ export function BayConfigurationModal({
 }: BayConfigurationModalProps) {
   const [selectedBayIds, setSelectedBayIds] = useState<string[]>([]);
   const [selectedBays, setSelectedBays] = useState<BayConfiguration[]>([]);
+
+  // Fetch executed leases for this property to exclude leased bays
+  const { data: executedLeases = [], isLoading: isLoadingLeases } = useQuery<ExecutedLease[]>({
+    queryKey: ['/api/properties', property.id, 'executed-leases'],
+    enabled: !!property.id && isOpen
+  });
+
+  // Get list of all bay IDs that are already leased
+  const leasedBayIds = executedLeases.flatMap(lease => lease.assignedBays || []);
 
   // Initialize selected bays from props
   useEffect(() => {
@@ -70,6 +80,11 @@ export function BayConfigurationModal({
   const individualBays = property.bayConfigurations;
 
   const toggleBaySelection = (bayId: string) => {
+    // Don't allow selection of leased bays
+    if (leasedBayIds.includes(bayId)) {
+      return;
+    }
+
     const bay = individualBays.find(b => b.id === bayId);
     if (!bay) return;
 
@@ -83,8 +98,10 @@ export function BayConfigurationModal({
   };
 
   const handleSelectAll = () => {
-    setSelectedBayIds(individualBays.map(bay => bay.id));
-    setSelectedBays([...individualBays]);
+    // Only select available (non-leased) bays
+    const availableBays = individualBays.filter(bay => !leasedBayIds.includes(bay.id));
+    setSelectedBayIds(availableBays.map(bay => bay.id));
+    setSelectedBays([...availableBays]);
   };
 
   const handleClearAll = () => {
@@ -109,7 +126,7 @@ export function BayConfigurationModal({
             Bay Configuration Selection
           </DialogTitle>
           <DialogDescription>
-            Select bays to include in the rentable area calculation for this RFP
+            Select bays to include in the rentable area calculation for this RFP. Red bays are already leased and cannot be selected.
           </DialogDescription>
         </DialogHeader>
 
@@ -145,14 +162,19 @@ export function BayConfigurationModal({
             <div className="flex gap-1 justify-start overflow-x-auto">
               {individualBays.map((bay) => {
                 const isSelected = selectedBayIds.includes(bay.id);
+                const isLeased = leasedBayIds.includes(bay.id);
+                
                 return (
                   <Button
                     key={bay.id}
                     variant={isSelected ? "default" : "outline"}
+                    disabled={isLeased}
                     className={`h-20 w-10 flex flex-col items-center justify-center text-xs p-1 flex-shrink-0 ${
-                      isSelected 
-                        ? "bg-orange-600 hover:bg-orange-700 text-white border-orange-700" 
-                        : "hover:bg-orange-50 border-orange-200 bg-white"
+                      isLeased
+                        ? "bg-red-500 text-white border-red-600 cursor-not-allowed opacity-90"
+                        : isSelected 
+                          ? "bg-orange-600 hover:bg-orange-700 text-white border-orange-700" 
+                          : "hover:bg-orange-50 border-orange-200 bg-white"
                     }`}
                     onClick={() => toggleBaySelection(bay.id)}
                   >
@@ -161,6 +183,7 @@ export function BayConfigurationModal({
                         {bay.bayName.replace('Bay ', '')}
                       </div>
                       <div className="text-xs opacity-75">
+                        {isLeased ? "LEASED" : ""}
                         {((bay.rentableSquareFootage || bay.squareFootage) / 1000).toFixed(0)}K
                       </div>
                     </div>

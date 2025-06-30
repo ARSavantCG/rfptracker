@@ -221,6 +221,7 @@ This is a full-stack web application for tracking and managing Request for Propo
 - June 30, 2025. Added dock door information to Property Info section on Properties page - displays standard and oversized dock door counts calculated from bay configurations with total door count summary
 - June 30, 2025. Implemented collapsible Property Info section on Properties page - collapsed by default with clickable header showing chevron icons, includes hover effects for better user experience
 - June 30, 2025. Implemented comprehensive executed lease management system with bay assignments and tenant names - added "Manage Leases" button to Properties page, created database schema for executed_leases table with bay assignments and parking allocation tracking, built lease management modal with bay selection grid showing unavailable bays, added full CRUD operations for lease management to prevent double-booking in RFP bay selection process
+- June 30, 2025. Fixed executed lease management system functionality - resolved database table creation, corrected bay configuration property mapping from bayId to id for proper bay name display, implemented real-time rentable area calculator that tallies square footage as bays are selected in lease management modal with individual bay breakdown and total calculation
 
 ## User Preferences
 

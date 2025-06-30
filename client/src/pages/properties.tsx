@@ -21,7 +21,7 @@ export default function Properties() {
   });
 
   // Query for executed leases for all properties
-  const { data: allExecutedLeases } = useQuery({
+  const { data: allExecutedLeases } = useQuery<any[]>({
     queryKey: ["/api/executed-leases/all"],
   });
 
@@ -361,9 +361,34 @@ export default function Properties() {
 
                               {/* Executed Leases */}
                               {(() => {
-                                const propertyLeases = allExecutedLeases?.filter(
+                                const propertyLeases = (allExecutedLeases || []).filter(
                                   (lease: any) => lease.propertyId === property.id
-                                ) || [];
+                                );
+                                
+                                // Calculate totals for leased areas and parking
+                                const totalLeasedArea = propertyLeases.reduce((total: number, lease: any) => {
+                                  const assignedBayConfigs = property.bayConfigurations?.filter(
+                                    (bay: any) => lease.assignedBays?.includes(bay.id)
+                                  ) || [];
+                                  const leaseArea = assignedBayConfigs.reduce(
+                                    (subtotal: number, bay: any) => subtotal + (bay.rentableSquareFootage || bay.squareFootage || 0),
+                                    0
+                                  );
+                                  return total + leaseArea;
+                                }, 0);
+                                
+                                const totalLeasedParking = propertyLeases.reduce((total: number, lease: any) => {
+                                  return total + (lease.standardParking || 0) + (lease.accessibleParking || 0) + 
+                                         (lease.evParking || 0) + (lease.trailerParking || 0);
+                                }, 0);
+                                
+                                // Calculate remaining available space
+                                const totalPropertyArea = getTotalRentableArea(property);
+                                const totalPropertyParking = (property.standardParking || 0) + 
+                                                           (property.accessibleParking || 0) + 
+                                                           (property.evParking || 0);
+                                const remainingArea = totalPropertyArea - totalLeasedArea;
+                                const remainingParking = totalPropertyParking - totalLeasedParking;
                                 
                                 return (
                                   <div>
@@ -417,6 +442,27 @@ export default function Properties() {
                                         })}
                                       </div>
                                     )}
+                                    
+                                    {/* Remaining Available Space Summary */}
+                                    <div className="mt-3 pt-3 border-t border-gray-200">
+                                      <div className="text-sm text-gray-600 mb-2">Available Space:</div>
+                                      <div className="bg-green-50 p-2 rounded text-xs">
+                                        <div className="grid grid-cols-2 gap-1 text-gray-700">
+                                          <div>
+                                            <span className="text-gray-500">Remaining Area:</span>
+                                            <span className="ml-1 font-semibold text-green-700">
+                                              {remainingArea.toLocaleString()} SF
+                                            </span>
+                                          </div>
+                                          <div>
+                                            <span className="text-gray-500">Remaining Parking:</span>
+                                            <span className="ml-1 font-semibold text-green-700">
+                                              {remainingParking} spaces
+                                            </span>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
                                   </div>
                                 );
                               })()}

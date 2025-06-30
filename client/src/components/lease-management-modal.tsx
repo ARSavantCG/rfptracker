@@ -441,12 +441,6 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
                       <div className="flex justify-between items-start">
                         <div className="space-y-2">
                           <h4 className="font-semibold text-lg">{lease.tenantName}</h4>
-                          <div className="flex items-center gap-4 text-sm text-gray-600">
-                            <div className="flex items-center gap-1">
-                              <Calendar className="h-4 w-4" />
-                              {formatDate(lease.leaseStartDate)} - {lease.leaseEndDate ? formatDate(lease.leaseEndDate) : "Open"}
-                            </div>
-                          </div>
                           <div className="grid grid-cols-2 gap-4">
                             <div className="text-sm">
                               <span className="text-gray-500">Rentable Area:</span>
@@ -463,19 +457,12 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
                                 })()} SF
                               </span>
                             </div>
-                            {(lease.standardParking || lease.accessibleParking || lease.evParking || lease.trailerParking) && (
-                              <div className="text-sm">
-                                <span className="text-gray-500">Parking:</span>
-                                <span className="ml-2 font-medium">
-                                  {[
-                                    lease.standardParking && `${lease.standardParking} Std`,
-                                    lease.accessibleParking && `${lease.accessibleParking} ADA`,
-                                    lease.evParking && `${lease.evParking} EV`,
-                                    lease.trailerParking && `${lease.trailerParking} Trailer`
-                                  ].filter(Boolean).join(', ')}
-                                </span>
-                              </div>
-                            )}
+                            <div className="text-sm">
+                              <span className="text-gray-500">Parking:</span>
+                              <span className="ml-2 font-medium">
+                                {`${lease.standardParking || 0} Std, ${lease.accessibleParking || 0} ADA, ${lease.evParking || 0} EV, ${lease.trailerParking || 0} Trailer`}
+                              </span>
+                            </div>
                           </div>
                           {lease.notes && (
                             <p className="text-sm text-gray-600">{lease.notes}</p>

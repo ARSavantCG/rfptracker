@@ -21,6 +21,7 @@ import {
   romScopeItems,
   romPilotLineItems,
   rfpGenerationHistory,
+  executedLeases,
   type RfpRequest, 
   type InsertRfpRequest, 
   type UpdateRfpRequest,
@@ -60,6 +61,8 @@ import {
   type RomPilotLineItem,
   type InsertRomPilotLineItem,
   type UpdateRomPilotLineItem,
+  type ExecutedLease,
+  type InsertExecutedLease,
   type RfpFile,
   users,
   type User,
@@ -190,6 +193,13 @@ export interface IStorage {
   getGenerationHistoryItem(id: number): Promise<RfpGenerationHistory | undefined>;
   createGenerationHistoryItem(historyItem: InsertRfpGenerationHistory): Promise<RfpGenerationHistory>;
   deleteGenerationHistoryItem(id: number): Promise<boolean>;
+  
+  // Executed Leases management
+  getExecutedLeases(propertyId: number): Promise<ExecutedLease[]>;
+  createExecutedLease(lease: InsertExecutedLease): Promise<ExecutedLease>;
+  updateExecutedLease(id: number, updates: Partial<ExecutedLease>): Promise<ExecutedLease | undefined>;
+  deleteExecutedLease(id: number): Promise<boolean>;
+  getExecutedLease(id: number): Promise<ExecutedLease | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1143,6 +1153,47 @@ class ExtendedDatabaseStorage extends DatabaseStorage {
       .delete(evaluationBudgetAttachments)
       .where(eq(evaluationBudgetAttachments.id, attachmentId));
     return result.rowCount! > 0;
+  }
+
+  // Executed Leases management
+  async getExecutedLeases(propertyId: number): Promise<ExecutedLease[]> {
+    return await db
+      .select()
+      .from(executedLeases)
+      .where(eq(executedLeases.propertyId, propertyId))
+      .orderBy(desc(executedLeases.leaseStartDate));
+  }
+
+  async createExecutedLease(lease: InsertExecutedLease): Promise<ExecutedLease> {
+    const [created] = await db
+      .insert(executedLeases)
+      .values(lease)
+      .returning();
+    return created;
+  }
+
+  async updateExecutedLease(id: number, updates: Partial<ExecutedLease>): Promise<ExecutedLease | undefined> {
+    const [updated] = await db
+      .update(executedLeases)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(executedLeases.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteExecutedLease(id: number): Promise<boolean> {
+    const result = await db
+      .delete(executedLeases)
+      .where(eq(executedLeases.id, id));
+    return result.rowCount! > 0;
+  }
+
+  async getExecutedLease(id: number): Promise<ExecutedLease | undefined> {
+    const [lease] = await db
+      .select()
+      .from(executedLeases)
+      .where(eq(executedLeases.id, id));
+    return lease || undefined;
   }
 }
 

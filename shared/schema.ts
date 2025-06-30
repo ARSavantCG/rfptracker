@@ -438,6 +438,32 @@ export const insertEvaluationBudgetHistorySchema = createInsertSchema(evaluation
 export type EvaluationBudgetHistory = typeof evaluationBudgetHistory.$inferSelect;
 export type InsertEvaluationBudgetHistory = z.infer<typeof insertEvaluationBudgetHistorySchema>;
 
+// Executed Leases Table
+export const executedLeases = pgTable("executed_leases", {
+  id: serial("id").primaryKey(),
+  propertyId: integer("property_id").notNull(),
+  tenantName: text("tenant_name").notNull(),
+  leaseStartDate: timestamp("lease_start_date").notNull(),
+  leaseEndDate: timestamp("lease_end_date"),
+  assignedBays: json("assigned_bays").$type<string[]>().notNull().default([]), // Bay IDs like ["A1", "A2", "B3"]
+  standardParking: integer("standard_parking").default(0),
+  accessibleParking: integer("accessible_parking").default(0),
+  evParking: integer("ev_parking").default(0),
+  trailerParking: integer("trailer_parking").default(0),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertExecutedLeaseSchema = createInsertSchema(executedLeases).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type ExecutedLease = typeof executedLeases.$inferSelect;
+export type InsertExecutedLease = z.infer<typeof insertExecutedLeaseSchema>;
+
 export type EvaluationLineItem = {
   id: string;
   description: string;

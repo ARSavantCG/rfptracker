@@ -219,6 +219,7 @@ This is a full-stack web application for tracking and managing Request for Propo
 - June 30, 2025. Added comprehensive Property Info section to Properties page displaying total rentable area, bay count, detailed parking breakdown (Standard, Accessible, EV, Trailer), and auto-calculated parking ratio for each property card
 - June 30, 2025. Fixed total rentable area calculation to include mechanical room square footage in addition to bay configurations - corrected Bridge Point Gratigny to show accurate 409,189 SF total and updated parking ratio calculations consistently across property forms and property display
 - June 30, 2025. Added dock door information to Property Info section on Properties page - displays standard and oversized dock door counts calculated from bay configurations with total door count summary
+- June 30, 2025. Implemented collapsible Property Info section on Properties page - collapsed by default with clickable header showing chevron icons, includes hover effects for better user experience
 
 ## User Preferences
 

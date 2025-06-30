@@ -13,6 +13,7 @@ import type { Property, BayConfiguration } from "@shared/schema";
 export default function Properties() {
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedProperty, setExpandedProperty] = useState<string | null>(null);
+  const [expandedPropertyInfo, setExpandedPropertyInfo] = useState<number | null>(null);
 
   const { data: properties, isLoading } = useQuery<Property[]>({
     queryKey: ["/api/properties"],
@@ -267,74 +268,88 @@ export default function Properties() {
                         
                         {/* Property Info Section */}
                         <div className="mt-4 pt-4 border-t">
-                          <h4 className="text-sm font-semibold text-gray-800 mb-3">Property Info</h4>
+                          <div 
+                            className="flex items-center justify-between cursor-pointer hover:bg-gray-50 p-2 rounded -m-2 mb-1"
+                            onClick={() => setExpandedPropertyInfo(expandedPropertyInfo === property.id ? null : property.id)}
+                          >
+                            <h4 className="text-sm font-semibold text-gray-800">Property Info</h4>
+                            {expandedPropertyInfo === property.id ? (
+                              <ChevronUp className="h-4 w-4 text-gray-500" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4 text-gray-500" />
+                            )}
+                          </div>
                           
-                          {/* Rentable Area and Bay Count */}
-                          <div className="grid grid-cols-2 gap-3 mb-3">
-                            <div className="text-sm">
-                              <span className="text-gray-600">Total Rentable Area:</span>
-                              <div className="font-medium text-gray-900">
-                                {getTotalRentableArea(property).toLocaleString()} SF
+                          {expandedPropertyInfo === property.id && (
+                            <div className="space-y-3 mt-3">
+                              {/* Rentable Area and Bay Count */}
+                              <div className="grid grid-cols-2 gap-3 mb-3">
+                                <div className="text-sm">
+                                  <span className="text-gray-600">Total Rentable Area:</span>
+                                  <div className="font-medium text-gray-900">
+                                    {getTotalRentableArea(property).toLocaleString()} SF
+                                  </div>
+                                </div>
+                                <div className="text-sm">
+                                  <span className="text-gray-600">Bay Count:</span>
+                                  <div className="font-medium text-gray-900">
+                                    {getBayConfigurationCount(property)} bays
+                                  </div>
+                                </div>
                               </div>
-                            </div>
-                            <div className="text-sm">
-                              <span className="text-gray-600">Bay Count:</span>
-                              <div className="font-medium text-gray-900">
-                                {getBayConfigurationCount(property)} bays
-                              </div>
-                            </div>
-                          </div>
 
-                          {/* Dock Door Information */}
-                          <div className="mb-3">
-                            <div className="text-sm text-gray-600 mb-2">Dock Doors:</div>
-                            <div className="grid grid-cols-2 gap-2 text-xs">
-                              <div className="flex justify-between">
-                                <span className="text-gray-500">Standard:</span>
-                                <span className="font-medium">{getDoorCounts(property).standard}</span>
+                              {/* Dock Door Information */}
+                              <div className="mb-3">
+                                <div className="text-sm text-gray-600 mb-2">Dock Doors:</div>
+                                <div className="grid grid-cols-2 gap-2 text-xs">
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-500">Standard:</span>
+                                    <span className="font-medium">{getDoorCounts(property).standard}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-500">Oversized:</span>
+                                    <span className="font-medium">{getDoorCounts(property).oversized}</span>
+                                  </div>
+                                </div>
+                                <div className="text-xs text-gray-500 mt-1 text-center">
+                                  Total: {getDoorCounts(property).total} doors
+                                </div>
                               </div>
-                              <div className="flex justify-between">
-                                <span className="text-gray-500">Oversized:</span>
-                                <span className="font-medium">{getDoorCounts(property).oversized}</span>
-                              </div>
-                            </div>
-                            <div className="text-xs text-gray-500 mt-1 text-center">
-                              Total: {getDoorCounts(property).total} doors
-                            </div>
-                          </div>
 
-                          {/* Parking Information */}
-                          <div className="mb-3">
-                            <div className="text-sm text-gray-600 mb-2">Parking:</div>
-                            <div className="grid grid-cols-2 gap-2 text-xs">
-                              <div className="flex justify-between">
-                                <span className="text-gray-500">Standard:</span>
-                                <span className="font-medium">{property.standardParking || 0}</span>
+                              {/* Parking Information */}
+                              <div className="mb-3">
+                                <div className="text-sm text-gray-600 mb-2">Parking:</div>
+                                <div className="grid grid-cols-2 gap-2 text-xs">
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-500">Standard:</span>
+                                    <span className="font-medium">{property.standardParking || 0}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-500">Accessible:</span>
+                                    <span className="font-medium">{property.accessibleParking || 0}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-500">EV:</span>
+                                    <span className="font-medium">{property.evParking || 0}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-500">Trailer:</span>
+                                    <span className="font-medium">{property.trailerParking || 0}</span>
+                                  </div>
+                                </div>
                               </div>
-                              <div className="flex justify-between">
-                                <span className="text-gray-500">Accessible:</span>
-                                <span className="font-medium">{property.accessibleParking || 0}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-gray-500">EV:</span>
-                                <span className="font-medium">{property.evParking || 0}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-gray-500">Trailer:</span>
-                                <span className="font-medium">{property.trailerParking || 0}</span>
-                              </div>
-                            </div>
-                          </div>
 
-                          {/* Parking Ratio */}
-                          <div className="text-sm bg-blue-50 p-2 rounded">
-                            <div className="flex justify-between items-center">
-                              <span className="text-gray-600">Parking Ratio:</span>
-                              <span className="font-medium text-blue-700">
-                                {calculateParkingRatio(property)} per 1,000 SF
-                              </span>
+                              {/* Parking Ratio */}
+                              <div className="text-sm bg-blue-50 p-2 rounded">
+                                <div className="flex justify-between items-center">
+                                  <span className="text-gray-600">Parking Ratio:</span>
+                                  <span className="font-medium text-blue-700">
+                                    {calculateParkingRatio(property)} per 1,000 SF
+                                  </span>
+                                </div>
+                              </div>
                             </div>
-                          </div>
+                          )}
                         </div>
                       </CardContent>
                     </Card>

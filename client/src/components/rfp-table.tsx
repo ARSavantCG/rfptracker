@@ -13,7 +13,7 @@ interface RfpTableProps {
   selectedRfpId?: number;
 }
 
-type SortField = "id" | "rfpNumber" | "tenantName" | "property" | "status" | "receivedOn";
+type SortField = "id" | "rfpNumber" | "tenantName" | "property" | "status" | "receivedOn" | "internalDueDate";
 type SortDirection = "asc" | "desc";
 
 export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, selectedRfpId }: RfpTableProps) {
@@ -143,9 +143,9 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
     let bValue: any = b[sortField];
 
     // Handle date sorting
-    if (sortField === "receivedOn") {
-      aValue = new Date(aValue).getTime();
-      bValue = new Date(bValue).getTime();
+    if (sortField === "receivedOn" || sortField === "internalDueDate") {
+      aValue = aValue ? new Date(aValue).getTime() : 0;
+      bValue = bValue ? new Date(bValue).getTime() : 0;
     }
 
     // Handle string sorting
@@ -227,6 +227,13 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
               >
                 Received On <i className={`${getSortIcon("receivedOn")} ml-1`}></i>
               </th>
+              <th 
+                className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
+                onClick={() => handleSort("internalDueDate")}
+                style={{ width: '120px' }}
+              >
+                Internal Due Date <i className={`${getSortIcon("internalDueDate")} ml-1`}></i>
+              </th>
               <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '70px' }}>
                 Files
               </th>
@@ -238,7 +245,7 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
           <tbody className="bg-white divide-y divide-gray-200">
             {sortedRequests.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
                   <i className="fas fa-inbox text-xl mb-2"></i>
                   <p className="text-sm font-medium">No RFP requests found</p>
                   <p className="text-xs">Create your first RFP request to get started</p>
@@ -311,6 +318,12 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
                     onClick={() => onSelectRfp?.(request)}
                   >
                     {formatDate(request.receivedOn)}
+                  </td>
+                  <td 
+                    className="px-3 py-3 whitespace-nowrap text-xs text-gray-500 cursor-pointer"
+                    onClick={() => onSelectRfp?.(request)}
+                  >
+                    {request.internalDueDate ? formatDate(request.internalDueDate) : '—'}
                   </td>
                   <td 
                     className="px-3 py-3 whitespace-nowrap text-xs text-gray-500 cursor-pointer"

@@ -89,6 +89,16 @@ export default function Properties() {
     return (ratio * 1000).toFixed(2);
   };
 
+  const calculateTrailerParkingRatio = (property: Property): string => {
+    const trailerParking = property.trailerParking || 0;
+    const totalRentableSquareFootage = getTotalRentableArea(property);
+    
+    if (totalRentableSquareFootage === 0) return "0.00";
+    
+    const ratio = trailerParking / totalRentableSquareFootage;
+    return (ratio * 1000).toFixed(2);
+  };
+
   const getDoorCounts = (property: Property): { standard: number; oversized: number; total: number } => {
     const bayConfigurations = property.bayConfigurations as BayConfiguration[] || [];
     const standardDoors = bayConfigurations.reduce((total, bay) => {
@@ -355,6 +365,16 @@ export default function Properties() {
                                   <span className="text-gray-600">Parking Ratio:</span>
                                   <span className="font-medium text-blue-700">
                                     {calculateParkingRatio(property)} per 1,000 SF
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Trailer Parking Ratio */}
+                              <div className="text-sm bg-orange-50 p-2 rounded mb-3">
+                                <div className="flex justify-between items-center">
+                                  <span className="text-gray-600">Trailer Parking Ratio:</span>
+                                  <span className="font-medium text-orange-700">
+                                    {calculateTrailerParkingRatio(property)} per 1,000 SF
                                   </span>
                                 </div>
                               </div>

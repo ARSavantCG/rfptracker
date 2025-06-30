@@ -224,6 +224,7 @@ This is a full-stack web application for tracking and managing Request for Propo
 - June 30, 2025. Fixed executed lease management system functionality - resolved database table creation, corrected bay configuration property mapping from bayId to id for proper bay name display, implemented real-time rentable area calculator that tallies square footage as bays are selected in lease management modal with individual bay breakdown and total calculation
 - June 30, 2025. Added comprehensive "Executed Leases" section to Property Info dropdown displaying tenant names, individual lease areas and parking, plus "Available Space" summary showing remaining rentable area and remaining parking after accounting for all executed leases
 - June 30, 2025. Enhanced remaining space calculations to include separate trailer parking tracking - Available Space section now displays remaining rentable area, remaining standard parking, and remaining trailer parking as distinct values for precise space allocation management
+- June 30, 2025. Added trailer parking ratio calculation to Property Info section - displays trailer parking per 1,000 SF alongside regular parking ratio for comprehensive parking density analysis
 
 ## User Preferences
 

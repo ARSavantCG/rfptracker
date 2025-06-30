@@ -58,8 +58,26 @@ export default function Properties() {
     setExpandedProperty(expandedProperty === baseName ? null : baseName);
   };
 
+  // Helper functions
   const getBayConfigurationCount = (property: Property): number => {
     return property.bayConfigurations?.length || 0;
+  };
+
+  const getTotalRentableArea = (property: Property): number => {
+    const bayConfigurations = property.bayConfigurations as BayConfiguration[] || [];
+    return bayConfigurations.reduce((total, bay) => {
+      return total + (bay.squareFootage || 0);
+    }, 0);
+  };
+
+  const calculateParkingRatio = (property: Property): string => {
+    const totalRegularParking = (property.standardParking || 0) + (property.accessibleParking || 0) + (property.evParking || 0);
+    const totalRentableSquareFootage = getTotalRentableArea(property);
+    
+    if (totalRentableSquareFootage === 0) return "0.00";
+    
+    const ratio = totalRegularParking / totalRentableSquareFootage;
+    return (ratio * 1000).toFixed(2);
   };
 
   return (
@@ -230,13 +248,57 @@ export default function Properties() {
                           <BayConfigurationManager property={property} />
                         </div>
                         
-                        {/* Bay Configuration Summary */}
+                        {/* Property Info Section */}
                         <div className="mt-4 pt-4 border-t">
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-gray-600">Bay Configurations:</span>
-                            <span className="font-medium">
-                              {getBayConfigurationCount(property)} configured
-                            </span>
+                          <h4 className="text-sm font-semibold text-gray-800 mb-3">Property Info</h4>
+                          
+                          {/* Rentable Area and Bay Count */}
+                          <div className="grid grid-cols-2 gap-3 mb-3">
+                            <div className="text-sm">
+                              <span className="text-gray-600">Total Rentable Area:</span>
+                              <div className="font-medium text-gray-900">
+                                {getTotalRentableArea(property).toLocaleString()} SF
+                              </div>
+                            </div>
+                            <div className="text-sm">
+                              <span className="text-gray-600">Bay Count:</span>
+                              <div className="font-medium text-gray-900">
+                                {getBayConfigurationCount(property)} bays
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Parking Information */}
+                          <div className="mb-3">
+                            <div className="text-sm text-gray-600 mb-2">Parking:</div>
+                            <div className="grid grid-cols-2 gap-2 text-xs">
+                              <div className="flex justify-between">
+                                <span className="text-gray-500">Standard:</span>
+                                <span className="font-medium">{property.standardParking || 0}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-500">Accessible:</span>
+                                <span className="font-medium">{property.accessibleParking || 0}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-500">EV:</span>
+                                <span className="font-medium">{property.evParking || 0}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-500">Trailer:</span>
+                                <span className="font-medium">{property.trailerParking || 0}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Parking Ratio */}
+                          <div className="text-sm bg-blue-50 p-2 rounded">
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-600">Parking Ratio:</span>
+                              <span className="font-medium text-blue-700">
+                                {calculateParkingRatio(property)} per 1,000 SF
+                              </span>
+                            </div>
                           </div>
                         </div>
                       </CardContent>

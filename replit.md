@@ -216,6 +216,7 @@ This is a full-stack web application for tracking and managing Request for Propo
 - June 30, 2025. Removed redundant "Door Information" section from evaluation budget reports as door counts are already displayed in header to eliminate duplicate information
 - June 30, 2025. Added comprehensive parking information fields to property add/edit forms - Standard Parking, Accessible Parking, EV Parking, and Trailer Parking displayed in single horizontal row layout with database schema integration
 - June 30, 2025. Implemented auto-calculating parking ratio functionality - calculates (Standard + Accessible + EV Parking) ÷ Rentable Square Footage with real-time updates, displays as "spaces per 1,000 SF" format, excludes trailer parking from calculation, and shows breakdown details for transparency
+- June 30, 2025. Added comprehensive Property Info section to Properties page displaying total rentable area, bay count, detailed parking breakdown (Standard, Accessible, EV, Trailer), and auto-calculated parking ratio for each property card
 
 ## User Preferences
 

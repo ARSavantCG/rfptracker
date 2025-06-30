@@ -1052,6 +1052,40 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         }
     </div>
 
+    ${(budgetData.oversizedDoors > 0 || budgetData.regularDoors > 0) ? `
+    <div class="door-info-section">
+        <h3 class="door-info-title">Door Information</h3>
+        <div class="door-info-content">
+            <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+                <thead>
+                    <tr style="background-color: #f8f9fa; border-bottom: 2px solid #dee2e6;">
+                        <th style="padding: 8px; text-align: left; border: 1px solid #dee2e6;">Door Type</th>
+                        <th style="padding: 8px; text-align: center; border: 1px solid #dee2e6;">Quantity</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${budgetData.oversizedDoors > 0 ? `
+                    <tr>
+                        <td style="padding: 8px; border: 1px solid #dee2e6;">Oversized Doors</td>
+                        <td style="padding: 8px; text-align: center; border: 1px solid #dee2e6;">${budgetData.oversizedDoors}</td>
+                    </tr>
+                    ` : ''}
+                    ${budgetData.regularDoors > 0 ? `
+                    <tr>
+                        <td style="padding: 8px; border: 1px solid #dee2e6;">Regular Doors</td>
+                        <td style="padding: 8px; text-align: center; border: 1px solid #dee2e6;">${budgetData.regularDoors}</td>
+                    </tr>
+                    ` : ''}
+                    <tr style="background-color: #f8f9fa; font-weight: bold;">
+                        <td style="padding: 8px; border: 1px solid #dee2e6;">Total Doors</td>
+                        <td style="padding: 8px; text-align: center; border: 1px solid #dee2e6;">${budgetData.oversizedDoors + budgetData.regularDoors}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    ` : ''}
+
     ${budgetData.notes ? `
     <div class="notes-section">
         <h3 class="notes-title">Budget Notes</h3>
@@ -2222,6 +2256,50 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
           </Card>
         );
       })()}
+
+      {/* Door Count Information */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Door Information</CardTitle>
+          <p className="text-sm text-gray-600">
+            Specify door counts to include in the evaluation report
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="oversizedDoors">Oversized Doors</Label>
+              <Input
+                id="oversizedDoors"
+                type="number"
+                min="0"
+                value={budgetData.oversizedDoors}
+                onChange={(e) => setBudgetData(prev => ({
+                  ...prev,
+                  oversizedDoors: parseInt(e.target.value) || 0
+                }))}
+                className="mt-1"
+                placeholder="0"
+              />
+            </div>
+            <div>
+              <Label htmlFor="regularDoors">Regular Doors</Label>
+              <Input
+                id="regularDoors"
+                type="number"
+                min="0"
+                value={budgetData.regularDoors}
+                onChange={(e) => setBudgetData(prev => ({
+                  ...prev,
+                  regularDoors: parseInt(e.target.value) || 0
+                }))}
+                className="mt-1"
+                placeholder="0"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Preview Report */}
       <Card>

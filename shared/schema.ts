@@ -392,8 +392,7 @@ export const evaluationBudgets = pgTable("evaluation_budgets", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   lineItemRollups: json("line_item_rollups").$type<Record<string, 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements' | 'tiAndDesign'>>().default({}),
   assemblies: json("assemblies").$type<Record<string, { total: number; components: string[] }>>().default({}),
-  oversizedDoors: integer("oversized_doors").default(0),
-  regularDoors: integer("regular_doors").default(0),
+  metadata: json("metadata").$type<{ oversizedDoors?: number; regularDoors?: number; [key: string]: any }>().default({}),
 });
 
 // Evaluation Budget Attachments table

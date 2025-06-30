@@ -1029,6 +1029,8 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         <p><strong>Project:</strong> ${rfp?.projectName}</p>
         <p><strong>RFP Number:</strong> ${rfp?.rfpNumber}</p>
         <p><strong>Generated:</strong> ${currentDate}</p>
+        <p><strong>Rentable Area:</strong> ${rfp?.warehouseArea ? new Intl.NumberFormat('en-US').format(parseInt(rfp.warehouseArea)) : 'Not specified'} square feet</p>
+        <p><strong>Door Configuration:</strong> ${budgetData.oversizedDoors + budgetData.regularDoors} doors total (${budgetData.oversizedDoors} oversized, ${budgetData.regularDoors} regular)</p>
     </div>
     
     <div style="text-align: right; margin-bottom: 20px; padding-right: 20px;">

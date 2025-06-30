@@ -3659,30 +3659,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/properties/:propertyId/executed-leases', requireAuth, async (req, res) => {
     try {
       const { propertyId } = req.params;
-      console.log("Raw assignedBays data:", req.body.assignedBays, typeof req.body.assignedBays);
-      
-      let assignedBays = [];
-      if (req.body.assignedBays) {
-        if (Array.isArray(req.body.assignedBays)) {
-          assignedBays = req.body.assignedBays;
-        } else if (typeof req.body.assignedBays === 'string') {
-          try {
-            assignedBays = JSON.parse(req.body.assignedBays);
-          } catch (e) {
-            assignedBays = [req.body.assignedBays];
-          }
-        }
-      }
-      
       const leaseData = { 
         ...req.body, 
         propertyId: parseInt(propertyId),
         leaseStartDate: new Date(req.body.leaseStartDate),
         leaseEndDate: req.body.leaseEndDate ? new Date(req.body.leaseEndDate) : null,
-        assignedBays: assignedBays,
+        assignedBays: Array.isArray(req.body.assignedBays) ? req.body.assignedBays : [],
       };
-      
-      console.log("Processed leaseData.assignedBays:", leaseData.assignedBays);
       const lease = await storage.createExecutedLease(leaseData);
       res.json(lease);
     } catch (error) {

@@ -445,7 +445,7 @@ export const executedLeases = pgTable("executed_leases", {
   tenantName: text("tenant_name").notNull(),
   leaseStartDate: timestamp("lease_start_date").notNull(),
   leaseEndDate: timestamp("lease_end_date"),
-  assignedBays: json("assigned_bays").$type<string[]>().notNull().default([]), // Bay IDs like ["A1", "A2", "B3"]
+  assignedBays: text("assigned_bays").array().notNull().default([]), // Bay IDs like ["A1", "A2", "B3"]
   standardParking: integer("standard_parking").default(0),
   accessibleParking: integer("accessible_parking").default(0),
   evParking: integer("ev_parking").default(0),

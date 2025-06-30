@@ -22,13 +22,17 @@ export default function BayConfigurationSelector({
   );
 
   // Fetch executed leases for this property to exclude leased bays
-  const { data: executedLeases = [] } = useQuery<ExecutedLease[]>({
+  const { data: executedLeases = [], isLoading: isLoadingLeases } = useQuery<ExecutedLease[]>({
     queryKey: ['/api/properties', property.id, 'executed-leases'],
     enabled: !!property.id
   });
 
   // Get list of all bay IDs that are already leased
   const leasedBayIds = executedLeases.flatMap(lease => lease.assignedBays || []);
+  
+  // Debug logging
+  console.log('Executed leases:', executedLeases);
+  console.log('Leased bay IDs:', leasedBayIds);
 
   const bayConfigurations = property.bayConfigurations || [];
 

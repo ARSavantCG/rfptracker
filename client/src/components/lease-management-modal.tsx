@@ -78,10 +78,7 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
         leaseStartDate: new Date(data.leaseStartDate),
         leaseEndDate: data.leaseEndDate ? new Date(data.leaseEndDate) : null,
       };
-      return apiRequest(`/api/properties/${property.id}/executed-leases`, {
-        method: "POST",
-        body: JSON.stringify(formattedData),
-      });
+      return apiRequest(`/api/properties/${property.id}/executed-leases`, "POST", formattedData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/properties/${property.id}/executed-leases`] });
@@ -101,10 +98,7 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
         leaseStartDate: new Date(data.leaseStartDate),
         leaseEndDate: data.leaseEndDate ? new Date(data.leaseEndDate) : null,
       };
-      return apiRequest(`/api/executed-leases/${editingLease!.id}`, {
-        method: "PATCH",
-        body: JSON.stringify(formattedData),
-      });
+      return apiRequest(`/api/executed-leases/${editingLease!.id}`, "PATCH", formattedData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/properties/${property.id}/executed-leases`] });
@@ -120,7 +114,7 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
 
   const deleteMutation = useMutation({
     mutationFn: async (leaseId: number) => {
-      return apiRequest(`/api/executed-leases/${leaseId}`, { method: "DELETE" });
+      return apiRequest(`/api/executed-leases/${leaseId}`, "DELETE");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/properties/${property.id}/executed-leases`] });
@@ -163,7 +157,7 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
 
   // Get leased bays to filter from available bays
   const leasedBays = leases.flatMap(lease => lease.assignedBays || []);
-  const unassignedBays = availableBays.filter(bay => !leasedBays.includes(bay.bayId));
+  const unassignedBays = availableBays.filter(bay => !leasedBays.includes(bay.id));
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -256,36 +250,36 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
                             <div className="grid grid-cols-6 gap-2 max-h-32 overflow-y-auto border rounded-md p-3">
                               {availableBays.map((bay) => (
                                 <div
-                                  key={bay.bayId}
+                                  key={bay.id}
                                   className={`flex items-center space-x-2 ${
-                                    leasedBays.includes(bay.bayId) && !editingLease?.assignedBays?.includes(bay.bayId)
+                                    leasedBays.includes(bay.id) && !editingLease?.assignedBays?.includes(bay.id)
                                       ? "opacity-50"
                                       : ""
                                   }`}
                                 >
                                   <Checkbox
-                                    id={bay.bayId}
-                                    checked={field.value.includes(bay.bayId)}
+                                    id={bay.id}
+                                    checked={field.value.includes(bay.id)}
                                     disabled={
-                                      leasedBays.includes(bay.bayId) && !editingLease?.assignedBays?.includes(bay.bayId)
+                                      leasedBays.includes(bay.id) && !editingLease?.assignedBays?.includes(bay.id)
                                     }
                                     onCheckedChange={(checked) => {
                                       if (checked) {
-                                        field.onChange([...field.value, bay.bayId]);
+                                        field.onChange([...field.value, bay.id]);
                                       } else {
-                                        field.onChange(field.value.filter((id: string) => id !== bay.bayId));
+                                        field.onChange(field.value.filter((id: string) => id !== bay.id));
                                       }
                                     }}
                                   />
                                   <label
-                                    htmlFor={bay.bayId}
+                                    htmlFor={bay.id}
                                     className={`text-sm font-medium cursor-pointer ${
-                                      leasedBays.includes(bay.bayId) && !editingLease?.assignedBays?.includes(bay.bayId)
+                                      leasedBays.includes(bay.id) && !editingLease?.assignedBays?.includes(bay.id)
                                         ? "text-gray-400"
                                         : ""
                                     }`}
                                   >
-                                    {bay.bayId}
+                                    {bay.bayName}
                                   </label>
                                 </div>
                               ))}

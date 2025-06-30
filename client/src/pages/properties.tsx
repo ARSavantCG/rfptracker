@@ -82,6 +82,21 @@ export default function Properties() {
     return (ratio * 1000).toFixed(2);
   };
 
+  const getDoorCounts = (property: Property): { standard: number; oversized: number; total: number } => {
+    const bayConfigurations = property.bayConfigurations as BayConfiguration[] || [];
+    const standardDoors = bayConfigurations.reduce((total, bay) => {
+      return total + (bay.standardDockDoors || 0);
+    }, 0);
+    const oversizedDoors = bayConfigurations.reduce((total, bay) => {
+      return total + (bay.oversizedDockDoors || 0);
+    }, 0);
+    return {
+      standard: standardDoors,
+      oversized: oversizedDoors,
+      total: standardDoors + oversizedDoors
+    };
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navigation />
@@ -267,6 +282,24 @@ export default function Properties() {
                               <div className="font-medium text-gray-900">
                                 {getBayConfigurationCount(property)} bays
                               </div>
+                            </div>
+                          </div>
+
+                          {/* Dock Door Information */}
+                          <div className="mb-3">
+                            <div className="text-sm text-gray-600 mb-2">Dock Doors:</div>
+                            <div className="grid grid-cols-2 gap-2 text-xs">
+                              <div className="flex justify-between">
+                                <span className="text-gray-500">Standard:</span>
+                                <span className="font-medium">{getDoorCounts(property).standard}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-500">Oversized:</span>
+                                <span className="font-medium">{getDoorCounts(property).oversized}</span>
+                              </div>
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1 text-center">
+                              Total: {getDoorCounts(property).total} doors
                             </div>
                           </div>
 

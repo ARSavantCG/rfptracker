@@ -3634,6 +3634,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Executed Leases API routes
+  app.get('/api/properties/:propertyId/executed-leases', requireAuth, async (req, res) => {
+    try {
+      const { propertyId } = req.params;
+      const leases = await storage.getExecutedLeases(parseInt(propertyId));
+      res.json(leases);
+    } catch (error) {
+      console.error("Error fetching executed leases:", error);
+      res.status(500).json({ message: "Failed to fetch executed leases" });
+    }
+  });
+
+  app.post('/api/properties/:propertyId/executed-leases', requireAuth, async (req, res) => {
+    try {
+      const { propertyId } = req.params;
+      const leaseData = { ...req.body, propertyId: parseInt(propertyId) };
+      const lease = await storage.createExecutedLease(leaseData);
+      res.json(lease);
+    } catch (error) {
+      console.error("Error creating executed lease:", error);
+      res.status(500).json({ message: "Failed to create executed lease" });
+    }
+  });
+
+  app.patch('/api/executed-leases/:id', requireAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const lease = await storage.updateExecutedLease(parseInt(id), req.body);
+      res.json(lease);
+    } catch (error) {
+      console.error("Error updating executed lease:", error);
+      res.status(500).json({ message: "Failed to update executed lease" });
+    }
+  });
+
+  app.delete('/api/executed-leases/:id', requireAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const success = await storage.deleteExecutedLease(parseInt(id));
+      if (success) {
+        res.json({ message: "Executed lease deleted successfully" });
+      } else {
+        res.status(404).json({ message: "Executed lease not found" });
+      }
+    } catch (error) {
+      console.error("Error deleting executed lease:", error);
+      res.status(500).json({ message: "Failed to delete executed lease" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

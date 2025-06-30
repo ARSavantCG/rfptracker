@@ -8,6 +8,7 @@ import Navigation from "@/components/navigation";
 import { PropertyFormModal } from "@/components/property-form-modal";
 import BayConfigurationManager from "@/components/bay-configuration-manager";
 import { formatDate } from "@/lib/utils";
+import LeaseManagementModal from "@/components/lease-management-modal";
 import type { Property, BayConfiguration } from "@shared/schema";
 
 export default function Properties() {
@@ -264,6 +265,10 @@ export default function Properties() {
                         
                         <div className="flex space-x-2 mt-4">
                           <BayConfigurationManager property={property} />
+                          <LeaseManagementModal 
+                            property={property} 
+                            availableBays={property.bayConfigurations || []} 
+                          />
                         </div>
                         
                         {/* Property Info Section */}

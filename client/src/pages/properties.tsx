@@ -263,7 +263,7 @@ export default function Properties() {
                           </div>
                         </div>
                         
-                        <div className="flex space-x-2 mt-4">
+                        <div className="flex flex-wrap gap-2 mt-4">
                           <BayConfigurationManager property={property} />
                           <LeaseManagementModal 
                             property={property} 

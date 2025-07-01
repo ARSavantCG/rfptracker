@@ -236,6 +236,8 @@ This is a full-stack web application for tracking and managing Request for Propo
 - July 1, 2025. Added edit mode protection to Tenant Premises Overview with dedicated Edit/Done button - fields are now read-only by default to prevent accidental changes, requiring deliberate "Edit" button activation to modify dock door and parking values while maintaining auto-population functionality
 - July 1, 2025. Fixed executed leases parking display in Properties page to distinguish between "Vehicular" and "Trailer" parking instead of combining totals - individual lease cards now show separate counts for vehicular parking (standard + accessible + EV) and trailer parking for precise space allocation transparency
 - July 1, 2025. Standardized Property Info layout consistency by converting all grid layouts to vertical stacking - replaced side-by-side arrangements in Total Rentable Area/Bay Count, Dock Doors, Parking, and Available Space sections with consistent vertical format matching executed leases display for improved readability and visual flow
+- July 1, 2025. Completed publish workflow phase implementation with dedicated PublishSummary component - fixed Executive Summary Report status mapping to display "PUBLISHED" for publish phase RFPs, created distinct publish interface with project overview and financial summary generation, enhanced workflow status component to handle publish phase clicks, and removed "Ready to Publish" badge and Property field from Project Summary per user requirements
+- July 1, 2025. Fixed Financial Summary PDF generation in publish phase to open in new browser tab instead of downloading, resolving PDF viewing errors and enabling standard browser-based save functionality
 
 ## User Preferences
 

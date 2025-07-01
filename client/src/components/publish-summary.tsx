@@ -24,27 +24,10 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
     setIsGeneratingReport(true);
     try {
       const token = localStorage.getItem('auth-token');
-      const response = await fetch(`/api/rfp-requests/${rfp.id}/financial-summary`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to generate financial summary');
-      }
-
-      // Create download link
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Financial_Summary_${rfp.rfpNumber}_${rfp.projectName?.replace(/[^a-zA-Z0-9]/g, '_') || 'Report'}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      const url = `/api/rfp-requests/${rfp.id}/financial-summary?token=${encodeURIComponent(token || '')}`;
+      
+      // Open in new tab instead of downloading
+      window.open(url, '_blank');
     } catch (error) {
       console.error('Error generating financial summary:', error);
     } finally {
@@ -75,16 +58,10 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
       {/* Project Overview */}
       <Card>
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-xl flex items-center gap-2">
-              <Building className="h-5 w-5" />
-              Project Summary
-            </CardTitle>
-            <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
-              <CheckCircle className="h-3 w-3 mr-1" />
-              Ready to Publish
-            </Badge>
-          </div>
+          <CardTitle className="text-xl flex items-center gap-2">
+            <Building className="h-5 w-5" />
+            Project Summary
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -96,13 +73,6 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
               <div>
                 <label className="text-sm font-medium text-gray-600">Project Name</label>
                 <p className="text-lg text-gray-900">{rfp.projectName}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-600">Property</label>
-                <p className="text-gray-900 flex items-center gap-1">
-                  <MapPin className="h-4 w-4" />
-                  {rfp.property}
-                </p>
               </div>
             </div>
             <div className="space-y-3">

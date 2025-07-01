@@ -125,6 +125,12 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     enabled: !!rfp?.id,
   });
 
+  // Load property data to get total rentable area for prorated calculations
+  const { data: propertyData } = useQuery({
+    queryKey: [`/api/properties/${rfp?.property}`],
+    enabled: !!rfp?.property,
+  });
+
   // Load property existing improvements to auto-populate when relevant
   const { data: propertyImprovements, isLoading: isLoadingImprovements } = useQuery({
     queryKey: [`/api/properties/${rfp?.property}/existing-improvements`],
@@ -364,29 +370,71 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
       })
       .map((improvement: any) => {
         let allocatedCost = improvement.totalCost / 100; // Convert from cents to dollars
+        let quantity = 1;
+        let unit = 'ea';
+        let unitPrice = allocatedCost;
         
         if (improvement.allocationType === 'prorated') {
           // Calculate prorated cost based on selected area vs total property area
-          const propertyTotalArea = rfp.projectArea ? parseFloat(rfp.projectArea.replace(/[^\d.]/g, '')) : totalSelectedArea;
+          // Use total selected area as quantity and calculate unit price per SF
+          quantity = Math.round(totalSelectedArea);
+          unit = 'sf';
+          
+          // Get total property area from the property data
+          let propertyTotalArea = 409189; // Default fallback for Bridge Point Gratigny
+          
+          if (propertyData) {
+            // Calculate total rentable area: sum of bay areas + mechanical room area
+            const bayTotalArea = propertyData.bayConfigurations?.reduce((sum: number, bay: any) => {
+              return sum + (bay.rentableSquareFootage || bay.squareFootage || 0);
+            }, 0) || 0;
+            
+            const mechanicalArea = propertyData.mechanicalRoomSquareFootage || 0;
+            propertyTotalArea = bayTotalArea + mechanicalArea;
+          }
+          
           if (propertyTotalArea > 0) {
-            allocatedCost = (allocatedCost * totalSelectedArea) / propertyTotalArea;
+            // Calculate the prorated total cost for this tenant's area
+            const proratedTotalCost = (allocatedCost * totalSelectedArea) / propertyTotalArea;
+            unitPrice = proratedTotalCost / quantity; // Per square foot cost
+            allocatedCost = proratedTotalCost;
+            
+            console.log(`Prorated calculation for ${improvement.description}:`, {
+              originalCost: improvement.totalCost / 100,
+              totalSelectedArea,
+              propertyTotalArea,
+              proratedTotalCost,
+              unitPrice,
+              quantity
+            });
           }
         } else if (improvement.allocationType === 'bay-specific') {
           // For bay-specific, only include cost for applicable selected bays
-          const applicableBayCount = improvement.applicableBays?.filter((bayId: string) => selectedBayIds.includes(bayId)).length || 0;
+          const applicableBayIds = improvement.applicableBays?.filter((bayId: string) => selectedBayIds.includes(bayId)) || [];
+          const applicableBayCount = applicableBayIds.length;
           const totalApplicableBays = improvement.applicableBays?.length || 1;
-          allocatedCost = (allocatedCost * applicableBayCount) / totalApplicableBays;
+          
+          if (applicableBayCount > 0) {
+            quantity = applicableBayCount;
+            unit = 'bay';
+            allocatedCost = (allocatedCost * applicableBayCount) / totalApplicableBays;
+            unitPrice = allocatedCost / quantity;
+          } else {
+            // No applicable bays selected, skip this improvement
+            return null;
+          }
         }
         
         return {
           id: `existing-${improvement.id}`,
           description: `${improvement.description} (${improvement.category})`,
-          quantity: 1,
-          unit: improvement.allocationType === 'prorated' ? 'sf' : 'ea',
-          unitPrice: allocatedCost.toFixed(2),
+          quantity: quantity,
+          unit: unit,
+          unitPrice: unitPrice.toFixed(2),
           totalPrice: allocatedCost.toFixed(2),
         } as EvaluationLineItem;
-      });
+      })
+      .filter(item => item !== null);
   };
 
   // Initialize budget with saved data or bid line items data

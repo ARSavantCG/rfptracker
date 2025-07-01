@@ -179,13 +179,19 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValida
               onClick={() => isClickable && handlePhaseClick(phase)}
               className={`flex items-center space-x-3 p-3 rounded-lg border transition-colors ${
                 isActive
-                  ? phase.color
+                  ? "bg-blue-100 text-blue-700 border-blue-300"
                   : isCompleted
-                  ? "bg-gray-50 text-gray-600 border-gray-200"
-                  : "bg-gray-25 text-gray-400 border-gray-100"
+                  ? "bg-green-100 text-green-700 border-green-300"
+                  : "bg-gray-50 text-gray-400 border-gray-200"
               } ${isClickable ? "cursor-pointer hover:bg-opacity-80" : ""}`}
             >
-              <Icon className={`h-5 w-5 ${isCompleted ? "text-green-600" : ""}`} />
+              <Icon className={`h-5 w-5 ${
+                isActive 
+                  ? "text-blue-600" 
+                  : isCompleted 
+                  ? "text-green-600" 
+                  : "text-gray-400"
+              }`} />
               <div className="flex-1">
                 <div className="flex items-center space-x-2">
                   <span className={`font-medium text-sm ${isActive ? "text-gray-900" : ""}`}>

@@ -52,7 +52,7 @@ export function PropertyExistingImprovementsModal({
     defaultValues: {
       category: "",
       description: "",
-      totalCost: undefined,
+      totalCost: 0,
       allocationType: "prorated",
       applicableBays: [],
       notes: "",

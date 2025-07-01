@@ -347,8 +347,9 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
   const calculateParkingCounts = () => {
     if (!propertyData) return { vehicular: 0, trailer: 0 };
     
-    const vehicularTotal = (propertyData.standardParking || 0) + (propertyData.accessibleParking || 0) + (propertyData.evParking || 0);
-    const trailerTotal = propertyData.trailerParking || 0;
+    const property = propertyData as any;
+    const vehicularTotal = (property.standardParking || 0) + (property.accessibleParking || 0) + (property.evParking || 0);
+    const trailerTotal = property.trailerParking || 0;
     
     return { vehicular: vehicularTotal, trailer: trailerTotal };
   };
@@ -504,11 +505,11 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         hasExistingImprovements: existingImprovementsFromProperty.length > 0,
         oversizedDoors: doorCounts.oversized,
         regularDoors: doorCounts.regular,
-        vehicularParking: 0,
-        trailerParking: 0,
+        vehicularParking: parkingCounts.vehicular,
+        trailerParking: parkingCounts.trailer,
       }));
     }
-  }, [existingBudget, allBidLineItems, bidCollections, rfp?.selectedBayConfigurations, propertyImprovements]);
+  }, [existingBudget, allBidLineItems, bidCollections, rfp?.selectedBayConfigurations, propertyImprovements, propertyData]);
 
   const formatCurrency = (amount: string | number) => {
     const num = typeof amount === 'string' ? parseFloat(amount) : amount;

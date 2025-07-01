@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Edit, Trash2, Save, X, ArrowRight, Copy, FileDown, Upload, Package, Users, ChevronUp, ChevronDown, GripVertical } from "lucide-react";
+import { Plus, Edit, Trash2, Save, X, ArrowRight, Copy, FileDown, Upload, Package, Users, ChevronUp, ChevronDown, GripVertical, Check as CheckIcon } from "lucide-react";
 import { EvaluationAttachments } from "./evaluation-attachments";
 import { EvaluationBudgetHistory } from "./evaluation-budget-history";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
@@ -86,6 +86,9 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
   // File attachment state for Budget Evaluation stage
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
   const [existingAttachments, setExistingAttachments] = useState<any[]>([]);
+  
+  // Premises edit mode state
+  const [premisesEditMode, setPremisesEditMode] = useState(false);
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -2436,10 +2439,32 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
       {/* Tenant Premises Overview */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Tenant Premises Overview</CardTitle>
-          <p className="text-sm text-gray-600">
-            Specify premises information to include in the evaluation report
-          </p>
+          <div className="flex justify-between items-start">
+            <div>
+              <CardTitle className="text-lg">Tenant Premises Overview</CardTitle>
+              <p className="text-sm text-gray-600">
+                Specify premises information to include in the evaluation report
+              </p>
+            </div>
+            <Button
+              variant={premisesEditMode ? "default" : "outline"}
+              size="sm"
+              onClick={() => setPremisesEditMode(!premisesEditMode)}
+              className="h-8"
+            >
+              {premisesEditMode ? (
+                <>
+                  <CheckIcon className="h-4 w-4 mr-1" />
+                  Done
+                </>
+              ) : (
+                <>
+                  <Edit className="h-4 w-4 mr-1" />
+                  Edit
+                </>
+              )}
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-6">
@@ -2460,6 +2485,8 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                     }))}
                     className="mt-1"
                     placeholder="0"
+                    readOnly={!premisesEditMode}
+                    disabled={!premisesEditMode}
                   />
                 </div>
                 <div>
@@ -2475,6 +2502,8 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                     }))}
                     className="mt-1"
                     placeholder="0"
+                    readOnly={!premisesEditMode}
+                    disabled={!premisesEditMode}
                   />
                 </div>
               </div>
@@ -2497,6 +2526,8 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                     }))}
                     className="mt-1"
                     placeholder="0"
+                    readOnly={!premisesEditMode}
+                    disabled={!premisesEditMode}
                   />
                 </div>
                 <div>
@@ -2512,6 +2543,8 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                     }))}
                     className="mt-1"
                     placeholder="0"
+                    readOnly={!premisesEditMode}
+                    disabled={!premisesEditMode}
                   />
                 </div>
               </div>

@@ -36,7 +36,7 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
     let url = '';
     
     if (reportType === 'budget-evaluation' && reportId) {
-      url = `/api/rfp-requests/${rfp.id}/evaluation-budget-history/${reportId}?token=${encodeURIComponent(token || '')}`;
+      url = `/api/evaluation-budget-history/${reportId}/view?token=${encodeURIComponent(token || '')}`;
     } else if (reportType === 'invitation-to-bid' && reportId) {
       url = `/api/rfp-requests/${rfp.id}/generation-history/${reportId}?token=${encodeURIComponent(token || '')}`;
     } else if (reportType === 'executive-summary') {

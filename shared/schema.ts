@@ -377,6 +377,65 @@ export type Property = typeof properties.$inferSelect;
 export type InsertProperty = z.infer<typeof insertPropertySchema>;
 export type UpdateProperty = z.infer<typeof updatePropertySchema>;
 
+// Property Existing Improvements table
+export const propertyExistingImprovements = pgTable("property_existing_improvements", {
+  id: serial("id").primaryKey(),
+  propertyId: integer("property_id").references(() => properties.id, { onDelete: "cascade" }).notNull(),
+  category: text("category").notNull(), // lighting, restrooms, spec-office, hvac, fire-alarm, custom
+  description: text("description").notNull(),
+  totalCost: integer("total_cost").notNull(), // Cost in cents for precision
+  allocationType: text("allocation_type").notNull(), // "prorated", "bay-specific", "whole-property"
+  
+  // For prorated items (lighting, HVAC, etc.) - cost distributed by square footage
+  costPerSquareFoot: integer("cost_per_square_foot"), // Cost per SF in cents, calculated from totalCost / totalPropertySF
+  
+  // For bay-specific items - which bays this improvement applies to
+  applicableBays: json("applicable_bays").$type<string[]>().default([]), // Array of bay IDs
+  
+  // Additional metadata
+  notes: text("notes"),
+  installationDate: timestamp("installation_date"),
+  vendor: text("vendor"),
+  isActive: boolean("is_active").default(true),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertPropertyExistingImprovementSchema = createInsertSchema(propertyExistingImprovements).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  costPerSquareFoot: true, // Calculated field
+}).extend({
+  totalCost: z.number().min(0),
+  installationDate: z.string().optional().transform((val) => val ? new Date(val) : undefined),
+});
+
+export const updatePropertyExistingImprovementSchema = insertPropertyExistingImprovementSchema.partial().extend({
+  id: z.number(),
+});
+
+export type PropertyExistingImprovement = typeof propertyExistingImprovements.$inferSelect;
+export type InsertPropertyExistingImprovement = z.infer<typeof insertPropertyExistingImprovementSchema>;
+export type UpdatePropertyExistingImprovement = z.infer<typeof updatePropertyExistingImprovementSchema>;
+
+// Existing improvement categories
+export const EXISTING_IMPROVEMENT_CATEGORIES = {
+  lighting: 'Lighting',
+  restrooms: 'Restrooms', 
+  'spec-office': 'Spec Office',
+  hvac: 'HVAC (Ventilation)',
+  'fire-alarm': 'Fire Alarm',
+  custom: 'Custom'
+} as const;
+
+export const ALLOCATION_TYPES = {
+  prorated: 'Prorated by Square Footage',
+  'bay-specific': 'Bay-Specific',
+  'whole-property': 'Whole Property'
+} as const;
+
 // Evaluation Budget table
 export const evaluationBudgets = pgTable("evaluation_budgets", {
   id: serial("id").primaryKey(),

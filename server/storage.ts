@@ -14,6 +14,7 @@ import {
   bidCollections,
   bidLineItems,
   properties,
+  propertyExistingImprovements,
   evaluationBudgets,
   evaluationBudgetAttachments,
   evaluationBudgetHistory,
@@ -43,6 +44,9 @@ import {
   type Property,
   type InsertProperty,
   type UpdateProperty,
+  type PropertyExistingImprovement,
+  type InsertPropertyExistingImprovement,
+  type UpdatePropertyExistingImprovement,
   type EvaluationBudget,
   type InsertEvaluationBudget,
   type UpdateEvaluationBudget,
@@ -130,6 +134,13 @@ export interface IStorage {
   createProperty(property: InsertProperty): Promise<Property>;
   updateProperty(id: number, updates: Partial<UpdateProperty>): Promise<Property | undefined>;
   deleteProperty(id: number): Promise<boolean>;
+
+  // Property Existing Improvements management
+  getPropertyExistingImprovements(propertyId: number): Promise<PropertyExistingImprovement[]>;
+  getPropertyExistingImprovement(id: number): Promise<PropertyExistingImprovement | undefined>;
+  createPropertyExistingImprovement(improvement: InsertPropertyExistingImprovement): Promise<PropertyExistingImprovement>;
+  updatePropertyExistingImprovement(id: number, updates: Partial<UpdatePropertyExistingImprovement>): Promise<PropertyExistingImprovement | undefined>;
+  deletePropertyExistingImprovement(id: number): Promise<boolean>;
 
   // Evaluation Budget management
   getEvaluationBudget(rfpId: number): Promise<EvaluationBudget | undefined>;

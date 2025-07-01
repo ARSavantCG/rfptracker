@@ -356,6 +356,7 @@ export default function Dashboard() {
                   onOpenInvitationModal={handleOpenInvitationModal}
                   onOpenBidCollection={handleOpenBidCollection}
                   onOpenEvaluation={handleOpenEvaluation}
+                  onOpenPublish={handleOpenPublish}
                   onViewDetails={handleViewDetails}
                 />
               </div>

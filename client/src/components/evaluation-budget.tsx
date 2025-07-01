@@ -125,6 +125,12 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     enabled: !!rfp?.id,
   });
 
+  // Load property existing improvements to auto-populate when relevant
+  const { data: propertyImprovements } = useQuery({
+    queryKey: [`/api/properties/${rfp?.propertyId}/existing-improvements`],
+    enabled: !!rfp?.propertyId,
+  });
+
   // File handling functions
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
@@ -325,17 +331,72 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     return { oversized: oversizedTotal, regular: regularTotal };
   };
 
+  // Function to auto-populate existing improvements based on selected bays
+  const populateExistingImprovements = () => {
+    if (!propertyImprovements || !rfp?.selectedBayConfigurations) return [];
+
+    const selectedBayIds = rfp.selectedBayConfigurations.map(bay => bay.id);
+    const totalSelectedArea = rfp.selectedBayConfigurations.reduce((sum, bay) => sum + (bay.rentableSquareFootage || bay.squareFootage || 0), 0);
+    
+    return propertyImprovements
+      .filter((improvement: any) => {
+        // Include improvement if it's active and relevant to selected bays
+        if (!improvement.isActive) return false;
+        
+        if (improvement.allocationType === 'whole-property') {
+          return true; // Always include whole-property improvements
+        }
+        
+        if (improvement.allocationType === 'bay-specific') {
+          // Include if any applicable bays are in our selection
+          return improvement.applicableBays?.some((bayId: string) => selectedBayIds.includes(bayId));
+        }
+        
+        if (improvement.allocationType === 'prorated') {
+          return true; // Include prorated improvements (will be calculated proportionally)
+        }
+        
+        return false;
+      })
+      .map((improvement: any) => {
+        let allocatedCost = improvement.totalCost / 100; // Convert from cents to dollars
+        
+        if (improvement.allocationType === 'prorated') {
+          // Calculate prorated cost based on selected area vs total property area
+          const propertyTotalArea = rfp.projectArea ? parseFloat(rfp.projectArea.replace(/[^\d.]/g, '')) : totalSelectedArea;
+          if (propertyTotalArea > 0) {
+            allocatedCost = (allocatedCost * totalSelectedArea) / propertyTotalArea;
+          }
+        } else if (improvement.allocationType === 'bay-specific') {
+          // For bay-specific, only include cost for applicable selected bays
+          const applicableBayCount = improvement.applicableBays?.filter((bayId: string) => selectedBayIds.includes(bayId)).length || 0;
+          const totalApplicableBays = improvement.applicableBays?.length || 1;
+          allocatedCost = (allocatedCost * applicableBayCount) / totalApplicableBays;
+        }
+        
+        return {
+          id: `existing-${improvement.id}`,
+          description: `${improvement.description} (${improvement.category})`,
+          quantity: 1,
+          unit: improvement.allocationType === 'prorated' ? 'sf' : 'ea',
+          unitPrice: allocatedCost.toFixed(2),
+          totalPrice: allocatedCost.toFixed(2),
+        } as EvaluationLineItem;
+      });
+  };
+
   // Initialize budget with saved data or bid line items data
   useEffect(() => {
     const doorCounts = calculateDoorCounts();
+    const existingImprovementsFromProperty = populateExistingImprovements();
     
     if (existingBudget) {
       // Load saved budget data but override door counts with current bay configuration
       setBudgetData({
         tenantImprovements: (existingBudget as any).tenantImprovements || [],
         designSoftCosts: (existingBudget as any).designSoftCosts || [],
-        existingImprovements: (existingBudget as any).existingImprovements || [],
-        hasExistingImprovements: (existingBudget as any).hasExistingImprovements || false,
+        existingImprovements: (existingBudget as any).existingImprovements || existingImprovementsFromProperty,
+        hasExistingImprovements: (existingBudget as any).hasExistingImprovements || existingImprovementsFromProperty.length > 0,
         includeExistingInTotal: (existingBudget as any).includeExistingInTotal || false,
         separateDesignCosts: (existingBudget as any).separateDesignCosts !== undefined ? (existingBudget as any).separateDesignCosts : false,
         totalTenantImprovements: (existingBudget as any).totalTenantImprovements || "0.00",
@@ -365,19 +426,23 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
       setBudgetData(prev => ({
         ...prev,
         tenantImprovements: initialItems as EvaluationLineItem[],
+        existingImprovements: existingImprovementsFromProperty,
+        hasExistingImprovements: existingImprovementsFromProperty.length > 0,
         separateDesignCosts: false,
         oversizedDoors: doorCounts.oversized,
         regularDoors: doorCounts.regular,
       }));
     } else {
-      // Initialize with door counts even if no other data
+      // Initialize with door counts and existing improvements even if no other data
       setBudgetData(prev => ({
         ...prev,
+        existingImprovements: existingImprovementsFromProperty,
+        hasExistingImprovements: existingImprovementsFromProperty.length > 0,
         oversizedDoors: doorCounts.oversized,
         regularDoors: doorCounts.regular,
       }));
     }
-  }, [existingBudget, allBidLineItems, bidCollections, rfp?.selectedBayConfigurations]);
+  }, [existingBudget, allBidLineItems, bidCollections, rfp?.selectedBayConfigurations, propertyImprovements]);
 
   const formatCurrency = (amount: string | number) => {
     const num = typeof amount === 'string' ? parseFloat(amount) : amount;

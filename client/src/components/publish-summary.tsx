@@ -1,8 +1,10 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, Calendar, Building, Users, CheckCircle, Eye, DollarSign, ChevronDown, ChevronUp } from "lucide-react";
+import { FileText, Calendar, Building, Users, CheckCircle, Eye, DollarSign, ChevronDown, ChevronUp, Check, Lock } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 import type { RfpRequest } from "@shared/schema";
 
 interface PublishSummaryProps {
@@ -12,6 +14,8 @@ interface PublishSummaryProps {
 export function PublishSummary({ rfp }: PublishSummaryProps) {
   const [budgetReportsCollapsed, setBudgetReportsCollapsed] = useState(true);
   const [bidDocumentsCollapsed, setBidDocumentsCollapsed] = useState(true);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   // Fetch report histories for this RFP
   const { data: budgetHistory = [] } = useQuery({
@@ -22,6 +26,29 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
   const { data: generationHistory = [] } = useQuery({
     queryKey: [`/api/rfp-requests/${rfp?.id}/generation-history`],
     enabled: !!rfp?.id,
+  });
+
+  // Mutation for completing the project
+  const completeProjectMutation = useMutation({
+    mutationFn: async () => {
+      if (!rfp) throw new Error("No RFP selected");
+      return apiRequest(`/api/rfp-requests/${rfp.id}`, "PATCH", { status: "completed" });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
+      toast({
+        title: "Project Completed",
+        description: "RFP has been marked as completed successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to mark project as completed",
+        variant: "destructive",
+      });
+    },
   });
 
   if (!rfp) {
@@ -280,19 +307,60 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
       {/* Project Completion */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg text-center">Project Completion</CardTitle>
+          <CardTitle className="text-lg text-center flex items-center justify-center gap-2">
+            {rfp.status === "completed" ? (
+              <>
+                <Lock className="h-5 w-5 text-gray-500" />
+                Project Completed
+              </>
+            ) : (
+              <>
+                <Check className="h-5 w-5 text-green-600" />
+                Mark Project Complete
+              </>
+            )}
+          </CardTitle>
           <p className="text-sm text-gray-600 text-center">
-            Once all stakeholder reviews are complete, mark this project as finished
+            {rfp.status === "completed" 
+              ? "This project has been finalized and archived"
+              : "Once all stakeholder reviews are complete, mark this project as finished"
+            }
           </p>
         </CardHeader>
         <CardContent>
           <div className="text-center">
-            <p className="text-sm text-gray-500 mb-4">
-              This action will finalize the RFP process and archive the project
-            </p>
-            <p className="text-xs text-gray-400">
-              Use the "Mark as Complete" button in the Workflow Status panel when ready
-            </p>
+            {rfp.status === "completed" ? (
+              <div className="space-y-3">
+                <div className="flex items-center justify-center gap-2 p-3 bg-gray-100 border border-gray-300 rounded-lg">
+                  <CheckCircle className="h-5 w-5 text-gray-500" />
+                  <span className="text-gray-600 font-medium">Project Completed</span>
+                </div>
+                <p className="text-xs text-gray-500">
+                  This RFP has been finalized and archived. All workflow phases are complete.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-sm text-gray-500 mb-4">
+                  This action will finalize the RFP process and change the status to completed
+                </p>
+                <Button
+                  onClick={() => rfp && completeProjectMutation.mutate()}
+                  disabled={completeProjectMutation.isPending || !rfp}
+                  className="w-full bg-green-600 hover:bg-green-700"
+                  size="lg"
+                >
+                  {completeProjectMutation.isPending ? (
+                    "Marking Complete..."
+                  ) : (
+                    <>
+                      <CheckCircle className="h-5 w-5 mr-2" />
+                      Mark Project as Complete
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

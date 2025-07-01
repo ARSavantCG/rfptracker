@@ -245,6 +245,7 @@ This is a full-stack web application for tracking and managing Request for Propo
 - July 1, 2025. Removed Executive Summary section from publish phase completely as it is not project/RFP specific - publish phase now displays only project-specific reports from actual workflow history
 - July 1, 2025. Set Final Reports & Documentation sections to be collapsed by default - Budget Evaluation Reports and Invitation to Bid Documents now start collapsed for cleaner interface, users can expand as needed
 - July 1, 2025. Fixed authentication issues for report viewing in publish phase - replaced URL-based navigation with proper fetch requests using Bearer token authentication, corrected generation history endpoint URL to use `/api/generation-history/{id}/view` format, and implemented blob-based PDF opening for secure document access
+- July 1, 2025. Implemented prominent project completion button in publish phase - replaces vague completion text with clear visual indicator showing current project status, green "Mark Project as Complete" button for active projects, and greyed-out "Project Completed" state for finished projects to eliminate confusion about completion status
 
 ## User Preferences
 

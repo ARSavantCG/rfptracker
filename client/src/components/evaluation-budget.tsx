@@ -1204,8 +1204,8 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                     <p style="margin: 4px 0; font-size: 13px;"><strong>Door Configuration:</strong> ${budgetData.oversizedDoors + budgetData.regularDoors} doors total (${budgetData.oversizedDoors} oversized, ${budgetData.regularDoors} regular)</p>
                 </div>
                 <div>
-                    <p style="margin: 4px 0; font-size: 13px;"><strong>Parking Spaces:</strong> ${totalParking} total (${standardParking} standard, ${accessibleParking} accessible, ${evParking} EV)</p>
-                    ${trailerParking > 0 ? `<p style="margin: 4px 0; font-size: 13px;"><strong>Trailer Parking:</strong> ${trailerParking} spaces</p>` : ''}
+                    <p style="margin: 4px 0; font-size: 13px;"><strong>Vehicular Parking:</strong> ${budgetData.vehicularParking || 0} spaces</p>
+                    <p style="margin: 4px 0; font-size: 13px;"><strong>Trailer Parking:</strong> ${budgetData.trailerParking || 0} spaces</p>
                 </div>
             </div>
         </div>

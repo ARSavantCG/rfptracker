@@ -939,7 +939,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
 
     const renderExistingImprovementsSection = () => {
       const total = calculateCategoryTotal(budgetData.existingImprovements);
-      const rentableArea = rfp?.projectArea ? parseInt(rfp.projectArea) : 0;
+      const rentableArea = rfp?.warehouseArea ? parseInt(rfp.warehouseArea) : 0;
       
       return `
       <div class="section">
@@ -1160,15 +1160,42 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         <p><strong>Project:</strong> ${rfp?.projectName}</p>
         <p><strong>RFP Number:</strong> ${rfp?.rfpNumber}</p>
         <p><strong>Generated:</strong> ${currentDate}</p>
-        <p><strong>Rentable Area:</strong> ${rfp?.warehouseArea ? new Intl.NumberFormat('en-US').format(parseInt(rfp.warehouseArea)) : 'Not specified'} square feet</p>
-        <p><strong>Door Configuration:</strong> ${budgetData.oversizedDoors + budgetData.regularDoors} doors total (${budgetData.oversizedDoors} oversized, ${budgetData.regularDoors} regular)</p>
     </div>
     
-    <div style="text-align: right; margin-bottom: 20px; padding-right: 20px;">
-        <p style="margin: 0; font-size: 14px; color: #666;"><strong>Rentable Area:</strong> ${(() => {
-          const totalArea = rfp?.warehouseArea ? parseInt(rfp.warehouseArea) : 0;
-          return totalArea > 0 ? new Intl.NumberFormat('en-US').format(totalArea) + ' sf' : 'N/A';
-        })()}</p>
+    <!-- Property Summary Section -->
+    <div class="section">
+        <div class="section-header">
+            <h2 class="section-title" style="font-size: 14px;">Property Summary</h2>
+        </div>
+        <div class="table-container">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 8px;">
+                <div>
+                    <p style="margin: 4px 0; font-size: 13px;"><strong>Rentable Area:</strong> ${rfp?.warehouseArea ? new Intl.NumberFormat('en-US').format(parseInt(rfp.warehouseArea)) + ' sf' : 'Not specified'}</p>
+                    <p style="margin: 4px 0; font-size: 13px;"><strong>Door Configuration:</strong> ${budgetData.oversizedDoors + budgetData.regularDoors} doors total (${budgetData.oversizedDoors} oversized, ${budgetData.regularDoors} regular)</p>
+                </div>
+                <div>
+                    ${(() => {
+                      // Load property data for parking information
+                      if (propertyData) {
+                        const standardParking = propertyData.standardParking || 0;
+                        const accessibleParking = propertyData.accessibleParking || 0;
+                        const evParking = propertyData.evParking || 0;
+                        const trailerParking = propertyData.trailerParking || 0;
+                        const totalParking = standardParking + accessibleParking + evParking;
+                        const rentableArea = rfp?.warehouseArea ? parseInt(rfp.warehouseArea) : 0;
+                        const parkingRatio = rentableArea > 0 ? (totalParking / rentableArea * 1000).toFixed(2) : '0.00';
+                        
+                        return `
+                        <p style="margin: 4px 0; font-size: 13px;"><strong>Parking Spaces:</strong> ${totalParking} total (${standardParking} standard, ${accessibleParking} accessible, ${evParking} EV)</p>
+                        <p style="margin: 4px 0; font-size: 13px;"><strong>Parking Ratio:</strong> ${parkingRatio} spaces per 1,000 sf</p>
+                        ${trailerParking > 0 ? `<p style="margin: 4px 0; font-size: 13px;"><strong>Trailer Parking:</strong> ${trailerParking} spaces</p>` : ''}
+                        `;
+                      }
+                      return '<p style="margin: 4px 0; font-size: 13px; color: #666;">Property details loading...</p>';
+                    })()}
+                </div>
+            </div>
+        </div>
     </div>
 
     ${renderCategorySection("Tenant Improvements", budgetData.tenantImprovements, "tenantImprovements")}

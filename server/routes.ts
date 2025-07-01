@@ -1922,7 +1922,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/properties/:propertyId/existing-improvements", async (req, res) => {
+  app.post("/api/properties/:propertyId/existing-improvements", requireAuth, async (req, res) => {
     try {
       const propertyId = parseInt(req.params.propertyId);
       if (isNaN(propertyId)) {

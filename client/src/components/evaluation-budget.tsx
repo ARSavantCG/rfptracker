@@ -1195,7 +1195,6 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                 </div>
                 <div>
                     <p style="margin: 4px 0; font-size: 13px;"><strong>Parking Spaces:</strong> ${totalParking} total (${standardParking} standard, ${accessibleParking} accessible, ${evParking} EV)</p>
-                    <p style="margin: 4px 0; font-size: 13px;"><strong>Parking Ratio:</strong> ${parkingRatio} spaces per 1,000 sf</p>
                     ${trailerParking > 0 ? `<p style="margin: 4px 0; font-size: 13px;"><strong>Trailer Parking:</strong> ${trailerParking} spaces</p>` : ''}
                 </div>
             </div>

@@ -40,10 +40,9 @@ interface PropertyExistingImprovementsModalProps {
 }
 
 export function PropertyExistingImprovementsModal({ 
-  property, 
-  open, 
-  onOpenChange 
-}: PropertyExistingImprovementsModalProps) {
+  property 
+}: { property: Property }) {
+  const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
   const queryClient = useQueryClient();
@@ -149,8 +148,14 @@ export function PropertyExistingImprovementsModal({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+    <>
+      <Button variant="outline" size="sm" onClick={() => setOpen(true)} className="flex items-center gap-2">
+        <Grid className="h-4 w-4" />
+        Manage Costs in Place
+      </Button>
+      
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             Manage Existing Improvements - {property.propertyName}
@@ -498,5 +503,6 @@ export function PropertyExistingImprovementsModal({
         </div>
       </DialogContent>
     </Dialog>
+    </>
   );
 }

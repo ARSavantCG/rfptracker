@@ -9,6 +9,7 @@ import { PropertyFormModal } from "@/components/property-form-modal";
 import BayConfigurationManager from "@/components/bay-configuration-manager";
 import { formatDate } from "@/lib/utils";
 import LeaseManagementModal from "@/components/lease-management-modal";
+import { PropertyExistingImprovementsModal } from "@/components/property-existing-improvements-modal";
 import type { Property, BayConfiguration } from "@shared/schema";
 
 export default function Properties() {
@@ -283,6 +284,9 @@ export default function Properties() {
                           <LeaseManagementModal 
                             property={property} 
                             availableBays={property.bayConfigurations || []} 
+                          />
+                          <PropertyExistingImprovementsModal 
+                            property={property}
                           />
                         </div>
                         

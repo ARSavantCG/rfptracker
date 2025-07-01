@@ -42,8 +42,6 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
       url = `/api/evaluation-budget-history/${reportId}/view?token=${encodeURIComponent(token || '')}`;
     } else if (reportType === 'invitation-to-bid' && reportId) {
       url = `/api/rfp-requests/${rfp.id}/generation-history/${reportId}?token=${encodeURIComponent(token || '')}`;
-    } else if (reportType === 'executive-summary') {
-      url = `/api/reports/executive?rfpId=${rfp.id}&token=${encodeURIComponent(token || '')}`;
     }
     
     if (url) {
@@ -248,24 +246,7 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
             </div>
           )}
 
-          {/* Executive Summary Option */}
-          <div className="border rounded-lg p-4 space-y-3">
-            <div className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-blue-600" />
-              <h4 className="font-medium">Executive Summary</h4>
-            </div>
-            <p className="text-sm text-gray-600">
-              High-level project overview and key recommendations for leadership
-            </p>
-            <Button
-              onClick={() => viewReport('executive-summary')}
-              variant="outline"
-              className="w-full"
-            >
-              <Eye className="h-4 w-4 mr-2" />
-              View Executive Summary
-            </Button>
-          </div>
+
 
           {/* Show message if no reports generated yet */}
           {(!Array.isArray(budgetHistory) || budgetHistory.length === 0) && 

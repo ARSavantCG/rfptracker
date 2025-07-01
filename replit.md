@@ -242,6 +242,7 @@ This is a full-stack web application for tracking and managing Request for Propo
 - July 1, 2025. Removed Financial Summary Report generation section from publish phase per user request - keeping only project-specific report history display and Executive Summary option
 - July 1, 2025. Fixed budget evaluation report viewing in publish phase - corrected URL pattern from `/api/rfp-requests/{id}/evaluation-budget-history/{reportId}` to `/api/evaluation-budget-history/{reportId}/view` to match the actual API endpoint used in other workflow steps
 - July 1, 2025. Added collapsible functionality to report sections in publish phase - "Budget Evaluation Reports" and "Invitation to Bid Documents" sections now have dropdown arrows with hover effects, allowing users to collapse/expand each section independently similar to Property Info sections
+- July 1, 2025. Removed Executive Summary section from publish phase completely as it is not project/RFP specific - publish phase now displays only project-specific reports from actual workflow history
 
 ## User Preferences
 

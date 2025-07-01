@@ -52,12 +52,10 @@ export function PropertyExistingImprovementsModal({
     defaultValues: {
       category: "",
       description: "",
-      totalCost: 0,
+      totalCost: undefined,
       allocationType: "prorated",
       applicableBays: [],
       notes: "",
-      vendor: "",
-      installationDate: "",
     },
   });
 
@@ -275,41 +273,28 @@ export function PropertyExistingImprovementsModal({
                     )}
                   />
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="totalCost"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Total Cost ($)</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              step="0.01"
-                              {...field}
-                              onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                              placeholder="0.00" 
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="installationDate"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Installation Date (Optional)</FormLabel>
-                          <FormControl>
-                            <Input type="date" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
+                  <FormField
+                    control={form.control}
+                    name="totalCost"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Total Cost ($)</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="text"
+                            {...field}
+                            value={field.value ? field.value.toLocaleString() : ''}
+                            onChange={(e) => {
+                              const value = e.target.value.replace(/[^0-9.]/g, '');
+                              field.onChange(parseFloat(value) || undefined);
+                            }}
+                            placeholder="Enter cost amount" 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
                   {allocationType === "bay-specific" && (
                     <FormField
@@ -344,35 +329,19 @@ export function PropertyExistingImprovementsModal({
                     />
                   )}
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="vendor"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Vendor (Optional)</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="Installation vendor" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="notes"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Notes (Optional)</FormLabel>
-                          <FormControl>
-                            <Textarea {...field} placeholder="Additional notes..." rows={2} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
+                  <FormField
+                    control={form.control}
+                    name="notes"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Notes (Optional)</FormLabel>
+                        <FormControl>
+                          <Textarea {...field} placeholder="Additional notes..." rows={2} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
                   <div className="flex gap-2">
                     <Button 
@@ -431,24 +400,10 @@ export function PropertyExistingImprovementsModal({
                             <span className="font-medium">Total Cost: </span>
                             {formatCurrency(improvement.totalCost)}
                           </div>
-                          {improvement.allocationType === "prorated" && improvement.costPerSquareFoot && (
-                            <div>
-                              <span className="font-medium">Cost/SF: </span>
-                              {formatCurrency(improvement.costPerSquareFoot)}
-                            </div>
-                          )}
-                          {improvement.vendor && (
-                            <div>
-                              <span className="font-medium">Vendor: </span>
-                              {improvement.vendor}
-                            </div>
-                          )}
-                          {improvement.installationDate && (
-                            <div>
-                              <span className="font-medium">Installed: </span>
-                              {new Date(improvement.installationDate).toLocaleDateString()}
-                            </div>
-                          )}
+                          <div>
+                            <span className="font-medium">Allocation: </span>
+                            {ALLOCATION_TYPES[improvement.allocationType as keyof typeof ALLOCATION_TYPES]}
+                          </div>
                         </div>
 
                         {improvement.applicableBays && improvement.applicableBays.length > 0 && (

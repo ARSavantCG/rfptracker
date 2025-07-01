@@ -103,6 +103,8 @@ export function PropertyExistingImprovementsModal({
   });
 
   const onSubmit = (data: FormData) => {
+    console.log('Form submitted with data:', data);
+    console.log('Form errors:', form.formState.errors);
     if (editingId) {
       updateMutation.mutate({ id: editingId, data });
     } else {
@@ -358,6 +360,7 @@ export function PropertyExistingImprovementsModal({
                     <Button 
                       type="submit" 
                       disabled={createMutation.isPending || updateMutation.isPending}
+                      onClick={() => console.log('Button clicked!')}
                     >
                       <Save className="mr-2 h-4 w-4" />
                       {editingId ? "Update" : "Add"} Improvement

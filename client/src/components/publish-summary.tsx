@@ -10,8 +10,8 @@ interface PublishSummaryProps {
 }
 
 export function PublishSummary({ rfp }: PublishSummaryProps) {
-  const [budgetReportsCollapsed, setBudgetReportsCollapsed] = useState(false);
-  const [bidDocumentsCollapsed, setBidDocumentsCollapsed] = useState(false);
+  const [budgetReportsCollapsed, setBudgetReportsCollapsed] = useState(true);
+  const [bidDocumentsCollapsed, setBidDocumentsCollapsed] = useState(true);
 
   // Fetch report histories for this RFP
   const { data: budgetHistory = [] } = useQuery({

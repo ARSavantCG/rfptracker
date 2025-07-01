@@ -1906,6 +1906,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Property Existing Improvements routes
+  app.get("/api/properties/:propertyId/existing-improvements", async (req, res) => {
+    try {
+      const propertyId = parseInt(req.params.propertyId);
+      if (isNaN(propertyId)) {
+        return res.status(400).json({ message: "Invalid property ID" });
+      }
+
+      const improvements = await storage.getPropertyExistingImprovements(propertyId);
+      res.json(improvements);
+    } catch (error) {
+      console.error('Error fetching property existing improvements:', error);
+      res.status(500).json({ message: "Failed to fetch existing improvements" });
+    }
+  });
+
+  app.post("/api/properties/:propertyId/existing-improvements", async (req, res) => {
+    try {
+      const propertyId = parseInt(req.params.propertyId);
+      if (isNaN(propertyId)) {
+        return res.status(400).json({ message: "Invalid property ID" });
+      }
+
+      // Convert total cost from dollars to cents
+      const improvementData = {
+        ...req.body,
+        propertyId,
+        totalCost: Math.round(req.body.totalCost * 100), // Convert to cents
+      };
+
+      const improvement = await storage.createPropertyExistingImprovement(improvementData);
+      res.status(201).json(improvement);
+    } catch (error) {
+      console.error('Error creating property existing improvement:', error);
+      res.status(400).json({ 
+        message: error instanceof Error ? error.message : "Failed to create existing improvement" 
+      });
+    }
+  });
+
+  app.patch("/api/properties/:propertyId/existing-improvements/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid improvement ID" });
+      }
+
+      const updates = { ...req.body };
+      // Convert total cost from dollars to cents if provided
+      if (updates.totalCost !== undefined) {
+        updates.totalCost = Math.round(updates.totalCost * 100);
+      }
+
+      const improvement = await storage.updatePropertyExistingImprovement(id, updates);
+      if (!improvement) {
+        return res.status(404).json({ message: "Existing improvement not found" });
+      }
+
+      res.json(improvement);
+    } catch (error) {
+      console.error('Error updating property existing improvement:', error);
+      res.status(400).json({ 
+        message: error instanceof Error ? error.message : "Failed to update existing improvement" 
+      });
+    }
+  });
+
+  app.delete("/api/properties/:propertyId/existing-improvements/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid improvement ID" });
+      }
+
+      const deleted = await storage.deletePropertyExistingImprovement(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Existing improvement not found" });
+      }
+
+      res.status(204).send();
+    } catch (error) {
+      console.error('Error deleting property existing improvement:', error);
+      res.status(500).json({ message: "Failed to delete existing improvement" });
+    }
+  });
+
   // Evaluation Budget routes
   app.post("/api/rfp-requests/:rfpId/evaluation-budget", async (req, res) => {
     try {

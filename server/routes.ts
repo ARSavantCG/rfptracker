@@ -3649,6 +3649,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { propertyId } = req.params;
       const leases = await storage.getExecutedLeases(parseInt(propertyId));
+      console.log(`DEBUG: Executed leases for property ${propertyId}:`, JSON.stringify(leases, null, 2));
       res.json(leases);
     } catch (error) {
       console.error("Error fetching executed leases:", error);

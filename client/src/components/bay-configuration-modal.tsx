@@ -40,6 +40,12 @@ export function BayConfigurationModal({
 
   // Get list of all bay IDs that are already leased
   const leasedBayIds = executedLeases.flatMap(lease => lease.assignedBays || []);
+  
+  // Debug logging for bay configuration modal
+  console.log('BayConfigurationModal - Executed leases:', executedLeases);
+  console.log('BayConfigurationModal - Leased bay IDs:', leasedBayIds);
+  console.log('BayConfigurationModal - Property bay configurations:', property.bayConfigurations);
+  console.log('BayConfigurationModal - Bay config IDs:', property.bayConfigurations?.map(bay => bay.id));
 
   // Initialize selected bays from props
   useEffect(() => {

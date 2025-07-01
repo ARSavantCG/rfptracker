@@ -27,14 +27,16 @@ export default function BayConfigurationSelector({
     enabled: !!property.id
   });
 
+  const bayConfigurations = property.bayConfigurations || [];
+
   // Get list of all bay IDs that are already leased
   const leasedBayIds = executedLeases.flatMap(lease => lease.assignedBays || []);
   
   // Debug logging
   console.log('Executed leases:', executedLeases);
   console.log('Leased bay IDs:', leasedBayIds);
-
-  const bayConfigurations = property.bayConfigurations || [];
+  console.log('Bay configurations:', bayConfigurations);
+  console.log('Bay configuration IDs:', bayConfigurations.map(bay => bay.id));
 
   // Convert bay configurations to proper bay representation
   // Each bay configuration represents one bay with unique sequential numbering

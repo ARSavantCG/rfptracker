@@ -137,6 +137,8 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValida
       onOpenBidCollection(rfp);
     } else if (phase.key === "evaluation" && onOpenEvaluation) {
       onOpenEvaluation(rfp);
+    } else if (phase.key === "publish" && onOpenPublish) {
+      onOpenPublish(rfp);
     }
   };
 
@@ -168,7 +170,7 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValida
           const isCompleted = index < currentPhaseIndex;
           const isNext = index === currentPhaseIndex + 1;
 
-          const isClickable = (isActive || isCompleted) && (phase.key === "rfp-entry" || phase.key === "rfp-validation" || phase.key === "invitation-to-bid" || phase.key === "bid-collection" || phase.key === "evaluation");
+          const isClickable = (isActive || isCompleted) && (phase.key === "rfp-entry" || phase.key === "rfp-validation" || phase.key === "invitation-to-bid" || phase.key === "bid-collection" || phase.key === "evaluation" || phase.key === "publish");
           
           return (
             <div

@@ -2586,6 +2586,35 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
       {/* Evaluation Budget History */}
       <EvaluationBudgetHistory rfpId={rfp?.id} />
 
+      {/* Workflow Actions */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Workflow Actions</CardTitle>
+          <p className="text-sm text-gray-600">
+            Save your evaluation budget and advance to the publish phase
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="flex justify-center space-x-4">
+            <Button
+              onClick={() => saveProgressMutation.mutate()}
+              disabled={saveProgressMutation.isPending}
+              variant="outline"
+              className="px-6"
+            >
+              {saveProgressMutation.isPending ? "Saving..." : "Save Progress"}
+            </Button>
+            <Button
+              onClick={saveAndAdvance}
+              disabled={saveAndAdvanceMutation.isPending}
+              className="px-6 bg-green-600 hover:bg-green-700"
+            >
+              {saveAndAdvanceMutation.isPending ? "Saving & Advancing..." : "Save & Advance to Publish"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Assembly Creation Dialog */}
       <Dialog open={showAssemblyCreator} onOpenChange={setShowAssemblyCreator}>
         <DialogContent className="max-w-md">

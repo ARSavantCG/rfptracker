@@ -2406,6 +2406,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
                       phaseDisplay = 'Evaluation';
                       phaseClass = 'status-inprogress';
                       break;
+                    case 'publish':
+                      phaseDisplay = 'Published';
+                      phaseClass = 'status-completed';
+                      break;
                     default:
                       phaseDisplay = 'RFP Entry';
                       phaseClass = 'status-received';

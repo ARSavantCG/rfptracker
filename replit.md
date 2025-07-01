@@ -238,6 +238,7 @@ This is a full-stack web application for tracking and managing Request for Propo
 - July 1, 2025. Standardized Property Info layout consistency by converting all grid layouts to vertical stacking - replaced side-by-side arrangements in Total Rentable Area/Bay Count, Dock Doors, Parking, and Available Space sections with consistent vertical format matching executed leases display for improved readability and visual flow
 - July 1, 2025. Completed publish workflow phase implementation with dedicated PublishSummary component - fixed Executive Summary Report status mapping to display "PUBLISHED" for publish phase RFPs, created distinct publish interface with project overview and financial summary generation, enhanced workflow status component to handle publish phase clicks, and removed "Ready to Publish" badge and Property field from Project Summary per user requirements
 - July 1, 2025. Fixed Financial Summary PDF generation in publish phase to open in new browser tab instead of downloading, resolving PDF viewing errors and enabling standard browser-based save functionality
+- July 1, 2025. Modified "Final Reports & Documentation" section in publish phase to dynamically display project-specific reports from actual report history instead of generic options - now pulls Budget Evaluation reports and Invitation to Bid documents from database history with proper viewing functionality
 
 ## User Preferences
 

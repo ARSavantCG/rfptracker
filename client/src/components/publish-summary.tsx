@@ -1,8 +1,9 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Download, Calendar, Building, MapPin, DollarSign, Users, CheckCircle } from "lucide-react";
+import { FileText, Download, Calendar, Building, MapPin, DollarSign, Users, CheckCircle, Eye } from "lucide-react";
 import type { RfpRequest } from "@shared/schema";
 
 interface PublishSummaryProps {
@@ -11,6 +12,17 @@ interface PublishSummaryProps {
 
 export function PublishSummary({ rfp }: PublishSummaryProps) {
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+
+  // Fetch report histories for this RFP
+  const { data: budgetHistory = [] } = useQuery({
+    queryKey: [`/api/rfp-requests/${rfp?.id}/evaluation-budget-history`],
+    enabled: !!rfp?.id,
+  });
+
+  const { data: generationHistory = [] } = useQuery({
+    queryKey: [`/api/rfp-requests/${rfp?.id}/generation-history`],
+    enabled: !!rfp?.id,
+  });
 
   if (!rfp) {
     return (
@@ -32,6 +44,23 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
       console.error('Error generating financial summary:', error);
     } finally {
       setIsGeneratingReport(false);
+    }
+  };
+
+  const viewReport = (reportType: string, reportId?: number) => {
+    const token = localStorage.getItem('auth-token');
+    let url = '';
+    
+    if (reportType === 'budget-evaluation' && reportId) {
+      url = `/api/rfp-requests/${rfp.id}/evaluation-budget-history/${reportId}?token=${encodeURIComponent(token || '')}`;
+    } else if (reportType === 'invitation-to-bid' && reportId) {
+      url = `/api/rfp-requests/${rfp.id}/generation-history/${reportId}?token=${encodeURIComponent(token || '')}`;
+    } else if (reportType === 'executive-summary') {
+      url = `/api/reports/executive?rfpId=${rfp.id}&token=${encodeURIComponent(token || '')}`;
+    }
+    
+    if (url) {
+      window.open(url, '_blank');
     }
   };
 
@@ -142,46 +171,113 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
             Final Reports & Documentation
           </CardTitle>
           <p className="text-sm text-gray-600 mt-2">
-            Generate comprehensive project reports for stakeholders and record keeping
+            Project-specific reports generated during the workflow process
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="border rounded-lg p-4 space-y-3">
-              <div className="flex items-center gap-2">
-                <DollarSign className="h-5 w-5 text-green-600" />
-                <h4 className="font-medium">Financial Summary Report</h4>
-              </div>
-              <p className="text-sm text-gray-600">
-                Complete budget breakdown, cost analysis, and financial recommendations
-              </p>
-              <Button
-                onClick={generateFinancialSummary}
-                disabled={isGeneratingReport}
-                className="w-full"
-              >
-                <Download className="h-4 w-4 mr-2" />
-                {isGeneratingReport ? "Generating..." : "Generate Financial Summary"}
-              </Button>
+          {/* Financial Summary Generation */}
+          <div className="border rounded-lg p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-green-600" />
+              <h4 className="font-medium">Financial Summary Report</h4>
             </div>
-            <div className="border rounded-lg p-4 space-y-3">
-              <div className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-blue-600" />
-                <h4 className="font-medium">Executive Summary</h4>
-              </div>
-              <p className="text-sm text-gray-600">
-                High-level project overview and key recommendations for leadership
-              </p>
-              <Button
-                onClick={() => window.open('/api/reports/executive', '_blank')}
-                variant="outline"
-                className="w-full"
-              >
-                <Download className="h-4 w-4 mr-2" />
-                View Executive Summary
-              </Button>
-            </div>
+            <p className="text-sm text-gray-600">
+              Complete budget breakdown, cost analysis, and financial recommendations
+            </p>
+            <Button
+              onClick={generateFinancialSummary}
+              disabled={isGeneratingReport}
+              className="w-full"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              {isGeneratingReport ? "Generating..." : "Generate Financial Summary"}
+            </Button>
           </div>
+
+          {/* Generated Budget Evaluation Reports */}
+          {Array.isArray(budgetHistory) && budgetHistory.length > 0 && (
+            <div className="space-y-2">
+              <h4 className="font-medium text-sm text-gray-700">Budget Evaluation Reports</h4>
+              {budgetHistory.map((report: any) => (
+                <div key={report.id} className="flex items-center justify-between p-3 border rounded-lg bg-gray-50">
+                  <div className="flex items-center gap-2">
+                    <DollarSign className="h-4 w-4 text-green-600" />
+                    <div>
+                      <p className="text-sm font-medium">Budget Evaluation Report</p>
+                      <p className="text-xs text-gray-500">
+                        Generated {report.generatedAt ? formatDate(report.generatedAt) : 'Unknown date'}
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => viewReport('budget-evaluation', report.id)}
+                  >
+                    <Eye className="h-4 w-4 mr-1" />
+                    View
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Generated Invitation to Bid Reports */}
+          {Array.isArray(generationHistory) && generationHistory.length > 0 && (
+            <div className="space-y-2">
+              <h4 className="font-medium text-sm text-gray-700">Invitation to Bid Documents</h4>
+              {generationHistory.map((report: any) => (
+                <div key={report.id} className="flex items-center justify-between p-3 border rounded-lg bg-gray-50">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-blue-600" />
+                    <div>
+                      <p className="text-sm font-medium">{report.title}</p>
+                      <p className="text-xs text-gray-500">
+                        Generated {report.generatedAt ? formatDate(report.generatedAt) : 'Unknown date'}
+                        {report.notes && ` - ${report.notes}`}
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => viewReport('invitation-to-bid', report.id)}
+                  >
+                    <Eye className="h-4 w-4 mr-1" />
+                    View
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Executive Summary Option */}
+          <div className="border rounded-lg p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-blue-600" />
+              <h4 className="font-medium">Executive Summary</h4>
+            </div>
+            <p className="text-sm text-gray-600">
+              High-level project overview and key recommendations for leadership
+            </p>
+            <Button
+              onClick={() => viewReport('executive-summary')}
+              variant="outline"
+              className="w-full"
+            >
+              <Eye className="h-4 w-4 mr-2" />
+              View Executive Summary
+            </Button>
+          </div>
+
+          {/* Show message if no reports generated yet */}
+          {budgetHistory.length === 0 && generationHistory.length === 0 && (
+            <div className="text-center py-4">
+              <p className="text-sm text-gray-500">
+                No project-specific reports have been generated yet. Complete workflow phases to generate reports.
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
 

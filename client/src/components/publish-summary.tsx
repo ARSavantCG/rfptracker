@@ -1,9 +1,7 @@
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { FileText, Download, Calendar, Building, MapPin, DollarSign, Users, CheckCircle, Eye } from "lucide-react";
+import { FileText, Calendar, Building, Users, CheckCircle, Eye, DollarSign } from "lucide-react";
 import type { RfpRequest } from "@shared/schema";
 
 interface PublishSummaryProps {
@@ -11,7 +9,6 @@ interface PublishSummaryProps {
 }
 
 export function PublishSummary({ rfp }: PublishSummaryProps) {
-  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
 
   // Fetch report histories for this RFP
   const { data: budgetHistory = [] } = useQuery({
@@ -32,20 +29,7 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
     );
   }
 
-  const generateFinancialSummary = async () => {
-    setIsGeneratingReport(true);
-    try {
-      const token = localStorage.getItem('auth-token');
-      const url = `/api/rfp-requests/${rfp.id}/financial-summary?token=${encodeURIComponent(token || '')}`;
-      
-      // Open in new tab instead of downloading
-      window.open(url, '_blank');
-    } catch (error) {
-      console.error('Error generating financial summary:', error);
-    } finally {
-      setIsGeneratingReport(false);
-    }
-  };
+
 
   const viewReport = (reportType: string, reportId?: number) => {
     const token = localStorage.getItem('auth-token');
@@ -175,24 +159,6 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Financial Summary Generation */}
-          <div className="border rounded-lg p-4 space-y-3">
-            <div className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-green-600" />
-              <h4 className="font-medium">Financial Summary Report</h4>
-            </div>
-            <p className="text-sm text-gray-600">
-              Complete budget breakdown, cost analysis, and financial recommendations
-            </p>
-            <Button
-              onClick={generateFinancialSummary}
-              disabled={isGeneratingReport}
-              className="w-full"
-            >
-              <Download className="h-4 w-4 mr-2" />
-              {isGeneratingReport ? "Generating..." : "Generate Financial Summary"}
-            </Button>
-          </div>
 
           {/* Generated Budget Evaluation Reports */}
           {Array.isArray(budgetHistory) && budgetHistory.length > 0 && (

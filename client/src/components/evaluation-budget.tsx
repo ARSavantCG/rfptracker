@@ -2114,10 +2114,26 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
             <Checkbox
               id="hasExistingImprovements"
               checked={budgetData.hasExistingImprovements}
-              onCheckedChange={(checked) => setBudgetData(prev => ({ 
-                ...prev, 
-                hasExistingImprovements: !!checked 
-              }))}
+              onCheckedChange={(checked) => {
+                setBudgetData(prev => {
+                  if (checked) {
+                    // Auto-populate existing improvements when checkbox is checked
+                    const existingImprovementsFromProperty = populateExistingImprovements();
+                    return {
+                      ...prev, 
+                      hasExistingImprovements: true,
+                      existingImprovements: existingImprovementsFromProperty
+                    };
+                  } else {
+                    // Clear existing improvements when checkbox is unchecked
+                    return {
+                      ...prev, 
+                      hasExistingImprovements: false,
+                      existingImprovements: []
+                    };
+                  }
+                });
+              }}
             />
             <Label htmlFor="hasExistingImprovements" className="text-lg font-semibold">
               Existing Improvements

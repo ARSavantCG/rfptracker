@@ -58,6 +58,8 @@ interface EvaluationBudgetData {
   assemblies: Record<string, { total: number; components: string[] }>;
   oversizedDoors: number;
   regularDoors: number;
+  vehicularParking: number;
+  trailerParking: number;
 }
 
 interface EvaluationBudgetProps {
@@ -327,6 +329,8 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     assemblies: {},
     oversizedDoors: 0,
     regularDoors: 0,
+    vehicularParking: 0,
+    trailerParking: 0,
   });
 
   // Calculate door counts from bay configuration data
@@ -454,6 +458,8 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         assemblies: (existingBudget as any).assemblies || {},
         oversizedDoors: doorCounts.oversized,
         regularDoors: doorCounts.regular,
+        vehicularParking: (existingBudget as any).vehicularParking || 0,
+        trailerParking: (existingBudget as any).trailerParking || 0,
       });
     } else if (allBidLineItems && Array.isArray(allBidLineItems) && allBidLineItems.length > 0) {
       // Initialize with bid line items if no saved budget exists
@@ -476,6 +482,8 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         separateDesignCosts: false,
         oversizedDoors: doorCounts.oversized,
         regularDoors: doorCounts.regular,
+        vehicularParking: 0,
+        trailerParking: 0,
       }));
     } else {
       // Initialize with door counts and existing improvements even if no other data
@@ -485,6 +493,8 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         hasExistingImprovements: existingImprovementsFromProperty.length > 0,
         oversizedDoors: doorCounts.oversized,
         regularDoors: doorCounts.regular,
+        vehicularParking: 0,
+        trailerParking: 0,
       }));
     }
   }, [existingBudget, allBidLineItems, bidCollections, rfp?.selectedBayConfigurations, propertyImprovements]);
@@ -2411,45 +2421,88 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         );
       })()}
 
-      {/* Door Count Information */}
+      {/* Tenant Premises Overview */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Door Information</CardTitle>
+          <CardTitle className="text-lg">Tenant Premises Overview</CardTitle>
           <p className="text-sm text-gray-600">
-            Specify door counts to include in the evaluation report
+            Specify premises information to include in the evaluation report
           </p>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-6">
+            {/* Dock Doors Section */}
             <div>
-              <Label htmlFor="oversizedDoors">Oversized Doors</Label>
-              <Input
-                id="oversizedDoors"
-                type="number"
-                min="0"
-                value={budgetData.oversizedDoors}
-                onChange={(e) => setBudgetData(prev => ({
-                  ...prev,
-                  oversizedDoors: parseInt(e.target.value) || 0
-                }))}
-                className="mt-1"
-                placeholder="0"
-              />
+              <Label className="text-base font-medium mb-3 block">Dock Doors</Label>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="oversizedDoors">Oversized Doors</Label>
+                  <Input
+                    id="oversizedDoors"
+                    type="number"
+                    min="0"
+                    value={budgetData.oversizedDoors}
+                    onChange={(e) => setBudgetData(prev => ({
+                      ...prev,
+                      oversizedDoors: parseInt(e.target.value) || 0
+                    }))}
+                    className="mt-1"
+                    placeholder="0"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="regularDoors">Regular Doors</Label>
+                  <Input
+                    id="regularDoors"
+                    type="number"
+                    min="0"
+                    value={budgetData.regularDoors}
+                    onChange={(e) => setBudgetData(prev => ({
+                      ...prev,
+                      regularDoors: parseInt(e.target.value) || 0
+                    }))}
+                    className="mt-1"
+                    placeholder="0"
+                  />
+                </div>
+              </div>
             </div>
+
+            {/* Parking Information Section */}
             <div>
-              <Label htmlFor="regularDoors">Regular Doors</Label>
-              <Input
-                id="regularDoors"
-                type="number"
-                min="0"
-                value={budgetData.regularDoors}
-                onChange={(e) => setBudgetData(prev => ({
-                  ...prev,
-                  regularDoors: parseInt(e.target.value) || 0
-                }))}
-                className="mt-1"
-                placeholder="0"
-              />
+              <Label className="text-base font-medium mb-3 block">Parking</Label>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="vehicularParking">Vehicular Parking</Label>
+                  <Input
+                    id="vehicularParking"
+                    type="number"
+                    min="0"
+                    value={budgetData.vehicularParking || 0}
+                    onChange={(e) => setBudgetData(prev => ({
+                      ...prev,
+                      vehicularParking: parseInt(e.target.value) || 0
+                    }))}
+                    className="mt-1"
+                    placeholder="0"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="trailerParking">Trailer Parking</Label>
+                  <Input
+                    id="trailerParking"
+                    type="number"
+                    min="0"
+                    value={budgetData.trailerParking || 0}
+                    onChange={(e) => setBudgetData(prev => ({
+                      ...prev,
+                      trailerParking: parseInt(e.target.value) || 0
+                    }))}
+                    className="mt-1"
+                    placeholder="0"
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </CardContent>

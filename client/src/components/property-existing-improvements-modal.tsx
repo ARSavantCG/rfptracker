@@ -360,7 +360,12 @@ export function PropertyExistingImprovementsModal({
                     <Button 
                       type="submit" 
                       disabled={createMutation.isPending || updateMutation.isPending}
-                      onClick={() => console.log('Button clicked!')}
+                      onClick={(e) => {
+                        console.log('Button clicked!');
+                        console.log('Form values:', form.getValues());
+                        console.log('Form valid:', form.formState.isValid);
+                        console.log('Form errors:', form.formState.errors);
+                      }}
                     >
                       <Save className="mr-2 h-4 w-4" />
                       {editingId ? "Update" : "Add"} Improvement

@@ -166,7 +166,7 @@ export default function BayConfigurationSelector({
                   )}
                   {isLeased && (
                     <div className="text-xs text-red-700 font-medium mt-1">
-                      LEASED
+                      LEA.
                     </div>
                   )}
                 </Button>

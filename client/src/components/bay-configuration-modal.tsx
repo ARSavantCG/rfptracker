@@ -41,14 +41,7 @@ export function BayConfigurationModal({
   // Get list of all bay IDs that are already leased
   const leasedBayIds = executedLeases.flatMap(lease => lease.assignedBays || []);
   
-  // Debug logging for bay configuration modal
-  console.log('BayConfigurationModal - Executed leases:', executedLeases);
-  console.log('BayConfigurationModal - Leased bay IDs:', leasedBayIds);
-  console.log('BayConfigurationModal - Property bay configurations:', property.bayConfigurations);
-  console.log('BayConfigurationModal - Bay config IDs:', property.bayConfigurations?.map(bay => bay.id));
-  console.log('BayConfigurationModal - Query enabled:', !!property.id && isOpen);
-  console.log('BayConfigurationModal - Property ID:', property.id);
-  console.log('BayConfigurationModal - Modal open:', isOpen);
+
 
   // Initialize selected bays from props
   useEffect(() => {
@@ -192,7 +185,7 @@ export function BayConfigurationModal({
                         {bay.bayName.replace('Bay ', '')}
                       </div>
                       <div className="text-xs opacity-75">
-                        {isLeased ? "LEASED" : ""}
+                        {isLeased ? "LEA." : ""}
                         {((bay.rentableSquareFootage || bay.squareFootage) / 1000).toFixed(0)}K
                       </div>
                     </div>

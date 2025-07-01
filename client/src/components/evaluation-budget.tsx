@@ -797,6 +797,15 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
       day: 'numeric',
       timeZone: 'America/New_York'
     });
+
+    // Extract property data for use in report
+    const rentableArea = rfp?.warehouseArea ? parseInt(rfp.warehouseArea) : 0;
+    const standardParking = (propertyData as any)?.standardParking || 0;
+    const accessibleParking = (propertyData as any)?.accessibleParking || 0;
+    const evParking = (propertyData as any)?.evParking || 0;
+    const trailerParking = (propertyData as any)?.trailerParking || 0;
+    const totalParking = standardParking + accessibleParking + evParking;
+    const parkingRatio = rentableArea > 0 ? (totalParking / rentableArea * 1000).toFixed(2) : '0.00';
     
     // Calculate grand total for report (sum of category totals with rollups)
     const tiTotal = calculateCategoryTotalWithRollups('tenantImprovements');
@@ -867,9 +876,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
       
       // Calculate total with rollups
       const total = calculateCategoryTotalWithRollups(categoryType as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements');
-      // Use warehouse area as rentable area
-      const totalArea = rfp?.warehouseArea ? parseInt(rfp.warehouseArea) : 0;
-      const rentableArea = totalArea;
+      // Use the extracted rentable area
       const isTenantImprovements = categoryType === 'tenantImprovements';
       
       return `
@@ -939,7 +946,6 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
 
     const renderExistingImprovementsSection = () => {
       const total = calculateCategoryTotal(budgetData.existingImprovements);
-      const rentableArea = rfp?.warehouseArea ? parseInt(rfp.warehouseArea) : 0;
       
       return `
       <div class="section">
@@ -1170,29 +1176,13 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         <div class="table-container">
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 8px;">
                 <div>
-                    <p style="margin: 4px 0; font-size: 13px;"><strong>Rentable Area:</strong> ${rfp?.warehouseArea ? new Intl.NumberFormat('en-US').format(parseInt(rfp.warehouseArea)) + ' sf' : 'Not specified'}</p>
+                    <p style="margin: 4px 0; font-size: 13px;"><strong>Rentable Area:</strong> ${rentableArea > 0 ? new Intl.NumberFormat('en-US').format(rentableArea) + ' sf' : 'Not specified'}</p>
                     <p style="margin: 4px 0; font-size: 13px;"><strong>Door Configuration:</strong> ${budgetData.oversizedDoors + budgetData.regularDoors} doors total (${budgetData.oversizedDoors} oversized, ${budgetData.regularDoors} regular)</p>
                 </div>
                 <div>
-                    ${(() => {
-                      // Load property data for parking information
-                      if (propertyData) {
-                        const standardParking = propertyData.standardParking || 0;
-                        const accessibleParking = propertyData.accessibleParking || 0;
-                        const evParking = propertyData.evParking || 0;
-                        const trailerParking = propertyData.trailerParking || 0;
-                        const totalParking = standardParking + accessibleParking + evParking;
-                        const rentableArea = rfp?.warehouseArea ? parseInt(rfp.warehouseArea) : 0;
-                        const parkingRatio = rentableArea > 0 ? (totalParking / rentableArea * 1000).toFixed(2) : '0.00';
-                        
-                        return `
-                        <p style="margin: 4px 0; font-size: 13px;"><strong>Parking Spaces:</strong> ${totalParking} total (${standardParking} standard, ${accessibleParking} accessible, ${evParking} EV)</p>
-                        <p style="margin: 4px 0; font-size: 13px;"><strong>Parking Ratio:</strong> ${parkingRatio} spaces per 1,000 sf</p>
-                        ${trailerParking > 0 ? `<p style="margin: 4px 0; font-size: 13px;"><strong>Trailer Parking:</strong> ${trailerParking} spaces</p>` : ''}
-                        `;
-                      }
-                      return '<p style="margin: 4px 0; font-size: 13px; color: #666;">Property details loading...</p>';
-                    })()}
+                    <p style="margin: 4px 0; font-size: 13px;"><strong>Parking Spaces:</strong> ${totalParking} total (${standardParking} standard, ${accessibleParking} accessible, ${evParking} EV)</p>
+                    <p style="margin: 4px 0; font-size: 13px;"><strong>Parking Ratio:</strong> ${parkingRatio} spaces per 1,000 sf</p>
+                    ${trailerParking > 0 ? `<p style="margin: 4px 0; font-size: 13px;"><strong>Trailer Parking:</strong> ${trailerParking} spaces</p>` : ''}
                 </div>
             </div>
         </div>
@@ -1203,8 +1193,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
 
     <div class="grand-total">
         <h2>Grand Total: ${formatCurrency(grandTotal)} <span style="font-size: 50%; font-weight: normal;">${(() => {
-          const totalArea = rfp?.warehouseArea ? parseInt(rfp.warehouseArea) : 0;
-          const pricePerSf = totalArea > 0 ? grandTotal / totalArea : 0;
+          const pricePerSf = rentableArea > 0 ? grandTotal / rentableArea : 0;
           return pricePerSf > 0 ? '($' + pricePerSf.toFixed(2) + '/sf)' : '';
         })()}</span></h2>
         ${budgetData.hasExistingImprovements && !budgetData.includeExistingInTotal ? 

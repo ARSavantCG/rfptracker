@@ -385,17 +385,14 @@ export const propertyExistingImprovements = pgTable("property_existing_improveme
   description: text("description").notNull(),
   totalCost: integer("total_cost").notNull(), // Cost in cents for precision
   allocationType: text("allocation_type").notNull(), // "prorated", "bay-specific", "whole-property"
-  
-  // For prorated items (lighting, HVAC, etc.) - cost distributed by square footage
-  costPerSquareFoot: integer("cost_per_square_foot"), // Cost per SF in cents, calculated from totalCost / totalPropertySF
+  allocationValue: integer("allocation_value"), // For percentage-based or custom allocations
+  units: text("units"), // Units for the allocation (sf, percentage, etc.)
   
   // For bay-specific items - which bays this improvement applies to
   applicableBays: json("applicable_bays").$type<string[]>().default([]), // Array of bay IDs
   
   // Additional metadata
   notes: text("notes"),
-  installationDate: timestamp("installation_date"),
-  vendor: text("vendor"),
   isActive: boolean("is_active").default(true),
   
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -406,10 +403,8 @@ export const insertPropertyExistingImprovementSchema = createInsertSchema(proper
   id: true,
   createdAt: true,
   updatedAt: true,
-  costPerSquareFoot: true, // Calculated field
 }).extend({
   totalCost: z.number().min(0),
-  installationDate: z.string().optional().transform((val) => val ? new Date(val) : undefined),
 });
 
 export const updatePropertyExistingImprovementSchema = insertPropertyExistingImprovementSchema.partial().extend({

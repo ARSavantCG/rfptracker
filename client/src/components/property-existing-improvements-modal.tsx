@@ -25,10 +25,10 @@ const formSchema = z.object({
   description: z.string().min(1, "Description is required"),
   totalCost: z.number().min(0, "Cost must be positive"),
   allocationType: z.enum(["prorated", "bay-specific", "whole-property"]),
+  allocationValue: z.number().optional(),
+  units: z.string().optional(),
   applicableBays: z.array(z.string()).optional(),
   notes: z.string().optional(),
-  vendor: z.string().optional(),
-  installationDate: z.string().optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;

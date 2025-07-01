@@ -699,25 +699,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createPropertyExistingImprovement(improvement: InsertPropertyExistingImprovement): Promise<PropertyExistingImprovement> {
-    // Calculate cost per square foot for prorated items
-    let costPerSquareFoot = null;
-    if (improvement.allocationType === 'prorated') {
-      // Get property total rentable area for calculation
-      const property = await this.getProperty(improvement.propertyId);
-      if (property) {
-        const totalBayArea = property.bayConfigurations.reduce((sum, bay) => sum + bay.squareFootage, 0);
-        const totalRentableArea = totalBayArea + (property.mechanicalRoomSquareFootage || 0);
-        if (totalRentableArea > 0) {
-          costPerSquareFoot = Math.round((improvement.totalCost / totalRentableArea) * 100); // Store in cents per SF
-        }
-      }
-    }
-
     const [created] = await db
       .insert(propertyExistingImprovements)
       .values({
         ...improvement,
-        costPerSquareFoot,
         createdAt: new Date(),
         updatedAt: new Date(),
       })
@@ -727,28 +712,6 @@ export class DatabaseStorage implements IStorage {
 
   async updatePropertyExistingImprovement(id: number, updates: Partial<UpdatePropertyExistingImprovement>): Promise<PropertyExistingImprovement | undefined> {
     const updateData: any = { ...updates, updatedAt: new Date() };
-    
-    // Recalculate cost per square foot if allocation type or total cost changed
-    if (updates.allocationType === 'prorated' || (updates.totalCost !== undefined && updates.allocationType !== 'bay-specific')) {
-      const current = await this.getPropertyExistingImprovement(id);
-      if (current) {
-        const totalCost = updates.totalCost !== undefined ? updates.totalCost : current.totalCost;
-        const allocationType = updates.allocationType || current.allocationType;
-        
-        if (allocationType === 'prorated') {
-          const property = await this.getProperty(current.propertyId);
-          if (property) {
-            const totalBayArea = property.bayConfigurations.reduce((sum, bay) => sum + bay.squareFootage, 0);
-            const totalRentableArea = totalBayArea + (property.mechanicalRoomSquareFootage || 0);
-            if (totalRentableArea > 0) {
-              updateData.costPerSquareFoot = Math.round((totalCost / totalRentableArea) * 100); // Store in cents per SF
-            }
-          }
-        } else {
-          updateData.costPerSquareFoot = null;
-        }
-      }
-    }
 
     const [updated] = await db
       .update(propertyExistingImprovements)

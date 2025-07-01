@@ -46,6 +46,9 @@ export function BayConfigurationModal({
   console.log('BayConfigurationModal - Leased bay IDs:', leasedBayIds);
   console.log('BayConfigurationModal - Property bay configurations:', property.bayConfigurations);
   console.log('BayConfigurationModal - Bay config IDs:', property.bayConfigurations?.map(bay => bay.id));
+  console.log('BayConfigurationModal - Query enabled:', !!property.id && isOpen);
+  console.log('BayConfigurationModal - Property ID:', property.id);
+  console.log('BayConfigurationModal - Modal open:', isOpen);
 
   // Initialize selected bays from props
   useEffect(() => {

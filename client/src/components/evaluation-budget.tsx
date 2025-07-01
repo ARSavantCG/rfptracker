@@ -126,10 +126,12 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
   });
 
   // Load property existing improvements to auto-populate when relevant
-  const { data: propertyImprovements } = useQuery({
-    queryKey: [`/api/properties/${rfp?.propertyId}/existing-improvements`],
-    enabled: !!rfp?.propertyId,
+  const { data: propertyImprovements, isLoading: isLoadingImprovements } = useQuery({
+    queryKey: [`/api/properties/${rfp?.property}/existing-improvements`],
+    enabled: !!rfp?.property,
   });
+
+
 
   // File handling functions
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -333,7 +335,9 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
 
   // Function to auto-populate existing improvements based on selected bays
   const populateExistingImprovements = () => {
-    if (!propertyImprovements || !rfp?.selectedBayConfigurations) return [];
+    if (!propertyImprovements || !rfp?.selectedBayConfigurations) {
+      return [];
+    }
 
     const selectedBayIds = rfp.selectedBayConfigurations.map(bay => bay.id);
     const totalSelectedArea = rfp.selectedBayConfigurations.reduce((sum, bay) => sum + (bay.rentableSquareFootage || bay.squareFootage || 0), 0);

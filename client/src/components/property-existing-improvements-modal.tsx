@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Trash2, Plus, Edit3, Save, X } from "lucide-react";
+import { Trash2, Plus, Edit3, Save, X, Grid } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { 
   EXISTING_IMPROVEMENT_CATEGORIES, 

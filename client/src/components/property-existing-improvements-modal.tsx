@@ -183,14 +183,17 @@ export function PropertyExistingImprovementsModal({
 
           {/* Add New Improvement Button */}
           {!showForm && (
-            <Button 
-              onClick={() => setShowForm(true)} 
-              className="w-full"
-              variant="outline"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Add Existing Improvement
-            </Button>
+            <div className="flex justify-center">
+              <Button 
+                onClick={() => setShowForm(true)} 
+                size="sm"
+                variant="outline"
+                className="px-3 py-1 text-sm"
+              >
+                <Plus className="mr-1 h-3 w-3" />
+                Add Existing Improvement
+              </Button>
+            </div>
           )}
 
           {/* Add/Edit Form */}
@@ -221,11 +224,19 @@ export function PropertyExistingImprovementsModal({
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {Object.entries(EXISTING_IMPROVEMENT_CATEGORIES).map(([key, label]) => (
-                                <SelectItem key={key} value={key}>
-                                  {label}
-                                </SelectItem>
-                              ))}
+                              {Object.entries(EXISTING_IMPROVEMENT_CATEGORIES)
+                                .sort(([keyA, labelA], [keyB, labelB]) => {
+                                  // Put "Custom" at the end
+                                  if (keyA === 'custom') return 1;
+                                  if (keyB === 'custom') return -1;
+                                  // Sort all others alphabetically by label
+                                  return labelA.localeCompare(labelB);
+                                })
+                                .map(([key, label]) => (
+                                  <SelectItem key={key} value={key}>
+                                    {label}
+                                  </SelectItem>
+                                ))}
                             </SelectContent>
                           </Select>
                           <FormMessage />

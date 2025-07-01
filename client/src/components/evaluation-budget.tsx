@@ -798,8 +798,16 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
       timeZone: 'America/New_York'
     });
 
-    // Extract property data for use in report
-    const rentableArea = rfp?.warehouseArea ? parseInt(rfp.warehouseArea) : 0;
+    // Extract property data for use in report - calculate from bay configurations if warehouse_area is null
+    let rentableArea = 0;
+    if (rfp?.warehouseArea) {
+      rentableArea = parseInt(rfp.warehouseArea);
+    } else if (rfp?.selectedBayConfigurations && Array.isArray(rfp.selectedBayConfigurations)) {
+      // Calculate from bay configurations
+      rentableArea = Math.round(rfp.selectedBayConfigurations.reduce((total, bay) => {
+        return total + (bay.rentableSquareFootage || 0);
+      }, 0));
+    }
     const standardParking = (propertyData as any)?.standardParking || 0;
     const accessibleParking = (propertyData as any)?.accessibleParking || 0;
     const evParking = (propertyData as any)?.evParking || 0;

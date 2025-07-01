@@ -87,9 +87,18 @@ export default function Dashboard() {
   useEffect(() => {
     if (selectedRfp && allRfps.length > 0) {
       const updatedRfp = allRfps.find(rfp => rfp.id === selectedRfp.id);
-      if (updatedRfp && JSON.stringify(updatedRfp) !== JSON.stringify(selectedRfp)) {
-        setSelectedRfp(updatedRfp);
+      if (updatedRfp) {
+        // Update the selected RFP if data has changed
+        if (JSON.stringify(updatedRfp) !== JSON.stringify(selectedRfp)) {
+          setSelectedRfp(updatedRfp);
+        }
+      } else {
+        // Clear selected RFP if it no longer exists (was deleted)
+        setSelectedRfp(null);
       }
+    } else if (selectedRfp && allRfps.length === 0) {
+      // Clear selected RFP if all RFPs were deleted
+      setSelectedRfp(null);
     }
   }, [allRfps, selectedRfp]);
 

@@ -121,12 +121,8 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValida
 
   const handleAdvancePhase = () => {
     if (nextPhase) {
-      if (nextPhase.key === "invitation-to-bid") {
-        // Open invitation-to-bid modal instead of directly advancing
-        onAdvanceToInvitation(rfp);
-      } else {
-        advancePhaseMutation.mutate(nextPhase.key);
-      }
+      // Always advance the workflow phase
+      advancePhaseMutation.mutate(nextPhase.key);
     }
   };
 

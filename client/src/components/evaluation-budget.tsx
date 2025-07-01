@@ -399,14 +399,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
             unitPrice = proratedTotalCost / quantity; // Per square foot cost
             allocatedCost = proratedTotalCost;
             
-            console.log(`Prorated calculation for ${improvement.description}:`, {
-              originalCost: improvement.totalCost / 100,
-              totalSelectedArea,
-              propertyTotalArea,
-              proratedTotalCost,
-              unitPrice,
-              quantity
-            });
+
           }
         } else if (improvement.allocationType === 'bay-specific') {
           // For bay-specific, only include cost for applicable selected bays
@@ -427,7 +420,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         
         return {
           id: `existing-${improvement.id}`,
-          description: `${improvement.description} (${improvement.category})`,
+          description: improvement.description,
           quantity: quantity,
           unit: unit,
           unitPrice: unitPrice.toFixed(2),

@@ -157,16 +157,11 @@ export default function BayConfigurationSelector({
                 >
                   <div className="font-bold text-xs mb-1">{bay.bayName}</div>
                   <div className="text-xs opacity-75 leading-tight">
-                    {(bay.squareFootage / 1000).toFixed(0)}K SF
+                    {isLeased ? "LEA" : `${(bay.squareFootage / 1000).toFixed(0)}K SF`}
                   </div>
                   {(bay.standardDockDoors > 0 || bay.oversizedDockDoors > 0) && (
                     <div className="text-xs opacity-60 leading-tight mt-1">
                       {bay.standardDockDoors + bay.oversizedDockDoors} Doors
-                    </div>
-                  )}
-                  {isLeased && (
-                    <div className="text-xs text-red-700 font-medium mt-1">
-                      LEA.
                     </div>
                   )}
                 </Button>

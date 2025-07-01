@@ -185,8 +185,7 @@ export function BayConfigurationModal({
                         {bay.bayName.replace('Bay ', '')}
                       </div>
                       <div className="text-xs opacity-75">
-                        {isLeased ? "LEA." : ""}
-                        {((bay.rentableSquareFootage || bay.squareFootage) / 1000).toFixed(0)}K
+                        {isLeased ? "LEA" : `${((bay.rentableSquareFootage || bay.squareFootage) / 1000).toFixed(0)}K`}
                       </div>
                     </div>
                   </Button>

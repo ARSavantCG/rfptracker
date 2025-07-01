@@ -271,7 +271,8 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
           </div>
 
           {/* Show message if no reports generated yet */}
-          {budgetHistory.length === 0 && generationHistory.length === 0 && (
+          {(!Array.isArray(budgetHistory) || budgetHistory.length === 0) && 
+           (!Array.isArray(generationHistory) || generationHistory.length === 0) && (
             <div className="text-center py-4">
               <p className="text-sm text-gray-500">
                 No project-specific reports have been generated yet. Complete workflow phases to generate reports.

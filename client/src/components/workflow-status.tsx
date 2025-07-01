@@ -14,6 +14,7 @@ interface WorkflowStatusProps {
   onOpenInvitationModal?: (rfp: RfpRequest) => void;
   onOpenBidCollection?: (rfp: RfpRequest) => void;
   onOpenEvaluation?: (rfp: RfpRequest) => void;
+  onOpenPublish?: (rfp: RfpRequest) => void;
   onViewDetails?: (rfp: RfpRequest) => void;
 }
 
@@ -62,7 +63,7 @@ const workflowPhases = [
   }
 ];
 
-export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValidateRfp, onOpenInvitationModal, onOpenBidCollection, onOpenEvaluation, onViewDetails }: WorkflowStatusProps) {
+export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValidateRfp, onOpenInvitationModal, onOpenBidCollection, onOpenEvaluation, onOpenPublish, onViewDetails }: WorkflowStatusProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 

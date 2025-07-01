@@ -13,6 +13,7 @@ import { RfpDetailModal } from "@/components/rfp-detail-modal";
 import { BidCollectionTable } from "@/components/bid-collection-table";
 import { EvaluationBudget } from "@/components/evaluation-budget";
 import { FinancialSummary } from "@/components/financial-summary";
+import { PublishSummary } from "@/components/publish-summary";
 import { QuickActionsSidebar } from "@/components/quick-actions-sidebar";
 import Navigation from "@/components/navigation";
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,7 @@ export default function Dashboard() {
   const [isRfpDetailModalOpen, setIsRfpDetailModalOpen] = useState(false);
   const [showBidCollection, setShowBidCollection] = useState(false);
   const [showEvaluation, setShowEvaluation] = useState(false);
+  const [showPublish, setShowPublish] = useState(false);
   const [selectedRfp, setSelectedRfp] = useState<RfpRequest | null>(null);
   const [workflowRfp, setWorkflowRfp] = useState<RfpRequest | null>(null);
   const [validationRfp, setValidationRfp] = useState<RfpRequest | null>(null);
@@ -96,6 +98,7 @@ export default function Dashboard() {
     if (selectedRfp) {
       setShowBidCollection(false);
       setShowEvaluation(false);
+      setShowPublish(false);
     }
   }, [selectedRfp]);
 
@@ -135,6 +138,13 @@ export default function Dashboard() {
   const handleOpenEvaluation = (rfp: RfpRequest) => {
     setShowBidCollection(false);
     setShowEvaluation(true);
+    setShowPublish(false);
+  };
+
+  const handleOpenPublish = (rfp: RfpRequest) => {
+    setShowBidCollection(false);
+    setShowEvaluation(false);
+    setShowPublish(true);
   };
 
   const handleViewDetails = (rfp: RfpRequest) => {
@@ -296,6 +306,19 @@ export default function Dashboard() {
                   </Button>
                 </div>
                 <EvaluationBudget rfp={selectedRfp} />
+              </div>
+            ) : showPublish && selectedRfp ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowPublish(false)}
+                    className="mb-4"
+                  >
+                    ← Back to RFP List
+                  </Button>
+                </div>
+                <PublishSummary rfp={selectedRfp} />
               </div>
             ) : selectedRfp && selectedRfp.workflowPhase === 'publish' && showBidCollection ? (
               <div className="space-y-4">

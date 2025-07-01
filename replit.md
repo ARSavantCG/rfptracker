@@ -244,6 +244,7 @@ This is a full-stack web application for tracking and managing Request for Propo
 - July 1, 2025. Added collapsible functionality to report sections in publish phase - "Budget Evaluation Reports" and "Invitation to Bid Documents" sections now have dropdown arrows with hover effects, allowing users to collapse/expand each section independently similar to Property Info sections
 - July 1, 2025. Removed Executive Summary section from publish phase completely as it is not project/RFP specific - publish phase now displays only project-specific reports from actual workflow history
 - July 1, 2025. Set Final Reports & Documentation sections to be collapsed by default - Budget Evaluation Reports and Invitation to Bid Documents now start collapsed for cleaner interface, users can expand as needed
+- July 1, 2025. Fixed authentication issues for report viewing in publish phase - replaced URL-based navigation with proper fetch requests using Bearer token authentication, corrected generation history endpoint URL to use `/api/generation-history/{id}/view` format, and implemented blob-based PDF opening for secure document access
 
 ## User Preferences
 

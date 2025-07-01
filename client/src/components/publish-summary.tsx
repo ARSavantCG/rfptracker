@@ -34,18 +34,35 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
 
 
 
-  const viewReport = (reportType: string, reportId?: number) => {
+  const viewReport = async (reportType: string, reportId?: number) => {
     const token = localStorage.getItem('auth-token');
-    let url = '';
     
-    if (reportType === 'budget-evaluation' && reportId) {
-      url = `/api/evaluation-budget-history/${reportId}/view?token=${encodeURIComponent(token || '')}`;
-    } else if (reportType === 'invitation-to-bid' && reportId) {
-      url = `/api/rfp-requests/${rfp.id}/generation-history/${reportId}?token=${encodeURIComponent(token || '')}`;
-    }
-    
-    if (url) {
-      window.open(url, '_blank');
+    try {
+      let url = '';
+      
+      if (reportType === 'budget-evaluation' && reportId) {
+        url = `/api/evaluation-budget-history/${reportId}/view`;
+      } else if (reportType === 'invitation-to-bid' && reportId) {
+        url = `/api/generation-history/${reportId}/view`;
+      }
+      
+      if (url) {
+        const response = await fetch(url, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        
+        if (response.ok) {
+          const blob = await response.blob();
+          const objectUrl = URL.createObjectURL(blob);
+          window.open(objectUrl, '_blank');
+        } else {
+          console.error('Failed to fetch report:', response.statusText);
+        }
+      }
+    } catch (error) {
+      console.error('Error viewing report:', error);
     }
   };
 

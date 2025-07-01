@@ -235,6 +235,7 @@ This is a full-stack web application for tracking and managing Request for Propo
 - July 1, 2025. Implemented comprehensive "Tenant Premises Overview" section replacing "Door Information" - renamed header to consolidate dock doors and parking information, added automatic parking data population from property configuration (vehicular and trailer parking), organized interface with clear "Dock Doors" and "Parking" subsections, and updated PDF generation to display parking counts from evaluation budget data rather than property totals for tenant-specific reporting
 - July 1, 2025. Added edit mode protection to Tenant Premises Overview with dedicated Edit/Done button - fields are now read-only by default to prevent accidental changes, requiring deliberate "Edit" button activation to modify dock door and parking values while maintaining auto-population functionality
 - July 1, 2025. Fixed executed leases parking display in Properties page to distinguish between "Vehicular" and "Trailer" parking instead of combining totals - individual lease cards now show separate counts for vehicular parking (standard + accessible + EV) and trailer parking for precise space allocation transparency
+- July 1, 2025. Standardized Property Info layout consistency by converting all grid layouts to vertical stacking - replaced side-by-side arrangements in Total Rentable Area/Bay Count, Dock Doors, Parking, and Available Space sections with consistent vertical format matching executed leases display for improved readability and visual flow
 
 ## User Preferences
 

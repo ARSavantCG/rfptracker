@@ -343,6 +343,16 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     return { oversized: oversizedTotal, regular: regularTotal };
   };
 
+  // Calculate parking counts from property data
+  const calculateParkingCounts = () => {
+    if (!propertyData) return { vehicular: 0, trailer: 0 };
+    
+    const vehicularTotal = (propertyData.standardParking || 0) + (propertyData.accessibleParking || 0) + (propertyData.evParking || 0);
+    const trailerTotal = propertyData.trailerParking || 0;
+    
+    return { vehicular: vehicularTotal, trailer: trailerTotal };
+  };
+
   // Function to auto-populate existing improvements based on selected bays
   const populateExistingImprovements = () => {
     if (!propertyImprovements || !rfp?.selectedBayConfigurations) {
@@ -437,6 +447,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
   // Initialize budget with saved data or bid line items data
   useEffect(() => {
     const doorCounts = calculateDoorCounts();
+    const parkingCounts = calculateParkingCounts();
     const existingImprovementsFromProperty = populateExistingImprovements();
     
     if (existingBudget) {
@@ -458,8 +469,8 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         assemblies: (existingBudget as any).assemblies || {},
         oversizedDoors: doorCounts.oversized,
         regularDoors: doorCounts.regular,
-        vehicularParking: (existingBudget as any).vehicularParking || 0,
-        trailerParking: (existingBudget as any).trailerParking || 0,
+        vehicularParking: (existingBudget as any).vehicularParking || parkingCounts.vehicular,
+        trailerParking: (existingBudget as any).trailerParking || parkingCounts.trailer,
       });
     } else if (allBidLineItems && Array.isArray(allBidLineItems) && allBidLineItems.length > 0) {
       // Initialize with bid line items if no saved budget exists
@@ -482,8 +493,8 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         separateDesignCosts: false,
         oversizedDoors: doorCounts.oversized,
         regularDoors: doorCounts.regular,
-        vehicularParking: 0,
-        trailerParking: 0,
+        vehicularParking: parkingCounts.vehicular,
+        trailerParking: parkingCounts.trailer,
       }));
     } else {
       // Initialize with door counts and existing improvements even if no other data

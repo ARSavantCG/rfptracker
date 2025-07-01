@@ -247,6 +247,8 @@ This is a full-stack web application for tracking and managing Request for Propo
 - July 1, 2025. Fixed authentication issues for report viewing in publish phase - replaced URL-based navigation with proper fetch requests using Bearer token authentication, corrected generation history endpoint URL to use `/api/generation-history/{id}/view` format, and implemented blob-based PDF opening for secure document access
 - July 1, 2025. Implemented prominent project completion button in publish phase - replaces vague completion text with clear visual indicator showing current project status, green "Mark Project as Complete" button for active projects, and greyed-out "Project Completed" state for finished projects to eliminate confusion about completion status
 - July 1, 2025. Fixed RFP deletion error in dashboard - added proper state cleanup when selected RFP is deleted, preventing "Cannot read properties of null" runtime errors by automatically clearing selectedRfp state when RFP no longer exists in the list
+- July 1, 2025. Fixed login page massive JavaScript error display by adding ErrorBoundary component and reset password for AReutlinger@bridgeindustrial.com to "password123"
+- July 1, 2025. Removed outdated "Award" workflow phase from edit RFP dropdown menu - updated both frontend dropdown and backend validation to properly reflect 6-phase workflow (RFP Entry → RFP Validation → Invitation to Bid → Bid Collection → Evaluation → Publish)
 
 ## User Preferences
 

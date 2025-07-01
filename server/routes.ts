@@ -1324,7 +1324,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/projects/phase/:phase", async (req, res) => {
     try {
       const { phase } = req.params;
-      if (!["rfp-entry", "rfp-validation", "invitation-to-bid", "bid-collection", "evaluation", "award", "publish"].includes(phase)) {
+      if (!["rfp-entry", "rfp-validation", "invitation-to-bid", "bid-collection", "evaluation", "publish"].includes(phase)) {
         return res.status(400).json({ message: "Invalid workflow phase" });
       }
 
@@ -1344,7 +1344,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { newPhase } = req.body;
-      if (!newPhase || !["rfp-entry", "rfp-validation", "invitation-to-bid", "bid-collection", "evaluation", "award", "publish"].includes(newPhase)) {
+      if (!newPhase || !["rfp-entry", "rfp-validation", "invitation-to-bid", "bid-collection", "evaluation", "publish"].includes(newPhase)) {
         return res.status(400).json({ message: "Invalid workflow phase" });
       }
 

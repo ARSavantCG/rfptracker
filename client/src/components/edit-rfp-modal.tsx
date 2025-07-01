@@ -633,7 +633,6 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
                         <SelectItem value="invitation-to-bid">Invitation to Bid</SelectItem>
                         <SelectItem value="bid-collection">Bid Collection</SelectItem>
                         <SelectItem value="evaluation">Evaluation</SelectItem>
-                        <SelectItem value="award">Award</SelectItem>
                         <SelectItem value="publish">Publish</SelectItem>
                       </SelectContent>
                     </Select>

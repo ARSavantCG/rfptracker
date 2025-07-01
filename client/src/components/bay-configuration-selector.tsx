@@ -23,7 +23,7 @@ export default function BayConfigurationSelector({
 
   // Fetch executed leases for this property to exclude leased bays
   const { data: executedLeases = [], isLoading: isLoadingLeases } = useQuery<ExecutedLease[]>({
-    queryKey: ['/api/properties', property.id, 'executed-leases'],
+    queryKey: [`/api/properties/${property.id}/executed-leases`],
     enabled: !!property.id
   });
 

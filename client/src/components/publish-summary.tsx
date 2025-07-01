@@ -1,7 +1,8 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, Calendar, Building, Users, CheckCircle, Eye, DollarSign } from "lucide-react";
+import { FileText, Calendar, Building, Users, CheckCircle, Eye, DollarSign, ChevronDown, ChevronUp } from "lucide-react";
 import type { RfpRequest } from "@shared/schema";
 
 interface PublishSummaryProps {
@@ -9,6 +10,8 @@ interface PublishSummaryProps {
 }
 
 export function PublishSummary({ rfp }: PublishSummaryProps) {
+  const [budgetReportsCollapsed, setBudgetReportsCollapsed] = useState(false);
+  const [bidDocumentsCollapsed, setBidDocumentsCollapsed] = useState(false);
 
   // Fetch report histories for this RFP
   const { data: budgetHistory = [] } = useQuery({
@@ -163,57 +166,85 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
           {/* Generated Budget Evaluation Reports */}
           {Array.isArray(budgetHistory) && budgetHistory.length > 0 && (
             <div className="space-y-2">
-              <h4 className="font-medium text-sm text-gray-700">Budget Evaluation Reports</h4>
-              {budgetHistory.map((report: any) => (
-                <div key={report.id} className="flex items-center justify-between p-3 border rounded-lg bg-gray-50">
-                  <div className="flex items-center gap-2">
-                    <DollarSign className="h-4 w-4 text-green-600" />
-                    <div>
-                      <p className="text-sm font-medium">Budget Evaluation Report</p>
-                      <p className="text-xs text-gray-500">
-                        Generated {report.generatedAt ? formatDate(report.generatedAt) : 'Unknown date'}
-                      </p>
+              <div 
+                className="flex items-center justify-between cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors"
+                onClick={() => setBudgetReportsCollapsed(!budgetReportsCollapsed)}
+              >
+                <h4 className="font-medium text-sm text-gray-700">Budget Evaluation Reports</h4>
+                {budgetReportsCollapsed ? (
+                  <ChevronDown className="h-4 w-4 text-gray-500" />
+                ) : (
+                  <ChevronUp className="h-4 w-4 text-gray-500" />
+                )}
+              </div>
+              {!budgetReportsCollapsed && (
+                <div className="space-y-2">
+                  {budgetHistory.map((report: any) => (
+                    <div key={report.id} className="flex items-center justify-between p-3 border rounded-lg bg-gray-50">
+                      <div className="flex items-center gap-2">
+                        <DollarSign className="h-4 w-4 text-green-600" />
+                        <div>
+                          <p className="text-sm font-medium">Budget Evaluation Report</p>
+                          <p className="text-xs text-gray-500">
+                            Generated {report.generatedAt ? formatDate(report.generatedAt) : 'Unknown date'}
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => viewReport('budget-evaluation', report.id)}
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        View
+                      </Button>
                     </div>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => viewReport('budget-evaluation', report.id)}
-                  >
-                    <Eye className="h-4 w-4 mr-1" />
-                    View
-                  </Button>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
           )}
 
           {/* Generated Invitation to Bid Reports */}
           {Array.isArray(generationHistory) && generationHistory.length > 0 && (
             <div className="space-y-2">
-              <h4 className="font-medium text-sm text-gray-700">Invitation to Bid Documents</h4>
-              {generationHistory.map((report: any) => (
-                <div key={report.id} className="flex items-center justify-between p-3 border rounded-lg bg-gray-50">
-                  <div className="flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-blue-600" />
-                    <div>
-                      <p className="text-sm font-medium">{report.title}</p>
-                      <p className="text-xs text-gray-500">
-                        Generated {report.generatedAt ? formatDate(report.generatedAt) : 'Unknown date'}
-                        {report.notes && ` - ${report.notes}`}
-                      </p>
+              <div 
+                className="flex items-center justify-between cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors"
+                onClick={() => setBidDocumentsCollapsed(!bidDocumentsCollapsed)}
+              >
+                <h4 className="font-medium text-sm text-gray-700">Invitation to Bid Documents</h4>
+                {bidDocumentsCollapsed ? (
+                  <ChevronDown className="h-4 w-4 text-gray-500" />
+                ) : (
+                  <ChevronUp className="h-4 w-4 text-gray-500" />
+                )}
+              </div>
+              {!bidDocumentsCollapsed && (
+                <div className="space-y-2">
+                  {generationHistory.map((report: any) => (
+                    <div key={report.id} className="flex items-center justify-between p-3 border rounded-lg bg-gray-50">
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-blue-600" />
+                        <div>
+                          <p className="text-sm font-medium">{report.title}</p>
+                          <p className="text-xs text-gray-500">
+                            Generated {report.generatedAt ? formatDate(report.generatedAt) : 'Unknown date'}
+                            {report.notes && ` - ${report.notes}`}
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => viewReport('invitation-to-bid', report.id)}
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        View
+                      </Button>
                     </div>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => viewReport('invitation-to-bid', report.id)}
-                  >
-                    <Eye className="h-4 w-4 mr-1" />
-                    View
-                  </Button>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
           )}
 

@@ -307,25 +307,25 @@ export default function Properties() {
                           {expandedPropertyInfo === property.id && (
                             <div className="space-y-3 mt-3">
                               {/* Rentable Area and Bay Count */}
-                              <div className="grid grid-cols-2 gap-3 mb-3">
-                                <div className="text-sm">
-                                  <span className="text-gray-600">Total Rentable Area:</span>
-                                  <div className="font-medium text-gray-900">
+                              <div className="space-y-2 mb-3 text-xs">
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500">Total Rentable Area:</span>
+                                  <span className="font-medium text-gray-900">
                                     {getTotalRentableArea(property).toLocaleString()} SF
-                                  </div>
+                                  </span>
                                 </div>
-                                <div className="text-sm">
-                                  <span className="text-gray-600">Bay Count:</span>
-                                  <div className="font-medium text-gray-900">
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500">Bay Count:</span>
+                                  <span className="font-medium text-gray-900">
                                     {getBayConfigurationCount(property)} bays
-                                  </div>
+                                  </span>
                                 </div>
                               </div>
 
                               {/* Dock Door Information */}
                               <div className="mb-3">
                                 <div className="text-sm text-gray-600 mb-2">Dock Doors:</div>
-                                <div className="grid grid-cols-2 gap-2 text-xs">
+                                <div className="space-y-1 text-xs">
                                   <div className="flex justify-between">
                                     <span className="text-gray-500">Standard:</span>
                                     <span className="font-medium">{getDoorCounts(property).standard}</span>
@@ -334,16 +334,17 @@ export default function Properties() {
                                     <span className="text-gray-500">Oversized:</span>
                                     <span className="font-medium">{getDoorCounts(property).oversized}</span>
                                   </div>
-                                </div>
-                                <div className="text-xs text-gray-500 mt-1 text-center">
-                                  Total: {getDoorCounts(property).total} doors
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-500">Total:</span>
+                                    <span className="font-medium">{getDoorCounts(property).total} doors</span>
+                                  </div>
                                 </div>
                               </div>
 
                               {/* Parking Information */}
                               <div className="mb-3">
                                 <div className="text-sm text-gray-600 mb-2">Parking:</div>
-                                <div className="grid grid-cols-2 gap-2 text-xs">
+                                <div className="space-y-1 text-xs">
                                   <div className="flex justify-between">
                                     <span className="text-gray-500">Standard:</span>
                                     <span className="font-medium">{property.standardParking || 0}</span>
@@ -444,28 +445,34 @@ export default function Properties() {
                                             0
                                           );
                                           
-                                          // Calculate total parking for lease
-                                          const totalParking = (lease.standardParking || 0) + 
-                                                             (lease.accessibleParking || 0) + 
-                                                             (lease.evParking || 0) + 
-                                                             (lease.trailerParking || 0);
+                                          // Calculate vehicular and trailer parking separately
+                                          const vehicularParking = (lease.standardParking || 0) + 
+                                                                 (lease.accessibleParking || 0) + 
+                                                                 (lease.evParking || 0);
+                                          const trailerParking = lease.trailerParking || 0;
                                           
                                           return (
                                             <div key={lease.id} className="bg-gray-50 p-2 rounded text-xs">
                                               <div className="font-medium text-gray-900 mb-1">
                                                 {lease.tenantName}
                                               </div>
-                                              <div className="grid grid-cols-2 gap-1 text-gray-600">
-                                                <div>
+                                              <div className="space-y-1 text-gray-600">
+                                                <div className="flex justify-between">
                                                   <span className="text-gray-500">Area:</span>
-                                                  <span className="ml-1 font-medium">
+                                                  <span className="font-medium">
                                                     {totalRentableArea.toLocaleString()} SF
                                                   </span>
                                                 </div>
-                                                <div>
-                                                  <span className="text-gray-500">Parking:</span>
-                                                  <span className="ml-1 font-medium">
-                                                    {totalParking} spaces
+                                                <div className="flex justify-between">
+                                                  <span className="text-gray-500">Vehicular:</span>
+                                                  <span className="font-medium">
+                                                    {vehicularParking} spaces
+                                                  </span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                  <span className="text-gray-500">Trailer:</span>
+                                                  <span className="font-medium">
+                                                    {trailerParking} spaces
                                                   </span>
                                                 </div>
                                               </div>

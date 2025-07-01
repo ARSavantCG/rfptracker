@@ -148,7 +148,7 @@ export default function BayConfigurationSelector({
                   disabled={isLeased}
                   className={`h-20 w-16 flex flex-col items-center justify-center text-xs p-2 flex-shrink-0 ${
                     isLeased
-                      ? "bg-red-100 border-red-300 text-red-600 cursor-not-allowed opacity-60"
+                      ? "bg-red-800 border-red-900 text-white cursor-not-allowed opacity-95"
                       : isSelected 
                         ? "bg-orange-600 hover:bg-orange-700 text-white border-orange-700" 
                         : "hover:bg-orange-50 border-orange-200 bg-white"

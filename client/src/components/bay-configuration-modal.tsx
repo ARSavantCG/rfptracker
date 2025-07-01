@@ -173,7 +173,7 @@ export function BayConfigurationModal({
                     disabled={isLeased}
                     className={`h-20 w-10 flex flex-col items-center justify-center text-xs p-1 flex-shrink-0 ${
                       isLeased
-                        ? "bg-red-500 text-white border-red-600 cursor-not-allowed opacity-90"
+                        ? "bg-red-800 text-white border-red-900 cursor-not-allowed opacity-95"
                         : isSelected 
                           ? "bg-orange-600 hover:bg-orange-700 text-white border-orange-700" 
                           : "hover:bg-orange-50 border-orange-200 bg-white"

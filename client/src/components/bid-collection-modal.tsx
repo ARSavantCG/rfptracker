@@ -228,30 +228,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
     },
   });
 
-  const advanceToEvaluationMutation = useMutation({
-    mutationFn: async () => {
-      if (!rfp) throw new Error("No RFP selected");
-      
-      return await apiRequest(`/api/rfp-requests/${rfp.id}/workflow-phase`, "PATCH", { 
-        phase: "evaluation" 
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
-      toast({
-        title: "Success",
-        description: "Advanced to Evaluation phase successfully",
-      });
-      onClose();
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to advance to evaluation phase",
-        variant: "destructive",
-      });
-    },
-  });
+
 
   const onSubmit = (data: BidCollectionFormData) => {
     const submissionData = {
@@ -731,7 +708,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
               </Button>
               
               <div className="flex gap-3">
-                <Button type="submit" disabled={saveBidMutation.isPending || advanceToEvaluationMutation.isPending}>
+                <Button type="submit" disabled={saveBidMutation.isPending}>
                   {saveBidMutation.isPending ? (
                     <>
                       <Save className="h-4 w-4 mr-2" />
@@ -745,24 +722,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                   )}
                 </Button>
                 
-                <Button 
-                  type="button"
-                  onClick={() => advanceToEvaluationMutation.mutate()}
-                  disabled={saveBidMutation.isPending || advanceToEvaluationMutation.isPending}
-                  className="bg-green-600 hover:bg-green-700 text-white disabled:opacity-50"
-                >
-                  {advanceToEvaluationMutation.isPending ? (
-                    <>
-                      <Save className="h-4 w-4 mr-2" />
-                      Advancing...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="h-4 w-4 mr-2" />
-                      Advance to Evaluation
-                    </>
-                  )}
-                </Button>
+
               </div>
             </div>
           </form>

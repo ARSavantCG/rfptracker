@@ -423,8 +423,12 @@ function generateContractorRfpHtml(options: PdfGenerationOptions, dates: any): s
   // Use Project Address from RFP data
   const projectAddress = rfp.propertyAddress || invitationToBid?.projectLocation || rfp.property;
   
-  // Use contact info from invitation
-  const contactInfo = invitationToBid?.contactForQuestions?.split(' - ') || [];
+  // Use contact info from RFP development contact or invitation fallback
+  const developmentContactInfo = rfp.developmentContact ? rfp.developmentContact.split(' - ') : [];
+  const invitationContactInfo = invitationToBid?.contactForQuestions?.split(' - ') || [];
+  
+  // Prefer development contact from RFP, fallback to invitation contact
+  const contactInfo = developmentContactInfo.length >= 2 ? developmentContactInfo : invitationContactInfo;
   const contactPerson = contactInfo[0] || 'Development Contact';
   const contactEmail = contactInfo[1] || '';
   const contactPhone = contactInfo[2] || '';
@@ -583,12 +587,16 @@ function generateContractorRfpHtml(options: PdfGenerationOptions, dates: any): s
       <div class="section">
         <div class="section-title">AREA BREAKDOWN:</div>
         <table class="info-table">
-          ${dates.areaBreakdown.map(area => `
+          ${dates.areaBreakdown.map((area: any) => `
           <tr>
             <td class="label">${area.description}</td>
             <td>${parseInt(area.squareFootage || '0').toLocaleString()} SF${area.notes ? ` - ${area.notes}` : ''}</td>
           </tr>
           `).join('')}
+          <tr>
+            <td class="label">Remaining Rentable Area</td>
+            <td>${(dates.totalArea - dates.areaBreakdown.reduce((sum: number, area: any) => sum + parseInt(area.squareFootage || '0'), 0)).toLocaleString()} SF</td>
+          </tr>
         </table>
       </div>
       ` : ''}
@@ -677,7 +685,12 @@ function generateArchitectRfpHtml(options: PdfGenerationOptions, dates: any): st
   
   const projectName = rfp.confidential ? `Confidential @ ${rfp.propertyAddress || rfp.property}` : `${rfp.tenantName} @ ${rfp.propertyAddress || rfp.property}`;
   const projectLocation = rfp.propertyAddress || invitationToBid?.projectLocation || rfp.property;
-  const contactInfo = invitationToBid?.contactForQuestions?.split(' - ') || [];
+  // Use contact info from RFP development contact or invitation fallback
+  const developmentContactInfo = rfp.developmentContact ? rfp.developmentContact.split(' - ') : [];
+  const invitationContactInfo = invitationToBid?.contactForQuestions?.split(' - ') || [];
+  
+  // Prefer development contact from RFP, fallback to invitation contact
+  const contactInfo = developmentContactInfo.length >= 2 ? developmentContactInfo : invitationContactInfo;
   const contactPerson = contactInfo[0] || 'Development Contact';
   const contactEmail = contactInfo[1] || '';
   const contactPhone = contactInfo[2] || '';
@@ -823,7 +836,8 @@ function generateArchitectRfpHtml(options: PdfGenerationOptions, dates: any): st
           ${dates.areaBreakdown && dates.areaBreakdown.length > 0 ? `
           <p><strong>Area Requirements:</strong></p>
           <ul class="requirements-list">
-            ${dates.areaBreakdown.map(area => `<li>${area.description}: ${parseInt(area.squareFootage || '0').toLocaleString()} SF${area.notes ? ` - ${area.notes}` : ''}</li>`).join('')}
+            ${dates.areaBreakdown.map((area: any) => `<li>${area.description}: ${parseInt(area.squareFootage || '0').toLocaleString()} SF${area.notes ? ` - ${area.notes}` : ''}</li>`).join('')}
+            <li>Remaining Rentable Area: ${(dates.totalArea - dates.areaBreakdown.reduce((sum: number, area: any) => sum + parseInt(area.squareFootage || '0'), 0)).toLocaleString()} SF</li>
           </ul>
           <p><strong>Design Services Required:</strong></p>
           ` : ''}
@@ -933,12 +947,15 @@ function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dates: an
   const { rfp, invitationToBid, recipientName, recipientCompany } = options;
   const { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea, areaBreakdown, warehouseNotes } = dates;
 
-  // Extract contact information from invitation to bid
-  const contactInfo = invitationToBid?.contactForQuestions || '';
-  const contactParts = contactInfo.split(' - ');
-  const contactPerson = contactParts[0] || 'Development Team';
-  const contactEmail = contactParts[1] || 'contact@company.com';
-  const contactPhone = contactParts[2] || '';
+  // Use contact info from RFP development contact or invitation fallback
+  const developmentContactInfo = rfp.developmentContact ? rfp.developmentContact.split(' - ') : [];
+  const invitationContactInfo = invitationToBid?.contactForQuestions?.split(' - ') || [];
+  
+  // Prefer development contact from RFP, fallback to invitation contact
+  const contactInfo = developmentContactInfo.length >= 2 ? developmentContactInfo : invitationContactInfo;
+  const contactPerson = contactInfo[0] || 'Development Team';
+  const contactEmail = contactInfo[1] || 'contact@company.com';
+  const contactPhone = contactInfo[2] || '';
 
   const projectName = invitationToBid?.projectScope || (rfp.confidential ? `Confidential @ ${rfp.property}` : `${rfp.tenantName} @ ${rfp.property}`);
 
@@ -1093,12 +1110,15 @@ function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, dates: a
   const { rfp, invitationToBid, recipientName, recipientCompany } = options;
   const { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea, areaBreakdown, warehouseNotes } = dates;
 
-  // Extract contact information from invitation to bid
-  const contactInfo = invitationToBid?.contactForQuestions || '';
-  const contactParts = contactInfo.split(' - ');
-  const contactPerson = contactParts[0] || 'Development Team';
-  const contactEmail = contactParts[1] || 'contact@company.com';
-  const contactPhone = contactParts[2] || '';
+  // Use contact info from RFP development contact or invitation fallback
+  const developmentContactInfo = rfp.developmentContact ? rfp.developmentContact.split(' - ') : [];
+  const invitationContactInfo = invitationToBid?.contactForQuestions?.split(' - ') || [];
+  
+  // Prefer development contact from RFP, fallback to invitation contact
+  const contactInfo = developmentContactInfo.length >= 2 ? developmentContactInfo : invitationContactInfo;
+  const contactPerson = contactInfo[0] || 'Development Team';
+  const contactEmail = contactInfo[1] || 'contact@company.com';
+  const contactPhone = contactInfo[2] || '';
 
   const projectName = invitationToBid?.projectScope || (rfp.confidential ? `Confidential @ ${rfp.property}` : `${rfp.tenantName} @ ${rfp.property}`);
 

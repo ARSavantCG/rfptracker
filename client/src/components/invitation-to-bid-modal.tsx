@@ -28,9 +28,6 @@ const invitationFormSchema = z.object({
   projectLocation: z.string().min(1, "Project location is required"),
   contractorDueDate: z.string().min(1, "Contractor due date is required"),
   architectDueDate: z.string().min(1, "Architect due date is required"),
-  contactPerson: z.string().min(1, "Contact person is required"),
-  contactEmail: z.string().email("Valid email is required"),
-  contactPhone: z.string().optional(),
   projectDescription: z.string().optional(),
   documentsLink: z.string().optional(),
   keyDates: z.array(z.object({
@@ -140,9 +137,6 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
       projectLocation: "",
       contractorDueDate: "",
       architectDueDate: "",
-      contactPerson: "",
-      contactEmail: "",
-      contactPhone: "",
       projectDescription: "",
       documentsLink: "",
       keyDates: [],
@@ -281,14 +275,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
         projectLocation: getPropertyAddress(rfp.property) || "",
         contractorDueDate: rfp.contractorDueDate ? new Date(rfp.contractorDueDate).toISOString().split('T')[0] : "",
         architectDueDate: rfp.architectDueDate ? new Date(rfp.architectDueDate).toISOString().split('T')[0] : "",
-        ...(() => {
-          const contactDetails = getDevelopmentContactDetails(rfp.developmentContact || "");
-          return {
-            contactPerson: contactDetails.name,
-            contactEmail: contactDetails.email,
-            contactPhone: contactDetails.phone,
-          };
-        })(),
+
         projectDescription: rfp.projectDescription || "",
         documentsLink: rfp.documentsLink || "",
         keyDates: [],
@@ -306,25 +293,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
           new Date(existingInvitation.contractorDueDate).toISOString().split('T')[0] : defaultValues.contractorDueDate,
         architectDueDate: existingInvitation.architectDueDate ? 
           new Date(existingInvitation.architectDueDate).toISOString().split('T')[0] : defaultValues.architectDueDate,
-        // Parse contact information from combined field or use development contact
-        ...(() => {
-          if (existingInvitation.contactForQuestions) {
-            const parts = existingInvitation.contactForQuestions.split(' - ');
-            if (parts.length >= 3) {
-              return {
-                contactPerson: parts[0] || "",
-                contactEmail: parts[1] || "",
-                contactPhone: parts[2] || "",
-              };
-            }
-          }
-          const contactDetails = getDevelopmentContactDetails(rfp.developmentContact || "");
-          return {
-            contactPerson: contactDetails.name,
-            contactEmail: contactDetails.email,
-            contactPhone: contactDetails.phone,
-          };
-        })(),
+        // Contact information will be automatically populated from RFP validation data in PDF generation
         projectDescription: existingInvitation.projectDescription || "",
         documentsLink: existingInvitation.documentsLink || "",
         keyDates: Array.isArray(existingInvitation.keyDates) ? existingInvitation.keyDates : [],
@@ -358,7 +327,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
         bidSubmissionDeadline: data.contractorDueDate || null,
         contractorDueDate: data.contractorDueDate || null,
         architectDueDate: data.architectDueDate || null,
-        contactForQuestions: `${data.contactPerson} - ${data.contactEmail || ''} - ${data.contactPhone || ''}`,
+        contactForQuestions: '', // Will be populated from RFP validation data in PDF generation
         projectDescription: data.projectDescription,
         documentsLink: data.documentsLink,
         keyDates: data.keyDates,
@@ -875,52 +844,38 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
               </div>
             </div>
 
-            {/* Contact Information */}
+            {/* Area Breakdown */}
             <div className="space-y-4">
-              <h3 className="text-lg font-medium">Contact Information</h3>
-              <div className="grid grid-cols-3 gap-4">
-                <FormField
-                  control={form.control}
-                  name="contactPerson"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Contact Person</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="contactEmail"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Contact Email</FormLabel>
-                      <FormControl>
-                        <Input type="email" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="contactPhone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Contact Phone</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              <h3 className="text-lg font-medium">Area Breakdown</h3>
+              {rfp?.areaBreakdown && rfp.areaBreakdown.length > 0 ? (
+                <div className="space-y-2">
+                  {/* Column Headers */}
+                  <div className="grid grid-cols-4 gap-4 pb-2 border-b text-sm font-medium text-gray-600">
+                    <div>Description</div>
+                    <div>Square Footage</div>
+                    <div>Notes</div>
+                    <div></div>
+                  </div>
+                  
+                  {/* Area Items */}
+                  {rfp.areaBreakdown.map((area, index) => (
+                    <div key={area.id || index} className="grid grid-cols-4 gap-4 items-center py-2 border-b border-gray-100">
+                      <div className="text-sm">{area.description}</div>
+                      <div className="text-sm font-medium">{parseInt(area.squareFootage || '0').toLocaleString()} SF</div>
+                      <div className="text-sm text-gray-600">{area.notes || '—'}</div>
+                      <div></div>
+                    </div>
+                  ))}
+                  
+                  <div className="text-sm text-gray-500 italic">
+                    Area breakdown defined during RFP validation phase
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center text-gray-500 py-4 border border-dashed border-gray-300 rounded-lg">
+                  No area breakdown defined. Areas can be defined during RFP validation phase.
+                </div>
+              )}
             </div>
 
             {/* Scope of Work */}

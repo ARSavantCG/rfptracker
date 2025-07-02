@@ -408,11 +408,6 @@ export default function Dashboard() {
         rfp={validationRfp}
         onValidationComplete={() => {
           setIsValidationModalOpen(false);
-          // Automatically open invitation modal after validation
-          if (validationRfp) {
-            setWorkflowRfp(validationRfp);
-            setIsInvitationModalOpen(true);
-          }
           setValidationRfp(null);
         }}
       />

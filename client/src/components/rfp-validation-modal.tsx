@@ -120,8 +120,43 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
     },
   });
 
+  const advanceMutation = useMutation({
+    mutationFn: async () => {
+      if (!rfp) throw new Error("No RFP selected");
+      
+      // Save current validation data first, then advance workflow
+      const currentData = form.getValues();
+      await apiRequest(`/api/rfp-requests/${rfp.id}`, "PATCH", currentData);
+      
+      // Then advance to invitation-to-bid phase
+      return apiRequest(`/api/rfp-requests/${rfp.id}/workflow-phase`, "PATCH", { 
+        phase: "invitation-to-bid" 
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
+      toast({
+        title: "Success",
+        description: "RFP validation completed and advanced to Invitation to Bid",
+      });
+      handleClose();
+      onValidationComplete?.();
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to advance workflow",
+        variant: "destructive",
+      });
+    },
+  });
+
   const onSubmit = (data: ValidationFormData) => {
     updateMutation.mutate(data);
+  };
+
+  const handleAdvanceWorkflow = () => {
+    advanceMutation.mutate();
   };
 
   const handleClose = () => {
@@ -332,14 +367,22 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                 type="button"
                 variant="outline"
                 onClick={handleClose}
-                disabled={updateMutation.isPending}
+                disabled={updateMutation.isPending || advanceMutation.isPending}
               >
                 <X className="h-4 w-4 mr-2" />
                 Cancel
               </Button>
-              <Button type="submit" disabled={updateMutation.isPending}>
+              <Button type="submit" disabled={updateMutation.isPending || advanceMutation.isPending}>
                 <Save className="h-4 w-4 mr-2" />
                 {updateMutation.isPending ? "Saving..." : "Save Validation Details"}
+              </Button>
+              <Button 
+                type="button"
+                onClick={handleAdvanceWorkflow}
+                disabled={updateMutation.isPending || advanceMutation.isPending}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                {advanceMutation.isPending ? "Advancing..." : "Advance to ITB"}
               </Button>
             </div>
           </form>

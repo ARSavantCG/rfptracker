@@ -579,6 +579,20 @@ function generateContractorRfpHtml(options: PdfGenerationOptions, dates: any): s
         </div>
       </div>
       
+      ${dates.areaBreakdown && dates.areaBreakdown.length > 0 ? `
+      <div class="section">
+        <div class="section-title">AREA BREAKDOWN:</div>
+        <table class="info-table">
+          ${dates.areaBreakdown.map(area => `
+          <tr>
+            <td class="label">${area.description}</td>
+            <td>${parseInt(area.squareFootage || '0').toLocaleString()} SF${area.notes ? ` - ${area.notes}` : ''}</td>
+          </tr>
+          `).join('')}
+        </table>
+      </div>
+      ` : ''}
+      
       <div class="section">
         <table class="info-table">
           <tr>
@@ -806,10 +820,14 @@ function generateArchitectRfpHtml(options: PdfGenerationOptions, dates: any): st
         <div class="section-title">PROJECT SCOPE:</div>
         <div class="description-box">
           <p>We require architectural design services for ${totalArea.toLocaleString()} sf of total rentable area. The project scope includes:</p>
+          ${dates.areaBreakdown && dates.areaBreakdown.length > 0 ? `
+          <p><strong>Area Requirements:</strong></p>
           <ul class="requirements-list">
-            ${warehouseArea > 0 ? `<li>Warehouse/Industrial Space: ${warehouseArea.toLocaleString()} sf</li>` : ''}
-            ${existingOffice > 0 ? `<li>Existing Office Renovation: ${existingOffice.toLocaleString()} sf</li>` : ''}
-            ${newOffice > 0 ? `<li>New Office Design: ${newOffice.toLocaleString()} sf</li>` : ''}
+            ${dates.areaBreakdown.map(area => `<li>${area.description}: ${parseInt(area.squareFootage || '0').toLocaleString()} SF${area.notes ? ` - ${area.notes}` : ''}</li>`).join('')}
+          </ul>
+          <p><strong>Design Services Required:</strong></p>
+          ` : ''}
+          <ul class="requirements-list">
             <li>Schematic Design</li>
             <li>Design Development</li>
             <li>Construction Documents</li>

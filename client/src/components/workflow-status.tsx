@@ -274,15 +274,6 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValida
               >
                 Manage Bids
               </Button>
-              <Button
-                onClick={handleAdvancePhase}
-                disabled={advancePhaseMutation.isPending}
-                className="w-full px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                {advancePhaseMutation.isPending
-                  ? "Advancing..."
-                  : "Advance to Evaluation"}
-              </Button>
             </div>
           )}
 

@@ -15,6 +15,7 @@ import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautif
 import { FileUpload } from "./file-upload";
 import { useToast } from "@/hooks/use-toast";
 import { formatDate } from "@/lib/utils";
+import { apiRequest } from "@/lib/queryClient";
 import type { RfpRequest, Contact, BidCollection, BidLineItem } from "@shared/schema";
 
 const bidCollectionSchema = z.object({
@@ -222,6 +223,31 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
       toast({
         title: "Error",
         description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const advanceToEvaluationMutation = useMutation({
+    mutationFn: async () => {
+      if (!rfp) throw new Error("No RFP selected");
+      
+      return await apiRequest(`/api/rfp-requests/${rfp.id}/workflow-phase`, "PATCH", { 
+        phase: "evaluation" 
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
+      toast({
+        title: "Success",
+        description: "Advanced to Evaluation phase successfully",
+      });
+      onClose();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to advance to evaluation phase",
         variant: "destructive",
       });
     },
@@ -699,23 +725,45 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
             </div>
 
             {/* Form Actions */}
-            <div className="flex justify-end gap-3">
+            <div className="flex justify-between gap-3">
               <Button type="button" variant="outline" onClick={onClose}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={saveBidMutation.isPending}>
-                {saveBidMutation.isPending ? (
-                  <>
-                    <Save className="h-4 w-4 mr-2" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4 mr-2" />
-                    {bidCollection ? 'Update' : 'Create'} Bid Collection
-                  </>
-                )}
-              </Button>
+              
+              <div className="flex gap-3">
+                <Button type="submit" disabled={saveBidMutation.isPending || advanceToEvaluationMutation.isPending}>
+                  {saveBidMutation.isPending ? (
+                    <>
+                      <Save className="h-4 w-4 mr-2" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4 mr-2" />
+                      {bidCollection ? 'Update' : 'Create'} Bid Collection
+                    </>
+                  )}
+                </Button>
+                
+                <Button 
+                  type="button"
+                  onClick={() => advanceToEvaluationMutation.mutate()}
+                  disabled={saveBidMutation.isPending || advanceToEvaluationMutation.isPending}
+                  className="bg-green-600 hover:bg-green-700 text-white disabled:opacity-50"
+                >
+                  {advanceToEvaluationMutation.isPending ? (
+                    <>
+                      <Save className="h-4 w-4 mr-2" />
+                      Advancing...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4 mr-2" />
+                      Advance to Evaluation
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           </form>
         </Form>

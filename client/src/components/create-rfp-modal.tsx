@@ -610,8 +610,9 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
               <Button 
                 type="submit" 
                 disabled={createMutation.isPending}
+                className="bg-green-600 hover:bg-green-700 text-white"
               >
-                {createMutation.isPending ? "Creating..." : "Create RFP"}
+                {createMutation.isPending ? "Creating..." : "Create RFP & Advance"}
               </Button>
             </div>
           </form>

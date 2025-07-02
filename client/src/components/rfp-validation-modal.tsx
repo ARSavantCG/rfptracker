@@ -382,7 +382,7 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                 disabled={updateMutation.isPending || advanceMutation.isPending}
                 className="bg-green-600 hover:bg-green-700 text-white"
               >
-                {advanceMutation.isPending ? "Advancing..." : "Advance to ITB"}
+                {advanceMutation.isPending ? "Saving & Advancing..." : "Save & Advance to ITB"}
               </Button>
             </div>
           </form>

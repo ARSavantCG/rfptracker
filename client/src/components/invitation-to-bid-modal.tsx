@@ -540,6 +540,100 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
     },
   });
 
+  const generateAndAdvanceMutation = useMutation({
+    mutationFn: async (data: InvitationFormData) => {
+      if (!rfp) throw new Error("No RFP selected");
+      
+      setIsGeneratingPdfs(true);
+      
+      const documentsToOpen = [];
+      
+      if (data.generateArchitectRfp) {
+        documentsToOpen.push({ type: "architect", title: "Architect RFP" });
+      }
+      if (data.generateContractorRfp) {
+        documentsToOpen.push({ type: "contractor", title: "Contractor RFP" });
+      }
+      if (data.generateBrokerArchitectRfp) {
+        documentsToOpen.push({ type: "broker-architect", title: "Broker Architect RFP" });
+      }
+      if (data.generateBrokerContractorRfp) {
+        documentsToOpen.push({ type: "broker-contractor", title: "Broker Contractor RFP" });
+      }
+      
+      // Save invitation data first
+      await saveInvitationMutation.mutateAsync(data);
+      
+      // Generate and open documents
+      for (let i = 0; i < documentsToOpen.length; i++) {
+        const doc = documentsToOpen[i];
+        try {
+          console.log(`Opening ${doc.title} document...`);
+          const token = localStorage.getItem('auth-token');
+          const response = await fetch(`/api/rfp-requests/${rfp.id}/generate-pdf`, {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              recipientType: doc.type,
+              recipientName: "",
+              recipientCompany: "",
+              returnType: "html"
+            })
+          });
+          
+          if (response.ok) {
+            const htmlContent = await response.text();
+            const newWindow = window.open('', '_blank');
+            if (newWindow) {
+              newWindow.document.write(htmlContent);
+              newWindow.document.close();
+              console.log(`Successfully opened ${doc.title} in new window`);
+            } else {
+              console.error(`Failed to open window for ${doc.title} - popup may be blocked`);
+            }
+          }
+          
+          // Add a small delay between documents
+          if (i < documentsToOpen.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+        } catch (error) {
+          console.error(`Failed to open ${doc.title}:`, error);
+        }
+      }
+      
+      // Refresh generation history
+      refetchHistory();
+      
+      // Advance workflow to bid-collection
+      const advanceResponse = await apiRequest(`/api/rfp-requests/${rfp.id}/workflow-phase`, "PATCH", { 
+        phase: "bid-collection" 
+      });
+      
+      return advanceResponse;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
+      toast({
+        title: "Success",
+        description: "RFPs generated and advanced to Bid Collection phase",
+      });
+      setIsGeneratingPdfs(false);
+      onClose();
+    },
+    onError: (error) => {
+      setIsGeneratingPdfs(false);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to generate RFPs and advance workflow",
+        variant: "destructive",
+      });
+    },
+  });
+
   const onSubmit = (data: InvitationFormData) => {
     // Check if at least one option is selected
     const hasSelection = data.generateArchitectRfp || data.generateContractorRfp || 
@@ -1291,11 +1385,28 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                 
                 <Button 
                   type="submit"
-                  disabled={!hasSelectedRfpType || createInvitationMutation.isPending || isGeneratingPdfs || saveInvitationMutation.isPending}
+                  disabled={!hasSelectedRfpType || createInvitationMutation.isPending || isGeneratingPdfs || saveInvitationMutation.isPending || generateAndAdvanceMutation.isPending}
                   className="bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
                 >
                   <FileText className="h-4 w-4 mr-2" />
                   Generate RFPs
+                </Button>
+                
+                <Button 
+                  type="button"
+                  onClick={() => {
+                    const formData = form.getValues();
+                    const hasSelection = formData.generateArchitectRfp || formData.generateContractorRfp || 
+                                        formData.generateBrokerArchitectRfp || formData.generateBrokerContractorRfp;
+                    if (hasSelection) {
+                      generateAndAdvanceMutation.mutate(formData);
+                    }
+                  }}
+                  disabled={!hasSelectedRfpType || createInvitationMutation.isPending || isGeneratingPdfs || saveInvitationMutation.isPending || generateAndAdvanceMutation.isPending}
+                  className="bg-green-600 hover:bg-green-700 text-white disabled:opacity-50"
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  {generateAndAdvanceMutation.isPending || isGeneratingPdfs ? "Generating & Advancing..." : "Generate RFPs & Advance"}
                 </Button>
               </div>
             </div>

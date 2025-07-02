@@ -257,6 +257,7 @@ This is a full-stack web application for tracking and managing Request for Propo
 - July 2, 2025. Enhanced "Create RFP" button to clearly indicate workflow progression - changed button text to "Create RFP & Advance" with green color styling to match other workflow advance buttons, making it obvious to team members that this action creates the RFP and moves to the next workflow step
 - July 2, 2025. Fixed RFP creation workflow to automatically advance to validation phase - new RFPs now start directly in "rfp-validation" phase with "in-progress" status instead of "rfp-entry", eliminated redundant "Advance to RFP Validation" button, ensuring "Create RFP & Advance" button properly moves users to step 2 after creation
 - July 2, 2025. Added green "Save & Advance to ITB" button to RFP Validation modal - provides quick workflow progression option that saves validation data and automatically advances to Invitation to Bid phase, complementing existing "Save Validation Details" button for incremental saves
+- July 2, 2025. Added green "Generate RFPs & Advance" button to Invitation to Bid modal - provides seamless workflow progression by generating selected RFP documents and automatically advancing to Bid Collection phase, complementing existing "Generate RFPs" button for document creation without workflow advancement
 
 ## User Preferences
 

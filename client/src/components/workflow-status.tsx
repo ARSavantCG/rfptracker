@@ -214,79 +214,128 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValida
         })}
       </div>
 
-      <div className="mt-4 pt-4 border-t border-gray-200 space-y-2">
-        {actualWorkflowPhase === "rfp-entry" && (
-          <Button
-            onClick={handleAdvancePhase}
-            disabled={advancePhaseMutation.isPending}
-            className="w-auto px-3 py-1 text-sm"
-          >
-            {advancePhaseMutation.isPending
-              ? "Advancing..."
-              : "Advance to RFP Validation"}
-          </Button>
-        )}
-        
-        {actualWorkflowPhase === "rfp-validation" && (
-          <Button
-            onClick={handleAdvancePhase}
-            disabled={advancePhaseMutation.isPending}
-            className="w-auto px-3 py-1 text-sm"
-          >
-            {advancePhaseMutation.isPending
-              ? "Advancing..."
-              : "Advance to Invitation to Bid"}
-          </Button>
-        )}
-        
-        {/* Show Create Invitation to Bid button when in invitation-to-bid phase */}
-        {actualWorkflowPhase === "invitation-to-bid" && (
-          <div className="space-y-2 flex flex-col items-start">
-            <Button
-              onClick={() => onAdvanceToInvitation(rfp)}
-              className="w-auto px-3 py-1 text-sm"
-            >
-              Generate ITB PDF
-            </Button>
+      <div className="mt-4 pt-4 border-t border-gray-200">
+        <h4 className="text-sm font-medium text-gray-700 mb-3">Current Phase Actions</h4>
+        <div className="space-y-2">
+          {actualWorkflowPhase === "rfp-entry" && (
             <Button
               onClick={handleAdvancePhase}
               disabled={advancePhaseMutation.isPending}
-              variant="outline"
-              className="w-auto px-3 py-1 text-sm"
+              className="w-full px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white"
             >
               {advancePhaseMutation.isPending
                 ? "Advancing..."
-                : "Begin Bid Collection"}
+                : "Advance to RFP Validation"}
             </Button>
-          </div>
-        )}
+          )}
+          
+          {actualWorkflowPhase === "rfp-validation" && (
+            <div className="space-y-2">
+              <Button
+                onClick={() => onValidateRfp?.(rfp)}
+                variant="outline"
+                className="w-full px-4 py-2 text-sm"
+              >
+                Edit Validation Details
+              </Button>
+              <Button
+                onClick={handleAdvancePhase}
+                disabled={advancePhaseMutation.isPending}
+                className="w-full px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                {advancePhaseMutation.isPending
+                  ? "Advancing..."
+                  : "Advance to Invitation to Bid"}
+              </Button>
+            </div>
+          )}
+          
+          {actualWorkflowPhase === "invitation-to-bid" && (
+            <div className="space-y-2">
+              <Button
+                onClick={() => onOpenInvitationModal?.(rfp)}
+                variant="outline"
+                className="w-full px-4 py-2 text-sm"
+              >
+                Generate ITB Documents
+              </Button>
+              <Button
+                onClick={handleAdvancePhase}
+                disabled={advancePhaseMutation.isPending}
+                className="w-full px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                {advancePhaseMutation.isPending
+                  ? "Advancing..."
+                  : "Advance to Bid Collection"}
+              </Button>
+            </div>
+          )}
 
-        {/* Show Mark as Complete button when in publish phase */}
-        {actualWorkflowPhase === "publish" && rfp.status !== "completed" && (
-          <Button
-            onClick={() => completeProjectMutation.mutate()}
-            disabled={completeProjectMutation.isPending}
-            className="w-auto px-3 py-1 text-sm bg-green-600 hover:bg-green-700 text-white"
-          >
-            {completeProjectMutation.isPending
-              ? "Marking Complete..."
-              : "Mark as Complete"}
-          </Button>
-        )}
+          {actualWorkflowPhase === "bid-collection" && (
+            <div className="space-y-2">
+              <Button
+                onClick={() => onOpenBidCollection?.(rfp)}
+                variant="outline"
+                className="w-full px-4 py-2 text-sm"
+              >
+                Manage Bids
+              </Button>
+              <Button
+                onClick={handleAdvancePhase}
+                disabled={advancePhaseMutation.isPending}
+                className="w-full px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                {advancePhaseMutation.isPending
+                  ? "Advancing..."
+                  : "Advance to Evaluation"}
+              </Button>
+            </div>
+          )}
 
-        {nextPhase && actualWorkflowPhase !== "invitation-to-bid" && actualWorkflowPhase !== "publish" && rfp.isValidated && (
-          <Button
-            onClick={handleAdvancePhase}
-            disabled={advancePhaseMutation.isPending}
-            className="w-auto px-3 py-1 text-sm"
-          >
-            {advancePhaseMutation.isPending
-              ? "Advancing..."
-              : nextPhase.key === "invitation-to-bid"
-              ? "Create Invitation to Bid"
-              : `Advance to ${nextPhase.label}`}
-          </Button>
-        )}
+          {actualWorkflowPhase === "evaluation" && (
+            <div className="space-y-2">
+              <Button
+                onClick={() => onOpenEvaluation?.(rfp)}
+                variant="outline"
+                className="w-full px-4 py-2 text-sm"
+              >
+                Budget Evaluation
+              </Button>
+              <Button
+                onClick={handleAdvancePhase}
+                disabled={advancePhaseMutation.isPending}
+                className="w-full px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                {advancePhaseMutation.isPending
+                  ? "Advancing..."
+                  : "Advance to Publish"}
+              </Button>
+            </div>
+          )}
+
+          {actualWorkflowPhase === "publish" && (
+            <div className="space-y-2">
+              <Button
+                onClick={() => onOpenPublish?.(rfp)}
+                variant="outline"
+                className="w-full px-4 py-2 text-sm"
+              >
+                View Project Summary
+              </Button>
+              {rfp.status !== "completed" && (
+                <Button
+                  onClick={() => completeProjectMutation.mutate()}
+                  disabled={completeProjectMutation.isPending}
+                  className="w-full px-4 py-2 text-sm bg-green-600 hover:bg-green-700 text-white"
+                >
+                  {completeProjectMutation.isPending
+                    ? "Marking Complete..."
+                    : "Mark Project as Complete"}
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

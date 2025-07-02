@@ -100,14 +100,21 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
     mutationFn: async (data: ValidationFormData) => {
       if (!rfp) throw new Error("No RFP selected");
 
-      const response = await apiRequest(`/api/rfp-requests/${rfp.id}`, "PATCH", data);
-      return response;
+      // First update the RFP validation data
+      await apiRequest(`/api/rfp-requests/${rfp.id}`, "PATCH", data);
+      
+      // Then advance the workflow phase from rfp-validation to invitation-to-bid
+      const phaseResponse = await apiRequest(`/api/rfp-requests/${rfp.id}/workflow-phase`, "PATCH", {
+        phase: "invitation-to-bid"
+      });
+      
+      return phaseResponse;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
       toast({
         title: "Success",
-        description: "RFP validation details updated successfully",
+        description: "RFP validation completed and advanced to Invitation to Bid",
       });
       handleClose();
       onValidationComplete?.();

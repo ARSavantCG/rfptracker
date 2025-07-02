@@ -167,16 +167,6 @@ export function BidCollectionTable({ rfp }: BidCollectionTableProps) {
                 Print All Bids
               </Button>
             )}
-            {rfp.workflowPhase === 'bid-collection' && (
-              <Button 
-                onClick={() => advanceToEvaluationMutation.mutate()}
-                disabled={advanceToEvaluationMutation.isPending}
-                className="bg-green-600 hover:bg-green-700 text-white"
-              >
-                <ArrowRight className="h-4 w-4 mr-2" />
-                {advanceToEvaluationMutation.isPending ? 'Advancing...' : 'Advance to Evaluation'}
-              </Button>
-            )}
           </div>
         </CardHeader>
         <CardContent>
@@ -367,6 +357,20 @@ export function BidCollectionTable({ rfp }: BidCollectionTableProps) {
                   ))}
                 </TableBody>
               </Table>
+            </div>
+          )}
+          
+          {/* Bottom Action Area */}
+          {rfp.workflowPhase === 'bid-collection' && (
+            <div className="flex justify-end mt-6 pt-4 border-t">
+              <Button 
+                onClick={() => advanceToEvaluationMutation.mutate()}
+                disabled={advanceToEvaluationMutation.isPending}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                <ArrowRight className="h-4 w-4 mr-2" />
+                {advanceToEvaluationMutation.isPending ? 'Advancing...' : 'Advance to Evaluation'}
+              </Button>
             </div>
           )}
         </CardContent>

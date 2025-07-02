@@ -218,15 +218,9 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValida
         <h4 className="text-sm font-medium text-gray-700 mb-3">Current Phase Actions</h4>
         <div className="space-y-2">
           {actualWorkflowPhase === "rfp-entry" && (
-            <Button
-              onClick={handleAdvancePhase}
-              disabled={advancePhaseMutation.isPending}
-              className="w-full px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              {advancePhaseMutation.isPending
-                ? "Advancing..."
-                : "Advance to RFP Validation"}
-            </Button>
+            <div className="text-sm text-gray-500 text-center py-2">
+              Use "Create RFP & Advance" to begin workflow
+            </div>
           )}
           
           {actualWorkflowPhase === "rfp-validation" && (

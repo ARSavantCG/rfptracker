@@ -58,10 +58,16 @@ export function BidCollectionTable({ rfp }: BidCollectionTableProps) {
   // Workflow advancement mutation
   const advanceToEvaluationMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch(`/api/rfp-requests/${rfp?.id}/advance-phase`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ newPhase: 'evaluation' }),
+      if (!rfp) throw new Error("No RFP selected");
+      
+      const token = localStorage.getItem('auth-token');
+      const response = await fetch(`/api/rfp-requests/${rfp.id}/workflow-phase`, {
+        method: 'PATCH',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ phase: 'evaluation' }),
       });
       if (!response.ok) throw new Error('Failed to advance workflow');
       return response.json();
@@ -70,13 +76,13 @@ export function BidCollectionTable({ rfp }: BidCollectionTableProps) {
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
       toast({
         title: "Success",
-        description: "Workflow advanced to evaluation stage.",
+        description: "Advanced to Evaluation phase successfully",
       });
     },
-    onError: () => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
-        description: "Failed to advance workflow. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to advance to evaluation phase",
         variant: "destructive",
       });
     },
@@ -98,9 +104,7 @@ export function BidCollectionTable({ rfp }: BidCollectionTableProps) {
   };
 
   const handleAdvanceToEvaluation = () => {
-    if (bidCollections && (bidCollections as BidCollection[]).length > 0) {
-      advanceToEvaluationMutation.mutate();
-    }
+    advanceToEvaluationMutation.mutate();
   };
 
   if (!rfp) {
@@ -163,11 +167,11 @@ export function BidCollectionTable({ rfp }: BidCollectionTableProps) {
                 Print All Bids
               </Button>
             )}
-            {rfp.workflowPhase === 'bid-collection' && bidCollections && (bidCollections as BidCollection[]).length > 0 && (
+            {rfp.workflowPhase === 'bid-collection' && (
               <Button 
-                onClick={handleAdvanceToEvaluation}
+                onClick={() => advanceToEvaluationMutation.mutate()}
                 disabled={advanceToEvaluationMutation.isPending}
-                className="bg-green-600 hover:bg-green-700"
+                className="bg-green-600 hover:bg-green-700 text-white"
               >
                 <ArrowRight className="h-4 w-4 mr-2" />
                 {advanceToEvaluationMutation.isPending ? 'Advancing...' : 'Advance to Evaluation'}

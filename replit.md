@@ -259,6 +259,7 @@ This is a full-stack web application for tracking and managing Request for Propo
 - July 2, 2025. Added green "Save & Advance to ITB" button to RFP Validation modal - provides quick workflow progression option that saves validation data and automatically advances to Invitation to Bid phase, complementing existing "Save Validation Details" button for incremental saves
 - July 2, 2025. Added green "Generate RFPs & Advance" button to Invitation to Bid modal - provides seamless workflow progression by generating selected RFP documents and automatically advancing to Bid Collection phase, complementing existing "Generate RFPs" button for document creation without workflow advancement
 - July 2, 2025. Added green "Advance to Evaluation" button to Bid Collection modal - provides direct workflow progression from Bid Collection phase to Evaluation phase within the modal interface, maintaining consistency with green advance button pattern across all workflow phases
+- July 2, 2025. Enhanced Bid Collection table view with always-visible green "Advance to Evaluation" button - button now appears whenever RFP is in bid-collection phase regardless of whether bids have been submitted, allowing users to progress workflow directly from the main bid summary screen
 
 ## User Preferences
 

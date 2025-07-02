@@ -9,8 +9,8 @@ interface RfpTableProps {
   searchQuery: string;
   statusFilter: string;
   onEditRfp: (rfp: RfpRequest) => void;
-  onSelectRfp?: (rfp: RfpRequest) => void;
-  selectedRfpId?: number;
+  onSelectRfp?: (rfp: RfpRequest | null) => void;
+  selectedRfpId?: number | null;
 }
 
 type SortField = "id" | "rfpNumber" | "tenantName" | "property" | "status" | "receivedOn" | "internalDueDate";
@@ -88,11 +88,11 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
     if (onSelectRfp && selectedRfpId && rfpRequests.length > 0) {
       const selectedExists = rfpRequests.some(rfp => rfp.id === selectedRfpId);
       if (!selectedExists) {
-        onSelectRfp(null as any);
+        onSelectRfp(null);
       }
     } else if (onSelectRfp && rfpRequests.length === 0) {
       // Clear selection if no RFPs exist
-      onSelectRfp(null as any);
+      onSelectRfp(null);
     }
   }, [rfpRequests, selectedRfpId, onSelectRfp]);
 

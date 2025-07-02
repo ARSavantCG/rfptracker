@@ -66,7 +66,7 @@ export default function Dashboard() {
   });
 
   const makeAdminMutation = useMutation({
-    mutationFn: () => apiRequest("/api/dev/make-admin", "POST", { userId: currentUser?.id }),
+    mutationFn: () => apiRequest("/api/dev/make-admin", "POST", { userId: (currentUser as any)?.id }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       toast({
@@ -116,7 +116,12 @@ export default function Dashboard() {
     setIsEditModalOpen(true);
   };
 
-  const handleSelectRfp = (rfp: RfpRequest) => {
+  const handleSelectRfp = (rfp: RfpRequest | null) => {
+    if (!rfp) {
+      setSelectedRfp(null);
+      return;
+    }
+    
     // If clicking the same RFP that's already selected, unselect it
     if (selectedRfp && selectedRfp.id === rfp.id) {
       setSelectedRfp(null);

@@ -167,8 +167,8 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValida
       <div className="space-y-3">
         {workflowPhases.map((phase, index) => {
           const Icon = phase.icon;
-          const isActive = phase.key === actualWorkflowPhase;
-          const isCompleted = index < currentPhaseIndex;
+          const isActive = phase.key === actualWorkflowPhase && rfp.status !== "completed";
+          const isCompleted = index < currentPhaseIndex || (phase.key === "publish" && rfp.status === "completed");
           const isNext = index === currentPhaseIndex + 1;
 
           const isClickable = (isActive || isCompleted) && (phase.key === "rfp-entry" || phase.key === "rfp-validation" || phase.key === "invitation-to-bid" || phase.key === "bid-collection" || phase.key === "evaluation" || phase.key === "publish");

@@ -262,6 +262,7 @@ This is a full-stack web application for tracking and managing Request for Propo
 - July 2, 2025. Enhanced Bid Collection table view with always-visible green "Advance to Evaluation" button - button now appears whenever RFP is in bid-collection phase regardless of whether bids have been submitted, allowing users to progress workflow directly from the main bid summary screen
 - July 2, 2025. Removed "Advance to Evaluation" button from New Bid Collection modal - eliminates workflow advancement option during bid creation to prevent confusion and accidental progression, maintaining button only in bid collection table view for intentional workflow advancement
 - July 2, 2025. Removed "Advance to Evaluation" button from workflow status panel - centralized workflow advancement to single location in bid collection summary window for controlled progression and reduced interface clutter
+- July 2, 2025. Updated publish phase completion button to "Publish & Mark Complete" - matches green workflow advancement pattern across all phases, provides clear action that publishes project and marks as completed in single step
 
 ## User Preferences
 

@@ -29,7 +29,7 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
   });
 
   // Mutation for completing the project
-  const completeProjectMutation = useMutation({
+  const publishAndCompleteMutation = useMutation({
     mutationFn: async () => {
       if (!rfp) throw new Error("No RFP selected");
       return apiRequest(`/api/rfp-requests/${rfp.id}`, "PATCH", { status: "completed" });
@@ -38,14 +38,14 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
       toast({
-        title: "Project Completed",
-        description: "RFP has been marked as completed successfully",
+        title: "Project Published & Completed",
+        description: "RFP has been published and marked as completed successfully",
       });
     },
     onError: () => {
       toast({
         title: "Error",
-        description: "Failed to mark project as completed",
+        description: "Failed to publish and complete project",
         variant: "destructive",
       });
     },
@@ -345,17 +345,17 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
                   This action will finalize the RFP process and change the status to completed
                 </p>
                 <Button
-                  onClick={() => rfp && completeProjectMutation.mutate()}
-                  disabled={completeProjectMutation.isPending || !rfp}
+                  onClick={() => rfp && publishAndCompleteMutation.mutate()}
+                  disabled={publishAndCompleteMutation.isPending || !rfp}
                   className="w-full bg-green-600 hover:bg-green-700"
                   size="lg"
                 >
-                  {completeProjectMutation.isPending ? (
-                    "Marking Complete..."
+                  {publishAndCompleteMutation.isPending ? (
+                    "Publishing & Completing..."
                   ) : (
                     <>
                       <CheckCircle className="h-5 w-5 mr-2" />
-                      Mark Project as Complete
+                      Publish & Mark Complete
                     </>
                   )}
                 </Button>

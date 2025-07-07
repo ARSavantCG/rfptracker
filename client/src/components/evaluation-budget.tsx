@@ -1430,68 +1430,43 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                 }
               });
               
-              // Find assembly names from budgetData.assemblies or use fallback
+              // Find assembly names by looking for the assembly line item itself
               const getAssemblyDisplayName = (assemblyId: string): string => {
                 if (!assemblyId) return 'Unknown Assembly';
                 
-                // Check if there's a custom assembly with this ID
-                if (budgetData.customAssemblies) {
-                  const customAssembly = budgetData.customAssemblies.find((a: any) => a.id === assemblyId);
-                  if (customAssembly) {
-                    return customAssembly.name;
-                  }
-                }
+                // Look for the assembly line item in all categories - the assembly line item has the assembly name as its description
+                const allCategoryItems = [
+                  ...budgetData.tenantImprovements,
+                  ...budgetData.designSoftCosts,
+                  ...budgetData.existingImprovements
+                ];
                 
-                // Check if there's an assembly in the assemblies object
-                if (budgetData.assemblies) {
-                  const assemblyEntry = Object.entries(budgetData.assemblies).find(([name, data]: [string, any]) => 
-                    data && data.components && Array.isArray(data.components) && data.components.some((componentId: string) => 
-                      assembledItems.some((item: any) => item.id === componentId)
-                    )
-                  );
-                  if (assemblyEntry) {
-                    return assemblyEntry[0];
-                  }
+                // Find the assembly line item (the one with id matching assemblyId)
+                const assemblyLineItem = allCategoryItems.find(item => item.id === assemblyId);
+                if (assemblyLineItem && assemblyLineItem.description) {
+                  return assemblyLineItem.description;
                 }
                 
                 // Fallback to a user-friendly name based on timestamp
                 const timestamp = assemblyId.replace('assembly_', '');
-                return `Assembly ${timestamp.slice(-4)}`;
+                return `Custom Assembly ${timestamp.slice(-4)}`;
               };
               
               // Generate summary for each assembly with proper name lookup
               const getAssemblyDisplayNameForPDF = (assemblyId: string): string => {
                 if (!assemblyId) return 'Unknown Assembly';
                 
-                // Check assemblies object first - this is where custom assembly names are stored
-                if (budgetData.assemblies && typeof budgetData.assemblies === 'object') {
-                  for (const [assemblyName, assemblyData] of Object.entries(budgetData.assemblies)) {
-                    const data = assemblyData as any;
-                    if (data && data.components && Array.isArray(data.components)) {
-                      const hasMatchingItems = data.components.some((componentId: string) => 
-                        assembledItems.some((item: any) => item.id === componentId && item.assemblyId === assemblyId)
-                      );
-                      if (hasMatchingItems) {
-                        return assemblyName;
-                      }
-                    }
-                  }
-                }
+                // Look for the assembly line item in all categories - the assembly line item has the assembly name as its description
+                const allCategoryItems = [
+                  ...budgetData.tenantImprovements,
+                  ...budgetData.designSoftCosts,
+                  ...budgetData.existingImprovements
+                ];
                 
-                // Check customAssemblies array as fallback
-                if (budgetData.customAssemblies && Array.isArray(budgetData.customAssemblies)) {
-                  const customAssembly = budgetData.customAssemblies.find((a: any) => a.id === assemblyId);
-                  if (customAssembly && customAssembly.name) {
-                    return customAssembly.name;
-                  }
-                }
-                
-                // Special case handling for known assembly patterns
-                if (assemblyId.includes('2868')) {
-                  return 'Demising Wall Assembly';
-                }
-                if (assemblyId.includes('6570')) {
-                  return 'Dock Positions';
+                // Find the assembly line item (the one with id matching assemblyId)
+                const assemblyLineItem = allCategoryItems.find(item => item.id === assemblyId);
+                if (assemblyLineItem && assemblyLineItem.description) {
+                  return assemblyLineItem.description;
                 }
                 
                 // Fallback
@@ -2581,37 +2556,17 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         const getAssemblyDisplayName = (assemblyId: string): string => {
           if (!assemblyId) return 'Unknown Assembly';
           
-          // Check assemblies object first - this is where custom assembly names are stored
-          if (budgetData.assemblies && typeof budgetData.assemblies === 'object') {
-            // The assemblies object has assembly names as keys, look for assembly by name
-            for (const [assemblyName, assemblyData] of Object.entries(budgetData.assemblies)) {
-              const data = assemblyData as any;
-              if (data && data.components && Array.isArray(data.components)) {
-                // Check if this assembly contains items with the matching assemblyId
-                const hasMatchingItems = data.components.some((componentId: string) => 
-                  assembledItems.some((item: any) => item.id === componentId && item.assemblyId === assemblyId)
-                );
-                if (hasMatchingItems) {
-                  return assemblyName; // Return the assembly name (key)
-                }
-              }
-            }
-          }
+          // Look for the assembly line item in all categories - the assembly line item has the assembly name as its description
+          const allCategoryItems = [
+            ...budgetData.tenantImprovements,
+            ...budgetData.designSoftCosts,
+            ...budgetData.existingImprovements
+          ];
           
-          // Then check customAssemblies array as fallback
-          if (budgetData.customAssemblies && Array.isArray(budgetData.customAssemblies)) {
-            const customAssembly = budgetData.customAssemblies.find((a: any) => a.id === assemblyId);
-            if (customAssembly && customAssembly.name) {
-              return customAssembly.name;
-            }
-          }
-          
-          // Special case handling for known assembly patterns based on the screenshot
-          if (assemblyId.includes('2868')) {
-            return 'Demising Wall Assembly';
-          }
-          if (assemblyId.includes('6570')) {
-            return 'Dock Positions';
+          // Find the assembly line item (the one with id matching assemblyId)
+          const assemblyLineItem = allCategoryItems.find(item => item.id === assemblyId);
+          if (assemblyLineItem && assemblyLineItem.description) {
+            return assemblyLineItem.description;
           }
           
           // Fallback: create a readable name from timestamp

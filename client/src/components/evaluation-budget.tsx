@@ -1215,65 +1215,6 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
             font-size: 12px;
             color: #856404;
         }
-        .tenant-share-content {
-            padding: 0;
-        }
-        .tenant-share-item {
-            background-color: white;
-            border: 1px solid #e9ecef;
-            border-radius: 3px;
-            padding: 10px;
-            margin-bottom: 10px;
-        }
-        .tenant-share-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
-            padding-bottom: 5px;
-            border-bottom: 1px solid #e9ecef;
-        }
-        .tenant-share-name {
-            font-weight: 600;
-            color: #495057;
-        }
-        .tenant-share-percentage {
-            background-color: #fd7e14;
-            color: white;
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 11px;
-            font-weight: 600;
-        }
-        .tenant-share-breakdown {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            font-size: 12px;
-        }
-        .cost-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-        }
-        .cost-label {
-            color: #6c757d;
-            font-size: 10px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 3px;
-        }
-        .cost-value {
-            font-weight: 600;
-            color: #495057;
-        }
-        .tenant-cost {
-            color: #28a745;
-        }
-        .remaining-cost {
-            color: #fd7e14;
-        }
         .tenant-share-note {
             background-color: #fdf2e9;
             border: 1px solid #fd7e14;
@@ -1521,25 +1462,9 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                 const remainingPercentage = 100 - tenantShare;
                 
                 return `
-                  <div class="tenant-share-item">
-                    <div class="tenant-share-header">
-                      <span class="tenant-share-name"><strong>${item.description}</strong></span>
-                      <span class="tenant-share-percentage">${tenantShare}% Tenant Share</span>
-                    </div>
-                    <div class="tenant-share-breakdown">
-                      <div class="cost-item">
-                        <span class="cost-label">Total Cost:</span>
-                        <span class="cost-value">${formatCurrency(totalCost)}</span>
-                      </div>
-                      <div class="cost-item">
-                        <span class="cost-label">Tenant Share (${tenantShare}%):</span>
-                        <span class="cost-value tenant-cost">${formatCurrency(tenantCost)}</span>
-                      </div>
-                      <div class="cost-item">
-                        <span class="cost-label">Remaining (${remainingPercentage}%):</span>
-                        <span class="cost-value remaining-cost">${formatCurrency(remainingCost)}</span>
-                      </div>
-                    </div>
+                  <div class="rollup-summary-item">
+                    <span class="rollup-item-name"><strong>${item.description}</strong> (${formatCurrency(totalCost)})</span>
+                    <span class="rollup-item-target">${tenantShare}% Tenant Share</span>
                   </div>
                 `;
               }).join('')}
@@ -2656,27 +2581,13 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                   const remainingPercentage = 100 - tenantShare;
                   
                   return (
-                    <div key={item.id} className="border rounded-lg p-3 bg-white">
-                      <div className="flex justify-between items-start mb-2">
-                        <span className="font-medium text-gray-800">{item.description}</span>
-                        <span className="text-sm text-orange-600 font-medium">
-                          {tenantShare}% Tenant Share
-                        </span>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-                        <div>
-                          <div className="text-gray-500 text-xs uppercase tracking-wide">Total Cost</div>
-                          <div className="font-medium">{formatCurrency(totalCost)}</div>
-                        </div>
-                        <div>
-                          <div className="text-gray-500 text-xs uppercase tracking-wide">Tenant Share ({tenantShare}%)</div>
-                          <div className="font-medium text-green-600">{formatCurrency(tenantCost)}</div>
-                        </div>
-                        <div>
-                          <div className="text-gray-500 text-xs uppercase tracking-wide">Remaining ({remainingPercentage}%)</div>
-                          <div className="font-medium text-orange-600">{formatCurrency(remainingCost)}</div>
-                        </div>
-                      </div>
+                    <div key={item.id} className="flex justify-between items-center text-sm">
+                      <span className="text-gray-700">
+                        <strong>{item.description}</strong> ({formatCurrency(totalCost)})
+                      </span>
+                      <span className="text-orange-600">
+                        {tenantShare}% Tenant Share
+                      </span>
                     </div>
                   );
                 })}

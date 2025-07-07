@@ -349,15 +349,35 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     return { oversized: oversizedTotal, regular: regularTotal };
   };
 
-  // Calculate parking counts from property data
+  // Calculate parking counts based on tenant's allocated area
   const calculateParkingCounts = () => {
-    if (!propertyData) return { vehicular: 0, trailer: 0 };
+    if (!propertyData || !rfp?.selectedBayConfigurations) return { vehicular: 0, trailer: 0 };
     
     const property = propertyData as any;
-    const vehicularTotal = (property.standardParking || 0) + (property.accessibleParking || 0) + (property.evParking || 0);
-    const trailerTotal = property.trailerParking || 0;
     
-    return { vehicular: vehicularTotal, trailer: trailerTotal };
+    // Calculate tenant's rentable area from selected bays
+    const tenantRentableArea = rfp.selectedBayConfigurations.reduce((total, bay) => {
+      return total + (bay.rentableSquareFootage || 0);
+    }, 0) + (rfp.mechanicalRoomArea || 0);
+    
+    // Get total property rentable area
+    const totalPropertyArea = parseFloat(property.rentableSquareFootage || '0');
+    
+    if (totalPropertyArea === 0 || tenantRentableArea === 0) {
+      return { vehicular: 0, trailer: 0 };
+    }
+    
+    // Calculate tenant's percentage of the property
+    const tenantPercentage = tenantRentableArea / totalPropertyArea;
+    
+    // Calculate proportional parking allocation
+    const totalVehicularParking = (property.standardParking || 0) + (property.accessibleParking || 0) + (property.evParking || 0);
+    const totalTrailerParking = property.trailerParking || 0;
+    
+    const allocatedVehicular = Math.round(totalVehicularParking * tenantPercentage);
+    const allocatedTrailer = Math.round(totalTrailerParking * tenantPercentage);
+    
+    return { vehicular: allocatedVehicular, trailer: allocatedTrailer };
   };
 
   // Function to auto-populate existing improvements based on selected bays
@@ -477,8 +497,8 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         assemblies: (existingBudget as any).assemblies || {},
         oversizedDoors: doorCounts.oversized,
         regularDoors: doorCounts.regular,
-        vehicularParking: (existingBudget as any).vehicularParking || parkingCounts.vehicular,
-        trailerParking: (existingBudget as any).trailerParking || parkingCounts.trailer,
+        vehicularParking: (existingBudget as any).vehicularParking !== undefined ? (existingBudget as any).vehicularParking : parkingCounts.vehicular,
+        trailerParking: (existingBudget as any).trailerParking !== undefined ? (existingBudget as any).trailerParking : parkingCounts.trailer,
       });
     } else if (allBidLineItems && Array.isArray(allBidLineItems) && allBidLineItems.length > 0) {
       // Initialize with bid line items if no saved budget exists
@@ -2700,24 +2720,44 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                 Specify premises information to include in the evaluation report
               </p>
             </div>
-            <Button
-              variant={premisesEditMode ? "default" : "outline"}
-              size="sm"
-              onClick={() => setPremisesEditMode(!premisesEditMode)}
-              className="h-8"
-            >
-              {premisesEditMode ? (
-                <>
-                  <CheckIcon className="h-4 w-4 mr-1" />
-                  Done
-                </>
-              ) : (
-                <>
-                  <Edit className="h-4 w-4 mr-1" />
-                  Edit
-                </>
+            <div className="flex gap-2">
+              {premisesEditMode && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const newParkingCounts = calculateParkingCounts();
+                    setBudgetData(prev => ({
+                      ...prev,
+                      vehicularParking: newParkingCounts.vehicular,
+                      trailerParking: newParkingCounts.trailer,
+                    }));
+                  }}
+                  title="Reset parking to calculated values based on tenant area allocation"
+                  className="h-8"
+                >
+                  Reset Parking
+                </Button>
               )}
-            </Button>
+              <Button
+                variant={premisesEditMode ? "default" : "outline"}
+                size="sm"
+                onClick={() => setPremisesEditMode(!premisesEditMode)}
+                className="h-8"
+              >
+                {premisesEditMode ? (
+                  <>
+                    <CheckIcon className="h-4 w-4 mr-1" />
+                    Done
+                  </>
+                ) : (
+                  <>
+                    <Edit className="h-4 w-4 mr-1" />
+                    Edit
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>

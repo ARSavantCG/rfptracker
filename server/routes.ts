@@ -223,15 +223,33 @@ function generateAllBidCollectionsHtml(rfp: any, allBidsData: any[]) {
     day: 'numeric'
   });
 
-  // Calculate bid comparison data
-  const bidSummary = allBidsData.map(({ bid, lineItems }) => {
+  // Categorize bids by contractor vs architect type
+  const contractorBids = allBidsData.filter(({ contact }) => contact?.type === 'contractor');
+  const architectBids = allBidsData.filter(({ contact }) => contact?.type === 'architect');
+
+  // Calculate bid comparison data for contractors
+  const contractorSummary = contractorBids.map(({ bid, lineItems }) => {
     const totalAmount = lineItems.reduce((sum: number, item: any) => sum + parseFloat(item.totalPrice || '0'), 0);
     return {
       company: bid.contractorCompany,
       totalAmount,
       status: bid.status,
       submissionDate: bid.submissionDate,
-      lineItemCount: lineItems.length
+      lineItemCount: lineItems.length,
+      type: 'contractor'
+    };
+  }).sort((a, b) => a.totalAmount - b.totalAmount);
+
+  // Calculate bid comparison data for architects
+  const architectSummary = architectBids.map(({ bid, lineItems }) => {
+    const totalAmount = lineItems.reduce((sum: number, item: any) => sum + parseFloat(item.totalPrice || '0'), 0);
+    return {
+      company: bid.contractorCompany,
+      totalAmount,
+      status: bid.status,
+      submissionDate: bid.submissionDate,
+      lineItemCount: lineItems.length,
+      type: 'architect'
     };
   }).sort((a, b) => a.totalAmount - b.totalAmount);
 
@@ -279,7 +297,7 @@ function generateAllBidCollectionsHtml(rfp: any, allBidsData: any[]) {
       <div class="header">
         <h1>Bid Collection Summary</h1>
         <div class="subtitle">RFP ${rfp.rfpNumber} - ${rfp.projectName}</div>
-        <div class="subtitle">Generated on ${currentDate} • ${allBidsData.length} bids received</div>
+        <div class="subtitle">Generated on ${currentDate} • ${contractorBids.length} contractor bids • ${architectBids.length} architect bids</div>
       </div>
 
       <div class="section">
@@ -298,23 +316,28 @@ function generateAllBidCollectionsHtml(rfp: any, allBidsData: any[]) {
           </div>
           <div>
             <div class="info-item">
-              <span class="info-label">Bids Received:</span> ${allBidsData.length}
+              <span class="info-label">Contractor Bids:</span> ${contractorBids.length}
             </div>
             <div class="info-item">
-              <span class="info-label">Lowest Bid:</span> $${bidSummary[0]?.totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2 }) || 'N/A'}
+              <span class="info-label">Architect Bids:</span> ${architectBids.length}
             </div>
+            ${contractorSummary.length > 0 ? `
             <div class="info-item">
-              <span class="info-label">Highest Bid:</span> $${bidSummary[bidSummary.length - 1]?.totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2 }) || 'N/A'}
+              <span class="info-label">Lowest Contractor Bid:</span> $${contractorSummary[0]?.totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2 }) || 'N/A'}
             </div>
+            ` : ''}
+            ${architectSummary.length > 0 ? `
             <div class="info-item">
-              <span class="info-label">Average Bid:</span> $${bidSummary.length > 0 ? (bidSummary.reduce((sum, bid) => sum + bid.totalAmount, 0) / bidSummary.length).toLocaleString('en-US', { minimumFractionDigits: 2 }) : 'N/A'}
+              <span class="info-label">Lowest Architect Bid:</span> $${architectSummary[0]?.totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2 }) || 'N/A'}
             </div>
+            ` : ''}
           </div>
         </div>
       </div>
 
+      ${contractorSummary.length > 0 ? `
       <div class="section">
-        <div class="section-title">Bid Comparison Summary</div>
+        <div class="section-title">Contractor Bid Comparison</div>
         <table class="summary-table">
           <thead>
             <tr>
@@ -326,7 +349,7 @@ function generateAllBidCollectionsHtml(rfp: any, allBidsData: any[]) {
             </tr>
           </thead>
           <tbody>
-            ${bidSummary.map((bid, index) => `
+            ${contractorSummary.map((bid, index) => `
               <tr class="${index === 0 ? 'rank-1' : index === 1 ? 'rank-2' : index === 2 ? 'rank-3' : ''}">
                 <td style="text-align: center; font-weight: 600;">${index + 1}</td>
                 <td><strong>${bid.company}</strong></td>
@@ -355,15 +378,62 @@ function generateAllBidCollectionsHtml(rfp: any, allBidsData: any[]) {
           </tbody>
         </table>
       </div>
+      ` : ''}
 
-      ${allBidsData.map(({ bid, lineItems }, index) => {
+      ${architectSummary.length > 0 ? `
+      <div class="section">
+        <div class="section-title">Architect Bid Comparison</div>
+        <table class="summary-table">
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Company</th>
+              <th>Total Amount</th>
+              <th>Submission Date</th>
+              <th>Line Items</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${architectSummary.map((bid, index) => `
+              <tr class="${index === 0 ? 'rank-1' : index === 1 ? 'rank-2' : index === 2 ? 'rank-3' : ''}">
+                <td style="text-align: center; font-weight: 600;">${index + 1}</td>
+                <td><strong>${bid.company}</strong></td>
+                <td class="currency"><strong>$${bid.totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong></td>
+                <td>${(() => {
+                  if (!bid.submissionDate) return 'N/A';
+                  try {
+                    let date;
+                    if (typeof bid.submissionDate === 'string') {
+                      if (bid.submissionDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                        date = new Date(bid.submissionDate + 'T00:00:00');
+                      } else {
+                        date = new Date(bid.submissionDate);
+                      }
+                    } else {
+                      date = new Date(bid.submissionDate);
+                    }
+                    return isNaN(date.getTime()) ? 'Invalid Date' : date.toLocaleDateString('en-US');
+                  } catch (error) {
+                    return 'Invalid Date';
+                  }
+                })()}</td>
+                <td style="text-align: center;">${bid.lineItemCount}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+      ` : ''}
+
+      ${contractorBids.length > 0 ? `<div class="section-title">Contractor Bid Details</div>` : ''}
+      ${contractorBids.map(({ bid, lineItems, contact }, index) => {
         const totalAmount = lineItems.reduce((sum: number, item: any) => sum + parseFloat(item.totalPrice || '0'), 0);
-        const rank = bidSummary.findIndex(b => b.company === bid.contractorCompany) + 1;
+        const rank = contractorSummary.findIndex(b => b.company === bid.contractorCompany) + 1;
         
         return `
           <div class="bid-section">
             <div class="bid-header">
-              <h3 style="margin: 0; color: #1f2937;">Bid #${index + 1} - ${bid.contractorCompany} (Rank #${rank})</h3>
+              <h3 style="margin: 0; color: #1f2937;">Contractor Bid #${index + 1} - ${bid.contractorCompany} (Rank #${rank})</h3>
               <div style="color: #6b7280; font-size: 12px; margin-top: 5px;">Total: $${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
             </div>
 
@@ -417,6 +487,101 @@ function generateAllBidCollectionsHtml(rfp: any, allBidsData: any[]) {
                   <tr>
                     <td>${item.description || ''}</td>
                     <td class="currency">${item.quantity ? parseFloat(item.quantity).toLocaleString('en-US') : ''}</td>
+                    <td>${item.unit || ''}</td>
+                    <td class="currency">${item.unitPrice ? '$' + parseFloat(item.unitPrice).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''}</td>
+                    <td class="currency">${item.totalPrice ? '$' + parseFloat(item.totalPrice).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''}</td>
+                  </tr>
+                `).join('')}
+                <tr class="total-row">
+                  <td colspan="4" style="text-align: right;"><strong>Bid Total:</strong></td>
+                  <td class="currency"><strong>$${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></td>
+                </tr>
+              </tbody>
+            </table>
+
+            ${bid.notes ? `
+              <div class="subsection-title">Notes</div>
+              <div style="background: #f9fafb; padding: 15px; border-radius: 6px; border: 1px solid #e5e7eb; margin-bottom: 15px;">
+                ${bid.notes.replace(/\n/g, '<br>')}
+              </div>
+            ` : ''}
+
+            ${bid.attachments && bid.attachments.length > 0 ? `
+              <div class="subsection-title">Attachments</div>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px;">
+                ${bid.attachments.map((file: any) => `
+                  <div style="padding: 8px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 4px;">
+                    <strong>${file.name}</strong> (${(file.size / 1024).toFixed(1)} KB)
+                  </div>
+                `).join('')}
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('')}
+
+      ${architectBids.length > 0 ? `<div class="section-title">Architect Bid Details</div>` : ''}
+      ${architectBids.map(({ bid, lineItems, contact }, index) => {
+        const totalAmount = lineItems.reduce((sum: number, item: any) => sum + parseFloat(item.totalPrice || '0'), 0);
+        const rank = architectSummary.findIndex(b => b.company === bid.contractorCompany) + 1;
+        
+        return `
+          <div class="bid-section">
+            <div class="bid-header">
+              <h3 style="margin: 0; color: #1f2937;">Architect Bid #${index + 1} - ${bid.contractorCompany} (Rank #${rank})</h3>
+              <div style="color: #6b7280; font-size: 12px; margin-top: 5px;">Total: $${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+            </div>
+
+            <div class="subsection-title">Company Information</div>
+            <div class="info-grid">
+              <div>
+                <div class="info-item">
+                  <span class="info-label">Company:</span> ${bid.contractorCompany}
+                </div>
+                <div class="info-item">
+                  <span class="info-label">Submission Date:</span> ${(() => {
+                    if (!bid.submissionDate) return 'N/A';
+                    try {
+                      let date;
+                      if (typeof bid.submissionDate === 'string') {
+                        if (bid.submissionDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                          date = new Date(bid.submissionDate + 'T00:00:00');
+                        } else {
+                          date = new Date(bid.submissionDate);
+                        }
+                      } else {
+                        date = new Date(bid.submissionDate);
+                      }
+                      return isNaN(date.getTime()) ? 'Invalid Date' : date.toLocaleDateString('en-US');
+                    } catch (error) {
+                      return 'Invalid Date';
+                    }
+                  })()}
+                </div>
+              </div>
+              <div>
+                <div class="info-item">
+                  <span class="info-label">Total Amount:</span> $${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
+              </div>
+            </div>
+
+            <div class="subsection-title">Pricing Breakdown</div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Description</th>
+                  <th>Quantity</th>
+                  <th>Unit</th>
+                  <th>Unit Price</th>
+                  <th>Total Price</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${lineItems.map((item: any) => `
+                  <tr>
+                    <td>${item.description}</td>
+                    <td style="text-align: center;">${item.quantity || ''}</td>
                     <td>${item.unit || ''}</td>
                     <td class="currency">${item.unitPrice ? '$' + parseFloat(item.unitPrice).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''}</td>
                     <td class="currency">${item.totalPrice ? '$' + parseFloat(item.totalPrice).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''}</td>
@@ -3392,11 +3557,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "No bid collections found" });
       }
 
-      // Get line items for all bids
+      // Get line items and contact info for all bids
       const allBidsData = await Promise.all(
         bidCollections.map(async (bid) => {
           const lineItems = await storage.getBidLineItemsByBid(bid.id);
-          return { bid, lineItems };
+          const contact = await storage.getContact(bid.contractorId);
+          return { bid, lineItems, contact };
         })
       );
 

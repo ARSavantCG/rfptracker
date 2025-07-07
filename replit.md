@@ -270,6 +270,7 @@ This is a full-stack web application for tracking and managing Request for Propo
 - July 7, 2025. Fixed "Invalid Date" display in bid collection PDF reports - enhanced date formatting logic in "Bid Comparison Summary" and detailed bid sections to properly handle different date formats (string, Date object, YYYY-MM-DD) and gracefully handle parsing errors, ensuring submission dates display correctly instead of showing "Invalid Date"
 - July 7, 2025. Enhanced RFP Details modal with comprehensive Project Summary section - added prominent blue-highlighted section displaying key project metrics including property name, tenant name, rentable area with comma formatting, bay count from selected configurations, estimated value, and timeline requirements for quick high-level project overview
 - July 7, 2025. Fixed property name loading issue in RFP Details Project Summary - corrected query field from `propertyId` to `property` to match RFP schema, property name now displays correctly as "Bridge Point Gratigny" instead of "Loading..."
+- July 7, 2025. Implemented scope-based bid categorization in PDF reports - separated contractor and architect bids into distinct comparison sections with separate rankings, eliminated misleading cross-scope comparisons by creating "Contractor Bid Comparison" and "Architect Bid Comparison" tables with proper within-scope ranking for accurate bid evaluation
 
 ## User Preferences
 

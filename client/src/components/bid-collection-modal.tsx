@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { formatDate } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
 import type { RfpRequest, Contact, BidCollection, BidLineItem } from "@shared/schema";
+import * as XLSX from 'xlsx';
 
 const bidCollectionSchema = z.object({
   contractorId: z.number(),
@@ -56,6 +57,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
   const [lineItems, setLineItems] = useState<LineItemFormData[]>([]);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [originalLineItem, setOriginalLineItem] = useState<LineItemFormData | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<BidCollectionFormData>({
     resolver: zodResolver(bidCollectionSchema),
@@ -356,6 +358,128 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
     }).format(num);
   };
 
+  const importFromExcelOrCSV = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = e.target?.result;
+        let workbook: XLSX.WorkBook;
+        
+        if (file.name.toLowerCase().endsWith('.csv')) {
+          // Parse CSV
+          workbook = XLSX.read(data, { type: 'binary' });
+        } else {
+          // Parse Excel
+          workbook = XLSX.read(data, { type: 'array' });
+        }
+        
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+        
+        if (jsonData.length < 2) {
+          toast({
+            title: "Import Error",
+            description: "File must contain at least a header row and one data row.",
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        const headers = jsonData[0].map((h: any) => String(h).toLowerCase().trim());
+        const dataRows = jsonData.slice(1);
+        
+        // Find column indices
+        const descIndex = headers.findIndex(h => h.includes('description') || h.includes('desc'));
+        const qtyIndex = headers.findIndex(h => h.includes('qty') || h.includes('quantity'));
+        const unitIndex = headers.findIndex(h => h.includes('unit'));
+        const totalPriceIndex = headers.findIndex(h => h.includes('total') && h.includes('price'));
+        const notesIndex = headers.findIndex(h => h.includes('notes') || h.includes('note'));
+        
+        if (descIndex === -1) {
+          toast({
+            title: "Import Error",
+            description: "Could not find 'Description' column. Please ensure your file has the correct column headers.",
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        const importedItems: LineItemFormData[] = [];
+        
+        dataRows.forEach((row, rowIndex) => {
+          // Skip empty rows
+          if (!row || row.every(cell => !cell)) return;
+          
+          const description = String(row[descIndex] || "").trim();
+          if (!description) return; // Skip rows without description
+          
+          const quantity = qtyIndex !== -1 ? String(row[qtyIndex] || "").replace(/,/g, '') : "";
+          const unit = unitIndex !== -1 ? String(row[unitIndex] || "").trim() : "";
+          const totalPrice = totalPriceIndex !== -1 ? String(row[totalPriceIndex] || "").replace(/[$,]/g, '') : "";
+          const notes = notesIndex !== -1 ? String(row[notesIndex] || "").trim() : "";
+          
+          // Calculate unit price if we have quantity and total price
+          let unitPrice = "";
+          if (quantity && totalPrice && parseFloat(quantity) > 0 && parseFloat(totalPrice) > 0) {
+            unitPrice = (parseFloat(totalPrice) / parseFloat(quantity)).toFixed(2);
+          }
+          
+          importedItems.push({
+            category: "General",
+            description,
+            quantity,
+            unit,
+            unitPrice,
+            totalPrice,
+            notes,
+          });
+        });
+        
+        if (importedItems.length === 0) {
+          toast({
+            title: "Import Warning",
+            description: "No valid line items found in the file.",
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        // Add imported items to existing line items
+        setLineItems([...lineItems, ...importedItems]);
+        
+        toast({
+          title: "Import Successful",
+          description: `Imported ${importedItems.length} line item(s) from ${file.name}`,
+        });
+        
+      } catch (error) {
+        console.error('Import error:', error);
+        toast({
+          title: "Import Error",
+          description: "Failed to parse the file. Please check the format and try again.",
+          variant: "destructive",
+        });
+      }
+    };
+    
+    if (file.name.toLowerCase().endsWith('.csv')) {
+      reader.readAsBinaryString(file);
+    } else {
+      reader.readAsArrayBuffer(file);
+    }
+    
+    // Clear the input
+    event.target.value = '';
+  };
+
   const importFromScopeOfWork = () => {
     if (!invitationToBid || !(invitationToBid as any)?.scopeOfWork) return;
     
@@ -440,6 +564,10 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-medium">Pricing Breakdown</h3>
                 <div className="flex gap-2">
+                  <Button type="button" onClick={importFromExcelOrCSV} variant="outline" size="sm">
+                    <Upload className="h-4 w-4 mr-2" />
+                    Import from Excel/CSV
+                  </Button>
                   {invitationToBid && (invitationToBid as any)?.scopeOfWork?.length > 0 && (
                     <Button type="button" onClick={importFromScopeOfWork} variant="outline" size="sm">
                       <Download className="h-4 w-4 mr-2" />
@@ -730,6 +858,15 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
           </form>
         </Form>
       </DialogContent>
+      
+      {/* Hidden file input for Excel/CSV import */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".xlsx,.xls,.csv"
+        onChange={handleFileImport}
+        style={{ display: 'none' }}
+      />
     </Dialog>
   );
 }

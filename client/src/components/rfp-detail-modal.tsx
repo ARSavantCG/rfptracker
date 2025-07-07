@@ -70,10 +70,10 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
       if (!rfp) return;
       const updateData: any = {};
       if (dates.completedDate !== undefined) {
-        updateData.completedDate = dates.completedDate ? new Date(dates.completedDate) : null;
+        updateData.completedDate = dates.completedDate || null;
       }
       if (dates.publishedDate !== undefined) {
-        updateData.publishedDate = dates.publishedDate ? new Date(dates.publishedDate) : null;
+        updateData.publishedDate = dates.publishedDate || null;
       }
       const response = await apiRequest(`/api/rfp-requests/${rfp.id}`, "PATCH", updateData);
       return response.json();
@@ -286,7 +286,7 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
                             type="date"
                             value={editCompletedDate}
                             onChange={(e) => setEditCompletedDate(e.target.value)}
-                            className="h-6 text-xs w-32 pr-8"
+                            className="h-8 text-xs w-36 pr-8"
                           />
                           <CalendarIcon className="absolute right-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-gray-400 pointer-events-none" />
                         </div>
@@ -314,7 +314,7 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
                             type="date"
                             value={editPublishedDate}
                             onChange={(e) => setEditPublishedDate(e.target.value)}
-                            className="h-6 text-xs w-32 pr-8"
+                            className="h-8 text-xs w-36 pr-8"
                           />
                           <CalendarIcon className="absolute right-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-gray-400 pointer-events-none" />
                         </div>

@@ -959,7 +959,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
           <div class="section-header">
               <h2 class="section-title">
                   ${title}
-                  <span class="section-total">${formatCurrency(total)} <span style="font-size: 50%; font-weight: normal;">${(() => {
+                  <span style="color: #28a745; font-weight: bold; font-size: 16px;">${formatCurrency(total)} <span style="font-size: 50%; font-weight: normal;">${(() => {
                     const pricePerSf = rentableArea > 0 ? total / rentableArea : 0;
                     return pricePerSf > 0 ? '($' + pricePerSf.toFixed(2) + '/RSF)' : '';
                   })()}</span></span>
@@ -1028,9 +1028,9 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
       return `
       <div class="section">
           <div class="section-header">
-              <h2 class="section-title" style="color: #0891b2;">
+              <h2 class="section-title" style="color: #333;">
                   Existing Improvements
-                  <span class="section-total existing-improvements" style="color: #0891b2; font-style: italic;">${formatCurrency(total)} <span style="font-size: 50%; font-weight: normal;">${(() => {
+                  <span style="color: #0891b2; font-style: italic; font-weight: bold; font-size: 16px;">${formatCurrency(total)} <span style="font-size: 50%; font-weight: normal;">${(() => {
                     const pricePerSf = rentableArea > 0 ? total / rentableArea : 0;
                     return pricePerSf > 0 ? '($' + pricePerSf.toFixed(2) + '/RSF)' : '';
                   })()}</span></span>
@@ -1132,7 +1132,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         }
         .section-title {
             margin: 0;
-            color: #495057;
+            color: #333;
             font-size: 16px;
             font-weight: 600;
             display: flex;
@@ -1960,7 +1960,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-lg">{title}</CardTitle>
+        <CardTitle className="text-lg text-black">{title}</CardTitle>
         <div className="flex items-center gap-2">
           <span className={`text-lg font-bold ${category === 'existingImprovements' ? 'text-cyan-600 italic' : 'text-green-600'}`}>{formatCurrency(totalWithRollups)}</span>
           {totalWithRollups !== total && (

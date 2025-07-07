@@ -2491,6 +2491,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let rfpData = await storage.getAllRfpRequests();
       console.log("Fetched", rfpData.length, "RFPs from storage");
       
+      // For completed projects, fetch their evaluation budget data to get grand totals
+      const rfpDataWithBudgets = await Promise.all(rfpData.map(async (rfp) => {
+        if (rfp.status === 'completed') {
+          try {
+            const evaluationBudget = await storage.getEvaluationBudget(rfp.id);
+            return {
+              ...rfp,
+              grandTotal: evaluationBudget?.grandTotal || null
+            };
+          } catch (error) {
+            console.log(`Failed to fetch budget for RFP ${rfp.id}:`, error);
+            return { ...rfp, grandTotal: null };
+          }
+        }
+        return { ...rfp, grandTotal: null };
+      }));
+      
+      rfpData = rfpDataWithBudgets;
+      
       // Apply filters to RFP data
       if (filters.status && filters.status !== "all") {
         rfpData = rfpData.filter(rfp => rfp.status === filters.status);
@@ -2527,12 +2546,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             table { width: 100%; border-collapse: collapse; margin-top: 20px; }
             th, td { border: 1px solid #e5e7eb; padding: 8px; text-align: left; }
             th { background: #f9fafb; font-weight: 600; }
-            th:nth-child(3), th:nth-child(4), th:nth-child(5), th:nth-child(6), th:nth-child(7) { text-align: center; }
-            td:nth-child(3), td:nth-child(4), td:nth-child(5), td:nth-child(6), td:nth-child(7) { text-align: center; }
+            th:nth-child(3), th:nth-child(4), th:nth-child(5), th:nth-child(6), th:nth-child(7), th:nth-child(8) { text-align: center; }
+            td:nth-child(3), td:nth-child(4), td:nth-child(5), td:nth-child(6), td:nth-child(7), td:nth-child(8) { text-align: center; }
             th:nth-child(3) { width: 100px; }
             td:nth-child(3) { width: 100px; }
-            th:nth-child(4), th:nth-child(5), th:nth-child(6) { width: 120px; }
-            td:nth-child(4), td:nth-child(5), td:nth-child(6) { width: 120px; }
+            th:nth-child(4), th:nth-child(5), th:nth-child(6), th:nth-child(7) { width: 120px; }
+            td:nth-child(4), td:nth-child(5), td:nth-child(6), td:nth-child(7) { width: 120px; }
+            th:nth-child(8) { width: 140px; }
+            td:nth-child(8) { width: 140px; text-align: right; }
             .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; color: white; display: inline-block; }
             .status-received { background: #8B5CF6; }
             .status-inprogress { background: #F59E0B; }
@@ -2563,6 +2584,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 <th>Due Date</th>
                 <th>Days Until Due</th>
                 <th>Status</th>
+                <th>Grand Total</th>
               </tr>
             </thead>
             <tbody>
@@ -2644,6 +2666,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   }
                 }
                 
+                // Format grand total for completed projects
+                let grandTotalDisplay = '-';
+                if (rfp.status === 'completed' && rfp.grandTotal) {
+                  const total = parseFloat(rfp.grandTotal);
+                  if (!isNaN(total)) {
+                    grandTotalDisplay = '$' + total.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+                  }
+                }
+
                 return '<tr>' +
                   '<td><strong>' + (rfp.rfpNumber || 'N/A') + '</strong></td>' +
                   '<td>' + (rfp.projectName || 'N/A').replace(/ - $/, '') + '</td>' +
@@ -2652,6 +2683,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   '<td>' + dueDateDisplay + '</td>' +
                   '<td>' + dayDisplay + '</td>' +
                   '<td>' + statusDisplay + '</td>' +
+                  '<td style="font-weight: bold; text-align: right;">' + grandTotalDisplay + '</td>' +
                   '</tr>';
               }).join('')}
             </tbody>

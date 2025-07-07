@@ -77,7 +77,7 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
       }
 
       const response = await apiRequest(`/api/rfp-requests/${rfp.id}`, "PATCH", updateData);
-      return response.json();
+      return response;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
@@ -89,9 +89,10 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
       setIsEditingDates(false);
     },
     onError: (error) => {
+      console.error('Date update error:', error);
       toast({
         title: "Error",
-        description: "Failed to update completion dates",
+        description: error instanceof Error ? error.message : "Failed to update completion dates",
         variant: "destructive",
       });
     },

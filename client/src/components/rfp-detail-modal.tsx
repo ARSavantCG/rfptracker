@@ -1,9 +1,14 @@
 import { useState } from "react";
+import * as React from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { formatDate, formatFileSize, getFileIcon, getStatusColor } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { InvitationWorkflowModal } from "./invitation-workflow-modal";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { CalendarIcon, Edit, Check, X } from "lucide-react";
 import type { RfpRequest } from "@shared/schema";
 
 interface RfpDetailModalProps {
@@ -16,8 +21,12 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editStatus, setEditStatus] = useState("");
   const [showInvitationModal, setShowInvitationModal] = useState(false);
+  const [isEditingDates, setIsEditingDates] = useState(false);
+  const [editCompletedDate, setEditCompletedDate] = useState("");
+  const [editPublishedDate, setEditPublishedDate] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   // Get comprehensive file count from all workflow stages
   const { data: fileCountData } = useQuery({
@@ -57,6 +66,37 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
     },
   });
 
+  const updateDatesMutation = useMutation({
+    mutationFn: async (dates: { completedDate?: string | null; publishedDate?: string | null }) => {
+      if (!rfp) return;
+      const updateData: any = {};
+      if (dates.completedDate !== undefined) {
+        updateData.completedDate = dates.completedDate ? new Date(dates.completedDate) : null;
+      }
+      if (dates.publishedDate !== undefined) {
+        updateData.publishedDate = dates.publishedDate ? new Date(dates.publishedDate) : null;
+      }
+      const response = await apiRequest("PATCH", `/api/rfp-requests/${rfp.id}`, updateData);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
+      toast({
+        title: "Success",
+        description: "Project completion dates updated successfully",
+      });
+      setIsEditingDates(false);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to update completion dates",
+        variant: "destructive",
+      });
+    },
+  });
+
   const deleteFileMutation = useMutation({
     mutationFn: async (fileId: string) => {
       if (!rfp) return;
@@ -80,6 +120,30 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
   });
 
   if (!isOpen || !rfp) return null;
+
+  // Check if user is admin
+  const isAdmin = user?.role === "admin";
+
+  // Initialize edit dates when modal opens or RFP changes
+  React.useEffect(() => {
+    if (rfp) {
+      setEditCompletedDate(rfp.completedDate ? new Date(rfp.completedDate).toISOString().split('T')[0] : "");
+      setEditPublishedDate(rfp.publishedDate ? new Date(rfp.publishedDate).toISOString().split('T')[0] : "");
+    }
+  }, [rfp?.id]);
+
+  const handleSaveDates = () => {
+    updateDatesMutation.mutate({
+      completedDate: editCompletedDate || null,
+      publishedDate: editPublishedDate || null,
+    });
+  };
+
+  const handleCancelDatesEdit = () => {
+    setEditCompletedDate(rfp.completedDate ? new Date(rfp.completedDate).toISOString().split('T')[0] : "");
+    setEditPublishedDate(rfp.publishedDate ? new Date(rfp.publishedDate).toISOString().split('T')[0] : "");
+    setIsEditingDates(false);
+  };
 
   const handleDownloadFile = (fileId: string, fileName: string) => {
     const link = document.createElement('a');
@@ -208,6 +272,92 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
                       <div className="flex items-start">
                         <span className="text-blue-700 font-medium">Timeline:</span>
                         <span className="ml-2 text-blue-900">{rfp.timelineRequirements}</span>
+                      </div>
+                    )}
+                    
+                    {/* Completion Date */}
+                    <div className="flex items-start">
+                      <span className="text-blue-700 font-medium">Completed:</span>
+                      <span className="ml-2 text-blue-900">
+                        {!isEditingDates ? (
+                          <div className="flex items-center gap-2">
+                            <span>{rfp.completedDate ? formatDate(rfp.completedDate) : 'Not completed'}</span>
+                            {isAdmin && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setIsEditingDates(true)}
+                                className="h-6 px-2 text-blue-600 hover:text-blue-800"
+                              >
+                                <Edit className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="date"
+                              value={editCompletedDate}
+                              onChange={(e) => setEditCompletedDate(e.target.value)}
+                              className="h-7 text-xs"
+                            />
+                          </div>
+                        )}
+                      </span>
+                    </div>
+
+                    {/* Published Date */}
+                    <div className="flex items-start">
+                      <span className="text-blue-700 font-medium">Published:</span>
+                      <span className="ml-2 text-blue-900">
+                        {!isEditingDates ? (
+                          <div className="flex items-center gap-2">
+                            <span>{rfp.publishedDate ? formatDate(rfp.publishedDate) : 'Not published'}</span>
+                            {isAdmin && !isEditingDates && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setIsEditingDates(true)}
+                                className="h-6 px-2 text-blue-600 hover:text-blue-800"
+                              >
+                                <Edit className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="date"
+                              value={editPublishedDate}
+                              onChange={(e) => setEditPublishedDate(e.target.value)}
+                              className="h-7 text-xs"
+                            />
+                          </div>
+                        )}
+                      </span>
+                    </div>
+
+                    {/* Save/Cancel buttons for admin editing */}
+                    {isEditingDates && isAdmin && (
+                      <div className="flex items-center gap-2 col-span-2 justify-end">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleCancelDatesEdit}
+                          className="h-7 px-3 text-gray-600 hover:text-gray-800"
+                        >
+                          <X className="h-3 w-3 mr-1" />
+                          Cancel
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={handleSaveDates}
+                          disabled={updateDatesMutation.isPending}
+                          className="h-7 px-3 bg-blue-600 hover:bg-blue-700"
+                        >
+                          <Check className="h-3 w-3 mr-1" />
+                          Save
+                        </Button>
                       </div>
                     )}
                   </div>

@@ -1140,7 +1140,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
             align-items: center;
         }
         .section-total { font-weight: bold; color: #28a745; font-size: 16px; }
-        .section-total.existing-improvements { color: #0891b2; }
+        .section-total.existing-improvements { color: #0891b2 !important; font-style: italic !important; }
         .table-container { padding: 8px; }
         table { width: 100%; border-collapse: collapse; margin-top: 5px; table-layout: fixed; }
         th, td { padding: 6px 8px; border-bottom: 1px solid #dee2e6; vertical-align: top; font-size: 13px; }
@@ -1961,7 +1961,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-lg">{title}</CardTitle>
         <div className="flex items-center gap-2">
-          <span className="text-lg font-bold text-green-600">{formatCurrency(totalWithRollups)}</span>
+          <span className={`text-lg font-bold ${category === 'existingImprovements' ? 'text-cyan-600 italic' : 'text-green-600'}`}>{formatCurrency(totalWithRollups)}</span>
           {totalWithRollups !== total && (
             <span className="text-sm text-gray-500">
               (Base: {formatCurrency(total)})

@@ -288,6 +288,7 @@ This is a full-stack web application for tracking and managing Request for Propo
 - July 7, 2025. Fixed workflow progression blocking issue - removed status-based workflow phase override in WorkflowStatus component that was forcing RFPs to stay in "rfp-entry" phase, updated existing K&K Expansion RFP to "rfp-validation" phase to enable proper workflow progression through 6-step system
 - July 7, 2025. Added workflow advancement button to edit RFP modal - implemented "Save & Advance to RFP Validation" green button that appears only for RFPs in "rfp-entry" phase, provides seamless workflow progression by saving form data and automatically advancing to validation phase in single action
 - July 7, 2025. Fixed file deletion error in edit RFP modal - resolved "response.json is not a function" error by removing duplicate JSON parsing in deleteFileMutation for both edit-rfp-modal and rfp-detail-modal components, file deletion now works correctly without API response processing errors
+- July 7, 2025. Fixed project name generation in edit RFP modal - corrected auto-generated project names to properly use property names instead of property IDs, ensuring names display as "Tenant @ Property Name" (e.g., "Katz & Katz (Expansion) @ Bridge 595 - 2") instead of "Tenant @ 2" by implementing proper property lookup logic matching the create RFP modal
 
 ## User Preferences
 

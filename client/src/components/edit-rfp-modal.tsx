@@ -208,14 +208,28 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
           }
         }
         
-        if (property) {
+        if (property && properties.length > 0) {
+          // Find the selected property by ID
+          const selectedProp = properties.find(p => p.id.toString() === property);
+          let propertyName = property;
+          
+          if (selectedProp) {
+            // Only add building name if it exists, is not empty, and is different from property name
+            if (selectedProp.building && 
+                selectedProp.building.trim() !== '') {
+              propertyName = `${selectedProp.propertyName} - ${selectedProp.building}`;
+            } else {
+              propertyName = selectedProp.propertyName;
+            }
+          }
+          
           let projectName = '';
           if (confidential) {
-            projectName = `Confidential @ ${property}`;
+            projectName = `${propertyName} - Confidential Project`;
           } else if (tenantName) {
-            projectName = `${tenantName} @ ${property}`;
+            projectName = `${tenantName} @ ${propertyName}`;
           } else {
-            projectName = `@ ${property}`;
+            projectName = `@ ${propertyName}`;
           }
           
           form.setValue('projectName', projectName, { shouldValidate: false });

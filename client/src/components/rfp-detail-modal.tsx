@@ -27,8 +27,8 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
 
   // Get property information for project summary
   const { data: property } = useQuery({
-    queryKey: [`/api/properties/${rfp?.propertyId}`],
-    enabled: !!rfp?.propertyId,
+    queryKey: [`/api/properties/${rfp?.property}`],
+    enabled: !!rfp?.property,
   });
 
   const updateStatusMutation = useMutation({

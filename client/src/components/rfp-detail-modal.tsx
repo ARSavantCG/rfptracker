@@ -118,11 +118,6 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
     },
   });
 
-  if (!isOpen || !rfp) return null;
-
-  // Check if user is admin
-  const isAdmin = user?.role === "admin";
-
   // Initialize edit dates when modal opens or RFP changes
   useEffect(() => {
     if (rfp) {
@@ -130,6 +125,11 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
       setEditPublishedDate(rfp.publishedDate ? new Date(rfp.publishedDate).toISOString().split('T')[0] : "");
     }
   }, [rfp?.id]);
+
+  // Check if user is admin
+  const isAdmin = user?.role === "admin";
+
+  if (!isOpen || !rfp) return null;
 
   const handleSaveDates = () => {
     updateDatesMutation.mutate({

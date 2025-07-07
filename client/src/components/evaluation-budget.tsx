@@ -1215,6 +1215,74 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
             font-size: 12px;
             color: #856404;
         }
+        .tenant-share-content {
+            padding: 0;
+        }
+        .tenant-share-item {
+            background-color: white;
+            border: 1px solid #e9ecef;
+            border-radius: 3px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        .tenant-share-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .tenant-share-name {
+            font-weight: 600;
+            color: #495057;
+        }
+        .tenant-share-percentage {
+            background-color: #fd7e14;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .tenant-share-breakdown {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            font-size: 12px;
+        }
+        .cost-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+        .cost-label {
+            color: #6c757d;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 3px;
+        }
+        .cost-value {
+            font-weight: 600;
+            color: #495057;
+        }
+        .tenant-cost {
+            color: #28a745;
+        }
+        .remaining-cost {
+            color: #fd7e14;
+        }
+        .tenant-share-note {
+            background-color: #fdf2e9;
+            border: 1px solid #fd7e14;
+            border-radius: 3px;
+            padding: 8px;
+            margin-top: 10px;
+            font-size: 12px;
+            color: #c1611d;
+        }
         @media print {
             body { background-color: white; }
             .section { border: 1px solid #ddd; }
@@ -1427,6 +1495,62 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         </div>
     </div>
     ` : ''}
+
+    ${(() => {
+      // Tenant Share Summary for PDF
+      const allItems = [
+        ...budgetData.tenantImprovements,
+        ...budgetData.designSoftCosts,
+        ...budgetData.existingImprovements
+      ];
+      
+      const proratedItems = allItems.filter(item => (item.tenantShare || 100) < 100);
+      
+      if (proratedItems.length === 0) return '';
+
+      return `
+      <div class="rollup-summary-section">
+          <h3 class="rollup-summary-title">Tenant Share Summary</h3>
+          <p class="rollup-summary-description">The following items have been prorated based on tenant responsibility percentage:</p>
+          <div class="tenant-share-content">
+              ${proratedItems.map(item => {
+                const totalCost = parseFloat(item.totalPrice) || 0;
+                const tenantShare = item.tenantShare || 100;
+                const tenantCost = totalCost * (tenantShare / 100);
+                const remainingCost = totalCost - tenantCost;
+                const remainingPercentage = 100 - tenantShare;
+                
+                return `
+                  <div class="tenant-share-item">
+                    <div class="tenant-share-header">
+                      <span class="tenant-share-name"><strong>${item.description}</strong></span>
+                      <span class="tenant-share-percentage">${tenantShare}% Tenant Share</span>
+                    </div>
+                    <div class="tenant-share-breakdown">
+                      <div class="cost-item">
+                        <span class="cost-label">Total Cost:</span>
+                        <span class="cost-value">${formatCurrency(totalCost)}</span>
+                      </div>
+                      <div class="cost-item">
+                        <span class="cost-label">Tenant Share (${tenantShare}%):</span>
+                        <span class="cost-value tenant-cost">${formatCurrency(tenantCost)}</span>
+                      </div>
+                      <div class="cost-item">
+                        <span class="cost-label">Remaining (${remainingPercentage}%):</span>
+                        <span class="cost-value remaining-cost">${formatCurrency(remainingCost)}</span>
+                      </div>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+              <div class="tenant-share-note">
+                <strong>Note:</strong> The "Remaining" amounts represent costs that could be attributed to other tenants 
+                or additional lease allocations to achieve 100% cost recovery for shared improvements.
+              </div>
+          </div>
+      </div>
+      `;
+    })()}
 
     ${budgetData.hasExistingImprovements ? renderCategorySection("Existing Improvements", budgetData.existingImprovements, "existingImprovements") : ''}
 </body>
@@ -2496,6 +2620,72 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                     </div>
                   ));
                 })}
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })()}
+
+      {/* Tenant Share Summary */}
+      {(() => {
+        const allItems = [
+          ...budgetData.tenantImprovements,
+          ...budgetData.designSoftCosts,
+          ...budgetData.existingImprovements
+        ];
+        
+        const proratedItems = allItems.filter(item => (item.tenantShare || 100) < 100);
+        
+        if (proratedItems.length === 0) return null;
+
+        return (
+          <Card className="bg-orange-50 border-orange-200">
+            <CardHeader>
+              <CardTitle className="text-lg text-orange-800">Tenant Share Summary</CardTitle>
+              <p className="text-sm text-orange-600">
+                The following items have been prorated based on tenant responsibility percentage:
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {proratedItems.map(item => {
+                  const totalCost = parseFloat(item.totalPrice) || 0;
+                  const tenantShare = item.tenantShare || 100;
+                  const tenantCost = totalCost * (tenantShare / 100);
+                  const remainingCost = totalCost - tenantCost;
+                  const remainingPercentage = 100 - tenantShare;
+                  
+                  return (
+                    <div key={item.id} className="border rounded-lg p-3 bg-white">
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="font-medium text-gray-800">{item.description}</span>
+                        <span className="text-sm text-orange-600 font-medium">
+                          {tenantShare}% Tenant Share
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                        <div>
+                          <div className="text-gray-500 text-xs uppercase tracking-wide">Total Cost</div>
+                          <div className="font-medium">{formatCurrency(totalCost)}</div>
+                        </div>
+                        <div>
+                          <div className="text-gray-500 text-xs uppercase tracking-wide">Tenant Share ({tenantShare}%)</div>
+                          <div className="font-medium text-green-600">{formatCurrency(tenantCost)}</div>
+                        </div>
+                        <div>
+                          <div className="text-gray-500 text-xs uppercase tracking-wide">Remaining ({remainingPercentage}%)</div>
+                          <div className="font-medium text-orange-600">{formatCurrency(remainingCost)}</div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="mt-4 p-3 bg-orange-100 rounded-lg">
+                <div className="text-sm text-orange-800">
+                  <strong>Note:</strong> The "Remaining" amounts represent costs that could be attributed to other tenants 
+                  or additional lease allocations to achieve 100% cost recovery for shared improvements.
+                </div>
               </div>
             </CardContent>
           </Card>

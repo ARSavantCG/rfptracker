@@ -75,6 +75,13 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
       if (dates.publishedDate !== undefined) {
         updateData.publishedDate = dates.publishedDate ? new Date(dates.publishedDate) : null;
       }
+      console.log('Sending update data:', updateData);
+      console.log('Date objects:', {
+        completedDate: updateData.completedDate,
+        publishedDate: updateData.publishedDate,
+        completedIsDate: updateData.completedDate instanceof Date,
+        publishedIsDate: updateData.publishedDate instanceof Date
+      });
       const response = await apiRequest(`/api/rfp-requests/${rfp.id}`, "PATCH", updateData);
       return response.json();
     },

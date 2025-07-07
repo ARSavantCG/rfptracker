@@ -82,7 +82,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
     mutationFn: async (fileId: string) => {
       if (!rfp) return;
       const response = await apiRequest(`/api/rfp-requests/${rfp.id}/files/${fileId}`, "DELETE");
-      return response.json();
+      return response;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });

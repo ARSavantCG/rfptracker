@@ -287,6 +287,7 @@ This is a full-stack web application for tracking and managing Request for Propo
 - July 7, 2025. Fixed workflow phase validation error in RFP edit form - updated insertRfpRequestSchema in shared/schema.ts to include "rfp-validation" and "publish" phases, replacing outdated 5-phase workflow enum with complete 6-phase workflow system to resolve "Invalid enum value" error when editing RFPs
 - July 7, 2025. Fixed workflow progression blocking issue - removed status-based workflow phase override in WorkflowStatus component that was forcing RFPs to stay in "rfp-entry" phase, updated existing K&K Expansion RFP to "rfp-validation" phase to enable proper workflow progression through 6-step system
 - July 7, 2025. Added workflow advancement button to edit RFP modal - implemented "Save & Advance to RFP Validation" green button that appears only for RFPs in "rfp-entry" phase, provides seamless workflow progression by saving form data and automatically advancing to validation phase in single action
+- July 7, 2025. Fixed file deletion error in edit RFP modal - resolved "response.json is not a function" error by removing duplicate JSON parsing in deleteFileMutation for both edit-rfp-modal and rfp-detail-modal components, file deletion now works correctly without API response processing errors
 
 ## User Preferences
 

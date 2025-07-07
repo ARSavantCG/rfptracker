@@ -1706,7 +1706,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid ID" });
       }
 
-      const bidData = JSON.parse(req.body.bidData || '{}');
+      // Extract bid data from individual form fields
+      const bidData = {
+        contractorId: parseInt(req.body.contractorId),
+        contractorName: req.body.contractorName,
+        contractorCompany: req.body.contractorCompany,
+        contractorEmail: req.body.contractorEmail,
+        submissionDate: req.body.submissionDate,
+        totalAmount: req.body.totalAmount,
+        status: req.body.status,
+        notes: req.body.notes || ''
+      };
+      
       const lineItems = JSON.parse(req.body.lineItems || '[]');
       
       // Convert date string back to Date object

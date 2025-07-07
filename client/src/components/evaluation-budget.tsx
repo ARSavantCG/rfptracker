@@ -1028,9 +1028,9 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
       return `
       <div class="section">
           <div class="section-header">
-              <h2 class="section-title">
+              <h2 class="section-title" style="color: rgb(0, 112, 192);">
                   Existing Improvements
-                  <span class="section-total">${formatCurrency(total)} <span style="font-size: 50%; font-weight: normal;">${(() => {
+                  <span class="section-total" style="color: rgb(0, 112, 192);">${formatCurrency(total)} <span style="font-size: 50%; font-weight: normal;">${(() => {
                     const pricePerSf = rentableArea > 0 ? total / rentableArea : 0;
                     return pricePerSf > 0 ? '($' + pricePerSf.toFixed(2) + '/RSF)' : '';
                   })()}</span></span>
@@ -1358,7 +1358,18 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
 
     ${Object.keys(budgetData.lineItemRollups).length > 0 ? `
     <div class="rollup-summary-section">
-        <h3 class="rollup-summary-title">Line Item Rollup Summary</h3>
+        <h3 class="rollup-summary-title">Line Item Rollup Summary <span style="color: #9333ea; font-style: italic; font-weight: normal;">(${(() => {
+          const rollupTotal = Object.entries(budgetData.lineItemRollups).reduce((total, [itemId]) => {
+            const allItems = [
+              ...budgetData.tenantImprovements,
+              ...budgetData.designSoftCosts,
+              ...budgetData.existingImprovements
+            ];
+            const item = allItems.find(i => i.id === itemId);
+            return total + (item ? parseFloat(item.totalPrice) || 0 : 0);
+          }, 0);
+          return formatCurrency(rollupTotal);
+        })()})</span></h3>
         <p class="rollup-summary-description">The following items are being redistributed to different categories:</p>
         <div class="rollup-summary-content">
             ${Object.entries(budgetData.lineItemRollups).map(([itemId, targetCategory]) => {
@@ -2421,7 +2432,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                 });
               }}
             />
-            <Label htmlFor="hasExistingImprovements" className="text-lg font-semibold">
+            <Label htmlFor="hasExistingImprovements" className="text-lg font-semibold" style={{ color: 'rgb(0, 112, 192)' }}>
               Existing Improvements
             </Label>
           </div>
@@ -2486,7 +2497,20 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
       {Object.keys(budgetData.lineItemRollups).length > 0 && (
         <Card className="bg-blue-50 border-blue-200">
           <CardHeader>
-            <CardTitle className="text-lg text-blue-800">Line Item Rollup Summary</CardTitle>
+            <CardTitle className="text-lg text-blue-800">
+              Line Item Rollup Summary
+              <span className="text-purple-600 italic font-normal ml-2">
+                ({formatCurrency(Object.entries(budgetData.lineItemRollups).reduce((total, [itemId]) => {
+                  const allItems = [
+                    ...budgetData.tenantImprovements,
+                    ...budgetData.designSoftCosts,
+                    ...budgetData.existingImprovements
+                  ];
+                  const item = allItems.find(i => i.id === itemId);
+                  return total + (item ? parseFloat(item.totalPrice) || 0 : 0);
+                }, 0))})
+              </span>
+            </CardTitle>
             <p className="text-sm text-blue-600">
               The following items are being redistributed to different categories:
             </p>

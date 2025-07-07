@@ -1996,8 +1996,8 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                   <TableHead className="w-36">Quantity (Unit)</TableHead>
                   <TableHead className="w-32">Unit Price</TableHead>
                   {!newItemCategory && <TableHead className="w-32">Total</TableHead>}
-                  <TableHead className="w-24 text-center">Tenant %</TableHead>
                   <TableHead className="w-24 text-center">$/SF</TableHead>
+                  <TableHead className="w-24 text-center">Tenant %</TableHead>
                   <TableHead className="w-32">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -2126,19 +2126,6 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                                   </TableCell>
                                   {!newItemCategory && <TableCell className="font-medium">{formatCurrency(item.totalPrice)}</TableCell>}
                                   <TableCell className="text-center">
-                                    <div className="flex items-center justify-center gap-1">
-                                      <Input
-                                        type="number"
-                                        min="0"
-                                        max="100"
-                                        value={item.tenantShare || 100}
-                                        onChange={(e) => updateItem(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', item.id, { tenantShare: parseInt(e.target.value) || 100 })}
-                                        className="w-12 text-center text-sm"
-                                      />
-                                      <span className="text-xs text-gray-500">%</span>
-                                    </div>
-                                  </TableCell>
-                                  <TableCell className="text-center">
                                     {(() => {
                                       const totalCost = parseFloat(item.totalPrice) || 0;
                                       const tenantShare = (item.tenantShare || 100) / 100;
@@ -2150,6 +2137,19 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                                       }
                                       return 'N/A';
                                     })()}
+                                  </TableCell>
+                                  <TableCell className="text-center">
+                                    <div className="flex items-center justify-center gap-1">
+                                      <Input
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        value={item.tenantShare || 100}
+                                        onChange={(e) => updateItem(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', item.id, { tenantShare: parseInt(e.target.value) || 100 })}
+                                        className="w-12 text-center text-sm"
+                                      />
+                                      <span className="text-xs text-gray-500">%</span>
+                                    </div>
                                   </TableCell>
                                   <TableCell>
                                     <div className="flex gap-1">
@@ -2196,11 +2196,6 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                                   )}
                                   <TableCell className="text-center">
                                     <span className={`${isAssembled ? 'line-through opacity-60' : ''}`}>
-                                      {item.tenantShare || 100}%
-                                    </span>
-                                  </TableCell>
-                                  <TableCell className="text-center">
-                                    <span className={`${isAssembled ? 'line-through opacity-60' : ''}`}>
                                       {(() => {
                                         const totalCost = calculateDistributedCosts(item);
                                         const tenantShare = (item.tenantShare || 100) / 100;
@@ -2212,6 +2207,11 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                                         }
                                         return 'N/A';
                                       })()}
+                                    </span>
+                                  </TableCell>
+                                  <TableCell className="text-center">
+                                    <span className={`${isAssembled ? 'line-through opacity-60' : ''}`}>
+                                      {item.tenantShare || 100}%
                                     </span>
                                   </TableCell>
                                   <TableCell>
@@ -2314,17 +2314,6 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                 />
               </div>
               <div>
-                <Label>Tenant %</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={newItem.tenantShare || 100}
-                  onChange={(e) => setNewItem(prev => ({ ...prev, tenantShare: parseInt(e.target.value) || 100 }))}
-                  placeholder="100"
-                />
-              </div>
-              <div>
                 <Label>$/SF</Label>
                 <div className="h-10 flex items-center justify-center text-sm text-gray-500 bg-gray-100 rounded border">
                   {(() => {
@@ -2339,6 +2328,17 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                     return 'N/A';
                   })()}
                 </div>
+              </div>
+              <div>
+                <Label>Tenant %</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={newItem.tenantShare || 100}
+                  onChange={(e) => setNewItem(prev => ({ ...prev, tenantShare: parseInt(e.target.value) || 100 }))}
+                  placeholder="100"
+                />
               </div>
               <div className="flex items-end gap-2">
                 <Button onClick={() => addNewItem(category)} size="sm">

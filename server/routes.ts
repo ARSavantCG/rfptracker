@@ -331,7 +331,24 @@ function generateAllBidCollectionsHtml(rfp: any, allBidsData: any[]) {
                 <td style="text-align: center; font-weight: 600;">${index + 1}</td>
                 <td><strong>${bid.company}</strong></td>
                 <td class="currency"><strong>$${bid.totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong></td>
-                <td>${bid.submissionDate ? new Date(bid.submissionDate + 'T00:00:00').toLocaleDateString('en-US') : 'N/A'}</td>
+                <td>${(() => {
+                  if (!bid.submissionDate) return 'N/A';
+                  try {
+                    let date;
+                    if (typeof bid.submissionDate === 'string') {
+                      if (bid.submissionDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                        date = new Date(bid.submissionDate + 'T00:00:00');
+                      } else {
+                        date = new Date(bid.submissionDate);
+                      }
+                    } else {
+                      date = new Date(bid.submissionDate);
+                    }
+                    return isNaN(date.getTime()) ? 'Invalid Date' : date.toLocaleDateString('en-US');
+                  } catch (error) {
+                    return 'Invalid Date';
+                  }
+                })()}</td>
                 <td style="text-align: center;">${bid.lineItemCount}</td>
               </tr>
             `).join('')}
@@ -357,7 +374,24 @@ function generateAllBidCollectionsHtml(rfp: any, allBidsData: any[]) {
                   <span class="info-label">Company:</span> ${bid.contractorCompany}
                 </div>
                 <div class="info-item">
-                  <span class="info-label">Submission Date:</span> ${bid.submissionDate ? new Date(bid.submissionDate + 'T00:00:00').toLocaleDateString('en-US') : 'N/A'}
+                  <span class="info-label">Submission Date:</span> ${(() => {
+                    if (!bid.submissionDate) return 'N/A';
+                    try {
+                      let date;
+                      if (typeof bid.submissionDate === 'string') {
+                        if (bid.submissionDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                          date = new Date(bid.submissionDate + 'T00:00:00');
+                        } else {
+                          date = new Date(bid.submissionDate);
+                        }
+                      } else {
+                        date = new Date(bid.submissionDate);
+                      }
+                      return isNaN(date.getTime()) ? 'Invalid Date' : date.toLocaleDateString('en-US');
+                    } catch (error) {
+                      return 'Invalid Date';
+                    }
+                  })()}
                 </div>
               </div>
               <div>

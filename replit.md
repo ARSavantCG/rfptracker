@@ -267,6 +267,7 @@ This is a full-stack web application for tracking and managing Request for Propo
 - July 7, 2025. Fixed unit price input usability in bid collection modal - removed currency formatting during editing to enable natural decimal entry, users can now type prices like "1.50" without worrying about decimal placement, fields show formatted display when not being edited
 - July 7, 2025. Implemented Excel and CSV import functionality for bid collection pricing breakdown - added "Import from Excel/CSV" button with smart column mapping (Description, Qty, Unit, Total Price, Notes), automatic unit price calculation from quantity and total price, comprehensive error handling, and seamless integration with existing line items for efficient data entry from external spreadsheets
 - July 7, 2025. Fixed bid collection total amount calculation and date persistence issues - corrected server-side PUT route to properly extract form fields (contractorId, totalAmount, submissionDate) from FormData instead of expecting nested bidData object, added automatic total amount recalculation in frontend before submission, ensuring calculated totals display correctly in bid collection table instead of "TBD"
+- July 7, 2025. Fixed "Invalid Date" display in bid collection PDF reports - enhanced date formatting logic in "Bid Comparison Summary" and detailed bid sections to properly handle different date formats (string, Date object, YYYY-MM-DD) and gracefully handle parsing errors, ensuring submission dates display correctly instead of showing "Invalid Date"
 
 ## User Preferences
 

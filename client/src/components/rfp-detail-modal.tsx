@@ -1,5 +1,4 @@
-import { useState } from "react";
-import * as React from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { formatDate, formatFileSize, getFileIcon, getStatusColor } from "@/lib/utils";
@@ -125,7 +124,7 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
   const isAdmin = user?.role === "admin";
 
   // Initialize edit dates when modal opens or RFP changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (rfp) {
       setEditCompletedDate(rfp.completedDate ? new Date(rfp.completedDate).toISOString().split('T')[0] : "");
       setEditPublishedDate(rfp.publishedDate ? new Date(rfp.publishedDate).toISOString().split('T')[0] : "");

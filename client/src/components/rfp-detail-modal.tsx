@@ -75,7 +75,7 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
       if (dates.publishedDate !== undefined) {
         updateData.publishedDate = dates.publishedDate ? new Date(dates.publishedDate) : null;
       }
-      const response = await apiRequest("PATCH", `/api/rfp-requests/${rfp.id}`, updateData);
+      const response = await apiRequest(`/api/rfp-requests/${rfp.id}`, "PATCH", updateData);
       return response.json();
     },
     onSuccess: () => {
@@ -278,12 +278,15 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
                     <div className="flex items-center gap-2">
                       <span className="text-blue-700 font-medium">Completed:</span>
                       {isAdmin && isEditingDates ? (
-                        <Input
-                          type="date"
-                          value={editCompletedDate}
-                          onChange={(e) => setEditCompletedDate(e.target.value)}
-                          className="h-6 text-xs w-32"
-                        />
+                        <div className="relative">
+                          <Input
+                            type="date"
+                            value={editCompletedDate}
+                            onChange={(e) => setEditCompletedDate(e.target.value)}
+                            className="h-6 text-xs w-32 pr-8"
+                          />
+                          <CalendarIcon className="absolute right-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-gray-400 pointer-events-none" />
+                        </div>
                       ) : (
                         <span className="text-blue-900">
                           {rfp.completedDate ? formatDate(rfp.completedDate) : "Not completed"}
@@ -303,12 +306,15 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
                     <div className="flex items-center gap-2">
                       <span className="text-blue-700 font-medium">Published:</span>
                       {isAdmin && isEditingDates ? (
-                        <Input
-                          type="date"
-                          value={editPublishedDate}
-                          onChange={(e) => setEditPublishedDate(e.target.value)}
-                          className="h-6 text-xs w-32"
-                        />
+                        <div className="relative">
+                          <Input
+                            type="date"
+                            value={editPublishedDate}
+                            onChange={(e) => setEditPublishedDate(e.target.value)}
+                            className="h-6 text-xs w-32 pr-8"
+                          />
+                          <CalendarIcon className="absolute right-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-gray-400 pointer-events-none" />
+                        </div>
                       ) : (
                         <span className="text-blue-900">
                           {rfp.publishedDate ? formatDate(rfp.publishedDate) : "Not published"}

@@ -111,8 +111,7 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValida
 
   // Map RFP status to workflow phase to ensure sync
   const getWorkflowPhaseFromStatus = (status: string, workflowPhase: string) => {
-    if (status === "received") return "rfp-entry";
-    if (status === "in-progress" && workflowPhase === "rfp-entry") return "rfp-entry";
+    // Just return the actual workflow phase - don't override based on status
     return workflowPhase;
   };
 

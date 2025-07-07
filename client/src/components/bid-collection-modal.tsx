@@ -149,6 +149,14 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
     }
   }, [bidCollection, form, isOpen, existingLineItems]);
 
+  // Recalculate total whenever line items change
+  useEffect(() => {
+    const total = lineItems.reduce((sum, item) => {
+      return sum + parseFloat(item.totalPrice || '0');
+    }, 0).toFixed(2);
+    form.setValue('totalAmount', total);
+  }, [lineItems, form]);
+
   // Reset attachments when modal closes
   useEffect(() => {
     if (!isOpen) {
@@ -233,9 +241,15 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
 
 
   const onSubmit = (data: BidCollectionFormData) => {
+    // Recalculate total amount before submission
+    const totalAmount = lineItems.reduce((sum, item) => {
+      return sum + parseFloat(item.totalPrice || '0');
+    }, 0).toFixed(2);
+    
     const submissionData = {
       ...data,
       contractorId: parseInt(data.contractorId.toString()),
+      totalAmount, // Ensure calculated total is included
       lineItems,
       attachments,
     };

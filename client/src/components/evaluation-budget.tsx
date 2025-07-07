@@ -27,6 +27,7 @@ interface EvaluationLineItem {
   unit: string;
   unitPrice: string;
   totalPrice: string;
+  tenantShare: number; // Percentage of cost attributed to tenant (0-100)
   bidCollectionId?: number;
   bidLineItemId?: number;
   isRolledUp?: boolean;
@@ -74,7 +75,8 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     quantity: 0,
     unit: "",
     unitPrice: "",
-    totalPrice: ""
+    totalPrice: "",
+    tenantShare: 100
   });
   
   // Assembly creation state
@@ -246,6 +248,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
       unit: firstItem.unit,
       unitPrice: unitPrice.toFixed(2),
       totalPrice: totalPrice.toFixed(2),
+      tenantShare: 100, // Default to 100% tenant responsibility
       bidCollectionId: firstItem.bidCollectionId,
       bidLineItemId: firstItem.bidLineItemId,
       isRolledUp: false,
@@ -443,6 +446,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
           unit: unit,
           unitPrice: unitPrice.toFixed(2),
           totalPrice: allocatedCost.toFixed(2),
+          tenantShare: 100, // Default to 100% tenant responsibility
         } as EvaluationLineItem;
       })
       .filter(item => item !== null);
@@ -485,6 +489,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         unit: item.unit || "ea",
         unitPrice: item.unitPrice?.toString() || "0.00",
         totalPrice: item.totalPrice?.toString() || "0.00",
+        tenantShare: 100, // Default to 100% tenant responsibility
         bidCollectionId: item.bidCollectionId,
         bidLineItemId: item.id,
       }));
@@ -529,7 +534,8 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         return total;
       }
       const price = parseFloat(item.totalPrice) || 0;
-      return total + price;
+      const tenantShare = (item.tenantShare || 100) / 100;
+      return total + (price * tenantShare);
     }, 0);
   };
 
@@ -543,7 +549,9 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     const categoryItems = budgetData[category];
     categoryItems.forEach(item => {
       if (!budgetData.lineItemRollups[item.id] && !item.assemblyId) {
-        total += parseFloat(item.totalPrice) || 0;
+        const price = parseFloat(item.totalPrice) || 0;
+        const tenantShare = (item.tenantShare || 100) / 100;
+        total += price * tenantShare;
       }
     });
     
@@ -558,7 +566,10 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         ];
         const item = allItems.find(i => i.id === itemId);
         if (item) {
-          let amountToAdd = parseFloat(item.totalPrice) || 0;
+          const baseAmount = parseFloat(item.totalPrice) || 0;
+          const tenantShare = (item.tenantShare || 100) / 100;
+          let amountToAdd = baseAmount * tenantShare;
+          
           // If rolling to both TI & Design, distribute proportionally based on category sizes
           if (targetCategory === 'tiAndDesign') {
             const tiTotal = calculateCategoryTotal(budgetData.tenantImprovements);
@@ -594,7 +605,9 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
 
   // Calculate distributed costs including rolled-up items
   const calculateDistributedCosts = (item: EvaluationLineItem) => {
-    const itemCost = parseFloat(item.totalPrice) || 0;
+    const baseItemCost = parseFloat(item.totalPrice) || 0;
+    const tenantShare = (item.tenantShare || 100) / 100;
+    const itemCost = baseItemCost * tenantShare;
     
     // First handle design cost distribution if applicable
     let distributedDesignCost = 0;
@@ -621,7 +634,11 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
       // Calculate base total for this category (excluding rolled-up items)
       const baseCategoryTotal = budgetData[itemCategory]
         .filter(i => !budgetData.lineItemRollups[i.id])
-        .reduce((total, i) => total + (parseFloat(i.totalPrice) || 0), 0);
+        .reduce((total, i) => {
+          const price = parseFloat(i.totalPrice) || 0;
+          const tenantShare = (i.tenantShare || 100) / 100;
+          return total + (price * tenantShare);
+        }, 0);
       
       // Calculate total amount rolled INTO this category
       let totalRolledIn = 0;
@@ -634,7 +651,9 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
           ];
           const rolledItem = allItems.find(i => i.id === itemId);
           if (rolledItem) {
-            let amountToAdd = parseFloat(rolledItem.totalPrice) || 0;
+            const baseAmount = parseFloat(rolledItem.totalPrice) || 0;
+            const tenantShare = (rolledItem.tenantShare || 100) / 100;
+            let amountToAdd = baseAmount * tenantShare;
             // If rolling to both TI & Design, distribute proportionally based on category sizes
             if (targetCategory === 'tiAndDesign') {
               const tiTotal = calculateCategoryTotal(budgetData.tenantImprovements);
@@ -850,15 +869,18 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     
     // Local calculation functions that use the hideDesignCosts parameter
     const calculateDistributedCostsForPreview = (item: EvaluationLineItem) => {
+      const baseItemCost = parseFloat(item.totalPrice) || 0;
+      const tenantShare = (item.tenantShare || 100) / 100;
+      const itemCost = baseItemCost * tenantShare;
+      
       if (!hideDesignCosts) {
-        // When showing separately, return original cost
-        return parseFloat(item.totalPrice) || 0;
+        // When showing separately, return tenant share cost
+        return itemCost;
       }
       
       // When hiding design costs, distribute them proportionally
       const tiTotal = calculateCategoryTotal(budgetData.tenantImprovements);
       const designTotal = calculateCategoryTotal(budgetData.designSoftCosts);
-      const itemCost = parseFloat(item.totalPrice) || 0;
       
       if (tiTotal === 0) return itemCost;
       
@@ -1441,6 +1463,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
       unit: newItem.unit || "ea",
       unitPrice: unitPrice.toFixed(2),
       totalPrice,
+      tenantShare: newItem.tenantShare || 100,
     };
 
     setBudgetData(prev => ({
@@ -1448,7 +1471,14 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
       [category]: [...prev[category], item],
     }));
 
-    setNewItem({});
+    setNewItem({
+      description: "",
+      quantity: 0,
+      unit: "",
+      unitPrice: "",
+      totalPrice: "",
+      tenantShare: 100
+    });
     setNewItemCategory("");
   };
 
@@ -1844,6 +1874,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                   <TableHead className="w-36">Quantity (Unit)</TableHead>
                   <TableHead className="w-32">Unit Price</TableHead>
                   {!newItemCategory && <TableHead className="w-32">Total</TableHead>}
+                  <TableHead className="w-24 text-center">Tenant %</TableHead>
                   <TableHead className="w-24 text-center">$/SF</TableHead>
                   <TableHead className="w-32">Actions</TableHead>
                 </TableRow>
@@ -1973,11 +2004,26 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                                   </TableCell>
                                   {!newItemCategory && <TableCell className="font-medium">{formatCurrency(item.totalPrice)}</TableCell>}
                                   <TableCell className="text-center">
+                                    <div className="flex items-center justify-center gap-1">
+                                      <Input
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        value={item.tenantShare || 100}
+                                        onChange={(e) => updateItem(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', item.id, { tenantShare: parseInt(e.target.value) || 100 })}
+                                        className="w-12 text-center text-sm"
+                                      />
+                                      <span className="text-xs text-gray-500">%</span>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="text-center">
                                     {(() => {
                                       const totalCost = parseFloat(item.totalPrice) || 0;
+                                      const tenantShare = (item.tenantShare || 100) / 100;
+                                      const tenantCost = totalCost * tenantShare;
                                       const warehouseArea = parseFloat(rfp?.warehouseArea || '0');
                                       if (warehouseArea > 0) {
-                                        const perSF = totalCost / warehouseArea;
+                                        const perSF = tenantCost / warehouseArea;
                                         return `$${perSF.toFixed(2)}`;
                                       }
                                       return 'N/A';
@@ -2028,11 +2074,18 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                                   )}
                                   <TableCell className="text-center">
                                     <span className={`${isAssembled ? 'line-through opacity-60' : ''}`}>
+                                      {item.tenantShare || 100}%
+                                    </span>
+                                  </TableCell>
+                                  <TableCell className="text-center">
+                                    <span className={`${isAssembled ? 'line-through opacity-60' : ''}`}>
                                       {(() => {
                                         const totalCost = calculateDistributedCosts(item);
+                                        const tenantShare = (item.tenantShare || 100) / 100;
+                                        const tenantCost = totalCost * tenantShare;
                                         const warehouseArea = parseFloat(rfp?.warehouseArea || '0');
                                         if (warehouseArea > 0) {
-                                          const perSF = totalCost / warehouseArea;
+                                          const perSF = tenantCost / warehouseArea;
                                           return `$${perSF.toFixed(2)}`;
                                         }
                                         return 'N/A';
@@ -2093,7 +2146,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
 
         {newItemCategory === category && (
           <div className="mt-4 p-4 border rounded-lg bg-gray-50">
-            <div className="grid grid-cols-1 md:grid-cols-8 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-9 gap-4">
               <div className="md:col-span-3">
                 <Label>Description</Label>
                 <Input
@@ -2139,13 +2192,26 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                 />
               </div>
               <div>
+                <Label>Tenant %</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={newItem.tenantShare || 100}
+                  onChange={(e) => setNewItem(prev => ({ ...prev, tenantShare: parseInt(e.target.value) || 100 }))}
+                  placeholder="100"
+                />
+              </div>
+              <div>
                 <Label>$/SF</Label>
                 <div className="h-10 flex items-center justify-center text-sm text-gray-500 bg-gray-100 rounded border">
                   {(() => {
                     const totalPrice = parseFloat(newItem.totalPrice || '0');
+                    const tenantShare = (newItem.tenantShare || 100) / 100;
+                    const tenantCost = totalPrice * tenantShare;
                     const warehouseArea = parseFloat(rfp?.warehouseArea || '0');
-                    if (warehouseArea > 0 && totalPrice > 0) {
-                      const perSF = totalPrice / warehouseArea;
+                    if (warehouseArea > 0 && tenantCost > 0) {
+                      const perSF = tenantCost / warehouseArea;
                       return `$${perSF.toFixed(2)}`;
                     }
                     return 'N/A';

@@ -523,6 +523,7 @@ export type EvaluationLineItem = {
   unit: string; // e.g., "sq ft", "lf", "ea"
   unitPrice: string;
   totalPrice: string;
+  tenantShare: number; // Percentage of cost attributed to tenant (0-100)
   bidCollectionId?: number; // Reference to original bid if applicable
   bidLineItemId?: number; // Reference to original bid line item if applicable
 };

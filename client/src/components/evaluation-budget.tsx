@@ -1353,14 +1353,14 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
 
     ${budgetData.notes ? `
     <div class="notes-section">
-        <h3 class="notes-title">Budget Notes</h3>
+        <h3 style="color: #333; font-size: 16px; font-weight: 600; margin: 0 0 8px 0;">Budget Notes</h3>
         <div class="notes-content">${budgetData.notes}</div>
     </div>
     ` : ''}
 
     ${Object.keys(budgetData.lineItemRollups).length > 0 ? `
     <div class="rollup-summary-section">
-        <h3 class="rollup-summary-title">Line Item Rollup Summary <span style="color: #9333ea; font-style: italic; font-weight: normal;">(${(() => {
+        <h3 style="color: #333; font-size: 16px; font-weight: 600; margin: 0 0 8px 0;">Line Item Rollup Summary <span style="color: #9333ea; font-style: italic; font-weight: normal;">(${(() => {
           const rollupTotal = Object.entries(budgetData.lineItemRollups).reduce((total, [itemId]) => {
             const allItems = [
               ...budgetData.tenantImprovements,
@@ -1419,7 +1419,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
       return hasAssemblies;
     })() ? `
     <div class="rollup-summary-section">
-        <h3 class="rollup-summary-title">Assembly Summary</h3>
+        <h3 style="color: #333; font-size: 16px; font-weight: 600; margin: 0 0 8px 0;">Assembly Summary</h3>
         <p class="rollup-summary-description">The following line items are grouped into assemblies:</p>
         <div class="rollup-summary-content">
             ${(() => {
@@ -1516,7 +1516,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
 
       return `
       <div class="rollup-summary-section">
-          <h3 class="rollup-summary-title">Tenant Share Summary</h3>
+          <h3 style="color: #333; font-size: 16px; font-weight: 600; margin: 0 0 8px 0;">Tenant Share Summary</h3>
           <p class="rollup-summary-description">The following items have been prorated based on tenant responsibility percentage:</p>
           <div class="tenant-share-content">
               ${proratedItems.map(item => {
@@ -2434,7 +2434,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                 });
               }}
             />
-            <Label htmlFor="hasExistingImprovements" className="text-lg font-semibold text-cyan-600">
+            <Label htmlFor="hasExistingImprovements" className="text-lg font-semibold text-black">
               Existing Improvements
             </Label>
           </div>

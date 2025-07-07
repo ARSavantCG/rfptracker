@@ -329,28 +329,32 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
                         </button>
                       )}
                     </div>
-
-                    {/* Edit Actions */}
-                    {isAdmin && isEditingDates && (
-                      <div className="col-span-2 flex justify-end gap-2 mt-2">
-                        <button
-                          onClick={handleCancelDatesEdit}
-                          className="flex items-center gap-1 px-2 py-1 text-xs text-gray-600 hover:text-gray-800"
-                        >
-                          <X className="h-3 w-3" />
-                          Cancel
-                        </button>
-                        <button
-                          onClick={handleSaveDates}
-                          disabled={updateDatesMutation.isPending}
-                          className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
-                        >
-                          <Check className="h-3 w-3" />
-                          Save
-                        </button>
-                      </div>
-                    )}
                   </div>
+                  
+                  {/* Edit Actions */}
+                  {isAdmin && isEditingDates && (
+                    <div className="flex justify-end gap-2 mt-4">
+                      <button
+                        onClick={() => {
+                          setIsEditingDates(false);
+                          setEditCompletedDate(rfp.completedDate ? new Date(rfp.completedDate).toISOString().split('T')[0] : "");
+                          setEditPublishedDate(rfp.publishedDate ? new Date(rfp.publishedDate).toISOString().split('T')[0] : "");
+                        }}
+                        className="flex items-center gap-1 px-2 py-1 text-xs text-gray-600 hover:text-gray-800"
+                      >
+                        <X className="h-3 w-3" />
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleSaveDates}
+                        disabled={updateDatesMutation.isPending}
+                        className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                      >
+                        <Check className="h-3 w-3" />
+                        Save
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <div className="bg-gray-50 rounded-lg p-4">

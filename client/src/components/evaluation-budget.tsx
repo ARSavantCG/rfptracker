@@ -1141,6 +1141,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         }
         .section-total { font-weight: bold; color: #28a745; font-size: 16px; }
         .section-total.existing-improvements { color: #0891b2 !important; font-style: italic !important; }
+        .existing-improvements-total { color: #0891b2 !important; font-style: italic !important; font-weight: bold !important; }
         .table-container { padding: 8px; }
         table { width: 100%; border-collapse: collapse; margin-top: 5px; table-layout: fixed; }
         th, td { padding: 6px 8px; border-bottom: 1px solid #dee2e6; vertical-align: top; font-size: 13px; }

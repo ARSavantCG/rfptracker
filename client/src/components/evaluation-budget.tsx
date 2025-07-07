@@ -1231,8 +1231,9 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
             border-bottom: 1px solid #e9ecef;
         }
         .tenant-share-name {
-            font-weight: 600;
+            font-weight: 500;
             color: #495057;
+            font-size: 12px;
         }
         .tenant-share-percentage {
             background-color: #fd7e14;
@@ -2655,8 +2656,8 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                   return (
                     <div key={item.id} className="border rounded-lg p-3 bg-white">
                       <div className="flex justify-between items-center mb-2">
-                        <span className="font-semibold text-gray-800">{item.description}</span>
-                        <span className="text-sm text-orange-600 font-medium bg-orange-100 px-2 py-1 rounded">
+                        <span className="text-sm font-medium text-gray-800">{item.description}</span>
+                        <span className="text-xs text-orange-600 font-medium bg-orange-100 px-2 py-1 rounded">
                           {tenantShare}% Tenant Share
                         </span>
                       </div>

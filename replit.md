@@ -263,6 +263,8 @@ This is a full-stack web application for tracking and managing Request for Propo
 - July 2, 2025. Removed "Advance to Evaluation" button from New Bid Collection modal - eliminates workflow advancement option during bid creation to prevent confusion and accidental progression, maintaining button only in bid collection table view for intentional workflow advancement
 - July 2, 2025. Removed "Advance to Evaluation" button from workflow status panel - centralized workflow advancement to single location in bid collection summary window for controlled progression and reduced interface clutter
 - July 2, 2025. Updated publish phase completion button to "Publish & Mark Complete" - matches green workflow advancement pattern across all phases, provides clear action that publishes project and marks as completed in single step
+- July 7, 2025. Enhanced PDF generation to automatically use RFP's development contact information instead of invitation form data - updated all PDF generation functions (contractor, architect, broker variants) with consistent contact extraction logic, removed Contact Information section from invitation-to-bid modal while preserving contact info in generated PDFs
+- July 7, 2025. Fixed unit price input usability in bid collection modal - removed currency formatting during editing to enable natural decimal entry, users can now type prices like "1.50" without worrying about decimal placement, fields show formatted display when not being edited
 
 ## User Preferences
 

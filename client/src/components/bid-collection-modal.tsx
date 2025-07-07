@@ -549,26 +549,28 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                                   </TableCell>
                                   <TableCell>
                                     <Input
-                                      value={item.unitPrice ? `$${parseFloat(item.unitPrice || '0').toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}
+                                      value={editingIndex === index ? (item.unitPrice || '') : (item.unitPrice ? `$${parseFloat(item.unitPrice || '0').toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '')}
                                       onChange={(e) => {
                                         if (editingIndex === null) startEditing(index);
                                         const value = e.target.value.replace(/[$,]/g, '');
                                         updateLineItem(index, 'unitPrice', value);
                                       }}
-                                      placeholder="$0.00"
+                                      onFocus={() => startEditing(index)}
+                                      placeholder="0.00"
                                       type="text"
                                       className="w-full text-xs h-8 text-right"
                                     />
                                   </TableCell>
                                   <TableCell>
                                     <Input
-                                      value={item.totalPrice ? `$${parseFloat(item.totalPrice || '0').toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}
+                                      value={editingIndex === index ? (item.totalPrice || '') : (item.totalPrice ? `$${parseFloat(item.totalPrice || '0').toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '')}
                                       onChange={(e) => {
                                         if (editingIndex === null) startEditing(index);
                                         const value = e.target.value.replace(/[$,]/g, '');
                                         updateLineItem(index, 'totalPrice', value);
                                       }}
-                                      placeholder="$0.00"
+                                      onFocus={() => startEditing(index)}
+                                      placeholder="0.00"
                                       type="text"
                                       className="w-full text-xs h-8 text-right"
                                     />

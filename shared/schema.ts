@@ -94,8 +94,8 @@ export const updateRfpRequestSchema = insertRfpRequestSchema.partial().extend({
   id: z.number(),
   workflowPhase: z.enum(["rfp-entry", "rfp-validation", "invitation-to-bid", "bid-collection", "evaluation", "publish"]).optional(),
   status: z.enum(["received", "in-progress", "completed", "on-hold"]).optional(),
-  completedDate: z.date().optional().nullable(),
-  publishedDate: z.date().optional().nullable(),
+  completedDate: z.union([z.date(), z.string().transform((val) => val ? new Date(val) : null)]).optional().nullable(),
+  publishedDate: z.union([z.date(), z.string().transform((val) => val ? new Date(val) : null)]).optional().nullable(),
 });
 
 export type InsertRfpRequest = z.infer<typeof insertRfpRequestSchema>;

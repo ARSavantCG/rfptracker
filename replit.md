@@ -284,6 +284,7 @@ This is a full-stack web application for tracking and managing Request for Propo
 - July 7, 2025. Implemented comprehensive color consistency between web interface and PDF reports - existing improvements totals now display in cyan/teal italics in both evaluation workflow step and budget evaluation reports, ensuring visual distinction between costs included in Grand Total (green) versus excluded costs (cyan/teal italics)
 - July 7, 2025. Fixed PDF report header styling to enforce black text requirement - all section headers (Line Item Rollup Summary, Assembly Summary, Tenant Share Summary, Budget Notes, Existing Improvements) now use inline black styling instead of colored CSS classes, while maintaining colored styling only for numerical totals and values as required
 - July 7, 2025. Resolved persistent existing improvements total color issue in PDF generation - added `!important` declarations to inline styling for existing improvements section total to force cyan/teal color display, overriding any conflicting CSS classes that were causing green color persistence
+- July 7, 2025. Fixed workflow phase validation error in RFP edit form - updated insertRfpRequestSchema in shared/schema.ts to include "rfp-validation" and "publish" phases, replacing outdated 5-phase workflow enum with complete 6-phase workflow system to resolve "Invalid enum value" error when editing RFPs
 
 ## User Preferences
 

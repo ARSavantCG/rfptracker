@@ -1030,7 +1030,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
           <div class="section-header">
               <h2 class="section-title" style="color: #333;">
                   Existing Improvements
-                  <span style="color: #0891b2; font-style: italic; font-weight: bold; font-size: 16px;">${formatCurrency(total)} <span style="font-size: 50%; font-weight: normal;">${(() => {
+                  <span style="color: #0891b2 !important; font-style: italic !important; font-weight: bold !important; font-size: 16px !important;">${formatCurrency(total)} <span style="font-size: 50%; font-weight: normal;">${(() => {
                     const pricePerSf = rentableArea > 0 ? total / rentableArea : 0;
                     return pricePerSf > 0 ? '($' + pricePerSf.toFixed(2) + '/RSF)' : '';
                   })()}</span></span>

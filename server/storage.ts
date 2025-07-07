@@ -511,9 +511,8 @@ export class DatabaseStorage implements IStorage {
     
     if (newPhase === "rfp-entry") {
       newStatus = "received";
-    } else if (newPhase === "publish") {
-      newStatus = "completed";
     }
+    // Note: 'publish' phase stays 'in-progress' until explicitly marked complete
     
     const [updated] = await db
       .update(rfpRequests)

@@ -1792,7 +1792,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
       toast({
         title: "Budget Saved & Workflow Advanced",
-        description: "Evaluation budget saved and project moved to award phase.",
+        description: "Evaluation budget saved and project moved to publish phase.",
       });
     },
     onError: () => {

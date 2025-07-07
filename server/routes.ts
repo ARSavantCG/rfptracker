@@ -2624,7 +2624,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 let phaseClass = '';
                 
                 // Check if completed by status first, then by workflow phase
-                if (rfp.status === 'completed' || workflowPhase === 'award') {
+                if (rfp.status === 'completed') {
                   phaseDisplay = 'Completed';
                   phaseClass = 'status-completed';
                 } else {
@@ -2632,6 +2632,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     case 'rfp-entry':
                       phaseDisplay = 'RFP Entry';
                       phaseClass = 'status-received';
+                      break;
+                    case 'rfp-validation':
+                      phaseDisplay = 'RFP Validation';
+                      phaseClass = 'status-inprogress';
                       break;
                     case 'invitation-to-bid':
                       phaseDisplay = 'Invitation to Bid';
@@ -2646,8 +2650,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                       phaseClass = 'status-inprogress';
                       break;
                     case 'publish':
-                      phaseDisplay = 'Published';
-                      phaseClass = 'status-completed';
+                      phaseDisplay = 'Publish';
+                      phaseClass = 'status-inprogress';
                       break;
                     default:
                       phaseDisplay = 'RFP Entry';

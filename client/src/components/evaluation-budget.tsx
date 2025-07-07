@@ -941,7 +941,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                   ${title}
                   <span class="section-total">${formatCurrency(total)} <span style="font-size: 50%; font-weight: normal;">${(() => {
                     const pricePerSf = rentableArea > 0 ? total / rentableArea : 0;
-                    return pricePerSf > 0 ? '($' + pricePerSf.toFixed(2) + '/sf)' : '';
+                    return pricePerSf > 0 ? '($' + pricePerSf.toFixed(2) + '/RSF)' : '';
                   })()}</span></span>
               </h2>
           </div>
@@ -954,7 +954,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                           <th>Unit</th>
                           <th>Unit Price</th>
                           <th>Total Price</th>
-                          <th>$ / sf</th>
+                          <th>$/RSF</th>
                       </tr>
                   </thead>
                   <tbody>
@@ -1012,7 +1012,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                   Existing Improvements
                   <span class="section-total">${formatCurrency(total)} <span style="font-size: 50%; font-weight: normal;">${(() => {
                     const pricePerSf = rentableArea > 0 ? total / rentableArea : 0;
-                    return pricePerSf > 0 ? '($' + pricePerSf.toFixed(2) + '/sf)' : '';
+                    return pricePerSf > 0 ? '($' + pricePerSf.toFixed(2) + '/RSF)' : '';
                   })()}</span></span>
               </h2>
           </div>
@@ -1026,7 +1026,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                           <th>Unit</th>
                           <th>Unit Price</th>
                           <th>Total Price</th>
-                          <th>$ / sf</th>
+                          <th>$/RSF</th>
                       </tr>
                   </thead>
                   <tbody>
@@ -1320,7 +1320,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     <div class="grand-total">
         <h2>Grand Total: ${formatCurrency(grandTotal)} <span style="font-size: 50%; font-weight: normal;">${(() => {
           const pricePerSf = rentableArea > 0 ? grandTotal / rentableArea : 0;
-          return pricePerSf > 0 ? '($' + pricePerSf.toFixed(2) + '/sf)' : '';
+          return pricePerSf > 0 ? '($' + pricePerSf.toFixed(2) + '/RSF)' : '';
         })()}</span></h2>
         ${budgetData.hasExistingImprovements && !budgetData.includeExistingInTotal ? 
           '<p style="margin: 10px 0 0 0; font-size: 14px; opacity: 0.9;">* Existing improvements tracked separately for financial modeling</p>' : ''
@@ -1996,7 +1996,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                   <TableHead className="w-36">Quantity (Unit)</TableHead>
                   <TableHead className="w-32">Unit Price</TableHead>
                   {!newItemCategory && <TableHead className="w-32">Total</TableHead>}
-                  <TableHead className="w-24 text-center">$/SF</TableHead>
+                  <TableHead className="w-24 text-center">$/RSF</TableHead>
                   <TableHead className="w-24 text-center">Tenant %</TableHead>
                   <TableHead className="w-32">Actions</TableHead>
                 </TableRow>
@@ -2314,7 +2314,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                 />
               </div>
               <div>
-                <Label>$/SF</Label>
+                <Label>$/RSF</Label>
                 <div className="h-10 flex items-center justify-center text-sm text-gray-500 bg-gray-100 rounded border">
                   {(() => {
                     const totalPrice = parseFloat(newItem.totalPrice || '0');

@@ -89,7 +89,6 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
       setIsEditingDates(false);
     },
     onError: (error) => {
-      console.error('Date update error:', error);
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to update completion dates",

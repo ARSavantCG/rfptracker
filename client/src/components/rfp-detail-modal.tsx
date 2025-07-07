@@ -70,10 +70,10 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
       if (!rfp) return;
       const updateData: any = {};
       if (dates.completedDate !== undefined) {
-        updateData.completedDate = dates.completedDate || null;
+        updateData.completedDate = dates.completedDate ? new Date(dates.completedDate) : null;
       }
       if (dates.publishedDate !== undefined) {
-        updateData.publishedDate = dates.publishedDate || null;
+        updateData.publishedDate = dates.publishedDate ? new Date(dates.publishedDate) : null;
       }
       const response = await apiRequest(`/api/rfp-requests/${rfp.id}`, "PATCH", updateData);
       return response.json();

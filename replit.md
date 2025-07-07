@@ -290,6 +290,7 @@ This is a full-stack web application for tracking and managing Request for Propo
 - July 7, 2025. Fixed file deletion error in edit RFP modal - resolved "response.json is not a function" error by removing duplicate JSON parsing in deleteFileMutation for both edit-rfp-modal and rfp-detail-modal components, file deletion now works correctly without API response processing errors
 - July 7, 2025. Fixed project name generation in edit RFP modal - corrected auto-generated project names to properly use property names instead of property IDs, ensuring names display as "Tenant @ Property Name" (e.g., "Katz & Katz (Expansion) @ Bridge 595 - 2") instead of "Tenant @ 2" by implementing proper property lookup logic matching the create RFP modal
 - July 7, 2025. Updated existing K&K Expansion RFP project name in database - manually corrected stored project name from "Katz & Katz Transfer (Expansion) @ 2" to "Katz & Katz Transfer (Expansion) @ Bridge 595 - 2" to match proper naming format, ensuring PDF generation displays correct property name
+- July 7, 2025. Fixed PDF generation project name display - updated generateBrokerArchitectRfpHtml, generateBrokerContractorRfpHtml, and generateArchitectRfpHtml functions to prioritize rfp.projectName from database over constructed names, ensuring all PDF documents display correct "Tenant @ Property Name - Building" format instead of "Tenant @ Property ID"
 
 ## User Preferences
 

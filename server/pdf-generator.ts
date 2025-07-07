@@ -683,7 +683,7 @@ function generateArchitectRfpHtml(options: PdfGenerationOptions, dates: any): st
   const { rfp, invitationToBid, recipientName, recipientCompany } = options;
   const { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea } = dates;
   
-  const projectName = rfp.confidential ? `Confidential @ ${rfp.propertyAddress || rfp.property}` : `${rfp.tenantName} @ ${rfp.propertyAddress || rfp.property}`;
+  const projectName = rfp.projectName || (rfp.confidential ? `Confidential @ ${rfp.propertyAddress || rfp.property}` : `${rfp.tenantName} @ ${rfp.propertyAddress || rfp.property}`);
   const projectLocation = rfp.propertyAddress || invitationToBid?.projectLocation || rfp.property;
   // Use contact info from RFP development contact or invitation fallback
   const developmentContactInfo = rfp.developmentContact ? rfp.developmentContact.split(' - ') : [];
@@ -957,7 +957,7 @@ function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dates: an
   const contactEmail = contactInfo[1] || 'contact@company.com';
   const contactPhone = contactInfo[2] || '';
 
-  const projectName = invitationToBid?.projectScope || (rfp.confidential ? `Confidential @ ${rfp.property}` : `${rfp.tenantName} @ ${rfp.property}`);
+  const projectName = rfp.projectName || invitationToBid?.projectScope || (rfp.confidential ? `Confidential @ ${rfp.property}` : `${rfp.tenantName} @ ${rfp.property}`);
 
   // Format bid deadline with E.O.B.
   const formattedDeadline = bidDeadline.replace(/(\d{4})$/, '$1 E.O.B.');
@@ -1120,7 +1120,7 @@ function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, dates: a
   const contactEmail = contactInfo[1] || 'contact@company.com';
   const contactPhone = contactInfo[2] || '';
 
-  const projectName = invitationToBid?.projectScope || (rfp.confidential ? `Confidential @ ${rfp.property}` : `${rfp.tenantName} @ ${rfp.property}`);
+  const projectName = rfp.projectName || invitationToBid?.projectScope || (rfp.confidential ? `Confidential @ ${rfp.property}` : `${rfp.tenantName} @ ${rfp.property}`);
 
   // Format bid deadline with E.O.B.
   const formattedDeadline = bidDeadline.replace(/(\d{4})$/, '$1 E.O.B.');

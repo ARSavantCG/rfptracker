@@ -126,8 +126,8 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
     }
   }, [rfp?.id]);
 
-  // Check if user is admin
-  const isAdmin = user?.role === "admin";
+  // Check if user has admin permissions
+  const isAdmin = user?.permissions?.includes('admin.access');
 
   if (!isOpen || !rfp) return null;
 

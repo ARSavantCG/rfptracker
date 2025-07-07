@@ -280,6 +280,75 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
     },
   });
 
+  const updateAndAdvanceMutation = useMutation({
+    mutationFn: async (data: EditRfpFormData) => {
+      if (!rfp) throw new Error("No RFP selected");
+      
+      const formData = new FormData();
+      
+      // Append form fields
+      Object.entries(data).forEach(([key, value]) => {
+        if (Array.isArray(value)) {
+          formData.append(key, JSON.stringify(value));
+        } else {
+          formData.append(key, value.toString());
+        }
+      });
+      
+      // Add selected bay configurations
+      if (selectedBayConfigurations.length > 0) {
+        formData.append('selectedBayConfigurations', JSON.stringify(selectedBayConfigurations));
+      }
+      
+      // Append new files
+      selectedFiles.forEach((file) => {
+        formData.append('files', file);
+      });
+      
+      // First update the RFP
+      const updateResponse = await fetch(`/api/rfp-requests/${rfp.id}/update-with-files`, {
+        method: 'PATCH',
+        body: formData,
+      });
+      
+      if (!updateResponse.ok) {
+        throw new Error('Failed to update RFP request');
+      }
+
+      // Then advance the workflow phase to rfp-validation
+      const advanceResponse = await fetch(`/api/rfp-requests/${rfp.id}/workflow-phase`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('auth-token')}`,
+        },
+        body: JSON.stringify({ phase: "rfp-validation" }),
+      });
+      
+      if (!advanceResponse.ok) {
+        throw new Error('Failed to advance workflow phase');
+      }
+      
+      return advanceResponse.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
+      toast({
+        title: "Success",
+        description: "RFP updated and advanced to validation phase",
+      });
+      onClose();
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update and advance RFP",
+        variant: "destructive",
+      });
+    },
+  });
+
   if (!rfp) return null;
 
   return (
@@ -727,15 +796,32 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
                 type="button"
                 variant="outline"
                 onClick={handleClose}
-                disabled={updateMutation.isPending}
+                disabled={updateMutation.isPending || updateAndAdvanceMutation.isPending}
               >
                 <X className="h-4 w-4 mr-2" />
                 Cancel
               </Button>
-              <Button type="submit" disabled={updateMutation.isPending}>
+              <Button 
+                type="submit" 
+                disabled={updateMutation.isPending || updateAndAdvanceMutation.isPending}
+              >
                 <Save className="h-4 w-4 mr-2" />
                 {updateMutation.isPending ? "Updating..." : "Update RFP"}
               </Button>
+              {rfp?.workflowPhase === "rfp-entry" && (
+                <Button
+                  type="button"
+                  onClick={() => {
+                    const formData = form.getValues();
+                    updateAndAdvanceMutation.mutate(formData);
+                  }}
+                  disabled={updateMutation.isPending || updateAndAdvanceMutation.isPending}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  {updateAndAdvanceMutation.isPending ? "Saving & Advancing..." : "Save & Advance to RFP Validation"}
+                </Button>
+              )}
             </div>
           </form>
         </Form>

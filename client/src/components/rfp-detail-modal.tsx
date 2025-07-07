@@ -239,7 +239,10 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
               <div className="lg:col-span-2 space-y-6">
                 {/* Project Summary Section */}
                 <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                  <h4 className="font-medium text-blue-900 mb-3">Project Summary</h4>
+                  <h4 className="font-medium text-blue-900 mb-3">
+                    Project Summary 
+                    {isAdmin && <span className="text-xs text-blue-600 ml-2">(Admin Mode)</span>}
+                  </h4>
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div className="flex items-start">
                       <span className="text-blue-700 font-medium">Property:</span>
@@ -274,7 +277,7 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
                       </div>
                     )}
                     
-                    {/* Completion Date */}
+                    {/* Always show completion dates for admin users */}
                     <div className="flex items-center gap-2">
                       <span className="text-blue-700 font-medium">Completed:</span>
                       {isAdmin && isEditingDates ? (
@@ -295,14 +298,14 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
                       {isAdmin && !isEditingDates && (
                         <button
                           onClick={() => setIsEditingDates(true)}
-                          className="text-blue-600 hover:text-blue-800"
+                          className="text-blue-600 hover:text-blue-800 ml-2"
+                          title="Edit completion date"
                         >
                           <Edit className="h-3 w-3" />
                         </button>
                       )}
                     </div>
 
-                    {/* Published Date */}
                     <div className="flex items-center gap-2">
                       <span className="text-blue-700 font-medium">Published:</span>
                       {isAdmin && isEditingDates ? (
@@ -323,7 +326,8 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
                       {isAdmin && !isEditingDates && (
                         <button
                           onClick={() => setIsEditingDates(true)}
-                          className="text-blue-600 hover:text-blue-800"
+                          className="text-blue-600 hover:text-blue-800 ml-2"
+                          title="Edit published date"
                         >
                           <Edit className="h-3 w-3" />
                         </button>

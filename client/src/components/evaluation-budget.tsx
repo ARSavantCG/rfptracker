@@ -2807,6 +2807,9 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         </CardContent>
       </Card>
 
+      {/* File Attachments */}
+      <EvaluationAttachments rfpId={rfp?.id} />
+
       {/* Preview Report */}
       <Card>
         <CardHeader>
@@ -2833,9 +2836,6 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
           </p>
         </CardContent>
       </Card>
-
-      {/* File Attachments */}
-      <EvaluationAttachments rfpId={rfp?.id} />
 
       {/* Evaluation Budget History */}
       <EvaluationBudgetHistory rfpId={rfp?.id} />

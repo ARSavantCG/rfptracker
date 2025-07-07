@@ -1030,7 +1030,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
           <div class="section-header">
               <h2 class="section-title" style="color: rgb(0, 112, 192);">
                   Existing Improvements
-                  <span class="section-total" style="color: rgb(0, 112, 192);">${formatCurrency(total)} <span style="font-size: 50%; font-weight: normal;">${(() => {
+                  <span class="section-total existing-improvements">${formatCurrency(total)} <span style="font-size: 50%; font-weight: normal;">${(() => {
                     const pricePerSf = rentableArea > 0 ? total / rentableArea : 0;
                     return pricePerSf > 0 ? '($' + pricePerSf.toFixed(2) + '/RSF)' : '';
                   })()}</span></span>
@@ -1140,6 +1140,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
             align-items: center;
         }
         .section-total { font-weight: bold; color: #28a745; font-size: 16px; }
+        .section-total.existing-improvements { color: rgb(0, 112, 192); }
         .table-container { padding: 8px; }
         table { width: 100%; border-collapse: collapse; margin-top: 5px; table-layout: fixed; }
         th, td { padding: 6px 8px; border-bottom: 1px solid #dee2e6; vertical-align: top; font-size: 13px; }

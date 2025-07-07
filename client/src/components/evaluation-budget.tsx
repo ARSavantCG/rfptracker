@@ -497,8 +497,8 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         assemblies: (existingBudget as any).assemblies || {},
         oversizedDoors: doorCounts.oversized,
         regularDoors: doorCounts.regular,
-        vehicularParking: (existingBudget as any).vehicularParking !== undefined ? (existingBudget as any).vehicularParking : parkingCounts.vehicular,
-        trailerParking: (existingBudget as any).trailerParking !== undefined ? (existingBudget as any).trailerParking : parkingCounts.trailer,
+        vehicularParking: (existingBudget as any).metadata?.vehicularParking !== undefined ? (existingBudget as any).metadata.vehicularParking : parkingCounts.vehicular,
+        trailerParking: (existingBudget as any).metadata?.trailerParking !== undefined ? (existingBudget as any).metadata.trailerParking : parkingCounts.trailer,
       });
     } else if (allBidLineItems && Array.isArray(allBidLineItems) && allBidLineItems.length > 0) {
       // Initialize with bid line items if no saved budget exists
@@ -1674,7 +1674,9 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         assemblies: budgetData.assemblies,
         metadata: { 
           oversizedDoors: budgetData.oversizedDoors, 
-          regularDoors: budgetData.regularDoors 
+          regularDoors: budgetData.regularDoors,
+          vehicularParking: budgetData.vehicularParking,
+          trailerParking: budgetData.trailerParking
         },
       };
 
@@ -1743,7 +1745,9 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         assemblies: budgetData.assemblies,
         metadata: { 
           oversizedDoors: budgetData.oversizedDoors, 
-          regularDoors: budgetData.regularDoors 
+          regularDoors: budgetData.regularDoors,
+          vehicularParking: budgetData.vehicularParking,
+          trailerParking: budgetData.trailerParking
         },
       };
 

@@ -275,88 +275,73 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
                     )}
                     
                     {/* Completion Date */}
-                    <div className="flex items-start">
+                    <div className="flex items-center gap-2">
                       <span className="text-blue-700 font-medium">Completed:</span>
-                      <span className="ml-2 text-blue-900">
-                        {!isEditingDates ? (
-                          <div className="flex items-center gap-2">
-                            <span>{rfp.completedDate ? formatDate(rfp.completedDate) : 'Not completed'}</span>
-                            {isAdmin && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setIsEditingDates(true)}
-                                className="h-6 px-2 text-blue-600 hover:text-blue-800"
-                              >
-                                <Edit className="h-3 w-3" />
-                              </Button>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            <Input
-                              type="date"
-                              value={editCompletedDate}
-                              onChange={(e) => setEditCompletedDate(e.target.value)}
-                              className="h-7 text-xs"
-                            />
-                          </div>
-                        )}
-                      </span>
+                      {isAdmin && isEditingDates ? (
+                        <Input
+                          type="date"
+                          value={editCompletedDate}
+                          onChange={(e) => setEditCompletedDate(e.target.value)}
+                          className="h-6 text-xs w-32"
+                        />
+                      ) : (
+                        <span className="text-blue-900">
+                          {rfp.completedDate ? formatDate(rfp.completedDate) : "Not completed"}
+                        </span>
+                      )}
+                      {isAdmin && !isEditingDates && (
+                        <button
+                          onClick={() => setIsEditingDates(true)}
+                          className="text-blue-600 hover:text-blue-800"
+                        >
+                          <Edit className="h-3 w-3" />
+                        </button>
+                      )}
                     </div>
 
                     {/* Published Date */}
-                    <div className="flex items-start">
+                    <div className="flex items-center gap-2">
                       <span className="text-blue-700 font-medium">Published:</span>
-                      <span className="ml-2 text-blue-900">
-                        {!isEditingDates ? (
-                          <div className="flex items-center gap-2">
-                            <span>{rfp.publishedDate ? formatDate(rfp.publishedDate) : 'Not published'}</span>
-                            {isAdmin && !isEditingDates && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setIsEditingDates(true)}
-                                className="h-6 px-2 text-blue-600 hover:text-blue-800"
-                              >
-                                <Edit className="h-3 w-3" />
-                              </Button>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            <Input
-                              type="date"
-                              value={editPublishedDate}
-                              onChange={(e) => setEditPublishedDate(e.target.value)}
-                              className="h-7 text-xs"
-                            />
-                          </div>
-                        )}
-                      </span>
+                      {isAdmin && isEditingDates ? (
+                        <Input
+                          type="date"
+                          value={editPublishedDate}
+                          onChange={(e) => setEditPublishedDate(e.target.value)}
+                          className="h-6 text-xs w-32"
+                        />
+                      ) : (
+                        <span className="text-blue-900">
+                          {rfp.publishedDate ? formatDate(rfp.publishedDate) : "Not published"}
+                        </span>
+                      )}
+                      {isAdmin && !isEditingDates && (
+                        <button
+                          onClick={() => setIsEditingDates(true)}
+                          className="text-blue-600 hover:text-blue-800"
+                        >
+                          <Edit className="h-3 w-3" />
+                        </button>
+                      )}
                     </div>
 
-                    {/* Save/Cancel buttons for admin editing */}
-                    {isEditingDates && isAdmin && (
-                      <div className="flex items-center gap-2 col-span-2 justify-end">
-                        <Button
-                          variant="ghost"
-                          size="sm"
+                    {/* Edit Actions */}
+                    {isAdmin && isEditingDates && (
+                      <div className="col-span-2 flex justify-end gap-2 mt-2">
+                        <button
                           onClick={handleCancelDatesEdit}
-                          className="h-7 px-3 text-gray-600 hover:text-gray-800"
+                          className="flex items-center gap-1 px-2 py-1 text-xs text-gray-600 hover:text-gray-800"
                         >
-                          <X className="h-3 w-3 mr-1" />
+                          <X className="h-3 w-3" />
                           Cancel
-                        </Button>
-                        <Button
-                          size="sm"
+                        </button>
+                        <button
                           onClick={handleSaveDates}
                           disabled={updateDatesMutation.isPending}
-                          className="h-7 px-3 bg-blue-600 hover:bg-blue-700"
+                          className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
                         >
-                          <Check className="h-3 w-3 mr-1" />
+                          <Check className="h-3 w-3" />
                           Save
-                        </Button>
+                        </button>
                       </div>
                     )}
                   </div>

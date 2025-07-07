@@ -25,6 +25,12 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
     enabled: !!rfp?.id,
   });
 
+  // Get property information for project summary
+  const { data: property } = useQuery({
+    queryKey: [`/api/properties/${rfp?.propertyId}`],
+    enabled: !!rfp?.propertyId,
+  });
+
   const updateStatusMutation = useMutation({
     mutationFn: async (newStatus: string) => {
       if (!rfp) return;
@@ -168,6 +174,45 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Request Details */}
               <div className="lg:col-span-2 space-y-6">
+                {/* Project Summary Section */}
+                <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                  <h4 className="font-medium text-blue-900 mb-3">Project Summary</h4>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div className="flex items-start">
+                      <span className="text-blue-700 font-medium">Property:</span>
+                      <span className="ml-2 text-blue-900">{property?.propertyName || 'Loading...'}</span>
+                    </div>
+                    <div className="flex items-start">
+                      <span className="text-blue-700 font-medium">Tenant:</span>
+                      <span className="ml-2 text-blue-900">{rfp.tenantName}</span>
+                    </div>
+                    <div className="flex items-start">
+                      <span className="text-blue-700 font-medium">Rentable Area:</span>
+                      <span className="ml-2 text-blue-900">
+                        {rfp.warehouseArea ? `${parseInt(rfp.warehouseArea).toLocaleString()} SF` : 'Not specified'}
+                      </span>
+                    </div>
+                    <div className="flex items-start">
+                      <span className="text-blue-700 font-medium">Bay Count:</span>
+                      <span className="ml-2 text-blue-900">
+                        {rfp.selectedBayConfigurations ? `${rfp.selectedBayConfigurations.length} bays` : 'Not specified'}
+                      </span>
+                    </div>
+                    {rfp.estimatedValue && (
+                      <div className="flex items-start">
+                        <span className="text-blue-700 font-medium">Est. Value:</span>
+                        <span className="ml-2 text-blue-900">{rfp.estimatedValue}</span>
+                      </div>
+                    )}
+                    {rfp.timelineRequirements && (
+                      <div className="flex items-start">
+                        <span className="text-blue-700 font-medium">Timeline:</span>
+                        <span className="ml-2 text-blue-900">{rfp.timelineRequirements}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
                 <div className="bg-gray-50 rounded-lg p-4">
                   <h4 className="font-medium text-gray-900 mb-3">Request Information</h4>
                   <div className="grid grid-cols-2 gap-4 text-sm">

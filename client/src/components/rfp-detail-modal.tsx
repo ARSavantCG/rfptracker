@@ -286,6 +286,14 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
                         {rfp.selectedBayConfigurations ? `${rfp.selectedBayConfigurations.length} bays` : 'Not specified'}
                       </span>
                     </div>
+                    <div className="flex items-start">
+                      <span className="text-blue-700 font-medium">Received Date:</span>
+                      <span className="ml-2 text-blue-900">{formatDate(rfp.receivedOn)}</span>
+                    </div>
+                    <div className="flex items-start">
+                      <span className="text-blue-700 font-medium">Internal Due Date:</span>
+                      <span className="ml-2 text-blue-900">{formatDate(rfp.internalDueDate)}</span>
+                    </div>
                     {rfp.estimatedValue && (
                       <div className="flex items-start">
                         <span className="text-blue-700 font-medium">Est. Value:</span>

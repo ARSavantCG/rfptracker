@@ -98,7 +98,8 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
-      day: 'numeric'
+      day: 'numeric',
+      timeZone: 'America/New_York'
     });
   };
 

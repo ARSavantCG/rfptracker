@@ -143,7 +143,7 @@ function generateBidCollectionHtml(bidCollection: any, rfp: any, lineItems: any[
                     return 'Invalid Date';
                   }
                   
-                  return date.toLocaleDateString('en-US');
+                  return date.toLocaleDateString('en-US', { timeZone: 'America/New_York' });
                 } catch (error) {
                   console.error('Date parsing error:', error, 'Original value:', bidCollection.submissionDate);
                   return 'Invalid Date';

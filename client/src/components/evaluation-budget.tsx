@@ -894,12 +894,12 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         return {
           Category: categoryName,
           Description: item.description,
-          Quantity: new Intl.NumberFormat('en-US').format(item.quantity),
+          Quantity: item.quantity,
           Unit: item.unit,
-          'Unit Price': `$${unitPrice.toFixed(2)}`,
-          'Total Price': `$${totalPrice.toFixed(2)}`,
+          'Unit Price': unitPrice,
+          'Total Price': totalPrice,
           'Tenant Share %': item.tenantShare || 100,
-          '$/RSF': pricePerSf > 0 ? `$${pricePerSf.toFixed(2)}` : 'N/A'
+          '$/RSF': pricePerSf > 0 ? pricePerSf : 0
         };
       });
     };
@@ -920,12 +920,12 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
       allData.push({
         Category: 'Assembly',
         Description: assemblyName,
-        Quantity: '1',
+        Quantity: 1,
         Unit: 'assembly',
-        'Unit Price': `$${assemblyData.total.toFixed(2)}`,
-        'Total Price': `$${assemblyData.total.toFixed(2)}`,
+        'Unit Price': assemblyData.total,
+        'Total Price': assemblyData.total,
         'Tenant Share %': 100,
-        '$/RSF': pricePerSf > 0 ? `$${pricePerSf.toFixed(2)}` : 'N/A'
+        '$/RSF': pricePerSf > 0 ? pricePerSf : 0
       });
     });
 
@@ -943,9 +943,9 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
       Quantity: '',
       Unit: '',
       'Unit Price': '',
-      'Total Price': `$${tiTotal.toFixed(2)}`,
+      'Total Price': tiTotal,
       'Tenant Share %': '',
-      '$/RSF': rentableArea > 0 ? `$${(tiTotal / rentableArea).toFixed(2)}` : 'N/A'
+      '$/RSF': rentableArea > 0 ? tiTotal / rentableArea : 0
     });
 
     if (budgetData.separateDesignCosts && designTotal > 0) {
@@ -955,9 +955,9 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         Quantity: '',
         Unit: '',
         'Unit Price': '',
-        'Total Price': `$${designTotal.toFixed(2)}`,
+        'Total Price': designTotal,
         'Tenant Share %': '',
-        '$/RSF': rentableArea > 0 ? `$${(designTotal / rentableArea).toFixed(2)}` : 'N/A'
+        '$/RSF': rentableArea > 0 ? designTotal / rentableArea : 0
       });
     }
 
@@ -968,9 +968,9 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         Quantity: '',
         Unit: '',
         'Unit Price': '',
-        'Total Price': `$${existingTotal.toFixed(2)}`,
+        'Total Price': existingTotal,
         'Tenant Share %': '',
-        '$/RSF': rentableArea > 0 ? `$${(existingTotal / rentableArea).toFixed(2)}` : 'N/A'
+        '$/RSF': rentableArea > 0 ? existingTotal / rentableArea : 0
       });
     }
 
@@ -980,9 +980,9 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
       Quantity: '',
       Unit: '',
       'Unit Price': '',
-      'Total Price': `$${grandTotal.toFixed(2)}`,
+      'Total Price': grandTotal,
       'Tenant Share %': '',
-      '$/RSF': rentableArea > 0 ? `$${(grandTotal / rentableArea).toFixed(2)}` : 'N/A'
+      '$/RSF': rentableArea > 0 ? grandTotal / rentableArea : 0
     });
 
     // Create worksheet
@@ -1004,6 +1004,32 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1:H1');
     range.e.r += projectInfo.length;
     worksheet['!ref'] = XLSX.utils.encode_range(range);
+
+    // Format currency columns - E (Unit Price), F (Total Price), H ($/RSF)
+    const dataStartRow = projectInfo.length + 1;
+    if (worksheet['!cols']) worksheet['!cols'] = [];
+    else worksheet['!cols'] = [];
+    
+    // Set column formats
+    for (let row = dataStartRow; row <= range.e.r; row++) {
+      // Unit Price column (E)
+      const unitPriceCell = `E${row}`;
+      if (worksheet[unitPriceCell] && typeof worksheet[unitPriceCell].v === 'number') {
+        worksheet[unitPriceCell].z = '$#,##0.00';
+      }
+      
+      // Total Price column (F)
+      const totalPriceCell = `F${row}`;
+      if (worksheet[totalPriceCell] && typeof worksheet[totalPriceCell].v === 'number') {
+        worksheet[totalPriceCell].z = '$#,##0.00';
+      }
+      
+      // $/RSF column (H)
+      const perSfCell = `H${row}`;
+      if (worksheet[perSfCell] && typeof worksheet[perSfCell].v === 'number') {
+        worksheet[perSfCell].z = '$#,##0.00';
+      }
+    }
 
     // Add worksheet to workbook
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Evaluation Budget');
@@ -1058,12 +1084,12 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         return {
           Category: categoryName,
           Description: item.description,
-          Quantity: new Intl.NumberFormat('en-US').format(item.quantity),
+          Quantity: item.quantity,
           Unit: item.unit,
-          'Unit Price': `$${unitPrice.toFixed(2)}`,
-          'Total Price': `$${totalPrice.toFixed(2)}`,
+          'Unit Price': unitPrice,
+          'Total Price': totalPrice,
           'Tenant Share %': item.tenantShare || 100,
-          '$/RSF': pricePerSf > 0 ? `$${pricePerSf.toFixed(2)}` : 'N/A',
+          '$/RSF': pricePerSf > 0 ? pricePerSf : 0,
           'Rolled Up': isRolledUp ? 'YES' : 'NO',
           'Rolled Up To': rolledUpTo,
           'In Assembly': isAssembled ? 'YES' : 'NO',
@@ -1114,7 +1140,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
           Quantity: '',
           Unit: '',
           'Unit Price': '',
-          'Total Price': `$${(parseFloat(item.totalPrice) || 0).toFixed(2)}`,
+          'Total Price': parseFloat(item.totalPrice) || 0,
           'Tenant Share %': '',
           '$/RSF': '',
           'Rolled Up': 'YES',
@@ -1153,12 +1179,12 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         allData.push({
           Category: 'ASSEMBLY',
           Description: assemblyName,
-          Quantity: '1',
+          Quantity: 1,
           Unit: 'assembly',
-          'Unit Price': `$${assemblyData.total.toFixed(2)}`,
-          'Total Price': `$${assemblyData.total.toFixed(2)}`,
+          'Unit Price': assemblyData.total,
+          'Total Price': assemblyData.total,
           'Tenant Share %': 100,
-          '$/RSF': rentableArea > 0 ? `$${(assemblyData.total / rentableArea).toFixed(2)}` : 'N/A',
+          '$/RSF': rentableArea > 0 ? assemblyData.total / rentableArea : 0,
           'Rolled Up': '',
           'Rolled Up To': '',
           'In Assembly': '',
@@ -1200,9 +1226,9 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
       Quantity: '',
       Unit: '',
       'Unit Price': '',
-      'Total Price': `$${originalTiTotal.toFixed(2)}`,
+      'Total Price': originalTiTotal,
       'Tenant Share %': '',
-      '$/RSF': rentableArea > 0 ? `$${(originalTiTotal / rentableArea).toFixed(2)}` : 'N/A',
+      '$/RSF': rentableArea > 0 ? originalTiTotal / rentableArea : 0,
       'Rolled Up': '',
       'Rolled Up To': '',
       'In Assembly': '',
@@ -1218,9 +1244,9 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
       Quantity: '',
       Unit: '',
       'Unit Price': '',
-      'Total Price': `$${originalDesignTotal.toFixed(2)}`,
+      'Total Price': originalDesignTotal,
       'Tenant Share %': '',
-      '$/RSF': rentableArea > 0 ? `$${(originalDesignTotal / rentableArea).toFixed(2)}` : 'N/A',
+      '$/RSF': rentableArea > 0 ? originalDesignTotal / rentableArea : 0,
       'Rolled Up': '',
       'Rolled Up To': '',
       'In Assembly': '',
@@ -1237,9 +1263,9 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         Quantity: '',
         Unit: '',
         'Unit Price': '',
-        'Total Price': `$${originalExistingTotal.toFixed(2)}`,
+        'Total Price': originalExistingTotal,
         'Tenant Share %': '',
-        '$/RSF': rentableArea > 0 ? `$${(originalExistingTotal / rentableArea).toFixed(2)}` : 'N/A',
+        '$/RSF': rentableArea > 0 ? originalExistingTotal / rentableArea : 0,
         'Rolled Up': '',
         'Rolled Up To': '',
         'In Assembly': '',
@@ -1257,9 +1283,9 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
       Quantity: '',
       Unit: '',
       'Unit Price': '',
-      'Total Price': `$${originalGrandTotal.toFixed(2)}`,
+      'Total Price': originalGrandTotal,
       'Tenant Share %': '',
-      '$/RSF': rentableArea > 0 ? `$${(originalGrandTotal / rentableArea).toFixed(2)}` : 'N/A',
+      '$/RSF': rentableArea > 0 ? originalGrandTotal / rentableArea : 0,
       'Rolled Up': '',
       'Rolled Up To': '',
       'In Assembly': '',
@@ -1290,6 +1316,30 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1:N1');
     range.e.r += projectInfo.length;
     worksheet['!ref'] = XLSX.utils.encode_range(range);
+
+    // Format currency columns - E (Unit Price), F (Total Price), H ($/RSF)
+    const dataStartRow = projectInfo.length + 1;
+    
+    // Set column formats for currency columns
+    for (let row = dataStartRow; row <= range.e.r; row++) {
+      // Unit Price column (E)
+      const unitPriceCell = `E${row}`;
+      if (worksheet[unitPriceCell] && typeof worksheet[unitPriceCell].v === 'number') {
+        worksheet[unitPriceCell].z = '$#,##0.00';
+      }
+      
+      // Total Price column (F)
+      const totalPriceCell = `F${row}`;
+      if (worksheet[totalPriceCell] && typeof worksheet[totalPriceCell].v === 'number') {
+        worksheet[totalPriceCell].z = '$#,##0.00';
+      }
+      
+      // $/RSF column (H)
+      const perSfCell = `H${row}`;
+      if (worksheet[perSfCell] && typeof worksheet[perSfCell].v === 'number') {
+        worksheet[perSfCell].z = '$#,##0.00';
+      }
+    }
 
     // Add worksheet to workbook
     XLSX.utils.book_append_sheet(workbook, worksheet, 'All Line Items Raw Data');

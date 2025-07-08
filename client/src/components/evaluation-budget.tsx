@@ -662,9 +662,9 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     else if (budgetData.existingImprovements.find(i => i.id === item.id)) itemCategory = 'existingImprovements';
     
     if (itemCategory) {
-      // Calculate base total for this category (excluding rolled-up items)
+      // Calculate base total for this category (excluding rolled-up items AND assembled items)
       const baseCategoryTotal = budgetData[itemCategory]
-        .filter(i => !budgetData.lineItemRollups[i.id])
+        .filter(i => !budgetData.lineItemRollups[i.id] && !i.assemblyId)
         .reduce((total, i) => {
           const price = parseFloat(i.totalPrice) || 0;
           const tenantShare = (i.tenantShare || 100) / 100;
@@ -706,7 +706,9 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
       });
       
       // Distribute rolled-in amount proportionally if this item is not rolled up elsewhere
-      if (!budgetData.lineItemRollups[item.id] && baseCategoryTotal > 0 && totalRolledIn > 0) {
+      if (!budgetData.lineItemRollups[item.id] && !item.assemblyId && baseCategoryTotal > 0 && totalRolledIn > 0) {
+        // CORRECTED LOGIC: Calculate item percentage based on what the user expects
+        // If item represents 60% of the displayed costs, it should get 60% of the rolled-up amount
         const itemPercentage = itemCost / baseCategoryTotal;
         rolledUpDistribution = totalRolledIn * itemPercentage;
       }
@@ -1425,6 +1427,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
       
       if (baseTiTotal === 0) return itemCost;
       
+      // CORRECTED LOGIC: Proper proportional distribution based on item's percentage of total
       const itemPercentage = itemCost / baseTiTotal;
       const distributedDesignCost = rolledUpDesignTotal * itemPercentage;
       

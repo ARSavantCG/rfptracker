@@ -151,8 +151,20 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
         projectName: rfp.projectName || "",
         confidential: Boolean(rfp.confidential),
         sentBy: rfp.sentBy || "",
-        receivedOn: rfp.receivedOn ? new Date(rfp.receivedOn).toISOString().split('T')[0] : "",
-        internalDueDate: rfp.internalDueDate ? new Date(rfp.internalDueDate).toISOString().split('T')[0] : "",
+        receivedOn: rfp.receivedOn ? (() => {
+          const date = new Date(rfp.receivedOn);
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const day = String(date.getDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        })() : "",
+        internalDueDate: rfp.internalDueDate ? (() => {
+          const date = new Date(rfp.internalDueDate);
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const day = String(date.getDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        })() : "",
         developmentContact: rfp.developmentContact || "",
         projectArea: rfp.projectArea || "",
         requestTypes: rfp.requestTypes || [],

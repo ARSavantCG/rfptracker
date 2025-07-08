@@ -909,13 +909,30 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
       }
       
       // When hiding design costs, distribute them proportionally
-      const tiTotal = calculateCategoryTotal(budgetData.tenantImprovements);
-      const designTotal = calculateCategoryTotal(budgetData.designSoftCosts);
+      // Get only the base TI costs (not including rollups) for distribution calculation
+      const baseTiItems = budgetData.tenantImprovements.filter(item => {
+        const rollupTarget = budgetData.lineItemRollups[item.id];
+        return !rollupTarget && !item.assemblyId; // Items not rolled up and not assembled
+      });
+      const baseTiTotal = baseTiItems.reduce((sum, item) => {
+        const baseItemCost = parseFloat(item.totalPrice) || 0;
+        const tenantShare = (item.tenantShare || 100) / 100;
+        return sum + (baseItemCost * tenantShare);
+      }, 0);
       
-      if (tiTotal === 0) return itemCost;
+      // Get the design costs that are rolled into TI
+      const rolledUpDesignTotal = budgetData.designSoftCosts
+        .filter(item => budgetData.lineItemRollups[item.id] === 'tenantImprovements')
+        .reduce((sum, item) => {
+          const baseItemCost = parseFloat(item.totalPrice) || 0;
+          const tenantShare = (item.tenantShare || 100) / 100;
+          return sum + (baseItemCost * tenantShare);
+        }, 0);
       
-      const itemPercentage = itemCost / tiTotal;
-      const distributedDesignCost = designTotal * itemPercentage;
+      if (baseTiTotal === 0) return itemCost;
+      
+      const itemPercentage = itemCost / baseTiTotal;
+      const distributedDesignCost = rolledUpDesignTotal * itemPercentage;
       
       return itemCost + distributedDesignCost;
     };

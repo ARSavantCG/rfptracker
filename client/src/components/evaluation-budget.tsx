@@ -1020,6 +1020,292 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     });
   };
 
+  const exportAllLineItems = () => {
+    if (!rfp) return;
+
+    // Create workbook
+    const workbook = XLSX.utils.book_new();
+    
+    // Calculate rentable area
+    let rentableArea = 0;
+    if (rfp?.warehouseArea) {
+      rentableArea = parseInt(rfp.warehouseArea);
+    } else if (rfp?.selectedBayConfigurations && Array.isArray(rfp.selectedBayConfigurations)) {
+      rentableArea = Math.round(rfp.selectedBayConfigurations.reduce((total, bay) => {
+        return total + (bay.rentableSquareFootage || 0);
+      }, 0));
+    }
+
+    // Helper function to prepare ALL line items exactly as entered
+    const prepareAllLineItemsForExport = (items: EvaluationLineItem[], categoryName: string) => {
+      return items.map(item => {
+        const totalPrice = parseFloat(item.totalPrice) || 0;
+        const unitPrice = parseFloat(item.unitPrice) || 0;
+        const pricePerSf = rentableArea > 0 ? totalPrice / rentableArea : 0;
+        
+        // Check if item is rolled up
+        const rollupTarget = budgetData.lineItemRollups[item.id];
+        const isRolledUp = !!rollupTarget;
+        const rolledUpTo = isRolledUp ? rollupTarget : '';
+        
+        // Check if item is part of an assembly
+        const isAssembled = !!item.assemblyId;
+        const assemblyName = isAssembled ? 
+          Object.keys(budgetData.assemblies || {}).find(name => 
+            (budgetData.assemblies || {})[name]?.components?.includes(item.id)
+          ) || 'Unknown Assembly' : '';
+
+        return {
+          Category: categoryName,
+          Description: item.description,
+          Quantity: new Intl.NumberFormat('en-US').format(item.quantity),
+          Unit: item.unit,
+          'Unit Price': `$${unitPrice.toFixed(2)}`,
+          'Total Price': `$${totalPrice.toFixed(2)}`,
+          'Tenant Share %': item.tenantShare || 100,
+          '$/RSF': pricePerSf > 0 ? `$${pricePerSf.toFixed(2)}` : 'N/A',
+          'Rolled Up': isRolledUp ? 'YES' : 'NO',
+          'Rolled Up To': rolledUpTo,
+          'In Assembly': isAssembled ? 'YES' : 'NO',
+          'Assembly Name': assemblyName,
+          'Bid Collection ID': item.bidCollectionId || '',
+          'Bid Line Item ID': item.bidLineItemId || '',
+          'Notes': `${isRolledUp ? 'ROLLED UP - ' : ''}${isAssembled ? 'ASSEMBLED - ' : ''}Original line item as entered`
+        };
+      });
+    };
+
+    // Prepare data for all categories - ALL items as entered
+    const tenantImprovementsData = prepareAllLineItemsForExport(budgetData.tenantImprovements, 'Tenant Improvements');
+    const designCostsData = prepareAllLineItemsForExport(budgetData.designSoftCosts, 'Design/Soft Costs');
+    const existingImprovementsData = prepareAllLineItemsForExport(budgetData.existingImprovements, 'Existing Improvements');
+
+    // Combine all data
+    let allData = [...tenantImprovementsData, ...designCostsData, ...existingImprovementsData];
+
+    // Add rollup summary information
+    allData.push({});  // Empty row
+    allData.push({
+      Category: 'ROLLUP SUMMARY',
+      Description: 'Line Item Rollup Configuration',
+      Quantity: '',
+      Unit: '',
+      'Unit Price': '',
+      'Total Price': '',
+      'Tenant Share %': '',
+      '$/RSF': '',
+      'Rolled Up': '',
+      'Rolled Up To': '',
+      'In Assembly': '',
+      'Assembly Name': '',
+      'Bid Collection ID': '',
+      'Bid Line Item ID': '',
+      'Notes': 'Shows which items are rolled up into other categories'
+    });
+
+    // Add rollup details
+    Object.entries(budgetData.lineItemRollups || {}).forEach(([itemId, target]) => {
+      const allItems = [...budgetData.tenantImprovements, ...budgetData.designSoftCosts, ...budgetData.existingImprovements];
+      const item = allItems.find(i => i.id === itemId);
+      if (item) {
+        allData.push({
+          Category: 'ROLLUP DETAIL',
+          Description: item.description,
+          Quantity: '',
+          Unit: '',
+          'Unit Price': '',
+          'Total Price': `$${(parseFloat(item.totalPrice) || 0).toFixed(2)}`,
+          'Tenant Share %': '',
+          '$/RSF': '',
+          'Rolled Up': 'YES',
+          'Rolled Up To': target,
+          'In Assembly': '',
+          'Assembly Name': '',
+          'Bid Collection ID': '',
+          'Bid Line Item ID': '',
+          'Notes': `This cost is rolled into the ${target} category`
+        });
+      }
+    });
+
+    // Add assembly summary
+    if (Object.keys(budgetData.assemblies || {}).length > 0) {
+      allData.push({});  // Empty row
+      allData.push({
+        Category: 'ASSEMBLY SUMMARY',
+        Description: 'Custom Assembly Configuration',
+        Quantity: '',
+        Unit: '',
+        'Unit Price': '',
+        'Total Price': '',
+        'Tenant Share %': '',
+        '$/RSF': '',
+        'Rolled Up': '',
+        'Rolled Up To': '',
+        'In Assembly': '',
+        'Assembly Name': '',
+        'Bid Collection ID': '',
+        'Bid Line Item ID': '',
+        'Notes': 'Shows custom assemblies and their component items'
+      });
+
+      Object.entries(budgetData.assemblies || {}).forEach(([assemblyName, assemblyData]) => {
+        allData.push({
+          Category: 'ASSEMBLY',
+          Description: assemblyName,
+          Quantity: '1',
+          Unit: 'assembly',
+          'Unit Price': `$${assemblyData.total.toFixed(2)}`,
+          'Total Price': `$${assemblyData.total.toFixed(2)}`,
+          'Tenant Share %': 100,
+          '$/RSF': rentableArea > 0 ? `$${(assemblyData.total / rentableArea).toFixed(2)}` : 'N/A',
+          'Rolled Up': '',
+          'Rolled Up To': '',
+          'In Assembly': '',
+          'Assembly Name': assemblyName,
+          'Bid Collection ID': '',
+          'Bid Line Item ID': '',
+          'Notes': `Custom assembly containing ${assemblyData.components?.length || 0} component items`
+        });
+      });
+    }
+
+    // Add category totals (original costs as entered)
+    allData.push({});  // Empty row
+    allData.push({
+      Category: 'TOTALS (ORIGINAL)',
+      Description: 'Original Category Totals (as entered)',
+      Quantity: '',
+      Unit: '',
+      'Unit Price': '',
+      'Total Price': '',
+      'Tenant Share %': '',
+      '$/RSF': '',
+      'Rolled Up': '',
+      'Rolled Up To': '',
+      'In Assembly': '',
+      'Assembly Name': '',
+      'Bid Collection ID': '',
+      'Bid Line Item ID': '',
+      'Notes': 'These are the totals of items as originally entered in each category'
+    });
+
+    const originalTiTotal = calculateCategoryTotal(budgetData.tenantImprovements);
+    const originalDesignTotal = calculateCategoryTotal(budgetData.designSoftCosts);
+    const originalExistingTotal = calculateCategoryTotal(budgetData.existingImprovements);
+
+    allData.push({
+      Category: 'ORIGINAL TOTALS',
+      Description: 'Tenant Improvements (Original)',
+      Quantity: '',
+      Unit: '',
+      'Unit Price': '',
+      'Total Price': `$${originalTiTotal.toFixed(2)}`,
+      'Tenant Share %': '',
+      '$/RSF': rentableArea > 0 ? `$${(originalTiTotal / rentableArea).toFixed(2)}` : 'N/A',
+      'Rolled Up': '',
+      'Rolled Up To': '',
+      'In Assembly': '',
+      'Assembly Name': '',
+      'Bid Collection ID': '',
+      'Bid Line Item ID': '',
+      'Notes': 'Original TI total before any rollups'
+    });
+
+    allData.push({
+      Category: 'ORIGINAL TOTALS',
+      Description: 'Design/Soft Costs (Original)',
+      Quantity: '',
+      Unit: '',
+      'Unit Price': '',
+      'Total Price': `$${originalDesignTotal.toFixed(2)}`,
+      'Tenant Share %': '',
+      '$/RSF': rentableArea > 0 ? `$${(originalDesignTotal / rentableArea).toFixed(2)}` : 'N/A',
+      'Rolled Up': '',
+      'Rolled Up To': '',
+      'In Assembly': '',
+      'Assembly Name': '',
+      'Bid Collection ID': '',
+      'Bid Line Item ID': '',
+      'Notes': 'Original Design costs before any rollups'
+    });
+
+    if (originalExistingTotal > 0) {
+      allData.push({
+        Category: 'ORIGINAL TOTALS',
+        Description: 'Existing Improvements (Original)',
+        Quantity: '',
+        Unit: '',
+        'Unit Price': '',
+        'Total Price': `$${originalExistingTotal.toFixed(2)}`,
+        'Tenant Share %': '',
+        '$/RSF': rentableArea > 0 ? `$${(originalExistingTotal / rentableArea).toFixed(2)}` : 'N/A',
+        'Rolled Up': '',
+        'Rolled Up To': '',
+        'In Assembly': '',
+        'Assembly Name': '',
+        'Bid Collection ID': '',
+        'Bid Line Item ID': '',
+        'Notes': 'Original Existing Improvements total'
+      });
+    }
+
+    const originalGrandTotal = originalTiTotal + originalDesignTotal + originalExistingTotal;
+    allData.push({
+      Category: 'ORIGINAL TOTALS',
+      Description: 'GRAND TOTAL (Original)',
+      Quantity: '',
+      Unit: '',
+      'Unit Price': '',
+      'Total Price': `$${originalGrandTotal.toFixed(2)}`,
+      'Tenant Share %': '',
+      '$/RSF': rentableArea > 0 ? `$${(originalGrandTotal / rentableArea).toFixed(2)}` : 'N/A',
+      'Rolled Up': '',
+      'Rolled Up To': '',
+      'In Assembly': '',
+      'Assembly Name': '',
+      'Bid Collection ID': '',
+      'Bid Line Item ID': '',
+      'Notes': 'Total of all original costs as entered'
+    });
+
+    // Create worksheet
+    const worksheet = XLSX.utils.json_to_sheet(allData);
+    
+    // Add project information at the top
+    const projectInfo = [
+      [`Project: ${rfp.projectName}`],
+      [`Property: ${propertyData?.propertyName || 'Unknown'}`],
+      [`Rentable Area: ${new Intl.NumberFormat('en-US').format(rentableArea)} SF`],
+      [`Export Date: ${new Date().toLocaleDateString('en-US', { timeZone: 'America/New_York' })}`],
+      [`Export Type: ALL LINE ITEMS (Raw Data)`],
+      [`Notes: This export shows every cost exactly as entered, including rolled up and assembled items`],
+      []  // Empty row
+    ];
+
+    // Insert project info at the top
+    XLSX.utils.sheet_add_aoa(worksheet, projectInfo, { origin: 'A1' });
+    
+    // Adjust the data range to account for header rows
+    const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1:N1');
+    range.e.r += projectInfo.length;
+    worksheet['!ref'] = XLSX.utils.encode_range(range);
+
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'All Line Items Raw Data');
+
+    // Generate filename
+    const fileName = `${rfp.projectName.replace(/[^a-zA-Z0-9]/g, '_')}_All_Line_Items_${new Date().toISOString().split('T')[0]}.xlsx`;
+
+    // Write and download file
+    XLSX.writeFile(workbook, fileName);
+
+    toast({
+      title: "Export Complete",
+      description: `All line items exported to ${fileName}`,
+    });
+  };
+
   const generateReportPreview = async (hideDesignCosts: boolean) => {
     if (!rfp) return;
     
@@ -3041,12 +3327,12 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="flex justify-center space-x-4">
+          <div className="flex justify-center space-x-3">
             <Button 
               onClick={() => generateReportPreview(budgetData.separateDesignCosts)}
               variant="outline"
               size="sm"
-              className="px-8"
+              className="px-6"
             >
               Generate Budget Report
             </Button>
@@ -3054,10 +3340,19 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
               onClick={exportToExcel}
               variant="outline"
               size="sm"
-              className="px-8"
+              className="px-6"
             >
               <FileDown className="w-4 h-4 mr-2" />
               Export to Excel
+            </Button>
+            <Button 
+              onClick={exportAllLineItems}
+              variant="outline"
+              size="sm"
+              className="px-6"
+            >
+              <FileDown className="w-4 h-4 mr-2" />
+              Export All Line Items
             </Button>
           </div>
           <p className="text-xs text-gray-500 mt-2 text-center">

@@ -18,6 +18,7 @@ import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import { useToast } from "@/hooks/use-toast";
 import { formatDate } from "@/lib/utils";
 import { nanoid } from "nanoid";
+import * as XLSX from "xlsx";
 import type { RfpRequest, BidCollection, BidLineItem } from "@shared/schema";
 
 interface EvaluationLineItem {
@@ -860,6 +861,163 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     return assemblyItems.reduce((total, item) => {
       return total + (parseFloat(item.totalPrice) || 0);
     }, 0);
+  };
+
+  const exportToExcel = () => {
+    if (!rfp) return;
+
+    // Create workbook
+    const workbook = XLSX.utils.book_new();
+    
+    // Calculate rentable area
+    let rentableArea = 0;
+    if (rfp?.warehouseArea) {
+      rentableArea = parseInt(rfp.warehouseArea);
+    } else if (rfp?.selectedBayConfigurations && Array.isArray(rfp.selectedBayConfigurations)) {
+      rentableArea = Math.round(rfp.selectedBayConfigurations.reduce((total, bay) => {
+        return total + (bay.rentableSquareFootage || 0);
+      }, 0));
+    }
+
+    // Helper function to prepare line items for export
+    const prepareLineItemsForExport = (items: EvaluationLineItem[], categoryName: string) => {
+      const filteredItems = items.filter(item => {
+        const rollupTarget = budgetData.lineItemRollups[item.id];
+        return !rollupTarget && !item.assemblyId; // Exclude rolled up and assembled items
+      });
+
+      return filteredItems.map(item => {
+        const totalPrice = calculateDistributedCosts(item);
+        const unitPrice = calculateDistributedUnitPrice(item);
+        const pricePerSf = rentableArea > 0 ? totalPrice / rentableArea : 0;
+        
+        return {
+          Category: categoryName,
+          Description: item.description,
+          Quantity: new Intl.NumberFormat('en-US').format(item.quantity),
+          Unit: item.unit,
+          'Unit Price': `$${unitPrice.toFixed(2)}`,
+          'Total Price': `$${totalPrice.toFixed(2)}`,
+          'Tenant Share %': item.tenantShare || 100,
+          '$/RSF': pricePerSf > 0 ? `$${pricePerSf.toFixed(2)}` : 'N/A'
+        };
+      });
+    };
+
+    // Prepare data for all categories
+    const tenantImprovementsData = prepareLineItemsForExport(budgetData.tenantImprovements, 'Tenant Improvements');
+    const designCostsData = budgetData.separateDesignCosts ? 
+      prepareLineItemsForExport(budgetData.designSoftCosts, 'Design/Soft Costs') : [];
+    const existingImprovementsData = budgetData.hasExistingImprovements ? 
+      prepareLineItemsForExport(budgetData.existingImprovements, 'Existing Improvements') : [];
+
+    // Combine all data
+    let allData = [...tenantImprovementsData, ...designCostsData, ...existingImprovementsData];
+
+    // Add assemblies
+    Object.entries(budgetData.assemblies || {}).forEach(([assemblyName, assemblyData]) => {
+      const pricePerSf = rentableArea > 0 ? assemblyData.total / rentableArea : 0;
+      allData.push({
+        Category: 'Assembly',
+        Description: assemblyName,
+        Quantity: '1',
+        Unit: 'assembly',
+        'Unit Price': `$${assemblyData.total.toFixed(2)}`,
+        'Total Price': `$${assemblyData.total.toFixed(2)}`,
+        'Tenant Share %': 100,
+        '$/RSF': pricePerSf > 0 ? `$${pricePerSf.toFixed(2)}` : 'N/A'
+      });
+    });
+
+    // Add summary totals
+    const tiTotal = calculateCategoryTotalWithRollups('tenantImprovements');
+    const designTotal = calculateCategoryTotalWithRollups('designSoftCosts');
+    const existingTotal = budgetData.hasExistingImprovements && budgetData.includeExistingInTotal ?
+      calculateCategoryTotalWithRollups('existingImprovements') : 0;
+    const grandTotal = tiTotal + designTotal + existingTotal;
+
+    allData.push({});  // Empty row
+    allData.push({
+      Category: 'TOTALS',
+      Description: 'Tenant Improvements Total',
+      Quantity: '',
+      Unit: '',
+      'Unit Price': '',
+      'Total Price': `$${tiTotal.toFixed(2)}`,
+      'Tenant Share %': '',
+      '$/RSF': rentableArea > 0 ? `$${(tiTotal / rentableArea).toFixed(2)}` : 'N/A'
+    });
+
+    if (budgetData.separateDesignCosts && designTotal > 0) {
+      allData.push({
+        Category: 'TOTALS',
+        Description: 'Design/Soft Costs Total',
+        Quantity: '',
+        Unit: '',
+        'Unit Price': '',
+        'Total Price': `$${designTotal.toFixed(2)}`,
+        'Tenant Share %': '',
+        '$/RSF': rentableArea > 0 ? `$${(designTotal / rentableArea).toFixed(2)}` : 'N/A'
+      });
+    }
+
+    if (existingTotal > 0) {
+      allData.push({
+        Category: 'TOTALS',
+        Description: 'Existing Improvements Total',
+        Quantity: '',
+        Unit: '',
+        'Unit Price': '',
+        'Total Price': `$${existingTotal.toFixed(2)}`,
+        'Tenant Share %': '',
+        '$/RSF': rentableArea > 0 ? `$${(existingTotal / rentableArea).toFixed(2)}` : 'N/A'
+      });
+    }
+
+    allData.push({
+      Category: 'TOTALS',
+      Description: 'GRAND TOTAL',
+      Quantity: '',
+      Unit: '',
+      'Unit Price': '',
+      'Total Price': `$${grandTotal.toFixed(2)}`,
+      'Tenant Share %': '',
+      '$/RSF': rentableArea > 0 ? `$${(grandTotal / rentableArea).toFixed(2)}` : 'N/A'
+    });
+
+    // Create worksheet
+    const worksheet = XLSX.utils.json_to_sheet(allData);
+    
+    // Add project information at the top
+    const projectInfo = [
+      [`Project: ${rfp.projectName}`],
+      [`Property: ${propertyData?.propertyName || 'Unknown'}`],
+      [`Rentable Area: ${new Intl.NumberFormat('en-US').format(rentableArea)} SF`],
+      [`Export Date: ${new Date().toLocaleDateString('en-US', { timeZone: 'America/New_York' })}`],
+      []  // Empty row
+    ];
+
+    // Insert project info at the top
+    XLSX.utils.sheet_add_aoa(worksheet, projectInfo, { origin: 'A1' });
+    
+    // Adjust the data range to account for header rows
+    const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1:H1');
+    range.e.r += projectInfo.length;
+    worksheet['!ref'] = XLSX.utils.encode_range(range);
+
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Evaluation Budget');
+
+    // Generate filename
+    const fileName = `${rfp.projectName.replace(/[^a-zA-Z0-9]/g, '_')}_Budget_${new Date().toISOString().split('T')[0]}.xlsx`;
+
+    // Write and download file
+    XLSX.writeFile(workbook, fileName);
+
+    toast({
+      title: "Export Complete",
+      description: `Budget data exported to ${fileName}`,
+    });
   };
 
   const generateReportPreview = async (hideDesignCosts: boolean) => {
@@ -2883,7 +3041,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="flex justify-center">
+          <div className="flex justify-center space-x-4">
             <Button 
               onClick={() => generateReportPreview(budgetData.separateDesignCosts)}
               variant="outline"
@@ -2891,6 +3049,15 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
               className="px-8"
             >
               Generate Budget Report
+            </Button>
+            <Button 
+              onClick={exportToExcel}
+              variant="outline"
+              size="sm"
+              className="px-8"
+            >
+              <FileDown className="w-4 h-4 mr-2" />
+              Export to Excel
             </Button>
           </div>
           <p className="text-xs text-gray-500 mt-2 text-center">

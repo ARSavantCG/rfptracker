@@ -620,6 +620,16 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         return total + calculateDistributedCosts(item);
       }, 0);
     }
+    
+    // Use rollup-aware calculation for accurate totals including rolled-up items
+    if (category === 'tenantImprovements') {
+      return calculateCategoryTotalWithRollups('tenantImprovements');
+    } else if (category === 'designSoftCosts') {
+      return calculateCategoryTotalWithRollups('designSoftCosts');
+    } else if (category === 'existingImprovements') {
+      return calculateCategoryTotalWithRollups('existingImprovements');
+    }
+    
     return calculateCategoryTotal(items);
   };
 
@@ -923,6 +933,16 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
           return total + calculateDistributedCostsForPreview(item);
         }, 0);
       }
+      
+      // Use rollup-aware calculation for accurate totals including rolled-up items
+      if (category === 'tenantImprovements') {
+        return calculateCategoryTotalWithRollups('tenantImprovements');
+      } else if (category === 'designSoftCosts') {
+        return calculateCategoryTotalWithRollups('designSoftCosts');
+      } else if (category === 'existingImprovements') {
+        return calculateCategoryTotalWithRollups('existingImprovements');
+      }
+      
       return calculateCategoryTotal(items);
     };
     

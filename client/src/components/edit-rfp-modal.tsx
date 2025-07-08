@@ -217,7 +217,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
             // Only add building name if it exists, is not empty, and is different from property name
             if (selectedProp.building && 
                 selectedProp.building.trim() !== '') {
-              propertyName = `${selectedProp.propertyName} - ${selectedProp.building}`;
+              propertyName = `${selectedProp.propertyName} - Bldg. ${selectedProp.building}`;
             } else {
               propertyName = selectedProp.propertyName;
             }

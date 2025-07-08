@@ -279,7 +279,9 @@ export class DatabaseStorage implements IStorage {
     }
 
     // Format property name with building (like in the property selector)
-    const propertyDisplay = `${property.propertyName} - ${property.building}`;
+    const propertyDisplay = property.building && property.building.trim() !== '' 
+      ? `${property.propertyName} - Bldg. ${property.building}`
+      : property.propertyName;
     
     if (confidential) {
       return `Confidential @ ${propertyDisplay}`;

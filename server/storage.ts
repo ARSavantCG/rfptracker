@@ -336,6 +336,17 @@ export class DatabaseStorage implements IStorage {
       updateData.confidential = Boolean(updateData.confidential);
     }
     
+    // Auto-calculate warehouse area from bay configurations if provided
+    if (updateData.selectedBayConfigurations && Array.isArray(updateData.selectedBayConfigurations)) {
+      const totalRentableArea = updateData.selectedBayConfigurations.reduce((sum: number, bay: any) => {
+        return sum + (bay.rentableSquareFootage || 0);
+      }, 0);
+      
+      if (totalRentableArea > 0) {
+        updateData.warehouseArea = Math.round(totalRentableArea).toString();
+      }
+    }
+    
     const [updated] = await db
       .update(rfpRequests)
       .set({

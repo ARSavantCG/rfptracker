@@ -262,7 +262,22 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
                     <div className="flex items-start">
                       <span className="text-blue-700 font-medium">Rentable Area:</span>
                       <span className="ml-2 text-blue-900">
-                        {rfp.warehouseArea ? `${parseInt(rfp.warehouseArea).toLocaleString()} SF` : 'Not specified'}
+                        {(() => {
+                          // First try warehouseArea, then calculate from bay configurations
+                          if (rfp.warehouseArea) {
+                            return `${parseInt(rfp.warehouseArea).toLocaleString()} SF`;
+                          }
+                          
+                          // Calculate from selected bay configurations
+                          if (rfp.selectedBayConfigurations && rfp.selectedBayConfigurations.length > 0) {
+                            const totalRentable = rfp.selectedBayConfigurations.reduce((sum: number, bay: any) => {
+                              return sum + (bay.rentableSquareFootage || 0);
+                            }, 0);
+                            return totalRentable > 0 ? `${Math.round(totalRentable).toLocaleString()} SF` : 'Not specified';
+                          }
+                          
+                          return 'Not specified';
+                        })()}
                       </span>
                     </div>
                     <div className="flex items-start">

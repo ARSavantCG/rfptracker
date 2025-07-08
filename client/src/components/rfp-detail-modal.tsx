@@ -247,7 +247,13 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div className="flex items-start">
                       <span className="text-blue-700 font-medium">Property:</span>
-                      <span className="ml-2 text-blue-900">{property?.propertyName || 'Loading...'}</span>
+                      <span className="ml-2 text-blue-900">
+                        {property ? (
+                          property.building && property.building.trim() !== ''
+                            ? `${property.propertyName} - Bldg. ${property.building}`
+                            : property.propertyName
+                        ) : 'Loading...'}
+                      </span>
                     </div>
                     <div className="flex items-start">
                       <span className="text-blue-700 font-medium">Tenant:</span>

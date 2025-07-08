@@ -292,6 +292,7 @@ This is a full-stack web application for tracking and managing Request for Propo
 - July 7, 2025. Updated existing K&K Expansion RFP project name in database - manually corrected stored project name from "Katz & Katz Transfer (Expansion) @ 2" to "Katz & Katz Transfer (Expansion) @ Bridge 595 - 2" to match proper naming format, ensuring PDF generation displays correct property name
 - July 7, 2025. Fixed PDF generation project name display - updated generateBrokerArchitectRfpHtml, generateBrokerContractorRfpHtml, and generateArchitectRfpHtml functions to prioritize rfp.projectName from database over constructed names, ensuring all PDF documents display correct "Tenant @ Property Name - Building" format instead of "Tenant @ Property ID"
 - July 8, 2025. Fixed multi-building property naming format - updated project name generation logic in create-rfp-modal.tsx, edit-rfp-modal.tsx, and server/storage.ts to use "Property Name - Bldg. [Number]" format instead of "Property Name - [Number]", corrected K&K Expansion RFP database record to display "Katz & Katz Transfer (Expansion) @ Bridge 595 - Bldg. 2" for proper multi-building property identification
+- July 8, 2025. Fixed property display formatting in RFP table and detail modal - updated getPropertyDisplayName function in rfp-table.tsx to use "Bldg." prefix for multi-building properties, also corrected property display in rfp-detail-modal.tsx Project Summary section to consistently show proper building format across all RFP views
 
 ## User Preferences
 

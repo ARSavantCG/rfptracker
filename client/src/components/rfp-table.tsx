@@ -78,9 +78,12 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
     const property = properties.find(p => p.id.toString() === propertyId);
     if (!property) return propertyId;
     
-    // Clean up property name - remove trailing dash for single building properties
-    const displayName = `${property.propertyName} - ${property.building}`;
-    return displayName.replace(/ - $/, '');
+    // Format property name with building using "Bldg." prefix for multi-building properties
+    if (property.building && property.building.trim() !== '') {
+      return `${property.propertyName} - Bldg. ${property.building}`;
+    } else {
+      return property.propertyName;
+    }
   };
 
   // Clear selected RFP if it no longer exists in the list

@@ -44,8 +44,8 @@ export default function Navigation() {
     { path: "/", label: "Dashboard", icon: Home },
     { path: "/contacts", label: "Contacts", icon: Users },
     { path: "/properties", label: "Properties", icon: Building },
-    { path: "/rom-pilot", label: "ROM Pilot", icon: Calculator },
     { path: "/reports", label: "Reports", icon: BarChart3 },
+    { path: "/rom-pilot", label: "ROM Pilot", icon: Calculator },
   ];
 
   // Add admin item if user is admin

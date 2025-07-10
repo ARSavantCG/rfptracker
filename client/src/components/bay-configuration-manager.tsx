@@ -418,14 +418,35 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                       <p className="text-xs text-gray-500">Configure directional bay numbering system</p>
                     </div>
                     
-                    {/* Compass Indicator */}
+                    {/* Dynamic Compass Indicator */}
                     <div className="bg-white border border-gray-300 rounded-lg p-2 shadow-sm">
                       <div className="relative w-16 h-16">
                         <Compass className="w-16 h-16 text-gray-400" />
-                        <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 bg-red-600 text-white text-xs px-1 rounded font-bold">N</div>
-                        <div className="absolute top-1/2 -right-1 transform -translate-y-1/2 bg-gray-600 text-white text-xs px-1 rounded">E</div>
-                        <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 bg-gray-600 text-white text-xs px-1 rounded">S</div>
-                        <div className="absolute top-1/2 -left-1 transform -translate-y-1/2 bg-gray-600 text-white text-xs px-1 rounded">W</div>
+                        <div className={`absolute -top-1 left-1/2 transform -translate-x-1/2 text-white text-xs px-1 rounded font-bold ${
+                          firstBayDirection === 'north' ? 'bg-red-600' : 'bg-gray-600'
+                        }`}>N</div>
+                        <div className={`absolute top-1/2 -right-1 transform -translate-y-1/2 text-white text-xs px-1 rounded ${
+                          firstBayDirection === 'east' ? 'bg-red-600' : 'bg-gray-600'
+                        }`}>E</div>
+                        <div className={`absolute -bottom-1 left-1/2 transform -translate-x-1/2 text-white text-xs px-1 rounded ${
+                          firstBayDirection === 'south' ? 'bg-red-600' : 'bg-gray-600'
+                        }`}>S</div>
+                        <div className={`absolute top-1/2 -left-1 transform -translate-y-1/2 text-white text-xs px-1 rounded ${
+                          firstBayDirection === 'west' ? 'bg-red-600' : 'bg-gray-600'
+                        }`}>W</div>
+                        {/* Diagonal directions */}
+                        <div className={`absolute top-1 right-1 transform text-white text-xs px-1 rounded ${
+                          firstBayDirection === 'northeast' ? 'bg-red-600' : 'bg-gray-600'
+                        }`}>NE</div>
+                        <div className={`absolute bottom-1 right-1 transform text-white text-xs px-1 rounded ${
+                          firstBayDirection === 'southeast' ? 'bg-red-600' : 'bg-gray-600'
+                        }`}>SE</div>
+                        <div className={`absolute bottom-1 left-1 transform text-white text-xs px-1 rounded ${
+                          firstBayDirection === 'southwest' ? 'bg-red-600' : 'bg-gray-600'
+                        }`}>SW</div>
+                        <div className={`absolute top-1 left-1 transform text-white text-xs px-1 rounded ${
+                          firstBayDirection === 'northwest' ? 'bg-red-600' : 'bg-gray-600'
+                        }`}>NW</div>
                       </div>
                     </div>
                   </div>
@@ -449,7 +470,7 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                           <SelectItem value="northwest">Northwest</SelectItem>
                         </SelectContent>
                       </Select>
-                      <p className="text-xs text-gray-500">Which direction does the first bay face?</p>
+                      <p className="text-xs text-gray-500">Which direction does the front door of the first bay face?</p>
                     </div>
                     
                     <div className="space-y-2">

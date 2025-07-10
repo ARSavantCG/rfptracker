@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Grid3x3, Check } from "lucide-react";
+import { Grid3x3, Check, Compass, Navigation } from "lucide-react";
 import type { Property, BayConfiguration, ExecutedLease } from "@shared/schema";
 
 interface BayConfigurationModalProps {
@@ -154,43 +154,112 @@ export function BayConfigurationModal({
           </div>
 
           {/* Building Layout */}
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <div className="mb-3">
-              <Label className="text-sm font-medium text-gray-700">Building Layout</Label>
-              <p className="text-xs text-gray-500">Click bays to select for rentable area calculation</p>
+          <div className="bg-gray-50 p-4 rounded-lg relative">
+            <div className="flex justify-between items-start mb-3">
+              <div>
+                <Label className="text-sm font-medium text-gray-700">Building Layout</Label>
+                <p className="text-xs text-gray-500">Click bays to select for rentable area calculation</p>
+              </div>
+              
+              {/* Compass Indicator */}
+              <div className="relative">
+                <div className="bg-white border border-gray-300 rounded-lg p-2 shadow-sm">
+                  <div className="relative w-16 h-16">
+                    <Compass className="w-16 h-16 text-gray-400" />
+                    {/* North indicator */}
+                    <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 bg-red-600 text-white text-xs px-1 rounded font-bold">
+                      N
+                    </div>
+                    {/* East indicator */}
+                    <div className="absolute top-1/2 -right-1 transform -translate-y-1/2 bg-gray-600 text-white text-xs px-1 rounded">
+                      E
+                    </div>
+                    {/* South indicator */}
+                    <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 bg-gray-600 text-white text-xs px-1 rounded">
+                      S
+                    </div>
+                    {/* West indicator */}
+                    <div className="absolute top-1/2 -left-1 transform -translate-y-1/2 bg-gray-600 text-white text-xs px-1 rounded">
+                      W
+                    </div>
+                  </div>
+                  <p className="text-xs text-center text-gray-600 mt-1">Building Orientation</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Directional Labels */}
+            <div className="mb-4">
+              <div className="flex justify-between items-center text-xs text-gray-600">
+                <div className="flex items-center gap-1">
+                  <Navigation className="w-3 h-3 rotate-180" />
+                  <span className="font-medium">West Side</span>
+                  <span className="text-gray-400">(Street/Entrance)</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="text-gray-400">(Loading Docks)</span>
+                  <span className="font-medium">East Side</span>
+                  <Navigation className="w-3 h-3" />
+                </div>
+              </div>
             </div>
             
             {/* Bay Grid - Narrow buttons to fit all in one row */}
-            <div className="flex gap-1 justify-start overflow-x-auto">
-              {individualBays.map((bay) => {
-                const isSelected = selectedBayIds.includes(bay.id);
-                const isLeased = leasedBayIds.includes(bay.id);
-                
-                return (
-                  <Button
-                    key={bay.id}
-                    variant={isSelected ? "default" : "outline"}
-                    disabled={isLeased}
-                    className={`h-20 w-10 flex flex-col items-center justify-center text-xs p-1 flex-shrink-0 ${
-                      isLeased
-                        ? "bg-red-800 text-white border-red-900 cursor-not-allowed opacity-95"
-                        : isSelected 
-                          ? "bg-orange-600 hover:bg-orange-700 text-white border-orange-700" 
-                          : "hover:bg-orange-50 border-orange-200 bg-white"
-                    }`}
-                    onClick={() => toggleBaySelection(bay.id)}
-                  >
-                    <div className="flex flex-col items-center justify-center h-full">
-                      <div className="font-bold text-xs mb-1">
-                        {bay.bayName.replace('Bay ', '')}
+            <div className="relative">
+              {/* Bay Numbers Row */}
+              <div className="flex gap-1 justify-start overflow-x-auto mb-2">
+                {individualBays.map((bay, index) => {
+                  const isSelected = selectedBayIds.includes(bay.id);
+                  const isLeased = leasedBayIds.includes(bay.id);
+                  
+                  return (
+                    <Button
+                      key={bay.id}
+                      variant={isSelected ? "default" : "outline"}
+                      disabled={isLeased}
+                      className={`h-20 w-12 flex flex-col items-center justify-center text-xs p-1 flex-shrink-0 ${
+                        isLeased
+                          ? "bg-red-800 text-white border-red-900 cursor-not-allowed opacity-95"
+                          : isSelected 
+                            ? "bg-orange-600 hover:bg-orange-700 text-white border-orange-700" 
+                            : "hover:bg-orange-50 border-orange-200 bg-white"
+                      }`}
+                      onClick={() => toggleBaySelection(bay.id)}
+                    >
+                      <div className="flex flex-col items-center justify-center h-full">
+                        <div className="font-bold text-xs mb-1">
+                          {bay.bayName.replace('Bay ', '')}
+                        </div>
+                        <div className="text-xs opacity-75">
+                          {isLeased ? "LEA" : `${((bay.rentableSquareFootage || bay.squareFootage) / 1000).toFixed(0)}K`}
+                        </div>
                       </div>
-                      <div className="text-xs opacity-75">
-                        {isLeased ? "LEA" : `${((bay.rentableSquareFootage || bay.squareFootage) / 1000).toFixed(0)}K`}
+                    </Button>
+                  );
+                })}
+              </div>
+
+              {/* Position indicators below bays */}
+              <div className="flex gap-1 justify-start overflow-x-auto">
+                {individualBays.map((bay, index) => {
+                  const totalBays = individualBays.length;
+                  let position = "";
+                  
+                  if (index === 0) position = "West End";
+                  else if (index === totalBays - 1) position = "East End";
+                  else if (index < totalBays / 3) position = "West";
+                  else if (index > (totalBays * 2) / 3) position = "East";
+                  else position = "Center";
+                  
+                  return (
+                    <div key={`pos-${bay.id}`} className="w-12 flex-shrink-0">
+                      <div className="text-xs text-center text-gray-500 py-1">
+                        {position}
                       </div>
                     </div>
-                  </Button>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
           </div>
 

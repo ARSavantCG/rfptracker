@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Calculator, Grid3x3 } from "lucide-react";
+import { Calculator, Grid3x3, Compass, Navigation } from "lucide-react";
 import type { Property, BayConfiguration, ExecutedLease } from "@shared/schema";
 
 interface BayConfigurationSelectorProps {
@@ -130,14 +130,45 @@ export default function BayConfigurationSelector({
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Building-like Bay Layout */}
-        <div className="bg-gray-50 p-3 rounded-lg">
-          <div className="mb-2">
-            <Label className="text-sm font-medium text-gray-700">Building Layout</Label>
-            <p className="text-xs text-gray-500">Click bays to select for rentable area calculation. Red bays are already leased and unavailable.</p>
+        <div className="bg-gray-50 p-3 rounded-lg relative">
+          <div className="flex justify-between items-start mb-2">
+            <div>
+              <Label className="text-sm font-medium text-gray-700">Building Layout</Label>
+              <p className="text-xs text-gray-500">Click bays to select for rentable area calculation. Red bays are already leased and unavailable.</p>
+            </div>
+            
+            {/* Compact Compass Indicator */}
+            <div className="bg-white border border-gray-300 rounded-lg p-1 shadow-sm">
+              <div className="relative w-12 h-12">
+                <Compass className="w-12 h-12 text-gray-400" />
+                <div className="absolute -top-0.5 left-1/2 transform -translate-x-1/2 bg-red-600 text-white text-xs px-1 rounded font-bold">N</div>
+                <div className="absolute top-1/2 -right-0.5 transform -translate-y-1/2 bg-gray-600 text-white text-xs px-1 rounded">E</div>
+                <div className="absolute -bottom-0.5 left-1/2 transform -translate-x-1/2 bg-gray-600 text-white text-xs px-1 rounded">S</div>
+                <div className="absolute top-1/2 -left-0.5 transform -translate-y-1/2 bg-gray-600 text-white text-xs px-1 rounded">W</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Directional Labels */}
+          <div className="mb-3">
+            <div className="flex justify-between items-center text-xs text-gray-600">
+              <div className="flex items-center gap-1">
+                <Navigation className="w-3 h-3 rotate-180" />
+                <span className="font-medium">West</span>
+                <span className="text-gray-400">(Street)</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="text-gray-400">(Docks)</span>
+                <span className="font-medium">East</span>
+                <Navigation className="w-3 h-3" />
+              </div>
+            </div>
           </div>
           
-          {/* Single row layout representing building */}
-          <div className="flex gap-0.5 justify-start overflow-x-auto pb-1">
+          {/* Bay Grid with Position Indicators */}
+          <div className="relative">
+            {/* Single row layout representing building */}
+            <div className="flex gap-0.5 justify-start overflow-x-auto pb-1">
             {individualBays.map((bay) => {
               const isSelected = selectedBayIds.includes(bay.id);
               const isLeased = leasedBayIds.includes(bay.id);
@@ -167,6 +198,29 @@ export default function BayConfigurationSelector({
                 </Button>
               );
             })}
+            </div>
+            
+            {/* Position indicators below bays */}
+            <div className="flex gap-0.5 justify-start overflow-x-auto mt-1">
+              {individualBays.map((bay, index) => {
+                const totalBays = individualBays.length;
+                let position = "";
+                
+                if (index === 0) position = "West End";
+                else if (index === totalBays - 1) position = "East End";
+                else if (index < totalBays / 3) position = "West";
+                else if (index > (totalBays * 2) / 3) position = "East";
+                else position = "Center";
+                
+                return (
+                  <div key={`pos-${bay.id}`} className="w-16 flex-shrink-0">
+                    <div className="text-xs text-center text-gray-500 py-1">
+                      {position}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
 

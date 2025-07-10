@@ -3056,21 +3056,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/rom-scope-items/:id", async (req, res) => {
+  app.put("/api/rom-scope-items/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
         return res.status(400).json({ message: "Invalid ID" });
       }
 
+      console.log("Updating ROM scope item ID:", id);
+      console.log("Update data:", req.body);
+
       const scopeItem = await storage.updateRomScopeItem(id, req.body);
       if (!scopeItem) {
         return res.status(404).json({ message: "Scope item not found" });
       }
 
+      console.log("Successfully updated ROM scope item:", scopeItem);
       res.json(scopeItem);
     } catch (error) {
-      res.status(500).json({ message: "Failed to update scope item" });
+      console.error("ROM scope item update error:", error);
+      res.status(500).json({ message: "Failed to update scope item", error: error.message });
     }
   });
 

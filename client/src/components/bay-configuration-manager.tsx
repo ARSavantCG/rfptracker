@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Trash2, Edit, Settings, Copy, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, Trash2, Edit, Settings, Copy, ChevronDown, ChevronRight, Compass, Navigation } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { Property, BayConfiguration } from "@shared/schema";
@@ -398,6 +398,62 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
             </CardHeader>
             {showAddBayForm && (
               <CardContent className="space-y-4">
+                {/* Building Orientation Guide */}
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700">Building Orientation Guide</Label>
+                      <p className="text-xs text-gray-500">Reference for bay/column numbering configuration</p>
+                    </div>
+                    
+                    {/* Compass Indicator */}
+                    <div className="bg-white border border-gray-300 rounded-lg p-2 shadow-sm">
+                      <div className="relative w-16 h-16">
+                        <Compass className="w-16 h-16 text-gray-400" />
+                        <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 bg-red-600 text-white text-xs px-1 rounded font-bold">N</div>
+                        <div className="absolute top-1/2 -right-1 transform -translate-y-1/2 bg-gray-600 text-white text-xs px-1 rounded">E</div>
+                        <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 bg-gray-600 text-white text-xs px-1 rounded">S</div>
+                        <div className="absolute top-1/2 -left-1 transform -translate-y-1/2 bg-gray-600 text-white text-xs px-1 rounded">W</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Directional Layout Guide */}
+                  <div className="grid grid-cols-2 gap-4 text-xs">
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <Navigation className="w-3 h-3 rotate-180" />
+                      <div>
+                        <div className="font-medium">West Side (Lower Numbers)</div>
+                        <div className="text-gray-400">Street/Entrance Side</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <div className="text-right">
+                        <div className="font-medium">East Side (Higher Numbers)</div>
+                        <div className="text-gray-400">Loading Dock Side</div>
+                      </div>
+                      <Navigation className="w-3 h-3" />
+                    </div>
+                  </div>
+
+                  {/* Visual Bay Example */}
+                  {bayConfigurations.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-gray-200">
+                      <div className="text-xs text-gray-600 mb-2">Current Bay Layout:</div>
+                      <div className="flex gap-1 overflow-x-auto">
+                        {bayConfigurations.slice(0, 8).map((bay, index) => (
+                          <div key={bay.id} className="bg-blue-100 border border-blue-200 rounded px-2 py-1 text-xs text-blue-800 flex-shrink-0">
+                            {bay.bayName.replace('Bay ', '')}
+                          </div>
+                        ))}
+                        {bayConfigurations.length > 8 && (
+                          <div className="text-xs text-gray-400 px-2 py-1">+{bayConfigurations.length - 8} more</div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
               <div className="grid grid-cols-5 gap-4 items-end">
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">Start Column</Label>

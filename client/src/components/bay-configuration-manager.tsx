@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Plus, Trash2, Edit, Settings, Copy, ChevronDown, ChevronRight, Compass, Navigation } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { Property, BayConfiguration } from "@shared/schema";
@@ -30,6 +31,10 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
   const [isEditingMechRoom, setIsEditingMechRoom] = useState(false);
   const [tempMechRoomSF, setTempMechRoomSF] = useState("");
   const [showAddBayForm, setShowAddBayForm] = useState(false);
+  
+  // Directional orientation state
+  const [firstBayDirection, setFirstBayDirection] = useState<string>(property.firstBayDirection || "");
+  const [bayProgressionDirection, setBayProgressionDirection] = useState<string>(property.bayProgressionDirection || "");
 
   // Auto-populate start bay when bay configurations change
   useEffect(() => {
@@ -61,7 +66,12 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
   };
 
   const updatePropertyMutation = useMutation({
-    mutationFn: async (data: { bayConfigurations: BayConfiguration[], mechanicalRoomSquareFootage: number }) => {
+    mutationFn: async (data: { 
+      bayConfigurations: BayConfiguration[], 
+      mechanicalRoomSquareFootage: number,
+      firstBayDirection?: string,
+      bayProgressionDirection?: string 
+    }) => {
       const response = await fetch(`/api/properties/${property.id}`, {
         method: "PUT",
         headers: {
@@ -118,7 +128,9 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
     
     updatePropertyMutation.mutate({
       bayConfigurations: updatedBays,
-      mechanicalRoomSquareFootage: mechanicalSF
+      mechanicalRoomSquareFootage: mechanicalSF,
+      firstBayDirection: firstBayDirection || undefined,
+      bayProgressionDirection: bayProgressionDirection || undefined
     });
   };
 
@@ -403,7 +415,7 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                   <div className="flex justify-between items-start mb-3">
                     <div>
                       <Label className="text-sm font-medium text-gray-700">Building Orientation Guide</Label>
-                      <p className="text-xs text-gray-500">Reference for bay/column numbering configuration</p>
+                      <p className="text-xs text-gray-500">Configure directional bay numbering system</p>
                     </div>
                     
                     {/* Compass Indicator */}
@@ -415,6 +427,45 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                         <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 bg-gray-600 text-white text-xs px-1 rounded">S</div>
                         <div className="absolute top-1/2 -left-1 transform -translate-y-1/2 bg-gray-600 text-white text-xs px-1 rounded">W</div>
                       </div>
+                    </div>
+                  </div>
+
+                  {/* Directional Configuration */}
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-gray-700">Direction of Bay 1</Label>
+                      <Select value={firstBayDirection} onValueChange={setFirstBayDirection}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select direction" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="north">North</SelectItem>
+                          <SelectItem value="northeast">Northeast</SelectItem>
+                          <SelectItem value="east">East</SelectItem>
+                          <SelectItem value="southeast">Southeast</SelectItem>
+                          <SelectItem value="south">South</SelectItem>
+                          <SelectItem value="southwest">Southwest</SelectItem>
+                          <SelectItem value="west">West</SelectItem>
+                          <SelectItem value="northwest">Northwest</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-gray-500">Which direction does the first bay face?</p>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-gray-700">Bay Progression Direction</Label>
+                      <Select value={bayProgressionDirection} onValueChange={setBayProgressionDirection}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select direction" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="north">North</SelectItem>
+                          <SelectItem value="east">East</SelectItem>
+                          <SelectItem value="south">South</SelectItem>
+                          <SelectItem value="west">West</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-gray-500">Which direction do bay numbers increase?</p>
                     </div>
                   </div>
 

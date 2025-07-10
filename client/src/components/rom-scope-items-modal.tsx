@@ -28,6 +28,8 @@ interface RomScopeItem {
   description: string | null;
   unit: string;
   unitPrice: string;
+  source: string | null;
+  lastUpdated: string | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -52,6 +54,8 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
     description: "",
     unit: "",
     unitPrice: "",
+    source: "",
+    lastUpdated: "",
   });
 
   // Fetch scope items
@@ -135,6 +139,8 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
       description: "",
       unit: "",
       unitPrice: "",
+      source: "",
+      lastUpdated: "",
     });
     setShowAddForm(false);
     setEditingItem(null);
@@ -155,6 +161,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
     const submitData = {
       ...formData,
       unitPrice: parseFloat(formData.unitPrice).toFixed(2),
+      lastUpdated: formData.lastUpdated ? new Date(formData.lastUpdated) : null,
     };
 
     if (editingItem) {
@@ -171,6 +178,8 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
       description: item.description || "",
       unit: item.unit,
       unitPrice: item.unitPrice,
+      source: item.source || "",
+      lastUpdated: item.lastUpdated ? new Date(item.lastUpdated).toISOString().split('T')[0] : "",
     });
     setEditingItem(item);
     setShowAddForm(true);
@@ -280,6 +289,28 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                   </div>
                 </div>
 
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="source">Source</Label>
+                    <Input
+                      id="source"
+                      value={formData.source}
+                      onChange={(e) => setFormData({...formData, source: e.target.value})}
+                      placeholder="e.g., ABC Construction, Internal Estimate"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="lastUpdated">Last Updated</Label>
+                    <Input
+                      id="lastUpdated"
+                      type="date"
+                      value={formData.lastUpdated}
+                      onChange={(e) => setFormData({...formData, lastUpdated: e.target.value})}
+                    />
+                  </div>
+                </div>
+
                 <div className="flex justify-end space-x-3 pt-4 border-t">
                   <Button type="button" variant="outline" onClick={resetForm}>
                     Cancel
@@ -344,6 +375,18 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                           {item.description && (
                             <p className="text-sm text-gray-600 mt-1">{item.description}</p>
                           )}
+                          <div className="flex items-center space-x-4 mt-2">
+                            {item.source && (
+                              <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                                Source: {item.source}
+                              </span>
+                            )}
+                            {item.lastUpdated && (
+                              <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
+                                Updated: {new Date(item.lastUpdated).toLocaleDateString('en-US', {timeZone: 'America/New_York'})}
+                              </span>
+                            )}
+                          </div>
                         </div>
                         
                         <div className="flex space-x-2 ml-4">

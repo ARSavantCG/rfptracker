@@ -568,6 +568,8 @@ export const romScopeItems = pgTable("rom_scope_items", {
   unit: text("unit").notNull(), // "sf", "lf", "ea", etc.
   unitPrice: text("unit_price").notNull(),
   category: text("category").notNull(), // "office", "warehouse", "general", etc.
+  source: text("source"), // Who provided the price
+  lastUpdated: timestamp("last_updated"), // When the price was last updated
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

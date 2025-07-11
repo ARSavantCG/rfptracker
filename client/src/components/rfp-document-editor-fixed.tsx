@@ -79,13 +79,60 @@ export function RfpDocumentEditor() {
     };
 
     const baseSections: DocumentSection[] = [
-      { id: 'header', title: 'Document Header', content: baseContent.header, editable: true, templateKey: `${selectedDocumentType}_header`, headerFormat: { bold: true, fontSize: '24px' } },
-      { id: 'subtitle', title: 'Service Type Subtitle', content: baseContent.subtitle, editable: true, templateKey: `${selectedDocumentType}_subtitle`, headerFormat: { bold: true, fontSize: '18px' } },
-      { id: 'introduction', title: 'Introduction Text', content: baseContent.introduction, editable: true, templateKey: 'common_introduction' },
-      { id: 'scope_of_work', title: 'Scope of Work', content: baseContent.scope_of_work, editable: true, templateKey: `${selectedDocumentType}_scope_of_work`, headerFormat: { bold: true, fontSize: '16px' } },
-      { id: 'submission_requirements', title: 'Submission Requirements', content: baseContent.submission_requirements, editable: true, templateKey: 'common_submission_requirements', headerFormat: { bold: true, fontSize: '16px' } },
-      { id: 'request_types_text', title: 'Request Types Section', content: baseContent.request_types_text, editable: true, templateKey: 'common_request_types_text', headerFormat: { bold: true, fontSize: '16px' } },
-      { id: 'contact_footer', title: 'Contact Footer', content: baseContent.contact_footer, editable: true, templateKey: 'common_contact_footer' }
+      { 
+        id: 'header', 
+        title: getCustomTitle(`${selectedDocumentType}_header`) || 'Document Header', 
+        content: baseContent.header, 
+        editable: true, 
+        templateKey: `${selectedDocumentType}_header`, 
+        headerFormat: { bold: true, fontSize: '24px' } 
+      },
+      { 
+        id: 'subtitle', 
+        title: getCustomTitle(`${selectedDocumentType}_subtitle`) || 'Service Type Subtitle', 
+        content: baseContent.subtitle, 
+        editable: true, 
+        templateKey: `${selectedDocumentType}_subtitle`, 
+        headerFormat: { bold: true, fontSize: '18px' } 
+      },
+      { 
+        id: 'introduction', 
+        title: getCustomTitle('common_introduction') || 'Introduction Text', 
+        content: baseContent.introduction, 
+        editable: true, 
+        templateKey: 'common_introduction' 
+      },
+      { 
+        id: 'scope_of_work', 
+        title: getCustomTitle(`${selectedDocumentType}_scope_of_work`) || 'Scope of Work', 
+        content: baseContent.scope_of_work, 
+        editable: true, 
+        templateKey: `${selectedDocumentType}_scope_of_work`, 
+        headerFormat: { bold: true, fontSize: '16px' } 
+      },
+      { 
+        id: 'submission_requirements', 
+        title: getCustomTitle('common_submission_requirements') || 'Submission Requirements', 
+        content: baseContent.submission_requirements, 
+        editable: true, 
+        templateKey: 'common_submission_requirements', 
+        headerFormat: { bold: true, fontSize: '16px' } 
+      },
+      { 
+        id: 'request_types_text', 
+        title: getCustomTitle('common_request_types_text') || 'Request Types Section', 
+        content: baseContent.request_types_text, 
+        editable: true, 
+        templateKey: 'common_request_types_text', 
+        headerFormat: { bold: true, fontSize: '16px' } 
+      },
+      { 
+        id: 'contact_footer', 
+        title: getCustomTitle('common_contact_footer') || 'Contact Footer', 
+        content: baseContent.contact_footer, 
+        editable: true, 
+        templateKey: 'common_contact_footer' 
+      }
     ];
 
     // Combine base sections with custom sections
@@ -118,6 +165,12 @@ export function RfpDocumentEditor() {
     // For type-specific sections, use type_section format
     const template = templates.find(t => t.templateKey === `${type}_${section}`);
     return template?.content;
+  };
+
+  const getCustomTitle = (templateKey: string): string | undefined => {
+    if (!templates.length) return undefined;
+    const titleTemplate = templates.find(t => t.templateKey === `${templateKey}_title`);
+    return titleTemplate?.content;
   };
 
   const documentSections = generateDocumentSections();
@@ -219,11 +272,23 @@ export function RfpDocumentEditor() {
       const updates = [];
       
       for (const section of documentSections) {
-        if (section.templateKey && sectionContent[section.id] !== undefined) {
-          updates.push({
-            templateKey: section.templateKey,
-            content: sectionContent[section.id] || section.content
-          });
+        if (section.templateKey) {
+          // Save content if it has been modified
+          if (sectionContent[section.id] !== undefined) {
+            updates.push({
+              templateKey: section.templateKey,
+              content: sectionContent[section.id] || section.content
+            });
+          }
+          
+          // Save custom title if it has been modified
+          const customTitle = sectionContent[`title_${section.id}`];
+          if (customTitle && customTitle !== section.title) {
+            updates.push({
+              templateKey: `${section.templateKey}_title`,
+              content: customTitle
+            });
+          }
         }
       }
       
@@ -359,7 +424,7 @@ export function RfpDocumentEditor() {
                       className="text-base" 
                       style={getSectionHeaderStyle(section)}
                     >
-                      {section.title}
+                      {sectionContent[`title_${section.id}`] || section.title}
                     </CardTitle>
                     {section.isCustom && (
                       <Badge variant="outline" className="text-xs bg-blue-50">
@@ -456,24 +521,36 @@ export function RfpDocumentEditor() {
               <CardContent>
                 {editingSections.has(section.id) ? (
                   <div className="space-y-3">
-                    {/* Header Title Editing */}
-                    {section.isCustom && (
-                      <div>
-                        <Label htmlFor={`title-${section.id}`} className="text-sm font-medium">
-                          Section Title
-                        </Label>
-                        <Input
-                          id={`title-${section.id}`}
-                          value={section.title}
-                          onChange={(e) => {
+                    {/* Header Title Editing - Available for all sections */}
+                    <div>
+                      <Label htmlFor={`title-${section.id}`} className="text-sm font-medium">
+                        Section Title
+                      </Label>
+                      <Input
+                        id={`title-${section.id}`}
+                        value={sectionContent[`title_${section.id}`] || section.title}
+                        onChange={(e) => {
+                          if (section.isCustom) {
                             setCustomSections(prev => 
                               prev.map(s => s.id === section.id ? { ...s, title: e.target.value } : s)
                             );
-                          }}
-                          className="mb-2"
-                        />
-                      </div>
-                    )}
+                          } else {
+                            // For template sections, store title changes locally
+                            setSectionContent(prev => ({
+                              ...prev,
+                              [`title_${section.id}`]: e.target.value
+                            }));
+                          }
+                        }}
+                        className="mb-2"
+                        placeholder={section.isCustom ? "Enter section title" : "Customize section title (optional)"}
+                      />
+                      {!section.isCustom && (
+                        <p className="text-xs text-muted-foreground">
+                          Customize how this section appears in generated documents
+                        </p>
+                      )}
+                    </div>
                     
                     <div>
                       <Label htmlFor={`content-${section.id}`} className="text-sm font-medium">
@@ -505,7 +582,7 @@ export function RfpDocumentEditor() {
                         className="font-semibold text-sm"
                         style={getSectionHeaderStyle(section)}
                       >
-                        {section.title}
+                        {sectionContent[`title_${section.id}`] || section.title}
                       </div>
                       <Separator />
                       <div className="whitespace-pre-wrap text-sm">

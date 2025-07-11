@@ -1002,6 +1002,7 @@ export class DatabaseStorage implements IStorage {
     reportName: string;
     generatedBy: string;
     generatedContent: string;
+    changeSummary?: string[];
     notes?: string;
   }) {
     const [history] = await db
@@ -1027,10 +1028,10 @@ export class DatabaseStorage implements IStorage {
     return item;
   }
 
-  async updateEvaluationBudgetHistory(id: number, updates: Partial<EvaluationBudgetHistory>) {
+  async updateEvaluationBudgetHistory(id: number, updates: { reportName?: string; notes?: string }) {
     const [updated] = await db
       .update(evaluationBudgetHistory)
-      .set({ ...updates, updatedAt: new Date() })
+      .set(updates)
       .where(eq(evaluationBudgetHistory.id, id))
       .returning();
     return updated;
@@ -1043,13 +1044,71 @@ export class DatabaseStorage implements IStorage {
     return (result.rowCount || 0) > 0;
   }
 
-  async updateEvaluationBudgetHistory(id: number, updates: { reportName?: string; notes?: string }) {
-    const [updated] = await db
-      .update(evaluationBudgetHistory)
-      .set(updates)
-      .where(eq(evaluationBudgetHistory.id, id))
-      .returning();
-    return updated;
+  // Generate change summary for evaluation budget
+  generateEvaluationChangeSummary(previousBudget: any, currentBudget: any): string[] {
+    const changes: string[] = [];
+    
+    if (!previousBudget) {
+      changes.push("Initial evaluation budget created");
+      return changes;
+    }
+
+    // Check for line item changes
+    const prevTI = previousBudget.tenantImprovements || [];
+    const currTI = currentBudget.tenantImprovements || [];
+    if (prevTI.length !== currTI.length) {
+      if (currTI.length > prevTI.length) {
+        changes.push("Added line items");
+      } else {
+        changes.push("Removed line items");
+      }
+    }
+
+    // Check for rollup changes
+    const prevRollups = Object.keys(previousBudget.lineItemRollups || {}).length;
+    const currRollups = Object.keys(currentBudget.lineItemRollups || {}).length;
+    if (prevRollups !== currRollups) {
+      changes.push("Changes to rollup");
+    }
+
+    // Check for assembly changes
+    const prevAssemblies = Object.keys(previousBudget.assemblies || {}).length;
+    const currAssemblies = Object.keys(currentBudget.assemblies || {}).length;
+    if (prevAssemblies !== currAssemblies) {
+      changes.push("Changes to assemblies");
+    }
+
+    // Check for design/soft cost changes
+    const prevDesign = previousBudget.designSoftCosts || [];
+    const currDesign = currentBudget.designSoftCosts || [];
+    if (prevDesign.length !== currDesign.length) {
+      changes.push("Changes to design/soft costs");
+    }
+
+    // Check for existing improvements changes
+    const prevExisting = previousBudget.existingImprovements || [];
+    const currExisting = currentBudget.existingImprovements || [];
+    if (prevExisting.length !== currExisting.length) {
+      changes.push("Changes to existing improvements");
+    }
+
+    // Check for total amount changes
+    if (previousBudget.grandTotal !== currentBudget.grandTotal) {
+      changes.push("Updated total amounts");
+    }
+
+    // Check for door information changes
+    const prevDoors = previousBudget.metadata?.oversizedDoors || 0;
+    const currDoors = currentBudget.metadata?.oversizedDoors || 0;
+    if (prevDoors !== currDoors) {
+      changes.push("Updated door configuration");
+    }
+
+    if (changes.length === 0) {
+      changes.push("Minor adjustments");
+    }
+
+    return changes;
   }
 
   async deleteEvaluationBudgetHistory(id: number): Promise<boolean> {

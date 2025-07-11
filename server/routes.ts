@@ -3918,11 +3918,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { reportName, generatedContent, notes } = req.body;
       const generatedBy = req.user?.username || 'Unknown';
       
+      // Get current evaluation budget to compare changes
+      const currentBudget = await storage.getEvaluationBudget(rfpId);
+      
+      // Get the most recent history item to compare against
+      const previousHistory = await storage.getEvaluationBudgetHistory(rfpId);
+      const previousBudget = previousHistory.length > 0 ? JSON.parse(previousHistory[0].generatedContent || '{}').budgetData : null;
+      
+      // Generate change summary
+      const changeSummary = storage.generateEvaluationChangeSummary(previousBudget, currentBudget);
+      
       const historyItem = await storage.createEvaluationBudgetHistory({
         rfpId,
         reportName,
         generatedBy,
         generatedContent,
+        changeSummary,
         notes
       });
       

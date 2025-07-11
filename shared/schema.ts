@@ -490,6 +490,7 @@ export const evaluationBudgetHistory = pgTable("evaluation_budget_history", {
   reportName: varchar("report_name", { length: 255 }).notNull(),
   generatedBy: varchar("generated_by", { length: 255 }).notNull(),
   generatedContent: text("generated_content").notNull(),
+  changeSummary: text("change_summary").array().default([]),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

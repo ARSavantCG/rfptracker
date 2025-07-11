@@ -1016,14 +1016,28 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                                   </div>
 
                                   <div className="col-span-1">
-                                    <Button
-                                      type="button"
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => removeScope(index)}
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </Button>
+                                    <div className="flex gap-1">
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => saveInvitationMutation.mutate(form.getValues())}
+                                        className="h-8 w-8 p-0"
+                                        title="Save"
+                                      >
+                                        <Save className="h-3 w-3" />
+                                      </Button>
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => removeScope(index)}
+                                        className="h-8 w-8 p-0"
+                                        title="Delete"
+                                      >
+                                        <Trash2 className="h-3 w-3" />
+                                      </Button>
+                                    </div>
                                   </div>
                                 </div>
                               )}

@@ -1136,14 +1136,10 @@ async function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dat
       </div>
       ` : ''}
 
-      ${invitationToBid?.scopeOfWork && Array.isArray(invitationToBid.scopeOfWork) && invitationToBid.scopeOfWork.length > 0 ? `
+      ${templateContent.scopeOfWork ? `
       <div class="section">
         <div class="section-title">Scope of Work</div>
-        <ul>
-          ${invitationToBid.scopeOfWork.map((item: any) => `
-            <li>${item.description}${item.quantity ? ` - ${item.quantity.toLocaleString()} ${item.unit || ''}` : ''}</li>
-          `).join('')}
-        </ul>
+        <div>${templateContent.scopeOfWork.replace(/\n/g, '<br>')}</div>
       </div>
       ` : ''}
 
@@ -1221,15 +1217,12 @@ async function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, da
   // Format bid deadline with E.O.B.
   const formattedDeadline = bidDeadline.replace(/(\d{4})$/, '$1 E.O.B.');
 
-  // Generate scope of work HTML safely
+  // Generate scope of work HTML using template content instead of invitation data
   let scopeOfWorkHtml = '';
-  if (invitationToBid?.scopeOfWork && Array.isArray(invitationToBid.scopeOfWork) && invitationToBid.scopeOfWork.length > 0) {
-    const scopeItems = invitationToBid.scopeOfWork.map(item => {
-      const quantity = item.quantity ? ' - ' + item.quantity.toLocaleString() + ' ' + (item.unit || '') : '';
-      return '<li>' + item.description + quantity + '</li>';
-    }).join('');
-    
-    scopeOfWorkHtml = '<div class="section"><div class="section-title">Scope of Work</div><ul>' + scopeItems + '</ul></div>';
+  if (templateContent.scopeOfWork) {
+    // Convert template content to HTML format
+    const scopeContent = templateContent.scopeOfWork.replace(/\n/g, '<br>');
+    scopeOfWorkHtml = `<div class="section"><div class="section-title">Scope of Work</div><div>${scopeContent}</div></div>`;
   }
 
   // Generate space requirements table HTML safely using area breakdown data

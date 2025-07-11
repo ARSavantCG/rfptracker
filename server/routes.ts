@@ -3131,6 +3131,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/rom-pilots/:id/line-items", requireAuth, async (req, res) => {
     try {
+      console.log("ROM line items save request received");
+      console.log("User from auth:", req.user?.username);
+      console.log("Request headers:", req.headers.authorization);
+      
       const romPilotId = parseInt(req.params.id);
       if (isNaN(romPilotId)) {
         return res.status(400).json({ message: "Invalid ROM Pilot ID" });
@@ -3138,6 +3142,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { lineItems } = req.body;
       console.log("Saving ROM line items:", { romPilotId, lineItems });
+      console.log("Line items details:", lineItems.map(item => ({
+        scopeItemId: item.scopeItemId,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        totalPrice: item.totalPrice,
+        category: item.category
+      })));
       
       const savedLineItems = await storage.saveRomPilotLineItems(romPilotId, lineItems);
       

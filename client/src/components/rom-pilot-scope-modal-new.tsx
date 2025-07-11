@@ -242,11 +242,7 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
     mutationFn: async () => {
       const allItems = [...tenantImprovements, ...designSoftCosts];
       console.log("Saving ROM line items:", { romPilotId, allItems });
-      await apiRequest(`/api/rom-pilots/${romPilotId}/line-items`, {
-        method: "POST",
-        body: JSON.stringify({ lineItems: allItems }),
-        headers: { "Content-Type": "application/json" },
-      });
+      return await apiRequest(`/api/rom-pilots/${romPilotId}/line-items`, "POST", { lineItems: allItems });
     },
     onSuccess: () => {
       toast({
@@ -257,10 +253,11 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
       queryClient.invalidateQueries({ queryKey: ["/api/rom-pilots"] });
       onClose();
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error("Save error:", error);
       toast({
         title: "Error",
-        description: "Failed to save ROM scope items",
+        description: `Failed to save ROM scope items: ${error.message || 'Unknown error'}`,
         variant: "destructive",
       });
     },

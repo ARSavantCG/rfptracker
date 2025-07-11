@@ -708,7 +708,20 @@ async function requireAuth(req: any, res: any, next: any) {
     return res.status(401).json({ message: "Invalid or expired token" });
   }
 
-  req.userId = userId;
+  // Get user information for req.user
+  try {
+    const user = await storage.getUser(userId);
+    if (user) {
+      req.user = user;
+      req.userId = userId;
+    } else {
+      return res.status(401).json({ message: "User not found" });
+    }
+  } catch (error) {
+    console.error("Error getting user in auth middleware:", error);
+    return res.status(500).json({ message: "Authentication error" });
+  }
+
   next();
 }
 
@@ -3460,7 +3473,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get user info for the report
       const user = req.user;
-      const generatedBy = user?.name || user?.username || 'Unknown User';
+      const generatedBy = user?.firstName && user?.lastName 
+        ? `${user.firstName} ${user.lastName}` 
+        : user?.username || user?.email || 'Unknown User';
       
       // Generate HTML report
       const html = generateRomReportHtml(romPilot, lineItems, scopeItems, generatedBy);

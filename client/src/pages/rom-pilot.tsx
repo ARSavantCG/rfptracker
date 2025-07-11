@@ -250,10 +250,16 @@ export default function RomPilotPage() {
           setCreateModalOpen(false);
           setEditingRomPilot(null);
         }}
-        onSuccess={() => {
+        onSuccess={(createdRomPilot?: RomPilot) => {
           setCreateModalOpen(false);
           setEditingRomPilot(null);
           refetch();
+          
+          // If a new ROM was created (not editing), open the scope modal
+          if (createdRomPilot && !editingRomPilot) {
+            setSelectedRomPilot(createdRomPilot);
+            setScopeModalOpen(true);
+          }
         }}
         editingRomPilot={editingRomPilot}
       />

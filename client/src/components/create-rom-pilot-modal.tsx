@@ -24,7 +24,7 @@ interface RomPilot {
 interface CreateRomPilotModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (createdRomPilot?: RomPilot) => void;
   editingRomPilot?: RomPilot | null;
 }
 
@@ -133,12 +133,14 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess, editingRomPilo
         throw new Error(`Failed to ${isEditing ? 'update' : 'create'} ROM`);
       }
 
+      const result = await response.json();
+
       toast({
         title: "Success",
-        description: `ROM ${isEditing ? 'updated' : 'created'} successfully. ${!isEditing ? "Use 'Manage Scope' to add pricing." : ""}`,
+        description: `ROM ${isEditing ? 'updated' : 'created'} successfully. ${!isEditing ? "Opening scope management..." : ""}`,
       });
 
-      onSuccess();
+      onSuccess(isEditing ? undefined : result);
     } catch (error) {
       console.error("Error creating ROM:", error);
       toast({

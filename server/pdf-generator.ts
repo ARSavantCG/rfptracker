@@ -5,17 +5,23 @@ import { storage } from "./storage";
 // Function to get template content for PDF generation
 async function getTemplateContent(recipientType: string): Promise<any> {
   try {
+    console.log('Loading templates for recipient type:', recipientType);
     const templates = await storage.getAllPdfTemplates();
+    console.log('Available templates:', templates.map(t => t.templateKey));
+    
     const templateMap: { [key: string]: string } = {};
     
     templates.forEach(template => {
-      if (template.templateKey.startsWith(recipientType.replace('-', '_'))) {
-        const section = template.templateKey.split('_').slice(1).join('_');
+      const templatePrefix = recipientType.replace('-', '_');
+      console.log(`Checking template ${template.templateKey} against prefix ${templatePrefix}`);
+      if (template.templateKey.startsWith(templatePrefix)) {
+        const section = template.templateKey.split('_').slice(2).join('_'); // Skip both parts of broker_architect
         templateMap[section] = template.content;
+        console.log(`Found template content for ${section}:`, template.content.substring(0, 100));
       }
     });
     
-    return {
+    const result = {
       header: templateMap.header || 'REQUEST FOR PROPOSAL',
       subtitle: templateMap.subtitle || 'ARCHITECT SERVICES',
       introduction: templateMap.introduction || 'Bridge Industrial is seeking qualified professionals to provide services for the following project. Please review the project details and requirements below.',
@@ -23,6 +29,9 @@ async function getTemplateContent(recipientType: string): Promise<any> {
       submissionRequirements: templateMap.submission_requirements || 'Please include the following in your proposal submission.',
       evaluationCriteria: templateMap.evaluation_criteria || 'Proposals will be evaluated based on the following criteria.'
     };
+    
+    console.log('Final template content:', result);
+    return result;
   } catch (error) {
     console.error('Error fetching template content:', error);
     // Return default content if templates not available

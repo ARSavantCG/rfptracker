@@ -85,7 +85,7 @@ export function RfpDocumentEditor() {
 
   const getTemplateContent = (section: string, type: string): string | undefined => {
     const template = templates.find((t: any) => 
-      t.section === section && (t.templateType === type || t.templateType === 'common')
+      t.templateKey === `${type}_${section}` || t.templateKey === `common_${section}`
     );
     return template?.content;
   };

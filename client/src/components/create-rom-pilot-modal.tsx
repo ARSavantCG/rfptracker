@@ -49,6 +49,15 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess, editingRomPilo
     enabled: isOpen,
   });
 
+  // Fetch contacts and filter for owner type only
+  const { data: allContacts = [] } = useQuery({
+    queryKey: ["/api/contacts"],
+    enabled: isOpen,
+  });
+  
+  // Filter contacts to only show owner types
+  const ownerContacts = allContacts.filter((contact: any) => contact.type === "owner");
+
   // Use all properties without filtering since each has unique building info
   const displayProperties = properties;
 
@@ -462,10 +471,11 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess, editingRomPilo
                 <SelectValue placeholder="Select user" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="John Mejia">John Mejia</SelectItem>
-                <SelectItem value="Sarah Johnson">Sarah Johnson</SelectItem>
-                <SelectItem value="Mike Chen">Mike Chen</SelectItem>
-                <SelectItem value="Lisa Rodriguez">Lisa Rodriguez</SelectItem>
+                {ownerContacts.map((contact: any) => (
+                  <SelectItem key={contact.id} value={contact.name}>
+                    {contact.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

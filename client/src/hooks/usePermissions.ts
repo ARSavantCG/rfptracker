@@ -27,7 +27,7 @@ export function usePermissions() {
 
   const isAdmin = (): boolean => {
     if (!user) return false;
-    return user.role === 'admin';
+    return user.role === 'admin' || hasPermission('admin.access');
   };
 
   const isManager = (): boolean => {

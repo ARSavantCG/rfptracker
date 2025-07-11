@@ -930,41 +930,53 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(evaluationBudgetAttachments);
   }
 
-  // File cleanup utility methods
-  async getAllRfpFiles(): Promise<{ id: number; filename: string; name: string; size: number }[]> {
-    return await db.select({
-      id: rfpFiles.id,
-      filename: rfpFiles.filename,
-      name: rfpFiles.name,
-      size: rfpFiles.size
-    }).from(rfpFiles);
+  // File cleanup utility methods - working with JSON file storage
+  async getAllRfpFiles(): Promise<{ filename: string; name: string; size: number }[]> {
+    const rfps = await db.select({
+      id: rfpRequests.id,
+      files: rfpRequests.files
+    }).from(rfpRequests);
+    
+    const allFiles: { filename: string; name: string; size: number }[] = [];
+    for (const rfp of rfps) {
+      if (rfp.files && Array.isArray(rfp.files)) {
+        for (const file of rfp.files) {
+          allFiles.push({
+            filename: file.filename,
+            name: file.name,
+            size: file.size || 0
+          });
+        }
+      }
+    }
+    return allFiles;
   }
 
-  async getAllBidFiles(): Promise<{ id: number; filename: string; originalName: string; size: number }[]> {
-    return await db.select({
-      id: bidAttachments.id,
-      filename: bidAttachments.filename,
-      originalName: bidAttachments.originalName,
-      size: bidAttachments.size
-    }).from(bidAttachments);
+  async getAllBidFiles(): Promise<{ filename: string; originalName: string; size: number }[]> {
+    // Note: Currently bid files are not stored separately - they would be in bid attachments
+    // This is a placeholder for future implementation
+    return [];
   }
 
-  async getRfpFiles(rfpId: number): Promise<{ id: number; filename: string; name: string; size: number }[]> {
-    return await db.select({
-      id: rfpFiles.id,
-      filename: rfpFiles.filename,
-      name: rfpFiles.name,
-      size: rfpFiles.size
-    }).from(rfpFiles).where(eq(rfpFiles.rfpRequestId, rfpId));
+  async getRfpFiles(rfpId: number): Promise<{ filename: string; name: string; size: number }[]> {
+    const [rfp] = await db.select({
+      files: rfpRequests.files
+    }).from(rfpRequests).where(eq(rfpRequests.id, rfpId));
+    
+    if (!rfp || !rfp.files || !Array.isArray(rfp.files)) {
+      return [];
+    }
+    
+    return rfp.files.map(file => ({
+      filename: file.filename,
+      name: file.name,
+      size: file.size || 0
+    }));
   }
 
-  async getBidFiles(bidId: number): Promise<{ id: number; filename: string; originalName: string; size: number }[]> {
-    return await db.select({
-      id: bidAttachments.id,
-      filename: bidAttachments.filename,
-      originalName: bidAttachments.originalName,
-      size: bidAttachments.size
-    }).from(bidAttachments).where(eq(bidAttachments.bidCollectionId, bidId));
+  async getBidFiles(bidId: number): Promise<{ filename: string; originalName: string; size: number }[]> {
+    // Note: Currently bid files are not stored separately - placeholder
+    return [];
   }
 
   async getEvaluationBudgetAttachment(attachmentId: number): Promise<EvaluationBudgetAttachment | undefined> {

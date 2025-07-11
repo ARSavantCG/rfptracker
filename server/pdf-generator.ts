@@ -1,5 +1,41 @@
 import { createWriteStream } from "fs";
 import { promisify } from "util";
+import { storage } from "./storage";
+
+// Function to get template content for PDF generation
+async function getTemplateContent(recipientType: string): Promise<any> {
+  try {
+    const templates = await storage.getAllPdfTemplates();
+    const templateMap: { [key: string]: string } = {};
+    
+    templates.forEach(template => {
+      if (template.templateKey.startsWith(recipientType.replace('-', '_'))) {
+        const section = template.templateKey.split('_').slice(1).join('_');
+        templateMap[section] = template.content;
+      }
+    });
+    
+    return {
+      header: templateMap.header || 'REQUEST FOR PROPOSAL',
+      subtitle: templateMap.subtitle || 'ARCHITECT SERVICES',
+      introduction: templateMap.introduction || 'Bridge Industrial is seeking qualified professionals to provide services for the following project. Please review the project details and requirements below.',
+      scopeOfWork: templateMap.scope_of_work || 'Please provide pricing and timeline for the following scope of work items.',
+      submissionRequirements: templateMap.submission_requirements || 'Please include the following in your proposal submission.',
+      evaluationCriteria: templateMap.evaluation_criteria || 'Proposals will be evaluated based on the following criteria.'
+    };
+  } catch (error) {
+    console.error('Error fetching template content:', error);
+    // Return default content if templates not available
+    return {
+      header: 'REQUEST FOR PROPOSAL',
+      subtitle: recipientType.includes('architect') ? 'ARCHITECT SERVICES' : 'CONTRACTOR SERVICES',
+      introduction: 'Bridge Industrial is seeking qualified professionals to provide services for the following project. Please review the project details and requirements below.',
+      scopeOfWork: 'Please provide pricing and timeline for the following scope of work items.',
+      submissionRequirements: 'Please include the following in your proposal submission.',
+      evaluationCriteria: 'Proposals will be evaluated based on the following criteria.'
+    };
+  }
+}
 
 function formatDate(date: string | Date): string {
   const d = new Date(date);
@@ -354,7 +390,7 @@ function generateFinancialSummaryHtml(options: PdfGenerationOptions, dates: any)
 
 export async function generateRfpPdf(options: PdfGenerationOptions): Promise<Buffer> {
   try {
-    const html = generateRfpHtml(options);
+    const html = await generateRfpHtml(options);
     
     // Ensure clean UTF-8 encoding
     const cleanHtml = html.replace(/[\u0000-\u0008\u000B-\u000C\u000E-\u001F\u007F-\u009F]/g, '');
@@ -378,7 +414,7 @@ export async function generateRfpPdf(options: PdfGenerationOptions): Promise<Buf
   }
 }
 
-function generateRfpHtml(options: PdfGenerationOptions): string {
+async function generateRfpHtml(options: PdfGenerationOptions): Promise<string> {
   const { rfp, invitationToBid, recipientType, recipientName, recipientCompany } = options;
   
   const today = formatDate(new Date());
@@ -399,17 +435,20 @@ function generateRfpHtml(options: PdfGenerationOptions): string {
   // Get warehouse notes from RFP data
   const warehouseNotes = rfp.warehouseNotes || "";
 
+  // Get template content for this recipient type
+  const templateContent = await getTemplateContent(recipientType);
+
   // Generate different content based on recipient type
   if (recipientType === "contractor") {
-    return generateContractorRfpHtml(options, { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea, areaBreakdown, warehouseNotes });
+    return await generateContractorRfpHtml(options, { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea, areaBreakdown, warehouseNotes }, templateContent);
   } else if (recipientType === "broker-contractor") {
-    return generateBrokerContractorRfpHtml(options, { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea, areaBreakdown, warehouseNotes });
+    return await generateBrokerContractorRfpHtml(options, { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea, areaBreakdown, warehouseNotes }, templateContent);
   } else if (recipientType === "broker-architect") {
-    return generateBrokerArchitectRfpHtml(options, { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea, areaBreakdown, warehouseNotes });
+    return await generateBrokerArchitectRfpHtml(options, { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea, areaBreakdown, warehouseNotes }, templateContent);
   } else if (recipientType === "financial-summary") {
     return generateFinancialSummaryHtml(options, { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea, areaBreakdown, warehouseNotes });
   } else {
-    return generateArchitectRfpHtml(options, { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea, areaBreakdown, warehouseNotes });
+    return await generateArchitectRfpHtml(options, { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea, areaBreakdown, warehouseNotes }, templateContent);
   }
 }
 
@@ -973,7 +1012,7 @@ function generateArchitectRfpHtml(options: PdfGenerationOptions, dates: any): st
   `;
 }
 
-function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dates: any): string {
+async function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dates: any, templateContent: any): Promise<string> {
   const { rfp, invitationToBid, recipientName, recipientCompany } = options;
   const { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea, areaBreakdown, warehouseNotes } = dates;
 

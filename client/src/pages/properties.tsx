@@ -370,7 +370,7 @@ export default function Properties() {
                                 <div className="space-y-1 text-xs">
                                   <div className="flex justify-between">
                                     <span className="text-gray-500">Trailer:</span>
-                                    <span className="font-medium">{property.trailerParking || 0}</span>
+                                    <span className="font-medium">{property.trailerParking || 0} spaces</span>
                                   </div>
                                 </div>
                               </div>

@@ -3929,9 +3929,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const parsed = JSON.parse(previousHistory[0].generatedContent || '{}');
           previousBudget = parsed.budgetData || parsed;
         } catch (error) {
-          // If it's HTML content, skip comparison (first real report)
-          console.log("Previous report contains HTML, treating as first budget comparison");
-          previousBudget = null;
+          // If it's HTML content, this indicates there was a previous budget report
+          // but we can't extract the budget data for comparison
+          console.log("Previous report contains HTML, indicating prior budget existed");
+          
+          // Set flag to indicate this is not truly the initial budget
+          previousBudget = { isLegacyReport: true };
         }
       }
       

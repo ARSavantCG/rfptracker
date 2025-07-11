@@ -1052,6 +1052,12 @@ export class DatabaseStorage implements IStorage {
       changes.push("Initial evaluation budget created");
       return changes;
     }
+    
+    // Handle legacy HTML reports where we can't extract budget data
+    if (previousBudget.isLegacyReport) {
+      changes.push("Budget modifications since previous report");
+      return changes;
+    }
 
     // Check for line item changes
     const prevTI = previousBudget.tenantImprovements || [];
@@ -1064,11 +1070,29 @@ export class DatabaseStorage implements IStorage {
       }
     }
 
-    // Check for rollup changes
-    const prevRollups = Object.keys(previousBudget.lineItemRollups || {}).length;
-    const currRollups = Object.keys(currentBudget.lineItemRollups || {}).length;
-    if (prevRollups !== currRollups) {
-      changes.push("Changes to rollup");
+    // Enhanced rollup change detection
+    const prevRollups = previousBudget.lineItemRollups || {};
+    const currRollups = currentBudget.lineItemRollups || {};
+    
+    // Check if rollup configuration changed (not just count)
+    const prevRollupKeys = Object.keys(prevRollups);
+    const currRollupKeys = Object.keys(currRollups);
+    
+    let rollupsChanged = false;
+    if (prevRollupKeys.length !== currRollupKeys.length) {
+      rollupsChanged = true;
+    } else {
+      // Check if rollup values changed
+      for (const key of currRollupKeys) {
+        if (prevRollups[key] !== currRollups[key]) {
+          rollupsChanged = true;
+          break;
+        }
+      }
+    }
+    
+    if (rollupsChanged) {
+      changes.push("Changes to line item rollups");
     }
 
     // Check for assembly changes

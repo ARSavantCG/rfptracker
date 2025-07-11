@@ -583,15 +583,15 @@ function generateContractorRfpHtml(options: PdfGenerationOptions, dates: any): s
         </div>
       </div>
       
-      ${invitationToBid?.requestPricing || invitationToBid?.requestSchedule || invitationToBid?.requestSpacePlan ? `
+      ${rfp.requestTypes && rfp.requestTypes.length > 0 ? `
       <div class="section">
         <div class="section-title">REQUEST TYPES:</div>
         <div class="description-box">
           <p><strong>Please provide the following information in your proposal:</strong></p>
           <ul class="requirements-list">
-            ${invitationToBid?.requestPricing ? '<li>✓ Pricing estimates and cost breakdown</li>' : ''}
-            ${invitationToBid?.requestSchedule ? '<li>✓ Project schedule and timeline</li>' : ''}
-            ${invitationToBid?.requestSpacePlan ? '<li>✓ Space planning and design concepts</li>' : ''}
+            ${rfp.requestTypes.includes('pricing') ? '<li>✓ Pricing estimates and cost breakdown</li>' : ''}
+            ${rfp.requestTypes.includes('schedule') ? '<li>✓ Project schedule and timeline</li>' : ''}
+            ${rfp.requestTypes.includes('space-plan') ? '<li>✓ Space planning and design concepts</li>' : ''}
           </ul>
         </div>
       </div>
@@ -845,15 +845,15 @@ function generateArchitectRfpHtml(options: PdfGenerationOptions, dates: any): st
         ${contactPerson} at ${contactEmail} at your earliest convenience.</p>
       </div>
       
-      ${invitationToBid?.requestPricing || invitationToBid?.requestSchedule || invitationToBid?.requestSpacePlan ? `
+      ${rfp.requestTypes && rfp.requestTypes.length > 0 ? `
       <div class="section">
         <div class="section-title">REQUEST TYPES:</div>
         <div class="description-box">
           <p><strong>Please provide the following information in your proposal:</strong></p>
           <ul class="requirements-list">
-            ${invitationToBid?.requestPricing ? '<li>✓ Pricing estimates and cost breakdown</li>' : ''}
-            ${invitationToBid?.requestSchedule ? '<li>✓ Project schedule and timeline</li>' : ''}
-            ${invitationToBid?.requestSpacePlan ? '<li>✓ Space planning and design concepts</li>' : ''}
+            ${rfp.requestTypes.includes('pricing') ? '<li>✓ Pricing estimates and cost breakdown</li>' : ''}
+            ${rfp.requestTypes.includes('schedule') ? '<li>✓ Project schedule and timeline</li>' : ''}
+            ${rfp.requestTypes.includes('space-plan') ? '<li>✓ Space planning and design concepts</li>' : ''}
           </ul>
         </div>
       </div>
@@ -976,6 +976,8 @@ function generateArchitectRfpHtml(options: PdfGenerationOptions, dates: any): st
 function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dates: any): string {
   const { rfp, invitationToBid, recipientName, recipientCompany } = options;
   const { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea, areaBreakdown, warehouseNotes } = dates;
+
+
   
 
 
@@ -1097,15 +1099,15 @@ function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dates: an
       </div>
       ` : ''}
 
-      ${invitationToBid?.requestPricing || invitationToBid?.requestSchedule || invitationToBid?.requestSpacePlan ? `
+      ${rfp.requestTypes && rfp.requestTypes.length > 0 ? `
       <div class="section">
         <div class="section-title">Request Types</div>
         <div class="description-box">
           <p><strong>Please provide the following information in your proposal:</strong></p>
           <ul class="requirements-list">
-            ${invitationToBid?.requestPricing ? '<li>✓ Pricing estimates and cost breakdown</li>' : ''}
-            ${invitationToBid?.requestSchedule ? '<li>✓ Project schedule and timeline</li>' : ''}
-            ${invitationToBid?.requestSpacePlan ? '<li>✓ Space planning and design concepts</li>' : ''}
+            ${rfp.requestTypes.includes('pricing') ? '<li>✓ Pricing estimates and cost breakdown</li>' : ''}
+            ${rfp.requestTypes.includes('schedule') ? '<li>✓ Project schedule and timeline</li>' : ''}
+            ${rfp.requestTypes.includes('space-plan') ? '<li>✓ Space planning and design concepts</li>' : ''}
           </ul>
         </div>
       </div>
@@ -1297,15 +1299,15 @@ function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, dates: a
 
       ${scopeOfWorkHtml}
 
-      ${invitationToBid?.requestPricing || invitationToBid?.requestSchedule || invitationToBid?.requestSpacePlan ? `
+      ${rfp.requestTypes && rfp.requestTypes.length > 0 ? `
       <div class="section">
         <div class="section-title">Request Types</div>
         <div class="description-box">
           <p><strong>Please provide the following information in your proposal:</strong></p>
           <ul class="requirements-list">
-            ${invitationToBid?.requestPricing ? '<li>✓ Pricing estimates and cost breakdown</li>' : ''}
-            ${invitationToBid?.requestSchedule ? '<li>✓ Project schedule and timeline</li>' : ''}
-            ${invitationToBid?.requestSpacePlan ? '<li>✓ Space planning and design concepts</li>' : ''}
+            ${rfp.requestTypes.includes('pricing') ? '<li>✓ Pricing estimates and cost breakdown</li>' : ''}
+            ${rfp.requestTypes.includes('schedule') ? '<li>✓ Project schedule and timeline</li>' : ''}
+            ${rfp.requestTypes.includes('space-plan') ? '<li>✓ Space planning and design concepts</li>' : ''}
           </ul>
         </div>
       </div>

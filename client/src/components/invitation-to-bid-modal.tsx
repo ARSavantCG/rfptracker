@@ -22,9 +22,6 @@ const invitationFormSchema = z.object({
   generateContractorRfp: z.boolean().default(false),
   generateBrokerArchitectRfp: z.boolean().default(false),
   generateBrokerContractorRfp: z.boolean().default(false),
-  requestPricing: z.boolean().default(false),
-  requestSchedule: z.boolean().default(false),
-  requestSpacePlan: z.boolean().default(false),
   selectedContractor: z.string().optional(),
   selectedArchitect: z.string().optional(),
   projectScope: z.string().min(1, "Project scope is required"),
@@ -277,9 +274,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
         generateContractorRfp: false,
         generateBrokerArchitectRfp: false,
         generateBrokerContractorRfp: false,
-        requestPricing: rfp.requestTypes?.includes('pricing') || false,
-        requestSchedule: rfp.requestTypes?.includes('schedule') || false,
-        requestSpacePlan: rfp.requestTypes?.includes('space-plan') || false,
+
         selectedContractor: rfp.generalContractor || "none",
         selectedArchitect: rfp.architect || "none",
         projectScope: cleanProjectName(rfp.projectName),
@@ -304,9 +299,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
           new Date(existingInvitation.contractorDueDate).toISOString().split('T')[0] : defaultValues.contractorDueDate,
         architectDueDate: existingInvitation.architectDueDate ? 
           new Date(existingInvitation.architectDueDate).toISOString().split('T')[0] : defaultValues.architectDueDate,
-        requestPricing: existingInvitation.requestPricing !== undefined ? existingInvitation.requestPricing : defaultValues.requestPricing,
-        requestSchedule: existingInvitation.requestSchedule !== undefined ? existingInvitation.requestSchedule : defaultValues.requestSchedule,
-        requestSpacePlan: existingInvitation.requestSpacePlan !== undefined ? existingInvitation.requestSpacePlan : defaultValues.requestSpacePlan,
+
         // Contact information will be automatically populated from RFP validation data in PDF generation
         projectDescription: existingInvitation.projectDescription || "",
         documentsLink: existingInvitation.documentsLink || "",
@@ -351,10 +344,6 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
         // Include contractor and architect selections
         selectedContractor: data.selectedContractor !== 'none' ? data.selectedContractor : null,
         selectedArchitect: data.selectedArchitect !== 'none' ? data.selectedArchitect : null,
-        // Include request type selections
-        requestPricing: data.requestPricing,
-        requestSchedule: data.requestSchedule,
-        requestSpacePlan: data.requestSpacePlan,
       };
       
       // Save or update invitation to bid record
@@ -736,74 +725,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
               </div>
             </div>
 
-            {/* Request Types */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">Request Types</h3>
-              <div className="grid grid-cols-3 gap-4">
-                <FormField
-                  control={form.control}
-                  name="requestPricing"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel>Pricing</FormLabel>
-                        <FormDescription className="text-xs">
-                          Request pricing estimates
-                        </FormDescription>
-                      </div>
-                    </FormItem>
-                  )}
-                />
 
-                <FormField
-                  control={form.control}
-                  name="requestSchedule"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel>Schedule</FormLabel>
-                        <FormDescription className="text-xs">
-                          Request project timeline
-                        </FormDescription>
-                      </div>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="requestSpacePlan"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel>Space Plan</FormLabel>
-                        <FormDescription className="text-xs">
-                          Request space planning (architects only)
-                        </FormDescription>
-                      </div>
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </div>
 
             {/* Project Information */}
             <div className="space-y-4">

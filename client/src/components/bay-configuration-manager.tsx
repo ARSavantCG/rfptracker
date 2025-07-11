@@ -419,34 +419,50 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                     </div>
                     
                     {/* Dynamic Compass Indicator */}
-                    <div className="bg-white border border-gray-300 rounded-lg p-2 shadow-sm">
-                      <div className="relative w-16 h-16">
-                        <Compass className="w-16 h-16 text-gray-400" />
-                        <div className={`absolute -top-1 left-1/2 transform -translate-x-1/2 text-white text-xs px-1 rounded font-bold ${
+                    <div className="bg-white border border-gray-300 rounded-lg p-3 shadow-sm">
+                      <div className="relative w-20 h-20">
+                        {/* Compass Rose Background */}
+                        <div className="absolute inset-0 border-2 border-gray-300 rounded-full"></div>
+                        <div className="absolute inset-2 border border-gray-200 rounded-full"></div>
+                        
+                        {/* Cross lines */}
+                        <div className="absolute top-1/2 left-0 w-full h-0.5 bg-gray-300 transform -translate-y-0.5"></div>
+                        <div className="absolute left-1/2 top-0 w-0.5 h-full bg-gray-300 transform -translate-x-0.5"></div>
+                        
+                        {/* Diagonal lines */}
+                        <div className="absolute top-1/2 left-1/2 w-0.5 h-full bg-gray-200 transform -translate-x-0.5 -translate-y-1/2 rotate-45 origin-center"></div>
+                        <div className="absolute top-1/2 left-1/2 w-0.5 h-full bg-gray-200 transform -translate-x-0.5 -translate-y-1/2 -rotate-45 origin-center"></div>
+                        
+                        {/* Cardinal directions - larger font */}
+                        <div className={`absolute -top-3 left-1/2 transform -translate-x-1/2 text-white text-sm px-2 py-1 rounded-md font-bold shadow-sm ${
                           firstBayDirection === 'north' ? 'bg-red-600' : 'bg-gray-600'
                         }`}>N</div>
-                        <div className={`absolute top-1/2 -right-1 transform -translate-y-1/2 text-white text-xs px-1 rounded ${
+                        <div className={`absolute top-1/2 -right-3 transform -translate-y-1/2 text-white text-sm px-2 py-1 rounded-md font-bold shadow-sm ${
                           firstBayDirection === 'east' ? 'bg-red-600' : 'bg-gray-600'
                         }`}>E</div>
-                        <div className={`absolute -bottom-1 left-1/2 transform -translate-x-1/2 text-white text-xs px-1 rounded ${
+                        <div className={`absolute -bottom-3 left-1/2 transform -translate-x-1/2 text-white text-sm px-2 py-1 rounded-md font-bold shadow-sm ${
                           firstBayDirection === 'south' ? 'bg-red-600' : 'bg-gray-600'
                         }`}>S</div>
-                        <div className={`absolute top-1/2 -left-1 transform -translate-y-1/2 text-white text-xs px-1 rounded ${
+                        <div className={`absolute top-1/2 -left-3 transform -translate-y-1/2 text-white text-sm px-2 py-1 rounded-md font-bold shadow-sm ${
                           firstBayDirection === 'west' ? 'bg-red-600' : 'bg-gray-600'
                         }`}>W</div>
-                        {/* Diagonal directions */}
-                        <div className={`absolute top-1 right-1 transform text-white text-xs px-1 rounded ${
-                          firstBayDirection === 'northeast' ? 'bg-red-600' : 'bg-gray-600'
+                        
+                        {/* Diagonal directions - smaller font */}
+                        <div className={`absolute -top-2 -right-2 transform text-white text-xs px-1 py-0.5 rounded font-medium shadow-sm ${
+                          firstBayDirection === 'northeast' ? 'bg-red-600' : 'bg-gray-500'
                         }`}>NE</div>
-                        <div className={`absolute bottom-1 right-1 transform text-white text-xs px-1 rounded ${
-                          firstBayDirection === 'southeast' ? 'bg-red-600' : 'bg-gray-600'
+                        <div className={`absolute -bottom-2 -right-2 transform text-white text-xs px-1 py-0.5 rounded font-medium shadow-sm ${
+                          firstBayDirection === 'southeast' ? 'bg-red-600' : 'bg-gray-500'
                         }`}>SE</div>
-                        <div className={`absolute bottom-1 left-1 transform text-white text-xs px-1 rounded ${
-                          firstBayDirection === 'southwest' ? 'bg-red-600' : 'bg-gray-600'
+                        <div className={`absolute -bottom-2 -left-2 transform text-white text-xs px-1 py-0.5 rounded font-medium shadow-sm ${
+                          firstBayDirection === 'southwest' ? 'bg-red-600' : 'bg-gray-500'
                         }`}>SW</div>
-                        <div className={`absolute top-1 left-1 transform text-white text-xs px-1 rounded ${
-                          firstBayDirection === 'northwest' ? 'bg-red-600' : 'bg-gray-600'
+                        <div className={`absolute -top-2 -left-2 transform text-white text-xs px-1 py-0.5 rounded font-medium shadow-sm ${
+                          firstBayDirection === 'northwest' ? 'bg-red-600' : 'bg-gray-500'
                         }`}>NW</div>
+                        
+                        {/* Center dot */}
+                        <div className="absolute top-1/2 left-1/2 w-2 h-2 bg-gray-400 rounded-full transform -translate-x-1/2 -translate-y-1/2"></div>
                       </div>
                     </div>
                   </div>

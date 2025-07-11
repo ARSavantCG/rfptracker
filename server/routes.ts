@@ -3129,7 +3129,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/rom-pilots/:id/line-items", async (req, res) => {
+  app.post("/api/rom-pilots/:id/line-items", requireAuth, async (req, res) => {
     try {
       const romPilotId = parseInt(req.params.id);
       if (isNaN(romPilotId)) {

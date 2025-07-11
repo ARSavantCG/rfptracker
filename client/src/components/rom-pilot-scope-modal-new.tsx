@@ -210,6 +210,12 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
     }).format(amount);
   };
 
+  const formatQuantity = (quantity: string) => {
+    const num = parseFloat(quantity);
+    if (isNaN(num)) return quantity;
+    return new Intl.NumberFormat('en-US').format(num);
+  };
+
   // Drag and drop handlers
   const handleTenantImprovementsDragEnd = (result: DropResult) => {
     if (!result.destination) return;
@@ -235,6 +241,7 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
   const saveLineItems = useMutation({
     mutationFn: async () => {
       const allItems = [...tenantImprovements, ...designSoftCosts];
+      console.log("Saving ROM line items:", { romPilotId, allItems });
       await apiRequest(`/api/rom-pilots/${romPilotId}/line-items`, {
         method: "POST",
         body: JSON.stringify({ lineItems: allItems }),
@@ -363,9 +370,12 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
                             </td>
                             <td className="py-2 px-3">
                               <Input
-                                type="number"
-                                value={item.quantity || ""}
-                                onChange={(e) => updateLineItem(category, index, 'quantity', e.target.value)}
+                                type="text"
+                                value={item.quantity ? formatQuantity(item.quantity) : ""}
+                                onChange={(e) => {
+                                  const value = e.target.value.replace(/,/g, '');
+                                  updateLineItem(category, index, 'quantity', value);
+                                }}
                                 className="h-7 text-xs"
                                 placeholder="0"
                               />

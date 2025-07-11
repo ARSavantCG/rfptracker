@@ -886,7 +886,8 @@ export class DatabaseStorage implements IStorage {
     // Insert new line items
     const savedItems = [];
     for (const item of lineItems) {
-      if (item.scopeItemId && item.scopeItemId > 0) {
+      // Save all line items including custom items (scopeItemId = 0)
+      if (item.scopeItemId !== undefined && item.scopeItemId >= 0) {
         const [created] = await db
           .insert(romPilotLineItems)
           .values({

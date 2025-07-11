@@ -886,7 +886,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => appendScope({ description: "", quantity: 1, unit: "" })}
+                  onClick={() => appendScope({ description: "", quantity: "", unit: "" })}
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Add Line Item
@@ -980,8 +980,8 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                                 <Input 
                                   type="number" 
                                   {...field} 
-                                  onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                                  placeholder="1" 
+                                  onChange={(e) => field.onChange(e.target.value === "" ? "" : parseInt(e.target.value) || "")}
+                                  placeholder="Enter quantity" 
                                 />
                               </FormControl>
                               <FormMessage />

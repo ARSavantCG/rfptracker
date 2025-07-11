@@ -42,6 +42,7 @@ import { generateRfpPdf, generatePdfFilename } from "./pdf-generator";
 import archiver from "archiver";
 import fs from "fs";
 import path from "path";
+import { deleteEntityFiles, cleanupOrphanedFiles, getCleanupStats, findOrphanedFiles } from "./file-cleanup";
 
 // Generate HTML for bid collection PDF
 function generateBidCollectionHtml(bidCollection: any, rfp: any, lineItems: any[]) {
@@ -1151,24 +1152,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid ID" });
       }
 
-      // Get the request to clean up files
-      const request = await storage.getRfpRequest(id);
-      if (request) {
-        // Delete associated files from disk
-        request.files.forEach(file => {
-          const filePath = path.join(uploadsDir, file.path || file.name);
-          if (fs.existsSync(filePath)) {
-            fs.unlinkSync(filePath);
-          }
-        });
-      }
+      // Delete associated files from disk using the cleanup utility
+      const deletedFiles = await deleteEntityFiles('rfp', id);
+      console.log(`Deleted ${deletedFiles.length} files for RFP ${id}`);
 
       const deleted = await storage.deleteRfpRequest(id);
       if (!deleted) {
         return res.status(404).json({ message: "RFP request not found" });
       }
 
-      res.status(200).json({ message: "RFP request deleted successfully" });
+      res.status(200).json({ 
+        message: "RFP request deleted successfully",
+        deletedFiles: deletedFiles.length
+      });
     } catch (error) {
       console.error('Delete RFP error:', error);
       res.status(500).json({ 
@@ -4182,6 +4178,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting executed lease:", error);
       res.status(500).json({ message: "Failed to delete executed lease" });
+    }
+  });
+
+  // File Cleanup API Endpoints
+
+  // Get cleanup statistics
+  app.get('/api/admin/file-cleanup/stats', requireAuth, async (req, res) => {
+    try {
+      const { getCleanupStats } = await import('./file-cleanup');
+      const stats = await getCleanupStats();
+      res.json(stats);
+    } catch (error) {
+      console.error('Error getting cleanup stats:', error);
+      res.status(500).json({ message: 'Failed to get cleanup statistics' });
+    }
+  });
+
+  // Find orphaned files
+  app.get('/api/admin/file-cleanup/orphaned', requireAuth, async (req, res) => {
+    try {
+      const { findOrphanedFiles } = await import('./file-cleanup');
+      const orphanedFiles = await findOrphanedFiles();
+      res.json({ orphanedFiles });
+    } catch (error) {
+      console.error('Error finding orphaned files:', error);
+      res.status(500).json({ message: 'Failed to find orphaned files' });
+    }
+  });
+
+  // Cleanup orphaned files
+  app.post('/api/admin/file-cleanup/clean', requireAuth, async (req, res) => {
+    try {
+      const { cleanupOrphanedFiles } = await import('./file-cleanup');
+      const result = await cleanupOrphanedFiles();
+      res.json({
+        message: 'File cleanup completed',
+        ...result
+      });
+    } catch (error) {
+      console.error('Error during file cleanup:', error);
+      res.status(500).json({ message: 'Failed to cleanup files' });
+    }
+  });
+
+  // Manual file cleanup for specific files
+  app.post('/api/admin/file-cleanup/delete', requireAuth, async (req, res) => {
+    try {
+      const { filenames } = req.body;
+      if (!Array.isArray(filenames)) {
+        return res.status(400).json({ message: 'filenames must be an array' });
+      }
+
+      const { deleteFiles } = await import('./file-cleanup');
+      const result = await deleteFiles(filenames);
+      
+      res.json({
+        message: 'File deletion completed',
+        ...result
+      });
+    } catch (error) {
+      console.error('Error during manual file deletion:', error);
+      res.status(500).json({ message: 'Failed to delete files' });
     }
   });
 

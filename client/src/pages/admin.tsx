@@ -16,6 +16,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { apiRequest } from "@/lib/queryClient";
 import Navigation from "@/components/navigation";
 import ContactPasswordModal from "@/components/contact-password-modal";
+import { FileCleanupPanel } from "@/components/file-cleanup-panel";
 import type { User, UserRole, Permission } from "@shared/schema";
 import { ROLE_PERMISSIONS } from "@shared/schema";
 
@@ -862,6 +863,9 @@ export default function Admin() {
               <SystemUsersAndContacts />
             </CardContent>
           </Card>
+
+          {/* File Storage Management */}
+          <FileCleanupPanel />
         </div>
       </div>
 

@@ -369,10 +369,11 @@ export class DatabaseStorage implements IStorage {
         .from(bidCollections)
         .where(eq(bidCollections.rfpId, id));
       
-      // Delete bid line items for each bid collection
-      console.log('Deleting bid line items...');
+      // Delete bid line items and attachments for each bid collection
+      console.log('Deleting bid line items and attachments...');
       for (const bidCollection of bidCollectionsToDelete) {
         await db.delete(bidLineItems).where(eq(bidLineItems.bidCollectionId, bidCollection.id));
+        await db.delete(bidAttachments).where(eq(bidAttachments.bidCollectionId, bidCollection.id));
       }
       
       console.log('Deleting bid collections...');
@@ -383,6 +384,18 @@ export class DatabaseStorage implements IStorage {
       
       console.log('Deleting invitation to bid...');
       await db.delete(invitationToBid).where(eq(invitationToBid.rfpId, id));
+
+      console.log('Deleting RFP generation history...');
+      await db.delete(rfpGenerationHistory).where(eq(rfpGenerationHistory.rfpId, id));
+
+      console.log('Deleting evaluation budget history...');
+      await db.delete(evaluationBudgetHistory).where(eq(evaluationBudgetHistory.rfpId, id));
+
+      console.log('Deleting evaluation budget attachments...');
+      await db.delete(evaluationBudgetAttachments).where(eq(evaluationBudgetAttachments.rfpId, id));
+
+      console.log('Deleting RFP files...');
+      await db.delete(rfpFiles).where(eq(rfpFiles.rfpRequestId, id));
       
       // Now delete the RFP
       console.log('Deleting RFP...');
@@ -805,7 +818,7 @@ export class DatabaseStorage implements IStorage {
     await db.delete(romPilotLineItems).where(eq(romPilotLineItems.romPilotId, id));
     
     const result = await db.delete(romPilots).where(eq(romPilots.id, id));
-    return result.rowCount > 0;
+    return (result.rowCount || 0) > 0;
   }
 
   // ROM Scope Item implementation
@@ -911,6 +924,47 @@ export class DatabaseStorage implements IStorage {
   // Evaluation Budget Attachment implementation
   async getEvaluationBudgetAttachments(rfpId: number): Promise<EvaluationBudgetAttachment[]> {
     return await db.select().from(evaluationBudgetAttachments).where(eq(evaluationBudgetAttachments.rfpId, rfpId));
+  }
+
+  async getAllEvaluationBudgetAttachments(): Promise<EvaluationBudgetAttachment[]> {
+    return await db.select().from(evaluationBudgetAttachments);
+  }
+
+  // File cleanup utility methods
+  async getAllRfpFiles(): Promise<{ id: number; filename: string; name: string; size: number }[]> {
+    return await db.select({
+      id: rfpFiles.id,
+      filename: rfpFiles.filename,
+      name: rfpFiles.name,
+      size: rfpFiles.size
+    }).from(rfpFiles);
+  }
+
+  async getAllBidFiles(): Promise<{ id: number; filename: string; originalName: string; size: number }[]> {
+    return await db.select({
+      id: bidAttachments.id,
+      filename: bidAttachments.filename,
+      originalName: bidAttachments.originalName,
+      size: bidAttachments.size
+    }).from(bidAttachments);
+  }
+
+  async getRfpFiles(rfpId: number): Promise<{ id: number; filename: string; name: string; size: number }[]> {
+    return await db.select({
+      id: rfpFiles.id,
+      filename: rfpFiles.filename,
+      name: rfpFiles.name,
+      size: rfpFiles.size
+    }).from(rfpFiles).where(eq(rfpFiles.rfpRequestId, rfpId));
+  }
+
+  async getBidFiles(bidId: number): Promise<{ id: number; filename: string; originalName: string; size: number }[]> {
+    return await db.select({
+      id: bidAttachments.id,
+      filename: bidAttachments.filename,
+      originalName: bidAttachments.originalName,
+      size: bidAttachments.size
+    }).from(bidAttachments).where(eq(bidAttachments.bidCollectionId, bidId));
   }
 
   async getEvaluationBudgetAttachment(attachmentId: number): Promise<EvaluationBudgetAttachment | undefined> {

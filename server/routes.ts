@@ -3923,16 +3923,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get the most recent history item to compare against
       const previousHistory = await storage.getEvaluationBudgetHistory(rfpId);
-      const previousBudget = previousHistory.length > 0 ? JSON.parse(previousHistory[0].generatedContent || '{}').budgetData : null;
+      let previousBudget = null;
+      if (previousHistory.length > 0) {
+        try {
+          const parsed = JSON.parse(previousHistory[0].generatedContent || '{}');
+          previousBudget = parsed.budgetData || parsed;
+        } catch (error) {
+          // If it's HTML content, skip comparison (first real report)
+          console.log("Previous report contains HTML, treating as first budget comparison");
+          previousBudget = null;
+        }
+      }
       
       // Generate change summary
       const changeSummary = storage.generateEvaluationChangeSummary(previousBudget, currentBudget);
       
+      // Store both HTML content and budget data for change tracking
+      const contentWithBudgetData = JSON.stringify({
+        htmlContent: generatedContent,
+        budgetData: currentBudget
+      });
+
       const historyItem = await storage.createEvaluationBudgetHistory({
         rfpId,
         reportName,
         generatedBy,
-        generatedContent,
+        generatedContent: contentWithBudgetData,
         changeSummary,
         notes
       });
@@ -3971,7 +3987,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
-      res.send(item.generatedContent);
+      
+      // Extract HTML content if stored as JSON with budget data
+      let htmlContent = item.generatedContent;
+      try {
+        const parsed = JSON.parse(item.generatedContent);
+        htmlContent = parsed.htmlContent || item.generatedContent;
+      } catch (error) {
+        // If it's not JSON, use as-is (legacy HTML content)
+        htmlContent = item.generatedContent;
+      }
+      
+      res.send(htmlContent);
     } catch (error) {
       console.error("Error viewing evaluation budget history item:", error);
       res.status(500).json({ message: "Failed to view evaluation budget history item" });

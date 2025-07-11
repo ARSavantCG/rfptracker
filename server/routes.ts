@@ -710,9 +710,16 @@ async function requireAuth(req: any, res: any, next: any) {
 
   // Get user information for req.user
   try {
-    const user = await storage.getUser(userId);
-    if (user) {
-      req.user = user;
+    const contact = await storage.getContact(parseInt(userId.replace('contact_', '')));
+    if (contact) {
+      req.user = {
+        id: userId,
+        username: contact.email,
+        firstName: contact.name.split(' ')[0],
+        lastName: contact.name.split(' ').slice(1).join(' '),
+        email: contact.email,
+        name: contact.name
+      };
       req.userId = userId;
     } else {
       return res.status(401).json({ message: "User not found" });

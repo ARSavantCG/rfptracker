@@ -291,18 +291,20 @@ export function BayConfigurationModal({
                   } else if (index === totalBays - 1) {
                     position = "East End";
                   } else {
-                    // Show 1-2 "Center" labels depending on total bay count
-                    const centerPositions = [];
-                    if (totalBays >= 10) {
-                      // For larger buildings, show 2 center indicators
-                      centerPositions.push(Math.floor(totalBays / 3));
-                      centerPositions.push(Math.floor(totalBays * 2 / 3));
-                    } else if (totalBays >= 6) {
-                      // For medium buildings, show 1 center indicator
-                      centerPositions.push(Math.floor(totalBays / 2));
+                    // Calculate the true center bay based on building layout
+                    let centerIndex = -1;
+                    
+                    if (totalBays % 2 === 1) {
+                      // Odd number of bays - exact center
+                      centerIndex = Math.floor(totalBays / 2);
+                    } else {
+                      // Even number of bays - choose the bay closest to mathematical center
+                      // For 22 bays (0-21 indices), center would be between index 10 and 11
+                      // Bay 12 (index 11) is the center in this case
+                      centerIndex = Math.floor(totalBays / 2);
                     }
                     
-                    if (centerPositions.includes(index)) {
+                    if (index === centerIndex) {
                       position = "Center";
                     } else {
                       position = ""; // No label for other positions

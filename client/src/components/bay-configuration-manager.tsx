@@ -443,17 +443,17 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                           <circle cx="40" cy="40" r="3" fill="#374151" stroke="#1f2937" strokeWidth="1"/>
                         </svg>
                         
-                        {/* Direction labels */}
-                        <div className={`absolute -top-1 left-1/2 transform -translate-x-1/2 text-lg font-bold ${
+                        {/* Direction labels - positioned outside the circle */}
+                        <div className={`absolute -top-4 left-1/2 transform -translate-x-1/2 text-lg font-bold ${
                           firstBayDirection === 'north' ? 'text-red-600' : 'text-gray-800'
                         }`}>N</div>
-                        <div className={`absolute top-1/2 -right-1 transform -translate-y-1/2 text-lg font-bold ${
+                        <div className={`absolute top-1/2 -right-4 transform -translate-y-1/2 text-lg font-bold ${
                           firstBayDirection === 'east' ? 'text-red-600' : 'text-gray-800'
                         }`}>E</div>
-                        <div className={`absolute -bottom-1 left-1/2 transform -translate-x-1/2 text-lg font-bold ${
+                        <div className={`absolute -bottom-4 left-1/2 transform -translate-x-1/2 text-lg font-bold ${
                           firstBayDirection === 'south' ? 'text-red-600' : 'text-gray-800'
                         }`}>S</div>
-                        <div className={`absolute top-1/2 -left-1 transform -translate-y-1/2 text-lg font-bold ${
+                        <div className={`absolute top-1/2 -left-4 transform -translate-y-1/2 text-lg font-bold ${
                           firstBayDirection === 'west' ? 'text-red-600' : 'text-gray-800'
                         }`}>W</div>
                         

@@ -72,6 +72,9 @@ import {
   type User,
   type UpsertUser,
   type UpdateUser,
+  pdfTemplates,
+  type PdfTemplate,
+  type InsertPdfTemplate,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, like, or, and, asc, gte, lte } from "drizzle-orm";
@@ -1412,6 +1415,45 @@ class ExtendedDatabaseStorage extends DatabaseStorage {
       .from(executedLeases)
       .where(eq(executedLeases.id, id));
     return lease || undefined;
+  }
+
+  // PDF Template management
+  async getPdfTemplates(): Promise<PdfTemplate[]> {
+    const templates = await db.select().from(pdfTemplates).orderBy(pdfTemplates.templateType, pdfTemplates.section);
+    return templates;
+  }
+
+  async getPdfTemplate(id: number): Promise<PdfTemplate | undefined> {
+    const [template] = await db.select().from(pdfTemplates).where(eq(pdfTemplates.id, id));
+    return template;
+  }
+
+  async getPdfTemplateByKey(templateKey: string): Promise<PdfTemplate | undefined> {
+    const [template] = await db.select().from(pdfTemplates).where(eq(pdfTemplates.templateKey, templateKey));
+    return template;
+  }
+
+  async createPdfTemplate(templateData: InsertPdfTemplate): Promise<PdfTemplate> {
+    const [template] = await db.insert(pdfTemplates).values({
+      ...templateData,
+      updatedAt: new Date()
+    }).returning();
+    return template;
+  }
+
+  async updatePdfTemplate(id: number, templateData: Partial<InsertPdfTemplate>): Promise<PdfTemplate> {
+    const [template] = await db.update(pdfTemplates)
+      .set({
+        ...templateData,
+        updatedAt: new Date()
+      })
+      .where(eq(pdfTemplates.id, id))
+      .returning();
+    return template;
+  }
+
+  async deletePdfTemplate(id: number): Promise<void> {
+    await db.delete(pdfTemplates).where(eq(pdfTemplates.id, id));
   }
 }
 

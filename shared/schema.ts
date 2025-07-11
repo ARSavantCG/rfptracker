@@ -701,5 +701,28 @@ export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
 export type UpdateUser = Partial<Omit<User, 'id' | 'createdAt'>>;
 
+// PDF Templates for customizable RFP content
+export const pdfTemplates = pgTable("pdf_templates", {
+  id: serial("id").primaryKey(),
+  templateKey: text("template_key").notNull().unique(), // e.g., "broker_architect_intro", "contractor_deliverables"
+  templateName: text("template_name").notNull(), // Human readable name
+  templateType: text("template_type").notNull(), // "broker-architect", "broker-contractor", "architect", "contractor"
+  section: text("section").notNull(), // "introduction", "deliverables", "pricing_considerations", etc.
+  content: text("content").notNull(), // The actual HTML/text content
+  description: text("description"), // Optional description for admin
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertPdfTemplateSchema = createInsertSchema(pdfTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type PdfTemplate = typeof pdfTemplates.$inferSelect;
+export type InsertPdfTemplate = z.infer<typeof insertPdfTemplateSchema>;
+
 
 

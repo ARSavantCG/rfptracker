@@ -8,7 +8,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Shield, Users, Settings, Edit, Trash2, CheckCircle, XCircle, User as UserIcon, KeyRound } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Shield, Users, Settings, Edit, Trash2, CheckCircle, XCircle, User as UserIcon, KeyRound, FileText, HardDrive } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
@@ -17,6 +18,7 @@ import { apiRequest } from "@/lib/queryClient";
 import Navigation from "@/components/navigation";
 import ContactPasswordModal from "@/components/contact-password-modal";
 import { FileCleanupPanel } from "@/components/file-cleanup-panel";
+import { PdfTemplateManagement } from "@/components/pdf-template-management";
 import type { User, UserRole, Permission } from "@shared/schema";
 import { ROLE_PERMISSIONS } from "@shared/schema";
 
@@ -843,33 +845,52 @@ export default function Admin() {
           <Settings className="h-8 w-8 text-blue-600" />
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Admin Panel</h1>
-            <p className="text-gray-600">Manage admin accounts and authorized ownership contacts</p>
+            <p className="text-gray-600">System administration and configuration management</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-6">
-          {/* System Users - Combined with Authorized Contacts */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Users className="h-5 w-5" />
-                <span>System Users</span>
-              </CardTitle>
-              <CardDescription>
-                Manage admin accounts and authorized ownership contacts
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <SystemUsersAndContacts />
-            </CardContent>
-          </Card>
+        <Tabs defaultValue="users" className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="users" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              User Management
+            </TabsTrigger>
+            <TabsTrigger value="templates" className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              PDF Templates
+            </TabsTrigger>
+            <TabsTrigger value="storage" className="flex items-center gap-2">
+              <HardDrive className="h-4 w-4" />
+              File Storage
+            </TabsTrigger>
+          </TabsList>
 
-          {/* File Storage Management */}
-          <FileCleanupPanel />
-        </div>
+          <TabsContent value="users" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Users className="h-5 w-5" />
+                  <span>System Users</span>
+                </CardTitle>
+                <CardDescription>
+                  Manage admin accounts and authorized ownership contacts
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <SystemUsersAndContacts />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="templates" className="mt-6">
+            <PdfTemplateManagement />
+          </TabsContent>
+
+          <TabsContent value="storage" className="mt-6">
+            <FileCleanupPanel />
+          </TabsContent>
+        </Tabs>
       </div>
-
-
     </div>
   );
 }

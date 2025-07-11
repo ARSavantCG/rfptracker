@@ -29,7 +29,8 @@ import {
   insertPropertySchema,
   updatePropertySchema,
   insertRomScopeItemSchema,
-  updateRomScopeItemSchema
+  updateRomScopeItemSchema,
+  insertPdfTemplateSchema
 } from "@shared/schema";
 import { validateRfpForProgression, canAdvanceToPhase } from "./validation";
 import { AuthService } from "./auth";
@@ -4240,6 +4241,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error during manual file deletion:', error);
       res.status(500).json({ message: 'Failed to delete files' });
+    }
+  });
+
+  // PDF Template management routes
+  app.get('/api/pdf-templates', requireAuth, async (req, res) => {
+    try {
+      const templates = await storage.getPdfTemplates();
+      res.json(templates);
+    } catch (error) {
+      console.error('Error fetching PDF templates:', error);
+      res.status(500).json({ message: 'Failed to fetch PDF templates' });
+    }
+  });
+
+  app.get('/api/pdf-templates/:id', requireAuth, async (req, res) => {
+    try {
+      const template = await storage.getPdfTemplate(parseInt(req.params.id));
+      if (!template) {
+        return res.status(404).json({ message: 'Template not found' });
+      }
+      res.json(template);
+    } catch (error) {
+      console.error('Error fetching PDF template:', error);
+      res.status(500).json({ message: 'Failed to fetch PDF template' });
+    }
+  });
+
+  app.post('/api/pdf-templates', requireAuth, async (req, res) => {
+    try {
+      const validatedData = insertPdfTemplateSchema.parse(req.body);
+      const template = await storage.createPdfTemplate(validatedData);
+      res.status(201).json(template);
+    } catch (error) {
+      console.error('Error creating PDF template:', error);
+      res.status(500).json({ message: 'Failed to create PDF template' });
+    }
+  });
+
+  app.put('/api/pdf-templates/:id', requireAuth, async (req, res) => {
+    try {
+      const templateData = insertPdfTemplateSchema.partial().parse(req.body);
+      const template = await storage.updatePdfTemplate(parseInt(req.params.id), templateData);
+      res.json(template);
+    } catch (error) {
+      console.error('Error updating PDF template:', error);
+      res.status(500).json({ message: 'Failed to update PDF template' });
+    }
+  });
+
+  app.delete('/api/pdf-templates/:id', requireAuth, async (req, res) => {
+    try {
+      await storage.deletePdfTemplate(parseInt(req.params.id));
+      res.json({ message: 'Template deleted successfully' });
+    } catch (error) {
+      console.error('Error deleting PDF template:', error);
+      res.status(500).json({ message: 'Failed to delete PDF template' });
     }
   });
 

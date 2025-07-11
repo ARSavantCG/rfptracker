@@ -364,7 +364,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                   
                   <div className="divide-y">
                     {items.map((item) => (
-                      <div key={item.id} className="p-4 flex justify-between items-start">
+                      <div key={item.id} className="p-3 flex justify-between items-center">
                         <div className="flex-1">
                           <div className="flex items-center space-x-3">
                             <h5 className="font-medium text-gray-900">{item.name}</h5>
@@ -375,18 +375,6 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                           {item.description && (
                             <p className="text-sm text-gray-600 mt-1">{item.description}</p>
                           )}
-                          <div className="flex items-center space-x-4 mt-2">
-                            {item.source && (
-                              <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
-                                Source: {item.source}
-                              </span>
-                            )}
-                            {item.lastUpdated && (
-                              <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
-                                Updated: {new Date(item.lastUpdated).toLocaleDateString('en-US', {timeZone: 'America/New_York'})}
-                              </span>
-                            )}
-                          </div>
                         </div>
                         
                         <div className="flex space-x-2 ml-4">

@@ -31,7 +31,8 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { FileText, Edit, Save, Eye, Plus, Download } from "lucide-react";
+import { FileText, Edit, Save, Eye, Plus, Download, Bold, Italic, Underline, Trash2, Type } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 
 interface DocumentSection {
   id: string;
@@ -39,12 +40,22 @@ interface DocumentSection {
   content: string;
   editable: boolean;
   templateKey?: string;
+  isCustom?: boolean;
+  headerFormat?: {
+    bold?: boolean;
+    italic?: boolean;
+    underline?: boolean;
+    fontSize?: string;
+  };
 }
 
 export function RfpDocumentEditor() {
   const [selectedDocumentType, setSelectedDocumentType] = useState<string>('');
   const [editingSections, setEditingSections] = useState<Set<string>>(new Set());
   const [sectionContent, setSectionContent] = useState<Record<string, string>>({});
+  const [customSections, setCustomSections] = useState<DocumentSection[]>([]);
+  const [headerFormats, setHeaderFormats] = useState<Record<string, any>>({});
+  const [newSectionTitle, setNewSectionTitle] = useState('');
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -72,15 +83,18 @@ export function RfpDocumentEditor() {
       request_types_text: getTemplateContent('request_types_text', 'common') || 'Please indicate which of the following you can provide:'
     };
 
-    return [
-      { id: 'header', title: 'Document Header', content: baseContent.header, editable: true, templateKey: `${selectedDocumentType}_header` },
-      { id: 'subtitle', title: 'Service Type Subtitle', content: baseContent.subtitle, editable: true, templateKey: `${selectedDocumentType}_subtitle` },
+    const baseSections: DocumentSection[] = [
+      { id: 'header', title: 'Document Header', content: baseContent.header, editable: true, templateKey: `${selectedDocumentType}_header`, headerFormat: { bold: true, fontSize: '24px' } },
+      { id: 'subtitle', title: 'Service Type Subtitle', content: baseContent.subtitle, editable: true, templateKey: `${selectedDocumentType}_subtitle`, headerFormat: { bold: true, fontSize: '18px' } },
       { id: 'introduction', title: 'Introduction Text', content: baseContent.introduction, editable: true, templateKey: 'common_introduction' },
-      { id: 'scope_of_work', title: 'Scope of Work Template', content: baseContent.scope_of_work, editable: true, templateKey: `${selectedDocumentType}_scope_of_work` },
-      { id: 'submission_requirements', title: 'Submission Requirements', content: baseContent.submission_requirements, editable: true, templateKey: 'common_submission_requirements' },
-      { id: 'request_types_text', title: 'Request Types Section Text', content: baseContent.request_types_text, editable: true, templateKey: 'common_request_types_text' },
+      { id: 'scope_of_work', title: 'Scope of Work', content: baseContent.scope_of_work, editable: true, templateKey: `${selectedDocumentType}_scope_of_work`, headerFormat: { bold: true, fontSize: '16px' } },
+      { id: 'submission_requirements', title: 'Submission Requirements', content: baseContent.submission_requirements, editable: true, templateKey: 'common_submission_requirements', headerFormat: { bold: true, fontSize: '16px' } },
+      { id: 'request_types_text', title: 'Request Types Section', content: baseContent.request_types_text, editable: true, templateKey: 'common_request_types_text', headerFormat: { bold: true, fontSize: '16px' } },
       { id: 'contact_footer', title: 'Contact Footer', content: baseContent.contact_footer, editable: true, templateKey: 'common_contact_footer' }
     ];
+
+    // Combine base sections with custom sections
+    return [...baseSections, ...customSections];
   };
 
   const getTemplateContent = (section: string, type: string): string | undefined => {
@@ -116,6 +130,52 @@ export function RfpDocumentEditor() {
       ...prev,
       [sectionId]: content
     }));
+  };
+
+  const addCustomSection = () => {
+    if (!newSectionTitle.trim()) return;
+    
+    const newSection: DocumentSection = {
+      id: `custom_${Date.now()}`,
+      title: newSectionTitle,
+      content: 'Enter your content here...',
+      editable: true,
+      isCustom: true,
+      headerFormat: { bold: true, fontSize: '16px' }
+    };
+    
+    setCustomSections(prev => [...prev, newSection]);
+    setSectionContent(prev => ({
+      ...prev,
+      [newSection.id]: newSection.content
+    }));
+    setNewSectionTitle('');
+  };
+
+  const removeCustomSection = (sectionId: string) => {
+    setCustomSections(prev => prev.filter(s => s.id !== sectionId));
+    setSectionContent(prev => {
+      const newContent = { ...prev };
+      delete newContent[sectionId];
+      return newContent;
+    });
+  };
+
+  const updateHeaderFormat = (sectionId: string, format: any) => {
+    setHeaderFormats(prev => ({
+      ...prev,
+      [sectionId]: format
+    }));
+  };
+
+  const getSectionHeaderStyle = (section: DocumentSection) => {
+    const format = headerFormats[section.id] || section.headerFormat || {};
+    return {
+      fontWeight: format.bold ? 'bold' : 'normal',
+      fontStyle: format.italic ? 'italic' : 'normal',
+      textDecoration: format.underline ? 'underline' : 'none',
+      fontSize: format.fontSize || '16px'
+    };
   };
 
   const saveTemplateUpdates = useMutation({
@@ -247,17 +307,95 @@ export function RfpDocumentEditor() {
             </Badge>
           </div>
 
+          {/* Add Custom Section */}
+          <Card className="border-2 border-dashed border-gray-300">
+            <CardContent className="pt-6">
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Enter new section title (e.g., 'Special Requirements', 'Project Timeline')"
+                  value={newSectionTitle}
+                  onChange={(e) => setNewSectionTitle(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && addCustomSection()}
+                />
+                <Button onClick={addCustomSection} disabled={!newSectionTitle.trim()}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Section
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
           {documentSections.map((section) => (
-            <Card key={section.id}>
+            <Card key={section.id} className={section.isCustom ? "border-blue-200" : ""}>
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-base">{section.title}</CardTitle>
                   <div className="flex items-center gap-2">
+                    <CardTitle 
+                      className="text-base" 
+                      style={getSectionHeaderStyle(section)}
+                    >
+                      {section.title}
+                    </CardTitle>
+                    {section.isCustom && (
+                      <Badge variant="outline" className="text-xs bg-blue-50">
+                        Custom
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    {/* Header Formatting Controls */}
+                    {editingSections.has(section.id) && (
+                      <div className="flex gap-1 mr-2">
+                        <Button
+                          variant={headerFormats[section.id]?.bold || section.headerFormat?.bold ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => {
+                            const currentFormat = headerFormats[section.id] || section.headerFormat || {};
+                            updateHeaderFormat(section.id, { ...currentFormat, bold: !currentFormat.bold });
+                          }}
+                        >
+                          <Bold className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant={headerFormats[section.id]?.italic || section.headerFormat?.italic ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => {
+                            const currentFormat = headerFormats[section.id] || section.headerFormat || {};
+                            updateHeaderFormat(section.id, { ...currentFormat, italic: !currentFormat.italic });
+                          }}
+                        >
+                          <Italic className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant={headerFormats[section.id]?.underline || section.headerFormat?.underline ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => {
+                            const currentFormat = headerFormats[section.id] || section.headerFormat || {};
+                            updateHeaderFormat(section.id, { ...currentFormat, underline: !currentFormat.underline });
+                          }}
+                        >
+                          <Underline className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                    
                     {section.templateKey && (
                       <Badge variant="secondary" className="text-xs">
                         Template
                       </Badge>
                     )}
+                    
+                    {section.isCustom && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => removeCustomSection(section.id)}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                    
                     <Button
                       variant="ghost"
                       size="sm"
@@ -271,27 +409,62 @@ export function RfpDocumentEditor() {
               <CardContent>
                 {editingSections.has(section.id) ? (
                   <div className="space-y-3">
-                    <Textarea
-                      value={sectionContent[section.id] || section.content}
-                      onChange={(e) => updateSectionContent(section.id, e.target.value)}
-                      rows={section.content.split('\n').length + 2}
-                      className="min-h-[100px]"
-                    />
+                    {/* Header Title Editing */}
+                    {section.isCustom && (
+                      <div>
+                        <Label htmlFor={`title-${section.id}`} className="text-sm font-medium">
+                          Section Title
+                        </Label>
+                        <Input
+                          id={`title-${section.id}`}
+                          value={section.title}
+                          onChange={(e) => {
+                            setCustomSections(prev => 
+                              prev.map(s => s.id === section.id ? { ...s, title: e.target.value } : s)
+                            );
+                          }}
+                          className="mb-2"
+                        />
+                      </div>
+                    )}
+                    
+                    <div>
+                      <Label htmlFor={`content-${section.id}`} className="text-sm font-medium">
+                        Content
+                      </Label>
+                      <Textarea
+                        id={`content-${section.id}`}
+                        value={sectionContent[section.id] || section.content}
+                        onChange={(e) => updateSectionContent(section.id, e.target.value)}
+                        rows={Math.max(4, (sectionContent[section.id] || section.content).split('\n').length + 2)}
+                        className="min-h-[100px]"
+                      />
+                    </div>
+                    
                     <div className="flex justify-end space-x-2">
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => toggleEditSection(section.id)}
                       >
-                        Done
+                        Done Editing
                       </Button>
                     </div>
                   </div>
                 ) : (
-                  <div className="bg-muted p-4 rounded-md">
-                    <pre className="whitespace-pre-wrap text-sm font-mono">
-                      {sectionContent[section.id] || section.content}
-                    </pre>
+                  <div className="bg-muted p-4 rounded-md border">
+                    <div className="space-y-2">
+                      <div 
+                        className="font-semibold text-sm"
+                        style={getSectionHeaderStyle(section)}
+                      >
+                        {section.title}
+                      </div>
+                      <Separator />
+                      <div className="whitespace-pre-wrap text-sm">
+                        {sectionContent[section.id] || section.content}
+                      </div>
+                    </div>
                   </div>
                 )}
               </CardContent>

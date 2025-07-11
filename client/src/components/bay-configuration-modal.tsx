@@ -121,7 +121,7 @@ export function BayConfigurationModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[1000px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-[95vw] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Grid3x3 className="h-5 w-5 text-orange-600" />
@@ -237,10 +237,8 @@ export function BayConfigurationModal({
                 <div className="flex items-center gap-3">
                   <Navigation className="w-4 h-4 rotate-180" />
                   <span className="font-medium">West Side</span>
-                  <span className="text-gray-500">(Street / Entrance)</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-gray-500">(Loading Docks)</span>
                   <span className="font-medium">East Side</span>
                   <Navigation className="w-4 h-4" />
                 </div>
@@ -288,11 +286,28 @@ export function BayConfigurationModal({
                   const totalBays = individualBays.length;
                   let position = "";
                   
-                  if (index === 0) position = "West End";
-                  else if (index === totalBays - 1) position = "East End";
-                  else if (index < totalBays / 3) position = "West";
-                  else if (index > (totalBays * 2) / 3) position = "East";
-                  else position = "Center";
+                  if (index === 0) {
+                    position = "West End";
+                  } else if (index === totalBays - 1) {
+                    position = "East End";
+                  } else {
+                    // Show 1-2 "Center" labels depending on total bay count
+                    const centerPositions = [];
+                    if (totalBays >= 10) {
+                      // For larger buildings, show 2 center indicators
+                      centerPositions.push(Math.floor(totalBays / 3));
+                      centerPositions.push(Math.floor(totalBays * 2 / 3));
+                    } else if (totalBays >= 6) {
+                      // For medium buildings, show 1 center indicator
+                      centerPositions.push(Math.floor(totalBays / 2));
+                    }
+                    
+                    if (centerPositions.includes(index)) {
+                      position = "Center";
+                    } else {
+                      position = ""; // No label for other positions
+                    }
+                  }
                   
                   return (
                     <div key={`pos-${bay.id}`} className="w-12 flex-shrink-0">

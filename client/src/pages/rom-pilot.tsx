@@ -88,15 +88,12 @@ export default function RomPilotPage() {
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
-      const newWindow = window.open(url, '_blank', 'width=450,height=400,scrollbars=yes,resizable=yes');
+      window.open(url, '_blank');
       
-      if (newWindow) {
-        newWindow.onload = () => {
-          setTimeout(() => {
-            window.URL.revokeObjectURL(url);
-          }, 1000);
-        };
-      }
+      // Clean up the URL after a short delay
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+      }, 1000);
 
       toast({
         title: "Success",

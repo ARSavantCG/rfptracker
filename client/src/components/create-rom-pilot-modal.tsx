@@ -262,10 +262,73 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess, editingRomPilo
                     </div>
 
                     <div className="mb-4">
-                      <h4 className="text-sm font-medium text-gray-700 mb-2">Building Layout</h4>
-                      <p className="text-xs text-gray-500 mb-3">Click bays to select for rentable area calculation</p>
+                      <div className="flex items-start gap-6 mb-4">
+                        {/* Compass Rose */}
+                        <div className="flex-shrink-0">
+                          <h4 className="text-sm font-medium text-gray-700 mb-2">Building Layout</h4>
+                          <div className="relative w-24 h-24 bg-white border border-gray-300 rounded-lg p-1">
+                            {/* Compass Rose SVG */}
+                            <svg
+                              viewBox="0 0 100 100"
+                              className="w-full h-full"
+                              style={{ transform: 'scale(0.9)' }}
+                            >
+                              {/* Outer circle */}
+                              <circle cx="50" cy="50" r="45" fill="none" stroke="#d1d5db" strokeWidth="2" />
+                              {/* Inner circle */}
+                              <circle cx="50" cy="50" r="30" fill="none" stroke="#d1d5db" strokeWidth="1" />
+                              
+                              {/* Eight-pointed star pattern */}
+                              <g fill="#e5e7eb" stroke="#9ca3af" strokeWidth="0.5">
+                                {/* Cardinal direction points (larger) */}
+                                <polygon points="50,5 55,25 50,30 45,25" />
+                                <polygon points="95,50 75,45 70,50 75,55" />
+                                <polygon points="50,95 45,75 50,70 55,75" />
+                                <polygon points="5,50 25,55 30,50 25,45" />
+                                
+                                {/* Diagonal direction points (smaller) */}
+                                <polygon points="79,21 70,30 65,25 74,16" />
+                                <polygon points="79,79 74,84 65,75 70,70" />
+                                <polygon points="21,79 26,84 35,75 30,70" />
+                                <polygon points="21,21 30,30 25,35 16,26" />
+                              </g>
+                              
+                              {/* Center dot */}
+                              <circle cx="50" cy="50" r="2" fill="#6b7280" />
+                            </svg>
+                            
+                            {/* Direction labels */}
+                            <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 text-sm font-bold text-gray-700">N</div>
+                            <div className="absolute top-1/2 -right-1 transform -translate-y-1/2 text-sm font-bold text-gray-700">E</div>
+                            <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 text-sm font-bold text-gray-700">S</div>
+                            <div className="absolute top-1/2 -left-1 transform -translate-y-1/2 text-sm font-bold text-gray-700">W</div>
+                          </div>
+                        </div>
+
+                        {/* Building Orientation Info */}
+                        <div className="flex-grow">
+                          <h4 className="text-sm font-medium text-gray-700 mb-2">Building Orientation</h4>
+                          <p className="text-sm text-gray-600 mb-1">
+                            {selectedProperty?.firstBayDirection ? `Bay 1 faces ${selectedProperty.firstBayDirection}` : 'Bay 1 faces North'}
+                          </p>
+                          <p className="text-xs text-gray-500 mb-3">Click bays to select for rentable area calculation</p>
+                        </div>
+                      </div>
+                      
+                      {/* Directional labels */}
+                      <div className="flex justify-between items-center mb-2 px-4">
+                        <div className="text-xs text-gray-500 flex items-center gap-1">
+                          <span>←</span>
+                          <span>West Side</span>
+                        </div>
+                        <div className="text-xs text-gray-500 flex items-center gap-1">
+                          <span>East Side</span>
+                          <span>→</span>
+                        </div>
+                      </div>
+                      
                       <div className="grid grid-cols-8 gap-2 max-h-64 overflow-y-auto p-2 border rounded-lg bg-gray-50">
-                        {propertyBayConfigs.map((bay) => {
+                        {propertyBayConfigs.map((bay, index) => {
                           const isSelected = bayConfigs.some(b => b.id === bay.id);
                           return (
                             <div
@@ -304,6 +367,31 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess, editingRomPilo
                           );
                         })}
                       </div>
+                      
+                      {/* Position indicators */}
+                      {propertyBayConfigs.length > 0 && (
+                        <div className="grid grid-cols-8 gap-2 px-2 mt-1">
+                          {propertyBayConfigs.map((_, index) => {
+                            const totalBays = propertyBayConfigs.length;
+                            const centerIndex = Math.floor((totalBays - 1) / 2);
+                            let positionLabel = '';
+                            
+                            if (index === 0) {
+                              positionLabel = 'West End';
+                            } else if (index === centerIndex) {
+                              positionLabel = 'Center';
+                            } else if (index === totalBays - 1) {
+                              positionLabel = 'East End';
+                            }
+                            
+                            return (
+                              <div key={index} className="text-xs text-gray-500 text-center h-4">
+                                {positionLabel}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
 
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">

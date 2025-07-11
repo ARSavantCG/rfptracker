@@ -138,55 +138,55 @@ export default function BayConfigurationSelector({
 
           {/* Building Orientation Compass */}
           <div className="flex items-start gap-4 mb-3">
-            <div className="bg-white border border-gray-300 rounded-lg p-3 shadow-sm">
-              <div className="relative w-16 h-16">
+            <div className="bg-white border border-gray-300 rounded-lg p-4 shadow-sm">
+              <div className="relative w-20 h-20">
                 {/* Compass Rose Background */}
                 <div className="absolute inset-0 border-2 border-gray-800 rounded-full"></div>
                 <div className="absolute inset-0.5 border border-gray-600 rounded-full"></div>
                 
                 {/* Compass Rose Star Pattern */}
-                <svg className="absolute inset-1 w-14 h-14" viewBox="0 0 56 56">
+                <svg className="absolute inset-1 w-18 h-18" viewBox="0 0 72 72">
                   {/* Main star points (N, S, E, W) */}
-                  <path d="M28 3 L29.5 25 L28 28 L26.5 25 Z" fill="#374151" stroke="#1f2937" strokeWidth="0.5"/>
-                  <path d="M53 28 L31 29.5 L28 28 L31 26.5 Z" fill="#374151" stroke="#1f2937" strokeWidth="0.5"/>
-                  <path d="M28 53 L26.5 31 L28 28 L29.5 31 Z" fill="#374151" stroke="#1f2937" strokeWidth="0.5"/>
-                  <path d="M3 28 L25 26.5 L28 28 L25 29.5 Z" fill="#374151" stroke="#1f2937" strokeWidth="0.5"/>
+                  <path d="M36 4 L37.5 32 L36 36 L34.5 32 Z" fill="#374151" stroke="#1f2937" strokeWidth="0.5"/>
+                  <path d="M68 36 L40 37.5 L36 36 L40 34.5 Z" fill="#374151" stroke="#1f2937" strokeWidth="0.5"/>
+                  <path d="M36 68 L34.5 40 L36 36 L37.5 40 Z" fill="#374151" stroke="#1f2937" strokeWidth="0.5"/>
+                  <path d="M4 36 L32 34.5 L36 36 L32 37.5 Z" fill="#374151" stroke="#1f2937" strokeWidth="0.5"/>
                   
                   {/* Smaller diagonal points (NE, SE, SW, NW) */}
-                  <path d="M28 28 L42 14 L43.5 15.5 L28 28 Z" fill="#6b7280" stroke="#374151" strokeWidth="0.5"/>
-                  <path d="M28 28 L42 42 L40.5 43.5 L28 28 Z" fill="#6b7280" stroke="#374151" strokeWidth="0.5"/>
-                  <path d="M28 28 L14 42 L12.5 40.5 L28 28 Z" fill="#6b7280" stroke="#374151" strokeWidth="0.5"/>
-                  <path d="M28 28 L14 14 L15.5 12.5 L28 28 Z" fill="#6b7280" stroke="#374151" strokeWidth="0.5"/>
+                  <path d="M36 36 L54 18 L55.5 19.5 L36 36 Z" fill="#6b7280" stroke="#374151" strokeWidth="0.5"/>
+                  <path d="M36 36 L54 54 L52.5 55.5 L36 36 Z" fill="#6b7280" stroke="#374151" strokeWidth="0.5"/>
+                  <path d="M36 36 L18 54 L16.5 52.5 L36 36 Z" fill="#6b7280" stroke="#374151" strokeWidth="0.5"/>
+                  <path d="M36 36 L18 18 L19.5 16.5 L36 36 Z" fill="#6b7280" stroke="#374151" strokeWidth="0.5"/>
                   
                   {/* Center circle */}
-                  <circle cx="28" cy="28" r="2" fill="#374151" stroke="#1f2937" strokeWidth="1"/>
+                  <circle cx="36" cy="36" r="2.5" fill="#374151" stroke="#1f2937" strokeWidth="1"/>
                 </svg>
                 
                 {/* Direction labels - positioned outside the circle */}
-                <div className={`absolute -top-4 left-1/2 transform -translate-x-1/2 text-sm font-bold ${
+                <div className={`absolute -top-5 left-1/2 transform -translate-x-1/2 text-sm font-bold ${
                   property.firstBayDirection === 'north' ? 'text-red-600' : 'text-gray-800'
                 }`}>N</div>
-                <div className={`absolute top-1/2 -right-4 transform -translate-y-1/2 text-sm font-bold ${
+                <div className={`absolute top-1/2 -right-5 transform -translate-y-1/2 text-sm font-bold ${
                   property.firstBayDirection === 'east' ? 'text-red-600' : 'text-gray-800'
                 }`}>E</div>
-                <div className={`absolute -bottom-4 left-1/2 transform -translate-x-1/2 text-sm font-bold ${
+                <div className={`absolute -bottom-5 left-1/2 transform -translate-x-1/2 text-sm font-bold ${
                   property.firstBayDirection === 'south' ? 'text-red-600' : 'text-gray-800'
                 }`}>S</div>
-                <div className={`absolute top-1/2 -left-4 transform -translate-y-1/2 text-sm font-bold ${
+                <div className={`absolute top-1/2 -left-5 transform -translate-y-1/2 text-sm font-bold ${
                   property.firstBayDirection === 'west' ? 'text-red-600' : 'text-gray-800'
                 }`}>W</div>
                 
                 {/* Diagonal direction labels */}
-                <div className={`absolute top-0.5 right-0.5 text-xs font-medium ${
+                <div className={`absolute top-1 right-1 text-xs font-medium ${
                   property.firstBayDirection === 'northeast' ? 'text-red-600' : 'text-gray-600'
                 }`}>NE</div>
-                <div className={`absolute bottom-0.5 right-0.5 text-xs font-medium ${
+                <div className={`absolute bottom-1 right-1 text-xs font-medium ${
                   property.firstBayDirection === 'southeast' ? 'text-red-600' : 'text-gray-600'
                 }`}>SE</div>
-                <div className={`absolute bottom-0.5 left-0.5 text-xs font-medium ${
+                <div className={`absolute bottom-1 left-1 text-xs font-medium ${
                   property.firstBayDirection === 'southwest' ? 'text-red-600' : 'text-gray-600'
                 }`}>SW</div>
-                <div className={`absolute top-0.5 left-0.5 text-xs font-medium ${
+                <div className={`absolute top-1 left-1 text-xs font-medium ${
                   property.firstBayDirection === 'northwest' ? 'text-red-600' : 'text-gray-600'
                 }`}>NW</div>
               </div>
@@ -205,13 +205,13 @@ export default function BayConfigurationSelector({
           {/* Directional Labels */}
           <div className="mb-3">
             <div className="flex justify-between items-center text-xs text-gray-600">
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-2">
                 <Navigation className="w-3 h-3 rotate-180" />
                 <span className="font-medium">West</span>
-                <span className="text-gray-400">(Street)</span>
+                <span className="text-gray-400">(Street / Entrance)</span>
               </div>
-              <div className="flex items-center gap-1">
-                <span className="text-gray-400">(Docks)</span>
+              <div className="flex items-center gap-2">
+                <span className="text-gray-400">(Loading Docks)</span>
                 <span className="font-medium">East</span>
                 <Navigation className="w-3 h-3" />
               </div>

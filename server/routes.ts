@@ -3049,10 +3049,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/rom-scope-items", async (req, res) => {
     try {
-      const scopeItem = await storage.createRomScopeItem(req.body);
+      // Handle date conversion for lastUpdated field
+      const createData = { ...req.body };
+      if (createData.lastUpdated && createData.lastUpdated !== '') {
+        createData.lastUpdated = new Date(createData.lastUpdated);
+      } else if (createData.lastUpdated === '') {
+        createData.lastUpdated = null;
+      }
+
+      const scopeItem = await storage.createRomScopeItem(createData);
       res.status(201).json(scopeItem);
     } catch (error) {
-      res.status(400).json({ message: "Invalid scope item data" });
+      console.error("ROM scope item creation error:", error);
+      res.status(400).json({ message: "Invalid scope item data", error: error.message });
     }
   });
 
@@ -3066,7 +3075,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Updating ROM scope item ID:", id);
       console.log("Update data:", req.body);
 
-      const scopeItem = await storage.updateRomScopeItem(id, req.body);
+      // Handle date conversion for lastUpdated field
+      const updateData = { ...req.body };
+      if (updateData.lastUpdated && updateData.lastUpdated !== '') {
+        updateData.lastUpdated = new Date(updateData.lastUpdated);
+      } else if (updateData.lastUpdated === '') {
+        updateData.lastUpdated = null;
+      }
+
+      const scopeItem = await storage.updateRomScopeItem(id, updateData);
       if (!scopeItem) {
         return res.status(404).json({ message: "Scope item not found" });
       }

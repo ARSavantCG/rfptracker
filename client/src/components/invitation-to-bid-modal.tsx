@@ -36,7 +36,9 @@ const invitationFormSchema = z.object({
   })).default([]),
   scopeOfWork: z.array(z.object({
     description: z.string(),
-    quantity: z.number(),
+    quantity: z.union([z.number(), z.string()]).transform((val) => 
+      typeof val === 'string' ? (val === '' ? 0 : parseInt(val) || 0) : val
+    ),
     unit: z.string(),
   })).default([]),
   architectMilestones: z.array(z.object({
@@ -355,13 +357,21 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
         description: "Your invitation details have been saved successfully.",
       });
       
-      // Preserve current form state including scope of work
+      // Preserve current form state completely
       const currentFormValues = form.getValues();
       
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests", rfp?.id, "invitation-to-bid"] });
       
-      // Restore form state after a brief delay to allow data to refresh
+      // Restore complete form state after data refresh
       setTimeout(() => {
+        // Preserve all form values, not just scope of work
+        form.reset({
+          ...currentFormValues,
+          // Ensure scope of work is properly maintained
+          scopeOfWork: updatedInvitation?.scopeOfWork || currentFormValues.scopeOfWork || []
+        });
+        
+        // Update scope of work field array
         if (updatedInvitation?.scopeOfWork) {
           replaceScope(updatedInvitation.scopeOfWork);
         } else if (currentFormValues.scopeOfWork) {

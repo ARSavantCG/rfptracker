@@ -357,7 +357,7 @@ export default function Properties() {
                                     <span className="text-gray-500">EV:</span>
                                     <span className="font-medium">{property.evParking || 0}</span>
                                   </div>
-                                  <div className="flex justify-between border-t pt-1 mt-1">
+                                  <div className="flex justify-between">
                                     <span className="text-gray-700 font-medium">Total:</span>
                                     <span className="font-semibold">{((property.standardParking || 0) + (property.accessibleParking || 0) + (property.evParking || 0))} spaces</span>
                                   </div>

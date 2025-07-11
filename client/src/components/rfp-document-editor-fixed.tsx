@@ -31,9 +31,8 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { FileText, Edit, Save, Eye, Plus, Download, Bold, Italic, Underline, Trash2, Type, GripVertical, ChevronUp, ChevronDown } from "lucide-react";
+import { FileText, Edit, Save, Eye, Plus, Download, Bold, Italic, Underline, Trash2, ChevronUp, ChevronDown } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
-import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 
 interface DocumentSection {
   id: string;
@@ -61,12 +60,6 @@ export function RfpDocumentEditor() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Get list of RFPs to choose from (for preview only)
-  const { data: rfps = [] } = useQuery({
-    queryKey: ['/api/rfp-requests'],
-  });
-
-  // Get templates for customization
   const { data: templates = [] } = useQuery({
     queryKey: ['/api/pdf-templates'],
   });
@@ -114,22 +107,27 @@ export function RfpDocumentEditor() {
   };
 
   const getTemplateContent = (section: string, type: string): string | undefined => {
-    const template = templates.find((t: any) => 
-      t.templateKey === `${type}_${section}` || t.templateKey === `common_${section}`
-    );
+    if (!templates.length) return undefined;
+    
+    // For common sections, use the template key directly
+    if (type === 'common') {
+      const template = templates.find(t => t.templateKey === `common_${section}`);
+      return template?.content;
+    }
+    
+    // For type-specific sections, use type_section format
+    const template = templates.find(t => t.templateKey === `${type}_${section}`);
     return template?.content;
   };
 
   const documentSections = generateDocumentSections();
 
-  // Initialize section content when document type changes
-  useEffect(() => {
-    const initialContent: Record<string, string> = {};
-    documentSections.forEach(section => {
-      initialContent[section.id] = section.content;
-    });
-    setSectionContent(initialContent);
-  }, [selectedDocumentType]);
+  const documentTypes = [
+    { value: 'architect', label: 'Architect RFP' },
+    { value: 'contractor', label: 'Contractor RFP' },
+    { value: 'broker-architect', label: 'Broker-Architect RFP' },
+    { value: 'broker-contractor', label: 'Broker-Contractor RFP' },
+  ];
 
   const toggleEditSection = (sectionId: string) => {
     const newEditing = new Set(editingSections);
@@ -181,16 +179,6 @@ export function RfpDocumentEditor() {
     setSectionOrder(prev => prev.filter(id => id !== sectionId));
   };
 
-  const handleDragEnd = (result: any) => {
-    if (!result.destination) return;
-
-    const items = Array.from(sectionOrder);
-    const [reorderedItem] = items.splice(result.source.index, 1);
-    items.splice(result.destination.index, 0, reorderedItem);
-
-    setSectionOrder(items);
-  };
-
   const moveSectionUp = (sectionId: string) => {
     const currentIndex = sectionOrder.indexOf(sectionId);
     if (currentIndex > 0) {
@@ -229,76 +217,65 @@ export function RfpDocumentEditor() {
   const saveTemplateUpdates = useMutation({
     mutationFn: async () => {
       const updates = [];
+      
       for (const section of documentSections) {
-        if (section.templateKey && sectionContent[section.id] !== section.content) {
+        if (section.templateKey && sectionContent[section.id] !== undefined) {
           updates.push({
             templateKey: section.templateKey,
-            content: sectionContent[section.id]
+            content: sectionContent[section.id] || section.content
           });
         }
       }
-
-      // Update templates that have changed
-      for (const update of updates) {
-        const template = templates.find((t: any) => t.templateKey === update.templateKey);
-        if (template) {
-          await apiRequest(`/api/pdf-templates/${template.id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ content: update.content }),
-          });
-        }
-      }
+      
+      await Promise.all(updates.map(update => 
+        apiRequest(`/api/pdf-templates/${update.templateKey}`, {
+          method: 'PUT',
+          body: JSON.stringify({ content: update.content })
+        })
+      ));
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/pdf-templates'] });
       toast({
-        title: "Templates updated",
-        description: "Your changes have been saved and will apply to future RFPs.",
+        title: "Templates Updated",
+        description: "Document templates have been saved successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/pdf-templates'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save templates",
+        variant: "destructive",
       });
     },
   });
 
-  const generatePreviewPdf = async () => {
+  const generatePreviewPdf = () => {
     if (!selectedDocumentType) return;
-
-    try {
-      // Use the first available RFP for preview, or show message if none available
-      if (rfps.length === 0) {
-        toast({
-          title: "No RFPs Available",
-          description: "Please create an RFP first to preview the document template.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const sampleRfp = rfps[0]; // Use first RFP as sample for preview
-      const url = `/api/rfp-requests/${sampleRfp.id}/generate-pdf/${selectedDocumentType}?preview=true`;
-      window.open(url, '_blank');
-    } catch (error) {
-      toast({
-        title: "Preview Error",
-        description: "Failed to generate preview. Please try again.",
-        variant: "destructive",
-      });
-    }
+    
+    // Open PDF in new tab for preview
+    const previewUrl = `/api/rfp-requests/43/generate-pdf/${selectedDocumentType}?preview=true`;
+    window.open(previewUrl, '_blank');
   };
 
-  const documentTypes = [
-    { value: 'architect', label: 'Architect RFP' },
-    { value: 'contractor', label: 'Contractor RFP' },
-    { value: 'broker-architect', label: 'Broker-Architect RFP' },
-    { value: 'broker-contractor', label: 'Broker-Contractor RFP' },
-  ];
+  // Reset states when document type changes
+  useEffect(() => {
+    if (selectedDocumentType) {
+      setEditingSections(new Set());
+      setSectionContent({});
+      setCustomSections([]);
+      setHeaderFormats({});
+      setSectionOrder([]);
+    }
+  }, [selectedDocumentType]);
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">RFP Document Editor</h2>
+          <h2 className="text-2xl font-bold">RFP Document Editor</h2>
           <p className="text-muted-foreground">
-            Edit RFP content directly and preview changes in real-time
+            Customize standard content for RFP documents by type
           </p>
         </div>
       </div>
@@ -373,122 +350,109 @@ export function RfpDocumentEditor() {
             </CardContent>
           </Card>
 
-          <DragDropContext onDragEnd={handleDragEnd}>
-            <Droppable droppableId="sections">
-              {(provided) => (
-                <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-4">
-                  {documentSections.map((section, index) => (
-                    <Draggable key={section.id} draggableId={section.id} index={index}>
-                      {(provided, snapshot) => (
-                        <Card 
-                          ref={provided.innerRef}
-                          {...provided.draggableProps}
-                          className={`${section.isCustom ? "border-blue-200" : ""} ${snapshot.isDragging ? "shadow-lg" : ""}`}
+          {documentSections.map((section, index) => (
+            <Card key={section.id} className={section.isCustom ? "border-blue-200" : ""}>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <CardTitle 
+                      className="text-base" 
+                      style={getSectionHeaderStyle(section)}
+                    >
+                      {section.title}
+                    </CardTitle>
+                    {section.isCustom && (
+                      <Badge variant="outline" className="text-xs bg-blue-50">
+                        Custom
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    {/* Reorder Controls */}
+                    <div className="flex gap-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => moveSectionUp(section.id)}
+                        disabled={index === 0}
+                        title="Move up"
+                      >
+                        <ChevronUp className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => moveSectionDown(section.id)}
+                        disabled={index === documentSections.length - 1}
+                        title="Move down"
+                      >
+                        <ChevronDown className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    
+                    {/* Header Formatting Controls */}
+                    {editingSections.has(section.id) && (
+                      <div className="flex gap-1 mr-2">
+                        <Button
+                          variant={headerFormats[section.id]?.bold || section.headerFormat?.bold ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => {
+                            const currentFormat = headerFormats[section.id] || section.headerFormat || {};
+                            updateHeaderFormat(section.id, { ...currentFormat, bold: !currentFormat.bold });
+                          }}
                         >
-                          <CardHeader className="pb-3">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <div {...provided.dragHandleProps} className="cursor-grab hover:cursor-grabbing">
-                                  <GripVertical className="h-4 w-4 text-gray-400" />
-                                </div>
-                                <CardTitle 
-                                  className="text-base" 
-                                  style={getSectionHeaderStyle(section)}
-                                >
-                                  {section.title}
-                                </CardTitle>
-                                {section.isCustom && (
-                                  <Badge variant="outline" className="text-xs bg-blue-50">
-                                    Custom
-                                  </Badge>
-                                )}
-                              </div>
-                              <div className="flex gap-2">
-                                {/* Reorder Controls */}
-                                <div className="flex gap-1">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => moveSectionUp(section.id)}
-                                    disabled={index === 0}
-                                    title="Move up"
-                                  >
-                                    <ChevronUp className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => moveSectionDown(section.id)}
-                                    disabled={index === documentSections.length - 1}
-                                    title="Move down"
-                                  >
-                                    <ChevronDown className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                                
-                                {/* Header Formatting Controls */}
-                                {editingSections.has(section.id) && (
-                                  <div className="flex gap-1 mr-2">
-                                    <Button
-                                      variant={headerFormats[section.id]?.bold || section.headerFormat?.bold ? "default" : "outline"}
-                                      size="sm"
-                                      onClick={() => {
-                                        const currentFormat = headerFormats[section.id] || section.headerFormat || {};
-                                        updateHeaderFormat(section.id, { ...currentFormat, bold: !currentFormat.bold });
-                                      }}
-                                    >
-                                      <Bold className="h-4 w-4" />
-                                    </Button>
-                                    <Button
-                                      variant={headerFormats[section.id]?.italic || section.headerFormat?.italic ? "default" : "outline"}
-                                      size="sm"
-                                      onClick={() => {
-                                        const currentFormat = headerFormats[section.id] || section.headerFormat || {};
-                                        updateHeaderFormat(section.id, { ...currentFormat, italic: !currentFormat.italic });
-                                      }}
-                                    >
-                                      <Italic className="h-4 w-4" />
-                                    </Button>
-                                    <Button
-                                      variant={headerFormats[section.id]?.underline || section.headerFormat?.underline ? "default" : "outline"}
-                                      size="sm"
-                                      onClick={() => {
-                                        const currentFormat = headerFormats[section.id] || section.headerFormat || {};
-                                        updateHeaderFormat(section.id, { ...currentFormat, underline: !currentFormat.underline });
-                                      }}
-                                    >
-                                      <Underline className="h-4 w-4" />
-                                    </Button>
-                                  </div>
-                                )}
-                                
-                                {section.templateKey && (
-                                  <Badge variant="secondary" className="text-xs">
-                                    Template
-                                  </Badge>
-                                )}
-                                
-                                {section.isCustom && (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => removeCustomSection(section.id)}
-                                    className="text-red-600 hover:text-red-700"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                )}
-                                
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => toggleEditSection(section.id)}
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </div>
-                          </CardHeader>
+                          <Bold className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant={headerFormats[section.id]?.italic || section.headerFormat?.italic ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => {
+                            const currentFormat = headerFormats[section.id] || section.headerFormat || {};
+                            updateHeaderFormat(section.id, { ...currentFormat, italic: !currentFormat.italic });
+                          }}
+                        >
+                          <Italic className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant={headerFormats[section.id]?.underline || section.headerFormat?.underline ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => {
+                            const currentFormat = headerFormats[section.id] || section.headerFormat || {};
+                            updateHeaderFormat(section.id, { ...currentFormat, underline: !currentFormat.underline });
+                          }}
+                        >
+                          <Underline className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                    
+                    {section.templateKey && (
+                      <Badge variant="secondary" className="text-xs">
+                        Template
+                      </Badge>
+                    )}
+                    
+                    {section.isCustom && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => removeCustomSection(section.id)}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                    
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => toggleEditSection(section.id)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
               <CardContent>
                 {editingSections.has(section.id) ? (
                   <div className="space-y-3">

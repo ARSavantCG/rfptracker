@@ -72,10 +72,15 @@ export function RfpDocumentEditor() {
       header: getTemplateContent('header', selectedDocumentType) || 'REQUEST FOR PROPOSAL',
       subtitle: getTemplateContent('subtitle', selectedDocumentType) || `${selectedDocumentType.toUpperCase().replace('-', ' ')} SERVICES`,
       introduction: getTemplateContent('introduction', 'common') || 'Bridge Industrial is seeking qualified professionals to provide services for the following project. Please review the project details and requirements below.',
+      project_description: getTemplateContent('project_description', selectedDocumentType) || 'Project description will be provided based on the specific requirements and scope of work.',
       scope_of_work: getTemplateContent('scope_of_work', selectedDocumentType) || `Based on the project requirements, we are requesting proposals for:\n\n• Project planning and design\n• Timeline development\n• Cost estimation\n• Quality assurance\n• Project coordination`,
+      space_requirements_intro: getTemplateContent('space_requirements_intro', 'common') || 'The project includes the following space requirements:',
+      key_dates_intro: getTemplateContent('key_dates_intro', 'common') || 'Please note the following important project dates:',
       submission_requirements: getTemplateContent('submission_requirements', 'common') || `Please provide the following with your proposal:\n• Detailed project timeline and milestones\n• Comprehensive cost breakdown\n• Relevant project experience and references\n• Proof of insurance and licensing\n• Any questions or clarifications needed`,
-      contact_footer: getTemplateContent('contact_footer', 'common') || 'For questions regarding this RFP, please contact the development team member listed above.',
-      request_types_text: getTemplateContent('request_types_text', 'common') || 'Please indicate which of the following you can provide:'
+      evaluation_criteria: getTemplateContent('evaluation_criteria', 'common') || `Proposals will be evaluated based on:\n• Technical approach and methodology\n• Project timeline and scheduling\n• Cost competitiveness\n• Previous experience and references\n• Team qualifications`,
+      request_types_text: getTemplateContent('request_types_text', 'common') || 'Please indicate which of the following you can provide:',
+      documents_link_text: getTemplateContent('documents_link_text', 'common') || 'Project documents and additional information can be accessed at:',
+      contact_footer: getTemplateContent('contact_footer', 'common') || 'For questions regarding this RFP, please contact the development team member listed above.'
     };
 
     const baseSections: DocumentSection[] = [
@@ -103,11 +108,35 @@ export function RfpDocumentEditor() {
         templateKey: 'common_introduction' 
       },
       { 
+        id: 'project_description', 
+        title: getCustomTitle(`${selectedDocumentType}_project_description`) || 'Project Description', 
+        content: baseContent.project_description, 
+        editable: true, 
+        templateKey: `${selectedDocumentType}_project_description`, 
+        headerFormat: { bold: true, fontSize: '16px' } 
+      },
+      { 
+        id: 'space_requirements_intro', 
+        title: getCustomTitle('common_space_requirements_intro') || 'Space Requirements Introduction', 
+        content: baseContent.space_requirements_intro, 
+        editable: true, 
+        templateKey: 'common_space_requirements_intro', 
+        headerFormat: { bold: true, fontSize: '16px' } 
+      },
+      { 
         id: 'scope_of_work', 
         title: getCustomTitle(`${selectedDocumentType}_scope_of_work`) || 'Scope of Work', 
         content: baseContent.scope_of_work, 
         editable: true, 
         templateKey: `${selectedDocumentType}_scope_of_work`, 
+        headerFormat: { bold: true, fontSize: '16px' } 
+      },
+      { 
+        id: 'key_dates_intro', 
+        title: getCustomTitle('common_key_dates_intro') || 'Key Dates Introduction', 
+        content: baseContent.key_dates_intro, 
+        editable: true, 
+        templateKey: 'common_key_dates_intro', 
         headerFormat: { bold: true, fontSize: '16px' } 
       },
       { 
@@ -119,11 +148,27 @@ export function RfpDocumentEditor() {
         headerFormat: { bold: true, fontSize: '16px' } 
       },
       { 
+        id: 'evaluation_criteria', 
+        title: getCustomTitle('common_evaluation_criteria') || 'Evaluation Criteria', 
+        content: baseContent.evaluation_criteria, 
+        editable: true, 
+        templateKey: 'common_evaluation_criteria', 
+        headerFormat: { bold: true, fontSize: '16px' } 
+      },
+      { 
         id: 'request_types_text', 
-        title: getCustomTitle('common_request_types_text') || 'Request Types Section', 
+        title: getCustomTitle('common_request_types_text') || 'Request Types Introduction', 
         content: baseContent.request_types_text, 
         editable: true, 
         templateKey: 'common_request_types_text', 
+        headerFormat: { bold: true, fontSize: '16px' } 
+      },
+      { 
+        id: 'documents_link_text', 
+        title: getCustomTitle('common_documents_link_text') || 'Documents Link Introduction', 
+        content: baseContent.documents_link_text, 
+        editable: true, 
+        templateKey: 'common_documents_link_text', 
         headerFormat: { bold: true, fontSize: '16px' } 
       },
       { 

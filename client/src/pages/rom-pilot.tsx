@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, Calculator, Edit, Trash2, FileText, ListChecks, Download } from "lucide-react";
 import Navigation from "@/components/navigation";
 import { CreateRomPilotModal } from "@/components/create-rom-pilot-modal";
-import { RomPilotScopeModal } from "@/components/rom-pilot-scope-modal";
+import { RomPilotScopeModal } from "@/components/rom-pilot-scope-modal-new";
 import { RomScopeItemsModal } from "@/components/rom-scope-items-modal";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";

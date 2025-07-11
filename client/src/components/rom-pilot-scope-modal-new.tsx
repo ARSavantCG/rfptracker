@@ -3,9 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { Trash2, Plus, Calculator, Save, ChevronUp, ChevronDown, GripVertical } from "lucide-react";
 import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
 import { useToast } from "@/hooks/use-toast";
@@ -70,7 +68,6 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
         const designItems: LineItem[] = [];
         
         existingLineItems.forEach((item: any) => {
-          // Find the corresponding scope item for unit display
           const scopeItem = scopeItems.find(si => si.id === item.scopeItemId);
           
           const lineItem: LineItem = {
@@ -136,23 +133,20 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
     const updatedItems = [...items];
     updatedItems[index] = { ...updatedItems[index], [field]: value };
 
-    // Auto-calculate total price when quantity or unit price changes
+    // Auto-populate data when scope item changes
+    if (field === 'scopeItemId' && typeof value === 'number' && value > 0) {
+      const scopeItem = scopeItems.find(item => item.id === value);
+      if (scopeItem) {
+        updatedItems[index].unitPrice = scopeItem.unitPrice;
+        updatedItems[index].scopeItem = scopeItem;
+      }
+    }
+
+    // Recalculate total when quantity or unit price changes
     if (field === 'quantity' || field === 'unitPrice') {
       const quantity = parseFloat(field === 'quantity' ? value.toString() : updatedItems[index].quantity) || 0;
       const unitPrice = parseFloat(field === 'unitPrice' ? value.toString() : updatedItems[index].unitPrice) || 0;
-      updatedItems[index].totalPrice = (quantity * unitPrice).toFixed(2);
-    }
-
-    // When scope item is selected, update unit price and scope item reference
-    if (field === 'scopeItemId') {
-      const selectedScopeItem = scopeItems.find(item => item.id === Number(value));
-      if (selectedScopeItem) {
-        updatedItems[index].unitPrice = selectedScopeItem.unitPrice;
-        updatedItems[index].scopeItem = selectedScopeItem;
-        const quantity = parseFloat(updatedItems[index].quantity) || 0;
-        const unitPrice = parseFloat(selectedScopeItem.unitPrice) || 0;
-        updatedItems[index].totalPrice = (quantity * unitPrice).toFixed(2);
-      }
+      updatedItems[index].totalPrice = (quantity * unitPrice).toString();
     }
 
     setItems(updatedItems);
@@ -160,69 +154,25 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
 
   const removeLineItem = (category: 'tenant-improvements' | 'design-soft-costs', index: number) => {
     if (category === 'tenant-improvements') {
-      setTenantImprovements(tenantImprovements.filter((_, i) => i !== index));
+      const updatedItems = tenantImprovements.filter((_, i) => i !== index);
+      setTenantImprovements(updatedItems);
     } else {
-      setDesignSoftCosts(designSoftCosts.filter((_, i) => i !== index));
+      const updatedItems = designSoftCosts.filter((_, i) => i !== index);
+      setDesignSoftCosts(updatedItems);
     }
   };
 
-  const saveLineItems = useMutation({
-    mutationFn: async () => {
-      const allLineItems = [...tenantImprovements, ...designSoftCosts];
-      return await apiRequest(`/api/rom-pilots/${romPilotId}/line-items`, "POST", { lineItems: allLineItems });
-    },
-    onSuccess: () => {
-      toast({ title: "Success", description: "ROM scope items saved successfully" });
-      queryClient.invalidateQueries({ queryKey: [`/api/rom-pilots/${romPilotId}/line-items`] });
-      queryClient.invalidateQueries({ queryKey: ["/api/rom-pilots"] });
-      onClose();
-    },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to save ROM scope items", variant: "destructive" });
-    },
-  });
-
-  const calculateCategoryTotal = (items: LineItem[]) => {
-    return items.reduce((sum, item) => sum + (parseFloat(item.totalPrice) || 0), 0);
-  };
-
-  const calculateGrandTotal = () => {
-    return calculateCategoryTotal(tenantImprovements) + calculateCategoryTotal(designSoftCosts);
-  };
-
-  // Drag and drop handlers
-  const handleTenantImprovementsDragEnd = (result: DropResult) => {
-    if (!result.destination) return;
-
-    const items = Array.from(tenantImprovements);
-    const [reorderedItem] = items.splice(result.source.index, 1);
-    items.splice(result.destination.index, 0, reorderedItem);
-    
-    setTenantImprovements(items);
-  };
-
-  const handleDesignSoftCostsDragEnd = (result: DropResult) => {
-    if (!result.destination) return;
-
-    const items = Array.from(designSoftCosts);
-    const [reorderedItem] = items.splice(result.source.index, 1);
-    items.splice(result.destination.index, 0, reorderedItem);
-    
-    setDesignSoftCosts(items);
-  };
-
-  // Reorder functions for line items
   const moveLineItemUp = (category: 'tenant-improvements' | 'design-soft-costs', index: number) => {
     if (index === 0) return;
     
     if (category === 'tenant-improvements') {
-      const items = [...tenantImprovements];
-      [items[index - 1], items[index]] = [items[index], items[index - 1]];
-      setTenantImprovements(items);
+      const updatedItems = [...tenantImprovements];
+      [updatedItems[index], updatedItems[index - 1]] = [updatedItems[index - 1], updatedItems[index]];
+      setTenantImprovements(updatedItems);
     } else {
-      const items = [...designSoftCosts];
-      [items[index - 1], items[index]] = [items[index], items[index - 1]];
-      setDesignSoftCosts(items);
+      const updatedItems = [...designSoftCosts];
+      [updatedItems[index], updatedItems[index - 1]] = [updatedItems[index - 1], updatedItems[index]];
+      setDesignSoftCosts(updatedItems);
     }
   };
 
@@ -241,6 +191,16 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
     }
   };
 
+  const calculateCategoryTotal = (items: LineItem[]) => {
+    return items.reduce((sum, item) => {
+      return sum + (parseFloat(item.totalPrice) || 0);
+    }, 0);
+  };
+
+  const calculateGrandTotal = () => {
+    return calculateCategoryTotal(tenantImprovements) + calculateCategoryTotal(designSoftCosts);
+  };
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -249,6 +209,55 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
       maximumFractionDigits: 0,
     }).format(amount);
   };
+
+  // Drag and drop handlers
+  const handleTenantImprovementsDragEnd = (result: DropResult) => {
+    if (!result.destination) return;
+    
+    const reorderedItems = Array.from(tenantImprovements);
+    const [removed] = reorderedItems.splice(result.source.index, 1);
+    reorderedItems.splice(result.destination.index, 0, removed);
+    
+    setTenantImprovements(reorderedItems);
+  };
+
+  const handleDesignSoftCostsDragEnd = (result: DropResult) => {
+    if (!result.destination) return;
+    
+    const reorderedItems = Array.from(designSoftCosts);
+    const [removed] = reorderedItems.splice(result.source.index, 1);
+    reorderedItems.splice(result.destination.index, 0, removed);
+    
+    setDesignSoftCosts(reorderedItems);
+  };
+
+  // Save line items mutation
+  const saveLineItems = useMutation({
+    mutationFn: async () => {
+      const allItems = [...tenantImprovements, ...designSoftCosts];
+      await apiRequest(`/api/rom-pilots/${romPilotId}/line-items`, {
+        method: "POST",
+        body: JSON.stringify({ lineItems: allItems }),
+        headers: { "Content-Type": "application/json" },
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "ROM scope items saved successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/rom-pilots/${romPilotId}/line-items`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/rom-pilots"] });
+      onClose();
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to save ROM scope items",
+        variant: "destructive",
+      });
+    },
+  });
 
   const renderLineItemsSection = (
     title: string,
@@ -396,8 +405,8 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
                               </Button>
                             </td>
                           </tr>
-                    )}
-                  </Draggable>
+                        )}
+                      </Draggable>
                     ))}
                     {provided.placeholder}
                   </tbody>

@@ -1715,7 +1715,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // PDF Generation routes
+  // PDF Generation routes  
+  app.get("/api/rfp-requests/:id/generate-pdf/:type", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { type } = req.params;
+      const { preview } = req.query;
+      
+      console.log("PDF generation request:", { id, type, preview });
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid ID" });
+      }
+
+      if (!type || !["architect", "contractor", "broker-architect", "broker-contractor"].includes(type)) {
+        return res.status(400).json({ message: "Valid recipient type is required" });
+      }
+
+      const rfp = await storage.getRfpRequest(id);
+      if (!rfp) {
+        return res.status(404).json({ message: "RFP request not found" });
+      }
+
+      // Get property data to include full address
+      const property = await storage.getProperty(parseInt(rfp.property));
+      const rfpWithAddress = {
+        ...rfp,
+        propertyAddress: property ? `${property.streetAddress}, ${property.city}, ${property.state} ${property.zip}` : rfp.property
+      };
+
+      // Get invitation to bid data if available
+      const invitationToBid = await storage.getInvitationToBid(id);
+
+      const pdfOptions = {
+        rfp: rfpWithAddress,
+        invitationToBid,
+        recipientType: type as "architect" | "contractor" | "broker-architect" | "broker-contractor",
+        recipientName: "Preview User",
+        recipientCompany: "Preview Company"
+      };
+
+      // Generate HTML
+      const htmlBuffer = await generateRfpPdf(pdfOptions);
+      const htmlContent = htmlBuffer.toString('utf8');
+      
+      // For preview mode, don't save to history
+      if (!preview) {
+        try {
+          const user = (req as any).user;
+          const generatedBy = user?.email || user?.username || 'Unknown';
+          
+          const historyItem = {
+            rfpId: id,
+            generationType: type === "architect" || type === "broker-architect" ? "architect" : "contractor",
+            generatedBy,
+            invitationData: invitationToBid || null,
+            generatedContent: htmlContent,
+            title: `${type === "architect" || type === "broker-architect" ? "Architect" : "Contractor"} RFP - ${rfp.projectName} - ${new Date().toLocaleDateString()}`,
+            notes: "Document Editor Preview"
+          };
+          
+          await storage.createGenerationHistoryItem(historyItem);
+        } catch (historyError) {
+          console.error("Failed to save generation history:", historyError);
+        }
+      }
+      
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      res.send(htmlContent);
+    } catch (error) {
+      console.error("PDF generation error:", error);
+      res.status(500).json({ message: "Failed to generate PDF" });
+    }
+  });
+
   app.post("/api/rfp-requests/:id/generate-pdf", async (req, res) => {
     try {
       const id = parseInt(req.params.id);

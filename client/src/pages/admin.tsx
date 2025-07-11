@@ -18,7 +18,7 @@ import { apiRequest } from "@/lib/queryClient";
 import Navigation from "@/components/navigation";
 import ContactPasswordModal from "@/components/contact-password-modal";
 import { FileCleanupPanel } from "@/components/file-cleanup-panel";
-import { PdfTemplateManagement } from "@/components/pdf-template-management";
+import { RfpDocumentEditor } from "@/components/rfp-document-editor";
 import type { User, UserRole, Permission } from "@shared/schema";
 import { ROLE_PERMISSIONS } from "@shared/schema";
 
@@ -857,7 +857,7 @@ export default function Admin() {
             </TabsTrigger>
             <TabsTrigger value="templates" className="flex items-center gap-2">
               <FileText className="h-4 w-4" />
-              PDF Templates
+              Document Editor
             </TabsTrigger>
             <TabsTrigger value="storage" className="flex items-center gap-2">
               <HardDrive className="h-4 w-4" />
@@ -883,7 +883,7 @@ export default function Admin() {
           </TabsContent>
 
           <TabsContent value="templates" className="mt-6">
-            <PdfTemplateManagement />
+            <RfpDocumentEditor />
           </TabsContent>
 
           <TabsContent value="storage" className="mt-6">

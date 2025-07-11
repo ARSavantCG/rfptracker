@@ -387,9 +387,9 @@ function generateRfpHtml(options: PdfGenerationOptions): string {
   const projectEnd = invitationToBid?.projectEndDate ? formatDate(invitationToBid.projectEndDate) : '';
   
   // Calculate areas for display using area breakdown data
-  const totalArea = parseInt(rfp.warehouseArea?.replace(/,/g, '') || '0');
   const areaBreakdown = (rfp as any).areaBreakdown || [];
   const totalBreakdownArea = areaBreakdown.reduce((sum: number, item: any) => sum + (parseInt(item.squareFootage) || 0), 0);
+  const totalArea = parseInt(rfp.warehouseArea?.replace(/,/g, '') || '0') || totalBreakdownArea;
   const warehouseArea = totalArea - totalBreakdownArea;
   
   // Legacy support for old office area fields
@@ -607,10 +607,12 @@ function generateContractorRfpHtml(options: PdfGenerationOptions, dates: any): s
             <td>${parseInt(area.squareFootage || '0').toLocaleString()} SF${area.notes ? ` - ${area.notes}` : ''}</td>
           </tr>
           `).join('')}
+          ${dates.totalArea > dates.areaBreakdown.reduce((sum: number, area: any) => sum + parseInt(area.squareFootage || '0'), 0) ? `
           <tr>
             <td class="label">Remaining Rentable Area</td>
             <td>${(dates.totalArea - dates.areaBreakdown.reduce((sum: number, area: any) => sum + parseInt(area.squareFootage || '0'), 0)).toLocaleString()} SF</td>
           </tr>
+          ` : ''}
         </table>
       </div>
       ` : ''}
@@ -974,6 +976,8 @@ function generateArchitectRfpHtml(options: PdfGenerationOptions, dates: any): st
 function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dates: any): string {
   const { rfp, invitationToBid, recipientName, recipientCompany } = options;
   const { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea, areaBreakdown, warehouseNotes } = dates;
+  
+
 
   // Use contact info from RFP development contact or invitation fallback
   const developmentContactInfo = rfp.developmentContact ? rfp.developmentContact.split(' - ') : [];
@@ -1066,7 +1070,7 @@ function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dates: an
         ` : ''}
       </div>
 
-      ${totalArea > 0 ? `
+      ${totalArea > 0 || (areaBreakdown && areaBreakdown.length > 0) ? `
       <div class="section">
         <div class="section-title">Space Requirements</div>
         <table>
@@ -1077,7 +1081,7 @@ function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dates: an
           ).join('') : ''}
           ${existingOffice > 0 && (!areaBreakdown || areaBreakdown.length === 0) ? `<tr><td>Existing Office</td><td>${existingOffice.toLocaleString()}</td><td>Renovation level TBD</td></tr>` : ''}
           ${newOffice > 0 && (!areaBreakdown || areaBreakdown.length === 0) ? `<tr><td>New Office Space</td><td>${newOffice.toLocaleString()}</td><td>New construction</td></tr>` : ''}
-          <tr><td><strong>Total</strong></td><td><strong>${totalArea.toLocaleString()}</strong></td><td></td></tr>
+          ${totalArea > 0 ? `<tr><td><strong>Total</strong></td><td><strong>${totalArea.toLocaleString()}</strong></td><td></td></tr>` : ''}
         </table>
       </div>
       ` : ''}

@@ -190,91 +190,88 @@ export function EvaluationBudgetHistory({ rfpId }: EvaluationBudgetHistoryProps)
           ) : (
             <div className="space-y-3">
               {history.map((item: EvaluationBudgetHistoryItem) => (
-                <div key={item.id} className="border rounded-lg p-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="font-medium">{item.reportName}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {item.notes || `Generated on ${formatDate(item.createdAt)}`}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleView(item.id)}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEdit(item)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="outline" size="sm">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Report</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Are you sure you want to delete "{item.reportName}"? This action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => handleDelete(item.id)}
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            >
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  </div>
-                  
-                  {/* Change Summary Section */}
-                  {item.changeSummary && item.changeSummary.length > 0 && (
-                    <div className="mt-3 pt-3 border-t">
-                      <div 
-                        className="flex items-center justify-between cursor-pointer hover:bg-gray-50 p-1 rounded"
-                        onClick={() => toggleSummary(item.id)}
-                      >
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                          <FileText className="h-4 w-4" />
-                          <span>Changes Summary</span>
+                <div key={item.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex-1">
+                    <div className="font-medium">{item.reportName}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {item.notes ? (
+                        <div>
+                          <div>{item.notes}</div>
+                          <div className="text-xs">Generated on {formatDate(item.createdAt)}</div>
                         </div>
-                        {expandedSummaries[item.id] ? (
-                          <ChevronUp className="h-4 w-4 text-gray-500" />
-                        ) : (
-                          <ChevronDown className="h-4 w-4 text-gray-500" />
+                      ) : (
+                        <div>Generated on {formatDate(item.createdAt)}</div>
+                      )}
+                    </div>
+                    
+                    {/* Change Summary Section - Under Generated on line */}
+                    {item.changeSummary && item.changeSummary.length > 0 && (
+                      <div className="mt-2">
+                        <div 
+                          className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded text-xs text-gray-600"
+                          onClick={() => toggleSummary(item.id)}
+                        >
+                          <FileText className="h-3 w-3" />
+                          <span>Changes from previous report</span>
+                          {expandedSummaries[item.id] ? (
+                            <ChevronUp className="h-3 w-3 text-gray-500" />
+                          ) : (
+                            <ChevronDown className="h-3 w-3 text-gray-500" />
+                          )}
+                        </div>
+                        
+                        {expandedSummaries[item.id] && (
+                          <div className="mt-1 space-y-1 ml-4">
+                            {item.changeSummary.map((change, index) => (
+                              <div key={index} className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded">
+                                • {change}
+                              </div>
+                            ))}
+                          </div>
                         )}
                       </div>
-                      
-                      {expandedSummaries[item.id] && (
-                        <div className="mt-2 space-y-1">
-                          {item.changeSummary.map((change, index) => (
-                            <div key={index} className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded">
-                              • {change}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      
-                      {!expandedSummaries[item.id] && (
-                        <div className="mt-1 text-xs text-gray-500">
-                          {item.changeSummary.slice(0, 2).join(", ")}{item.changeSummary.length > 2 ? "..." : ""}
-                        </div>
-                      )}
-                    </div>
-                  )}
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleView(item.id)}
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEdit(item)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="outline" size="sm">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Report</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to delete "{item.reportName}"? This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => handleDelete(item.id)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
                 </div>
               ))}
             </div>

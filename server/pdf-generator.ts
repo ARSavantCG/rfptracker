@@ -452,7 +452,7 @@ async function generateRfpHtml(options: PdfGenerationOptions): Promise<string> {
   }
 }
 
-function generateContractorRfpHtml(options: PdfGenerationOptions, dates: any): string {
+async function generateContractorRfpHtml(options: PdfGenerationOptions, dates: any, templateContent: any): Promise<string> {
   const { rfp, invitationToBid, recipientName, recipientCompany } = options;
   const { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea } = dates;
   
@@ -734,7 +734,7 @@ function generateContractorRfpHtml(options: PdfGenerationOptions, dates: any): s
   `;
 }
 
-function generateArchitectRfpHtml(options: PdfGenerationOptions, dates: any): string {
+async function generateArchitectRfpHtml(options: PdfGenerationOptions, dates: any, templateContent: any): Promise<string> {
   const { rfp, invitationToBid, recipientName, recipientCompany } = options;
   const { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea } = dates;
   
@@ -1073,14 +1073,14 @@ async function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dat
           <div>Email: ${contactEmail}</div>
           <div>Date: ${today}</div>
         </div>
-        <div class="document-title">PRELIMINARY REQUEST FOR PROPOSAL</div>
+        <div class="document-title">${templateContent.header}</div>
         <div class="project-title">${projectName}</div>
         <div style="font-size: 14px; color: #666;">RFP Number: ${rfp.rfpNumber}</div>
       </div>
 
       <div class="preliminary-notice">
-        <strong>PRELIMINARY BROKER RESPONSE RFP</strong><br>
-        This is a preliminary request for architectural input in order to support early-stage discussions with a prospective tenant. It does not represent a formal project commitment.
+        <strong>${templateContent.subtitle}</strong><br>
+        ${templateContent.introduction}
       </div>
 
       <div class="section">
@@ -1193,7 +1193,7 @@ async function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dat
   `;
 }
 
-function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, dates: any): string {
+async function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, dates: any, templateContent: any): Promise<string> {
   const { rfp, invitationToBid, recipientName, recipientCompany } = options;
   const { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea, areaBreakdown, warehouseNotes } = dates;
 

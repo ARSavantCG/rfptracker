@@ -1455,6 +1455,10 @@ class ExtendedDatabaseStorage extends DatabaseStorage {
   async deletePdfTemplate(id: number): Promise<void> {
     await db.delete(pdfTemplates).where(eq(pdfTemplates.id, id));
   }
+
+  async getAllPdfTemplates(): Promise<PdfTemplate[]> {
+    return await db.select().from(pdfTemplates).orderBy(asc(pdfTemplates.templateKey));
+  }
 }
 
 export const storage = new ExtendedDatabaseStorage();

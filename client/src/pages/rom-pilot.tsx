@@ -73,8 +73,13 @@ export default function RomPilotPage() {
 
   const generateRomReport = async (pilot: RomPilot) => {
     try {
+      const token = localStorage.getItem('auth-token');
       const response = await fetch(`/api/rom-pilots/${pilot.id}/report`, {
         method: 'GET',
+        headers: {
+          ...(token && { "Authorization": `Bearer ${token}` })
+        },
+        credentials: "include",
       });
 
       if (!response.ok) {

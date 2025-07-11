@@ -42,15 +42,13 @@ interface DocumentSection {
 }
 
 export function RfpDocumentEditor() {
-  const [selectedRfp, setSelectedRfp] = useState<any>(null);
   const [selectedDocumentType, setSelectedDocumentType] = useState<string>('');
   const [editingSections, setEditingSections] = useState<Set<string>>(new Set());
   const [sectionContent, setSectionContent] = useState<Record<string, string>>({});
-  const [showPreview, setShowPreview] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Get list of RFPs to choose from
+  // Get list of RFPs to choose from (for preview only)
   const { data: rfps = [] } = useQuery({
     queryKey: ['/api/rfp-requests'],
   });
@@ -60,30 +58,28 @@ export function RfpDocumentEditor() {
     queryKey: ['/api/pdf-templates'],
   });
 
-  // Generate document sections based on selected RFP and type
+  // Generate document sections based on document type only
   const generateDocumentSections = (): DocumentSection[] => {
-    if (!selectedRfp || !selectedDocumentType) return [];
+    if (!selectedDocumentType) return [];
 
     const baseContent = {
       header: getTemplateContent('header', selectedDocumentType) || 'REQUEST FOR PROPOSAL',
-      subtitle: getTemplateContent('subtitle', selectedDocumentType) || `${selectedDocumentType.toUpperCase()} SERVICES`,
-      project_info: `Project: ${selectedRfp.projectName}\nProperty: ${selectedRfp.property}\nDue Date: ${selectedRfp.internalDueDate || 'TBD'}`,
+      subtitle: getTemplateContent('subtitle', selectedDocumentType) || `${selectedDocumentType.toUpperCase().replace('-', ' ')} SERVICES`,
       introduction: getTemplateContent('introduction', 'common') || 'Bridge Industrial is seeking qualified professionals to provide services for the following project. Please review the project details and requirements below.',
-      scope_of_work: `Based on the project requirements, we are requesting proposals for:\n\n• Project planning and design\n• Timeline development\n• Cost estimation\n• Quality assurance\n• Project coordination`,
+      scope_of_work: getTemplateContent('scope_of_work', selectedDocumentType) || `Based on the project requirements, we are requesting proposals for:\n\n• Project planning and design\n• Timeline development\n• Cost estimation\n• Quality assurance\n• Project coordination`,
       submission_requirements: getTemplateContent('submission_requirements', 'common') || `Please provide the following with your proposal:\n• Detailed project timeline and milestones\n• Comprehensive cost breakdown\n• Relevant project experience and references\n• Proof of insurance and licensing\n• Any questions or clarifications needed`,
-      contact_info: `For questions regarding this RFP, please contact:\n\n${selectedRfp.developmentContact || 'Development Team'}\nBridge Industrial`,
-      footer: getTemplateContent('footer', 'common') || 'For questions regarding this RFP, please contact the development team member listed above.'
+      contact_footer: getTemplateContent('contact_footer', 'common') || 'For questions regarding this RFP, please contact the development team member listed above.',
+      request_types_text: getTemplateContent('request_types_text', 'common') || 'Please indicate which of the following you can provide:'
     };
 
     return [
       { id: 'header', title: 'Document Header', content: baseContent.header, editable: true, templateKey: `${selectedDocumentType}_header` },
       { id: 'subtitle', title: 'Service Type Subtitle', content: baseContent.subtitle, editable: true, templateKey: `${selectedDocumentType}_subtitle` },
-      { id: 'project_info', title: 'Project Information', content: baseContent.project_info, editable: true },
-      { id: 'introduction', title: 'Introduction', content: baseContent.introduction, editable: true, templateKey: 'common_introduction' },
-      { id: 'scope_of_work', title: 'Scope of Work', content: baseContent.scope_of_work, editable: true },
-      { id: 'submission_requirements', title: 'Submission Requirements', content: baseContent.submission_requirements, editable: true, templateKey: 'submission_requirements' },
-      { id: 'contact_info', title: 'Contact Information', content: baseContent.contact_info, editable: true },
-      { id: 'footer', title: 'Footer', content: baseContent.footer, editable: true, templateKey: 'contact_footer' }
+      { id: 'introduction', title: 'Introduction Text', content: baseContent.introduction, editable: true, templateKey: 'common_introduction' },
+      { id: 'scope_of_work', title: 'Scope of Work Template', content: baseContent.scope_of_work, editable: true, templateKey: `${selectedDocumentType}_scope_of_work` },
+      { id: 'submission_requirements', title: 'Submission Requirements', content: baseContent.submission_requirements, editable: true, templateKey: 'common_submission_requirements' },
+      { id: 'request_types_text', title: 'Request Types Section Text', content: baseContent.request_types_text, editable: true, templateKey: 'common_request_types_text' },
+      { id: 'contact_footer', title: 'Contact Footer', content: baseContent.contact_footer, editable: true, templateKey: 'common_contact_footer' }
     ];
   };
 
@@ -96,14 +92,14 @@ export function RfpDocumentEditor() {
 
   const documentSections = generateDocumentSections();
 
-  // Initialize section content when RFP or document type changes
+  // Initialize section content when document type changes
   useEffect(() => {
     const initialContent: Record<string, string> = {};
     documentSections.forEach(section => {
       initialContent[section.id] = section.content;
     });
     setSectionContent(initialContent);
-  }, [selectedRfp, selectedDocumentType]);
+  }, [selectedDocumentType]);
 
   const toggleEditSection = (sectionId: string) => {
     const newEditing = new Set(editingSections);
@@ -156,11 +152,21 @@ export function RfpDocumentEditor() {
   });
 
   const generatePreviewPdf = async () => {
-    if (!selectedRfp || !selectedDocumentType) return;
+    if (!selectedDocumentType) return;
 
     try {
-      // Create a preview URL with current content
-      const url = `/api/rfp-requests/${selectedRfp.id}/generate-pdf/${selectedDocumentType}?preview=true`;
+      // Use the first available RFP for preview, or show message if none available
+      if (rfps.length === 0) {
+        toast({
+          title: "No RFPs Available",
+          description: "Please create an RFP first to preview the document template.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const sampleRfp = rfps[0]; // Use first RFP as sample for preview
+      const url = `/api/rfp-requests/${sampleRfp.id}/generate-pdf/${selectedDocumentType}?preview=true`;
       window.open(url, '_blank');
     } catch (error) {
       toast({
@@ -192,37 +198,18 @@ export function RfpDocumentEditor() {
       {/* Document Selection */}
       <Card>
         <CardHeader>
-          <CardTitle>Select Document to Edit</CardTitle>
+          <CardTitle>Select Document Type to Edit</CardTitle>
           <CardDescription>
-            Choose an RFP project and document type to customize the content
+            Choose a document type to customize the standard content used for all RFPs
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="rfp-select">RFP Project</Label>
-              <Select value={selectedRfp?.id?.toString() || ''} onValueChange={(value) => {
-                const rfp = rfps.find((r: any) => r.id.toString() === value);
-                setSelectedRfp(rfp);
-              }}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select an RFP project" />
-                </SelectTrigger>
-                <SelectContent>
-                  {rfps.map((rfp: any) => (
-                    <SelectItem key={rfp.id} value={rfp.id.toString()}>
-                      {rfp.projectName} - {rfp.rfpNumber}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div>
               <Label htmlFor="type-select">Document Type</Label>
               <Select value={selectedDocumentType} onValueChange={setSelectedDocumentType}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select document type" />
+                  <SelectValue placeholder="Select document type to edit" />
                 </SelectTrigger>
                 <SelectContent>
                   {documentTypes.map((type) => (
@@ -235,7 +222,7 @@ export function RfpDocumentEditor() {
             </div>
           </div>
 
-          {selectedRfp && selectedDocumentType && (
+          {selectedDocumentType && (
             <div className="mt-4 flex gap-2">
               <Button onClick={generatePreviewPdf} variant="outline">
                 <Eye className="h-4 w-4 mr-2" />
@@ -251,7 +238,7 @@ export function RfpDocumentEditor() {
       </Card>
 
       {/* Document Content Editor */}
-      {selectedRfp && selectedDocumentType && (
+      {selectedDocumentType && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold">Document Content</h3>
@@ -313,14 +300,14 @@ export function RfpDocumentEditor() {
         </div>
       )}
 
-      {!selectedRfp && (
+      {!selectedDocumentType && (
         <Card>
           <CardContent className="pt-6">
             <div className="text-center py-8">
               <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600">Select an RFP project and document type to start editing</p>
+              <p className="text-gray-600">Select a document type to start editing templates</p>
               <p className="text-sm text-gray-500 mt-2">
-                Choose from your existing RFP projects to customize the content
+                Customize the standard content that applies to all RFPs of that type
               </p>
             </div>
           </CardContent>

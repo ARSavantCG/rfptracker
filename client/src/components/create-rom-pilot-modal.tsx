@@ -261,137 +261,161 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess, editingRomPilo
                       </Button>
                     </div>
 
-                    <div className="mb-4">
-                      <div className="flex items-start gap-6 mb-4">
-                        {/* Compass Rose */}
-                        <div className="flex-shrink-0">
-                          <h4 className="text-sm font-medium text-gray-700 mb-2">Building Layout</h4>
-                          <div className="relative w-24 h-24 bg-white border border-gray-300 rounded-lg p-1">
-                            {/* Compass Rose SVG */}
-                            <svg
-                              viewBox="0 0 100 100"
-                              className="w-full h-full"
-                              style={{ transform: 'scale(0.9)' }}
-                            >
-                              {/* Outer circle */}
-                              <circle cx="50" cy="50" r="45" fill="none" stroke="#d1d5db" strokeWidth="2" />
-                              {/* Inner circle */}
-                              <circle cx="50" cy="50" r="30" fill="none" stroke="#d1d5db" strokeWidth="1" />
+                    <div className="bg-gray-50 p-3 rounded-lg relative">
+                      <div className="mb-3">
+                        <div className="text-sm font-medium text-gray-700">Building Layout</div>
+                        <p className="text-xs text-gray-500">Click bays to select for rentable area calculation</p>
+                      </div>
+
+                      {/* Building Orientation Compass */}
+                      <div className="flex items-start gap-4 mb-3">
+                        <div className="bg-white border border-gray-300 rounded-lg p-4 shadow-sm">
+                          <div className="relative w-20 h-20">
+                            {/* Compass Rose Background */}
+                            <div className="absolute inset-0 border-2 border-gray-800 rounded-full"></div>
+                            <div className="absolute inset-0.5 border border-gray-600 rounded-full"></div>
+                            
+                            {/* Compass Rose Star Pattern */}
+                            <svg className="absolute inset-1 w-18 h-18" viewBox="0 0 72 72">
+                              {/* Main star points (N, S, E, W) */}
+                              <path d="M36 4 L37.5 32 L36 36 L34.5 32 Z" fill="#374151" stroke="#1f2937" strokeWidth="0.5"/>
+                              <path d="M68 36 L40 37.5 L36 36 L40 34.5 Z" fill="#374151" stroke="#1f2937" strokeWidth="0.5"/>
+                              <path d="M36 68 L34.5 40 L36 36 L37.5 40 Z" fill="#374151" stroke="#1f2937" strokeWidth="0.5"/>
+                              <path d="M4 36 L32 34.5 L36 36 L32 37.5 Z" fill="#374151" stroke="#1f2937" strokeWidth="0.5"/>
                               
-                              {/* Eight-pointed star pattern */}
-                              <g fill="#e5e7eb" stroke="#9ca3af" strokeWidth="0.5">
-                                {/* Cardinal direction points (larger) */}
-                                <polygon points="50,5 55,25 50,30 45,25" />
-                                <polygon points="95,50 75,45 70,50 75,55" />
-                                <polygon points="50,95 45,75 50,70 55,75" />
-                                <polygon points="5,50 25,55 30,50 25,45" />
-                                
-                                {/* Diagonal direction points (smaller) */}
-                                <polygon points="79,21 70,30 65,25 74,16" />
-                                <polygon points="79,79 74,84 65,75 70,70" />
-                                <polygon points="21,79 26,84 35,75 30,70" />
-                                <polygon points="21,21 30,30 25,35 16,26" />
-                              </g>
+                              {/* Smaller diagonal points (NE, SE, SW, NW) */}
+                              <path d="M36 36 L54 18 L55.5 19.5 L36 36 Z" fill="#6b7280" stroke="#374151" strokeWidth="0.5"/>
+                              <path d="M36 36 L54 54 L52.5 55.5 L36 36 Z" fill="#6b7280" stroke="#374151" strokeWidth="0.5"/>
+                              <path d="M36 36 L18 54 L16.5 52.5 L36 36 Z" fill="#6b7280" stroke="#374151" strokeWidth="0.5"/>
+                              <path d="M36 36 L18 18 L19.5 16.5 L36 36 Z" fill="#6b7280" stroke="#374151" strokeWidth="0.5"/>
                               
-                              {/* Center dot */}
-                              <circle cx="50" cy="50" r="2" fill="#6b7280" />
+                              {/* Center circle */}
+                              <circle cx="36" cy="36" r="2.5" fill="#374151" stroke="#1f2937" strokeWidth="1"/>
                             </svg>
                             
-                            {/* Direction labels */}
-                            <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 text-sm font-bold text-gray-700">N</div>
-                            <div className="absolute top-1/2 -right-1 transform -translate-y-1/2 text-sm font-bold text-gray-700">E</div>
-                            <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 text-sm font-bold text-gray-700">S</div>
-                            <div className="absolute top-1/2 -left-1 transform -translate-y-1/2 text-sm font-bold text-gray-700">W</div>
+                            {/* Direction labels - positioned outside the circle */}
+                            <div className={`absolute -top-5 left-1/2 transform -translate-x-1/2 text-sm font-bold ${
+                              selectedProperty?.firstBayDirection === 'north' ? 'text-red-600' : 'text-gray-800'
+                            }`}>N</div>
+                            <div className={`absolute top-1/2 -right-5 transform -translate-y-1/2 text-sm font-bold ${
+                              selectedProperty?.firstBayDirection === 'east' ? 'text-red-600' : 'text-gray-800'
+                            }`}>E</div>
+                            <div className={`absolute -bottom-5 left-1/2 transform -translate-x-1/2 text-sm font-bold ${
+                              selectedProperty?.firstBayDirection === 'south' ? 'text-red-600' : 'text-gray-800'
+                            }`}>S</div>
+                            <div className={`absolute top-1/2 -left-5 transform -translate-y-1/2 text-sm font-bold ${
+                              selectedProperty?.firstBayDirection === 'west' ? 'text-red-600' : 'text-gray-800'
+                            }`}>W</div>
+                            
+                            {/* Diagonal direction labels */}
+                            <div className={`absolute top-1 right-1 text-xs font-medium ${
+                              selectedProperty?.firstBayDirection === 'northeast' ? 'text-red-600' : 'text-gray-600'
+                            }`}>NE</div>
+                            <div className={`absolute bottom-1 right-1 text-xs font-medium ${
+                              selectedProperty?.firstBayDirection === 'southeast' ? 'text-red-600' : 'text-gray-600'
+                            }`}>SE</div>
+                            <div className={`absolute bottom-1 left-1 text-xs font-medium ${
+                              selectedProperty?.firstBayDirection === 'southwest' ? 'text-red-600' : 'text-gray-600'
+                            }`}>SW</div>
+                            <div className={`absolute top-1 left-1 text-xs font-medium ${
+                              selectedProperty?.firstBayDirection === 'northwest' ? 'text-red-600' : 'text-gray-600'
+                            }`}>NW</div>
                           </div>
                         </div>
-
-                        {/* Building Orientation Info */}
-                        <div className="flex-grow">
-                          <h4 className="text-sm font-medium text-gray-700 mb-2">Building Orientation</h4>
-                          <p className="text-sm text-gray-600 mb-1">
-                            {selectedProperty?.firstBayDirection ? `Bay 1 faces ${selectedProperty.firstBayDirection}` : 'Bay 1 faces North'}
-                          </p>
-                          <p className="text-xs text-gray-500 mb-3">Click bays to select for rentable area calculation</p>
-                        </div>
-                      </div>
-                      
-                      {/* Directional labels */}
-                      <div className="flex justify-between items-center mb-2 px-4">
-                        <div className="text-xs text-gray-500 flex items-center gap-1">
-                          <span>←</span>
-                          <span>West Side</span>
-                        </div>
-                        <div className="text-xs text-gray-500 flex items-center gap-1">
-                          <span>East Side</span>
-                          <span>→</span>
-                        </div>
-                      </div>
-                      
-                      <div className="grid grid-cols-8 gap-2 max-h-64 overflow-y-auto p-2 border rounded-lg bg-gray-50">
-                        {propertyBayConfigs.map((bay, index) => {
-                          const isSelected = bayConfigs.some(b => b.id === bay.id);
-                          return (
-                            <div
-                              key={bay.id}
-                              className={`flex flex-col items-center justify-center h-12 border rounded cursor-pointer text-xs transition-all ${
-                                isSelected
-                                  ? 'bg-blue-500 text-white border-blue-600'
-                                  : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
-                              }`}
-                              onClick={() => {
-                                if (isSelected) {
-                                  // Remove bay
-                                  const newBays = bayConfigs.filter(b => b.id !== bay.id);
-                                  setBayConfigs(newBays);
-                                  const totalSF = newBays.reduce((sum, b) => sum + b.squareFootage, 0);
-                                  setSquareFootage(totalSF.toString());
-                                } else {
-                                  // Add bay
-                                  const newBay = {
-                                    id: bay.id,
-                                    bayName: bay.bayName,
-                                    squareFootage: bay.squareFootage
-                                  };
-                                  const newBays = [...bayConfigs, newBay];
-                                  setBayConfigs(newBays);
-                                  const totalSF = newBays.reduce((sum, b) => sum + b.squareFootage, 0);
-                                  setSquareFootage(totalSF.toString());
-                                }
-                              }}
-                            >
-                              <div className="font-semibold leading-tight">{bay.bayName}</div>
-                              <div className="text-xs leading-tight">
-                                {Math.round(bay.squareFootage / 1000)}K
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                      
-                      {/* Position indicators */}
-                      {propertyBayConfigs.length > 0 && (
-                        <div className="grid grid-cols-8 gap-2 px-2 mt-1">
-                          {propertyBayConfigs.map((_, index) => {
-                            const totalBays = propertyBayConfigs.length;
-                            const centerIndex = Math.floor((totalBays - 1) / 2);
-                            let positionLabel = '';
-                            
-                            if (index === 0) {
-                              positionLabel = 'West End';
-                            } else if (index === centerIndex) {
-                              positionLabel = 'Center';
-                            } else if (index === totalBays - 1) {
-                              positionLabel = 'East End';
+                        <div className="text-xs text-gray-600 pt-2">
+                          <div className="font-medium mb-1">Building Orientation</div>
+                          <div className="text-gray-500">
+                            {selectedProperty?.firstBayDirection 
+                              ? `Bay 1 faces ${selectedProperty.firstBayDirection.charAt(0).toUpperCase() + selectedProperty.firstBayDirection.slice(1)}`
+                              : "Bay 1 faces North"
                             }
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Directional Labels */}
+                      <div className="mb-3">
+                        <div className="flex justify-between items-center text-xs text-gray-600">
+                          <div className="flex items-center gap-2">
+                            <span>←</span>
+                            <span className="font-medium">West Side</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">East Side</span>
+                            <span>→</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Bay Grid - Single Row Layout */}
+                      <div className="relative">
+                        <div className="flex gap-0.5 justify-start overflow-x-auto pb-1">
+                          {propertyBayConfigs.map((bay, index) => {
+                            const isSelected = bayConfigs.some(b => b.id === bay.id);
+                            // Convert to individual bay numbering like RFP configurator
+                            const bayNumber = index + 1;
+                            const displayBayName = `Bay ${bayNumber}`;
                             
                             return (
-                              <div key={index} className="text-xs text-gray-500 text-center h-4">
-                                {positionLabel}
+                              <div
+                                key={bay.id}
+                                className={`h-20 w-16 flex flex-col items-center justify-center text-xs p-2 flex-shrink-0 border rounded cursor-pointer transition-all ${
+                                  isSelected 
+                                    ? "bg-orange-600 text-white border-orange-700" 
+                                    : "bg-white border-orange-200 hover:bg-orange-50"
+                                }`}
+                                onClick={() => {
+                                  if (isSelected) {
+                                    // Remove bay
+                                    const newBays = bayConfigs.filter(b => b.id !== bay.id);
+                                    setBayConfigs(newBays);
+                                    const totalSF = newBays.reduce((sum, b) => sum + b.squareFootage, 0);
+                                    setSquareFootage(totalSF.toString());
+                                  } else {
+                                    // Add bay
+                                    const newBay = {
+                                      id: bay.id,
+                                      bayName: displayBayName,
+                                      squareFootage: bay.squareFootage
+                                    };
+                                    const newBays = [...bayConfigs, newBay];
+                                    setBayConfigs(newBays);
+                                    const totalSF = newBays.reduce((sum, b) => sum + b.squareFootage, 0);
+                                    setSquareFootage(totalSF.toString());
+                                  }
+                                }}
+                              >
+                                <div className="font-bold text-xs mb-1">{displayBayName}</div>
+                                <div className="text-xs opacity-75 leading-tight">
+                                  {`${(bay.squareFootage / 1000).toFixed(0)}K`}
+                                </div>
                               </div>
                             );
                           })}
                         </div>
-                      )}
+                        
+                        {/* Position indicators below bays */}
+                        <div className="flex gap-0.5 justify-start overflow-x-auto mt-1">
+                          {propertyBayConfigs.map((bay, index) => {
+                            const totalBays = propertyBayConfigs.length;
+                            let position = "";
+                            
+                            if (index === 0) position = "West End";
+                            else if (index === totalBays - 1) position = "East End";
+                            else if (index < totalBays / 3) position = "";
+                            else if (index > (totalBays * 2) / 3) position = "";
+                            else position = "Center";
+                            
+                            return (
+                              <div key={`pos-${bay.id}`} className="w-16 flex-shrink-0">
+                                <div className="text-xs text-center text-gray-500 py-1">
+                                  {position}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
                     </div>
 
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">

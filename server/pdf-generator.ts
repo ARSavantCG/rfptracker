@@ -430,7 +430,7 @@ function generateContractorRfpHtml(options: PdfGenerationOptions, dates: any): s
   // Prefer development contact from RFP, fallback to invitation contact
   const contactInfo = developmentContactInfo.length >= 2 ? developmentContactInfo : invitationContactInfo;
   const contactPerson = contactInfo[0] || 'Development Contact';
-  const contactEmail = contactInfo[1] || '';
+  const contactEmail = contactInfo[1] || 'AReutlinger@bridgeindustrial.com';
   const contactPhone = contactInfo[2] || '';
   
   // Use Project Description from invitation data
@@ -583,6 +583,20 @@ function generateContractorRfpHtml(options: PdfGenerationOptions, dates: any): s
         </div>
       </div>
       
+      ${invitationToBid?.requestPricing || invitationToBid?.requestSchedule || invitationToBid?.requestSpacePlan ? `
+      <div class="section">
+        <div class="section-title">REQUEST TYPES:</div>
+        <div class="description-box">
+          <p><strong>Please provide the following information in your proposal:</strong></p>
+          <ul class="requirements-list">
+            ${invitationToBid?.requestPricing ? '<li>✓ Pricing estimates and cost breakdown</li>' : ''}
+            ${invitationToBid?.requestSchedule ? '<li>✓ Project schedule and timeline</li>' : ''}
+            ${invitationToBid?.requestSpacePlan ? '<li>✓ Space planning and design concepts</li>' : ''}
+          </ul>
+        </div>
+      </div>
+      ` : ''}
+      
       ${dates.areaBreakdown && dates.areaBreakdown.length > 0 ? `
       <div class="section">
         <div class="section-title">AREA BREAKDOWN:</div>
@@ -692,7 +706,7 @@ function generateArchitectRfpHtml(options: PdfGenerationOptions, dates: any): st
   // Prefer development contact from RFP, fallback to invitation contact
   const contactInfo = developmentContactInfo.length >= 2 ? developmentContactInfo : invitationContactInfo;
   const contactPerson = contactInfo[0] || 'Development Contact';
-  const contactEmail = contactInfo[1] || '';
+  const contactEmail = contactInfo[1] || 'AReutlinger@bridgeindustrial.com';
   const contactPhone = contactInfo[2] || '';
   
   return `
@@ -829,6 +843,20 @@ function generateArchitectRfpHtml(options: PdfGenerationOptions, dates: any): st
         ${contactPerson} at ${contactEmail} at your earliest convenience.</p>
       </div>
       
+      ${invitationToBid?.requestPricing || invitationToBid?.requestSchedule || invitationToBid?.requestSpacePlan ? `
+      <div class="section">
+        <div class="section-title">REQUEST TYPES:</div>
+        <div class="description-box">
+          <p><strong>Please provide the following information in your proposal:</strong></p>
+          <ul class="requirements-list">
+            ${invitationToBid?.requestPricing ? '<li>✓ Pricing estimates and cost breakdown</li>' : ''}
+            ${invitationToBid?.requestSchedule ? '<li>✓ Project schedule and timeline</li>' : ''}
+            ${invitationToBid?.requestSpacePlan ? '<li>✓ Space planning and design concepts</li>' : ''}
+          </ul>
+        </div>
+      </div>
+      ` : ''}
+      
       <div class="section">
         <div class="section-title">PROJECT SCOPE:</div>
         <div class="description-box">
@@ -954,7 +982,7 @@ function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dates: an
   // Prefer development contact from RFP, fallback to invitation contact
   const contactInfo = developmentContactInfo.length >= 2 ? developmentContactInfo : invitationContactInfo;
   const contactPerson = contactInfo[0] || 'Development Team';
-  const contactEmail = contactInfo[1] || 'contact@company.com';
+  const contactEmail = contactInfo[1] || 'AReutlinger@bridgeindustrial.com';
   const contactPhone = contactInfo[2] || '';
 
   const projectName = rfp.projectName || invitationToBid?.projectScope || (rfp.confidential ? `Confidential @ ${rfp.property}` : `${rfp.tenantName} @ ${rfp.property}`);
@@ -1065,6 +1093,20 @@ function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dates: an
       </div>
       ` : ''}
 
+      ${invitationToBid?.requestPricing || invitationToBid?.requestSchedule || invitationToBid?.requestSpacePlan ? `
+      <div class="section">
+        <div class="section-title">Request Types</div>
+        <div class="description-box">
+          <p><strong>Please provide the following information in your proposal:</strong></p>
+          <ul class="requirements-list">
+            ${invitationToBid?.requestPricing ? '<li>✓ Pricing estimates and cost breakdown</li>' : ''}
+            ${invitationToBid?.requestSchedule ? '<li>✓ Project schedule and timeline</li>' : ''}
+            ${invitationToBid?.requestSpacePlan ? '<li>✓ Space planning and design concepts</li>' : ''}
+          </ul>
+        </div>
+      </div>
+      ` : ''}
+
       <div class="section">
         <div class="section-title">Requested Deliverables</div>
         <ul>
@@ -1117,7 +1159,7 @@ function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, dates: a
   // Prefer development contact from RFP, fallback to invitation contact
   const contactInfo = developmentContactInfo.length >= 2 ? developmentContactInfo : invitationContactInfo;
   const contactPerson = contactInfo[0] || 'Development Team';
-  const contactEmail = contactInfo[1] || 'contact@company.com';
+  const contactEmail = contactInfo[1] || 'AReutlinger@bridgeindustrial.com';
   const contactPhone = contactInfo[2] || '';
 
   const projectName = rfp.projectName || invitationToBid?.projectScope || (rfp.confidential ? `Confidential @ ${rfp.property}` : `${rfp.tenantName} @ ${rfp.property}`);
@@ -1250,6 +1292,20 @@ function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, dates: a
       ${spaceRequirementsHtml}
 
       ${scopeOfWorkHtml}
+
+      ${invitationToBid?.requestPricing || invitationToBid?.requestSchedule || invitationToBid?.requestSpacePlan ? `
+      <div class="section">
+        <div class="section-title">Request Types</div>
+        <div class="description-box">
+          <p><strong>Please provide the following information in your proposal:</strong></p>
+          <ul class="requirements-list">
+            ${invitationToBid?.requestPricing ? '<li>✓ Pricing estimates and cost breakdown</li>' : ''}
+            ${invitationToBid?.requestSchedule ? '<li>✓ Project schedule and timeline</li>' : ''}
+            ${invitationToBid?.requestSpacePlan ? '<li>✓ Space planning and design concepts</li>' : ''}
+          </ul>
+        </div>
+      </div>
+      ` : ''}
 
       <div class="section">
         <div class="section-title">Requested Deliverables</div>

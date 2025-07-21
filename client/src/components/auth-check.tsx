@@ -15,14 +15,15 @@ export default function AuthCheck({ children }: AuthCheckProps) {
     // Check if we should show the auth warning
     const checkAuthStatus = () => {
       const hasToken = isTokenPresent();
-      const isOnDashboard = window.location.pathname === '/' || window.location.pathname === '/dashboard';
       
-      // Show warning if user appears to be on dashboard but has no token
-      if (isOnDashboard && !hasToken) {
+      // Show warning if user has no token on any protected route
+      if (!hasToken && !window.location.pathname.includes('/reset-password')) {
+        console.log('No auth token found, showing login prompt');
         setShowAuthWarning(true);
       }
     };
 
+    // Check immediately
     checkAuthStatus();
     
     // Check auth status when localStorage changes

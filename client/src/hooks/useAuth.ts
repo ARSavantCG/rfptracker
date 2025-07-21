@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { isTokenPresent } from "@/lib/authHelper";
 
 export function useAuth() {
   const { data: user, isLoading, error } = useQuery({
@@ -41,5 +42,6 @@ export function useAuth() {
     user,
     isLoading,
     isAuthenticated: !!user && !error,
+    hasToken: isTokenPresent(),
   };
 }

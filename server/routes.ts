@@ -1137,54 +1137,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Delete RFP request - temporarily removing auth for debugging
+  // Delete RFP request - super simple version
   app.delete("/api/rfp-requests/:id", async (req, res) => {
+    console.log(`=== SIMPLE DELETE START ===`);
+    console.log(`Delete request for RFP ID: ${req.params.id}`);
+    
     try {
       const id = parseInt(req.params.id);
-      console.log(`Attempting to delete RFP ${id} by user:`, req.user?.username);
       
       if (isNaN(id)) {
-        console.log('Invalid ID provided for deletion:', req.params.id);
-        return res.status(400).json({ message: "Invalid ID" });
+        console.log(`Invalid ID: ${req.params.id}`);
+        return res.status(400).json({ success: false, message: "Invalid ID" });
       }
 
-      // Check if RFP exists first
-      const existingRfp = await storage.getRfpRequest(id);
-      if (!existingRfp) {
-        console.log(`RFP ${id} not found for deletion`);
-        return res.status(404).json({ message: "RFP request not found" });
-      }
-
-      // Delete associated files from disk using the cleanup utility
-      const deletedFiles = await deleteEntityFiles('rfp', id);
-      console.log(`Deleted ${deletedFiles.length} files for RFP ${id}`);
-
+      console.log(`Calling storage.deleteRfpRequest(${id})`);
       const deleted = await storage.deleteRfpRequest(id);
-      if (!deleted) {
-        console.log(`Failed to delete RFP ${id} from database`);
-        return res.status(404).json({ message: "Failed to delete RFP request from database" });
+      
+      if (deleted) {
+        console.log(`SUCCESS: RFP ${id} deleted`);
+        console.log(`=== SIMPLE DELETE SUCCESS ===`);
+        res.status(200).json({ success: true, message: "RFP deleted successfully" });
+      } else {
+        console.log(`FAILED: RFP ${id} not found or couldn't delete`);
+        res.status(404).json({ success: false, message: "RFP not found" });
       }
-
-      console.log(`Successfully deleted RFP ${id}`);
-      res.status(200).json({ 
-        message: "RFP request deleted successfully",
-        deletedFiles: deletedFiles.length
-      });
     } catch (error) {
-      console.error('Delete RFP error:', error);
-      console.error('Error type:', typeof error);
-      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
-      
-      let errorMessage = "Failed to delete RFP request";
-      if (error instanceof Error) {
-        errorMessage = `Failed to delete RFP request: ${error.message}`;
-      }
-      
-      res.status(500).json({ 
-        message: errorMessage,
-        error: error instanceof Error ? error.message : String(error),
-        requestId: req.params.id
-      });
+      console.error('DELETE ERROR:', error);
+      console.log(`=== SIMPLE DELETE ERROR ===`);
+      res.status(500).json({ success: false, message: "Delete failed", error: String(error) });
     }
   });
 
@@ -3851,7 +3831,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get comprehensive file count for an RFP from all workflow stages
-  app.get("/api/rfp-requests/:id/file-count", requireAuth, async (req, res) => {
+  app.get("/api/rfp-requests/:id/file-count", async (req, res) => {
     try {
       const rfpId = parseInt(req.params.id);
 

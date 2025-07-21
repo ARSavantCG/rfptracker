@@ -98,18 +98,27 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      return await apiRequest(`/api/rfp-requests/${id}`, "DELETE");
+      console.log(`Frontend: Attempting to delete RFP ${id}`);
+      try {
+        const result = await apiRequest(`/api/rfp-requests/${id}`, "DELETE");
+        console.log(`Frontend: Delete result:`, result);
+        return result;
+      } catch (error) {
+        console.error(`Frontend: Delete error:`, error);
+        throw error;
+      }
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log(`Frontend: Delete successful:`, data);
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/rfp-file-counts"] });
       toast({
         title: "Success",
         description: "RFP deleted successfully",
       });
     },
     onError: (error) => {
+      console.error(`Frontend: Delete mutation error:`, error);
       toast({
         title: "Error", 
         description: "Failed to delete RFP",

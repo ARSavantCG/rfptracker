@@ -98,40 +98,21 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      console.log(`Attempting to delete RFP ${id}`);
       return await apiRequest(`/api/rfp-requests/${id}`, "DELETE");
     },
-    onSuccess: (data) => {
-      console.log('RFP deletion successful:', data);
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-file-counts"] });
       toast({
         title: "Success",
-        description: "RFP request deleted successfully",
+        description: "RFP deleted successfully",
       });
     },
     onError: (error) => {
-      console.error('Delete mutation error:', error);
-      
-      // Use the helper to handle auth errors automatically
-      if (handleAuthError(error as Error)) {
-        return; // Auth error handled, don't show additional toast
-      }
-      
-      let errorMessage = "Failed to delete RFP request";
-      
-      if (error instanceof Error) {
-        if (error.message.includes('404')) {
-          errorMessage = "RFP request not found or already deleted.";
-        } else {
-          errorMessage = error.message;
-        }
-      }
-      
       toast({
-        title: "Error",
-        description: errorMessage,
+        title: "Error", 
+        description: "Failed to delete RFP",
         variant: "destructive",
       });
     },
@@ -147,53 +128,17 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
   };
 
   const handleDelete = (rfp: RfpRequest) => {
-    console.log('=== DELETION DEBUG START ===');
-    console.log('handleDelete called with RFP:', rfp);
-    console.log('RFP type:', typeof rfp);
-    console.log('RFP id:', rfp?.id, 'Type:', typeof rfp?.id);
-    console.log('RFP rfpNumber:', rfp?.rfpNumber, 'Type:', typeof rfp?.rfpNumber);
-    console.log('RFP object keys:', Object.keys(rfp || {}));
-    console.log('Full RFP object:', JSON.stringify(rfp, null, 2));
-    console.log('=== DELETION DEBUG END ===');
-    
-    if (!rfp) {
-      console.error('RFP object is null or undefined');
-      toast({
-        title: "Error",
-        description: "RFP data is missing - cannot delete",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    if (!rfp.id) {
-      console.error('RFP ID is missing:', rfp.id);
+    if (!rfp?.id) {
       toast({
         title: "Error", 
-        description: "RFP ID is missing - cannot delete",
+        description: "RFP ID is missing",
         variant: "destructive",
       });
       return;
     }
     
-    if (typeof rfp.id !== 'number') {
-      console.error('RFP ID is not a number:', rfp.id, 'Type:', typeof rfp.id);
-      toast({
-        title: "Error",
-        description: "RFP ID format is invalid - cannot delete", 
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    const confirmMessage = `Are you sure you want to delete RFP ${rfp.rfpNumber || rfp.id}?`;
-    console.log('Showing confirmation:', confirmMessage);
-    
-    if (confirm(confirmMessage)) {
-      console.log('Confirmed deletion, calling mutation with ID:', rfp.id);
+    if (confirm(`Are you sure you want to delete RFP ${rfp.rfpNumber || rfp.id}?`)) {
       deleteMutation.mutate(rfp.id);
-    } else {
-      console.log('Deletion cancelled by user');
     }
   };
 

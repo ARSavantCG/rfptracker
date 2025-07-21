@@ -136,18 +136,48 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
     }
   };
 
-  const handleDelete = (rfp: RfpRequest) => {
+  const handleDelete = async (rfp: RfpRequest) => {
+    console.log(`=== DIRECT DELETE TEST START ===`);
+    console.log(`Attempting to delete RFP ${rfp.id} - ${rfp.projectName}`);
+    
     if (!rfp?.id) {
-      toast({
-        title: "Error", 
-        description: "RFP ID is missing",
-        variant: "destructive",
-      });
+      console.log(`No RFP ID provided`);
+      alert("RFP ID is missing");
       return;
     }
     
-    if (confirm(`Are you sure you want to delete RFP ${rfp.rfpNumber || rfp.id}?`)) {
-      deleteMutation.mutate(rfp.id);
+    if (!confirm(`Are you sure you want to delete RFP ${rfp.rfpNumber || rfp.id}?`)) {
+      console.log(`Delete cancelled by user`);
+      return;
+    }
+    
+    try {
+      console.log(`Making direct fetch request to DELETE /api/rfp-requests/${rfp.id}`);
+      
+      const response = await fetch(`/api/rfp-requests/${rfp.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      console.log(`Response status: ${response.status}`);
+      console.log(`Response ok: ${response.ok}`);
+      
+      const responseData = await response.json();
+      console.log(`Response data:`, responseData);
+      
+      if (response.ok) {
+        console.log(`=== DIRECT DELETE SUCCESS ===`);
+        alert("RFP deleted successfully!");
+        window.location.reload(); // Simple page reload to see changes
+      } else {
+        console.error(`=== DIRECT DELETE FAILED ===`);
+        alert(`Delete failed: ${responseData.message || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error(`=== DIRECT DELETE ERROR ===`, error);
+      alert(`Delete error: ${error}`);
     }
   };
 

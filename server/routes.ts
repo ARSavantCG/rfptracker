@@ -672,39 +672,53 @@ const upload = multer({
   },
 });
 
-// Session middleware setup - simplified for development
+// Session middleware setup - production-ready
 function setupSession(app: Express) {
   // Trust proxy for Replit environment
   app.set('trust proxy', 1);
   
+  const PgSession = connectPgSimple(session);
+  
   app.use(session({
-    secret: process.env.SESSION_SECRET || 'rfp-tracker-dev-secret-2024',
-    resave: true,
-    saveUninitialized: true,
-    rolling: false,
-    name: 'connect.sid',
+    store: new PgSession({
+      conString: process.env.DATABASE_URL,
+      createTableIfMissing: true,
+      ttl: 24 * 60 * 60 // 24 hours in seconds
+    }),
+    secret: process.env.SESSION_SECRET || 'rfp-tracker-production-secret-key-2025',
+    resave: false,
+    saveUninitialized: false,
+    rolling: true, // Reset expiry on activity
+    name: 'rfp.session',
     cookie: {
-      secure: false,
-      httpOnly: false, // Allow JS access for debugging
-      maxAge: 24 * 60 * 60 * 1000,
-      sameSite: 'lax',
-      path: '/'
+      secure: false, // HTTP for development, HTTPS for production
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours in milliseconds
+      sameSite: 'lax'
     }
   }));
 }
 
-// Authentication middleware
+// Authentication middleware - simplified session-based approach
 async function requireAuth(req: any, res: any, next: any) {
   console.log(`Auth check for ${req.method} ${req.path}`);
   
-  // Check for token in Authorization header
+  // Check session first
+  if (req.session && req.session.user) {
+    req.user = req.session.user;
+    req.userId = req.session.user.id;
+    console.log(`Session authenticated user: ${req.session.user.username}`);
+    return next();
+  }
+  
+  // Check for token in Authorization header as fallback
   const authHeader = req.headers.authorization;
   const token = authHeader && authHeader.startsWith('Bearer ') 
     ? authHeader.substring(7) 
     : null;
 
   if (!token) {
-    console.log('No token provided in request');
+    console.log('No session or token provided in request');
     return res.status(401).json({ message: "Authentication required - no token provided" });
   }
 
@@ -716,20 +730,35 @@ async function requireAuth(req: any, res: any, next: any) {
 
   // Get user information for req.user
   try {
-    const contact = await storage.getContact(parseInt(userId.replace('contact_', '')));
-    if (contact) {
-      req.user = {
-        id: userId,
-        username: contact.email,
-        firstName: contact.name.split(' ')[0],
-        lastName: contact.name.split(' ').slice(1).join(' '),
-        email: contact.email,
-        name: contact.name
-      };
-      req.userId = userId;
-      console.log(`Authenticated user: ${contact.email}`);
+    let user;
+    if (userId.startsWith('contact_')) {
+      const contact = await storage.getContact(parseInt(userId.replace('contact_', '')));
+      if (contact) {
+        user = {
+          id: userId,
+          username: contact.email,
+          firstName: contact.name.split(' ')[0],
+          lastName: contact.name.split(' ').slice(1).join(' '),
+          email: contact.email,
+          name: contact.name,
+          isAdmin: false,
+          isContact: true,
+          permissions: contact.permissions,
+          role: 'contact'
+        };
+      }
     } else {
-      console.log('Contact not found for userId:', userId);
+      user = await AuthService.getUserById(userId);
+    }
+    
+    if (user) {
+      req.user = user;
+      req.userId = userId;
+      // Store in session for future requests
+      req.session.user = user;
+      console.log(`Token authenticated user: ${user.username}`);
+    } else {
+      console.log('User not found for userId:', userId);
       return res.status(401).json({ message: "User not found" });
     }
   } catch (error) {
@@ -783,8 +812,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // First try admin user login
       const user = await AuthService.authenticateUser({ username, password });
       if (user) {
+        // Store user in session
+        req.session.user = user;
         const token = await tokenStore.generateToken(user.id);
-        console.log("Admin login successful - Token generated for user:", user.username);
+        console.log("Admin login successful - Session and token created for user:", user.username);
         
         return res.json({ 
           user, 
@@ -811,19 +842,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .set({ lastLogin: new Date() })
         .where(eq(contacts.id, contact.id));
 
+      const userObj = {
+        id: `contact_${contact.id}`,
+        username: contact.email,
+        name: contact.name,
+        isAdmin: false,
+        isContact: true,
+        permissions: contact.permissions,
+        role: 'contact'
+      };
+      
+      // Store user in session
+      req.session.user = userObj;
       const token = await tokenStore.generateToken(`contact_${contact.id}`);
-      console.log("Contact login successful - Token generated for:", contact.email);
+      console.log("Contact login successful - Session and token created for:", contact.email);
 
       res.json({ 
-        user: {
-          id: `contact_${contact.id}`,
-          username: contact.email,
-          name: contact.name,
-          isAdmin: false,
-          isContact: true,
-          permissions: contact.permissions,
-          role: 'contact'
-        },
+        user: userObj,
         token,
         message: "Login successful" 
       });
@@ -841,6 +876,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     if (token) {
       await tokenStore.removeToken(token);
+    }
+
+    // Destroy session
+    if (req.session) {
+      req.session.destroy((err: any) => {
+        if (err) {
+          console.error('Session destruction error:', err);
+        }
+      });
     }
 
     res.json({ message: "Logout successful" });

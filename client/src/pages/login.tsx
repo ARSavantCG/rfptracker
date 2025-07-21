@@ -43,10 +43,9 @@ export default function Login({ onLoginSuccess }: LoginProps) {
     onSuccess: (data) => {
       console.log("Login response:", data);
       
-      // Store the authentication token
+      // Store token as backup but rely on session
       if (data.token) {
         localStorage.setItem('auth-token', data.token);
-        console.log("Token stored successfully");
       }
       
       toast({
@@ -54,10 +53,8 @@ export default function Login({ onLoginSuccess }: LoginProps) {
         description: "Welcome to RFP Tracker",
       });
       
-      // Force a page reload to ensure authentication state is properly established
-      setTimeout(() => {
-        window.location.reload();
-      }, 500);
+      // Immediate redirect without reload
+      onLoginSuccess();
     },
     onError: (error: Error) => {
       toast({

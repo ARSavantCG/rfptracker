@@ -52,7 +52,11 @@ function Router() {
     if (window.location.pathname === '/reset-password' || window.location.search.includes('token=')) {
       return <ResetPassword />;
     }
-    return <Login onLoginSuccess={() => window.location.reload()} />;
+    return <Login onLoginSuccess={() => {
+      // Clear any error states and reload
+      queryClient.clear();
+      window.location.reload();
+    }} />;
   }
 
   return (

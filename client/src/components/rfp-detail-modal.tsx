@@ -128,7 +128,7 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
   }, [rfp?.id]);
 
   // Check if user has admin permissions
-  const isAdmin = user?.permissions?.includes('admin.access');
+  const isAdmin = user?.permissions?.['admin.access'] || user?.isAdmin;
 
   if (!isOpen || !rfp) return null;
 

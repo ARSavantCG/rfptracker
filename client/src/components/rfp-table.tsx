@@ -359,9 +359,6 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
                       <button 
                         onClick={(e) => {
                           e.stopPropagation();
-                          console.log('Delete button clicked for request:', request);
-                          console.log('Request ID at click time:', request?.id);
-                          console.log('Request type:', typeof request);
                           handleDelete(request);
                         }}
                         disabled={deleteMutation.isPending}

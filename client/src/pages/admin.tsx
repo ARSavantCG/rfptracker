@@ -17,6 +17,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { apiRequest } from "@/lib/queryClient";
 import Navigation from "@/components/navigation";
 import ContactPasswordModal from "@/components/contact-password-modal";
+import AdminResetPasswordModal from "@/components/admin-reset-password-modal";
 import { FileCleanupPanel } from "@/components/file-cleanup-panel";
 import { RfpDocumentEditor } from "@/components/rfp-document-editor-fixed";
 import type { User, UserRole, Permission } from "@shared/schema";
@@ -32,6 +33,8 @@ function SystemUsersAndContacts() {
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
   const [selectedContactForPassword, setSelectedContactForPassword] = useState<any>(null);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [selectedContactForReset, setSelectedContactForReset] = useState<any>(null);
+  const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
 
   const { data: users, isLoading: usersLoading } = useQuery<User[]>({
     queryKey: ["/api/admin/users"],
@@ -292,8 +295,8 @@ function SystemUsersAndContacts() {
                     variant="outline"
                     size="sm"
                     onClick={() => {
-                      setSelectedContactForPassword(contact);
-                      setShowPasswordModal(true);
+                      setSelectedContactForReset(contact);
+                      setShowResetPasswordModal(true);
                     }}
                   >
                     <KeyRound className="h-4 w-4 mr-1" />
@@ -365,6 +368,16 @@ function SystemUsersAndContacts() {
         onClose={() => {
           setShowPasswordModal(false);
           setSelectedContactForPassword(null);
+        }}
+      />
+
+      {/* Admin Reset Password Modal */}
+      <AdminResetPasswordModal
+        contact={selectedContactForReset}
+        isOpen={showResetPasswordModal}
+        onClose={() => {
+          setShowResetPasswordModal(false);
+          setSelectedContactForReset(null);
         }}
       />
     </div>

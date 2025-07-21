@@ -110,6 +110,7 @@ This is a full-stack web application for tracking and managing Request for Propo
 
 ## Changelog
 - June 23, 2025. Initial setup
+- July 21, 2025. **PASSWORD MANAGEMENT SYSTEM**: Implemented comprehensive self-service password management for users - added dropdown menu in navigation header with user profile and change password option, created ChangePasswordModal component for secure password updates with current password verification, implemented backend API endpoints for both user password changes (/api/auth/change-password) and admin password resets (/api/admin/reset-password), added AdminResetPasswordModal for administrators to reset team member passwords with secure password generation and clipboard copying functionality, enhanced admin panel with intuitive password reset buttons for authorized contacts, ensuring production-ready user authentication and password security management for team deployment
 - June 23, 2025. ROM report generation enhanced with proper font size hierarchy for per-square-foot calculations (8px for category headers, 10px for Grand Total)
 - June 24, 2025. Added comprehensive copyright notices throughout codebase with Savant Consulting Group LLC ownership
 - June 24, 2025. Added property deletion functionality with confirmation dialog

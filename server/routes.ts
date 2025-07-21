@@ -843,6 +843,118 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin reset password endpoint
+  app.post('/api/admin/reset-password', requireAuth, async (req, res) => {
+    try {
+      const { contactId, newPassword } = req.body;
+      const user = req.user;
+      
+      // Check if user has admin permissions
+      if (!user.permissions?.includes('admin.access')) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      if (!contactId || !newPassword) {
+        return res.status(400).json({ message: "Contact ID and new password are required" });
+      }
+      
+      if (newPassword.length < 6) {
+        return res.status(400).json({ message: "New password must be at least 6 characters long" });
+      }
+      
+      // Find the contact
+      const [contact] = await db.select().from(contacts).where(eq(contacts.id, contactId));
+      
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+      
+      // Hash new password
+      const newPasswordHash = await bcrypt.hash(newPassword, 12);
+      
+      // Update password
+      await db.update(contacts)
+        .set({ passwordHash: newPasswordHash })
+        .where(eq(contacts.id, contactId));
+        
+      console.log(`Admin ${user.username} reset password for contact: ${contact.email}`);
+      res.json({ message: "Password reset successfully" });
+    } catch (error) {
+      console.error('Admin reset password error:', error);
+      res.status(500).json({ message: "Failed to reset password" });
+    }
+  });
+
+  // Change password endpoint
+  app.post('/api/auth/change-password', requireAuth, async (req, res) => {
+    try {
+      const { currentPassword, newPassword } = req.body;
+      const user = req.user;
+      
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ message: "Current password and new password are required" });
+      }
+      
+      if (newPassword.length < 6) {
+        return res.status(400).json({ message: "New password must be at least 6 characters long" });
+      }
+      
+      // For contact users
+      if (user.isContact) {
+        const contactId = parseInt(user.id.replace('contact_', ''));
+        const [contact] = await db.select().from(contacts).where(eq(contacts.id, contactId));
+        
+        if (!contact || !contact.passwordHash) {
+          return res.status(400).json({ message: "Current password not set" });
+        }
+        
+        // Verify current password
+        const isValidPassword = await bcrypt.compare(currentPassword, contact.passwordHash);
+        if (!isValidPassword) {
+          return res.status(400).json({ message: "Current password is incorrect" });
+        }
+        
+        // Hash new password
+        const newPasswordHash = await bcrypt.hash(newPassword, 12);
+        
+        // Update password
+        await db.update(contacts)
+          .set({ passwordHash: newPasswordHash })
+          .where(eq(contacts.id, contactId));
+          
+        console.log(`Password changed for contact: ${contact.email}`);
+        res.json({ message: "Password changed successfully" });
+      } else {
+        // For admin users
+        const adminUser = await db.select().from(users).where(eq(users.id, user.id)).limit(1);
+        
+        if (adminUser.length === 0) {
+          return res.status(404).json({ message: "User not found" });
+        }
+        
+        // Verify current password
+        const isValidPassword = await bcrypt.compare(currentPassword, adminUser[0].passwordHash);
+        if (!isValidPassword) {
+          return res.status(400).json({ message: "Current password is incorrect" });
+        }
+        
+        // Hash new password
+        const newPasswordHash = await bcrypt.hash(newPassword, 12);
+        
+        // Update password
+        await db.update(users)
+          .set({ passwordHash: newPasswordHash })
+          .where(eq(users.id, user.id));
+          
+        console.log(`Password changed for admin user: ${adminUser[0].username}`);
+        res.json({ message: "Password changed successfully" });
+      }
+    } catch (error) {
+      console.error('Change password error:', error);
+      res.status(500).json({ message: "Failed to change password" });
+    }
+  });
+
   app.post('/api/auth/logout', async (req, res) => {
     const authHeader = req.headers.authorization;
     const token = authHeader && authHeader.startsWith('Bearer ') 

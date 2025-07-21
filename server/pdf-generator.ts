@@ -276,7 +276,7 @@ function generateFinancialSummaryHtml(options: PdfGenerationOptions, dates: any)
         
         /* Column-specific styling for consistent alignment */
         .description-col { 
-          width: 40%; 
+          width: 30%; 
           text-align: left; 
         }
         .quantity-col { 
@@ -294,6 +294,10 @@ function generateFinancialSummaryHtml(options: PdfGenerationOptions, dates: any)
         .total-price-col { 
           width: 20%; 
           text-align: right; 
+        }
+        .notes-col {
+          width: 50%;
+          text-align: left;
         }
         
         .grand-total {
@@ -673,10 +677,10 @@ async function generateContractorRfpHtml(options: PdfGenerationOptions, dates: a
           <table class="info-table" style="margin-top: 15px;">
             <thead>
               <tr>
-                <th style="width: 30%;">Description</th>
-                <th style="width: 12%; text-align: center;">Quantity</th>
-                <th style="width: 8%; text-align: center;">Unit</th>
-                <th style="width: 50%;">Notes</th>
+                <th style="width: 30% !important;">Description</th>
+                <th style="width: 12% !important; text-align: center;">Quantity</th>
+                <th style="width: 8% !important; text-align: center;">Unit</th>
+                <th style="width: 50% !important;">Notes</th>
               </tr>
             </thead>
             <tbody>
@@ -967,10 +971,10 @@ async function generateArchitectRfpHtml(options: PdfGenerationOptions, dates: an
           <table class="info-table" style="margin-top: 15px;">
             <thead>
               <tr>
-                <th style="width: 30%;">Description</th>
-                <th style="width: 12%; text-align: center;">Quantity</th>
-                <th style="width: 8%; text-align: center;">Unit</th>
-                <th style="width: 50%;">Notes</th>
+                <th style="width: 30% !important;">Description</th>
+                <th style="width: 12% !important; text-align: center;">Quantity</th>
+                <th style="width: 8% !important; text-align: center;">Unit</th>
+                <th style="width: 50% !important;">Notes</th>
               </tr>
             </thead>
             <tbody>
@@ -1182,7 +1186,7 @@ async function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dat
       <div class="section">
         <div class="section-title">Space Requirements</div>
         <table style="border-collapse: collapse; width: 100%;">
-          <tr><th style="width: 30%; border: 1px solid #e5e7eb; padding: 8px;">Space Type</th><th style="width: 30%; border: 1px solid #e5e7eb; padding: 8px;">Area (sq ft)</th><th style="width: 40%; border: 1px solid #e5e7eb; padding: 8px;">Notes</th></tr>
+          <tr><th style="width: 30% !important; border: 1px solid #e5e7eb; padding: 8px;">Space Type</th><th style="width: 30% !important; border: 1px solid #e5e7eb; padding: 8px;">Area (sq ft)</th><th style="width: 40% !important; border: 1px solid #e5e7eb; padding: 8px;">Notes</th></tr>
           ${warehouseArea > 0 ? `<tr><td style="border: 1px solid #e5e7eb; padding: 8px;">Warehouse</td><td style="border: 1px solid #e5e7eb; padding: 8px;">${warehouseArea.toLocaleString()}</td><td style="border: 1px solid #e5e7eb; padding: 8px;">${warehouseNotes}</td></tr>` : ''}
           ${areaBreakdown && areaBreakdown.length > 0 ? areaBreakdown.map((item: any) => 
             `<tr><td style="border: 1px solid #e5e7eb; padding: 8px;">${item.description || 'Area'}</td><td style="border: 1px solid #e5e7eb; padding: 8px;">${parseInt(item.squareFootage || '0').toLocaleString()}</td><td style="border: 1px solid #e5e7eb; padding: 8px;">${item.notes || ''}</td></tr>`
@@ -1202,10 +1206,10 @@ async function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dat
           <table class="info-table" style="margin-top: 15px;">
             <thead>
               <tr>
-                <th style="width: 30%;">Description</th>
-                <th style="width: 12%; text-align: center;">Quantity</th>
-                <th style="width: 8%; text-align: center;">Unit</th>
-                <th style="width: 50%;">Notes</th>
+                <th style="width: 30% !important;">Description</th>
+                <th style="width: 12% !important; text-align: center;">Quantity</th>
+                <th style="width: 8% !important; text-align: center;">Unit</th>
+                <th style="width: 50% !important;">Notes</th>
               </tr>
             </thead>
             <tbody>
@@ -1337,7 +1341,7 @@ async function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, da
     
     spaceRows += '<tr><td style="border: 1px solid #e5e7eb; padding: 8px;"><strong>Total</strong></td><td style="border: 1px solid #e5e7eb; padding: 8px;"><strong>' + totalArea.toLocaleString() + '</strong></td><td style="border: 1px solid #e5e7eb; padding: 8px;"></td></tr>';
     
-    spaceRequirementsHtml = '<div class="section"><div class="section-title">Space Requirements</div><table style="border-collapse: collapse; width: 100%;"><tr><th style="width: 30%; border: 1px solid #e5e7eb; padding: 8px;">Space Type</th><th style="width: 30%; border: 1px solid #e5e7eb; padding: 8px;">Area (sq ft)</th><th style="width: 40%; border: 1px solid #e5e7eb; padding: 8px;">Notes</th></tr>' + spaceRows + '</table></div>';
+    spaceRequirementsHtml = '<div class="section"><div class="section-title">Space Requirements</div><table style="border-collapse: collapse; width: 100%;"><tr><th style="width: 30% !important; border: 1px solid #e5e7eb; padding: 8px;">Space Type</th><th style="width: 30% !important; border: 1px solid #e5e7eb; padding: 8px;">Area (sq ft)</th><th style="width: 40% !important; border: 1px solid #e5e7eb; padding: 8px;">Notes</th></tr>' + spaceRows + '</table></div>';
   }
 
   return `
@@ -1426,10 +1430,10 @@ async function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, da
           <table class="info-table" style="margin-top: 15px;">
             <thead>
               <tr>
-                <th style="width: 30%;">Description</th>
-                <th style="width: 12%; text-align: center;">Quantity</th>
-                <th style="width: 8%; text-align: center;">Unit</th>
-                <th style="width: 50%;">Notes</th>
+                <th style="width: 30% !important;">Description</th>
+                <th style="width: 12% !important; text-align: center;">Quantity</th>
+                <th style="width: 8% !important; text-align: center;">Unit</th>
+                <th style="width: 50% !important;">Notes</th>
               </tr>
             </thead>
             <tbody>

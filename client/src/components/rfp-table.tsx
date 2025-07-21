@@ -397,6 +397,9 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
                       </button>
                       <button 
                         onClick={(e) => {
+                          console.log("DELETE BUTTON CLICKED!");
+                          console.log("RFP ID:", request.id);
+                          console.log("RFP Name:", request.projectName);
                           e.stopPropagation();
                           handleDelete(request);
                         }}

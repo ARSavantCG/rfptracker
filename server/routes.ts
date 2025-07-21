@@ -855,19 +855,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.get('/api/auth/user', async (req, res) => {
-    // Temporarily return hardcoded user for testing
-    res.json({
-      id: 'test-user',
-      username: 'AReutlinger@bridgeindustrial.com',
-      firstName: 'Adolfo',
-      lastName: 'Reutlinger',
-      email: 'AReutlinger@bridgeindustrial.com',
-      name: 'Adolfo Reutlinger',
-      isAdmin: true,
-      isContact: false,
-      permissions: { 'admin.access': true },
-      role: 'admin'
-    });
+    try {
+      // Check authentication first
+      const authHeader = req.headers.authorization;
+      const token = authHeader && authHeader.startsWith('Bearer ') 
+        ? authHeader.substring(7) 
+        : null;
+
+      if (!token) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      // Validate token
+      const userId = await tokenStore.getUserFromToken(token);
+      if (!userId) {
+        return res.status(401).json({ message: "Invalid or expired token" });
+      }
+
+      // For now, return hardcoded user data but only if authenticated
+      res.json({
+        id: 'test-user',
+        username: 'AReutlinger@bridgeindustrial.com',
+        firstName: 'Adolfo',
+        lastName: 'Reutlinger',
+        email: 'AReutlinger@bridgeindustrial.com',
+        name: 'Adolfo Reutlinger',
+        isAdmin: true,
+        isContact: false,
+        permissions: { 'admin.access': true },
+        role: 'admin'
+      });
+    } catch (error) {
+      console.error('Auth user error:', error);
+      res.status(401).json({ message: "Authentication failed" });
+    }
   });
 
   app.post('/api/auth/init-admin', async (req, res) => {

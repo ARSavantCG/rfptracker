@@ -39,12 +39,6 @@ export function ContactFormModal({ contact, trigger, onSuccess }: ContactFormMod
 
   // Check if user has contact delete permissions
   const canDeleteContacts = user?.permissions?.includes('contacts.delete') || false;
-  
-  // Debug logging
-  if (user) {
-    console.log('ContactFormModal - User:', user.username, 'Permissions:', user.permissions);
-    console.log('ContactFormModal - canDeleteContacts:', canDeleteContacts);
-  }
 
   // Update form data when contact prop changes
   useEffect(() => {

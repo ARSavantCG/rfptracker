@@ -23,12 +23,6 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
 
   // Check if user has properties delete permissions
   const canDeleteBays = user?.permissions?.includes('properties.delete') || false;
-  
-  // Debug logging
-  if (user) {
-    console.log('BayConfigurationManager - User:', user.username, 'Permissions:', user.permissions);
-    console.log('BayConfigurationManager - canDeleteBays:', canDeleteBays);
-  }
   const [isOpen, setIsOpen] = useState(false);
   const [bayConfigurations, setBayConfigurations] = useState<BayConfiguration[]>(
     property.bayConfigurations || []

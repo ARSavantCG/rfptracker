@@ -865,17 +865,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ message: "Logout successful" });
   });
 
-  // Debug endpoint for testing permissions
-  app.get('/api/debug/permissions', requireAuth, async (req, res) => {
-    res.json({
-      user: req.user,
-      permissions: req.user?.permissions || [],
-      canDeleteContacts: req.user?.permissions?.includes('contacts.delete') || false,
-      canDeleteProperties: req.user?.permissions?.includes('properties.delete') || false,
-      canDeleteRom: req.user?.permissions?.includes('rom.scope.delete') || false,
-    });
-  });
-
   app.get('/api/auth/user', async (req, res) => {
     try {
       // Check authentication first

@@ -42,6 +42,7 @@ export function useAuth() {
 
       const userData = await response.json();
       console.log('Auth successful for user:', userData.username);
+      console.log('User permissions:', userData.permissions);
       return userData;
     }
   });

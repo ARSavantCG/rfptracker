@@ -147,23 +147,53 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
   };
 
   const handleDelete = (rfp: RfpRequest) => {
+    console.log('=== DELETION DEBUG START ===');
     console.log('handleDelete called with RFP:', rfp);
-    console.log('RFP id:', rfp?.id);
-    console.log('RFP rfpNumber:', rfp?.rfpNumber);
+    console.log('RFP type:', typeof rfp);
+    console.log('RFP id:', rfp?.id, 'Type:', typeof rfp?.id);
+    console.log('RFP rfpNumber:', rfp?.rfpNumber, 'Type:', typeof rfp?.rfpNumber);
+    console.log('RFP object keys:', Object.keys(rfp || {}));
+    console.log('Full RFP object:', JSON.stringify(rfp, null, 2));
+    console.log('=== DELETION DEBUG END ===');
     
-    if (!rfp || !rfp.id) {
-      console.error('Invalid RFP data for deletion:', rfp);
+    if (!rfp) {
+      console.error('RFP object is null or undefined');
       toast({
         title: "Error",
-        description: "Invalid RFP data - cannot delete",
+        description: "RFP data is missing - cannot delete",
         variant: "destructive",
       });
       return;
     }
     
-    if (confirm(`Are you sure you want to delete RFP ${rfp.rfpNumber}?`)) {
+    if (!rfp.id) {
+      console.error('RFP ID is missing:', rfp.id);
+      toast({
+        title: "Error", 
+        description: "RFP ID is missing - cannot delete",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (typeof rfp.id !== 'number') {
+      console.error('RFP ID is not a number:', rfp.id, 'Type:', typeof rfp.id);
+      toast({
+        title: "Error",
+        description: "RFP ID format is invalid - cannot delete", 
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const confirmMessage = `Are you sure you want to delete RFP ${rfp.rfpNumber || rfp.id}?`;
+    console.log('Showing confirmation:', confirmMessage);
+    
+    if (confirm(confirmMessage)) {
       console.log('Confirmed deletion, calling mutation with ID:', rfp.id);
       deleteMutation.mutate(rfp.id);
+    } else {
+      console.log('Deletion cancelled by user');
     }
   };
 
@@ -384,6 +414,9 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
                       <button 
                         onClick={(e) => {
                           e.stopPropagation();
+                          console.log('Delete button clicked for request:', request);
+                          console.log('Request ID at click time:', request?.id);
+                          console.log('Request type:', typeof request);
                           handleDelete(request);
                         }}
                         disabled={deleteMutation.isPending}

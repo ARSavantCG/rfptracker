@@ -4,6 +4,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { formatDate, getStatusColor, getStatusIcon } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { handleAuthError } from "@/lib/authHelper";
+import { useAuth } from "@/hooks/useAuth";
 import type { RfpRequest, Property } from "@shared/schema";
 
 interface RfpTableProps {
@@ -22,6 +23,10 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  // Check if user has delete permissions
+  const canDeleteRfp = user?.permissions?.includes('rfp.delete') || false;
 
   const { data: rfpRequests = [], isLoading } = useQuery<RfpRequest[]>({
     queryKey: ["/api/rfp-requests", { search: searchQuery, status: statusFilter }],
@@ -395,20 +400,22 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
                       >
                         <i className="fas fa-edit text-xs"></i>
                       </button>
-                      <button 
-                        onClick={(e) => {
-                          console.log("DELETE BUTTON CLICKED!");
-                          console.log("RFP ID:", request.id);
-                          console.log("RFP Name:", request.projectName);
-                          e.stopPropagation();
-                          handleDelete(request);
-                        }}
-                        disabled={deleteMutation.isPending}
-                        className="text-red-600 hover:text-red-700 disabled:opacity-50 p-1"
-                        title="Delete"
-                      >
-                        <i className="fas fa-trash text-xs"></i>
-                      </button>
+                      {canDeleteRfp && (
+                        <button 
+                          onClick={(e) => {
+                            console.log("DELETE BUTTON CLICKED!");
+                            console.log("RFP ID:", request.id);
+                            console.log("RFP Name:", request.projectName);
+                            e.stopPropagation();
+                            handleDelete(request);
+                          }}
+                          disabled={deleteMutation.isPending}
+                          className="text-red-600 hover:text-red-700 disabled:opacity-50 p-1"
+                          title="Delete"
+                        >
+                          <i className="fas fa-trash text-xs"></i>
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

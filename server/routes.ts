@@ -1189,12 +1189,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Delete RFP request - super simple version
+  // Delete RFP request - with permission checking
   app.delete("/api/rfp-requests/:id", async (req, res) => {
-    console.log(`=== SIMPLE DELETE START ===`);
+    console.log(`=== DELETE START ===`);
     console.log(`Delete request for RFP ID: ${req.params.id}`);
     
     try {
+      // First check authentication
+      const authHeader = req.headers.authorization;
+      const token = authHeader && authHeader.startsWith('Bearer ') 
+        ? authHeader.substring(7) 
+        : null;
+
+      if (!token) {
+        return res.status(401).json({ success: false, message: "Authentication required" });
+      }
+
+      // Validate token and get user
+      const userId = await tokenStore.getUserFromToken(token);
+      if (!userId) {
+        return res.status(401).json({ success: false, message: "Invalid or expired token" });
+      }
+
+      // Get user permissions
+      let userPermissions = [];
+      if (userId.startsWith('contact_')) {
+        const contactId = parseInt(userId.replace('contact_', ''));
+        const contact = await db.select().from(contacts).where(eq(contacts.id, contactId)).limit(1);
+        
+        if (contact.length === 0) {
+          return res.status(401).json({ success: false, message: "User not found" });
+        }
+        
+        userPermissions = contact[0].permissions || [];
+      } else {
+        // Regular user from users table
+        const user = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+        
+        if (user.length === 0) {
+          return res.status(401).json({ success: false, message: "User not found" });
+        }
+        
+        userPermissions = user[0].permissions || [];
+      }
+
+      // Check if user has rfp.delete permission
+      if (!userPermissions.includes('rfp.delete')) {
+        console.log(`PERMISSION DENIED: User ${userId} lacks rfp.delete permission`);
+        return res.status(403).json({ success: false, message: "You don't have permission to delete RFPs" });
+      }
+
       const id = parseInt(req.params.id);
       
       if (isNaN(id)) {
@@ -1202,12 +1246,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ success: false, message: "Invalid ID" });
       }
 
-      console.log(`Calling storage.deleteRfpRequest(${id})`);
+      console.log(`User has permission - calling storage.deleteRfpRequest(${id})`);
       const deleted = await storage.deleteRfpRequest(id);
       
       if (deleted) {
-        console.log(`SUCCESS: RFP ${id} deleted`);
-        console.log(`=== SIMPLE DELETE SUCCESS ===`);
+        console.log(`SUCCESS: RFP ${id} deleted by user ${userId}`);
+        console.log(`=== DELETE SUCCESS ===`);
         res.status(200).json({ success: true, message: "RFP deleted successfully" });
       } else {
         console.log(`FAILED: RFP ${id} not found or couldn't delete`);
@@ -1215,7 +1259,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     } catch (error) {
       console.error('DELETE ERROR:', error);
-      console.log(`=== SIMPLE DELETE ERROR ===`);
+      console.log(`=== DELETE ERROR ===`);
       res.status(500).json({ success: false, message: "Delete failed", error: String(error) });
     }
   });

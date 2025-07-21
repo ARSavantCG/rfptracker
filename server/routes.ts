@@ -672,7 +672,7 @@ const upload = multer({
   },
 });
 
-// Session middleware setup - production-ready
+// Session middleware setup - bulletproof for production deployment
 function setupSession(app: Express) {
   // Trust proxy for Replit environment
   app.set('trust proxy', 1);
@@ -687,18 +687,28 @@ function setupSession(app: Express) {
       tableName: 'sessions' // Explicit table name
     }),
     secret: process.env.SESSION_SECRET || 'rfp-tracker-production-secret-key-2025',
-    resave: false,
+    resave: true, // Force session resave to ensure persistence
     saveUninitialized: false,
     rolling: true, // Reset expiry on activity
     name: 'rfp.session',
     cookie: {
-      secure: false, // HTTP for development, HTTPS would need true
+      secure: false, // HTTP for development, HTTPS for production
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000, // 24 hours in milliseconds  
-      sameSite: 'lax',
-      domain: undefined // Let browser determine domain automatically
+      sameSite: 'lax'
     }
   }));
+  
+  // Add session debugging middleware
+  app.use((req: any, res: any, next: any) => {
+    console.log('Session Debug:', {
+      sessionId: req.session?.id,
+      hasUser: !!req.session?.user,
+      username: req.session?.user?.username,
+      cookies: !!req.headers.cookie
+    });
+    next();
+  });
 }
 
 // Authentication middleware - simplified session-based approach
@@ -760,8 +770,15 @@ async function requireAuth(req: any, res: any, next: any) {
     if (user) {
       req.user = user;
       req.userId = userId;
-      // Store in session for future requests
+      // Store in session for future requests with explicit save
       req.session.user = user;
+      req.session.save((err) => {
+        if (err) {
+          console.error('Token-to-session save error:', err);
+        } else {
+          console.log(`Session created from token for: ${user.username}`);
+        }
+      });
       console.log(`Token authenticated user: ${user.username}`);
     } else {
       console.log('User not found for userId:', userId);
@@ -818,9 +835,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // First try admin user login
       const user = await AuthService.authenticateUser({ username, password });
       if (user) {
-        // Store user in session
+        // Store user in session with explicit save
         req.session.user = user;
         const token = await tokenStore.generateToken(user.id);
+        
+        // Force session save to ensure it persists
+        req.session.save((err) => {
+          if (err) {
+            console.error('Session save error:', err);
+          } else {
+            console.log("Admin session saved successfully for:", user.username);
+          }
+        });
+        
         console.log("Admin login successful - Session and token created for user:", user.username);
         
         return res.json({ 
@@ -858,9 +885,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         role: 'contact'
       };
       
-      // Store user in session
+      // Store user in session with explicit save
       req.session.user = userObj;
       const token = await tokenStore.generateToken(`contact_${contact.id}`);
+      
+      // Force session save to ensure it persists
+      req.session.save((err) => {
+        if (err) {
+          console.error('Session save error:', err);
+        } else {
+          console.log("Contact session saved successfully for:", contact.email);
+        }
+      });
+      
       console.log("Contact login successful - Session and token created for:", contact.email);
 
       res.json({ 

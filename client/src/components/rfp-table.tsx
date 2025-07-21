@@ -101,20 +101,59 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      await apiRequest(`/api/rfp-requests/${id}`, "DELETE");
+      console.log(`Attempting to delete RFP ${id}`);
+      const token = localStorage.getItem('auth-token');
+      console.log('Auth token present:', !!token);
+      
+      if (!token) {
+        throw new Error('Authentication token not found. Please log in again.');
+      }
+      
+      try {
+        const result = await apiRequest(`/api/rfp-requests/${id}`, "DELETE");
+        console.log('Delete result:', result);
+        return result;
+      } catch (error) {
+        console.error('Delete API error:', error);
+        
+        // Handle specific authentication errors
+        if (error instanceof Error && error.message.includes('401')) {
+          throw new Error('Authentication failed. Please log in again.');
+        }
+        
+        throw error;
+      }
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log('RFP deletion successful:', data);
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/rfp-file-counts"] });
       toast({
         title: "Success",
         description: "RFP request deleted successfully",
       });
     },
     onError: (error) => {
+      console.error('Delete mutation error:', error);
+      
+      let errorMessage = "Failed to delete RFP request";
+      
+      if (error instanceof Error) {
+        if (error.message.includes('Authentication')) {
+          errorMessage = "Authentication failed. Please refresh the page and log in again.";
+        } else if (error.message.includes('404')) {
+          errorMessage = "RFP request not found or already deleted.";
+        } else if (error.message.includes('401')) {
+          errorMessage = "Not authorized to delete this RFP request.";
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to delete RFP request",
+        description: errorMessage,
         variant: "destructive",
       });
     },

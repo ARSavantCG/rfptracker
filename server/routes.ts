@@ -695,6 +695,8 @@ function setupSession(app: Express) {
 
 // Authentication middleware
 async function requireAuth(req: any, res: any, next: any) {
+  console.log(`Auth check for ${req.method} ${req.path}`);
+  
   // Check for token in Authorization header
   const authHeader = req.headers.authorization;
   const token = authHeader && authHeader.startsWith('Bearer ') 
@@ -702,11 +704,13 @@ async function requireAuth(req: any, res: any, next: any) {
     : null;
 
   if (!token) {
-    return res.status(401).json({ message: "Authentication required" });
+    console.log('No token provided in request');
+    return res.status(401).json({ message: "Authentication required - no token provided" });
   }
 
   const userId = await tokenStore.getUserFromToken(token);
   if (!userId) {
+    console.log('Token validation failed:', token.substring(0, 20) + '...');
     return res.status(401).json({ message: "Invalid or expired token" });
   }
 
@@ -723,7 +727,9 @@ async function requireAuth(req: any, res: any, next: any) {
         name: contact.name
       };
       req.userId = userId;
+      console.log(`Authenticated user: ${contact.email}`);
     } else {
+      console.log('Contact not found for userId:', userId);
       return res.status(401).json({ message: "User not found" });
     }
   } catch (error) {
@@ -1149,8 +1155,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/rfp-requests/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
+      console.log(`Attempting to delete RFP ${id} by user:`, req.user?.username);
+      
       if (isNaN(id)) {
+        console.log('Invalid ID provided for deletion:', req.params.id);
         return res.status(400).json({ message: "Invalid ID" });
+      }
+
+      // Check if RFP exists first
+      const existingRfp = await storage.getRfpRequest(id);
+      if (!existingRfp) {
+        console.log(`RFP ${id} not found for deletion`);
+        return res.status(404).json({ message: "RFP request not found" });
       }
 
       // Delete associated files from disk using the cleanup utility
@@ -1159,9 +1175,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const deleted = await storage.deleteRfpRequest(id);
       if (!deleted) {
-        return res.status(404).json({ message: "RFP request not found" });
+        console.log(`Failed to delete RFP ${id} from database`);
+        return res.status(404).json({ message: "Failed to delete RFP request from database" });
       }
 
+      console.log(`Successfully deleted RFP ${id}`);
       res.status(200).json({ 
         message: "RFP request deleted successfully",
         deletedFiles: deletedFiles.length

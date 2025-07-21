@@ -147,7 +147,22 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
   };
 
   const handleDelete = (rfp: RfpRequest) => {
+    console.log('handleDelete called with RFP:', rfp);
+    console.log('RFP id:', rfp?.id);
+    console.log('RFP rfpNumber:', rfp?.rfpNumber);
+    
+    if (!rfp || !rfp.id) {
+      console.error('Invalid RFP data for deletion:', rfp);
+      toast({
+        title: "Error",
+        description: "Invalid RFP data - cannot delete",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     if (confirm(`Are you sure you want to delete RFP ${rfp.rfpNumber}?`)) {
+      console.log('Confirmed deletion, calling mutation with ID:', rfp.id);
       deleteMutation.mutate(rfp.id);
     }
   };

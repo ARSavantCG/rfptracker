@@ -1230,9 +1230,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error('Delete RFP error:', error);
+      console.error('Error type:', typeof error);
+      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+      
+      let errorMessage = "Failed to delete RFP request";
+      if (error instanceof Error) {
+        errorMessage = `Failed to delete RFP request: ${error.message}`;
+      }
+      
       res.status(500).json({ 
-        message: "Failed to delete RFP request",
-        error: error instanceof Error ? error.message : String(error)
+        message: errorMessage,
+        error: error instanceof Error ? error.message : String(error),
+        requestId: req.params.id
       });
     }
   });

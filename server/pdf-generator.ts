@@ -665,6 +665,33 @@ async function generateContractorRfpHtml(options: PdfGenerationOptions, dates: a
       </div>
       ` : ''}
       
+      ${invitationToBid?.scopeOfWork && invitationToBid.scopeOfWork.length > 0 ? `
+      <div class="section">
+        <div class="section-title">SCOPE OF WORK:</div>
+        <div class="description-box">
+          <p><strong>Please provide pricing and timeline for the following scope of work items:</strong></p>
+          <table class="info-table" style="margin-top: 15px;">
+            <thead>
+              <tr>
+                <th style="background-color: #f5f5f5; font-weight: bold; text-align: left; padding: 8px;">Description</th>
+                <th style="background-color: #f5f5f5; font-weight: bold; text-align: center; padding: 8px;">Quantity</th>
+                <th style="background-color: #f5f5f5; font-weight: bold; text-align: center; padding: 8px;">Unit</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${invitationToBid.scopeOfWork.map((item: any) => `
+                <tr>
+                  <td style="padding: 8px; border: 1px solid #000;">${item.description || ''}</td>
+                  <td style="padding: 8px; border: 1px solid #000; text-align: center;">${item.quantity || ''}</td>
+                  <td style="padding: 8px; border: 1px solid #000; text-align: center;">${item.unit || ''}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      ` : ''}
+      
       <div class="section">
         <table class="info-table">
           <tr>
@@ -930,6 +957,33 @@ async function generateArchitectRfpHtml(options: PdfGenerationOptions, dates: an
         </div>
       </div>
       
+      ${invitationToBid?.scopeOfWork && invitationToBid.scopeOfWork.length > 0 ? `
+      <div class="section">
+        <div class="section-title">SCOPE OF WORK:</div>
+        <div class="description-box">
+          <p><strong>Please provide pricing and timeline for the following scope of work items:</strong></p>
+          <table class="info-table" style="margin-top: 15px;">
+            <thead>
+              <tr>
+                <th style="background-color: #f5f5f5; font-weight: bold; text-align: left; padding: 8px;">Description</th>
+                <th style="background-color: #f5f5f5; font-weight: bold; text-align: center; padding: 8px;">Quantity</th>
+                <th style="background-color: #f5f5f5; font-weight: bold; text-align: center; padding: 8px;">Unit</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${invitationToBid.scopeOfWork.map((item: any) => `
+                <tr>
+                  <td style="padding: 8px; border: 1px solid #000;">${item.description || ''}</td>
+                  <td style="padding: 8px; border: 1px solid #000; text-align: center;">${item.quantity || ''}</td>
+                  <td style="padding: 8px; border: 1px solid #000; text-align: center;">${item.unit || ''}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      ` : ''}
+      
       ${getMilestoneRequestsSection(invitationToBid, 'architect')}
       
       <div class="section">
@@ -1136,10 +1190,30 @@ async function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dat
       </div>
       ` : ''}
 
-      ${templateContent.scopeOfWork ? `
+      ${invitationToBid?.scopeOfWork && invitationToBid.scopeOfWork.length > 0 ? `
       <div class="section">
-        <div class="section-title">Scope of Work</div>
-        <div>${templateContent.scopeOfWork.replace(/\n/g, '<br>')}</div>
+        <div class="section-title">SCOPE OF WORK:</div>
+        <div class="description-box">
+          <p><strong>Please provide pricing and timeline for the following scope of work items:</strong></p>
+          <table class="info-table" style="margin-top: 15px;">
+            <thead>
+              <tr>
+                <th style="background-color: #f5f5f5; font-weight: bold; text-align: left; padding: 8px;">Description</th>
+                <th style="background-color: #f5f5f5; font-weight: bold; text-align: center; padding: 8px;">Quantity</th>
+                <th style="background-color: #f5f5f5; font-weight: bold; text-align: center; padding: 8px;">Unit</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${invitationToBid.scopeOfWork.map((item: any) => `
+                <tr>
+                  <td style="padding: 8px; border: 1px solid #000;">${item.description || ''}</td>
+                  <td style="padding: 8px; border: 1px solid #000; text-align: center;">${item.quantity || ''}</td>
+                  <td style="padding: 8px; border: 1px solid #000; text-align: center;">${item.unit || ''}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
       </div>
       ` : ''}
 
@@ -1338,7 +1412,32 @@ async function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, da
 
       ${spaceRequirementsHtml}
 
-      ${scopeOfWorkHtml}
+      ${invitationToBid?.scopeOfWork && invitationToBid.scopeOfWork.length > 0 ? `
+      <div class="section">
+        <div class="section-title">SCOPE OF WORK:</div>
+        <div class="description-box">
+          <p><strong>Please provide pricing and timeline for the following scope of work items:</strong></p>
+          <table class="info-table" style="margin-top: 15px;">
+            <thead>
+              <tr>
+                <th style="background-color: #f5f5f5; font-weight: bold; text-align: left; padding: 8px;">Description</th>
+                <th style="background-color: #f5f5f5; font-weight: bold; text-align: center; padding: 8px;">Quantity</th>
+                <th style="background-color: #f5f5f5; font-weight: bold; text-align: center; padding: 8px;">Unit</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${invitationToBid.scopeOfWork.map((item: any) => `
+                <tr>
+                  <td style="padding: 8px; border: 1px solid #000;">${item.description || ''}</td>
+                  <td style="padding: 8px; border: 1px solid #000; text-align: center;">${item.quantity || ''}</td>
+                  <td style="padding: 8px; border: 1px solid #000; text-align: center;">${item.unit || ''}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      ` : ''}
 
       ${rfp.requestTypes && rfp.requestTypes.length > 0 ? `
       <div class="section">

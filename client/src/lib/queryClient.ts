@@ -21,32 +21,23 @@ export async function apiRequest(
   data?: unknown | undefined,
 ): Promise<any> {
   const isFormData = data instanceof FormData;
+  const token = localStorage.getItem('auth-token');
   
-  // Try session-based authentication first
-  let res = await fetch(url, {
+  // Always send token if available
+  const headers: Record<string, string> = {
+    ...(isFormData ? {} : { "Content-Type": "application/json" }),
+  };
+  
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const res = await fetch(url, {
     method,
-    headers: {
-      ...(isFormData ? {} : { "Content-Type": "application/json" }),
-    },
+    headers,
     body: isFormData ? data : data ? JSON.stringify(data) : undefined,
     credentials: "include",
   });
-
-  // If session fails, try token-based auth
-  if (!res.ok && res.status === 401) {
-    const token = localStorage.getItem('auth-token');
-    if (token) {
-      res = await fetch(url, {
-        method,
-        headers: {
-          ...(isFormData ? {} : { "Content-Type": "application/json" }),
-          "Authorization": `Bearer ${token}`
-        },
-        body: isFormData ? data : data ? JSON.stringify(data) : undefined,
-        credentials: "include",
-      });
-    }
-  }
 
   await throwIfResNotOk(res);
   return res.json();
@@ -58,23 +49,18 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    // Try session-based authentication first
-    let res = await fetch(queryKey[0] as string, {
-      credentials: "include"
-    });
-
-    // If session fails, try token-based auth
-    if (!res.ok && res.status === 401) {
-      const token = localStorage.getItem('auth-token');
-      if (token) {
-        res = await fetch(queryKey[0] as string, {
-          credentials: "include",
-          headers: {
-            "Authorization": `Bearer ${token}`
-          }
-        });
-      }
+    const token = localStorage.getItem('auth-token');
+    
+    // Always send token if available
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
     }
+    
+    const res = await fetch(queryKey[0] as string, {
+      credentials: "include",
+      headers
+    });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
       return null;

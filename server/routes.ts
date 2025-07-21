@@ -672,79 +672,34 @@ const upload = multer({
   },
 });
 
-// Session middleware setup - bulletproof for production deployment
+// No session middleware - pure token-based authentication
 function setupSession(app: Express) {
-  // Trust proxy for Replit environment
   app.set('trust proxy', 1);
-  
-  const PgSession = connectPgSimple(session);
-  
-  app.use(session({
-    store: new PgSession({
-      conString: process.env.DATABASE_URL,
-      createTableIfMissing: true,
-      ttl: 24 * 60 * 60, // 24 hours in seconds
-      tableName: 'sessions' // Explicit table name
-    }),
-    secret: process.env.SESSION_SECRET || 'rfp-tracker-production-secret-key-2025',
-    resave: true, // Force session resave to ensure persistence
-    saveUninitialized: false,
-    rolling: true, // Reset expiry on activity
-    name: 'rfp.session',
-    cookie: {
-      secure: false, // HTTP for development, HTTPS for production
-      httpOnly: true,
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours in milliseconds  
-      sameSite: 'lax'
-    }
-  }));
-  
-  // Add session debugging middleware
-  app.use((req: any, res: any, next: any) => {
-    console.log('Session Debug:', {
-      sessionId: req.session?.id,
-      hasUser: !!req.session?.user,
-      username: req.session?.user?.username,
-      cookies: !!req.headers.cookie
-    });
-    next();
-  });
+  // Sessions disabled - using token-only authentication
 }
 
-// Authentication middleware - simplified session-based approach
+// Pure token-based authentication for reliable Replit deployment
 async function requireAuth(req: any, res: any, next: any) {
   console.log(`Auth check for ${req.method} ${req.path}`);
-  console.log('Session ID:', req.session?.id);
-  console.log('Session user:', req.session?.user?.username);
-  console.log('Session exists:', !!req.session);
-  console.log('Cookies present:', !!req.headers.cookie);
   
-  // Check session first
-  if (req.session && req.session.user) {
-    req.user = req.session.user;
-    req.userId = req.session.user.id;
-    console.log(`Session authenticated user: ${req.session.user.username}`);
-    return next();
-  }
-  
-  // Check for token in Authorization header as fallback
+  // Check for token in Authorization header
   const authHeader = req.headers.authorization;
   const token = authHeader && authHeader.startsWith('Bearer ') 
     ? authHeader.substring(7) 
     : null;
 
   if (!token) {
-    console.log('No session or token provided in request');
-    return res.status(401).json({ message: "Authentication required - no token provided" });
+    console.log('No token provided');
+    return res.status(401).json({ message: "Authentication required" });
   }
 
   const userId = await tokenStore.getUserFromToken(token);
   if (!userId) {
-    console.log('Token validation failed:', token.substring(0, 20) + '...');
+    console.log('Invalid token');
     return res.status(401).json({ message: "Invalid or expired token" });
   }
 
-  // Get user information for req.user
+  // Get user information
   try {
     let user;
     if (userId.startsWith('contact_')) {
@@ -770,26 +725,16 @@ async function requireAuth(req: any, res: any, next: any) {
     if (user) {
       req.user = user;
       req.userId = userId;
-      // Store in session for future requests with explicit save
-      req.session.user = user;
-      req.session.save((err) => {
-        if (err) {
-          console.error('Token-to-session save error:', err);
-        } else {
-          console.log(`Session created from token for: ${user.username}`);
-        }
-      });
       console.log(`Token authenticated user: ${user.username}`);
+      return next();
     } else {
-      console.log('User not found for userId:', userId);
+      console.log('User not found for token');
       return res.status(401).json({ message: "User not found" });
     }
   } catch (error) {
     console.error("Error getting user in auth middleware:", error);
     return res.status(500).json({ message: "Authentication error" });
   }
-
-  next();
 }
 
 async function requireAdmin(req: any, res: any, next: any) {
@@ -835,20 +780,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // First try admin user login
       const user = await AuthService.authenticateUser({ username, password });
       if (user) {
-        // Store user in session with explicit save
-        req.session.user = user;
         const token = await tokenStore.generateToken(user.id);
-        
-        // Force session save to ensure it persists
-        req.session.save((err) => {
-          if (err) {
-            console.error('Session save error:', err);
-          } else {
-            console.log("Admin session saved successfully for:", user.username);
-          }
-        });
-        
-        console.log("Admin login successful - Session and token created for user:", user.username);
+        console.log("Admin login successful - Token created for user:", user.username);
         
         return res.json({ 
           user, 
@@ -885,20 +818,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         role: 'contact'
       };
       
-      // Store user in session with explicit save
-      req.session.user = userObj;
       const token = await tokenStore.generateToken(`contact_${contact.id}`);
-      
-      // Force session save to ensure it persists
-      req.session.save((err) => {
-        if (err) {
-          console.error('Session save error:', err);
-        } else {
-          console.log("Contact session saved successfully for:", contact.email);
-        }
-      });
-      
-      console.log("Contact login successful - Session and token created for:", contact.email);
+      console.log("Contact login successful - Token created for:", contact.email);
 
       res.json({ 
         user: userObj,

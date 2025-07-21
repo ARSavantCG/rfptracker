@@ -683,7 +683,8 @@ function setupSession(app: Express) {
     store: new PgSession({
       conString: process.env.DATABASE_URL,
       createTableIfMissing: true,
-      ttl: 24 * 60 * 60 // 24 hours in seconds
+      ttl: 24 * 60 * 60, // 24 hours in seconds
+      tableName: 'sessions' // Explicit table name
     }),
     secret: process.env.SESSION_SECRET || 'rfp-tracker-production-secret-key-2025',
     resave: false,
@@ -691,10 +692,11 @@ function setupSession(app: Express) {
     rolling: true, // Reset expiry on activity
     name: 'rfp.session',
     cookie: {
-      secure: false, // HTTP for development, HTTPS for production
+      secure: false, // HTTP for development, HTTPS would need true
       httpOnly: true,
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours in milliseconds
-      sameSite: 'lax'
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours in milliseconds  
+      sameSite: 'lax',
+      domain: undefined // Let browser determine domain automatically
     }
   }));
 }
@@ -702,6 +704,10 @@ function setupSession(app: Express) {
 // Authentication middleware - simplified session-based approach
 async function requireAuth(req: any, res: any, next: any) {
   console.log(`Auth check for ${req.method} ${req.path}`);
+  console.log('Session ID:', req.session?.id);
+  console.log('Session user:', req.session?.user?.username);
+  console.log('Session exists:', !!req.session);
+  console.log('Cookies present:', !!req.headers.cookie);
   
   // Check session first
   if (req.session && req.session.user) {

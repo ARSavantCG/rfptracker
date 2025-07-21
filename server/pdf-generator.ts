@@ -673,17 +673,17 @@ async function generateContractorRfpHtml(options: PdfGenerationOptions, dates: a
           <table class="info-table" style="margin-top: 15px;">
             <thead>
               <tr>
-                <th style="background-color: #f5f5f5; font-weight: bold; text-align: left; padding: 8px;">Description</th>
-                <th style="background-color: #f5f5f5; font-weight: bold; text-align: center; padding: 8px;">Quantity</th>
-                <th style="background-color: #f5f5f5; font-weight: bold; text-align: center; padding: 8px;">Unit</th>
+                <th>Description</th>
+                <th>Quantity</th>
+                <th>Unit</th>
               </tr>
             </thead>
             <tbody>
               ${invitationToBid.scopeOfWork.map((item: any) => `
                 <tr>
-                  <td style="padding: 8px; border: 1px solid #000;">${item.description || ''}</td>
-                  <td style="padding: 8px; border: 1px solid #000; text-align: center;">${item.quantity || ''}</td>
-                  <td style="padding: 8px; border: 1px solid #000; text-align: center;">${item.unit || ''}</td>
+                  <td>${item.description || ''}</td>
+                  <td style="text-align: center;">${item.quantity || ''}</td>
+                  <td style="text-align: center;">${item.unit || ''}</td>
                 </tr>
               `).join('')}
             </tbody>
@@ -965,17 +965,17 @@ async function generateArchitectRfpHtml(options: PdfGenerationOptions, dates: an
           <table class="info-table" style="margin-top: 15px;">
             <thead>
               <tr>
-                <th style="background-color: #f5f5f5; font-weight: bold; text-align: left; padding: 8px;">Description</th>
-                <th style="background-color: #f5f5f5; font-weight: bold; text-align: center; padding: 8px;">Quantity</th>
-                <th style="background-color: #f5f5f5; font-weight: bold; text-align: center; padding: 8px;">Unit</th>
+                <th>Description</th>
+                <th>Quantity</th>
+                <th>Unit</th>
               </tr>
             </thead>
             <tbody>
               ${invitationToBid.scopeOfWork.map((item: any) => `
                 <tr>
-                  <td style="padding: 8px; border: 1px solid #000;">${item.description || ''}</td>
-                  <td style="padding: 8px; border: 1px solid #000; text-align: center;">${item.quantity || ''}</td>
-                  <td style="padding: 8px; border: 1px solid #000; text-align: center;">${item.unit || ''}</td>
+                  <td>${item.description || ''}</td>
+                  <td style="text-align: center;">${item.quantity || ''}</td>
+                  <td style="text-align: center;">${item.unit || ''}</td>
                 </tr>
               `).join('')}
             </tbody>
@@ -1198,17 +1198,17 @@ async function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dat
           <table class="info-table" style="margin-top: 15px;">
             <thead>
               <tr>
-                <th style="background-color: #f5f5f5; font-weight: bold; text-align: left; padding: 8px;">Description</th>
-                <th style="background-color: #f5f5f5; font-weight: bold; text-align: center; padding: 8px;">Quantity</th>
-                <th style="background-color: #f5f5f5; font-weight: bold; text-align: center; padding: 8px;">Unit</th>
+                <th>Description</th>
+                <th>Quantity</th>
+                <th>Unit</th>
               </tr>
             </thead>
             <tbody>
               ${invitationToBid.scopeOfWork.map((item: any) => `
                 <tr>
-                  <td style="padding: 8px; border: 1px solid #000;">${item.description || ''}</td>
-                  <td style="padding: 8px; border: 1px solid #000; text-align: center;">${item.quantity || ''}</td>
-                  <td style="padding: 8px; border: 1px solid #000; text-align: center;">${item.unit || ''}</td>
+                  <td>${item.description || ''}</td>
+                  <td style="text-align: center;">${item.quantity || ''}</td>
+                  <td style="text-align: center;">${item.unit || ''}</td>
                 </tr>
               `).join('')}
             </tbody>
@@ -1420,17 +1420,17 @@ async function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, da
           <table class="info-table" style="margin-top: 15px;">
             <thead>
               <tr>
-                <th style="background-color: #f5f5f5; font-weight: bold; text-align: left; padding: 8px;">Description</th>
-                <th style="background-color: #f5f5f5; font-weight: bold; text-align: center; padding: 8px;">Quantity</th>
-                <th style="background-color: #f5f5f5; font-weight: bold; text-align: center; padding: 8px;">Unit</th>
+                <th>Description</th>
+                <th>Quantity</th>
+                <th>Unit</th>
               </tr>
             </thead>
             <tbody>
               ${invitationToBid.scopeOfWork.map((item: any) => `
                 <tr>
-                  <td style="padding: 8px; border: 1px solid #000;">${item.description || ''}</td>
-                  <td style="padding: 8px; border: 1px solid #000; text-align: center;">${item.quantity || ''}</td>
-                  <td style="padding: 8px; border: 1px solid #000; text-align: center;">${item.unit || ''}</td>
+                  <td>${item.description || ''}</td>
+                  <td style="text-align: center;">${item.quantity || ''}</td>
+                  <td style="text-align: center;">${item.unit || ''}</td>
                 </tr>
               `).join('')}
             </tbody>

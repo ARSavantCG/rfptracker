@@ -673,9 +673,10 @@ async function generateContractorRfpHtml(options: PdfGenerationOptions, dates: a
           <table class="info-table" style="margin-top: 15px;">
             <thead>
               <tr>
-                <th>Description</th>
-                <th>Quantity</th>
-                <th>Unit</th>
+                <th style="width: 40%;">Description</th>
+                <th style="width: 15%; text-align: center;">Quantity</th>
+                <th style="width: 10%; text-align: center;">Unit</th>
+                <th style="width: 35%;">Notes</th>
               </tr>
             </thead>
             <tbody>
@@ -684,6 +685,7 @@ async function generateContractorRfpHtml(options: PdfGenerationOptions, dates: a
                   <td>${item.description || ''}</td>
                   <td style="text-align: center;">${item.quantity || ''}</td>
                   <td style="text-align: center;">${item.unit || ''}</td>
+                  <td>${item.notes || ''}</td>
                 </tr>
               `).join('')}
             </tbody>
@@ -965,9 +967,10 @@ async function generateArchitectRfpHtml(options: PdfGenerationOptions, dates: an
           <table class="info-table" style="margin-top: 15px;">
             <thead>
               <tr>
-                <th>Description</th>
-                <th>Quantity</th>
-                <th>Unit</th>
+                <th style="width: 40%;">Description</th>
+                <th style="width: 15%; text-align: center;">Quantity</th>
+                <th style="width: 10%; text-align: center;">Unit</th>
+                <th style="width: 35%;">Notes</th>
               </tr>
             </thead>
             <tbody>
@@ -976,6 +979,7 @@ async function generateArchitectRfpHtml(options: PdfGenerationOptions, dates: an
                   <td>${item.description || ''}</td>
                   <td style="text-align: center;">${item.quantity || ''}</td>
                   <td style="text-align: center;">${item.unit || ''}</td>
+                  <td>${item.notes || ''}</td>
                 </tr>
               `).join('')}
             </tbody>
@@ -1198,9 +1202,10 @@ async function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dat
           <table class="info-table" style="margin-top: 15px;">
             <thead>
               <tr>
-                <th>Description</th>
-                <th>Quantity</th>
-                <th>Unit</th>
+                <th style="width: 40%;">Description</th>
+                <th style="width: 15%; text-align: center;">Quantity</th>
+                <th style="width: 10%; text-align: center;">Unit</th>
+                <th style="width: 35%;">Notes</th>
               </tr>
             </thead>
             <tbody>
@@ -1209,6 +1214,7 @@ async function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dat
                   <td>${item.description || ''}</td>
                   <td style="text-align: center;">${item.quantity || ''}</td>
                   <td style="text-align: center;">${item.unit || ''}</td>
+                  <td>${item.notes || ''}</td>
                 </tr>
               `).join('')}
             </tbody>
@@ -1420,9 +1426,10 @@ async function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, da
           <table class="info-table" style="margin-top: 15px;">
             <thead>
               <tr>
-                <th>Description</th>
-                <th>Quantity</th>
-                <th>Unit</th>
+                <th style="width: 40%;">Description</th>
+                <th style="width: 15%; text-align: center;">Quantity</th>
+                <th style="width: 10%; text-align: center;">Unit</th>
+                <th style="width: 35%;">Notes</th>
               </tr>
             </thead>
             <tbody>
@@ -1431,6 +1438,7 @@ async function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, da
                   <td>${item.description || ''}</td>
                   <td style="text-align: center;">${item.quantity || ''}</td>
                   <td style="text-align: center;">${item.unit || ''}</td>
+                  <td>${item.notes || ''}</td>
                 </tr>
               `).join('')}
             </tbody>

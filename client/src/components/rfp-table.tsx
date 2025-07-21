@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { formatDate, getStatusColor, getStatusIcon } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { handleAuthError, isTokenPresent } from "@/lib/authHelper";
+import { handleAuthError } from "@/lib/authHelper";
 import type { RfpRequest, Property } from "@shared/schema";
 
 interface RfpTableProps {
@@ -47,16 +47,12 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
     queryFn: async () => {
       if (rfpRequests.length === 0) return {};
       
-      const token = localStorage.getItem('auth-token');
       const counts: Record<number, number> = {};
       await Promise.all(
         rfpRequests.map(async (rfp) => {
           try {
             const response = await fetch(`/api/rfp-requests/${rfp.id}/file-count`, {
-              headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json',
-              },
+              credentials: 'include',
             });
             if (response.ok) {
               const data = await response.json();
@@ -103,19 +99,7 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
       console.log(`Attempting to delete RFP ${id}`);
-      
-      if (!isTokenPresent()) {
-        throw new Error('Authentication required. Please log in again.');
-      }
-      
-      try {
-        const result = await apiRequest(`/api/rfp-requests/${id}`, "DELETE");
-        console.log('Delete result:', result);
-        return result;
-      } catch (error) {
-        console.error('Delete API error:', error);
-        throw error;
-      }
+      return await apiRequest(`/api/rfp-requests/${id}`, "DELETE");
     },
     onSuccess: (data) => {
       console.log('RFP deletion successful:', data);

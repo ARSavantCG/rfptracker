@@ -397,8 +397,7 @@ export class DatabaseStorage implements IStorage {
       console.log('Deleting evaluation budget attachments...');
       await db.delete(evaluationBudgetAttachments).where(eq(evaluationBudgetAttachments.rfpId, id));
 
-      console.log('Deleting RFP files...');
-      await db.delete(rfpFiles).where(eq(rfpFiles.rfpRequestId, id));
+      console.log('Deleting RFP files (handled automatically with RFP deletion)...');
       
       // Now delete the RFP
       console.log('Deleting RFP...');

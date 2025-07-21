@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Lock, User, Building2 } from "lucide-react";
 
 interface LoginCredentials {
@@ -48,13 +48,16 @@ export default function Login({ onLoginSuccess }: LoginProps) {
         localStorage.setItem('auth-token', data.token);
       }
       
+      // Clear any stale query cache
+      queryClient.clear();
+      
       toast({
         title: "Login Successful",
         description: "Welcome to RFP Tracker",
       });
       
-      // Immediate redirect without reload
-      onLoginSuccess();
+      // Force a complete refresh to ensure clean authentication state
+      window.location.href = '/';
     },
     onError: (error: Error) => {
       toast({

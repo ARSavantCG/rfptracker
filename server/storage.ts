@@ -372,11 +372,10 @@ export class DatabaseStorage implements IStorage {
         .from(bidCollections)
         .where(eq(bidCollections.rfpId, id));
       
-      // Delete bid line items and attachments for each bid collection
-      console.log('Deleting bid line items and attachments...');
+      // Delete bid line items for each bid collection
+      console.log('Deleting bid line items...');
       for (const bidCollection of bidCollectionsToDelete) {
         await db.delete(bidLineItems).where(eq(bidLineItems.bidCollectionId, bidCollection.id));
-        await db.delete(bidAttachments).where(eq(bidAttachments.bidCollectionId, bidCollection.id));
       }
       
       console.log('Deleting bid collections...');

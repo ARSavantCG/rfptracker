@@ -56,6 +56,84 @@ const checkPermission = (permission: string) => {
   };
 };
 
+// Generate RFP preview HTML with custom formatting
+function generateRfpPreviewHtml(documentType: string, formatSettings: any): string {
+  const { tableColumns, fonts, colors, spacing } = formatSettings;
+  const scopeColumns = tableColumns.scopeOfWork;
+  const spaceColumns = tableColumns.spaceRequirements;
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body { font-family: Arial, sans-serif; font-size: ${fonts.bodySize}px; margin: ${spacing.sectionMargin}px; }
+        .header { font-size: ${fonts.headerSize}px; font-weight: bold; text-align: ${formatSettings.layout.headerAlignment}; margin-bottom: ${spacing.sectionMargin}px; }
+        .section-title { font-size: 16px; font-weight: bold; margin: ${spacing.sectionMargin}px 0 10px 0; }
+        table { border-collapse: collapse; width: 100%; margin: ${spacing.tableMargin}px 0; table-layout: fixed; }
+        th { background-color: ${colors.tableHeaderBackground}; border: 1px solid ${colors.tableBorderColor}; padding: ${spacing.cellPadding}px; font-size: ${fonts.tableHeaderSize}px; font-weight: bold; }
+        td { border: 1px solid ${colors.tableBorderColor}; padding: ${spacing.cellPadding}px; font-size: ${fonts.tableBodySize}px; }
+        .scope-table th:nth-child(1), .scope-table td:nth-child(1) { width: ${scopeColumns.description}%; }
+        .scope-table th:nth-child(2), .scope-table td:nth-child(2) { width: ${scopeColumns.quantity}%; text-align: center; }
+        .scope-table th:nth-child(3), .scope-table td:nth-child(3) { width: ${scopeColumns.unit}%; text-align: center; }
+        .scope-table th:nth-child(4), .scope-table td:nth-child(4) { width: ${scopeColumns.notes}%; }
+        .space-table th:nth-child(1), .space-table td:nth-child(1) { width: ${spaceColumns.spaceType}%; }
+        .space-table th:nth-child(2), .space-table td:nth-child(2) { width: ${spaceColumns.area}%; }
+        .space-table th:nth-child(3), .space-table td:nth-child(3) { width: ${spaceColumns.notes}%; }
+      </style>
+    </head>
+    <body>
+      <div class="header">REQUEST FOR PROPOSAL</div>
+      <div class="header" style="font-size: 18px;">${documentType.toUpperCase().replace('-', ' ')} SERVICES</div>
+      
+      <div class="section-title">PROJECT OVERVIEW</div>
+      <p>This is a preview of your RFP formatting. The settings you customize will be applied to all generated RFP documents.</p>
+      
+      <div class="section-title">SCOPE OF WORK</div>
+      <table class="scope-table">
+        <tr>
+          <th>Description</th>
+          <th>Quantity</th>
+          <th>Unit</th>
+          <th>Notes</th>
+        </tr>
+        <tr>
+          <td>Sample work item description</td>
+          <td>1,000</td>
+          <td>sf</td>
+          <td>This is a sample note showing how the Notes column will display with your current width settings and formatting.</td>
+        </tr>
+        <tr>
+          <td>Another scope item with longer description text</td>
+          <td>25</td>
+          <td>ea</td>
+          <td>Sample notes for testing</td>
+        </tr>
+      </table>
+      
+      <div class="section-title">SPACE REQUIREMENTS</div>
+      <table class="space-table">
+        <tr>
+          <th>Space Type</th>
+          <th>Area (sq ft)</th>
+          <th>Notes</th>
+        </tr>
+        <tr>
+          <td>Office Space</td>
+          <td>5,000</td>
+          <td>Executive offices and conference rooms</td>
+        </tr>
+        <tr>
+          <td>Warehouse</td>
+          <td>25,000</td>
+          <td>High-ceiling storage area with loading docks</td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `;
+}
+
 // Generate HTML for bid collection PDF
 function generateBidCollectionHtml(bidCollection: any, rfp: any, lineItems: any[]) {
   const totalAmount = lineItems.reduce((sum, item) => sum + parseFloat(item.totalPrice || '0'), 0);
@@ -4529,6 +4607,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error during manual file deletion:', error);
       res.status(500).json({ message: 'Failed to delete files' });
+    }
+  });
+
+  // RFP Format Settings routes
+  app.get('/api/rfp-format-settings', requireAuth, async (req: any, res) => {
+    try {
+      const settings = await storage.getRfpFormatSettings();
+      res.json(settings || {
+        tableColumns: {
+          scopeOfWork: { description: 30, quantity: 12, unit: 8, notes: 50 },
+          spaceRequirements: { spaceType: 30, area: 30, notes: 40 }
+        },
+        fonts: { headerSize: 24, bodySize: 12, tableHeaderSize: 11, tableBodySize: 12 },
+        colors: { 
+          headerBackground: '#f8f9fa', tableHeaderBackground: '#f8f9fa', 
+          tableBorderColor: '#e5e7eb', primaryAccent: '#3b82f6' 
+        },
+        spacing: { sectionMargin: 20, tableMargin: 15, cellPadding: 8 },
+        layout: { pageMargins: '1in', tableLayout: 'fixed', headerAlignment: 'left' }
+      });
+    } catch (error) {
+      console.error("Error fetching RFP format settings:", error);
+      res.status(500).json({ message: "Failed to fetch RFP format settings" });
+    }
+  });
+
+  app.post('/api/rfp-format-settings', requireAuth, async (req: any, res) => {
+    try {
+      await storage.saveRfpFormatSettings(req.body);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error saving RFP format settings:", error);
+      res.status(500).json({ message: "Failed to save RFP format settings" });
+    }
+  });
+
+  app.post('/api/rfp-preview', requireAuth, async (req: any, res) => {
+    try {
+      const { documentType, formatSettings } = req.body;
+      
+      // Generate sample preview HTML with the provided settings
+      const previewHtml = generateRfpPreviewHtml(documentType, formatSettings);
+      res.json({ html: previewHtml });
+    } catch (error) {
+      console.error("Error generating RFP preview:", error);
+      res.status(500).json({ message: "Failed to generate preview" });
     }
   });
 

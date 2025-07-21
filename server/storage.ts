@@ -1457,6 +1457,28 @@ class ExtendedDatabaseStorage extends DatabaseStorage {
   async getAllPdfTemplates(): Promise<PdfTemplate[]> {
     return await db.select().from(pdfTemplates).orderBy(asc(pdfTemplates.templateKey));
   }
+
+  // RFP Format Settings methods
+  async getRfpFormatSettings(): Promise<any | null> {
+    try {
+      // For now, return null to use defaults
+      // Could implement a dedicated settings table later if needed
+      return null;
+    } catch (error) {
+      console.error("Error fetching RFP format settings:", error);
+      return null;
+    }
+  }
+
+  async saveRfpFormatSettings(settings: any): Promise<void> {
+    try {
+      // Log settings for now - could implement persistence later
+      console.log("RFP Format Settings saved:", JSON.stringify(settings, null, 2));
+    } catch (error) {
+      console.error("Error saving RFP format settings:", error);
+      throw error;
+    }
+  }
 }
 
 export const storage = new ExtendedDatabaseStorage();

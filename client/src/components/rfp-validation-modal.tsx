@@ -300,13 +300,13 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                   <div className="space-y-2">
                     {/* Column Headers - Show only once */}
                     <div className="grid grid-cols-12 gap-2 items-center">
-                      <div className="col-span-4">
-                        <label className="text-sm font-medium text-gray-700">Description</label>
+                      <div className="col-span-3">
+                        <label className="text-sm font-medium text-gray-700">Space Type</label>
                       </div>
                       <div className="col-span-3">
-                        <label className="text-sm font-medium text-gray-700">Square Footage</label>
+                        <label className="text-sm font-medium text-gray-700">Area (sq ft)</label>
                       </div>
-                      <div className="col-span-4">
+                      <div className="col-span-5">
                         <label className="text-sm font-medium text-gray-700">Notes</label>
                       </div>
                       <div className="col-span-1">
@@ -317,7 +317,7 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                     {/* Area Items */}
                     {form.watch("areaBreakdown")?.map((area, index) => (
                       <div key={area.id} className="grid grid-cols-12 gap-2 items-center">
-                        <div className="col-span-4">
+                        <div className="col-span-3">
                           <Input
                             value={area.description}
                             onChange={(e) => updateAreaBreakdown(index, "description", e.target.value)}
@@ -336,7 +336,7 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                             placeholder="e.g., 5,000"
                           />
                         </div>
-                        <div className="col-span-4">
+                        <div className="col-span-5">
                           <Input
                             value={area.notes || ""}
                             onChange={(e) => updateAreaBreakdown(index, "notes", e.target.value)}

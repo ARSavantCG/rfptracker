@@ -673,10 +673,10 @@ async function generateContractorRfpHtml(options: PdfGenerationOptions, dates: a
           <table class="info-table" style="margin-top: 15px;">
             <thead>
               <tr>
-                <th style="width: 40%;">Description</th>
-                <th style="width: 15%; text-align: center;">Quantity</th>
-                <th style="width: 10%; text-align: center;">Unit</th>
-                <th style="width: 35%;">Notes</th>
+                <th style="width: 30%;">Description</th>
+                <th style="width: 12%; text-align: center;">Quantity</th>
+                <th style="width: 8%; text-align: center;">Unit</th>
+                <th style="width: 50%;">Notes</th>
               </tr>
             </thead>
             <tbody>
@@ -967,10 +967,10 @@ async function generateArchitectRfpHtml(options: PdfGenerationOptions, dates: an
           <table class="info-table" style="margin-top: 15px;">
             <thead>
               <tr>
-                <th style="width: 40%;">Description</th>
-                <th style="width: 15%; text-align: center;">Quantity</th>
-                <th style="width: 10%; text-align: center;">Unit</th>
-                <th style="width: 35%;">Notes</th>
+                <th style="width: 30%;">Description</th>
+                <th style="width: 12%; text-align: center;">Quantity</th>
+                <th style="width: 8%; text-align: center;">Unit</th>
+                <th style="width: 50%;">Notes</th>
               </tr>
             </thead>
             <tbody>
@@ -1181,15 +1181,15 @@ async function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dat
       ${totalArea > 0 || (areaBreakdown && areaBreakdown.length > 0) ? `
       <div class="section">
         <div class="section-title">Space Requirements</div>
-        <table>
-          <tr><th>Space Type</th><th>Area (sq ft)</th><th>Notes</th></tr>
-          ${warehouseArea > 0 ? `<tr><td>Warehouse</td><td>${warehouseArea.toLocaleString()}</td><td>${warehouseNotes}</td></tr>` : ''}
+        <table style="border-collapse: collapse; width: 100%;">
+          <tr><th style="width: 30%; border: 1px solid #e5e7eb; padding: 8px;">Space Type</th><th style="width: 30%; border: 1px solid #e5e7eb; padding: 8px;">Area (sq ft)</th><th style="width: 40%; border: 1px solid #e5e7eb; padding: 8px;">Notes</th></tr>
+          ${warehouseArea > 0 ? `<tr><td style="border: 1px solid #e5e7eb; padding: 8px;">Warehouse</td><td style="border: 1px solid #e5e7eb; padding: 8px;">${warehouseArea.toLocaleString()}</td><td style="border: 1px solid #e5e7eb; padding: 8px;">${warehouseNotes}</td></tr>` : ''}
           ${areaBreakdown && areaBreakdown.length > 0 ? areaBreakdown.map((item: any) => 
-            `<tr><td>${item.description || 'Area'}</td><td>${parseInt(item.squareFootage || '0').toLocaleString()}</td><td>${item.notes || ''}</td></tr>`
+            `<tr><td style="border: 1px solid #e5e7eb; padding: 8px;">${item.description || 'Area'}</td><td style="border: 1px solid #e5e7eb; padding: 8px;">${parseInt(item.squareFootage || '0').toLocaleString()}</td><td style="border: 1px solid #e5e7eb; padding: 8px;">${item.notes || ''}</td></tr>`
           ).join('') : ''}
-          ${existingOffice > 0 && (!areaBreakdown || areaBreakdown.length === 0) ? `<tr><td>Existing Office</td><td>${existingOffice.toLocaleString()}</td><td>Renovation level TBD</td></tr>` : ''}
-          ${newOffice > 0 && (!areaBreakdown || areaBreakdown.length === 0) ? `<tr><td>New Office Space</td><td>${newOffice.toLocaleString()}</td><td>New construction</td></tr>` : ''}
-          ${totalArea > 0 ? `<tr><td><strong>Total</strong></td><td><strong>${totalArea.toLocaleString()}</strong></td><td></td></tr>` : ''}
+          ${existingOffice > 0 && (!areaBreakdown || areaBreakdown.length === 0) ? `<tr><td style="border: 1px solid #e5e7eb; padding: 8px;">Existing Office</td><td style="border: 1px solid #e5e7eb; padding: 8px;">${existingOffice.toLocaleString()}</td><td style="border: 1px solid #e5e7eb; padding: 8px;">Renovation level TBD</td></tr>` : ''}
+          ${newOffice > 0 && (!areaBreakdown || areaBreakdown.length === 0) ? `<tr><td style="border: 1px solid #e5e7eb; padding: 8px;">New Office Space</td><td style="border: 1px solid #e5e7eb; padding: 8px;">${newOffice.toLocaleString()}</td><td style="border: 1px solid #e5e7eb; padding: 8px;">New construction</td></tr>` : ''}
+          ${totalArea > 0 ? `<tr><td style="border: 1px solid #e5e7eb; padding: 8px;"><strong>Total</strong></td><td style="border: 1px solid #e5e7eb; padding: 8px;"><strong>${totalArea.toLocaleString()}</strong></td><td style="border: 1px solid #e5e7eb; padding: 8px;"></td></tr>` : ''}
         </table>
       </div>
       ` : ''}
@@ -1202,10 +1202,10 @@ async function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dat
           <table class="info-table" style="margin-top: 15px;">
             <thead>
               <tr>
-                <th style="width: 40%;">Description</th>
-                <th style="width: 15%; text-align: center;">Quantity</th>
-                <th style="width: 10%; text-align: center;">Unit</th>
-                <th style="width: 35%;">Notes</th>
+                <th style="width: 30%;">Description</th>
+                <th style="width: 12%; text-align: center;">Quantity</th>
+                <th style="width: 8%; text-align: center;">Unit</th>
+                <th style="width: 50%;">Notes</th>
               </tr>
             </thead>
             <tbody>
@@ -1312,7 +1312,7 @@ async function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, da
     
     // Add warehouse area if it exists
     if (warehouseArea > 0) {
-      spaceRows += '<tr><td>Warehouse</td><td>' + warehouseArea.toLocaleString() + '</td><td>' + warehouseNotes + '</td></tr>';
+      spaceRows += '<tr><td style="border: 1px solid #e5e7eb; padding: 8px;">Warehouse</td><td style="border: 1px solid #e5e7eb; padding: 8px;">' + warehouseArea.toLocaleString() + '</td><td style="border: 1px solid #e5e7eb; padding: 8px;">' + warehouseNotes + '</td></tr>';
     }
     
     // Add dynamic area breakdown items with custom notes
@@ -1322,22 +1322,22 @@ async function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, da
         const squareFootage = parseInt(item.squareFootage || '0');
         const notes = item.notes || '';
         if (squareFootage > 0) {
-          spaceRows += '<tr><td>' + description + '</td><td>' + squareFootage.toLocaleString() + '</td><td>' + notes + '</td></tr>';
+          spaceRows += '<tr><td style="border: 1px solid #e5e7eb; padding: 8px;">' + description + '</td><td style="border: 1px solid #e5e7eb; padding: 8px;">' + squareFootage.toLocaleString() + '</td><td style="border: 1px solid #e5e7eb; padding: 8px;">' + notes + '</td></tr>';
         }
       });
     } else {
       // Fallback to legacy office areas if no area breakdown exists
       if (existingOffice > 0) {
-        spaceRows += '<tr><td>Existing Office</td><td>' + existingOffice.toLocaleString() + '</td><td>Renovation level TBD</td></tr>';
+        spaceRows += '<tr><td style="border: 1px solid #e5e7eb; padding: 8px;">Existing Office</td><td style="border: 1px solid #e5e7eb; padding: 8px;">' + existingOffice.toLocaleString() + '</td><td style="border: 1px solid #e5e7eb; padding: 8px;">Renovation level TBD</td></tr>';
       }
       if (newOffice > 0) {
-        spaceRows += '<tr><td>New Office Space</td><td>' + newOffice.toLocaleString() + '</td><td>New construction</td></tr>';
+        spaceRows += '<tr><td style="border: 1px solid #e5e7eb; padding: 8px;">New Office Space</td><td style="border: 1px solid #e5e7eb; padding: 8px;">' + newOffice.toLocaleString() + '</td><td style="border: 1px solid #e5e7eb; padding: 8px;">New construction</td></tr>';
       }
     }
     
-    spaceRows += '<tr><td><strong>Total</strong></td><td><strong>' + totalArea.toLocaleString() + '</strong></td><td></td></tr>';
+    spaceRows += '<tr><td style="border: 1px solid #e5e7eb; padding: 8px;"><strong>Total</strong></td><td style="border: 1px solid #e5e7eb; padding: 8px;"><strong>' + totalArea.toLocaleString() + '</strong></td><td style="border: 1px solid #e5e7eb; padding: 8px;"></td></tr>';
     
-    spaceRequirementsHtml = '<div class="section"><div class="section-title">Space Requirements</div><table><tr><th>Space Type</th><th>Area (sq ft)</th><th>Notes</th></tr>' + spaceRows + '</table></div>';
+    spaceRequirementsHtml = '<div class="section"><div class="section-title">Space Requirements</div><table style="border-collapse: collapse; width: 100%;"><tr><th style="width: 30%; border: 1px solid #e5e7eb; padding: 8px;">Space Type</th><th style="width: 30%; border: 1px solid #e5e7eb; padding: 8px;">Area (sq ft)</th><th style="width: 40%; border: 1px solid #e5e7eb; padding: 8px;">Notes</th></tr>' + spaceRows + '</table></div>';
   }
 
   return `
@@ -1426,10 +1426,10 @@ async function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, da
           <table class="info-table" style="margin-top: 15px;">
             <thead>
               <tr>
-                <th style="width: 40%;">Description</th>
-                <th style="width: 15%; text-align: center;">Quantity</th>
-                <th style="width: 10%; text-align: center;">Unit</th>
-                <th style="width: 35%;">Notes</th>
+                <th style="width: 30%;">Description</th>
+                <th style="width: 12%; text-align: center;">Quantity</th>
+                <th style="width: 8%; text-align: center;">Unit</th>
+                <th style="width: 50%;">Notes</th>
               </tr>
             </thead>
             <tbody>

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { Edit, Trash2, Plus, Building2 } from "lucide-react";
 import { insertPropertySchema, updatePropertySchema, type Property } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
@@ -42,6 +43,10 @@ export function PropertyManagementModal({ isOpen, onClose }: PropertyManagementM
   const [propertyName, setPropertyName] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  // Check if user has properties delete permissions
+  const canDeleteProperties = user?.permissions?.includes('properties.delete') || false;
 
   const { data: properties = [], isLoading } = useQuery<Property[]>({
     queryKey: ["/api/properties"],
@@ -308,14 +313,16 @@ export function PropertyManagementModal({ isOpen, onClose }: PropertyManagementM
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDeleteProperty(property)}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {canDeleteProperties && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeleteProperty(property)}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </div>

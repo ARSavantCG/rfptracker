@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Plus, Trash2, Edit, Settings, Copy, ChevronDown, ChevronRight, Compass, Navigation } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
 import type { Property, BayConfiguration } from "@shared/schema";
 
@@ -18,6 +19,10 @@ interface BayConfigurationManagerProps {
 export default function BayConfigurationManager({ property }: BayConfigurationManagerProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  // Check if user has properties delete permissions
+  const canDeleteBays = user?.permissions?.includes('properties.delete') || false;
   const [isOpen, setIsOpen] = useState(false);
   const [bayConfigurations, setBayConfigurations] = useState<BayConfiguration[]>(
     property.bayConfigurations || []
@@ -797,15 +802,17 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                               >
                                 <Edit className="h-3 w-3" />
                               </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => removeBayConfiguration(bay.id)}
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50 h-8 w-8 p-0"
-                                title="Delete bay"
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
+                              {canDeleteBays && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => removeBayConfiguration(bay.id)}
+                                  className="text-red-600 hover:text-red-700 hover:bg-red-50 h-8 w-8 p-0"
+                                  title="Delete bay"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              )}
                             </div>
                           </div>
                         );

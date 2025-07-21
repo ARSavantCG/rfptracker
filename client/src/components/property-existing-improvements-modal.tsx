@@ -11,6 +11,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Trash2, Plus, Edit3, Save, X, Grid } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/useAuth";
 import { 
   EXISTING_IMPROVEMENT_CATEGORIES, 
   ALLOCATION_TYPES,
@@ -46,6 +47,10 @@ export function PropertyExistingImprovementsModal({
   const [editingId, setEditingId] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  // Check if user has properties delete permissions
+  const canDeleteProperties = user?.permissions?.includes('properties.delete') || false;
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -451,14 +456,16 @@ export function PropertyExistingImprovementsModal({
                         >
                           <Edit3 className="h-4 w-4" />
                         </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => deleteMutation.mutate(improvement.id)}
-                          disabled={deleteMutation.isPending}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {canDeleteProperties && (
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => deleteMutation.mutate(improvement.id)}
+                            disabled={deleteMutation.isPending}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </div>

@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
 import { Plus, Edit2, Trash2, Package, DollarSign } from "lucide-react";
 
@@ -43,6 +44,10 @@ interface RomScopeItemsModalProps {
 export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  // Check if user has ROM scope delete permissions (only for deleting master scope items)
+  const canDeleteRomScope = user?.permissions?.includes('rom.scope.delete') || false;
   
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingItem, setEditingItem] = useState<RomScopeItem | null>(null);
@@ -385,14 +390,16 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                           >
                             <Edit2 className="h-4 w-4" />
                           </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDelete(item.id)}
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          {canDeleteRomScope && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDelete(item.id)}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
                       </div>
                     ))}

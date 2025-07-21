@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { Plus, Edit, Users, Trash2 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { TagInput } from "@/components/ui/tag-input";
@@ -33,7 +34,11 @@ export function ContactFormModal({ contact, trigger, onSuccess }: ContactFormMod
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const isEdit = !!contact;
+
+  // Check if user has contact delete permissions
+  const canDeleteContacts = user?.permissions?.includes('contacts.delete') || false;
 
   // Update form data when contact prop changes
   useEffect(() => {
@@ -304,7 +309,7 @@ export function ContactFormModal({ contact, trigger, onSuccess }: ContactFormMod
 
           <div className="flex justify-between pt-4">
             <div>
-              {isEdit && (
+              {isEdit && canDeleteContacts && (
                 <Button
                   type="button"
                   variant="outline"

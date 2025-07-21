@@ -45,6 +45,17 @@ import fs from "fs";
 import path from "path";
 import { deleteEntityFiles, cleanupOrphanedFiles, getCleanupStats, findOrphanedFiles } from "./file-cleanup";
 
+// Permission checking middleware
+const checkPermission = (permission: string) => {
+  return async (req: any, res: any, next: any) => {
+    const user = req.user;
+    if (!user || !user.permissions?.includes(permission)) {
+      return res.status(403).json({ message: `Access denied. ${permission} permission required.` });
+    }
+    next();
+  };
+};
+
 // Generate HTML for bid collection PDF
 function generateBidCollectionHtml(bidCollection: any, rfp: any, lineItems: any[]) {
   const totalAmount = lineItems.reduce((sum, item) => sum + parseFloat(item.totalPrice || '0'), 0);
@@ -1328,7 +1339,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete file from RFP
-  app.delete("/api/rfp-requests/:id/files/:fileId", async (req, res) => {
+  app.delete("/api/rfp-requests/:id/files/:fileId", requireAuth, checkPermission('rfp.edit'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const fileId = req.params.fileId;
@@ -1512,7 +1523,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/contacts/:id", async (req, res) => {
+  app.delete("/api/contacts/:id", requireAuth, checkPermission('contacts.delete'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -1584,7 +1595,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/invitations/:id", async (req, res) => {
+  app.delete("/api/invitations/:id", requireAuth, checkPermission('rfp.delete'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -1723,7 +1734,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/rfp-requests/:id/invitation-to-bid", async (req, res) => {
+  app.delete("/api/rfp-requests/:id/invitation-to-bid", requireAuth, checkPermission('rfp.delete'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -2157,7 +2168,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/rfp-requests/:rfpId/bid-collections/:id", async (req, res) => {
+  app.delete("/api/rfp-requests/:rfpId/bid-collections/:id", requireAuth, checkPermission('rfp.delete'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -2299,7 +2310,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/properties/:id", async (req, res) => {
+  app.delete("/api/properties/:id", requireAuth, checkPermission('properties.delete'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -2384,7 +2395,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/properties/:propertyId/existing-improvements/:id", async (req, res) => {
+  app.delete("/api/properties/:propertyId/existing-improvements/:id", requireAuth, checkPermission('properties.delete'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -3201,7 +3212,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/rom-pilots/:id", async (req, res) => {
+  app.delete("/api/rom-pilots/:id", requireAuth, checkPermission('rom.delete'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -3278,7 +3289,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/rom-scope-items/:id", async (req, res) => {
+  app.delete("/api/rom-scope-items/:id", requireAuth, checkPermission('rom.scope.delete'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -3345,7 +3356,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/rom-pilots/:id/line-items", async (req, res) => {
+  app.delete("/api/rom-pilots/:id/line-items", requireAuth, checkPermission('rom.delete'), async (req, res) => {
     try {
       const romPilotId = parseInt(req.params.id);
       if (isNaN(romPilotId)) {
@@ -3746,7 +3757,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/admin/users/:id', async (req, res) => {
+  app.delete('/api/admin/users/:id', requireAuth, checkPermission('admin.access'), async (req, res) => {
     try {
       const { id } = req.params;
       await storage.deleteUser(id);

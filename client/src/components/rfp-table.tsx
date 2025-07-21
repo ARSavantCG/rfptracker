@@ -159,10 +159,19 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
     try {
       console.log(`Making direct fetch request to DELETE /api/rfp-requests/${rfp.id}`);
       
+      // Get auth token from localStorage
+      const token = localStorage.getItem('auth-token');
+      if (!token) {
+        console.error('No auth token found');
+        alert('Authentication required. Please log in again.');
+        return;
+      }
+      
       const response = await fetch(`/api/rfp-requests/${rfp.id}`, {
         method: 'DELETE',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         }
       });
       
@@ -178,7 +187,14 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
         window.location.reload(); // Simple page reload to see changes
       } else {
         console.error(`=== DIRECT DELETE FAILED ===`);
-        alert(`Delete failed: ${responseData.message || 'Unknown error'}`);
+        if (response.status === 401) {
+          alert('Authentication required. Please log in again.');
+          window.location.href = '/';
+        } else if (response.status === 403) {
+          alert('You do not have permission to delete RFPs.');
+        } else {
+          alert(`Delete failed: ${responseData.message || 'Unknown error'}`);
+        }
       }
     } catch (error) {
       console.error(`=== DIRECT DELETE ERROR ===`, error);

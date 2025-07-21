@@ -872,19 +872,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Invalid or expired token" });
       }
 
-      // For now, return hardcoded user data but only if authenticated
-      res.json({
-        id: 'test-user',
-        username: 'AReutlinger@bridgeindustrial.com',
-        firstName: 'Adolfo',
-        lastName: 'Reutlinger',
-        email: 'AReutlinger@bridgeindustrial.com',
-        name: 'Adolfo Reutlinger',
-        isAdmin: true,
-        isContact: false,
-        permissions: { 'admin.access': true },
-        role: 'admin'
-      });
+      // Get actual user data based on token
+      if (userId.startsWith('contact_')) {
+        const contactId = parseInt(userId.replace('contact_', ''));
+        const contact = await db.select().from(contacts).where(eq(contacts.id, contactId)).limit(1);
+        
+        if (contact.length === 0) {
+          return res.status(401).json({ message: "User not found" });
+        }
+        
+        const user = contact[0];
+        res.json({
+          id: userId,
+          username: user.email,
+          firstName: user.name.split(' ')[0],
+          lastName: user.name.split(' ').slice(1).join(' '),
+          email: user.email,
+          name: user.name,
+          isAdmin: user.permissions?.includes('admin.access') || false,
+          isContact: true,
+          permissions: user.permissions || [],
+          role: user.permissions?.includes('admin.access') ? 'admin' : 'contact'
+        });
+      } else {
+        // Regular user from users table
+        const user = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+        
+        if (user.length === 0) {
+          return res.status(401).json({ message: "User not found" });
+        }
+        
+        const userData = user[0];
+        res.json({
+          id: userData.id,
+          username: userData.username,
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          email: userData.email,
+          name: `${userData.firstName} ${userData.lastName}`,
+          isAdmin: userData.role === 'admin',
+          isContact: false,
+          permissions: userData.permissions || [],
+          role: userData.role
+        });
+      }
     } catch (error) {
       console.error('Auth user error:', error);
       res.status(401).json({ message: "Authentication failed" });

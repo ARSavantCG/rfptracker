@@ -674,13 +674,19 @@ async function generateContractorRfpHtml(options: PdfGenerationOptions, dates: a
         <div class="section-title">SCOPE OF WORK:</div>
         <div class="description-box">
           <p><strong>Please provide pricing and timeline for the following scope of work items:</strong></p>
-          <table class="info-table" style="margin-top: 15px;">
+          <table class="info-table" style="margin-top: 15px; table-layout: fixed; width: 100%;">
+            <colgroup>
+              <col style="width: 30%;">
+              <col style="width: 12%;">
+              <col style="width: 8%;">
+              <col style="width: 50%;">
+            </colgroup>
             <thead>
               <tr>
-                <th style="width: 30% !important;">Description</th>
-                <th style="width: 12% !important; text-align: center;">Quantity</th>
-                <th style="width: 8% !important; text-align: center;">Unit</th>
-                <th style="width: 50% !important;">Notes</th>
+                <th style="text-align: left;">Description</th>
+                <th style="text-align: center;">Quantity</th>
+                <th style="text-align: center;">Unit</th>
+                <th style="text-align: left;">Notes</th>
               </tr>
             </thead>
             <tbody>
@@ -968,13 +974,19 @@ async function generateArchitectRfpHtml(options: PdfGenerationOptions, dates: an
         <div class="section-title">SCOPE OF WORK:</div>
         <div class="description-box">
           <p><strong>Please provide pricing and timeline for the following scope of work items:</strong></p>
-          <table class="info-table" style="margin-top: 15px;">
+          <table class="info-table" style="margin-top: 15px; table-layout: fixed; width: 100%;">
+            <colgroup>
+              <col style="width: 30%;">
+              <col style="width: 12%;">
+              <col style="width: 8%;">
+              <col style="width: 50%;">
+            </colgroup>
             <thead>
               <tr>
-                <th style="width: 30% !important;">Description</th>
-                <th style="width: 12% !important; text-align: center;">Quantity</th>
-                <th style="width: 8% !important; text-align: center;">Unit</th>
-                <th style="width: 50% !important;">Notes</th>
+                <th style="text-align: left;">Description</th>
+                <th style="text-align: center;">Quantity</th>
+                <th style="text-align: center;">Unit</th>
+                <th style="text-align: left;">Notes</th>
               </tr>
             </thead>
             <tbody>
@@ -1185,8 +1197,13 @@ async function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dat
       ${totalArea > 0 || (areaBreakdown && areaBreakdown.length > 0) ? `
       <div class="section">
         <div class="section-title">Space Requirements</div>
-        <table style="border-collapse: collapse; width: 100%;">
-          <tr><th style="width: 30% !important; border: 1px solid #e5e7eb; padding: 8px;">Space Type</th><th style="width: 30% !important; border: 1px solid #e5e7eb; padding: 8px;">Area (sq ft)</th><th style="width: 40% !important; border: 1px solid #e5e7eb; padding: 8px;">Notes</th></tr>
+        <table style="border-collapse: collapse; width: 100%; table-layout: fixed;">
+          <colgroup>
+            <col style="width: 30%;">
+            <col style="width: 30%;">
+            <col style="width: 40%;">
+          </colgroup>
+          <tr><th style="border: 1px solid #e5e7eb; padding: 8px; text-align: left;">Space Type</th><th style="border: 1px solid #e5e7eb; padding: 8px; text-align: left;">Area (sq ft)</th><th style="border: 1px solid #e5e7eb; padding: 8px; text-align: left;">Notes</th></tr>
           ${warehouseArea > 0 ? `<tr><td style="border: 1px solid #e5e7eb; padding: 8px;">Warehouse</td><td style="border: 1px solid #e5e7eb; padding: 8px;">${warehouseArea.toLocaleString()}</td><td style="border: 1px solid #e5e7eb; padding: 8px;">${warehouseNotes}</td></tr>` : ''}
           ${areaBreakdown && areaBreakdown.length > 0 ? areaBreakdown.map((item: any) => 
             `<tr><td style="border: 1px solid #e5e7eb; padding: 8px;">${item.description || 'Area'}</td><td style="border: 1px solid #e5e7eb; padding: 8px;">${parseInt(item.squareFootage || '0').toLocaleString()}</td><td style="border: 1px solid #e5e7eb; padding: 8px;">${item.notes || ''}</td></tr>`
@@ -1341,7 +1358,7 @@ async function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, da
     
     spaceRows += '<tr><td style="border: 1px solid #e5e7eb; padding: 8px;"><strong>Total</strong></td><td style="border: 1px solid #e5e7eb; padding: 8px;"><strong>' + totalArea.toLocaleString() + '</strong></td><td style="border: 1px solid #e5e7eb; padding: 8px;"></td></tr>';
     
-    spaceRequirementsHtml = '<div class="section"><div class="section-title">Space Requirements</div><table style="border-collapse: collapse; width: 100%;"><tr><th style="width: 30% !important; border: 1px solid #e5e7eb; padding: 8px;">Space Type</th><th style="width: 30% !important; border: 1px solid #e5e7eb; padding: 8px;">Area (sq ft)</th><th style="width: 40% !important; border: 1px solid #e5e7eb; padding: 8px;">Notes</th></tr>' + spaceRows + '</table></div>';
+    spaceRequirementsHtml = '<div class="section"><div class="section-title">Space Requirements</div><table style="border-collapse: collapse; width: 100%; table-layout: fixed;"><colgroup><col style="width: 30%;"><col style="width: 30%;"><col style="width: 40%;"></colgroup><tr><th style="border: 1px solid #e5e7eb; padding: 8px; text-align: left;">Space Type</th><th style="border: 1px solid #e5e7eb; padding: 8px; text-align: left;">Area (sq ft)</th><th style="border: 1px solid #e5e7eb; padding: 8px; text-align: left;">Notes</th></tr>' + spaceRows + '</table></div>';
   }
 
   return `
@@ -1427,13 +1444,19 @@ async function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, da
         <div class="section-title">SCOPE OF WORK:</div>
         <div class="description-box">
           <p><strong>Please provide pricing and timeline for the following scope of work items:</strong></p>
-          <table class="info-table" style="margin-top: 15px;">
+          <table class="info-table" style="margin-top: 15px; table-layout: fixed; width: 100%;">
+            <colgroup>
+              <col style="width: 30%;">
+              <col style="width: 12%;">
+              <col style="width: 8%;">
+              <col style="width: 50%;">
+            </colgroup>
             <thead>
               <tr>
-                <th style="width: 30% !important;">Description</th>
-                <th style="width: 12% !important; text-align: center;">Quantity</th>
-                <th style="width: 8% !important; text-align: center;">Unit</th>
-                <th style="width: 50% !important;">Notes</th>
+                <th style="text-align: left;">Description</th>
+                <th style="text-align: center;">Quantity</th>
+                <th style="text-align: center;">Unit</th>
+                <th style="text-align: left;">Notes</th>
               </tr>
             </thead>
             <tbody>

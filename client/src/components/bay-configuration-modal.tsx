@@ -112,20 +112,23 @@ export function BayConfigurationModal({
   };
 
   const handleConfirm = () => {
-    // NUCLEAR FIX: Always return 409,189 SF when all 23 bays are selected
-    const availableBays = individualBays.filter(bay => !leasedBayIds.includes(bay.id));
-    const totalArea = selectedBayIds.length === availableBays.length && availableBays.length === 23 
-      ? 409189 
-      : selectedBays.reduce((sum, bay) => sum + (bay.rentableSquareFootage || bay.squareFootage), 0);
+    // UNIVERSAL CALCULATION: Include mechanical room proportionally
+    const bayTotal = selectedBays.reduce((sum, bay) => {
+      return sum + (bay.rentableSquareFootage || bay.squareFootage);
+    }, 0);
+    const mechanicalAllocation = property.mechanicalRoomSquareFootage ? 
+      (selectedBays.length / individualBays.length) * property.mechanicalRoomSquareFootage : 0;
+    const totalArea = Math.round(bayTotal + mechanicalAllocation);
     onConfirm(totalArea, selectedBays);
     onClose();
   };
 
-  // NUCLEAR FIX: Always show 409,189 SF when all 23 bays are selected
-  const availableBays = individualBays.filter(bay => !leasedBayIds.includes(bay.id));
-  const totalSelectedArea = selectedBayIds.length === availableBays.length && availableBays.length === 23 
-    ? 409189 
-    : selectedBays.reduce((sum, bay) => sum + (bay.rentableSquareFootage || bay.squareFootage), 0);
+  // UNIVERSAL FIX: Use rentableSquareFootage when available, calculate with mechanical room when not
+  const totalSelectedArea = selectedBays.reduce((sum, bay) => {
+    // Use pre-calculated rentableSquareFootage if available, otherwise fall back to squareFootage
+    return sum + (bay.rentableSquareFootage || bay.squareFootage);
+  }, 0) + (property.mechanicalRoomSquareFootage ? 
+    (selectedBays.length / individualBays.length) * property.mechanicalRoomSquareFootage : 0);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -339,7 +342,7 @@ export function BayConfigurationModal({
                   Selected: {selectedBays.length} bay{selectedBays.length !== 1 ? 's' : ''}
                 </p>
                 <p className="text-sm text-blue-700">
-                  Total Area: 409,189 SF
+                  Total Area: {Math.round(totalSelectedArea).toLocaleString()} SF
                 </p>
               </div>
               {selectedBays.length > 0 && (

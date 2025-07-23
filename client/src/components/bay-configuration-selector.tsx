@@ -220,17 +220,12 @@ export default function BayConfigurationSelector({
     setSelectedBayIds(availableBayIds);
   };
 
-  // FINAL NUCLEAR OPTION: Force exact total based on selection count
-  const availableBays = bayConfigurations.filter(bay => !leasedBayIds.includes(bay.id));
-  let totalArea;
-  if (selectedBayIds.length === availableBays.length && availableBays.length === 23) {
-    // All 23 bays selected = force exact 409,189 SF
-    totalArea = 409189;
-    console.log('🔥 FORCING 409189 - All bays selected');
-  } else {
-    totalArea = calculateTotalArea();
-    console.log('🔥 PARTIAL SELECTION - Calculated:', totalArea);
-  }
+  // UNIVERSAL CALCULATION: Use rentable square footage when available
+  const totalArea = selectedBayIds.length === 0 ? 0 : selectedBayIds.reduce((sum, bayId) => {
+    const bay = bayConfigurations.find(b => b.id === bayId);
+    return bay ? sum + (bay.rentableSquareFootage || bay.squareFootage) : sum;
+  }, 0) + (property.mechanicalRoomSquareFootage ? 
+    (selectedBayIds.length / bayConfigurations.length) * property.mechanicalRoomSquareFootage : 0);
   
   // Get selected bay configurations with proportional mechanical room allocation
   const selectedBays = selectedBayIds.map(bayId => {
@@ -479,13 +474,14 @@ export default function BayConfigurationSelector({
                 <Calculator className="h-4 w-4 text-orange-600" />
                 <div className="flex flex-col">
                   <span className="font-medium text-orange-900" key="fixed-total-area">
-                    Total Rentable Area: 409,189 SF
+                    Total Rentable Area: {Math.round(totalArea).toLocaleString()} SF
                   </span>
                   <span className="text-xs text-orange-700">
                     Building Total Available: {bayConfigurations.reduce((sum, bay) => sum + bay.squareFootage, 0).toLocaleString()} SF
                   </span>
                   <span className="text-xs text-green-600">
-                    FIXED: Always showing correct 409,189 SF
+                    Includes mechanical room allocation: {property.mechanicalRoomSquareFootage ? 
+                      Math.round((selectedBayIds.length / bayConfigurations.length) * property.mechanicalRoomSquareFootage) : 0} SF
                   </span>
                 </div>
               </div>

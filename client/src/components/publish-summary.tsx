@@ -105,8 +105,9 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
 
   const getRentableArea = () => {
     if (rfp.selectedBayConfigurations && rfp.selectedBayConfigurations.length > 0) {
+      // Use warehouse area + proportional mechanical allocation (bay.squareFootage + bay.mechanicalRoomAllocation)
       const totalArea = rfp.selectedBayConfigurations.reduce((sum: number, bay: any) => 
-        sum + (bay.rentableSquareFootage || bay.squareFootage || 0), 0);
+        sum + (bay.squareFootage || 0) + (bay.mechanicalRoomAllocation || 0), 0);
       return totalArea.toLocaleString();
     }
     return 'N/A';

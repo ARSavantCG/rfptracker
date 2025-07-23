@@ -79,6 +79,8 @@ export default function BayConfigurationSelector({
     // Total rentable area = selected bay SF + proportional mechanical allocation
     const totalRentableArea = selectedBaySquareFootage + proportionalMechanical;
     
+
+    
     return Math.round(totalRentableArea);
   };
 

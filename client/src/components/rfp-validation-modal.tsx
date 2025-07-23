@@ -219,11 +219,12 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                           const warehouseArea = rfp.warehouseArea;
                           const projectArea = rfp.projectArea;
                           
-                          // Check if bay configurations contain calculated area
+                          // Check if bay configurations contain calculated area using correct method
                           let calculatedArea = 0;
                           if (rfp.selectedBayConfigurations && rfp.selectedBayConfigurations.length > 0) {
                             calculatedArea = rfp.selectedBayConfigurations.reduce((total, bay) => {
-                              return total + (bay.rentableSquareFootage || 0);
+                              // Use warehouse area + proportional mechanical allocation
+                              return total + (bay.squareFootage || 0) + (bay.mechanicalRoomAllocation || 0);
                             }, 0);
                           }
                           
@@ -259,11 +260,12 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                           const warehouseArea = rfp.warehouseArea;
                           const projectArea = rfp.projectArea;
                           
-                          // Check if bay configurations contain calculated area
+                          // Check if bay configurations contain calculated area using correct method
                           let calculatedArea = 0;
                           if (rfp.selectedBayConfigurations && rfp.selectedBayConfigurations.length > 0) {
                             calculatedArea = rfp.selectedBayConfigurations.reduce((total, bay) => {
-                              return total + (bay.rentableSquareFootage || 0);
+                              // Use warehouse area + proportional mechanical allocation
+                              return total + (bay.squareFootage || 0) + (bay.mechanicalRoomAllocation || 0);
                             }, 0);
                           }
                           

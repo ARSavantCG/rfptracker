@@ -63,27 +63,17 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
     enabled: isOpen,
   });
 
-  // Handle bay configuration selection and calculate floor area
+  // Handle bay configuration selection and use pre-calculated area from bay selector
   const handleFloorAreaChange = (area: number, bayConfigs: BayConfiguration[]) => {
-    // Calculate using correct method: selected bay SF + proportional mechanical room allocation
-    const selectedBaySquareFootage = bayConfigs.reduce((sum, bay) => sum + (bay.squareFootage || 0), 0);
-    const mechanicalRoomSF = selectedProperty?.mechanicalRoomSquareFootage || 0;
+    // Use the area calculated by the Bay Configuration Selector (already includes proportional mechanical allocation)
+    setCalculatedFloorArea(area);
+    setSelectedBayConfigurations(bayConfigs);
     
-    // Calculate proportional mechanical room allocation for selected bays
-    if (selectedProperty?.bayConfigurations) {
-      const totalPropertyBaysSF = selectedProperty.bayConfigurations.reduce((sum: number, bay: any) => sum + (bay.squareFootage || 0), 0);
-      const proportionalMechanical = totalPropertyBaysSF > 0 ? (selectedBaySquareFootage / totalPropertyBaysSF) * mechanicalRoomSF : 0;
-      const totalRentableArea = selectedBaySquareFootage + proportionalMechanical;
-      
-      setCalculatedFloorArea(Math.round(totalRentableArea));
-      setSelectedBayConfigurations(bayConfigs);
-      
-      // Auto-populate the project area field with calculated value
-      if (totalRentableArea > 0) {
-        form.setValue("projectArea", `${Math.round(totalRentableArea).toLocaleString()} SF (calculated from selected bay configurations)`);
-      } else {
-        form.setValue("projectArea", "");
-      }
+    // Auto-populate the project area field with pre-calculated value
+    if (area > 0) {
+      form.setValue("projectArea", `${area.toLocaleString()} SF (calculated from selected bay configurations)`);
+    } else {
+      form.setValue("projectArea", "");
     }
   };
 
@@ -194,7 +184,8 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
       // Initialize bay configurations if they exist
       if (rfp.selectedBayConfigurations && rfp.selectedBayConfigurations.length > 0) {
         setSelectedBayConfigurations(rfp.selectedBayConfigurations);
-        // Calculate total using correct method: bay SF + proportional mechanical room allocation
+        
+        // Calculate total using proportional method for display
         const selectedBaySquareFootage = rfp.selectedBayConfigurations.reduce((sum: number, bay: any) => sum + (bay.squareFootage || 0), 0);
         const property = properties.find(p => p.id.toString() === rfp.property);
         const mechanicalRoomSF = property?.mechanicalRoomSquareFootage || 0;

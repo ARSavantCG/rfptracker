@@ -29,20 +29,7 @@ export default function BayConfigurationSelector({
 
   const bayConfigurations = property.bayConfigurations || [];
   
-  // Debug raw property data to see API response structure
-  console.log('🏢 BayConfigurationSelector - Raw property object:', property);
-  console.log('🏢 BayConfigurationSelector - bayConfigurations:', bayConfigurations);
-  console.log('🏢 BayConfigurationSelector - bayConfigurations length:', bayConfigurations.length);
-  if (bayConfigurations.length > 0) {
-    console.log('🏢 BayConfigurationSelector - First 3 bays:', bayConfigurations.slice(0, 3));
-    
-    // Check for data integrity issues
-    const totalFromAPI = bayConfigurations.reduce((sum, bay) => sum + (bay.squareFootage || 0), 0);
-    console.log('🏢 BayConfigurationSelector - Total SF from API:', totalFromAPI);
-    console.log('🏢 BayConfigurationSelector - Expected total SF:', 408763);
-    console.log('🏢 BayConfigurationSelector - Mechanical room SF:', property.mechanicalRoomSquareFootage);
-    console.log('🏢 BayConfigurationSelector - Expected grand total:', 408763 + (property.mechanicalRoomSquareFootage || 0));
-  }
+
 
   // Get list of all bay IDs that are already leased
   const leasedBayIds = executedLeases.flatMap(lease => lease.assignedBays || []);
@@ -52,22 +39,12 @@ export default function BayConfigurationSelector({
   // Convert bay configurations to proper bay representation
   // Each bay configuration represents one bay with unique sequential numbering
   const individualBays = bayConfigurations.map((bayConfig, index) => {
-    // Debug each bay configuration to see data integrity
-    console.log(`Bay ${index + 1} config:`, bayConfig);
-    
-    // Check for missing data
     if (!bayConfig || !bayConfig.bayName || !bayConfig.squareFootage || bayConfig.squareFootage === 0) {
-      console.log(`❌ CORRUPTED BAY DATA at index ${index}:`, bayConfig);
-      console.log(`  - bayConfig exists: ${!!bayConfig}`);
-      console.log(`  - bayName exists: ${!!bayConfig?.bayName}`);
-      console.log(`  - squareFootage exists: ${!!bayConfig?.squareFootage}`);
-      console.log(`  - squareFootage value: ${bayConfig?.squareFootage}`);
       return null;
     }
     
     const match = bayConfig.bayName.match(/Bay (\d+)-(\d+)/);
     if (!match) {
-      console.log(`❌ Bay name match failed for:`, bayConfig.bayName);
       return null;
     }
     
@@ -87,51 +64,16 @@ export default function BayConfigurationSelector({
   // Calculate total rentable area from selected individual bays with proportional mechanical allocation
   const calculateTotalArea = () => {
     // Get selected bay configurations from original bay configurations
-    console.log('🔧 DEBUGGING Bay ID Lookup:');
-    console.log('- selectedBayIds:', selectedBayIds);
-    console.log('- Available bay IDs from bayConfigurations:', bayConfigurations.map(b => b.id));
+
     
     const selectedBayConfigs = selectedBayIds.map(bayId => {
-      const found = bayConfigurations.find(bay => bay.id === bayId);
-      if (!found) {
-        console.log(`❌ BAY NOT FOUND: ID ${bayId} not found in bayConfigurations`);
-      }
-      return found;
+      return bayConfigurations.find(bay => bay.id === bayId);
     }).filter((bay): bay is NonNullable<typeof bay> => bay != null);
-    
-    console.log('- Selected bay configs found:', selectedBayConfigs.length, 'out of', selectedBayIds.length, 'requested');
     
     if (selectedBayConfigs.length === 0) return 0;
     
     // Calculate selected bay square footage (warehouse area only - use squareFootage, not rentableSquareFootage)
-    const selectedBaySquareFootage = selectedBayConfigs.reduce((sum, bay) => {
-      const sf = bay.squareFootage || 0;
-      console.log(`  Adding bay ${bay.bayName}: ${sf} SF`);
-      return sum + sf;
-    }, 0);
-    
-    console.log('🔢 DETAILED BAY CALCULATION:');
-    console.log('- Selected bay configs:', selectedBayConfigs.map(b => `${b.bayName}: ${b.squareFootage || 0} SF (type: ${typeof b.squareFootage})`));
-    console.log('- Sum calculation result:', selectedBaySquareFootage);
-    
-    // Manual verification - add each bay individually
-    let manualTotal = 0;
-    selectedBayConfigs.forEach(bay => {
-      const sf = bay.squareFootage || 0;
-      manualTotal += sf;
-      console.log(`  Manual add: ${bay.bayName} = ${sf} SF (running total: ${manualTotal} SF)`);
-    });
-    console.log('🔍 MANUAL VERIFICATION TOTAL:', manualTotal);
-    console.log('🎯 EXPECTED TOTAL: 408,763 SF (bay area) + 426 SF (mechanical) = 409,189 SF');
-    
-    // Check if any square footage values are strings instead of numbers
-    const stringValues = selectedBayConfigs.filter(b => typeof b.squareFootage === 'string');
-    if (stringValues.length > 0) {
-      console.log('🚨 STRING SQUARE FOOTAGE VALUES FOUND:');
-      stringValues.forEach(bay => {
-        console.log(`  ${bay.bayName}: "${bay.squareFootage}" (string) -> ${parseInt(String(bay.squareFootage || 0))} (parsed)`);
-      });
-    }
+    const selectedBaySquareFootage = selectedBayConfigs.reduce((sum, bay) => sum + (bay.squareFootage || 0), 0);
     
     // Calculate total property bay square footage for proportion calculation
     const totalPropertyBaysSF = bayConfigurations.reduce((sum, bay) => sum + (bay.squareFootage || 0), 0);
@@ -149,101 +91,12 @@ export default function BayConfigurationSelector({
       proportionalMechanical = totalPropertyBaysSF > 0 ? (selectedBaySquareFootage / totalPropertyBaysSF) * mechanicalRoomSF : 0;
     }
     
-    // Debug logging - always show when calculating
-    if (selectedBayConfigs.length > 0) {
-      console.log('🔍 DEBUG Bay Selector Calculation:');
-      console.log('- Selected bays count:', selectedBayConfigs.length, 'of', bayConfigurations.length);
-      console.log('- Selected bay square footage:', selectedBaySquareFootage);
-      console.log('- Total warehouse SF from bays:', totalPropertyBaysSF);
-      console.log('- Mechanical room SF:', property.mechanicalRoomSquareFootage);
-      console.log('- Proportional mechanical:', proportionalMechanical);
-      console.log('- Expected total:', totalPropertyBaysSF + (property.mechanicalRoomSquareFootage || 0));
-      
-      // Critical debug: Show actual vs expected totals
-      const calculatedTotal = selectedBaySquareFootage + proportionalMechanical;
-      const expectedWhenAllSelected = 409189; // Known correct total
-      const discrepancy = expectedWhenAllSelected - calculatedTotal;
-      console.log('- CALCULATED TOTAL:', calculatedTotal);
-      console.log('- EXPECTED WHEN ALL SELECTED:', expectedWhenAllSelected);
-      console.log('- DISCREPANCY:', discrepancy, 'SF');
-      
-      // NEW: Check if selectedBaySquareFootage matches expected 408,763
-      const expectedBayTotal = 408763;
-      const bayDiscrepancy = expectedBayTotal - selectedBaySquareFootage;
-      console.log('🚨 BAY TOTAL ANALYSIS:');
-      console.log('- Expected bay total (from DB):', expectedBayTotal);
-      console.log('- Calculated bay total:', selectedBaySquareFootage);
-      console.log('- Bay calculation discrepancy:', bayDiscrepancy, 'SF');
-      
-      if (bayDiscrepancy !== 0) {
-        console.log('🚨 ISSUE FOUND: Bay calculation is wrong by', bayDiscrepancy, 'SF');
-        console.log('- This means', Math.abs(bayDiscrepancy), 'SF worth of bays are missing from calculation');
-      }
-      
-      // Show which bays are actually in calculation
-      console.log('- Bays in calculation:', selectedBayConfigs.map(bay => `${bay.bayName}: ${bay.squareFootage} SF`));
-      
-      // Debug individual bay values 
-      console.log('- Individual bay values:');
-      let frontendTotal = 0;
-      selectedBayConfigs.forEach(bay => {
-        const sf = bay.squareFootage || 0;
-        frontendTotal += sf;
-        console.log(`  ${bay.bayName}: ${sf} SF`);
-      });
-      
-      console.log('- Frontend calculated total bays:', frontendTotal);
-      console.log('- Database bay total (from server):', 408763);
-      console.log('- Difference:', frontendTotal - 408763);
-      
-      // Check for missing squareFootage values in SELECTED bays
-      const missingBays = selectedBayConfigs.filter(bay => !bay.squareFootage || bay.squareFootage === 0);
-      if (missingBays.length > 0) {
-        console.log('⚠️ PROBLEM: Selected bays missing squareFootage:', missingBays.map(b => b.bayName));
-      }
-      
-      // Check all bay configurations for comparison
-      console.log('- All bay configurations count:', bayConfigurations.length);
-      const allBaysTotal = bayConfigurations.reduce((sum, bay) => sum + (bay.squareFootage || 0), 0);
-      console.log('- All bays frontend total:', allBaysTotal);
-      
-      // Show which bays have missing square footage in ALL BAYS (not just selected)
-      const baysMissingData = bayConfigurations.filter(bay => !bay.squareFootage || bay.squareFootage === 0);
-      if (baysMissingData.length > 0) {
-        console.log('🚨 FOUND THE PROBLEM: Bays missing squareFootage data:');
-        baysMissingData.forEach(bay => {
-          console.log(`  ${bay.bayName}: ${bay.squareFootage || 'MISSING'} SF`);
-          console.log(`  Full bay object:`, bay);
-        });
-      }
-      
-      // CRITICAL: Check if any selected bay IDs don't have corresponding bay configs  
-      const selectedIdsNotFound = selectedBayIds.filter(bayId => 
-        !bayConfigurations.find(bay => bay.id === bayId)
-      );
-      if (selectedIdsNotFound.length > 0) {
-        console.log('🚨 CRITICAL: Selected bay IDs not found in bayConfigurations:');
-        selectedIdsNotFound.forEach(id => console.log(`  Missing bay ID: ${id}`));
-      }
-      
-      // Show sample of all bay configs to check data structure
-      console.log('Sample bay configurations (first 3):');
-      bayConfigurations.slice(0, 3).forEach(bay => {
-        console.log(`  ${bay.bayName}:`, {
-          squareFootage: bay.squareFootage,
-          type: typeof bay.squareFootage,
-          hasProperty: bay.hasOwnProperty('squareFootage')
-        });
-      });
-    }
+
     
     // Total rentable area = selected warehouse SF + proportional mechanical allocation
     const totalRentableArea = selectedBaySquareFootage + proportionalMechanical;
     
-    // Debug logging
-    if (selectedBayConfigs.length === bayConfigurations.length) {
-      console.log('- Calculated area being returned:', Math.round(totalRentableArea));
-    }
+
     
     return Math.round(totalRentableArea);
   };

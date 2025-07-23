@@ -2400,6 +2400,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.setHeader('Pragma', 'no-cache');
       res.setHeader('Expires', '0');
       res.setHeader('ETag', `"${Date.now()}"`);
+      
+      // Debug log the total warehouse area for property 1
+      const property1 = properties.find(p => p.id === 1);
+      if (property1) {
+        const totalWarehouseSF = property1.bayConfigurations?.reduce((sum: number, bay: any) => sum + (bay.squareFootage || 0), 0) || 0;
+        console.log(`DEBUG Properties API - Property 1 warehouse total: ${totalWarehouseSF} SF`);
+      }
+      
       res.json(properties);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch properties" });

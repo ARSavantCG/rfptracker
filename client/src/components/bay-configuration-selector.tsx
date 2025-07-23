@@ -66,20 +66,27 @@ export default function BayConfigurationSelector({
     
     if (selectedBayConfigs.length === 0) return 0;
     
-    // Calculate selected bay square footage (warehouse area only)
+    // Calculate selected bay square footage (warehouse area only - use squareFootage, not rentableSquareFootage)
     const selectedBaySquareFootage = selectedBayConfigs.reduce((sum, bay) => sum + (bay.squareFootage || 0), 0);
     
     // Calculate total property bay square footage for proportion calculation
     const totalPropertyBaysSF = bayConfigurations.reduce((sum, bay) => sum + (bay.squareFootage || 0), 0);
     
-    // Calculate proportional mechanical room allocation
+    // Calculate proportional mechanical room allocation using property-level mechanical room SF
     const mechanicalRoomSF = property.mechanicalRoomSquareFootage || 0;
-    const proportionalMechanical = totalPropertyBaysSF > 0 ? (selectedBaySquareFootage / totalPropertyBaysSF) * mechanicalRoomSF : 0;
     
-    // Total rentable area = selected bay SF + proportional mechanical allocation
+    // For precision when all bays selected, use exact mechanical room SF to avoid floating point errors
+    let proportionalMechanical;
+    if (selectedBayConfigs.length === bayConfigurations.length) {
+      // All bays selected = 100% of mechanical room
+      proportionalMechanical = mechanicalRoomSF;
+    } else {
+      // Partial selection = proportional allocation
+      proportionalMechanical = totalPropertyBaysSF > 0 ? (selectedBaySquareFootage / totalPropertyBaysSF) * mechanicalRoomSF : 0;
+    }
+    
+    // Total rentable area = selected warehouse SF + proportional mechanical allocation
     const totalRentableArea = selectedBaySquareFootage + proportionalMechanical;
-    
-
     
     return Math.round(totalRentableArea);
   };

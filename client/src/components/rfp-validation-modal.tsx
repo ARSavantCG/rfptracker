@@ -64,6 +64,10 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
     queryKey: ["/api/contacts"],
   });
 
+  const { data: properties = [] } = useQuery<any[]>({
+    queryKey: ["/api/properties"],
+  });
+
   // Helper function to extract contact details from development contact
   const getDevelopmentContactDetails = (developmentContact: string) => {
     if (!developmentContact) return { name: "", email: "", phone: "" };
@@ -219,19 +223,31 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                           const warehouseArea = rfp.warehouseArea;
                           const projectArea = rfp.projectArea;
                           
-                          // Check if bay configurations contain calculated area using correct method
+                          // Check if bay configurations contain calculated area using correct proportional method
                           let calculatedArea = 0;
                           if (rfp.selectedBayConfigurations && rfp.selectedBayConfigurations.length > 0) {
-                            calculatedArea = rfp.selectedBayConfigurations.reduce((total, bay) => {
-                              // Use warehouse area + proportional mechanical allocation
-                              return total + (bay.squareFootage || 0) + (bay.mechanicalRoomAllocation || 0);
-                            }, 0);
+                            // Calculate warehouse area only from bay configurations
+                            const selectedBaySquareFootage = rfp.selectedBayConfigurations.reduce((sum: number, bay: any) => sum + (bay.squareFootage || 0), 0);
+                            
+                            // Get property data for mechanical room calculation
+                            const property = properties?.find((p: any) => p.id.toString() === rfp.property);
+                            const mechanicalRoomSF = property?.mechanicalRoomSquareFootage || 0;
+                            
+                            // Calculate proportional mechanical allocation
+                            let proportionalMechanical = 0;
+                            if (property?.bayConfigurations) {
+                              const totalPropertyBaysSF = property.bayConfigurations.reduce((sum: number, bay: any) => sum + (bay.squareFootage || 0), 0);
+                              if (rfp.selectedBayConfigurations.length === property.bayConfigurations.length) {
+                                // All bays selected = 100% of mechanical room
+                                proportionalMechanical = mechanicalRoomSF;
+                              } else {
+                                // Partial selection = proportional allocation
+                                proportionalMechanical = totalPropertyBaysSF > 0 ? (selectedBaySquareFootage / totalPropertyBaysSF) * mechanicalRoomSF : 0;
+                              }
+                            }
+                            
+                            calculatedArea = selectedBaySquareFootage + proportionalMechanical;
                           }
-                          
-                          console.log('Debug - warehouseArea:', warehouseArea);
-                          console.log('Debug - projectArea:', projectArea);
-                          console.log('Debug - calculatedArea from bays:', calculatedArea);
-                          console.log('Debug - selectedBayConfigurations:', rfp.selectedBayConfigurations);
                           
                           // Priority: calculated area from bays > warehouseArea > projectArea
                           const totalArea = calculatedArea > 0 ? calculatedArea : (warehouseArea || projectArea);
@@ -260,13 +276,30 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                           const warehouseArea = rfp.warehouseArea;
                           const projectArea = rfp.projectArea;
                           
-                          // Check if bay configurations contain calculated area using correct method
+                          // Check if bay configurations contain calculated area using correct proportional method
                           let calculatedArea = 0;
                           if (rfp.selectedBayConfigurations && rfp.selectedBayConfigurations.length > 0) {
-                            calculatedArea = rfp.selectedBayConfigurations.reduce((total, bay) => {
-                              // Use warehouse area + proportional mechanical allocation
-                              return total + (bay.squareFootage || 0) + (bay.mechanicalRoomAllocation || 0);
-                            }, 0);
+                            // Calculate warehouse area only from bay configurations
+                            const selectedBaySquareFootage = rfp.selectedBayConfigurations.reduce((sum: number, bay: any) => sum + (bay.squareFootage || 0), 0);
+                            
+                            // Get property data for mechanical room calculation
+                            const property = properties?.find((p: any) => p.id.toString() === rfp.property);
+                            const mechanicalRoomSF = property?.mechanicalRoomSquareFootage || 0;
+                            
+                            // Calculate proportional mechanical allocation
+                            let proportionalMechanical = 0;
+                            if (property?.bayConfigurations) {
+                              const totalPropertyBaysSF = property.bayConfigurations.reduce((sum: number, bay: any) => sum + (bay.squareFootage || 0), 0);
+                              if (rfp.selectedBayConfigurations.length === property.bayConfigurations.length) {
+                                // All bays selected = 100% of mechanical room
+                                proportionalMechanical = mechanicalRoomSF;
+                              } else {
+                                // Partial selection = proportional allocation
+                                proportionalMechanical = totalPropertyBaysSF > 0 ? (selectedBaySquareFootage / totalPropertyBaysSF) * mechanicalRoomSF : 0;
+                              }
+                            }
+                            
+                            calculatedArea = selectedBaySquareFootage + proportionalMechanical;
                           }
                           
                           // Priority: calculated area from bays > warehouseArea > projectArea

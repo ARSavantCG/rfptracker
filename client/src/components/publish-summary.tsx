@@ -28,6 +28,11 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
     enabled: !!rfp?.id,
   });
 
+  // Fetch properties data for bay configuration calculations
+  const { data: properties = [] } = useQuery<any[]>({
+    queryKey: ["/api/properties"],
+  });
+
   // Mutation for completing the project
   const publishAndCompleteMutation = useMutation({
     mutationFn: async () => {
@@ -105,10 +110,28 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
 
   const getRentableArea = () => {
     if (rfp.selectedBayConfigurations && rfp.selectedBayConfigurations.length > 0) {
-      // Use warehouse area + proportional mechanical allocation (bay.squareFootage + bay.mechanicalRoomAllocation)
-      const totalArea = rfp.selectedBayConfigurations.reduce((sum: number, bay: any) => 
-        sum + (bay.squareFootage || 0) + (bay.mechanicalRoomAllocation || 0), 0);
-      return totalArea.toLocaleString();
+      // Calculate using correct proportional method: warehouse SF + proportional mechanical allocation
+      const selectedBaySquareFootage = rfp.selectedBayConfigurations.reduce((sum: number, bay: any) => sum + (bay.squareFootage || 0), 0);
+      
+      // Get property data for mechanical room calculation
+      const property = properties?.find((p: any) => p.id.toString() === rfp.property);
+      const mechanicalRoomSF = property?.mechanicalRoomSquareFootage || 0;
+      
+      // Calculate proportional mechanical allocation
+      let proportionalMechanical = 0;
+      if (property?.bayConfigurations) {
+        const totalPropertyBaysSF = property.bayConfigurations.reduce((sum: number, bay: any) => sum + (bay.squareFootage || 0), 0);
+        if (rfp.selectedBayConfigurations.length === property.bayConfigurations.length) {
+          // All bays selected = 100% of mechanical room
+          proportionalMechanical = mechanicalRoomSF;
+        } else {
+          // Partial selection = proportional allocation
+          proportionalMechanical = totalPropertyBaysSF > 0 ? (selectedBaySquareFootage / totalPropertyBaysSF) * mechanicalRoomSF : 0;
+        }
+      }
+      
+      const totalArea = selectedBaySquareFootage + proportionalMechanical;
+      return Math.round(totalArea).toLocaleString();
     }
     return 'N/A';
   };

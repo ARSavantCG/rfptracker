@@ -140,6 +140,19 @@ export default function BayConfigurationSelector({
       console.log('- EXPECTED WHEN ALL SELECTED:', expectedWhenAllSelected);
       console.log('- DISCREPANCY:', discrepancy, 'SF');
       
+      // NEW: Check if selectedBaySquareFootage matches expected 408,763
+      const expectedBayTotal = 408763;
+      const bayDiscrepancy = expectedBayTotal - selectedBaySquareFootage;
+      console.log('🚨 BAY TOTAL ANALYSIS:');
+      console.log('- Expected bay total (from DB):', expectedBayTotal);
+      console.log('- Calculated bay total:', selectedBaySquareFootage);
+      console.log('- Bay calculation discrepancy:', bayDiscrepancy, 'SF');
+      
+      if (bayDiscrepancy !== 0) {
+        console.log('🚨 ISSUE FOUND: Bay calculation is wrong by', bayDiscrepancy, 'SF');
+        console.log('- This means', Math.abs(bayDiscrepancy), 'SF worth of bays are missing from calculation');
+      }
+      
       // Show which bays are actually in calculation
       console.log('- Bays in calculation:', selectedBayConfigs.map(bay => `${bay.bayName}: ${bay.squareFootage} SF`));
       

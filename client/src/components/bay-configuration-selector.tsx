@@ -119,7 +119,7 @@ export default function BayConfigurationSelector({
     if (stringValues.length > 0) {
       console.log('🚨 STRING SQUARE FOOTAGE VALUES FOUND:');
       stringValues.forEach(bay => {
-        console.log(`  ${bay.bayName}: "${bay.squareFootage}" (string) -> ${parseInt(bay.squareFootage || '0')} (parsed)`);
+        console.log(`  ${bay.bayName}: "${bay.squareFootage}" (string) -> ${parseInt(String(bay.squareFootage || 0))} (parsed)`);
       });
     }
     

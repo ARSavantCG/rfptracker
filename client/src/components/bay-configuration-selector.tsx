@@ -80,10 +80,49 @@ export default function BayConfigurationSelector({
       console.log('- Bay SF total:', selectedBaySquareFootage);
       console.log('- Mechanical SF:', property.mechanicalRoomSquareFootage);
       console.log('- Expected grand total: 409,189 SF');
+      console.log('- ACTUAL grand total:', selectedBaySquareFootage + (property.mechanicalRoomSquareFootage || 0));
+      console.log('- DISCREPANCY:', (selectedBaySquareFootage + (property.mechanicalRoomSquareFootage || 0)) - 409189, 'SF');
       
-      // Show each bay's contribution
+      // Show each bay's contribution and look for the problem
+      console.log('- Individual bays from frontend:');
       selectedBayConfigs.forEach(bay => {
         console.log(`  ${bay.bayName}: ${bay.squareFootage} SF`);
+      });
+      
+      // Compare against expected database values
+      const expectedBayValues = {
+        'Bay 1-2': 15031,
+        'Bay 2-3': 18017,
+        'Bay 3-4': 18046,
+        'Bay 4-5': 18064,  // This should be the corrected value
+        'Bay 5-6': 18054,
+        'Bay 6-7': 18054,
+        'Bay 7-8': 18024,
+        'Bay 8-9': 17987,
+        'Bay 9-10': 17987,
+        'Bay 10-11': 18024,
+        'Bay 11-12': 18054,
+        'Bay 12-13': 18054,
+        'Bay 13-14': 18059,
+        'Bay 14-15': 18024,
+        'Bay 15-16': 17987,
+        'Bay 16-17': 17987,
+        'Bay 17-18': 18054,
+        'Bay 18-19': 18054,
+        'Bay 19-20': 18054,
+        'Bay 20-21': 18054,
+        'Bay 21-22': 18046,
+        'Bay 22-23': 18017,
+        'Bay 23-24': 15031
+      };
+      
+      console.log('🚨 COMPARING FRONTEND vs DATABASE VALUES:');
+      selectedBayConfigs.forEach(bay => {
+        const expected = expectedBayValues[bay.bayName];
+        const actual = bay.squareFootage;
+        if (expected !== actual) {
+          console.log(`  ❌ ${bay.bayName}: Expected ${expected} SF, Got ${actual} SF (Difference: ${actual - expected} SF)`);
+        }
       });
     }
     

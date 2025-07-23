@@ -118,7 +118,7 @@ export default function BayConfigurationSelector({
       
       console.log('🚨 COMPARING FRONTEND vs DATABASE VALUES:');
       selectedBayConfigs.forEach(bay => {
-        const expected = expectedBayValues[bay.bayName];
+        const expected = expectedBayValues[bay.bayName as keyof typeof expectedBayValues];
         const actual = bay.squareFootage;
         if (expected !== actual) {
           console.log(`  ❌ ${bay.bayName}: Expected ${expected} SF, Got ${actual} SF (Difference: ${actual - expected} SF)`);

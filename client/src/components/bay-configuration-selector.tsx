@@ -57,14 +57,29 @@ export default function BayConfigurationSelector({
     };
   }).filter(Boolean);
 
-  // Calculate total rentable area from selected individual bays
+  // Calculate total rentable area from selected individual bays with proportional mechanical allocation
   const calculateTotalArea = () => {
-    const total = selectedBayIds.reduce((total, bayId) => {
-      const bay = individualBays.find(b => b?.id === bayId);
-      if (!bay) return total;
-      return total + (bay.squareFootage || 0);
-    }, 0);
-    return Math.round(total);
+    // Get selected bay configurations from original bay configurations
+    const selectedBayConfigs = selectedBayIds.map(bayId => 
+      bayConfigurations.find(bay => bay.id === bayId)
+    ).filter((bay): bay is NonNullable<typeof bay> => bay != null);
+    
+    if (selectedBayConfigs.length === 0) return 0;
+    
+    // Calculate selected bay square footage (warehouse area only)
+    const selectedBaySquareFootage = selectedBayConfigs.reduce((sum, bay) => sum + (bay.squareFootage || 0), 0);
+    
+    // Calculate total property bay square footage for proportion calculation
+    const totalPropertyBaysSF = bayConfigurations.reduce((sum, bay) => sum + (bay.squareFootage || 0), 0);
+    
+    // Calculate proportional mechanical room allocation
+    const mechanicalRoomSF = property.mechanicalRoomSquareFootage || 0;
+    const proportionalMechanical = totalPropertyBaysSF > 0 ? (selectedBaySquareFootage / totalPropertyBaysSF) * mechanicalRoomSF : 0;
+    
+    // Total rentable area = selected bay SF + proportional mechanical allocation
+    const totalRentableArea = selectedBaySquareFootage + proportionalMechanical;
+    
+    return Math.round(totalRentableArea);
   };
 
   const toggleBaySelection = (bayId: string) => {
@@ -91,9 +106,23 @@ export default function BayConfigurationSelector({
   };
 
   const totalArea = calculateTotalArea();
-  const selectedBays = selectedBayIds.map(id => 
-    individualBays.find(bay => bay.id === id)!
-  ).filter(Boolean);
+  
+  // Get selected bay configurations with proportional mechanical room allocation
+  const selectedBays = selectedBayIds.map(bayId => {
+    const originalBayConfig = bayConfigurations.find(bay => bay.id === bayId);
+    if (!originalBayConfig) return null;
+    
+    // Calculate proportional mechanical room allocation for this bay
+    const totalPropertyBaysSF = bayConfigurations.reduce((sum, bay) => sum + (bay.squareFootage || 0), 0);
+    const mechanicalRoomSF = property.mechanicalRoomSquareFootage || 0;
+    const bayProportion = totalPropertyBaysSF > 0 ? (originalBayConfig.squareFootage || 0) / totalPropertyBaysSF : 0;
+    const mechanicalRoomAllocation = mechanicalRoomSF * bayProportion;
+    
+    return {
+      ...originalBayConfig,
+      mechanicalRoomAllocation: mechanicalRoomAllocation
+    };
+  }).filter((bay): bay is NonNullable<typeof bay> => bay != null);
 
   // Update parent component when selection changes
   useEffect(() => {

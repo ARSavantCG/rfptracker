@@ -14,25 +14,27 @@ export function formatDate(date: string | Date): string {
       // Extract just the date part to avoid timezone conversion issues
       const datePart = date.split('T')[0];
       const [year, month, day] = datePart.split('-').map(Number);
-      const dateObj = new Date(year, month - 1, day);
       
-      return dateObj.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-      });
+      // Direct formatting without Date object to avoid timezone issues
+      const monthNames = [
+        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      ];
+      
+      return `${monthNames[month - 1]} ${day}, ${year}`;
     }
     
     // Handle YYYY-MM-DD format (simple date string)
     if (date.match(/^\d{4}-\d{2}-\d{2}$/)) {
       const [year, month, day] = date.split('-').map(Number);
-      const dateObj = new Date(year, month - 1, day);
       
-      return dateObj.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-      });
+      // Direct formatting without Date object to avoid timezone issues
+      const monthNames = [
+        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      ];
+      
+      return `${monthNames[month - 1]} ${day}, ${year}`;
     }
     
     // Handle other ISO strings with time
@@ -43,16 +45,12 @@ export function formatDate(date: string | Date): string {
         return 'Invalid Date';
       }
       
-      // Extract UTC date parts to avoid timezone conversion
-      const year = isoDate.getUTCFullYear();
-      const month = isoDate.getUTCMonth();
-      const day = isoDate.getUTCDate();
-      const dateObj = new Date(year, month, day);
-      
-      return dateObj.toLocaleDateString('en-US', {
+      // Format directly in Eastern Time
+      return isoDate.toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'short',
-        day: 'numeric'
+        day: 'numeric',
+        timeZone: 'America/New_York'
       });
     }
     
@@ -66,7 +64,8 @@ export function formatDate(date: string | Date): string {
     return dateObj.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
-      day: 'numeric'
+      day: 'numeric',
+      timeZone: 'America/New_York'
     });
   } else {
     // Handle Date objects
@@ -76,10 +75,12 @@ export function formatDate(date: string | Date): string {
       return 'Invalid Date';
     }
     
+    // Format in Eastern Time to match NYC timezone
     return dateObj.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
-      day: 'numeric'
+      day: 'numeric',
+      timeZone: 'America/New_York'
     });
   }
 }
@@ -92,6 +93,91 @@ export function formatFileSize(bytes: number): string {
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+// Specialized function for Eastern Time formatting (NYC timezone)
+export function formatDateEastern(date: string | Date): string {
+  if (!date) return 'N/A';
+  
+  if (typeof date === 'string') {
+    // Handle YYYY-MM-DDTHH:MM:SS.sssZ format (ISO with zero time from database)
+    if (date.match(/^\d{4}-\d{2}-\d{2}T00:00:00(\.\d{3})?Z?$/)) {
+      // Extract just the date part to avoid timezone conversion issues
+      const datePart = date.split('T')[0];
+      const [year, month, day] = datePart.split('-').map(Number);
+      
+      // Direct formatting without Date object to avoid timezone issues
+      const monthNames = [
+        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      ];
+      
+      return `${monthNames[month - 1]} ${day}, ${year}`;
+    }
+    
+    // Handle YYYY-MM-DD format
+    if (date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      const [year, month, day] = date.split('-').map(Number);
+      
+      // Direct formatting without Date object to avoid timezone issues
+      const monthNames = [
+        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      ];
+      
+      return `${monthNames[month - 1]} ${day}, ${year}`;
+    }
+    
+    // For other string formats, use Date object with Eastern timezone
+    const dateObj = new Date(date);
+    if (isNaN(dateObj.getTime())) {
+      console.warn('Invalid date passed to formatDateEastern:', date);
+      return 'Invalid Date';
+    }
+    
+    return dateObj.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      timeZone: 'America/New_York'
+    });
+  } else {
+    // Handle Date objects with Eastern timezone
+    const dateObj = new Date(date);
+    if (isNaN(dateObj.getTime())) {
+      console.warn('Invalid Date object passed to formatDateEastern:', date);
+      return 'Invalid Date';
+    }
+    
+    return dateObj.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      timeZone: 'America/New_York'
+    });
+  }
+}
+
+// Function for Eastern Time with full timestamp formatting
+export function formatDateTimeEastern(date: string | Date): string {
+  if (!date) return 'N/A';
+  
+  const dateObj = new Date(date);
+  if (isNaN(dateObj.getTime())) {
+    console.warn('Invalid date passed to formatDateTimeEastern:', date);
+    return 'Invalid Date';
+  }
+  
+  // Format with date and time in Eastern Time
+  return dateObj.toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZone: 'America/New_York',
+    timeZoneName: 'short'
+  });
 }
 
 export function getStatusColor(status: string): string {

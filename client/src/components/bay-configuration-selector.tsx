@@ -121,8 +121,19 @@ export default function BayConfigurationSelector({
         console.log('🚨 FOUND THE PROBLEM: Bays missing squareFootage data:');
         baysMissingData.forEach(bay => {
           console.log(`  ${bay.bayName}: ${bay.squareFootage || 'MISSING'} SF`);
+          console.log(`  Full bay object:`, bay);
         });
       }
+      
+      // Show sample of all bay configs to check data structure
+      console.log('Sample bay configurations (first 3):');
+      bayConfigurations.slice(0, 3).forEach(bay => {
+        console.log(`  ${bay.bayName}:`, {
+          squareFootage: bay.squareFootage,
+          type: typeof bay.squareFootage,
+          hasProperty: bay.hasOwnProperty('squareFootage')
+        });
+      });
     }
     
     // Total rentable area = selected warehouse SF + proportional mechanical allocation

@@ -182,10 +182,19 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
     
     // Debug: Log bay configuration square footages
     if (property && property.bayConfigurations) {
+      console.log('CREATE RFP MODAL - Property bay configurations:', property.bayConfigurations);
+      console.log('CREATE RFP MODAL - Bay configurations count:', property.bayConfigurations.length);
+      
+      // Check for missing squareFootage values
+      const missingSquareFootage = property.bayConfigurations.filter(bay => !bay.squareFootage);
+      if (missingSquareFootage.length > 0) {
+        console.log('CREATE RFP MODAL - Bays missing squareFootage:', missingSquareFootage);
+      }
+      
       const totalBaySF = property.bayConfigurations.reduce((sum, bay) => sum + (bay.squareFootage || 0), 0);
-      console.log('Frontend received bay total:', totalBaySF, 'SF');
-      console.log('Mechanical room SF:', property.mechanicalRoomSquareFootage);
-      console.log('Expected total:', totalBaySF + (property.mechanicalRoomSquareFootage || 0));
+      console.log('CREATE RFP MODAL - Frontend received bay total:', totalBaySF, 'SF');
+      console.log('CREATE RFP MODAL - Mechanical room SF:', property.mechanicalRoomSquareFootage);
+      console.log('CREATE RFP MODAL - Expected total:', totalBaySF + (property.mechanicalRoomSquareFootage || 0));
     }
     
     setSelectedProperty(property || null);

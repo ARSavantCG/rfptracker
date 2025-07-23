@@ -2405,16 +2405,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const property1 = properties.find(p => p.id === 1);
       if (property1) {
         const totalWarehouseSF = property1.bayConfigurations?.reduce((sum: number, bay: any) => sum + (bay.squareFootage || 0), 0) || 0;
-        console.log(`DEBUG Properties API - Property 1 warehouse total: ${totalWarehouseSF} SF`);
+        console.log(`🔍 DEBUG Properties API - Property 1 warehouse total: ${totalWarehouseSF} SF`);
         
         // Debug the bay configurations structure
-        console.log('DEBUG - Bay configurations count:', property1.bayConfigurations?.length);
-        console.log('DEBUG - First bay configuration:', JSON.stringify(property1.bayConfigurations?.[0], null, 2));
+        console.log('🔍 DEBUG - Bay configurations count:', property1.bayConfigurations?.length);
+        
+        // Show ALL bay values being sent to frontend
+        console.log('🏗️ ALL BAYS BEING SENT TO FRONTEND:');
+        property1.bayConfigurations?.forEach((bay: any) => {
+          console.log(`  ${bay.bayName}: ${bay.squareFootage} SF`);
+        });
+        
+        // Check specific bays that might be problematic
+        const bay45 = property1.bayConfigurations?.find((bay: any) => bay.bayName === 'Bay 4-5');
+        const bay56 = property1.bayConfigurations?.find((bay: any) => bay.bayName === 'Bay 5-6');
+        
+        if (bay45) {
+          console.log(`🚨 API RESPONSE - Bay 4-5: ${bay45.squareFootage} SF (Expected: 18064 SF)`);
+          if (bay45.squareFootage !== 18064) {
+            console.log(`❌ MISMATCH FOUND IN API RESPONSE: Bay 4-5 has ${bay45.squareFootage} SF instead of 18064 SF`);
+          }
+        }
+        if (bay56) {
+          console.log(`🚨 API RESPONSE - Bay 5-6: ${bay56.squareFootage} SF (Expected: 18054 SF)`);
+          if (bay56.squareFootage !== 18054) {
+            console.log(`❌ MISMATCH FOUND IN API RESPONSE: Bay 5-6 has ${bay56.squareFootage} SF instead of 18054 SF`);
+          }
+        }
+        
+        // Compare total against expected
+        const expectedTotal = 408763;
+        if (totalWarehouseSF !== expectedTotal) {
+          console.log(`❌ TOTAL MISMATCH: API sending ${totalWarehouseSF} SF, Expected ${expectedTotal} SF (Difference: ${totalWarehouseSF - expectedTotal} SF)`);
+        }
         
         // Check for missing squareFootage values
         const missingBays = property1.bayConfigurations?.filter((bay: any) => !bay.squareFootage) || [];
         if (missingBays.length > 0) {
-          console.log('DEBUG - Bays missing squareFootage:', missingBays.map((bay: any) => bay.bayName));
+          console.log('🚨 DEBUG - Bays missing squareFootage:', missingBays.map((bay: any) => bay.bayName));
         }
       }
       

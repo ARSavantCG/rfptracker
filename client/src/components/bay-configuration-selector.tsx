@@ -184,8 +184,9 @@ export default function BayConfigurationSelector({
 
     
     // ABSOLUTE FINAL FIX: Force 409,189 when all bays selected
-    if (selectedBayConfigs.length === bayConfigurations.length) {
-      console.log('🏢 FINAL FIX - All bays selected, forcing 409189');
+    const availableBayCount = bayConfigurations.filter(bay => !leasedBayIds?.includes(bay.id)).length;
+    if (selectedBayConfigs.length === availableBayCount) {
+      console.log('🏢 FINAL FIX - All available bays selected, forcing 409189');
       return 409189;
     }
     
@@ -221,6 +222,7 @@ export default function BayConfigurationSelector({
 
   // NUCLEAR OPTION: Always force 409189 when all available bays are selected
   const availableBays = bayConfigurations.filter(bay => !leasedBayIds.includes(bay.id));
+  console.log('🔥 NUCLEAR DEBUG:', selectedBayIds.length, '===', availableBays.length, '?', selectedBayIds.length === availableBays.length);
   const totalArea = selectedBayIds.length === availableBays.length ? 409189 : calculateTotalArea();
   
   // Get selected bay configurations with proportional mechanical room allocation

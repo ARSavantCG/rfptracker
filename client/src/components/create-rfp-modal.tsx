@@ -179,6 +179,15 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
     console.log('Property changed:', propertyId);
     const property = properties.find(p => p.id.toString() === propertyId);
     console.log('Found property:', property);
+    
+    // Debug: Log bay configuration square footages
+    if (property && property.bayConfigurations) {
+      const totalBaySF = property.bayConfigurations.reduce((sum, bay) => sum + (bay.squareFootage || 0), 0);
+      console.log('Frontend received bay total:', totalBaySF, 'SF');
+      console.log('Mechanical room SF:', property.mechanicalRoomSquareFootage);
+      console.log('Expected total:', totalBaySF + (property.mechanicalRoomSquareFootage || 0));
+    }
+    
     setSelectedProperty(property || null);
     setCalculatedFloorArea(0);
     setSelectedBayConfigurations([]);

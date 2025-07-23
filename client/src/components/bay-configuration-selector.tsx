@@ -30,11 +30,18 @@ export default function BayConfigurationSelector({
   const bayConfigurations = property.bayConfigurations || [];
   
   // Debug raw property data to see API response structure
-  console.log('BayConfigurationSelector - Raw property object:', property);
-  console.log('BayConfigurationSelector - bayConfigurations:', bayConfigurations);
-  console.log('BayConfigurationSelector - bayConfigurations length:', bayConfigurations.length);
+  console.log('🏢 BayConfigurationSelector - Raw property object:', property);
+  console.log('🏢 BayConfigurationSelector - bayConfigurations:', bayConfigurations);
+  console.log('🏢 BayConfigurationSelector - bayConfigurations length:', bayConfigurations.length);
   if (bayConfigurations.length > 0) {
-    console.log('BayConfigurationSelector - First 3 bays:', bayConfigurations.slice(0, 3));
+    console.log('🏢 BayConfigurationSelector - First 3 bays:', bayConfigurations.slice(0, 3));
+    
+    // Check for data integrity issues
+    const totalFromAPI = bayConfigurations.reduce((sum, bay) => sum + (bay.squareFootage || 0), 0);
+    console.log('🏢 BayConfigurationSelector - Total SF from API:', totalFromAPI);
+    console.log('🏢 BayConfigurationSelector - Expected total SF:', 408763);
+    console.log('🏢 BayConfigurationSelector - Mechanical room SF:', property.mechanicalRoomSquareFootage);
+    console.log('🏢 BayConfigurationSelector - Expected grand total:', 408763 + (property.mechanicalRoomSquareFootage || 0));
   }
 
   // Get list of all bay IDs that are already leased
@@ -110,6 +117,18 @@ export default function BayConfigurationSelector({
       console.log('- Mechanical room SF:', property.mechanicalRoomSquareFootage);
       console.log('- Proportional mechanical:', proportionalMechanical);
       console.log('- Expected total:', totalPropertyBaysSF + (property.mechanicalRoomSquareFootage || 0));
+      
+      // Critical debug: Show actual vs expected totals
+      const calculatedTotal = selectedBaySquareFootage + proportionalMechanical;
+      const expectedWhenAllSelected = 409189; // Known correct total
+      const discrepancy = expectedWhenAllSelected - calculatedTotal;
+      console.log('- CALCULATED TOTAL:', calculatedTotal);
+      console.log('- EXPECTED WHEN ALL SELECTED:', expectedWhenAllSelected);
+      console.log('- DISCREPANCY:', discrepancy, 'SF');
+      
+      // Show which bays are actually in calculation
+      console.log('- Bays in calculation:', selectedBayConfigs.map(bay => `${bay.bayName}: ${bay.squareFootage} SF`));
+    }
       
       // Debug individual bay values 
       console.log('- Individual bay values:');

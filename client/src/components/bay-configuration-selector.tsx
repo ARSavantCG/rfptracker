@@ -169,10 +169,10 @@ export default function BayConfigurationSelector({
       console.log('- Database bay total (from server):', 408763);
       console.log('- Difference:', frontendTotal - 408763);
       
-      // Check for missing squareFootage values
-      const missingBays = selectedBayConfigs.filter(bay => !bay.squareFootage);
+      // Check for missing squareFootage values in SELECTED bays
+      const missingBays = selectedBayConfigs.filter(bay => !bay.squareFootage || bay.squareFootage === 0);
       if (missingBays.length > 0) {
-        console.log('⚠️ PROBLEM: Bays missing squareFootage:', missingBays.map(b => b.bayName));
+        console.log('⚠️ PROBLEM: Selected bays missing squareFootage:', missingBays.map(b => b.bayName));
       }
       
       // Check all bay configurations for comparison
@@ -180,7 +180,7 @@ export default function BayConfigurationSelector({
       const allBaysTotal = bayConfigurations.reduce((sum, bay) => sum + (bay.squareFootage || 0), 0);
       console.log('- All bays frontend total:', allBaysTotal);
       
-      // Show which bays have missing square footage
+      // Show which bays have missing square footage in ALL BAYS (not just selected)
       const baysMissingData = bayConfigurations.filter(bay => !bay.squareFootage || bay.squareFootage === 0);
       if (baysMissingData.length > 0) {
         console.log('🚨 FOUND THE PROBLEM: Bays missing squareFootage data:');
@@ -188,6 +188,15 @@ export default function BayConfigurationSelector({
           console.log(`  ${bay.bayName}: ${bay.squareFootage || 'MISSING'} SF`);
           console.log(`  Full bay object:`, bay);
         });
+      }
+      
+      // CRITICAL: Check if any selected bay IDs don't have corresponding bay configs  
+      const selectedIdsNotFound = selectedBayIds.filter(bayId => 
+        !bayConfigurations.find(bay => bay.id === bayId)
+      );
+      if (selectedIdsNotFound.length > 0) {
+        console.log('🚨 CRITICAL: Selected bay IDs not found in bayConfigurations:');
+        selectedIdsNotFound.forEach(id => console.log(`  Missing bay ID: ${id}`));
       }
       
       // Show sample of all bay configs to check data structure

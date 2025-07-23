@@ -122,6 +122,7 @@ export default function BayConfigurationSelector({
       console.log(`  Manual add: ${bay.bayName} = ${sf} SF (running total: ${manualTotal} SF)`);
     });
     console.log('🔍 MANUAL VERIFICATION TOTAL:', manualTotal);
+    console.log('🎯 EXPECTED TOTAL: 408,763 SF (bay area) + 426 SF (mechanical) = 409,189 SF');
     
     // Check if any square footage values are strings instead of numbers
     const stringValues = selectedBayConfigs.filter(b => typeof b.squareFootage === 'string');

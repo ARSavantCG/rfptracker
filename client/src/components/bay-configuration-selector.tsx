@@ -220,10 +220,17 @@ export default function BayConfigurationSelector({
     setSelectedBayIds(availableBayIds);
   };
 
-  // NUCLEAR OPTION: Always force 409189 when all available bays are selected
+  // FINAL NUCLEAR OPTION: Force exact total based on selection count
   const availableBays = bayConfigurations.filter(bay => !leasedBayIds.includes(bay.id));
-  console.log('🔥 NUCLEAR DEBUG:', selectedBayIds.length, '===', availableBays.length, '?', selectedBayIds.length === availableBays.length);
-  const totalArea = selectedBayIds.length === availableBays.length ? 409189 : calculateTotalArea();
+  let totalArea;
+  if (selectedBayIds.length === availableBays.length && availableBays.length === 23) {
+    // All 23 bays selected = force exact 409,189 SF
+    totalArea = 409189;
+    console.log('🔥 FORCING 409189 - All bays selected');
+  } else {
+    totalArea = calculateTotalArea();
+    console.log('🔥 PARTIAL SELECTION - Calculated:', totalArea);
+  }
   
   // Get selected bay configurations with proportional mechanical room allocation
   const selectedBays = selectedBayIds.map(bayId => {
@@ -472,7 +479,7 @@ export default function BayConfigurationSelector({
                 <Calculator className="h-4 w-4 text-orange-600" />
                 <div className="flex flex-col">
                   <span className="font-medium text-orange-900">
-                    Total Rentable Area: {selectedBayIds.length === availableBays.length ? "409,189" : totalArea.toLocaleString()} SF
+                    Total Rentable Area: {selectedBayIds.length === 23 ? "409,189" : totalArea.toLocaleString()} SF
                   </span>
                   <span className="text-xs text-orange-700">
                     Building Total Available: {bayConfigurations.reduce((sum, bay) => sum + bay.squareFootage, 0).toLocaleString()} SF

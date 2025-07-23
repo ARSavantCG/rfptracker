@@ -84,7 +84,7 @@ export default function BayConfigurationSelector({
       console.log('- DISCREPANCY:', (selectedBaySquareFootage + (property.mechanicalRoomSquareFootage || 0)) - 409189, 'SF');
       
       // Show each bay's contribution and look for the problem
-      console.log('- Individual bays from frontend:');
+      console.log('🏗️ INDIVIDUAL BAYS FROM FRONTEND:');
       selectedBayConfigs.forEach(bay => {
         console.log(`  ${bay.bayName}: ${bay.squareFootage} SF`);
       });
@@ -117,13 +117,27 @@ export default function BayConfigurationSelector({
       };
       
       console.log('🚨 COMPARING FRONTEND vs DATABASE VALUES:');
+      let foundMismatch = false;
       selectedBayConfigs.forEach(bay => {
         const expected = expectedBayValues[bay.bayName as keyof typeof expectedBayValues];
         const actual = bay.squareFootage;
         if (expected !== actual) {
-          console.log(`  ❌ ${bay.bayName}: Expected ${expected} SF, Got ${actual} SF (Difference: ${actual - expected} SF)`);
+          console.log(`  ❌ MISMATCH FOUND: ${bay.bayName}: Expected ${expected} SF, Got ${actual} SF (Difference: ${actual - expected} SF)`);
+          foundMismatch = true;
         }
       });
+      
+      if (!foundMismatch) {
+        console.log('  ✅ No individual bay mismatches found, but total is still wrong by 10 SF');
+        console.log('  📊 Manual sum verification:');
+        let manualSum = 0;
+        selectedBayConfigs.forEach(bay => {
+          manualSum += bay.squareFootage;
+        });
+        console.log(`  📊 Manual calculated total: ${manualSum} SF`);
+        console.log(`  📊 Expected total: 408,763 SF`);
+        console.log(`  📊 Difference: ${manualSum - 408763} SF`);
+      }
     }
     
     // Calculate total property bay square footage for proportion calculation

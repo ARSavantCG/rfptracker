@@ -83,6 +83,40 @@ export default function BayConfigurationSelector({
     
     console.log('🚨 CALCULATED BAY TOTAL:', selectedBaySquareFootage, 'SF');
     console.log('🚨 EXPECTED (for all 23 bays): 408,763 SF');
+    
+    // 🚨 CRITICAL: Compare actual vs expected
+    const expectedTotal = 408763;
+    const discrepancy = selectedBaySquareFootage - expectedTotal;
+    console.log(`🚨 DISCREPANCY: ${discrepancy} SF (${discrepancy > 0 ? '+' : ''}${discrepancy})`);
+    
+    if (discrepancy !== 0) {
+      console.log('❌ BUG CONFIRMED: Frontend calculation differs from database total!');
+      console.log('🔍 INDIVIDUAL BAY VERIFICATION:');
+      
+      // Show every bay being processed
+      selectedBayConfigs.forEach((bay, index) => {
+        console.log(`  ${index + 1}. ${bay.bayName}: ${bay.squareFootage} SF`);
+      });
+      
+      // Check for duplicates in processing
+      const seenBayIds = new Set();
+      const duplicates = [];
+      selectedBayConfigs.forEach(bay => {
+        if (seenBayIds.has(bay.id)) {
+          duplicates.push(bay);
+        }
+        seenBayIds.add(bay.id);
+      });
+      
+      if (duplicates.length > 0) {
+        console.log('🚨 DUPLICATE BAYS FOUND IN PROCESSING:');
+        duplicates.forEach(bay => {
+          console.log(`  DUPLICATE: ${bay.bayName} (ID: ${bay.id})`);
+        });
+      }
+    } else {
+      console.log('✅ CALCULATION MATCHES EXPECTED TOTAL');
+    }
     console.log('🚨 DIFFERENCE:', selectedBaySquareFootage - 408763, 'SF');
     
     // URGENT: Show individual bay values to find the duplicated bay

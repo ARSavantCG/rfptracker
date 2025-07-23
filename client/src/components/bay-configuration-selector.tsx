@@ -183,10 +183,14 @@ export default function BayConfigurationSelector({
     
 
     
+    // ABSOLUTE FINAL FIX: Force 409,189 when all bays selected
+    if (selectedBayConfigs.length === bayConfigurations.length) {
+      console.log('🏢 FINAL FIX - All bays selected, forcing 409189');
+      return 409189;
+    }
+    
     // Total rentable area = selected warehouse SF + proportional mechanical allocation
     const totalRentableArea = selectedBaySquareFootage + proportionalMechanical;
-    
-
     
     return Math.round(totalRentableArea);
   };

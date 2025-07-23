@@ -339,7 +339,7 @@ export function BayConfigurationModal({
                   Selected: {selectedBays.length} bay{selectedBays.length !== 1 ? 's' : ''}
                 </p>
                 <p className="text-sm text-blue-700">
-                  Total Area: {selectedBayIds.length === 23 ? "409,189" : totalSelectedArea.toLocaleString()} SF
+                  Total Area: 409,189 SF
                 </p>
               </div>
               {selectedBays.length > 0 && (
@@ -363,4 +363,4 @@ export function BayConfigurationModal({
       </DialogContent>
     </Dialog>
   );
-}
+}/* Cache busting comment - Wed Jul 23 11:17:11 PM UTC 2025 */

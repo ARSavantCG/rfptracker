@@ -76,7 +76,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
   });
 
   const { data: properties = [] } = useQuery<Property[]>({
-    queryKey: ["/api/properties", Date.now()], // Force cache invalidation
+    queryKey: ["/api/properties"],
   });
 
   const { data: contacts = [] } = useQuery<Contact[]>({
@@ -176,7 +176,9 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
 
   // Handle property selection and set the selected property for bay configuration selector
   const handlePropertyChange = (propertyId: string) => {
+    console.log('Property changed:', propertyId);
     const property = properties.find(p => p.id.toString() === propertyId);
+    console.log('Found property:', property);
     setSelectedProperty(property || null);
     setCalculatedFloorArea(0);
     setSelectedBayConfigurations([]);

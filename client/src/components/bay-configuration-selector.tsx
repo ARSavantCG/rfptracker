@@ -70,14 +70,11 @@ export default function BayConfigurationSelector({
     
     // Debug logging
     if (selectedBayConfigs.length === bayConfigurations.length) {
-      console.log('DEBUG - All bays selected calculation:');
+      console.log('DEBUG Bay Selector - All bays selected calculation:');
       console.log('- Total warehouse SF from bays:', totalPropertyBaysSF);
       console.log('- Mechanical room SF:', property.mechanicalRoomSquareFootage);
       console.log('- Expected total:', totalPropertyBaysSF + (property.mechanicalRoomSquareFootage || 0));
-      console.log('- Bay configurations from property:', bayConfigurations.map(bay => ({
-        name: bay.bayName,
-        sf: bay.squareFootage
-      })));
+      console.log('- Calculated area being returned:', calculatedArea);
     }
     
     // Calculate proportional mechanical room allocation using property-level mechanical room SF

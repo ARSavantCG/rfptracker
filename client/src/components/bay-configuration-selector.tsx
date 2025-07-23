@@ -464,7 +464,10 @@ export default function BayConfigurationSelector({
                 <Calculator className="h-4 w-4 text-orange-600" />
                 <div className="flex flex-col">
                   <span className="font-medium text-orange-900">
-                    Total Rentable Area: {selectedBayIds.length === bayConfigurations.length ? "409,189" : totalArea.toLocaleString()} SF
+                    Total Rentable Area: {(() => {
+                      console.log('DEBUG FIX: selectedBayIds.length =', selectedBayIds.length, 'bayConfigurations.length =', bayConfigurations.length);
+                      return selectedBayIds.length === bayConfigurations.length ? "409,189" : totalArea.toLocaleString();
+                    })()} SF
                   </span>
                   <span className="text-xs text-orange-700">
                     Building Total Available: {bayConfigurations.reduce((sum, bay) => sum + bay.squareFootage, 0).toLocaleString()} SF

@@ -111,8 +111,17 @@ export default function BayConfigurationSelector({
     }, 0);
     
     console.log('🔢 DETAILED BAY CALCULATION:');
-    console.log('- Selected bay configs:', selectedBayConfigs.map(b => `${b.bayName}: ${b.squareFootage || 0} SF`));
+    console.log('- Selected bay configs:', selectedBayConfigs.map(b => `${b.bayName}: ${b.squareFootage || 0} SF (type: ${typeof b.squareFootage})`));
     console.log('- Sum calculation result:', selectedBaySquareFootage);
+    
+    // Check if any square footage values are strings instead of numbers
+    const stringValues = selectedBayConfigs.filter(b => typeof b.squareFootage === 'string');
+    if (stringValues.length > 0) {
+      console.log('🚨 STRING SQUARE FOOTAGE VALUES FOUND:');
+      stringValues.forEach(bay => {
+        console.log(`  ${bay.bayName}: "${bay.squareFootage}" (string) -> ${parseInt(bay.squareFootage || '0')} (parsed)`);
+      });
+    }
     
     // Calculate total property bay square footage for proportion calculation
     const totalPropertyBaysSF = bayConfigurations.reduce((sum, bay) => sum + (bay.squareFootage || 0), 0);

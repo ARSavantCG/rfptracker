@@ -8,36 +8,80 @@ export function cn(...inputs: ClassValue[]) {
 export function formatDate(date: string | Date): string {
   if (!date) return 'N/A';
   
-  // Handle date strings that might be in YYYY-MM-DD format from database
-  let dateObj: Date;
   if (typeof date === 'string') {
-    // If it's a YYYY-MM-DD string, parse it as a local date to prevent timezone shifts
+    // Handle YYYY-MM-DDTHH:MM:SS.sssZ format (ISO with zero time from database)
+    if (date.match(/^\d{4}-\d{2}-\d{2}T00:00:00(\.\d{3})?Z?$/)) {
+      // Extract just the date part to avoid timezone conversion issues
+      const datePart = date.split('T')[0];
+      const [year, month, day] = datePart.split('-').map(Number);
+      const dateObj = new Date(year, month - 1, day);
+      
+      return dateObj.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    }
+    
+    // Handle YYYY-MM-DD format (simple date string)
     if (date.match(/^\d{4}-\d{2}-\d{2}$/)) {
       const [year, month, day] = date.split('-').map(Number);
-      dateObj = new Date(year, month - 1, day);
-    } else if (date.includes('T')) {
-      // For ISO strings with time, parse and then create a new date in local timezone
-      const originalDate = new Date(date);
-      dateObj = new Date(originalDate.getFullYear(), originalDate.getMonth(), originalDate.getDate());
-    } else {
-      dateObj = new Date(date);
+      const dateObj = new Date(year, month - 1, day);
+      
+      return dateObj.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
     }
+    
+    // Handle other ISO strings with time
+    if (date.includes('T')) {
+      const isoDate = new Date(date);
+      if (isNaN(isoDate.getTime())) {
+        console.warn('Invalid ISO date passed to formatDate:', date);
+        return 'Invalid Date';
+      }
+      
+      // Extract UTC date parts to avoid timezone conversion
+      const year = isoDate.getUTCFullYear();
+      const month = isoDate.getUTCMonth();
+      const day = isoDate.getUTCDate();
+      const dateObj = new Date(year, month, day);
+      
+      return dateObj.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    }
+    
+    // Fallback for other string formats
+    const dateObj = new Date(date);
+    if (isNaN(dateObj.getTime())) {
+      console.warn('Invalid date string passed to formatDate:', date);
+      return 'Invalid Date';
+    }
+    
+    return dateObj.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
   } else {
-    dateObj = new Date(date);
+    // Handle Date objects
+    const dateObj = new Date(date);
+    if (isNaN(dateObj.getTime())) {
+      console.warn('Invalid Date object passed to formatDate:', date);
+      return 'Invalid Date';
+    }
+    
+    return dateObj.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
   }
-  
-  if (isNaN(dateObj.getTime())) {
-    console.warn('Invalid date passed to formatDate:', date);
-    return 'Invalid Date';
-  }
-  
-  // Always format dates in Eastern Time
-  return dateObj.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    timeZone: 'America/New_York'
-  });
 }
 
 export function formatFileSize(bytes: number): string {

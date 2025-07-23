@@ -478,7 +478,7 @@ export default function BayConfigurationSelector({
               <div className="flex items-center gap-2 p-3 bg-orange-50 rounded-lg">
                 <Calculator className="h-4 w-4 text-orange-600" />
                 <div className="flex flex-col">
-                  <span className="font-medium text-orange-900">
+                  <span className="font-medium text-orange-900" key="fixed-total-area">
                     Total Rentable Area: 409,189 SF
                   </span>
                   <span className="text-xs text-orange-700">

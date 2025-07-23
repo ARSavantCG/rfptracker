@@ -28,6 +28,14 @@ export default function BayConfigurationSelector({
   });
 
   const bayConfigurations = property.bayConfigurations || [];
+  
+  // Debug raw property data to see API response structure
+  console.log('BayConfigurationSelector - Raw property object:', property);
+  console.log('BayConfigurationSelector - bayConfigurations:', bayConfigurations);
+  console.log('BayConfigurationSelector - bayConfigurations length:', bayConfigurations.length);
+  if (bayConfigurations.length > 0) {
+    console.log('BayConfigurationSelector - First 3 bays:', bayConfigurations.slice(0, 3));
+  }
 
   // Get list of all bay IDs that are already leased
   const leasedBayIds = executedLeases.flatMap(lease => lease.assignedBays || []);

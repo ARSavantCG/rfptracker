@@ -45,8 +45,20 @@ export default function BayConfigurationSelector({
   // Convert bay configurations to proper bay representation
   // Each bay configuration represents one bay with unique sequential numbering
   const individualBays = bayConfigurations.map((bayConfig, index) => {
+    // Debug each bay configuration to see data integrity
+    console.log(`Bay ${index + 1} config:`, bayConfig);
+    
+    // Check for missing data
+    if (!bayConfig || !bayConfig.bayName || !bayConfig.squareFootage) {
+      console.log(`❌ CORRUPTED BAY DATA at index ${index}:`, bayConfig);
+      return null;
+    }
+    
     const match = bayConfig.bayName.match(/Bay (\d+)-(\d+)/);
-    if (!match) return null;
+    if (!match) {
+      console.log(`❌ Bay name match failed for:`, bayConfig.bayName);
+      return null;
+    }
     
     // Use sequential numbering based on array index to ensure unique bay numbers
     const bayNumber = index + 1;
@@ -59,7 +71,7 @@ export default function BayConfigurationSelector({
       standardDockDoors: bayConfig.standardDockDoors,
       oversizedDockDoors: bayConfig.oversizedDockDoors
     };
-  }).filter(Boolean);
+  }).filter((bay): bay is NonNullable<typeof bay> => bay !== null);
 
   // Calculate total rentable area from selected individual bays with proportional mechanical allocation
   const calculateTotalArea = () => {
@@ -173,12 +185,13 @@ export default function BayConfigurationSelector({
   const selectAllBays = () => {
     // Only select available (non-leased) bays
     const availableBayIds = individualBays
-      .filter(bay => !leasedBayIds.includes(bay.id))
+      .filter(bay => bay && !leasedBayIds.includes(bay.id))
       .map(bay => bay.id);
     
     console.log('*** SELECT ALL CLICKED ***');
     console.log('Available bay IDs:', availableBayIds);
     console.log('Total bays in property:', bayConfigurations.length);
+    console.log('Individual bays processed:', individualBays.length);
     
     setSelectedBayIds(availableBayIds);
   };

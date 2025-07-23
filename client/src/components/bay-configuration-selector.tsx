@@ -93,15 +93,27 @@ export default function BayConfigurationSelector({
       
       // Debug individual bay values 
       console.log('- Individual bay values:');
+      let frontendTotal = 0;
       selectedBayConfigs.forEach(bay => {
-        console.log(`  ${bay.bayName}: ${bay.squareFootage} SF`);
+        const sf = bay.squareFootage || 0;
+        frontendTotal += sf;
+        console.log(`  ${bay.bayName}: ${sf} SF`);
       });
+      
+      console.log('- Frontend calculated total bays:', frontendTotal);
+      console.log('- Database bay total (from server):', 408763);
+      console.log('- Difference:', frontendTotal - 408763);
       
       // Check for missing squareFootage values
       const missingBays = selectedBayConfigs.filter(bay => !bay.squareFootage);
       if (missingBays.length > 0) {
         console.log('⚠️ PROBLEM: Bays missing squareFootage:', missingBays.map(b => b.bayName));
       }
+      
+      // Check all bay configurations for comparison
+      console.log('- All bay configurations count:', bayConfigurations.length);
+      const allBaysTotal = bayConfigurations.reduce((sum, bay) => sum + (bay.squareFootage || 0), 0);
+      console.log('- All bays frontend total:', allBaysTotal);
     }
     
     // Total rentable area = selected warehouse SF + proportional mechanical allocation

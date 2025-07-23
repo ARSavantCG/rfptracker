@@ -114,6 +114,15 @@ export default function BayConfigurationSelector({
     console.log('- Selected bay configs:', selectedBayConfigs.map(b => `${b.bayName}: ${b.squareFootage || 0} SF (type: ${typeof b.squareFootage})`));
     console.log('- Sum calculation result:', selectedBaySquareFootage);
     
+    // Manual verification - add each bay individually
+    let manualTotal = 0;
+    selectedBayConfigs.forEach(bay => {
+      const sf = bay.squareFootage || 0;
+      manualTotal += sf;
+      console.log(`  Manual add: ${bay.bayName} = ${sf} SF (running total: ${manualTotal} SF)`);
+    });
+    console.log('🔍 MANUAL VERIFICATION TOTAL:', manualTotal);
+    
     // Check if any square footage values are strings instead of numbers
     const stringValues = selectedBayConfigs.filter(b => typeof b.squareFootage === 'string');
     if (stringValues.length > 0) {

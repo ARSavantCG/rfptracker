@@ -215,13 +215,13 @@ export default function BayConfigurationSelector({
   };
 
   const selectAllBays = () => {
-    // Only select available (non-leased) bays
-    const availableBayIds = individualBays
+    // FIXED: Use original bayConfigurations IDs, not transformed individualBays IDs
+    const availableBayIds = bayConfigurations
       .filter(bay => bay && !leasedBayIds.includes(bay.id))
       .map(bay => bay.id);
     
     console.log('*** SELECT ALL CLICKED ***');
-    console.log('Available bay IDs:', availableBayIds);
+    console.log('Available bay IDs (from bayConfigurations):', availableBayIds);
     console.log('Total bays in property:', bayConfigurations.length);
     console.log('Individual bays processed:', individualBays.length);
     

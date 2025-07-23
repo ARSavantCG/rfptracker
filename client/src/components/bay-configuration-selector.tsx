@@ -87,9 +87,19 @@ export default function BayConfigurationSelector({
   // Calculate total rentable area from selected individual bays with proportional mechanical allocation
   const calculateTotalArea = () => {
     // Get selected bay configurations from original bay configurations
-    const selectedBayConfigs = selectedBayIds.map(bayId => 
-      bayConfigurations.find(bay => bay.id === bayId)
-    ).filter((bay): bay is NonNullable<typeof bay> => bay != null);
+    console.log('🔧 DEBUGGING Bay ID Lookup:');
+    console.log('- selectedBayIds:', selectedBayIds);
+    console.log('- Available bay IDs from bayConfigurations:', bayConfigurations.map(b => b.id));
+    
+    const selectedBayConfigs = selectedBayIds.map(bayId => {
+      const found = bayConfigurations.find(bay => bay.id === bayId);
+      if (!found) {
+        console.log(`❌ BAY NOT FOUND: ID ${bayId} not found in bayConfigurations`);
+      }
+      return found;
+    }).filter((bay): bay is NonNullable<typeof bay> => bay != null);
+    
+    console.log('- Selected bay configs found:', selectedBayConfigs.length, 'out of', selectedBayIds.length, 'requested');
     
     if (selectedBayConfigs.length === 0) return 0;
     

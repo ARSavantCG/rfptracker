@@ -32,11 +32,7 @@ export default function BayConfigurationSelector({
   // Get list of all bay IDs that are already leased
   const leasedBayIds = executedLeases.flatMap(lease => lease.assignedBays || []);
   
-  // Debug logging
-  console.log('Executed leases:', executedLeases);
-  console.log('Leased bay IDs:', leasedBayIds);
-  console.log('Bay configurations:', bayConfigurations);
-  console.log('Bay configuration IDs:', bayConfigurations.map(bay => bay.id));
+
 
   // Convert bay configurations to proper bay representation
   // Each bay configuration represents one bay with unique sequential numbering
@@ -87,17 +83,6 @@ export default function BayConfigurationSelector({
     
     // Total rentable area = selected warehouse SF + proportional mechanical allocation
     const totalRentableArea = selectedBaySquareFootage + proportionalMechanical;
-    
-    // Debug the exact calculation when all bays are selected
-    if (selectedBayConfigs.length === bayConfigurations.length) {
-      console.log('BAY SELECTOR DEBUG - ALL BAYS SELECTED:');
-      console.log('Selected bay warehouse SF:', selectedBaySquareFootage);
-      console.log('Mechanical room SF:', mechanicalRoomSF);
-      console.log('Proportional mechanical:', proportionalMechanical);
-      console.log('Total before rounding:', totalRentableArea);
-      console.log('Expected: 408763 + 426 =', 408763 + 426);
-      console.log('Math.round result:', Math.round(totalRentableArea));
-    }
     
     return Math.round(totalRentableArea);
   };

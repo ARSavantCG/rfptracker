@@ -2395,6 +2395,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/properties", async (req, res) => {
     try {
       const properties = await storage.getAllProperties();
+      // Add cache-busting headers to force fresh data
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      res.setHeader('ETag', `"${Date.now()}"`);
       res.json(properties);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch properties" });

@@ -88,6 +88,34 @@ export default function BayConfigurationSelector({
     console.log('🚨 EXPECTED (for all 23 bays): 408,763 SF');
     console.log('🚨 DIFFERENCE:', selectedBaySquareFootage - 408763, 'SF');
     
+    // URGENT: Show individual bay values to find the duplicated bay
+    if (selectedBayConfigs.length > 15) { // Show when we have most/all bays
+      console.log('🔍 SHOWING ALL SELECTED BAY VALUES:');
+      selectedBayConfigs.forEach((bay, index) => {
+        console.log(`  ${index + 1}. ${bay.bayName}: ${bay.squareFootage} SF`);
+      });
+      
+      // Manual calculation to verify
+      let manualTotal = 0;
+      selectedBayConfigs.forEach(bay => {
+        manualTotal += bay.squareFootage;
+      });
+      console.log('🔢 MANUAL TOTAL:', manualTotal, 'SF');
+      console.log('🔢 REDUCE TOTAL:', selectedBaySquareFootage, 'SF');
+      console.log('🔢 MATCH:', manualTotal === selectedBaySquareFootage);
+      
+      // Check for duplicate bay IDs
+      const allBayIds = selectedBayConfigs.map(bay => bay.id);
+      const uniqueBayIds = [...new Set(allBayIds)];
+      console.log('🔍 ALL BAY IDS:', allBayIds.length);
+      console.log('🔍 UNIQUE BAY IDS:', uniqueBayIds.length);
+      if (allBayIds.length !== uniqueBayIds.length) {
+        console.log('❌ FOUND DUPLICATE BAY IDS!');
+        console.log('❌ All IDs:', allBayIds);
+        console.log('❌ Unique IDs:', uniqueBayIds);
+      }
+    }
+    
     // Debug: Show calculation when all bays selected
     if (selectedBayConfigs.length === bayConfigurations.length) {
       console.log('🔍 ALL BAYS SELECTED - CALCULATION CHECK:');

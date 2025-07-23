@@ -68,6 +68,14 @@ export default function BayConfigurationSelector({
     // Calculate total property bay square footage for proportion calculation
     const totalPropertyBaysSF = bayConfigurations.reduce((sum, bay) => sum + (bay.squareFootage || 0), 0);
     
+    // Debug logging
+    if (selectedBayConfigs.length === bayConfigurations.length) {
+      console.log('DEBUG - All bays selected calculation:');
+      console.log('- Total warehouse SF from bays:', totalPropertyBaysSF);
+      console.log('- Mechanical room SF:', property.mechanicalRoomSquareFootage);
+      console.log('- Expected total:', totalPropertyBaysSF + (property.mechanicalRoomSquareFootage || 0));
+    }
+    
     // Calculate proportional mechanical room allocation using property-level mechanical room SF
     const mechanicalRoomSF = property.mechanicalRoomSquareFootage || 0;
     

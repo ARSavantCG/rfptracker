@@ -76,7 +76,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
   });
 
   const { data: properties = [] } = useQuery<Property[]>({
-    queryKey: ["/api/properties"],
+    queryKey: ["/api/properties", Date.now()], // Force cache invalidation
   });
 
   const { data: contacts = [] } = useQuery<Contact[]>({

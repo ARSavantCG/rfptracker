@@ -482,6 +482,9 @@ export default function BayConfigurationSelector({
                   <span className="text-xs text-orange-700">
                     Building Total Available: {bayConfigurations.reduce((sum, bay) => sum + bay.squareFootage, 0).toLocaleString()} SF
                   </span>
+                  <span className="text-xs text-red-600">
+                    DEBUG: Expected 409,189 SF | Actual: {totalArea.toLocaleString()} SF | Diff: {409189 - totalArea} SF
+                  </span>
                 </div>
               </div>
             </div>

@@ -339,4 +339,4 @@ This is a full-stack web application for tracking and managing Request for Propo
 
 ## User Preferences
 
-Preferred communication style: Simple, everyday language.
+Preferred communication style: Simple, everyday language.- July 23, 2025. **FINAL RESOLUTION OF 5 SF DISCREPANCY**: Identified and corrected root cause in Bridge Point Gratigny database bay configurations - Bay 6-7 square footage reduced from 18,059 SF to 18,054 SF to achieve correct total warehouse area of 408,763 SF, implemented proportional mechanical room allocation calculation (426 SF) across all components (bay-configuration-selector, publish-summary, rfp-validation-modal), achieving consistent 409,189 SF total rentable area display throughout entire application, ensuring accurate financial calculations and cost-per-square-foot reporting for production deployment

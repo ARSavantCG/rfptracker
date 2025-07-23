@@ -77,6 +77,18 @@ export default function BayConfigurationSelector({
       console.log('- Mechanical room SF:', property.mechanicalRoomSquareFootage);
       console.log('- Proportional mechanical:', proportionalMechanical);
       console.log('- Expected total:', totalPropertyBaysSF + (property.mechanicalRoomSquareFootage || 0));
+      
+      // Debug individual bay values 
+      console.log('- Individual bay values:');
+      selectedBayConfigs.forEach(bay => {
+        console.log(\`  \${bay.bayName}: \${bay.squareFootage} SF\`);
+      });
+      
+      // Check for missing squareFootage values
+      const missingBays = selectedBayConfigs.filter(bay => !bay.squareFootage);
+      if (missingBays.length > 0) {
+        console.log('⚠️ PROBLEM: Bays missing squareFootage:', missingBays.map(b => b.bayName));
+      }
     }
     
     // Calculate proportional mechanical room allocation using property-level mechanical room SF

@@ -114,6 +114,15 @@ export default function BayConfigurationSelector({
       console.log('- All bay configurations count:', bayConfigurations.length);
       const allBaysTotal = bayConfigurations.reduce((sum, bay) => sum + (bay.squareFootage || 0), 0);
       console.log('- All bays frontend total:', allBaysTotal);
+      
+      // Show which bays have missing square footage
+      const baysMissingData = bayConfigurations.filter(bay => !bay.squareFootage || bay.squareFootage === 0);
+      if (baysMissingData.length > 0) {
+        console.log('🚨 FOUND THE PROBLEM: Bays missing squareFootage data:');
+        baysMissingData.forEach(bay => {
+          console.log(`  ${bay.bayName}: ${bay.squareFootage || 'MISSING'} SF`);
+        });
+      }
     }
     
     // Total rentable area = selected warehouse SF + proportional mechanical allocation

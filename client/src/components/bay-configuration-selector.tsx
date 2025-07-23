@@ -68,6 +68,19 @@ export default function BayConfigurationSelector({
     // Calculate total property bay square footage for proportion calculation
     const totalPropertyBaysSF = bayConfigurations.reduce((sum, bay) => sum + (bay.squareFootage || 0), 0);
     
+    // Calculate proportional mechanical room allocation using property-level mechanical room SF
+    const mechanicalRoomSF = property.mechanicalRoomSquareFootage || 0;
+    
+    // For precision when all bays selected, use exact mechanical room SF to avoid floating point errors
+    let proportionalMechanical;
+    if (selectedBayConfigs.length === bayConfigurations.length) {
+      // All bays selected = 100% of mechanical room
+      proportionalMechanical = mechanicalRoomSF;
+    } else {
+      // Partial selection = proportional allocation
+      proportionalMechanical = totalPropertyBaysSF > 0 ? (selectedBaySquareFootage / totalPropertyBaysSF) * mechanicalRoomSF : 0;
+    }
+    
     // Debug logging - always show when calculating
     if (selectedBayConfigs.length > 0) {
       console.log('🔍 DEBUG Bay Selector Calculation:');
@@ -81,7 +94,7 @@ export default function BayConfigurationSelector({
       // Debug individual bay values 
       console.log('- Individual bay values:');
       selectedBayConfigs.forEach(bay => {
-        console.log(\`  \${bay.bayName}: \${bay.squareFootage} SF\`);
+        console.log(`  ${bay.bayName}: ${bay.squareFootage} SF`);
       });
       
       // Check for missing squareFootage values
@@ -89,19 +102,6 @@ export default function BayConfigurationSelector({
       if (missingBays.length > 0) {
         console.log('⚠️ PROBLEM: Bays missing squareFootage:', missingBays.map(b => b.bayName));
       }
-    }
-    
-    // Calculate proportional mechanical room allocation using property-level mechanical room SF
-    const mechanicalRoomSF = property.mechanicalRoomSquareFootage || 0;
-    
-    // For precision when all bays selected, use exact mechanical room SF to avoid floating point errors
-    let proportionalMechanical;
-    if (selectedBayConfigs.length === bayConfigurations.length) {
-      // All bays selected = 100% of mechanical room
-      proportionalMechanical = mechanicalRoomSF;
-    } else {
-      // Partial selection = proportional allocation
-      proportionalMechanical = totalPropertyBaysSF > 0 ? (selectedBaySquareFootage / totalPropertyBaysSF) * mechanicalRoomSF : 0;
     }
     
     // Total rentable area = selected warehouse SF + proportional mechanical allocation

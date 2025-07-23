@@ -63,61 +63,15 @@ export default function BayConfigurationSelector({
 
   // Calculate total rentable area from selected individual bays with proportional mechanical allocation
   const calculateTotalArea = () => {
-    // 🚨 CRITICAL DEBUGGING - CAPTURE EVERY CALCULATION CALL
-    console.log('🚨🚨🚨 calculateTotalArea() EXECUTION START 🚨🚨🚨');
-    console.log('- selectedBayIds array:', selectedBayIds);
-    console.log('- selectedBayIds length:', selectedBayIds.length);
-    console.log('- bayConfigurations length:', bayConfigurations.length);
+    if (selectedBayIds.length === 0) return 0;
     
     // Get selected bay configurations from original bay configurations
     const selectedBayConfigs = selectedBayIds.map(bayId => {
       return bayConfigurations.find(bay => bay.id === bayId);
     }).filter((bay): bay is NonNullable<typeof bay> => bay != null);
     
-    console.log('- selectedBayConfigs after filtering:', selectedBayConfigs.length);
-    
-    if (selectedBayConfigs.length === 0) return 0;
-    
-    // Calculate selected bay square footage (warehouse area only - use squareFootage, not rentableSquareFootage)
+    // Calculate selected bay square footage using the exact same data the server uses
     const selectedBaySquareFootage = selectedBayConfigs.reduce((sum, bay) => sum + (bay.squareFootage || 0), 0);
-    
-    console.log('🚨 CALCULATED BAY TOTAL:', selectedBaySquareFootage, 'SF');
-    console.log('🚨 EXPECTED (for all 23 bays): 408,763 SF');
-    
-    // 🚨 CRITICAL: Compare actual vs expected
-    const expectedTotal = 408763;
-    const discrepancy = selectedBaySquareFootage - expectedTotal;
-    console.log(`🚨 DISCREPANCY: ${discrepancy} SF (${discrepancy > 0 ? '+' : ''}${discrepancy})`);
-    
-    if (discrepancy !== 0) {
-      console.log('❌ BUG CONFIRMED: Frontend calculation differs from database total!');
-      console.log('🔍 INDIVIDUAL BAY VERIFICATION:');
-      
-      // Show every bay being processed
-      selectedBayConfigs.forEach((bay, index) => {
-        console.log(`  ${index + 1}. ${bay.bayName}: ${bay.squareFootage} SF`);
-      });
-      
-      // Check for duplicates in processing
-      const seenBayIds = new Set();
-      const duplicates = [];
-      selectedBayConfigs.forEach(bay => {
-        if (seenBayIds.has(bay.id)) {
-          duplicates.push(bay);
-        }
-        seenBayIds.add(bay.id);
-      });
-      
-      if (duplicates.length > 0) {
-        console.log('🚨 DUPLICATE BAYS FOUND IN PROCESSING:');
-        duplicates.forEach(bay => {
-          console.log(`  DUPLICATE: ${bay.bayName} (ID: ${bay.id})`);
-        });
-      }
-    } else {
-      console.log('✅ CALCULATION MATCHES EXPECTED TOTAL');
-    }
-    console.log('🚨 DIFFERENCE:', selectedBaySquareFootage - 408763, 'SF');
     
     // URGENT: Show individual bay values to find the duplicated bay
     if (selectedBayConfigs.length > 15) { // Show when we have most/all bays
@@ -243,61 +197,11 @@ export default function BayConfigurationSelector({
   };
 
   const selectAllBays = () => {
-    // FIXED: Use original bayConfigurations IDs, not transformed individualBays IDs
+    // Use exact same bay IDs that the server sends
     const availableBayIds = bayConfigurations
       .filter(bay => bay && !leasedBayIds.includes(bay.id))
       .map(bay => bay.id);
     
-    console.log('*** SELECT ALL CLICKED ***');
-    console.log('Available bay IDs (from bayConfigurations):', availableBayIds);
-    console.log('Total bays in property:', bayConfigurations.length);
-    console.log('Individual bays processed:', individualBays.length);
-    
-    // IMMEDIATE DEBUGGING WITHOUT REACT STATE TIMING
-    console.log('🔥🔥🔥 IMMEDIATE SELECT ALL DEBUGGING 🔥🔥🔥');
-    const selectedBayConfigs = availableBayIds.map(bayId => {
-      return bayConfigurations.find(bay => bay.id === bayId);
-    }).filter((bay): bay is NonNullable<typeof bay> => bay != null);
-    
-    const selectedBaySquareFootage = selectedBayConfigs.reduce((sum, bay) => sum + (bay.squareFootage || 0), 0);
-    
-    console.log('🔥 CALCULATION CHECK (NO STATE DEPENDENCY):');
-    console.log('- Available bay IDs length:', availableBayIds.length);
-    console.log('- Selected bay configs length:', selectedBayConfigs.length);
-    console.log('- Bay configurations from server length:', bayConfigurations.length);
-    console.log('- Calculated bay SF total:', selectedBaySquareFootage);
-    console.log('- Expected bay SF total: 408,763');
-    console.log('- Difference:', selectedBaySquareFootage - 408763);
-    
-    // Show individual bay values  
-    console.log('🔥 INDIVIDUAL BAY BREAKDOWN (ALL SELECTED):');
-    selectedBayConfigs.forEach((bay, index) => {
-      console.log(`  ${index + 1}. ${bay.bayName}: ${bay.squareFootage} SF`);
-    });
-    
-    // Check for duplicates in bay configurations array itself
-    console.log('🔍 CHECKING bayConfigurations ARRAY FOR DUPLICATES:');
-    const bayIdCount = new Map();
-    bayConfigurations.forEach(bay => {
-      const count = bayIdCount.get(bay.id) || 0;
-      bayIdCount.set(bay.id, count + 1);
-      if (count > 0) {
-        console.log(`🚨 DUPLICATE IN SOURCE DATA: ${bay.bayName} (ID: ${bay.id}) appears ${count + 1} times in bayConfigurations array`);
-      }
-    });
-    
-    // Check sum using manual addition for verification
-    let manualSum = 0;
-    console.log('🔢 MANUAL VERIFICATION (line by line addition):');
-    selectedBayConfigs.forEach((bay, index) => {
-      manualSum += bay.squareFootage;
-      console.log(`  Step ${index + 1}: ${manualSum - bay.squareFootage} + ${bay.squareFootage} = ${manualSum} (${bay.bayName})`);
-    });
-    console.log(`🔢 Manual sum final result: ${manualSum} SF`);
-    console.log(`🔢 Reduce function result: ${selectedBaySquareFootage} SF`);
-    console.log(`🔢 Results match: ${manualSum === selectedBaySquareFootage}`);
-    
-    // Set state after debugging
     setSelectedBayIds(availableBayIds);
   };
 

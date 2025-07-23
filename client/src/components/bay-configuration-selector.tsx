@@ -128,7 +128,6 @@ export default function BayConfigurationSelector({
       
       // Show which bays are actually in calculation
       console.log('- Bays in calculation:', selectedBayConfigs.map(bay => `${bay.bayName}: ${bay.squareFootage} SF`));
-    }
       
       // Debug individual bay values 
       console.log('- Individual bay values:');

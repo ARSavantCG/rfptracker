@@ -56,8 +56,12 @@ export default function BayConfigurationSelector({
     console.log(`Bay ${index + 1} config:`, bayConfig);
     
     // Check for missing data
-    if (!bayConfig || !bayConfig.bayName || !bayConfig.squareFootage) {
+    if (!bayConfig || !bayConfig.bayName || !bayConfig.squareFootage || bayConfig.squareFootage === 0) {
       console.log(`❌ CORRUPTED BAY DATA at index ${index}:`, bayConfig);
+      console.log(`  - bayConfig exists: ${!!bayConfig}`);
+      console.log(`  - bayName exists: ${!!bayConfig?.bayName}`);
+      console.log(`  - squareFootage exists: ${!!bayConfig?.squareFootage}`);
+      console.log(`  - squareFootage value: ${bayConfig?.squareFootage}`);
       return null;
     }
     
@@ -75,8 +79,8 @@ export default function BayConfigurationSelector({
       bayNumber: bayNumber,
       bayName: `Bay ${bayNumber}`,
       squareFootage: bayConfig.squareFootage, // Full rentable area for this bay
-      standardDockDoors: bayConfig.standardDockDoors,
-      oversizedDockDoors: bayConfig.oversizedDockDoors
+      standardDockDoors: bayConfig.standardDockDoors || 0,
+      oversizedDockDoors: bayConfig.oversizedDockDoors || 0
     };
   }).filter((bay): bay is NonNullable<typeof bay> => bay !== null);
 

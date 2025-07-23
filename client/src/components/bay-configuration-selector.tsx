@@ -88,6 +88,17 @@ export default function BayConfigurationSelector({
     // Total rentable area = selected warehouse SF + proportional mechanical allocation
     const totalRentableArea = selectedBaySquareFootage + proportionalMechanical;
     
+    // Debug the exact calculation when all bays are selected
+    if (selectedBayConfigs.length === bayConfigurations.length) {
+      console.log('BAY SELECTOR DEBUG - ALL BAYS SELECTED:');
+      console.log('Selected bay warehouse SF:', selectedBaySquareFootage);
+      console.log('Mechanical room SF:', mechanicalRoomSF);
+      console.log('Proportional mechanical:', proportionalMechanical);
+      console.log('Total before rounding:', totalRentableArea);
+      console.log('Expected: 408763 + 426 =', 408763 + 426);
+      console.log('Math.round result:', Math.round(totalRentableArea));
+    }
+    
     return Math.round(totalRentableArea);
   };
 

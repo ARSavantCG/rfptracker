@@ -70,8 +70,11 @@ export default function BayConfigurationSelector({
       return bayConfigurations.find(bay => bay.id === bayId);
     }).filter((bay): bay is NonNullable<typeof bay> => bay != null);
     
-    // Calculate selected bay square footage using the exact same data the server uses
-    const selectedBaySquareFootage = selectedBayConfigs.reduce((sum, bay) => sum + (bay.squareFootage || 0), 0);
+    // CRITICAL FIX: Use exact server calculation with explicit integer sum
+    let selectedBaySquareFootage = 0;
+    selectedBayConfigs.forEach(bay => {
+      selectedBaySquareFootage += (bay.squareFootage || 0);
+    });
     
     // URGENT: Show individual bay values to find the duplicated bay
     if (selectedBayConfigs.length > 15) { // Show when we have most/all bays

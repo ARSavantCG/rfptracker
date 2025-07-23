@@ -68,13 +68,15 @@ export default function BayConfigurationSelector({
     // Calculate total property bay square footage for proportion calculation
     const totalPropertyBaysSF = bayConfigurations.reduce((sum, bay) => sum + (bay.squareFootage || 0), 0);
     
-    // Debug logging
-    if (selectedBayConfigs.length === bayConfigurations.length) {
-      console.log('DEBUG Bay Selector - All bays selected calculation:');
+    // Debug logging - always show when calculating
+    if (selectedBayConfigs.length > 0) {
+      console.log('🔍 DEBUG Bay Selector Calculation:');
+      console.log('- Selected bays count:', selectedBayConfigs.length, 'of', bayConfigurations.length);
+      console.log('- Selected bay square footage:', selectedBaySquareFootage);
       console.log('- Total warehouse SF from bays:', totalPropertyBaysSF);
       console.log('- Mechanical room SF:', property.mechanicalRoomSquareFootage);
+      console.log('- Proportional mechanical:', proportionalMechanical);
       console.log('- Expected total:', totalPropertyBaysSF + (property.mechanicalRoomSquareFootage || 0));
-      console.log('- Calculated area being returned:', calculatedArea);
     }
     
     // Calculate proportional mechanical room allocation using property-level mechanical room SF
@@ -121,6 +123,11 @@ export default function BayConfigurationSelector({
     const availableBayIds = individualBays
       .filter(bay => !leasedBayIds.includes(bay.id))
       .map(bay => bay.id);
+    
+    console.log('*** SELECT ALL CLICKED ***');
+    console.log('Available bay IDs:', availableBayIds);
+    console.log('Total bays in property:', bayConfigurations.length);
+    
     setSelectedBayIds(availableBayIds);
   };
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -76,10 +76,7 @@ export default function BayConfigurationSelector({
     
     console.log('- selectedBayConfigs after filtering:', selectedBayConfigs.length);
     
-    if (selectedBayConfigs.length === 0) {
-      console.log('🚨 EARLY RETURN: No bays selected');
-      return 0;
-    }
+    if (selectedBayConfigs.length === 0) return 0;
     
     // Calculate selected bay square footage (warehouse area only - use squareFootage, not rentableSquareFootage)
     const selectedBaySquareFootage = selectedBayConfigs.reduce((sum, bay) => sum + (bay.squareFootage || 0), 0);

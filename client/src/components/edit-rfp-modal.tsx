@@ -65,13 +65,17 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
 
   // Handle bay configuration selection and calculate floor area
   const handleFloorAreaChange = (area: number, bayConfigs: BayConfiguration[]) => {
-    const roundedArea = Math.round(area);
-    setCalculatedFloorArea(roundedArea);
+    // Calculate total using bay square footage + static mechanical room SF (not individual allocations)
+    const baySquareFootage = bayConfigs.reduce((sum, bay) => sum + (bay.squareFootage || 0), 0);
+    const mechanicalRoomSF = selectedProperty?.mechanicalRoomSquareFootage || 0;
+    const totalRentableArea = baySquareFootage + mechanicalRoomSF;
+    
+    setCalculatedFloorArea(totalRentableArea);
     setSelectedBayConfigurations(bayConfigs);
     
     // Auto-populate the project area field with calculated value
-    if (roundedArea > 0) {
-      form.setValue("projectArea", `${roundedArea.toLocaleString()} SF (calculated from selected bay configurations)`);
+    if (totalRentableArea > 0) {
+      form.setValue("projectArea", `${totalRentableArea.toLocaleString()} SF (calculated from selected bay configurations)`);
     } else {
       form.setValue("projectArea", "");
     }
@@ -184,8 +188,12 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
       // Initialize bay configurations if they exist
       if (rfp.selectedBayConfigurations && rfp.selectedBayConfigurations.length > 0) {
         setSelectedBayConfigurations(rfp.selectedBayConfigurations);
-        const totalArea = rfp.selectedBayConfigurations.reduce((sum: number, bay: any) => sum + (bay.rentableSquareFootage || bay.squareFootage), 0);
-        setCalculatedFloorArea(totalArea);
+        // Calculate total using bay square footage + static mechanical room SF (consistent with Properties page)
+        const baySquareFootage = rfp.selectedBayConfigurations.reduce((sum: number, bay: any) => sum + (bay.squareFootage || 0), 0);
+        const property = properties.find(p => p.id.toString() === rfp.property);
+        const mechanicalRoomSF = property?.mechanicalRoomSquareFootage || 0;
+        const totalRentableArea = baySquareFootage + mechanicalRoomSF;
+        setCalculatedFloorArea(totalRentableArea);
       } else {
         // Try to extract from project area if it contains calculated text
         const projectArea = rfp.projectArea || "";
@@ -624,11 +632,8 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
                       <label className="text-sm font-medium text-gray-700">Warehouse Area</label>
                       <div className="text-lg font-semibold text-green-600">
                         {(() => {
-                          const roundedTotal = Math.round(calculatedFloorArea);
-                          const totalMechanical = selectedBayConfigurations.reduce((sum, bay) => sum + (bay.mechanicalRoomAllocation || 0), 0);
-                          const roundedMechanical = Math.round(totalMechanical);
-                          const warehouseArea = roundedTotal - roundedMechanical;
-                          return warehouseArea.toLocaleString();
+                          const baySquareFootage = selectedBayConfigurations.reduce((sum, bay) => sum + (bay.squareFootage || 0), 0);
+                          return baySquareFootage.toLocaleString();
                         })()} SF
                       </div>
                       <p className="text-xs text-gray-500">Available for tenant use</p>
@@ -636,7 +641,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
                     <div>
                       <label className="text-sm font-medium text-gray-700">Mechanical Allocation</label>
                       <div className="text-lg font-semibold text-orange-600">
-                        {Math.round(selectedBayConfigurations.reduce((sum, bay) => sum + (bay.mechanicalRoomAllocation || 0), 0)).toLocaleString()} SF
+                        {selectedProperty?.mechanicalRoomSquareFootage?.toLocaleString() || '0'} SF
                       </div>
                       <p className="text-xs text-gray-500">Building Systems</p>
                     </div>

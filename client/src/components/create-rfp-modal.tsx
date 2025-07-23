@@ -187,13 +187,17 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
 
   // Handle bay configuration selection and calculate floor area
   const handleFloorAreaChange = (area: number, bayConfigs: BayConfiguration[]) => {
-    const roundedArea = Math.round(area);
-    setCalculatedFloorArea(roundedArea);
+    // Calculate total using bay square footage + static mechanical room SF (not individual allocations)
+    const baySquareFootage = bayConfigs.reduce((sum, bay) => sum + (bay.squareFootage || 0), 0);
+    const mechanicalRoomSF = selectedProperty?.mechanicalRoomSquareFootage || 0;
+    const totalRentableArea = baySquareFootage + mechanicalRoomSF;
+    
+    setCalculatedFloorArea(totalRentableArea);
     setSelectedBayConfigurations(bayConfigs);
     
     // Auto-populate the project area field with calculated value
-    if (roundedArea > 0) {
-      form.setValue("projectArea", `${roundedArea.toLocaleString()} SF (calculated from selected bay configurations)`);
+    if (totalRentableArea > 0) {
+      form.setValue("projectArea", `${totalRentableArea.toLocaleString()} SF (calculated from selected bay configurations)`);
     } else {
       form.setValue("projectArea", "");
     }
@@ -468,10 +472,9 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                           <label className="text-sm font-medium text-gray-700">Warehouse Area</label>
                           <div className="text-lg font-semibold text-green-600">
                             {(() => {
-                              const roundedTotal = Math.round(calculatedFloorArea);
-                              const totalMechanical = selectedBayConfigurations.reduce((sum, bay) => sum + (bay.mechanicalRoomAllocation || 0), 0);
-                              const roundedMechanical = Math.round(totalMechanical);
-                              const warehouseArea = roundedTotal - roundedMechanical;
+                              const baySquareFootage = selectedBayConfigurations.reduce((sum, bay) => sum + (bay.squareFootage || 0), 0);
+                              const mechanicalRoomSF = selectedProperty?.mechanicalRoomSquareFootage || 0;
+                              const warehouseArea = baySquareFootage;
                               return warehouseArea.toLocaleString();
                             })()} SF
                           </div>
@@ -480,7 +483,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                         <div>
                           <label className="text-sm font-medium text-gray-700">Mechanical Allocation</label>
                           <div className="text-lg font-semibold text-orange-600">
-                            {Math.round(selectedBayConfigurations.reduce((sum, bay) => sum + (bay.mechanicalRoomAllocation || 0), 0)).toLocaleString()} SF
+                            {selectedProperty?.mechanicalRoomSquareFootage?.toLocaleString() || '0'} SF
                           </div>
                           <p className="text-xs text-gray-500">Building Systems</p>
                         </div>

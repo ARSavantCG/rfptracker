@@ -73,23 +73,11 @@ export default function Properties() {
 
   const getTotalRentableArea = (property: Property): number => {
     const bayConfigurations = property.bayConfigurations as BayConfiguration[] || [];
-    
-    // Use the same calculation method as RFP modal: check if bays have mechanicalRoomAllocation calculated
-    const hasCalculatedAllocations = bayConfigurations.some(bay => bay.mechanicalRoomAllocation !== undefined);
-    
-    if (hasCalculatedAllocations) {
-      // Method 2: Use calculated bay allocations (same as RFP modal)
-      return bayConfigurations.reduce((total, bay) => {
-        return total + (bay.squareFootage || 0) + (bay.mechanicalRoomAllocation || 0);
-      }, 0);
-    } else {
-      // Method 1: Fallback to static calculation for properties without calculated allocations
-      const baySquareFootage = bayConfigurations.reduce((total, bay) => {
-        return total + (bay.squareFootage || 0);
-      }, 0);
-      const mechanicalRoomSquareFootage = property.mechanicalRoomSquareFootage || 0;
-      return baySquareFootage + mechanicalRoomSquareFootage;
-    }
+    const baySquareFootage = bayConfigurations.reduce((total, bay) => {
+      return total + (bay.squareFootage || 0);
+    }, 0);
+    const mechanicalRoomSquareFootage = property.mechanicalRoomSquareFootage || 0;
+    return baySquareFootage + mechanicalRoomSquareFootage;
   };
 
   const calculateParkingRatio = (property: Property): string => {

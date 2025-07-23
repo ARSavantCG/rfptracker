@@ -89,55 +89,42 @@ export default function BayConfigurationSelector({
         console.log(`  ${bay.bayName}: ${bay.squareFootage} SF`);
       });
       
-      // Compare against expected database values
-      const expectedBayValues = {
-        'Bay 1-2': 15031,
-        'Bay 2-3': 18017,
-        'Bay 3-4': 18046,
-        'Bay 4-5': 18064,  // This should be the corrected value
-        'Bay 5-6': 18054,
-        'Bay 6-7': 18054,
-        'Bay 7-8': 18024,
-        'Bay 8-9': 17987,
-        'Bay 9-10': 17987,
-        'Bay 10-11': 18024,
-        'Bay 11-12': 18054,
-        'Bay 12-13': 18054,
-        'Bay 13-14': 18059,
-        'Bay 14-15': 18024,
-        'Bay 15-16': 17987,
-        'Bay 16-17': 17987,
-        'Bay 17-18': 18054,
-        'Bay 18-19': 18054,
-        'Bay 19-20': 18054,
-        'Bay 20-21': 18054,
-        'Bay 21-22': 18046,
-        'Bay 22-23': 18017,
-        'Bay 23-24': 15031
-      };
+      // Show the exact calculation that's happening
+      console.log('🔢 DETAILED CALCULATION BREAKDOWN:');
+      console.log('- Number of selected bays:', selectedBayConfigs.length);
+      console.log('- Number of total available bays:', bayConfigurations.length);
       
-      console.log('🚨 COMPARING FRONTEND vs DATABASE VALUES:');
-      let foundMismatch = false;
-      selectedBayConfigs.forEach(bay => {
-        const expected = expectedBayValues[bay.bayName as keyof typeof expectedBayValues];
-        const actual = bay.squareFootage;
-        if (expected !== actual) {
-          console.log(`  ❌ MISMATCH FOUND: ${bay.bayName}: Expected ${expected} SF, Got ${actual} SF (Difference: ${actual - expected} SF)`);
-          foundMismatch = true;
-        }
+      // Calculate manually step by step to find the issue
+      let debugSum = 0;
+      selectedBayConfigs.forEach((bay, index) => {
+        console.log(`  Bay ${index + 1}: ${bay.bayName} = ${bay.squareFootage} SF`);
+        debugSum += bay.squareFootage;
       });
       
-      if (!foundMismatch) {
-        console.log('  ✅ No individual bay mismatches found, but total is still wrong by 10 SF');
-        console.log('  📊 Manual sum verification:');
-        let manualSum = 0;
-        selectedBayConfigs.forEach(bay => {
-          manualSum += bay.squareFootage;
-        });
-        console.log(`  📊 Manual calculated total: ${manualSum} SF`);
-        console.log(`  📊 Expected total: 408,763 SF`);
-        console.log(`  📊 Difference: ${manualSum - 408763} SF`);
+      console.log(`🔢 Debug sum total: ${debugSum} SF`);
+      console.log(`🔢 Reduce function result: ${selectedBaySquareFootage} SF`);
+      console.log(`🔢 Are they equal? ${debugSum === selectedBaySquareFootage}`);
+      
+      // Check if there are any duplicate bay IDs in selection
+      const uniqueBayIds = [...new Set(selectedBayIds)];
+      console.log(`🔍 Selected bay IDs count: ${selectedBayIds.length}`);
+      console.log(`🔍 Unique bay IDs count: ${uniqueBayIds.length}`);
+      if (selectedBayIds.length !== uniqueBayIds.length) {
+        console.log(`❌ DUPLICATE BAY IDS FOUND! This could cause double counting.`);
+        console.log(`🔍 Selected bay IDs:`, selectedBayIds);
+        console.log(`🔍 Unique bay IDs:`, uniqueBayIds);
       }
+      
+      // Check if any bay configurations are being counted twice
+      console.log(`🔍 Checking for duplicate bay configurations...`);
+      const bayIdCounts = new Map();
+      selectedBayConfigs.forEach(bay => {
+        const count = bayIdCounts.get(bay.id) || 0;
+        bayIdCounts.set(bay.id, count + 1);
+        if (count > 0) {
+          console.log(`❌ DUPLICATE BAY FOUND: ${bay.bayName} (ID: ${bay.id}) appears ${count + 1} times`);
+        }
+      });
     }
     
     // Calculate total property bay square footage for proportion calculation

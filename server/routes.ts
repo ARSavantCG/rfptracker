@@ -2406,6 +2406,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (property1) {
         const totalWarehouseSF = property1.bayConfigurations?.reduce((sum: number, bay: any) => sum + (bay.squareFootage || 0), 0) || 0;
         console.log(`DEBUG Properties API - Property 1 warehouse total: ${totalWarehouseSF} SF`);
+        
+        // Debug the bay configurations structure
+        console.log('DEBUG - Bay configurations count:', property1.bayConfigurations?.length);
+        console.log('DEBUG - First bay configuration:', JSON.stringify(property1.bayConfigurations?.[0], null, 2));
+        
+        // Check for missing squareFootage values
+        const missingBays = property1.bayConfigurations?.filter((bay: any) => !bay.squareFootage) || [];
+        if (missingBays.length > 0) {
+          console.log('DEBUG - Bays missing squareFootage:', missingBays.map((bay: any) => bay.bayName));
+        }
       }
       
       res.json(properties);

@@ -63,15 +63,30 @@ export default function BayConfigurationSelector({
 
   // Calculate total rentable area from selected individual bays with proportional mechanical allocation
   const calculateTotalArea = () => {
+    // 🚨 CRITICAL DEBUGGING - CAPTURE EVERY CALCULATION CALL
+    console.log('🚨🚨🚨 calculateTotalArea() EXECUTION START 🚨🚨🚨');
+    console.log('- selectedBayIds array:', selectedBayIds);
+    console.log('- selectedBayIds length:', selectedBayIds.length);
+    console.log('- bayConfigurations length:', bayConfigurations.length);
+    
     // Get selected bay configurations from original bay configurations
     const selectedBayConfigs = selectedBayIds.map(bayId => {
       return bayConfigurations.find(bay => bay.id === bayId);
     }).filter((bay): bay is NonNullable<typeof bay> => bay != null);
     
-    if (selectedBayConfigs.length === 0) return 0;
+    console.log('- selectedBayConfigs after filtering:', selectedBayConfigs.length);
+    
+    if (selectedBayConfigs.length === 0) {
+      console.log('🚨 EARLY RETURN: No bays selected');
+      return 0;
+    }
     
     // Calculate selected bay square footage (warehouse area only - use squareFootage, not rentableSquareFootage)
     const selectedBaySquareFootage = selectedBayConfigs.reduce((sum, bay) => sum + (bay.squareFootage || 0), 0);
+    
+    console.log('🚨 CALCULATED BAY TOTAL:', selectedBaySquareFootage, 'SF');
+    console.log('🚨 EXPECTED (for all 23 bays): 408,763 SF');
+    console.log('🚨 DIFFERENCE:', selectedBaySquareFootage - 408763, 'SF');
     
     // Debug: Show calculation when all bays selected
     if (selectedBayConfigs.length === bayConfigurations.length) {

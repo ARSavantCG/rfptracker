@@ -179,7 +179,41 @@ export default function BayConfigurationSelector({
     console.log('Total bays in property:', bayConfigurations.length);
     console.log('Individual bays processed:', individualBays.length);
     
+    // Force trigger debugging by setting selection
     setSelectedBayIds(availableBayIds);
+    
+    // Manually trigger calculation debugging immediately after selection
+    setTimeout(() => {
+      console.log('🔥 FORCED DEBUGGING TRIGGER AFTER SELECT ALL');
+      const selectedBayConfigs = availableBayIds.map(bayId => {
+        return bayConfigurations.find(bay => bay.id === bayId);
+      }).filter((bay): bay is NonNullable<typeof bay> => bay != null);
+      
+      const selectedBaySquareFootage = selectedBayConfigs.reduce((sum, bay) => sum + (bay.squareFootage || 0), 0);
+      
+      console.log('🔥 IMMEDIATE CALCULATION CHECK:');
+      console.log('- Selected bay configs length:', selectedBayConfigs.length);
+      console.log('- Bay configurations length:', bayConfigurations.length);
+      console.log('- Calculated bay SF total:', selectedBaySquareFootage);
+      console.log('- Expected bay SF total: 408,763');
+      console.log('- Difference:', selectedBaySquareFootage - 408763);
+      
+      // Show individual bay values  
+      console.log('🔥 INDIVIDUAL BAY BREAKDOWN:');
+      selectedBayConfigs.forEach((bay, index) => {
+        console.log(`  ${index + 1}. ${bay.bayName}: ${bay.squareFootage} SF`);
+      });
+      
+      // Check for duplicates
+      const bayIdCount = new Map();
+      selectedBayConfigs.forEach(bay => {
+        const count = bayIdCount.get(bay.id) || 0;
+        bayIdCount.set(bay.id, count + 1);
+        if (count > 0) {
+          console.log(`🚨 DUPLICATE BAY DETECTED: ${bay.bayName} (ID: ${bay.id}) appears ${count + 1} times`);
+        }
+      });
+    }, 100);
   };
 
   const totalArea = calculateTotalArea();

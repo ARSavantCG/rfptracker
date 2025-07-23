@@ -64,8 +64,6 @@ export default function BayConfigurationSelector({
   // Calculate total rentable area from selected individual bays with proportional mechanical allocation
   const calculateTotalArea = () => {
     // Get selected bay configurations from original bay configurations
-
-    
     const selectedBayConfigs = selectedBayIds.map(bayId => {
       return bayConfigurations.find(bay => bay.id === bayId);
     }).filter((bay): bay is NonNullable<typeof bay> => bay != null);
@@ -74,6 +72,20 @@ export default function BayConfigurationSelector({
     
     // Calculate selected bay square footage (warehouse area only - use squareFootage, not rentableSquareFootage)
     const selectedBaySquareFootage = selectedBayConfigs.reduce((sum, bay) => sum + (bay.squareFootage || 0), 0);
+    
+    // Debug: Show calculation when all bays selected
+    if (selectedBayConfigs.length === bayConfigurations.length) {
+      console.log('🔍 ALL BAYS SELECTED - CALCULATION CHECK:');
+      console.log('- Total bays:', selectedBayConfigs.length);
+      console.log('- Bay SF total:', selectedBaySquareFootage);
+      console.log('- Mechanical SF:', property.mechanicalRoomSquareFootage);
+      console.log('- Expected grand total: 409,189 SF');
+      
+      // Show each bay's contribution
+      selectedBayConfigs.forEach(bay => {
+        console.log(`  ${bay.bayName}: ${bay.squareFootage} SF`);
+      });
+    }
     
     // Calculate total property bay square footage for proportion calculation
     const totalPropertyBaysSF = bayConfigurations.reduce((sum, bay) => sum + (bay.squareFootage || 0), 0);

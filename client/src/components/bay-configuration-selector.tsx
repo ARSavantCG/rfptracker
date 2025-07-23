@@ -104,7 +104,15 @@ export default function BayConfigurationSelector({
     if (selectedBayConfigs.length === 0) return 0;
     
     // Calculate selected bay square footage (warehouse area only - use squareFootage, not rentableSquareFootage)
-    const selectedBaySquareFootage = selectedBayConfigs.reduce((sum, bay) => sum + (bay.squareFootage || 0), 0);
+    const selectedBaySquareFootage = selectedBayConfigs.reduce((sum, bay) => {
+      const sf = bay.squareFootage || 0;
+      console.log(`  Adding bay ${bay.bayName}: ${sf} SF`);
+      return sum + sf;
+    }, 0);
+    
+    console.log('🔢 DETAILED BAY CALCULATION:');
+    console.log('- Selected bay configs:', selectedBayConfigs.map(b => `${b.bayName}: ${b.squareFootage || 0} SF`));
+    console.log('- Sum calculation result:', selectedBaySquareFootage);
     
     // Calculate total property bay square footage for proportion calculation
     const totalPropertyBaysSF = bayConfigurations.reduce((sum, bay) => sum + (bay.squareFootage || 0), 0);

@@ -461,7 +461,14 @@ export async function generateRfpPdf(options: PdfGenerationOptions): Promise<Buf
 async function generateRfpHtml(options: PdfGenerationOptions): Promise<string> {
   const { rfp, invitationToBid, recipientType, recipientName, recipientCompany } = options;
   
-  const today = formatDate(new Date());
+  // Get current date in EST/EDT timezone to match user expectations
+  const today = new Date().toLocaleDateString('en-US', { 
+    weekday: 'long', 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric',
+    timeZone: 'America/New_York'
+  });
   const bidDeadline = invitationToBid?.bidSubmissionDeadline ? formatDate(invitationToBid.bidSubmissionDeadline) : formatDate(new Date());
   const projectStart = invitationToBid?.projectStartDate ? formatDate(invitationToBid.projectStartDate) : '';
   const projectEnd = invitationToBid?.projectEndDate ? formatDate(invitationToBid.projectEndDate) : '';

@@ -1520,7 +1520,6 @@ async function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, da
           <ul class="requirements-list">
             ${rfp.requestTypes.includes('pricing') ? '<li>✓ Pricing estimates and cost breakdown</li>' : ''}
             ${rfp.requestTypes.includes('schedule') ? '<li>✓ Project schedule and timeline</li>' : ''}
-            ${rfp.requestTypes.includes('space-plan') ? '<li>✓ Space planning and design concepts</li>' : ''}
           </ul>
         </div>
       </div>

@@ -338,7 +338,11 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
         projectDescription: data.projectDescription,
         documentsLink: data.documentsLink,
         keyDates: data.keyDates,
-        scopeOfWork: data.scopeOfWork,
+        // Transform scope of work to ensure quantity is a number
+        scopeOfWork: data.scopeOfWork.map(item => ({
+          ...item,
+          quantity: typeof item.quantity === 'string' ? parseFloat(item.quantity) || 0 : item.quantity
+        })),
         architectMilestones: data.architectMilestones,
         contractorMilestones: data.contractorMilestones,
         // Include contractor and architect selections

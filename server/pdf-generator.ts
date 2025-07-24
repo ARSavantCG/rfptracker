@@ -47,7 +47,20 @@ async function getTemplateContent(recipientType: string): Promise<any> {
 }
 
 function formatDate(date: string | Date): string {
-  const d = new Date(date);
+  let d: Date;
+  
+  if (typeof date === 'string') {
+    // If it's already a date string like "2025-07-28", parse it directly without timezone conversion
+    if (date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      const [year, month, day] = date.split('-').map(Number);
+      d = new Date(year, month - 1, day); // Create date in local timezone
+    } else {
+      d = new Date(date);
+    }
+  } else {
+    d = date;
+  }
+  
   return d.toLocaleDateString('en-US', { 
     weekday: 'long', 
     year: 'numeric', 
@@ -431,7 +444,15 @@ async function generateRfpHtml(options: PdfGenerationOptions): Promise<string> {
   const { rfp, invitationToBid, recipientType, recipientName, recipientCompany } = options;
   
   const today = formatDate(new Date());
+  // Add debug logging for date parsing
+  console.log('🔍 BID DEADLINE DEBUG:', {
+    rawDeadline: invitationToBid?.bidSubmissionDeadline,
+    typeof: typeof invitationToBid?.bidSubmissionDeadline
+  });
+  
   const bidDeadline = invitationToBid?.bidSubmissionDeadline ? formatDate(invitationToBid.bidSubmissionDeadline) : formatDate(new Date());
+  
+  console.log('🔍 FORMATTED BID DEADLINE:', bidDeadline);
   const projectStart = invitationToBid?.projectStartDate ? formatDate(invitationToBid.projectStartDate) : '';
   const projectEnd = invitationToBid?.projectEndDate ? formatDate(invitationToBid.projectEndDate) : '';
   

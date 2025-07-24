@@ -47,31 +47,45 @@ async function getTemplateContent(recipientType: string): Promise<any> {
 }
 
 function formatDate(date: string | Date): string {
-  let d: Date;
-  
   if (typeof date === 'string') {
     // If it's already a date string like "2025-07-28", parse it directly without timezone conversion
     if (date.match(/^\d{4}-\d{2}-\d{2}$/)) {
       const [year, month, day] = date.split('-').map(Number);
-      d = new Date(year, month - 1, day); // Create date in local timezone
+      const d = new Date(year, month - 1, day); // Create date in local timezone
+      return d.toLocaleDateString('en-US', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric'
+      });
     } else {
-      d = new Date(date);
+      const d = new Date(date);
+      return d.toLocaleDateString('en-US', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric'
+      });
     }
   } else {
-    // For Date objects, extract the date components to avoid UTC conversion
+    // For Date objects from database (UTC format), simply format as string
     const year = date.getUTCFullYear();
-    const month = date.getUTCMonth();
+    const month = date.getUTCMonth(); // 0-11 (July = 6)
     const day = date.getUTCDate();
-    d = new Date(year, month, day); // Create date in local timezone
+    
+    // Extract UTC date components to avoid timezone conversion issues
+    // When Date objects come from database in UTC format, we need to prevent
+    // automatic timezone conversion that causes date display to shift backward
+    
+    // Create new date using UTC components in local timezone
+    const localDate = new Date(year, month, day);
+    return localDate.toLocaleDateString('en-US', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric'
+    });
   }
-  
-  return d.toLocaleDateString('en-US', { 
-    weekday: 'long', 
-    year: 'numeric', 
-    month: 'long', 
-    day: 'numeric',
-    timeZone: 'America/New_York'
-  });
 }
 
 function getMilestoneRequestsSection(invitationToBid: any, recipientType: string): string {
@@ -448,15 +462,7 @@ async function generateRfpHtml(options: PdfGenerationOptions): Promise<string> {
   const { rfp, invitationToBid, recipientType, recipientName, recipientCompany } = options;
   
   const today = formatDate(new Date());
-  // Add debug logging for date parsing
-  console.log('🔍 BID DEADLINE DEBUG:', {
-    rawDeadline: invitationToBid?.bidSubmissionDeadline,
-    typeof: typeof invitationToBid?.bidSubmissionDeadline
-  });
-  
   const bidDeadline = invitationToBid?.bidSubmissionDeadline ? formatDate(invitationToBid.bidSubmissionDeadline) : formatDate(new Date());
-  
-  console.log('🔍 FORMATTED BID DEADLINE:', bidDeadline);
   const projectStart = invitationToBid?.projectStartDate ? formatDate(invitationToBid.projectStartDate) : '';
   const projectEnd = invitationToBid?.projectEndDate ? formatDate(invitationToBid.projectEndDate) : '';
   

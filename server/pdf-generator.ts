@@ -58,7 +58,11 @@ function formatDate(date: string | Date): string {
       d = new Date(date);
     }
   } else {
-    d = date;
+    // For Date objects, extract the date components to avoid UTC conversion
+    const year = date.getUTCFullYear();
+    const month = date.getUTCMonth();
+    const day = date.getUTCDate();
+    d = new Date(year, month, day); // Create date in local timezone
   }
   
   return d.toLocaleDateString('en-US', { 

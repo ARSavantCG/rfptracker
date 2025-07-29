@@ -28,6 +28,7 @@ import type { Property, ExecutedLease, BayConfiguration } from "@shared/schema";
 const leaseFormSchema = z.object({
   tenantName: z.string().min(1, "Tenant name is required"),
   assignedBays: z.array(z.string()).min(1, "At least one bay must be assigned"),
+  rentableAreaOverride: z.number().min(0).optional(),
   standardParking: z.number().min(0).default(0),
   accessibleParking: z.number().min(0).default(0),
   evParking: z.number().min(0).default(0),
@@ -54,6 +55,7 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
     defaultValues: {
       tenantName: "",
       assignedBays: [],
+      rentableAreaOverride: undefined,
       standardParking: 0,
       accessibleParking: 0,
       evParking: 0,
@@ -124,6 +126,7 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
     form.reset({
       tenantName: lease.tenantName,
       assignedBays: lease.assignedBays || [],
+      rentableAreaOverride: lease.rentableAreaOverride || undefined,
       standardParking: lease.standardParking || 0,
       accessibleParking: lease.accessibleParking || 0,
       evParking: lease.evParking || 0,
@@ -270,6 +273,32 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
                       )}
                     />
 
+                    {/* Rentable Area Override */}
+                    <FormField
+                      control={form.control}
+                      name="rentableAreaOverride"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Rentable Area Override (Optional)</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              min="0"
+                              {...field}
+                              value={field.value || ""}
+                              onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                              placeholder="Override calculated area with actual lease terms"
+                            />
+                          </FormControl>
+                          <div className="text-xs text-gray-500 mt-1">
+                            Leave empty to use calculated area from bay configurations. 
+                            Enter a value to override with actual lease square footage.
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
                     {/* Parking Information */}
                     <div className="grid grid-cols-4 gap-4">
                       <FormField
@@ -410,6 +439,10 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
                               <span className="text-gray-500">Rentable Area:</span>
                               <span className="ml-2 font-semibold text-blue-700">
                                 {(() => {
+                                  // Use override if available, otherwise calculate from bay configurations
+                                  if (lease.rentableAreaOverride) {
+                                    return lease.rentableAreaOverride.toLocaleString();
+                                  }
                                   const assignedBayConfigs = property.bayConfigurations?.filter(
                                     (bay: any) => lease.assignedBays?.includes(bay.id)
                                   ) || [];
@@ -419,6 +452,9 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
                                   );
                                   return totalRentableArea.toLocaleString();
                                 })()} SF
+                                {lease.rentableAreaOverride && (
+                                  <span className="text-xs text-orange-600 ml-1">(Override)</span>
+                                )}
                               </span>
                             </div>
                             <div className="text-sm">

@@ -4889,6 +4889,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     // Calculate remaining space after executed leases
     const leasedArea = executedLeases.reduce((sum, lease) => {
+      // Use override if available, otherwise calculate from bay configurations
+      if (lease.rentableAreaOverride) {
+        return sum + lease.rentableAreaOverride;
+      }
       const assignedBayConfigs = property.bayConfigurations?.filter(
         (bay: any) => lease.assignedBays?.includes(bay.id)
       ) || [];
@@ -5013,14 +5017,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       </thead>
       <tbody>
         ${executedLeases.map(lease => {
-          // Calculate rentable area from assigned bays
-          const assignedBayConfigs = property.bayConfigurations?.filter(
-            (bay: any) => lease.assignedBays?.includes(bay.id)
-          ) || [];
-          const totalRentableArea = assignedBayConfigs.reduce(
-            (total: number, bay: any) => total + (bay.rentableSquareFootage || bay.squareFootage || 0),
-            0
-          );
+          // Use override if available, otherwise calculate from bay configurations
+          let totalRentableArea;
+          if (lease.rentableAreaOverride) {
+            totalRentableArea = lease.rentableAreaOverride;
+          } else {
+            const assignedBayConfigs = property.bayConfigurations?.filter(
+              (bay: any) => lease.assignedBays?.includes(bay.id)
+            ) || [];
+            totalRentableArea = assignedBayConfigs.reduce(
+              (total: number, bay: any) => total + (bay.rentableSquareFootage || bay.squareFootage || 0),
+              0
+            );
+          }
           
           // Calculate vehicular parking total
           const vehicularParking = (lease.standardParking || 0) + (lease.accessibleParking || 0) + (lease.evParking || 0);
@@ -5028,7 +5037,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return `
           <tr>
             <td>${lease.tenantName}</td>
-            <td>${totalRentableArea.toLocaleString()} SF</td>
+            <td>${totalRentableArea.toLocaleString()} SF${lease.rentableAreaOverride ? ' <span style="color: #ea580c; font-size: 10px;">(Override)</span>' : ''}</td>
             <td>${vehicularParking} spaces</td>
             <td>${lease.trailerParking || 0} spaces</td>
             <td>N/A</td>

@@ -438,6 +438,10 @@ export default function Properties() {
                                 
                                 // Calculate totals for leased areas and parking
                                 const totalLeasedArea = propertyLeases.reduce((total: number, lease: any) => {
+                                  // Use override if available, otherwise calculate from bay configurations
+                                  if (lease.rentableAreaOverride) {
+                                    return total + lease.rentableAreaOverride;
+                                  }
                                   const assignedBayConfigs = property.bayConfigurations?.filter(
                                     (bay: any) => lease.assignedBays?.includes(bay.id)
                                   ) || [];
@@ -482,14 +486,19 @@ export default function Properties() {
                                     ) : (
                                       <div className="space-y-2 max-h-32 overflow-y-auto">
                                         {propertyLeases.map((lease: any) => {
-                                          // Calculate rentable area for assigned bays
-                                          const assignedBayConfigs = property.bayConfigurations?.filter(
-                                            (bay: any) => lease.assignedBays?.includes(bay.id)
-                                          ) || [];
-                                          const totalRentableArea = assignedBayConfigs.reduce(
-                                            (total: number, bay: any) => total + (bay.rentableSquareFootage || bay.squareFootage || 0),
-                                            0
-                                          );
+                                          // Use override if available, otherwise calculate from bay configurations
+                                          let totalRentableArea;
+                                          if (lease.rentableAreaOverride) {
+                                            totalRentableArea = lease.rentableAreaOverride;
+                                          } else {
+                                            const assignedBayConfigs = property.bayConfigurations?.filter(
+                                              (bay: any) => lease.assignedBays?.includes(bay.id)
+                                            ) || [];
+                                            totalRentableArea = assignedBayConfigs.reduce(
+                                              (total: number, bay: any) => total + (bay.rentableSquareFootage || bay.squareFootage || 0),
+                                              0
+                                            );
+                                          }
                                           
                                           // Calculate vehicular and trailer parking separately
                                           const vehicularParking = (lease.standardParking || 0) + 
@@ -507,6 +516,9 @@ export default function Properties() {
                                                   <span className="text-gray-500">Area:</span>
                                                   <span className="font-medium">
                                                     {totalRentableArea.toLocaleString()} SF
+                                                    {lease.rentableAreaOverride && (
+                                                      <span className="text-xs text-orange-600 ml-1">(Override)</span>
+                                                    )}
                                                   </span>
                                                 </div>
                                                 <div className="flex justify-between">

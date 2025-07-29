@@ -512,6 +512,7 @@ export const executedLeases = pgTable("executed_leases", {
   propertyId: integer("property_id").notNull(),
   tenantName: text("tenant_name").notNull(),
   assignedBays: text("assigned_bays").array().notNull().default([]), // Bay IDs like ["A1", "A2", "B3"]
+  rentableAreaOverride: integer("rentable_area_override"), // Override calculated area with actual lease terms
   standardParking: integer("standard_parking").default(0),
   accessibleParking: integer("accessible_parking").default(0),
   evParking: integer("ev_parking").default(0),

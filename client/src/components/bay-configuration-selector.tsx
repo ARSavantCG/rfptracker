@@ -3,23 +3,28 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Calculator, Grid3x3, Compass, Navigation } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Calculator, Grid3x3, Compass, Navigation, Edit3, RotateCcw } from "lucide-react";
 import type { Property, BayConfiguration, ExecutedLease } from "@shared/schema";
 
 interface BayConfigurationSelectorProps {
   property: Property;
-  onRentableAreaChange: (area: number, selectedBays: BayConfiguration[]) => void;
+  onRentableAreaChange: (area: number, selectedBays: BayConfiguration[], overrideArea?: number) => void;
   initialSelectedBays?: BayConfiguration[];
+  initialOverrideArea?: number;
 }
 
 export default function BayConfigurationSelector({ 
   property, 
   onRentableAreaChange,
-  initialSelectedBays = []
+  initialSelectedBays = [],
+  initialOverrideArea
 }: BayConfigurationSelectorProps) {
   const [selectedBayIds, setSelectedBayIds] = useState<string[]>(
     initialSelectedBays.map(bay => bay.id)
   );
+  const [isOverrideMode, setIsOverrideMode] = useState<boolean>(initialOverrideArea !== undefined);
+  const [overrideArea, setOverrideArea] = useState<string>(initialOverrideArea?.toString() || "");
 
   // Fetch executed leases for this property to exclude leased bays
   const { data: executedLeases = [], isLoading: isLoadingLeases } = useQuery<ExecutedLease[]>({
@@ -244,10 +249,15 @@ export default function BayConfigurationSelector({
     };
   }).filter((bay): bay is NonNullable<typeof bay> => bay != null);
 
-  // Update parent component when selection changes
+  // Calculate final area considering override
+  const calculatedArea = calculateTotalArea();
+  const finalArea = isOverrideMode && overrideArea ? parseFloat(overrideArea) : calculatedArea;
+  const overrideValue = isOverrideMode && overrideArea ? parseFloat(overrideArea) : undefined;
+
+  // Update parent component when selection or override changes
   useEffect(() => {
-    onRentableAreaChange(totalArea, selectedBays);
-  }, [selectedBayIds, totalArea]);
+    onRentableAreaChange(finalArea, selectedBays, overrideValue);
+  }, [selectedBayIds, finalArea, overrideValue]);
 
   if (!individualBays.length) {
     return (
@@ -472,19 +482,83 @@ export default function BayConfigurationSelector({
               
               <div className="flex items-center gap-2 p-3 bg-orange-50 rounded-lg">
                 <Calculator className="h-4 w-4 text-orange-600" />
-                <div className="flex flex-col">
+                <div className="flex flex-col flex-1">
                   <span className="font-medium text-orange-900" key="fixed-total-area">
-                    Total Rentable Area: {Math.round(totalArea).toLocaleString()} SF
+                    {isOverrideMode ? "Override" : "Calculated"} Rentable Area: {Math.round(finalArea).toLocaleString()} SF
                   </span>
-                  <span className="text-xs text-orange-700">
-                    Building Total Available: {bayConfigurations.reduce((sum, bay) => sum + bay.squareFootage, 0).toLocaleString()} SF
-                  </span>
-                  <span className="text-xs text-green-600">
-                    Includes mechanical room allocation: {property.mechanicalRoomSquareFootage ? 
-                      Math.round((selectedBayIds.length / bayConfigurations.length) * property.mechanicalRoomSquareFootage) : 0} SF
-                  </span>
+                  {!isOverrideMode && (
+                    <>
+                      <span className="text-xs text-orange-700">
+                        Building Total Available: {bayConfigurations.reduce((sum, bay) => sum + bay.squareFootage, 0).toLocaleString()} SF
+                      </span>
+                      <span className="text-xs text-green-600">
+                        Includes mechanical room allocation: {property.mechanicalRoomSquareFootage ? 
+                          Math.round((selectedBayIds.length / bayConfigurations.length) * property.mechanicalRoomSquareFootage) : 0} SF
+                      </span>
+                    </>
+                  )}
+                  {isOverrideMode && (
+                    <span className="text-xs text-blue-600">
+                      Original calculated area: {Math.round(calculatedArea).toLocaleString()} SF
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  {!isOverrideMode ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setIsOverrideMode(true);
+                        setOverrideArea(Math.round(calculatedArea).toString());
+                      }}
+                      className="text-blue-600 border-blue-600 hover:bg-blue-50"
+                    >
+                      <Edit3 className="h-3 w-3 mr-1" />
+                      Override
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setIsOverrideMode(false);
+                        setOverrideArea("");
+                      }}
+                      className="text-gray-600 border-gray-300 hover:bg-gray-50"
+                    >
+                      <RotateCcw className="h-3 w-3 mr-1" />
+                      Reset
+                    </Button>
+                  )}
                 </div>
               </div>
+              
+              {/* Override Area Input */}
+              {isOverrideMode && (
+                <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <Label htmlFor="override-area" className="text-sm font-medium text-blue-900 mb-2 block">
+                    Manual Rentable Area Override
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="override-area"
+                      type="number"
+                      value={overrideArea}
+                      onChange={(e) => setOverrideArea(e.target.value)}
+                      placeholder="Enter square footage"
+                      className="flex-1 border-blue-300 focus:border-blue-500 focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-blue-700 font-medium">SF</span>
+                  </div>
+                  <p className="text-xs text-blue-600 mt-2">
+                    Use this to enter the actual lease area when it differs from the bay configuration calculations. 
+                    Bay configurations will remain accurate for future leases.
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </div>

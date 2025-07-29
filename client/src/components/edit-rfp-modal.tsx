@@ -64,14 +64,17 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
   });
 
   // Handle bay configuration selection and use pre-calculated area from bay selector
-  const handleFloorAreaChange = (area: number, bayConfigs: BayConfiguration[]) => {
+  const handleFloorAreaChange = (area: number, bayConfigs: BayConfiguration[], overrideArea?: number) => {
     // Use the area calculated by the Bay Configuration Selector (already includes proportional mechanical allocation)
     setCalculatedFloorArea(area);
     setSelectedBayConfigurations(bayConfigs);
     
     // Auto-populate the project area field with pre-calculated value
     if (area > 0) {
-      form.setValue("projectArea", `${area.toLocaleString()} SF (calculated from selected bay configurations)`);
+      const areaText = overrideArea 
+        ? `${area.toLocaleString()} SF (override area for existing lease)`
+        : `${area.toLocaleString()} SF (calculated from selected bay configurations)`;
+      form.setValue("projectArea", areaText);
     } else {
       form.setValue("projectArea", "");
     }

@@ -45,6 +45,7 @@ export const rfpRequests = pgTable("rfp_requests", {
   officeAreaExisting: text("office_area_existing"),
   officeAreaNew: text("office_area_new"),
   warehouseArea: text("warehouse_area"),
+  warehouseAreaOverride: text("warehouse_area_override"), // Manual override for existing tenant situations
   warehouseNotes: text("warehouse_notes"),
   areaBreakdown: json("area_breakdown").$type<{id: string, description: string, squareFootage: string, notes?: string}[]>().default([]),
   projectAddress: text("project_address"),

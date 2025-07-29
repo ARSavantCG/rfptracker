@@ -4886,14 +4886,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const totalBays = property.bayConfigurations?.length || 0;
     
     // Calculate remaining space after executed leases
-    const leasedArea = executedLeases.reduce((sum, lease) => sum + (lease.rentableArea || 0), 0);
+    const leasedArea = executedLeases.reduce((sum, lease) => {
+      const assignedBayConfigs = property.bayConfigurations?.filter(
+        (bay: any) => lease.assignedBays?.includes(bay.id)
+      ) || [];
+      const leaseArea = assignedBayConfigs.reduce(
+        (total: number, bay: any) => total + (bay.rentableSquareFootage || bay.squareFootage || 0),
+        0
+      );
+      return sum + leaseArea;
+    }, 0);
     const remainingArea = totalRentableArea - leasedArea;
     
     // Calculate parking totals
     const totalVehicularParking = (property.standardParking || 0) + (property.accessibleParking || 0) + (property.evParking || 0);
     const totalTrailerParking = property.trailerParking || 0;
     
-    const leasedVehicularParking = executedLeases.reduce((sum, lease) => sum + (lease.vehicularParking || 0), 0);
+    const leasedVehicularParking = executedLeases.reduce((sum, lease) => sum + ((lease.standardParking || 0) + (lease.accessibleParking || 0) + (lease.evParking || 0)), 0);
     const leasedTrailerParking = executedLeases.reduce((sum, lease) => sum + (lease.trailerParking || 0), 0);
     
     const remainingVehicularParking = totalVehicularParking - leasedVehicularParking;
@@ -5001,15 +5010,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         </tr>
       </thead>
       <tbody>
-        ${executedLeases.map(lease => `
+        ${executedLeases.map(lease => {
+          // Calculate rentable area from assigned bays
+          const assignedBayConfigs = property.bayConfigurations?.filter(
+            (bay: any) => lease.assignedBays?.includes(bay.id)
+          ) || [];
+          const totalRentableArea = assignedBayConfigs.reduce(
+            (total: number, bay: any) => total + (bay.rentableSquareFootage || bay.squareFootage || 0),
+            0
+          );
+          
+          // Calculate vehicular parking total
+          const vehicularParking = (lease.standardParking || 0) + (lease.accessibleParking || 0) + (lease.evParking || 0);
+          
+          return `
           <tr>
             <td>${lease.tenantName}</td>
-            <td>${(lease.rentableArea || 0).toLocaleString()} SF</td>
-            <td>${lease.vehicularParking || 0} spaces</td>
+            <td>${totalRentableArea.toLocaleString()} SF</td>
+            <td>${vehicularParking} spaces</td>
             <td>${lease.trailerParking || 0} spaces</td>
-            <td>${lease.leaseDate ? new Date(lease.leaseDate).toLocaleDateString() : 'N/A'}</td>
+            <td>N/A</td>
           </tr>
-        `).join('')}
+        `;}).join('')}
       </tbody>
     </table>
   </div>

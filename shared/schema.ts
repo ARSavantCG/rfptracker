@@ -83,6 +83,7 @@ export const insertRfpRequestSchema = createInsertSchema(rfpRequests).omit({
   contractorDueDate: z.string().optional().transform((val) => val ? new Date(val) : null),
   architectDueDate: z.string().optional().transform((val) => val ? new Date(val) : null),
   dueDate: z.string().optional().transform((val) => val ? new Date(val) : undefined),
+  warehouseAreaOverride: z.string().optional().nullable(),
   areaBreakdown: z.array(z.object({
     id: z.string(),
     description: z.string(),

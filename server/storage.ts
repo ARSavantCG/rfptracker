@@ -315,6 +315,29 @@ export class DatabaseStorage implements IStorage {
   async createRfpRequest(request: InsertRfpRequest): Promise<RfpRequest> {
     const rfpNumber = await this.generateRfpNumber();
     
+    // Check if project area indicates override and extract the override value
+    let warehouseAreaOverride = null;
+    let warehouseArea = null;
+    
+    if (request.projectArea) {
+      if (request.projectArea.includes("override area for existing lease")) {
+        // Extract the number from the area text (e.g., "110,422 SF (override area for existing lease)")
+        const match = request.projectArea.match(/(\d{1,3}(?:,\d{3})*)/);
+        if (match) {
+          warehouseAreaOverride = match[1].replace(/,/g, '');
+        }
+      } else if (request.selectedBayConfigurations && Array.isArray(request.selectedBayConfigurations)) {
+        // Calculate normal warehouse area from bay configurations
+        const totalRentableArea = request.selectedBayConfigurations.reduce((sum: number, bay: any) => {
+          return sum + (bay.rentableSquareFootage || 0);
+        }, 0);
+        
+        if (totalRentableArea > 0) {
+          warehouseArea = Math.round(totalRentableArea).toString();
+        }
+      }
+    }
+    
     const [rfp] = await db
       .insert(rfpRequests)
       .values({
@@ -330,6 +353,8 @@ export class DatabaseStorage implements IStorage {
         architectDueDate: request.architectDueDate || null,
         developmentContact: request.developmentContact || null,
         projectArea: request.projectArea || null,
+        warehouseArea: warehouseArea,
+        warehouseAreaOverride: warehouseAreaOverride,
         requestTypes: request.requestTypes,
         notes: request.notes || null,
         files: request.files || [],
@@ -349,14 +374,25 @@ export class DatabaseStorage implements IStorage {
       updateData.confidential = Boolean(updateData.confidential);
     }
     
-    // Auto-calculate warehouse area from bay configurations if provided
-    if (updateData.selectedBayConfigurations && Array.isArray(updateData.selectedBayConfigurations)) {
-      const totalRentableArea = updateData.selectedBayConfigurations.reduce((sum: number, bay: any) => {
-        return sum + (bay.rentableSquareFootage || 0);
-      }, 0);
-      
-      if (totalRentableArea > 0) {
-        updateData.warehouseArea = Math.round(totalRentableArea).toString();
+    // Check if project area indicates override and extract the override value
+    if (updateData.projectArea) {
+      if (updateData.projectArea.includes("override area for existing lease")) {
+        // Extract the number from the area text (e.g., "110,422 SF (override area for existing lease)")
+        const match = updateData.projectArea.match(/(\d{1,3}(?:,\d{3})*)/);
+        if (match) {
+          updateData.warehouseAreaOverride = match[1].replace(/,/g, '');
+          updateData.warehouseArea = null; // Clear normal warehouse area when override is used
+        }
+      } else if (updateData.selectedBayConfigurations && Array.isArray(updateData.selectedBayConfigurations)) {
+        // Calculate normal warehouse area from bay configurations
+        const totalRentableArea = updateData.selectedBayConfigurations.reduce((sum: number, bay: any) => {
+          return sum + (bay.rentableSquareFootage || 0);
+        }, 0);
+        
+        if (totalRentableArea > 0) {
+          updateData.warehouseArea = Math.round(totalRentableArea).toString();
+          updateData.warehouseAreaOverride = null; // Clear override when using calculated area
+        }
       }
     }
     

@@ -15,6 +15,7 @@ import {
   bidLineItems,
   properties,
   propertyExistingImprovements,
+  propertyAttachments,
   evaluationBudgets,
   evaluationBudgetAttachments,
   evaluationBudgetHistory,
@@ -47,6 +48,8 @@ import {
   type PropertyExistingImprovement,
   type InsertPropertyExistingImprovement,
   type UpdatePropertyExistingImprovement,
+  type PropertyAttachment,
+  type InsertPropertyAttachment,
   type EvaluationBudget,
   type InsertEvaluationBudget,
   type UpdateEvaluationBudget,
@@ -75,7 +78,14 @@ import {
   pdfTemplates,
   type PdfTemplate,
   type InsertPdfTemplate,
+  propertyAttachments,
+  type PropertyAttachment as SchemaPropertyAttachment,
+  type InsertPropertyAttachment as SchemaInsertPropertyAttachment,
 } from "@shared/schema";
+
+// Use schema types for Property Attachments
+export type PropertyAttachment = SchemaPropertyAttachment;
+export type InsertPropertyAttachment = SchemaInsertPropertyAttachment;
 import { db } from "./db";
 import { eq, desc, sql, like, or, and, asc, gte, lte } from "drizzle-orm";
 
@@ -1456,6 +1466,38 @@ class ExtendedDatabaseStorage extends DatabaseStorage {
 
   async getAllPdfTemplates(): Promise<PdfTemplate[]> {
     return await db.select().from(pdfTemplates).orderBy(asc(pdfTemplates.templateKey));
+  }
+
+  // Property Attachments methods
+  async getPropertyAttachments(propertyId: number): Promise<PropertyAttachment[]> {
+    return await db
+      .select()
+      .from(propertyAttachments)
+      .where(eq(propertyAttachments.propertyId, propertyId))
+      .orderBy(desc(propertyAttachments.uploadedAt));
+  }
+
+  async getPropertyAttachment(id: number): Promise<PropertyAttachment | undefined> {
+    const [attachment] = await db
+      .select()
+      .from(propertyAttachments)
+      .where(eq(propertyAttachments.id, id));
+    return attachment || undefined;
+  }
+
+  async createPropertyAttachment(attachment: InsertPropertyAttachment): Promise<PropertyAttachment> {
+    const [created] = await db
+      .insert(propertyAttachments)
+      .values(attachment)
+      .returning();
+    return created;
+  }
+
+  async deletePropertyAttachment(id: number): Promise<boolean> {
+    const result = await db
+      .delete(propertyAttachments)
+      .where(eq(propertyAttachments.id, id));
+    return result.rowCount! > 0;
   }
 
   // RFP Format Settings methods

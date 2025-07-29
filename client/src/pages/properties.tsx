@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Building, MapPin, Plus, Search, Edit, Grid, ChevronDown, ChevronUp } from "lucide-react";
+import { Building, MapPin, Plus, Search, Edit, Grid, ChevronDown, ChevronUp, Printer } from "lucide-react";
 import { useState } from "react";
 import Navigation from "@/components/navigation";
 import { PropertyFormModal } from "@/components/property-form-modal";
@@ -10,6 +10,7 @@ import BayConfigurationManager from "@/components/bay-configuration-manager";
 import { formatDate } from "@/lib/utils";
 import LeaseManagementModal from "@/components/lease-management-modal";
 import { PropertyExistingImprovementsModal } from "@/components/property-existing-improvements-modal";
+import { PropertyAttachments } from "@/components/property-attachments";
 import type { Property, BayConfiguration } from "@shared/schema";
 
 export default function Properties() {
@@ -255,6 +256,37 @@ export default function Properties() {
                                   <Edit className="h-4 w-4" />
                                 </Button>
                               }
+                            />
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={async () => {
+                                try {
+                                  const token = localStorage.getItem('auth-token');
+                                  const response = await fetch(`/api/properties/${property.id}/print`, {
+                                    headers: {
+                                      'Authorization': `Bearer ${token}`
+                                    }
+                                  });
+                                  
+                                  if (!response.ok) {
+                                    throw new Error('Print failed');
+                                  }
+                                  
+                                  const blob = await response.blob();
+                                  const url = window.URL.createObjectURL(blob);
+                                  window.open(url, '_blank');
+                                } catch (error) {
+                                  console.error('Print error:', error);
+                                }
+                              }}
+                              title="Print property report"
+                            >
+                              <Printer className="h-4 w-4" />
+                            </Button>
+                            <PropertyAttachments 
+                              propertyId={property.id}
+                              propertyName={property.propertyName || 'Property'}
                             />
                           </div>
                         </div>

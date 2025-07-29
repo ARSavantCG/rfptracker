@@ -4763,6 +4763,331 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Property Attachments routes
+  app.get("/api/properties/:id/attachments", requireAuth, async (req, res) => {
+    try {
+      const propertyId = parseInt(req.params.id);
+      if (isNaN(propertyId)) {
+        return res.status(400).json({ message: "Invalid property ID" });
+      }
+
+      const attachments = await storage.getPropertyAttachments(propertyId);
+      res.json(attachments);
+    } catch (error) {
+      console.error("Error fetching property attachments:", error);
+      res.status(500).json({ message: "Failed to fetch property attachments" });
+    }
+  });
+
+  app.post("/api/properties/:id/attachments", requireAuth, upload.any(), async (req, res) => {
+    try {
+      const propertyId = parseInt(req.params.id);
+      if (isNaN(propertyId)) {
+        return res.status(400).json({ message: "Invalid property ID" });
+      }
+
+      const files = req.files as Express.Multer.File[];
+      if (!files || files.length === 0) {
+        return res.status(400).json({ message: "No files provided" });
+      }
+
+      const savedAttachments = [];
+      for (const file of files) {
+        const fileType = file.mimetype.includes('pdf') ? 'pdf' : 
+                        file.mimetype.includes('dwg') || file.originalname.toLowerCase().endsWith('.dwg') ? 'dwg' : 'other';
+        
+        const attachment = await storage.createPropertyAttachment({
+          propertyId,
+          filename: file.filename,
+          originalName: file.originalname,
+          size: file.size,
+          mimeType: file.mimetype,
+          fileType,
+          description: req.body.description || null
+        });
+        savedAttachments.push(attachment);
+      }
+
+      res.json(savedAttachments);
+    } catch (error) {
+      console.error("Error uploading property attachments:", error);
+      res.status(500).json({ message: "Failed to upload property attachments" });
+    }
+  });
+
+  app.get("/api/properties/:id/attachments/:attachmentId/download", requireAuth, async (req, res) => {
+    try {
+      const propertyId = parseInt(req.params.id);
+      const attachmentId = parseInt(req.params.attachmentId);
+      
+      if (isNaN(propertyId) || isNaN(attachmentId)) {
+        return res.status(400).json({ message: "Invalid property or attachment ID" });
+      }
+
+      const attachment = await storage.getPropertyAttachment(attachmentId);
+      if (!attachment || attachment.propertyId !== propertyId) {
+        return res.status(404).json({ message: "Attachment not found" });
+      }
+
+      const filePath = path.join(uploadsDir, attachment.filename);
+      if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ message: "File not found on disk" });
+      }
+
+      res.download(filePath, attachment.originalName);
+    } catch (error) {
+      console.error("Error downloading property attachment:", error);
+      res.status(500).json({ message: "Failed to download attachment" });
+    }
+  });
+
+  app.delete("/api/properties/:id/attachments/:attachmentId", requireAuth, async (req, res) => {
+    try {
+      const propertyId = parseInt(req.params.id);
+      const attachmentId = parseInt(req.params.attachmentId);
+      
+      if (isNaN(propertyId) || isNaN(attachmentId)) {
+        return res.status(400).json({ message: "Invalid property or attachment ID" });
+      }
+
+      const attachment = await storage.getPropertyAttachment(attachmentId);
+      if (!attachment || attachment.propertyId !== propertyId) {
+        return res.status(404).json({ message: "Attachment not found" });
+      }
+
+      // Delete file from disk
+      const filePath = path.join(uploadsDir, attachment.filename);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+
+      // Delete from database
+      const deleted = await storage.deletePropertyAttachment(attachmentId);
+      if (!deleted) {
+        return res.status(404).json({ message: "Failed to delete attachment" });
+      }
+
+      res.json({ message: "Attachment deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting property attachment:", error);
+      res.status(500).json({ message: "Failed to delete attachment" });
+    }
+  });
+
+  // Property print HTML generator
+  function generatePropertyPrintHtml(property: any, executedLeases: any[], propertyImprovements: any[]): string {
+    const totalRentableArea = property.bayConfigurations?.reduce((sum: number, bay: any) => sum + (bay.rentableSquareFootage || 0), 0) + (property.mechanicalRoomArea || 0);
+    const totalBays = property.bayConfigurations?.length || 0;
+    
+    // Calculate remaining space after executed leases
+    const leasedArea = executedLeases.reduce((sum, lease) => sum + (lease.rentableArea || 0), 0);
+    const remainingArea = totalRentableArea - leasedArea;
+    
+    // Calculate parking totals
+    const totalVehicularParking = (property.standardParking || 0) + (property.accessibleParking || 0) + (property.evParking || 0);
+    const totalTrailerParking = property.trailerParking || 0;
+    
+    const leasedVehicularParking = executedLeases.reduce((sum, lease) => sum + (lease.vehicularParking || 0), 0);
+    const leasedTrailerParking = executedLeases.reduce((sum, lease) => sum + (lease.trailerParking || 0), 0);
+    
+    const remainingVehicularParking = totalVehicularParking - leasedVehicularParking;
+    const remainingTrailerParking = totalTrailerParking - leasedTrailerParking;
+
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Property Report - ${property.propertyName}</title>
+  <style>
+    @media print {
+      .no-print { display: none !important; }
+      @page { margin: 0.5in; }
+      body { font-size: 11px; }
+    }
+    body { font-family: 'Segoe UI', sans-serif; font-size: 12px; margin: 0; padding: 20px; line-height: 1.4; }
+    .no-print { background: #3b82f6; color: white; padding: 15px; text-align: center; margin-bottom: 20px; border-radius: 8px; }
+    .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #e5e7eb; padding-bottom: 20px; }
+    .header h1 { font-size: 28px; margin: 0; color: #1f2937; }
+    .header .subtitle { font-size: 16px; color: #6b7280; margin: 5px 0; }
+    .section { margin-bottom: 30px; }
+    .section h2 { font-size: 18px; color: #1f2937; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; margin-bottom: 15px; }
+    .section h3 { font-size: 14px; color: #374151; margin: 15px 0 10px 0; }
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+    .info-item { background: #f9fafb; padding: 15px; border-radius: 8px; }
+    .info-item strong { color: #1f2937; }
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+    th, td { border: 1px solid #e5e7eb; padding: 8px; text-align: left; }
+    th { background: #f9fafb; font-weight: 600; color: #374151; }
+    .bay-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-top: 15px; }
+    .bay-item { background: #f0f9ff; border: 1px solid #bae6fd; padding: 8px; border-radius: 4px; text-align: center; font-size: 11px; }
+    .compass { text-align: center; margin: 15px 0; }
+    .compass-directions { display: flex; justify-content: space-between; margin: 10px 0; font-size: 11px; color: #6b7280; }
+    .existing-improvements { background: #ecfdf5; border-left: 4px solid #10b981; padding: 15px; margin: 10px 0; }
+  </style>
+</head>
+<body>
+  <div class="no-print">
+    <strong>📄 Save as PDF:</strong> Press Ctrl+P (Windows/Linux) or Cmd+P (Mac), then select "Save as PDF" as your destination.
+    <br><small>This banner will not appear in the printed version.</small>
+  </div>
+  
+  <div class="header">
+    <h1>${property.propertyName}</h1>
+    <div class="subtitle">Property Report - Generated on ${new Date().toLocaleDateString()}</div>
+  </div>
+
+  <div class="section">
+    <h2>Property Overview</h2>
+    <div class="info-grid">
+      <div class="info-item">
+        <strong>Property ID:</strong> ${property.propertyId || 'N/A'}<br>
+        <strong>Total Rentable Area:</strong> ${totalRentableArea ? totalRentableArea.toLocaleString() + ' SF' : 'N/A'}<br>
+        <strong>Bay Count:</strong> ${totalBays}<br>
+        <strong>Single Building:</strong> ${property.isSingleBuilding ? 'Yes' : 'No'}
+      </div>
+      <div class="info-item">
+        <strong>Vehicular Parking:</strong> ${totalVehicularParking} spaces<br>
+        <strong>Trailer Parking:</strong> ${totalTrailerParking} spaces<br>
+        <strong>Parking Ratio:</strong> ${totalRentableArea ? (totalVehicularParking / (totalRentableArea / 1000)).toFixed(2) : '0.00'} per 1,000 SF<br>
+        <strong>Trailer Ratio:</strong> ${totalRentableArea ? (totalTrailerParking / (totalRentableArea / 1000)).toFixed(2) : '0.00'} per 1,000 SF
+      </div>
+    </div>
+  </div>
+
+  ${property.bayConfigurations?.length > 0 ? `
+  <div class="section">
+    <h2>Bay Configuration</h2>
+    <div class="compass">
+      <div class="compass-directions">
+        <span>West Side (Street/Entrance)</span>
+        <span>East Side (Loading Docks)</span>
+      </div>
+    </div>
+    <div class="bay-grid">
+      ${property.bayConfigurations.map((bay: any) => `
+        <div class="bay-item">
+          <strong>${bay.bayName}</strong><br>
+          ${(bay.rentableSquareFootage || 0).toLocaleString()} SF
+        </div>
+      `).join('')}
+    </div>
+    ${property.mechanicalRoomArea ? `
+    <div style="margin-top: 15px;">
+      <div class="info-item">
+        <strong>Mechanical Room:</strong> ${property.mechanicalRoomArea.toLocaleString()} SF
+      </div>
+    </div>
+    ` : ''}
+  </div>
+  ` : ''}
+
+  ${executedLeases.length > 0 ? `
+  <div class="section">
+    <h2>Executed Leases</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Tenant Name</th>
+          <th>Rentable Area</th>
+          <th>Vehicular Parking</th>
+          <th>Trailer Parking</th>
+          <th>Lease Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${executedLeases.map(lease => `
+          <tr>
+            <td>${lease.tenantName}</td>
+            <td>${(lease.rentableArea || 0).toLocaleString()} SF</td>
+            <td>${lease.vehicularParking || 0} spaces</td>
+            <td>${lease.trailerParking || 0} spaces</td>
+            <td>${lease.leaseDate ? new Date(lease.leaseDate).toLocaleDateString() : 'N/A'}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  </div>
+  ` : ''}
+
+  <div class="section">
+    <h2>Available Space</h2>
+    <div class="info-grid">
+      <div class="info-item">
+        <strong>Remaining Rentable Area:</strong> ${remainingArea ? remainingArea.toLocaleString() + ' SF' : 'N/A'}<br>
+        <strong>Percentage Available:</strong> ${totalRentableArea ? ((remainingArea / totalRentableArea) * 100).toFixed(1) + '%' : 'N/A'}
+      </div>
+      <div class="info-item">
+        <strong>Remaining Vehicular Parking:</strong> ${remainingVehicularParking} spaces<br>
+        <strong>Remaining Trailer Parking:</strong> ${remainingTrailerParking} spaces
+      </div>
+    </div>
+  </div>
+
+  ${propertyImprovements.length > 0 ? `
+  <div class="section">
+    <h2>Existing Improvements</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Category</th>
+          <th>Description</th>
+          <th>Quantity</th>
+          <th>Unit</th>
+          <th>Unit Price</th>
+          <th>Total Cost</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${propertyImprovements.map(improvement => `
+          <tr>
+            <td>${improvement.category}</td>
+            <td>${improvement.description}</td>
+            <td>${(improvement.quantity || 0).toLocaleString()}</td>
+            <td>${improvement.unit || ''}</td>
+            <td>$${(improvement.unitPrice || 0).toLocaleString()}</td>
+            <td>$${((improvement.quantity || 0) * (improvement.unitPrice || 0)).toLocaleString()}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+    <div style="margin-top: 15px; text-align: right;">
+      <strong>Total Existing Improvements: $${propertyImprovements.reduce((sum, imp) => sum + ((imp.quantity || 0) * (imp.unitPrice || 0)), 0).toLocaleString()}</strong>
+    </div>
+  </div>
+  ` : ''}
+</body>
+</html>
+    `;
+  }
+
+  // Property print routes
+  app.get("/api/properties/:id/print", requireAuth, async (req, res) => {
+    try {
+      const propertyId = parseInt(req.params.id);
+      if (isNaN(propertyId)) {
+        return res.status(400).json({ message: "Invalid property ID" });
+      }
+
+      const property = await storage.getProperty(propertyId);
+      if (!property) {
+        return res.status(404).json({ message: "Property not found" });
+      }
+
+      const executedLeases = await storage.getExecutedLeases(propertyId);
+      const propertyImprovements = await storage.getPropertyExistingImprovements(propertyId);
+
+      // Generate HTML for printing
+      const html = generatePropertyPrintHtml(property, executedLeases, propertyImprovements);
+      
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.setHeader('Content-Disposition', `inline; filename="property-${property.propertyName.replace(/\s+/g, '-')}-report.html"`);
+      res.send(html);
+    } catch (error) {
+      console.error("Error generating property print:", error);
+      res.status(500).json({ message: "Failed to generate property print" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

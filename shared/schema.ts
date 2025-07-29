@@ -724,5 +724,26 @@ export const insertPdfTemplateSchema = createInsertSchema(pdfTemplates).omit({
 export type PdfTemplate = typeof pdfTemplates.$inferSelect;
 export type InsertPdfTemplate = z.infer<typeof insertPdfTemplateSchema>;
 
+// Property Attachments table for storing PDFs and DWG files
+export const propertyAttachments = pgTable("property_attachments", {
+  id: serial("id").primaryKey(),
+  propertyId: integer("property_id").references(() => properties.id, { onDelete: "cascade" }).notNull(),
+  filename: text("filename").notNull(),
+  originalName: text("original_name").notNull(),
+  size: integer("size").notNull(),
+  mimeType: text("mime_type").notNull(),
+  fileType: text("file_type").notNull(), // "pdf", "dwg", "other"
+  description: text("description"), // Optional description of the file
+  uploadedAt: timestamp("uploaded_at").defaultNow().notNull(),
+});
+
+export const insertPropertyAttachmentSchema = createInsertSchema(propertyAttachments).omit({
+  id: true,
+  uploadedAt: true,
+});
+
+export type PropertyAttachment = typeof propertyAttachments.$inferSelect;
+export type InsertPropertyAttachment = z.infer<typeof insertPropertyAttachmentSchema>;
+
 
 

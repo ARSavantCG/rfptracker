@@ -219,6 +219,11 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                       <span>Total Rentable Area:</span>
                       <span className="font-medium">
                         {(() => {
+                          // Check for override area first (highest priority)
+                          if (rfp.warehouseAreaOverride) {
+                            return parseInt(rfp.warehouseAreaOverride).toLocaleString();
+                          }
+                          
                           // Check multiple possible area fields
                           const warehouseArea = rfp.warehouseArea;
                           const projectArea = rfp.projectArea;
@@ -249,7 +254,7 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                             calculatedArea = selectedBaySquareFootage + proportionalMechanical;
                           }
                           
-                          // Priority: calculated area from bays > warehouseArea > projectArea
+                          // Priority: warehouseAreaOverride > calculated area from bays > warehouseArea > projectArea
                           const totalArea = calculatedArea > 0 ? calculatedArea : (warehouseArea || projectArea);
                           return totalArea ? parseInt(totalArea.toString()).toLocaleString() : 0;
                         })()} SF
@@ -272,42 +277,48 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                       <span>Remaining Rentable Area:</span>
                       <span>
                         {(() => {
-                          // Use same logic as above for consistency
-                          const warehouseArea = rfp.warehouseArea;
-                          const projectArea = rfp.projectArea;
-                          
-                          // Check if bay configurations contain calculated area using correct proportional method
-                          let calculatedArea = 0;
-                          if (rfp.selectedBayConfigurations && rfp.selectedBayConfigurations.length > 0) {
-                            // Calculate warehouse area only from bay configurations
-                            const selectedBaySquareFootage = rfp.selectedBayConfigurations.reduce((sum: number, bay: any) => sum + (bay.squareFootage || 0), 0);
+                          // Check for override area first (highest priority)
+                          let totalArea = 0;
+                          if (rfp.warehouseAreaOverride) {
+                            totalArea = parseInt(rfp.warehouseAreaOverride);
+                          } else {
+                            // Use same logic as above for consistency
+                            const warehouseArea = rfp.warehouseArea;
+                            const projectArea = rfp.projectArea;
                             
-                            // Get property data for mechanical room calculation
-                            const property = properties?.find((p: any) => p.id.toString() === rfp.property);
-                            const mechanicalRoomSF = property?.mechanicalRoomSquareFootage || 0;
-                            
-                            // Calculate proportional mechanical allocation
-                            let proportionalMechanical = 0;
-                            if (property?.bayConfigurations) {
-                              const totalPropertyBaysSF = property.bayConfigurations.reduce((sum: number, bay: any) => sum + (bay.squareFootage || 0), 0);
-                              if (rfp.selectedBayConfigurations.length === property.bayConfigurations.length) {
-                                // All bays selected = 100% of mechanical room
-                                proportionalMechanical = mechanicalRoomSF;
-                              } else {
-                                // Partial selection = proportional allocation
-                                proportionalMechanical = totalPropertyBaysSF > 0 ? (selectedBaySquareFootage / totalPropertyBaysSF) * mechanicalRoomSF : 0;
+                            // Check if bay configurations contain calculated area using correct proportional method
+                            let calculatedArea = 0;
+                            if (rfp.selectedBayConfigurations && rfp.selectedBayConfigurations.length > 0) {
+                              // Calculate warehouse area only from bay configurations
+                              const selectedBaySquareFootage = rfp.selectedBayConfigurations.reduce((sum: number, bay: any) => sum + (bay.squareFootage || 0), 0);
+                              
+                              // Get property data for mechanical room calculation
+                              const property = properties?.find((p: any) => p.id.toString() === rfp.property);
+                              const mechanicalRoomSF = property?.mechanicalRoomSquareFootage || 0;
+                              
+                              // Calculate proportional mechanical allocation
+                              let proportionalMechanical = 0;
+                              if (property?.bayConfigurations) {
+                                const totalPropertyBaysSF = property.bayConfigurations.reduce((sum: number, bay: any) => sum + (bay.squareFootage || 0), 0);
+                                if (rfp.selectedBayConfigurations.length === property.bayConfigurations.length) {
+                                  // All bays selected = 100% of mechanical room
+                                  proportionalMechanical = mechanicalRoomSF;
+                                } else {
+                                  // Partial selection = proportional allocation
+                                  proportionalMechanical = totalPropertyBaysSF > 0 ? (selectedBaySquareFootage / totalPropertyBaysSF) * mechanicalRoomSF : 0;
+                                }
                               }
+                              
+                              calculatedArea = selectedBaySquareFootage + proportionalMechanical;
                             }
                             
-                            calculatedArea = selectedBaySquareFootage + proportionalMechanical;
+                            // Priority: calculated area from bays > warehouseArea > projectArea
+                            totalArea = calculatedArea > 0 ? calculatedArea : (warehouseArea || projectArea || 0);
                           }
                           
-                          // Priority: calculated area from bays > warehouseArea > projectArea
-                          const totalArea = calculatedArea > 0 ? calculatedArea : (warehouseArea || projectArea || "0");
-                          const totalRentable = parseInt(totalArea.toString());
                           const additionalAreas = form.watch("areaBreakdown").reduce((sum, area) => 
                             sum + parseInt(area.squareFootage || "0"), 0);
-                          const remaining = totalRentable - additionalAreas;
+                          const remaining = totalArea - additionalAreas;
                           return remaining.toLocaleString();
                         })()} SF
                       </span>

@@ -363,8 +363,8 @@ export class DatabaseStorage implements IStorage {
         notes: request.notes || null,
         files: request.files || [],
         selectedBayConfigurations: request.selectedBayConfigurations || [],
-        status: "in-progress",
-        workflowPhase: "rfp-validation",
+        status: request.status || "in-progress",
+        workflowPhase: request.workflowPhase || "rfp-validation",
       })
       .returning();
     

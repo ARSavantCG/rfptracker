@@ -1499,8 +1499,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         developmentContact: originalRfp.developmentContact,
         projectArea: originalRfp.projectArea,
         requestTypes: originalRfp.requestTypes,
-        status: 'received', // Start as new request
-        workflowPhase: 'rfp-entry',
+        status: 'in-progress', // Start as in-progress
+        workflowPhase: 'rfp-entry', // Always start counter offers at step 1
         notes: `Counter offer created from RFP ${originalRfp.rfpNumber}`,
         files: [], // Start with no files
         selectedBayConfigurations: originalRfp.selectedBayConfigurations || [],

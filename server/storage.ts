@@ -279,7 +279,8 @@ export class DatabaseStorage implements IStorage {
 
   private async generateRfpNumber(): Promise<string> {
     const year = new Date().getFullYear();
-    const count = await db.$count(rfpRequests);
+    // Only count non-counter offer RFPs for sequential numbering
+    const count = await db.$count(rfpRequests, eq(rfpRequests.isCounterOffer, false));
     const number = (count + 1).toString().padStart(3, '0');
     return `RFP-${year}-${number}`;
   }

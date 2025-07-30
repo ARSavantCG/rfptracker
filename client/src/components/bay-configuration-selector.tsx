@@ -65,7 +65,7 @@ export default function BayConfigurationSelector({
     // Use sequential numbering based on sorted array index
     const bayNumber = index + 1;
     
-    const bayResult = {
+    return {
       id: bayConfig.id,
       bayNumber: bayNumber,
       bayName: `Bay ${bayNumber}`,
@@ -74,18 +74,7 @@ export default function BayConfigurationSelector({
       standardDockDoors: bayConfig.standardDockDoors || 0,
       oversizedDockDoors: bayConfig.oversizedDockDoors || 0
     };
-    
-    // Debug logging to show mapping
-    console.log(`🔍 BAY MAPPING: Display Bay ${bayNumber} → Original ${bayConfig.bayName} (${bayConfig.squareFootage} SF)`);
-    
-    return bayResult;
   }).filter((bay): bay is NonNullable<typeof bay> => bay !== null);
-
-  // Debug the final mapping
-  console.log('🔍 COMPLETE BAY MAPPING:');
-  individualBays.forEach((bay) => {
-    console.log(`  Display: ${bay.bayName} → Original: ${bay.originalBayName} → ${bay.squareFootage} SF`);
-  });
 
   // Calculate total rentable area from selected individual bays with proportional mechanical allocation
   const calculateTotalArea = () => {

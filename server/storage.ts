@@ -314,7 +314,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createRfpRequest(request: InsertRfpRequest): Promise<RfpRequest> {
-    const rfpNumber = await this.generateRfpNumber();
+    // Use provided RFP number for counter offers, or generate new one for regular RFPs
+    const rfpNumber = request.rfpNumber || await this.generateRfpNumber();
     
     // Check if project area indicates override and extract the override value
     let warehouseAreaOverride = null;
@@ -343,6 +344,8 @@ export class DatabaseStorage implements IStorage {
       .insert(rfpRequests)
       .values({
         rfpNumber,
+        parentRfpId: request.parentRfpId || null,
+        isCounterOffer: request.isCounterOffer || false,
         property: request.property,
         tenantName: request.tenantName,
         projectName: request.projectName,

@@ -1466,8 +1466,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(401).json({ message: "No token provided" });
     }
 
-    const userInfo = tokenStore.validateToken(token);
-    if (!userInfo) {
+    const userId = await tokenStore.getUserFromToken(token);
+    if (!userId) {
       return res.status(401).json({ message: "Invalid or expired token" });
     }
     try {

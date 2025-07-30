@@ -273,26 +273,27 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
                       )}
                     />
 
-                    {/* Rentable Area Override */}
+                    {/* Executed Lease Area Override */}
                     <FormField
                       control={form.control}
                       name="rentableAreaOverride"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Rentable Area Override (Optional)</FormLabel>
+                          <FormLabel className="text-orange-700 font-semibold">Executed Lease Area (Override Bay Calculation)</FormLabel>
                           <FormControl>
                             <Input
                               type="number"
                               min="0"
+                              className="border-orange-300 focus:border-orange-500"
                               {...field}
                               value={field.value || ""}
                               onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
-                              placeholder="Override calculated area with actual lease terms"
+                              placeholder="Enter actual lease square footage if different from bay calculation"
                             />
                           </FormControl>
-                          <div className="text-xs text-gray-500 mt-1">
-                            Leave empty to use calculated area from bay configurations. 
-                            Enter a value to override with actual lease square footage.
+                          <div className="text-xs text-orange-600 mt-1 font-medium">
+                            <strong>Optional:</strong> Enter the actual lease area if it differs from the calculated bay area above. 
+                            This will override the bay calculation for all lease displays and reports.
                           </div>
                           <FormMessage />
                         </FormItem>

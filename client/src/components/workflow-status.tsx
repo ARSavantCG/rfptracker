@@ -215,11 +215,23 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValida
         })}
       </div>
 
-      {/* Hide actions for archived RFPs - they are read-only */}
-      {rfp.status !== "archived" && (
-        <div className="mt-4 pt-4 border-t border-gray-200">
-          <h4 className="text-sm font-medium text-gray-700 mb-3">Current Phase Actions</h4>
+      <div className="mt-4 pt-4 border-t border-gray-200">
+        {rfp.status === "archived" ? (
+          /* Archived RFPs only show view summary option */
           <div className="space-y-2">
+            <h4 className="text-sm font-medium text-gray-700 mb-3">Project Summary</h4>
+            <Button
+              onClick={() => onOpenPublish?.(rfp)}
+              variant="outline"
+              className="w-full px-4 py-2 text-sm"
+            >
+              View Project Summary
+            </Button>
+          </div>
+        ) : (
+          /* Active RFPs show current phase actions */
+          <div className="space-y-2">
+            <h4 className="text-sm font-medium text-gray-700 mb-3">Current Phase Actions</h4>
           {actualWorkflowPhase === "rfp-entry" && (
             <div className="text-sm text-gray-500 text-center py-2">
               Use "Create RFP & Advance" to begin workflow
@@ -323,9 +335,9 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValida
               )}
             </div>
           )}
-        </div>
-        </div>
-      )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

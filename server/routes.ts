@@ -1473,16 +1473,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Only completed or archived RFPs can have counter offers" });
       }
 
-      // Generate versioned RFP number (add .01 suffix)
-      const baseRfpNumber = originalRfp.rfpNumber.split('.')[0]; // Remove existing version if any
-      let versionNumber = 1;
+      // Generate versioned RFP number (add .01 suffix to original RFP number)
+      const baseRfpNumber = originalRfp.rfpNumber; // Keep the full original RFP number
       
       // Check for existing counter offers to increment version
       const existingCounterOffers = await storage.getRfpRequestsByParentId(id);
-      
-      if (existingCounterOffers.length > 0) {
-        versionNumber = existingCounterOffers.length + 1;
-      }
+      let versionNumber = existingCounterOffers.length + 1;
       
       const versionedRfpNumber = `${baseRfpNumber}.${versionNumber.toString().padStart(2, '0')}`;
 

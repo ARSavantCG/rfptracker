@@ -1166,9 +1166,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/rfp-requests/stats", async (req, res) => {
     try {
       const allRequests = await storage.getAllRfpRequests();
+      const activeRequests = allRequests.filter(r => r.status !== "archived");
       
       const stats = {
-        total: allRequests.length,
+        total: activeRequests.length, // Total of active RFPs only
         received: allRequests.filter(r => r.status === "received").length,
         inProgress: allRequests.filter(r => r.status === "in-progress").length,
         completed: allRequests.filter(r => r.status === "completed").length,
@@ -1190,10 +1191,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let requests;
       if (search) {
         requests = await storage.searchRfpRequests(search as string);
+        // Exclude archived from search results unless specifically searching for archived
+        if (status !== "archived") {
+          requests = requests.filter(r => r.status !== "archived");
+        }
       } else if (status) {
         requests = await storage.filterRfpRequestsByStatus(status as string);
       } else {
+        // Default view: get all RFPs except archived
         requests = await storage.getAllRfpRequests();
+        requests = requests.filter(r => r.status !== "archived");
       }
       
       res.json(requests);

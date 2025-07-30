@@ -14,6 +14,10 @@ export const rfpRequests = pgTable("rfp_requests", {
   id: serial("id").primaryKey(),
   rfpNumber: text("rfp_number").notNull().unique(),
   
+  // Counter offer support
+  parentRfpId: integer("parent_rfp_id"), // Reference to original RFP for counter offers
+  isCounterOffer: boolean("is_counter_offer").default(false),
+  
   // Initial RFP Entry Fields
   property: text("property").notNull(),
   tenantName: text("tenant_name").notNull(),

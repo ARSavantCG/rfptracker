@@ -21,6 +21,7 @@ type SortDirection = "asc" | "desc";
 export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, selectedRfpId }: RfpTableProps) {
   const [sortField, setSortField] = useState<SortField>("id");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+  const [expandedRfps, setExpandedRfps] = useState<Set<number>>(new Set());
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -108,6 +109,46 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
     },
   });
 
+  // Counter offer mutation
+  const counterOfferMutation = useMutation({
+    mutationFn: async (rfpId: number) => {
+      const token = localStorage.getItem('auth-token');
+      const response = await fetch(`/api/rfp-requests/${rfpId}/counter-offer`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to create counter offer');
+      }
+
+      return response.json();
+    },
+    onSuccess: (counterOffer) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
+      toast({
+        title: "Success",
+        description: `Counter offer ${counterOffer.rfpNumber} created successfully`,
+      });
+    },
+    onError: (error: Error) => {
+      if (error.message.includes('401')) {
+        handleAuthError(error);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const { data: rfpRequests = [], isLoading } = useQuery<RfpRequest[]>({
     queryKey: ["/api/rfp-requests", { search: searchQuery, status: statusFilter }],
     queryFn: async () => {
@@ -166,6 +207,28 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
     } else {
       return property.propertyName;
     }
+  };
+
+  // Organize RFPs hierarchically (parent RFPs with their counter offers)
+  const organizedRfps = () => {
+    const parentRfps = rfpRequests.filter(rfp => !rfp.isCounterOffer);
+    const counterOffers = rfpRequests.filter(rfp => rfp.isCounterOffer);
+    
+    return parentRfps.map(parent => ({
+      ...parent,
+      counterOffers: counterOffers.filter(co => co.parentRfpId === parent.id)
+    }));
+  };
+
+  // Toggle expansion for RFP with counter offers
+  const toggleExpansion = (rfpId: number) => {
+    const newExpanded = new Set(expandedRfps);
+    if (newExpanded.has(rfpId)) {
+      newExpanded.delete(rfpId);
+    } else {
+      newExpanded.add(rfpId);
+    }
+    setExpandedRfps(newExpanded);
   };
 
   // Clear selected RFP if it no longer exists in the list
@@ -287,8 +350,8 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
     return sortDirection === "asc" ? "fas fa-sort-up" : "fas fa-sort-down";
   };
 
-  // Sort the data
-  const sortedRequests = [...rfpRequests].sort((a, b) => {
+  // Sort the organized hierarchical data
+  const sortedOrganizedRequests = organizedRfps().sort((a, b) => {
     let aValue: any = a[sortField];
     let bValue: any = b[sortField];
 
@@ -393,7 +456,7 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {sortedRequests.length === 0 ? (
+            {sortedOrganizedRequests.length === 0 ? (
               <tr>
                 <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
                   <i className="fas fa-inbox text-xl mb-2"></i>
@@ -402,11 +465,12 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
                 </td>
               </tr>
             ) : (
-              sortedRequests.map((request) => (
+              sortedOrganizedRequests.map((parentRfp) => [
+                // Render parent RFP
                 <tr 
-                  key={request.id} 
+                  key={parentRfp.id} 
                   className={`hover:bg-gray-50 transition-colors ${
-                    selectedRfpId === request.id ? 'bg-blue-50 border-l-4 border-blue-500' : 'border-l-4 border-transparent'
+                    selectedRfpId === parentRfp.id ? 'bg-blue-50 border-l-4 border-blue-500' : 'border-l-4 border-transparent'
                   }`}
                   style={{
                     height: '48px',
@@ -416,77 +480,95 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
                 >
                   <td 
                     className="px-3 py-3 whitespace-nowrap text-xs font-medium text-gray-900 cursor-pointer"
-                    onClick={() => onSelectRfp?.(request)}
+                    onClick={() => onSelectRfp?.(parentRfp)}
                   >
-                    {request.rfpNumber}
+                    <div className="flex items-center">
+                      {parentRfp.counterOffers.length > 0 && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleExpansion(parentRfp.id);
+                          }}
+                          className="mr-2 text-gray-400 hover:text-gray-600"
+                        >
+                          <i className={`fas ${expandedRfps.has(parentRfp.id) ? 'fa-chevron-down' : 'fa-chevron-right'} text-xs`}></i>
+                        </button>
+                      )}
+                      {parentRfp.rfpNumber}
+                      {parentRfp.counterOffers.length > 0 && (
+                        <span className="ml-2 px-1.5 py-0.5 text-xs bg-blue-100 text-blue-700 rounded">
+                          {parentRfp.counterOffers.length} counter{parentRfp.counterOffers.length > 1 ? 's' : ''}
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td 
                     className="px-3 py-3 whitespace-nowrap text-xs text-gray-900 cursor-pointer"
-                    onClick={() => onSelectRfp?.(request)}
+                    onClick={() => onSelectRfp?.(parentRfp)}
                   >
-                    {request.tenantName}
+                    {parentRfp.tenantName}
                   </td>
                   <td 
                     className="px-3 py-3 whitespace-nowrap text-xs text-gray-900 cursor-pointer"
-                    onClick={() => onSelectRfp?.(request)}
+                    onClick={() => onSelectRfp?.(parentRfp)}
                   >
-                    {getPropertyDisplayName(request.property)}
+                    {getPropertyDisplayName(parentRfp.property)}
                   </td>
                   <td 
                     className="px-3 py-3 whitespace-nowrap cursor-pointer"
-                    onClick={() => onSelectRfp?.(request)}
+                    onClick={() => onSelectRfp?.(parentRfp)}
                   >
                     <span
                       className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
-                        request.status === "received" 
+                        parentRfp.status === "received" 
                           ? "bg-purple-100 text-purple-700" 
-                          : request.status === "in-progress"
+                          : parentRfp.status === "in-progress"
                           ? "bg-orange-100 text-orange-700"
-                          : request.status === "completed"
+                          : parentRfp.status === "completed"
                           ? "bg-green-100 text-green-700"
-                          : request.status === "archived"
+                          : parentRfp.status === "archived"
                           ? "bg-gray-100 text-gray-700"
                           : "bg-red-100 text-red-700"
                       }`}
                     >
                       <div 
                         className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
-                          request.status === "received" 
+                          parentRfp.status === "received" 
                             ? "bg-purple-500" 
-                            : request.status === "in-progress"
+                            : parentRfp.status === "in-progress"
                             ? "bg-orange-500"
-                            : request.status === "completed"
+                            : parentRfp.status === "completed"
                             ? "bg-green-500"
-                            : request.status === "archived"
+                            : parentRfp.status === "archived"
                             ? "bg-gray-500"
                             : "bg-red-500"
                         }`}
                       ></div>
-                      {request.status === "in-progress" ? "In Progress" : 
-                       request.status === "on-hold" ? "On Hold" :
-                       request.status === "archived" ? "Archived" :
-                       request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                      {parentRfp.status === "in-progress" ? "In Progress" : 
+                       parentRfp.status === "on-hold" ? "On Hold" :
+                       parentRfp.status === "archived" ? "Archived" :
+                       parentRfp.status.charAt(0).toUpperCase() + parentRfp.status.slice(1)}
                     </span>
                   </td>
                   <td 
                     className="px-3 py-3 whitespace-nowrap text-xs text-gray-500 cursor-pointer"
-                    onClick={() => onSelectRfp?.(request)}
+                    onClick={() => onSelectRfp?.(parentRfp)}
                   >
-                    {formatDate(request.receivedOn)}
+                    {formatDate(parentRfp.receivedOn)}
                   </td>
                   <td 
                     className="px-3 py-3 whitespace-nowrap text-xs text-gray-500 cursor-pointer"
-                    onClick={() => onSelectRfp?.(request)}
+                    onClick={() => onSelectRfp?.(parentRfp)}
                   >
-                    {request.internalDueDate ? formatDate(request.internalDueDate) : '—'}
+                    {parentRfp.internalDueDate ? formatDate(parentRfp.internalDueDate) : '—'}
                   </td>
                   <td 
                     className="px-3 py-3 whitespace-nowrap text-xs text-gray-500 cursor-pointer"
-                    onClick={() => onSelectRfp?.(request)}
+                    onClick={() => onSelectRfp?.(parentRfp)}
                   >
                     <div className="flex items-center space-x-1">
                       <i className="fas fa-paperclip text-gray-400 text-xs"></i>
-                      <span>{fileCounts[request.id] || request.files.length}</span>
+                      <span>{fileCounts[parentRfp.id] || parentRfp.files.length}</span>
                     </div>
                   </td>
                   <td className="px-3 py-3 whitespace-nowrap text-xs">
@@ -494,7 +576,7 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
                       <button 
                         onClick={(e) => {
                           e.stopPropagation();
-                          onEditRfp(request);
+                          onEditRfp(parentRfp);
                         }}
                         className="text-green-600 hover:text-green-700 p-1"
                         title="Edit project"
@@ -503,62 +585,196 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
                       </button>
                       
                       {/* Archive button - only for completed RFPs */}
-                      {request.status === 'completed' && (
+                      {parentRfp.status === 'completed' && (
                         <button 
                           onClick={(e) => {
                             e.stopPropagation();
-                            archiveMutation.mutate(request.id);
+                            archiveMutation.mutate(parentRfp.id);
                           }}
                           disabled={archiveMutation.isPending}
-                          className="text-gray-600 hover:text-gray-700 disabled:opacity-50 p-1"
-                          title="Archive completed project"
+                          className="text-gray-600 hover:text-gray-700 p-1"
+                          title="Archive project"
                         >
                           <i className="fas fa-archive text-xs"></i>
                         </button>
                       )}
                       
-                      {/* Reopen button - for both completed and archived RFPs */}
-                      {(request.status === 'completed' || request.status === 'archived') && (
+                      {/* Reopen button - only for archived RFPs */}
+                      {parentRfp.status === 'archived' && (
                         <button 
                           onClick={(e) => {
                             e.stopPropagation();
-                            reopenMutation.mutate(request.id);
+                            reopenMutation.mutate(parentRfp.id);
                           }}
                           disabled={reopenMutation.isPending}
-                          className="text-blue-600 hover:text-blue-700 disabled:opacity-50 p-1"
-                          title="Reopen for counter offer"
+                          className="text-blue-600 hover:text-blue-700 p-1"
+                          title="Reopen project"
                         >
                           <i className="fas fa-undo text-xs"></i>
                         </button>
                       )}
                       
+                      {/* Counter offer button - only for completed RFPs */}
+                      {parentRfp.status === 'completed' && (
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            counterOfferMutation.mutate(parentRfp.id);
+                          }}
+                          disabled={counterOfferMutation.isPending}
+                          className="text-orange-600 hover:text-orange-700 p-1"
+                          title="Create counter offer"
+                        >
+                          <i className="fas fa-reply text-xs"></i>
+                        </button>
+                      )}
+                      
+                      {/* Delete button - for users with delete permissions */}
                       {canDeleteRfp && (
                         <button 
                           onClick={(e) => {
-                            console.log("DELETE BUTTON CLICKED!");
-                            console.log("RFP ID:", request.id);
-                            console.log("RFP Name:", request.projectName);
                             e.stopPropagation();
-                            handleDelete(request);
+                            handleDelete(parentRfp);
                           }}
-                          disabled={deleteMutation.isPending}
-                          className="text-red-600 hover:text-red-700 disabled:opacity-50 p-1"
-                          title="Delete"
+                          className="text-red-600 hover:text-red-700 p-1"
+                          title="Delete project"
                         >
                           <i className="fas fa-trash text-xs"></i>
                         </button>
                       )}
                     </div>
                   </td>
-                </tr>
-              ))
+                </tr>,
+                
+                // Render counter offers if expanded
+                ...(expandedRfps.has(parentRfp.id) ? parentRfp.counterOffers.map((counterOffer) => (
+                  <tr 
+                    key={counterOffer.id} 
+                    className={`bg-gray-50 hover:bg-gray-100 transition-colors ${
+                      selectedRfpId === counterOffer.id ? 'bg-blue-50 border-l-4 border-blue-500' : 'border-l-4 border-transparent'
+                    }`}
+                    style={{
+                      height: '48px',
+                      minHeight: '48px',
+                      maxHeight: '48px'
+                    }}
+                  >
+                    <td 
+                      className="px-3 py-3 whitespace-nowrap text-xs font-medium text-gray-700 cursor-pointer"
+                      onClick={() => onSelectRfp?.(counterOffer)}
+                    >
+                      <div className="flex items-center pl-6">
+                        <i className="fas fa-reply mr-2 text-gray-400 text-xs"></i>
+                        {counterOffer.rfpNumber}
+                      </div>
+                    </td>
+                    <td 
+                      className="px-3 py-3 whitespace-nowrap text-xs text-gray-700 cursor-pointer"
+                      onClick={() => onSelectRfp?.(counterOffer)}
+                    >
+                      {counterOffer.tenantName}
+                    </td>
+                    <td 
+                      className="px-3 py-3 whitespace-nowrap text-xs text-gray-700 cursor-pointer"
+                      onClick={() => onSelectRfp?.(counterOffer)}
+                    >
+                      {getPropertyDisplayName(counterOffer.property)}
+                    </td>
+                    <td 
+                      className="px-3 py-3 whitespace-nowrap cursor-pointer"
+                      onClick={() => onSelectRfp?.(counterOffer)}
+                    >
+                      <span
+                        className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+                          counterOffer.status === "received" 
+                            ? "bg-purple-100 text-purple-700" 
+                            : counterOffer.status === "in-progress"
+                            ? "bg-orange-100 text-orange-700"
+                            : counterOffer.status === "completed"
+                            ? "bg-green-100 text-green-700"
+                            : counterOffer.status === "archived"
+                            ? "bg-gray-100 text-gray-700"
+                            : "bg-red-100 text-red-700"
+                        }`}
+                      >
+                        <div 
+                          className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
+                            counterOffer.status === "received" 
+                              ? "bg-purple-500" 
+                              : counterOffer.status === "in-progress"
+                              ? "bg-orange-500"
+                              : counterOffer.status === "completed"
+                              ? "bg-green-500"
+                              : counterOffer.status === "archived"
+                              ? "bg-gray-500"
+                              : "bg-red-500"
+                          }`}
+                        ></div>
+                        {counterOffer.status === "in-progress" ? "In Progress" : 
+                         counterOffer.status === "on-hold" ? "On Hold" :
+                         counterOffer.status === "archived" ? "Archived" :
+                         counterOffer.status.charAt(0).toUpperCase() + counterOffer.status.slice(1)}
+                      </span>
+                    </td>
+                    <td 
+                      className="px-3 py-3 whitespace-nowrap text-xs text-gray-500 cursor-pointer"
+                      onClick={() => onSelectRfp?.(counterOffer)}
+                    >
+                      {formatDate(counterOffer.receivedOn)}
+                    </td>
+                    <td 
+                      className="px-3 py-3 whitespace-nowrap text-xs text-gray-500 cursor-pointer"
+                      onClick={() => onSelectRfp?.(counterOffer)}
+                    >
+                      {counterOffer.internalDueDate ? formatDate(counterOffer.internalDueDate) : '—'}
+                    </td>
+                    <td 
+                      className="px-3 py-3 whitespace-nowrap text-xs text-gray-500 cursor-pointer"
+                      onClick={() => onSelectRfp?.(counterOffer)}
+                    >
+                      <div className="flex items-center space-x-1">
+                        <i className="fas fa-paperclip text-gray-400 text-xs"></i>
+                        <span>{fileCounts[counterOffer.id] || counterOffer.files.length}</span>
+                      </div>
+                    </td>
+                    <td className="px-3 py-3 whitespace-nowrap text-xs">
+                      <div className="flex items-center space-x-1">
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEditRfp(counterOffer);
+                          }}
+                          className="text-green-600 hover:text-green-700 p-1"
+                          title="Edit counter offer"
+                        >
+                          <i className="fas fa-edit text-xs"></i>
+                        </button>
+                        
+                        {/* Delete button for counter offers */}
+                        {canDeleteRfp && (
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(counterOffer);
+                            }}
+                            className="text-red-600 hover:text-red-700 p-1"
+                            title="Delete counter offer"
+                          >
+                            <i className="fas fa-trash text-xs"></i>
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )) : [])
+              ].flat())
             )}
           </tbody>
         </table>
       </div>
       
       {/* Pagination - Basic implementation */}
-      {sortedRequests.length > 0 && (
+      {sortedOrganizedRequests.length > 0 && (
         <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
           <div className="flex-1 flex justify-between sm:hidden">
             <button className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
@@ -571,8 +787,8 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
           <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
             <div>
               <p className="text-sm text-gray-700">
-                Showing <span className="font-medium">1</span> to <span className="font-medium">{sortedRequests.length}</span> of{" "}
-                <span className="font-medium">{sortedRequests.length}</span> results
+                Showing <span className="font-medium">1</span> to <span className="font-medium">{sortedOrganizedRequests.length}</span> of{" "}
+                <span className="font-medium">{sortedOrganizedRequests.length}</span> results
               </p>
             </div>
             <div>

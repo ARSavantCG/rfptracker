@@ -1456,6 +1456,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Create Counter Offer (duplicate RFP with versioned ID)
+  app.post("/api/rfp-requests/:id/counter-offer", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid ID" });
+      }
+
+      const originalRfp = await storage.getRfpRequest(id);
+      if (!originalRfp) {
+        return res.status(404).json({ message: "Original RFP request not found" });
+      }
+
+      if (originalRfp.status !== 'completed' && originalRfp.status !== 'archived') {
+        return res.status(400).json({ message: "Only completed or archived RFPs can have counter offers" });
+      }
+
+      // Generate versioned RFP number (add .01 suffix)
+      const baseRfpNumber = originalRfp.rfpNumber.split('.')[0]; // Remove existing version if any
+      let versionNumber = 1;
+      
+      // Check for existing counter offers to increment version
+      const existingCounterOffers = await db.select()
+        .from(rfpRequests)
+        .where(eq(rfpRequests.parentRfpId, id));
+      
+      if (existingCounterOffers.length > 0) {
+        versionNumber = existingCounterOffers.length + 1;
+      }
+      
+      const versionedRfpNumber = `${baseRfpNumber}.${versionNumber.toString().padStart(2, '0')}`;
+
+      // Create counter offer by duplicating original RFP data
+      const counterOfferData = {
+        rfpNumber: versionedRfpNumber,
+        parentRfpId: id,
+        isCounterOffer: true,
+        property: originalRfp.property,
+        tenantName: originalRfp.tenantName,
+        projectName: `${originalRfp.projectName} (Counter Offer ${versionNumber})`,
+        confidential: originalRfp.confidential,
+        sentBy: originalRfp.sentBy,
+        receivedOn: new Date(), // Use current date for counter offer
+        internalDueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // Default 30 days from now
+        contractorDueDate: originalRfp.contractorDueDate,
+        architectDueDate: originalRfp.architectDueDate,
+        developmentContact: originalRfp.developmentContact,
+        projectArea: originalRfp.projectArea,
+        requestTypes: originalRfp.requestTypes,
+        status: 'received', // Start as new request
+        workflowPhase: 'rfp-entry',
+        notes: `Counter offer created from RFP ${originalRfp.rfpNumber}`,
+        files: [], // Start with no files
+        selectedBayConfigurations: originalRfp.selectedBayConfigurations || [],
+        // Copy validation fields
+        generalContractor: originalRfp.generalContractor,
+        architect: originalRfp.architect,
+        officeAreaExisting: originalRfp.officeAreaExisting,
+        officeAreaNew: originalRfp.officeAreaNew,
+        warehouseArea: originalRfp.warehouseArea,
+        warehouseAreaOverride: originalRfp.warehouseAreaOverride,
+        warehouseNotes: originalRfp.warehouseNotes,
+        areaBreakdown: originalRfp.areaBreakdown || [],
+        projectAddress: originalRfp.projectAddress,
+        projectSize: originalRfp.projectSize,
+        estimatedValue: originalRfp.estimatedValue,
+        timelineRequirements: originalRfp.timelineRequirements,
+        specialRequirements: originalRfp.specialRequirements,
+        contactPerson: originalRfp.contactPerson,
+        contactEmail: originalRfp.contactEmail,
+        dueDate: originalRfp.dueDate,
+        projectDescription: originalRfp.projectDescription,
+        documentsLink: originalRfp.documentsLink
+      };
+
+      // Create the counter offer RFP
+      const [counterOffer] = await db.insert(rfpRequests)
+        .values(counterOfferData)
+        .returning();
+
+      res.status(201).json(counterOffer);
+    } catch (error) {
+      console.error('Create counter offer error:', error);
+      res.status(400).json({ 
+        message: error instanceof Error ? error.message : "Failed to create counter offer" 
+      });
+    }
+  });
+
   // Delete RFP request - with permission checking
   app.delete("/api/rfp-requests/:id", async (req, res) => {
     console.log(`=== DELETE START ===`);

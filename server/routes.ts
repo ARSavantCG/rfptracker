@@ -1509,8 +1509,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         projectName: `${originalRfp.projectName} (${optionTitle})`,
         confidential: originalRfp.confidential,
         sentBy: originalRfp.sentBy,
-        receivedOn: new Date(), // Use current date for option
-        internalDueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // Default 30 days from now
+        receivedOn: originalRfp.receivedOn, // Copy original received date
+        internalDueDate: originalRfp.internalDueDate, // Copy original due date
         contractorDueDate: originalRfp.contractorDueDate,
         architectDueDate: originalRfp.architectDueDate,
         developmentContact: originalRfp.developmentContact,

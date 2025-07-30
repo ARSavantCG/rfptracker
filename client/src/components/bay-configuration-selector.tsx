@@ -42,8 +42,17 @@ export default function BayConfigurationSelector({
 
 
   // Convert bay configurations to proper bay representation
-  // Each bay configuration represents one bay with unique sequential numbering
-  const individualBays = bayConfigurations.map((bayConfig, index) => {
+  // Sort bay configurations by their actual bay names to ensure proper order
+  const sortedBayConfigs = [...bayConfigurations].sort((a, b) => {
+    const aMatch = a.bayName.match(/Bay (\d+)-(\d+)/);
+    const bMatch = b.bayName.match(/Bay (\d+)-(\d+)/);
+    if (!aMatch || !bMatch) return 0;
+    const aStart = parseInt(aMatch[1]);
+    const bStart = parseInt(bMatch[1]);
+    return aStart - bStart;
+  });
+
+  const individualBays = sortedBayConfigs.map((bayConfig, index) => {
     if (!bayConfig || !bayConfig.bayName || !bayConfig.squareFootage || bayConfig.squareFootage === 0) {
       return null;
     }
@@ -53,18 +62,30 @@ export default function BayConfigurationSelector({
       return null;
     }
     
-    // Use sequential numbering based on array index to ensure unique bay numbers
+    // Use sequential numbering based on sorted array index
     const bayNumber = index + 1;
     
-    return {
+    const bayResult = {
       id: bayConfig.id,
       bayNumber: bayNumber,
       bayName: `Bay ${bayNumber}`,
+      originalBayName: bayConfig.bayName, // Keep original for debugging
       squareFootage: bayConfig.squareFootage, // Full rentable area for this bay
       standardDockDoors: bayConfig.standardDockDoors || 0,
       oversizedDockDoors: bayConfig.oversizedDockDoors || 0
     };
+    
+    // Debug logging to show mapping
+    console.log(`🔍 BAY MAPPING: Display Bay ${bayNumber} → Original ${bayConfig.bayName} (${bayConfig.squareFootage} SF)`);
+    
+    return bayResult;
   }).filter((bay): bay is NonNullable<typeof bay> => bay !== null);
+
+  // Debug the final mapping
+  console.log('🔍 COMPLETE BAY MAPPING:');
+  individualBays.forEach((bay) => {
+    console.log(`  Display: ${bay.bayName} → Original: ${bay.originalBayName} → ${bay.squareFootage} SF`);
+  });
 
   // Calculate total rentable area from selected individual bays with proportional mechanical allocation
   const calculateTotalArea = () => {

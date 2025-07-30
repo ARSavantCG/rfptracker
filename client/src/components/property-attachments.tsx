@@ -180,8 +180,8 @@ export function PropertyAttachments({ propertyId, propertyName }: PropertyAttach
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm">
-          <Upload className="h-4 w-4 mr-2" />
-          Files ({attachments.length})
+          <Download className="h-4 w-4 mr-2" />
+          ({attachments.length})
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">

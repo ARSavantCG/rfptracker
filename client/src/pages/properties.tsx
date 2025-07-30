@@ -233,8 +233,8 @@ export default function Properties() {
                               </CardTitle>
                               {property.building && (
                                 <div className="flex items-center gap-2 mt-1">
-                                  <span className="text-lg font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded">
-                                    Building {property.building}
+                                  <span className="text-xs font-medium text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
+                                    Bldg. {property.building}
                                   </span>
                                 </div>
                               )}

@@ -7,6 +7,7 @@ interface Stats {
   inProgress: number;
   completed: number;
   onHold: number;
+  archived: number;
 }
 
 interface StatsCardsProps {
@@ -29,8 +30,8 @@ export function StatsCards({ onStatusFilter }: StatsCardsProps) {
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        {[...Array(4)].map((_, i) => (
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
+        {[...Array(5)].map((_, i) => (
           <div key={i} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 animate-pulse">
             <div className="flex items-center">
               <div className="w-8 h-8 bg-gray-200 rounded-lg"></div>
@@ -77,6 +78,15 @@ export function StatsCards({ onStatusFilter }: StatsCardsProps) {
       change: "+15%",
       trend: "up"
     },
+    {
+      title: "Archived",
+      value: stats.archived,
+      icon: "fas fa-archive",
+      bgColor: "bg-gray-100",
+      iconColor: "text-gray-600",
+      change: "0%",
+      trend: "neutral"
+    },
   ];
 
   // Prepare data for charts - always show all three main statuses
@@ -113,7 +123,8 @@ export function StatsCards({ onStatusFilter }: StatsCardsProps) {
     const statusMap: Record<string, string> = {
       'Received': 'received',
       'In Progress': 'in-progress', 
-      'Completed': 'completed'
+      'Completed': 'completed',
+      'Archived': 'archived'
     };
     
     return rfpRequests.filter((rfp: any) => rfp.status === statusMap[status]);
@@ -124,7 +135,8 @@ export function StatsCards({ onStatusFilter }: StatsCardsProps) {
       const statusMap: Record<string, string> = {
         'Received': 'received',
         'In Progress': 'in-progress', 
-        'Completed': 'completed'
+        'Completed': 'completed',
+        'Archived': 'archived'
       };
       onStatusFilter(statusMap[data.name]);
     }
@@ -135,7 +147,8 @@ export function StatsCards({ onStatusFilter }: StatsCardsProps) {
       const statusMap: Record<string, string> = {
         'Received': 'received',
         'In Progress': 'in-progress', 
-        'Completed': 'completed'
+        'Completed': 'completed',
+        'Archived': 'archived'
       };
       onStatusFilter(statusMap[data.name]);
     }
@@ -146,7 +159,8 @@ export function StatsCards({ onStatusFilter }: StatsCardsProps) {
       const statusMap: Record<string, string> = {
         'Received': 'received',
         'In Progress': 'in-progress',
-        'Completed': 'completed'
+        'Completed': 'completed',
+        'Archived': 'archived'
       };
       
       const targetStatus = statusMap[cardTitle];

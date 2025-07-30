@@ -29,7 +29,7 @@ export const rfpRequests = pgTable("rfp_requests", {
   requestTypes: json("request_types").$type<string[]>().notNull(), // pricing, schedule, space-plan
   
   // System fields
-  status: text("status").notNull().default("received"), // received, in-progress, completed, on-hold
+  status: text("status").notNull().default("received"), // received, in-progress, completed, on-hold, archived
   workflowPhase: text("workflow_phase").notNull().default("rfp-entry"), // rfp-entry, rfp-validation, invitation-to-bid, bid-collection, evaluation, publish
   notes: text("notes"),
   files: json("files").$type<RfpFile[]>().notNull().default([]),
@@ -76,7 +76,7 @@ export const insertRfpRequestSchema = createInsertSchema(rfpRequests).omit({
   validationErrors: true,
 }).extend({
   requestTypes: z.array(z.string()).min(1, "At least one request type is required"),
-  status: z.enum(["received", "in-progress", "completed", "on-hold"]).default("received"),
+  status: z.enum(["received", "in-progress", "completed", "on-hold", "archived"]).default("received"),
   workflowPhase: z.enum(["rfp-entry", "rfp-validation", "invitation-to-bid", "bid-collection", "evaluation", "publish"]).default("rfp-entry"),
   receivedOn: z.string().transform((val) => new Date(val)),
   internalDueDate: z.string().transform((val) => new Date(val)),
@@ -95,7 +95,7 @@ export const insertRfpRequestSchema = createInsertSchema(rfpRequests).omit({
 export const updateRfpRequestSchema = insertRfpRequestSchema.partial().extend({
   id: z.number(),
   workflowPhase: z.enum(["rfp-entry", "rfp-validation", "invitation-to-bid", "bid-collection", "evaluation", "publish"]).optional(),
-  status: z.enum(["received", "in-progress", "completed", "on-hold"]).optional(),
+  status: z.enum(["received", "in-progress", "completed", "on-hold", "archived"]).optional(),
   completedDate: z.union([z.date(), z.string().transform((val) => val ? new Date(val) : null)]).optional().nullable(),
   publishedDate: z.union([z.date(), z.string().transform((val) => val ? new Date(val) : null)]).optional().nullable(),
 });

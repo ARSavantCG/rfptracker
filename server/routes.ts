@@ -1173,6 +1173,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         inProgress: allRequests.filter(r => r.status === "in-progress").length,
         completed: allRequests.filter(r => r.status === "completed").length,
         onHold: allRequests.filter(r => r.status === "on-hold").length,
+        archived: allRequests.filter(r => r.status === "archived").length,
       };
 
       res.json(stats);
@@ -1386,6 +1387,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       res.status(400).json({ 
         message: error instanceof Error ? error.message : "Failed to advance workflow phase" 
+      });
+    }
+  });
+
+  // Archive RFP
+  app.patch("/api/rfp-requests/:id/archive", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid ID" });
+      }
+
+      const rfp = await storage.getRfpRequest(id);
+      if (!rfp) {
+        return res.status(404).json({ message: "RFP request not found" });
+      }
+
+      if (rfp.status !== 'completed') {
+        return res.status(400).json({ message: "Only completed RFPs can be archived" });
+      }
+
+      const updatedRequest = await storage.updateRfpRequest(id, { status: 'archived' });
+      res.json(updatedRequest);
+    } catch (error) {
+      res.status(400).json({ 
+        message: error instanceof Error ? error.message : "Failed to archive RFP" 
+      });
+    }
+  });
+
+  // Reopen RFP (move from completed back to in-progress)
+  app.patch("/api/rfp-requests/:id/reopen", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid ID" });
+      }
+
+      const rfp = await storage.getRfpRequest(id);
+      if (!rfp) {
+        return res.status(404).json({ message: "RFP request not found" });
+      }
+
+      if (rfp.status !== 'completed') {
+        return res.status(400).json({ message: "Only completed RFPs can be reopened" });
+      }
+
+      // Clear completion date when reopening
+      const updatedRequest = await storage.updateRfpRequest(id, { 
+        status: 'in-progress',
+        completedDate: null
+      });
+      res.json(updatedRequest);
+    } catch (error) {
+      res.status(400).json({ 
+        message: error instanceof Error ? error.message : "Failed to reopen RFP" 
       });
     }
   });

@@ -28,6 +28,86 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
   // Check if user has delete permissions
   const canDeleteRfp = user?.permissions?.includes('rfp.delete') || false;
 
+  // Archive mutation
+  const archiveMutation = useMutation({
+    mutationFn: async (rfpId: number) => {
+      const token = localStorage.getItem('auth-token');
+      const response = await fetch(`/api/rfp-requests/${rfpId}/archive`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to archive RFP');
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
+      toast({
+        title: "Success",
+        description: "RFP has been archived successfully",
+      });
+    },
+    onError: (error: Error) => {
+      if (error.message.includes('401')) {
+        handleAuthError(error);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Reopen mutation
+  const reopenMutation = useMutation({
+    mutationFn: async (rfpId: number) => {
+      const token = localStorage.getItem('auth-token');
+      const response = await fetch(`/api/rfp-requests/${rfpId}/reopen`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to reopen RFP');
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
+      toast({
+        title: "Success",
+        description: "RFP has been reopened and moved back to in-progress",
+      });
+    },
+    onError: (error: Error) => {
+      if (error.message.includes('401')) {
+        handleAuthError(error);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const { data: rfpRequests = [], isLoading } = useQuery<RfpRequest[]>({
     queryKey: ["/api/rfp-requests", { search: searchQuery, status: statusFilter }],
     queryFn: async () => {
@@ -364,6 +444,8 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
                           ? "bg-orange-100 text-orange-700"
                           : request.status === "completed"
                           ? "bg-green-100 text-green-700"
+                          : request.status === "archived"
+                          ? "bg-gray-100 text-gray-700"
                           : "bg-red-100 text-red-700"
                       }`}
                     >
@@ -375,11 +457,14 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
                             ? "bg-orange-500"
                             : request.status === "completed"
                             ? "bg-green-500"
+                            : request.status === "archived"
+                            ? "bg-gray-500"
                             : "bg-red-500"
                         }`}
                       ></div>
                       {request.status === "in-progress" ? "In Progress" : 
                        request.status === "on-hold" ? "On Hold" :
+                       request.status === "archived" ? "Archived" :
                        request.status.charAt(0).toUpperCase() + request.status.slice(1)}
                     </span>
                   </td>
@@ -416,6 +501,37 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
                       >
                         <i className="fas fa-edit text-xs"></i>
                       </button>
+                      
+                      {/* Archive button - only for completed RFPs */}
+                      {request.status === 'completed' && (
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            archiveMutation.mutate(request.id);
+                          }}
+                          disabled={archiveMutation.isPending}
+                          className="text-gray-600 hover:text-gray-700 disabled:opacity-50 p-1"
+                          title="Archive completed project"
+                        >
+                          <i className="fas fa-archive text-xs"></i>
+                        </button>
+                      )}
+                      
+                      {/* Reopen button - only for completed RFPs */}
+                      {request.status === 'completed' && (
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            reopenMutation.mutate(request.id);
+                          }}
+                          disabled={reopenMutation.isPending}
+                          className="text-blue-600 hover:text-blue-700 disabled:opacity-50 p-1"
+                          title="Reopen for counter offer"
+                        >
+                          <i className="fas fa-undo text-xs"></i>
+                        </button>
+                      )}
+                      
                       {canDeleteRfp && (
                         <button 
                           onClick={(e) => {

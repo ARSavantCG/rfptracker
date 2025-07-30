@@ -175,6 +175,12 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
     onSuccess: (option) => {
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
+      
+      // Auto-expand the parent RFP to show the new option
+      if (selectedRfpForOption) {
+        setExpandedRfps(prev => new Set([...Array.from(prev), selectedRfpForOption]));
+      }
+      
       setIsCreateOptionModalOpen(false);
       setSelectedRfpForOption(null);
       toast({

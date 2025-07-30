@@ -167,7 +167,7 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || 'Failed to create RFP option');
+        throw new Error(error.message || 'Failed to create RFP alternate');
       }
 
       return response.json();
@@ -185,7 +185,7 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
       setSelectedRfpForOption(null);
       toast({
         title: "Success",
-        description: `RFP option ${option.rfpNumber} created successfully`,
+        description: `RFP alternate ${option.rfpNumber} created successfully`,
       });
     },
     onError: (error: Error) => {
@@ -556,7 +556,7 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
                       )}
                       {parentRfp.options.length > 0 && (
                         <span className="ml-2 px-1.5 py-0.5 text-xs bg-purple-100 text-purple-700 rounded">
-                          {parentRfp.options.length} option{parentRfp.options.length > 1 ? 's' : ''}
+                          {parentRfp.options.length} alternate{parentRfp.options.length > 1 ? 's' : ''}
                         </span>
                       )}
                     </div>
@@ -697,7 +697,7 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
                             setIsCreateOptionModalOpen(true);
                           }}
                           className="text-purple-600 hover:text-purple-700 p-1"
-                          title="Create RFP option"
+                          title="Create RFP alternate"
                         >
                           <i className="fas fa-code-branch text-xs"></i>
                         </button>

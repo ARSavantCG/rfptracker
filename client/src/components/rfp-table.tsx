@@ -517,8 +517,8 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
                         </button>
                       )}
                       
-                      {/* Reopen button - only for completed RFPs */}
-                      {request.status === 'completed' && (
+                      {/* Reopen button - for both completed and archived RFPs */}
+                      {(request.status === 'completed' || request.status === 'archived') && (
                         <button 
                           onClick={(e) => {
                             e.stopPropagation();

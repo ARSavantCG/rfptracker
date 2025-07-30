@@ -166,9 +166,11 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValida
       <div className="space-y-3">
         {workflowPhases.map((phase, index) => {
           const Icon = phase.icon;
-          const isActive = phase.key === actualWorkflowPhase && rfp.status !== "completed";
-          const isCompleted = index < currentPhaseIndex || (phase.key === "publish" && rfp.status === "completed");
-          const isNext = index === currentPhaseIndex + 1;
+          // For archived RFPs, no phase should be active (all completed)
+          const isActive = phase.key === actualWorkflowPhase && rfp.status !== "completed" && rfp.status !== "archived";
+          // For archived RFPs or completed projects, show all phases as completed
+          const isCompleted = rfp.status === "archived" || index < currentPhaseIndex || (phase.key === "publish" && rfp.status === "completed");
+          const isNext = index === currentPhaseIndex + 1 && rfp.status !== "archived";
 
           const isClickable = (isActive || isCompleted) && (phase.key === "rfp-entry" || phase.key === "rfp-validation" || phase.key === "invitation-to-bid" || phase.key === "bid-collection" || phase.key === "evaluation" || phase.key === "publish");
           
@@ -213,9 +215,11 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValida
         })}
       </div>
 
-      <div className="mt-4 pt-4 border-t border-gray-200">
-        <h4 className="text-sm font-medium text-gray-700 mb-3">Current Phase Actions</h4>
-        <div className="space-y-2">
+      {/* Hide actions for archived RFPs - they are read-only */}
+      {rfp.status !== "archived" && (
+        <div className="mt-4 pt-4 border-t border-gray-200">
+          <h4 className="text-sm font-medium text-gray-700 mb-3">Current Phase Actions</h4>
+          <div className="space-y-2">
           {actualWorkflowPhase === "rfp-entry" && (
             <div className="text-sm text-gray-500 text-center py-2">
               Use "Create RFP & Advance" to begin workflow
@@ -320,7 +324,8 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValida
             </div>
           )}
         </div>
-      </div>
+        </div>
+      )}
     </div>
   );
 }

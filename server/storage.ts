@@ -99,6 +99,7 @@ export interface IStorage {
   removeFileFromRfp(rfpId: number, fileId: string): Promise<RfpRequest | undefined>;
   searchRfpRequests(query: string): Promise<RfpRequest[]>;
   filterRfpRequestsByStatus(status: string): Promise<RfpRequest[]>;
+  getRfpRequestsByParentId(parentId: number): Promise<RfpRequest[]>;
   
   // Workflow phase management
   advanceWorkflowPhase(rfpId: number, newPhase: string): Promise<RfpRequest | undefined>;
@@ -509,6 +510,10 @@ export class DatabaseStorage implements IStorage {
 
   async filterRfpRequestsByStatus(status: string): Promise<RfpRequest[]> {
     return await db.select().from(rfpRequests).where(eq(rfpRequests.status, status)).orderBy(desc(rfpRequests.id));
+  }
+
+  async getRfpRequestsByParentId(parentId: number): Promise<RfpRequest[]> {
+    return await db.select().from(rfpRequests).where(eq(rfpRequests.parentRfpId, parentId)).orderBy(desc(rfpRequests.id));
   }
 
   // Contact management methods

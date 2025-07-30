@@ -1478,9 +1478,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let versionNumber = 1;
       
       // Check for existing counter offers to increment version
-      const existingCounterOffers = await db.select()
-        .from(rfpRequests)
-        .where(eq(rfpRequests.parentRfpId, id));
+      const existingCounterOffers = await storage.getRfpRequestsByParentId(id);
       
       if (existingCounterOffers.length > 0) {
         versionNumber = existingCounterOffers.length + 1;
@@ -1531,10 +1529,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         documentsLink: originalRfp.documentsLink
       };
 
-      // Create the counter offer RFP
-      const [counterOffer] = await db.insert(rfpRequests)
-        .values(counterOfferData)
-        .returning();
+      // Create the counter offer RFP using storage method
+      const counterOffer = await storage.createRfpRequest({
+        ...counterOfferData,
+        areaBreakdown: originalRfp.areaBreakdown || [],
+        overrides: originalRfp.overrides || {},
+        metadata: {}
+      });
 
       res.status(201).json(counterOffer);
     } catch (error) {

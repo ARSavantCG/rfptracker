@@ -622,7 +622,7 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
                             counterOfferMutation.mutate(parentRfp.id);
                           }}
                           disabled={counterOfferMutation.isPending}
-                          className="text-orange-600 hover:text-orange-700 p-1"
+                          className="text-blue-600 hover:text-blue-700 p-1"
                           title="Create counter offer"
                         >
                           <i className="fas fa-reply text-xs"></i>

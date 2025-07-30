@@ -1061,7 +1061,7 @@ function CreateRfpOptionModal({
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
         <div className="px-6 py-4 border-b border-gray-200">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-gray-900">Create RFP Option</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Create RFP Alternate</h3>
             <button
               onClick={handleClose}
               className="text-gray-400 hover:text-gray-600"
@@ -1075,7 +1075,7 @@ function CreateRfpOptionModal({
           <div className="space-y-4">
             <div>
               <label htmlFor="optionType" className="block text-sm font-medium text-gray-700 mb-2">
-                Option Type
+                Type
               </label>
               <select
                 id="optionType"
@@ -1084,28 +1084,21 @@ function CreateRfpOptionModal({
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
               >
-                <option value="">Select option type...</option>
-                <option value="design">Design Alternative</option>
-                <option value="scope">Scope Variation</option>
-                <option value="timeline">Timeline Option</option>
-                <option value="budget">Budget Alternative</option>
-                <option value="layout">Layout Configuration</option>
-                <option value="materials">Materials Option</option>
-                <option value="phasing">Phasing Alternative</option>
-                <option value="other">Other</option>
+                <option value="">Select type...</option>
+                <option value="alternate">Alternate</option>
               </select>
             </div>
             
             <div>
               <label htmlFor="optionTitle" className="block text-sm font-medium text-gray-700 mb-2">
-                Option Title
+                Alternate Title
               </label>
               <input
                 type="text"
                 id="optionTitle"
                 value={optionTitle}
                 onChange={(e) => setOptionTitle(e.target.value)}
-                placeholder="e.g., Fast Track Option, Premium Finishes, etc."
+                placeholder="e.g., Full Building, Half Building, Different Bay Configuration"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
               />
@@ -1132,7 +1125,7 @@ function CreateRfpOptionModal({
                   Creating...
                 </>
               ) : (
-                'Create Option'
+                'Create Alternate'
               )}
             </button>
           </div>

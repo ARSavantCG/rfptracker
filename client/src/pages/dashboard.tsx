@@ -49,11 +49,11 @@ export default function Dashboard() {
   const [validationRfp, setValidationRfp] = useState<RfpRequest | null>(null);
   const [detailRfp, setDetailRfp] = useState<RfpRequest | null>(null);
 
-  // Fetch all RFPs to keep selected RFP data fresh
+  // Fetch all RFPs to keep selected RFP data fresh - include archived for selection tracking
   const { data: allRfps = [] } = useQuery<RfpRequest[]>({
-    queryKey: ["/api/rfp-requests"],
+    queryKey: ["/api/rfp-requests", "all-including-archived"],
     queryFn: async () => {
-      const response = await fetch("/api/rfp-requests");
+      const response = await fetch("/api/rfp-requests?include_archived=true");
       if (!response.ok) throw new Error("Failed to fetch RFP requests");
       return response.json();
     },

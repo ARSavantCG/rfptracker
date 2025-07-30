@@ -1186,21 +1186,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all RFP requests
   app.get("/api/rfp-requests", async (req, res) => {
     try {
-      const { search, status } = req.query;
+      const { search, status, include_archived } = req.query;
       
       let requests;
       if (search) {
         requests = await storage.searchRfpRequests(search as string);
         // Exclude archived from search results unless specifically searching for archived
-        if (status !== "archived") {
+        if (status !== "archived" && !include_archived) {
           requests = requests.filter(r => r.status !== "archived");
         }
       } else if (status) {
         requests = await storage.filterRfpRequestsByStatus(status as string);
       } else {
-        // Default view: get all RFPs except archived
+        // Default view: get all RFPs except archived (unless include_archived is true)
         requests = await storage.getAllRfpRequests();
-        requests = requests.filter(r => r.status !== "archived");
+        if (!include_archived) {
+          requests = requests.filter(r => r.status !== "archived");
+        }
       }
       
       res.json(requests);

@@ -18,6 +18,10 @@ export const rfpRequests = pgTable("rfp_requests", {
   parentRfpId: integer("parent_rfp_id"), // Reference to original RFP for counter offers
   isCounterOffer: boolean("is_counter_offer").default(false),
   
+  // RFP Options support - for multiple design/scope alternatives
+  isOption: boolean("is_option").default(false),
+  optionType: text("option_type"), // design-alternative, scope-variation, build-option, etc.
+  
   // Initial RFP Entry Fields
   property: text("property").notNull(),
   tenantName: text("tenant_name").notNull(),

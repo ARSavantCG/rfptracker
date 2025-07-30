@@ -1456,6 +1456,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Create RFP Option (alternative design/scope for same project)
+  app.post("/api/rfp-requests/:id/create-option", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { optionType, optionTitle } = req.body;
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid ID" });
+      }
+
+      if (!optionType || !optionTitle) {
+        return res.status(400).json({ message: "Option type and title are required" });
+      }
+
+      const originalRfp = await storage.getRfpRequest(id);
+      if (!originalRfp) {
+        return res.status(404).json({ message: "Original RFP request not found" });
+      }
+
+      // RFP options can be created at any time during the workflow
+      // Generate option number (add .A, .B, .C suffix to original RFP number)
+      const baseRfpNumber = originalRfp.rfpNumber;
+      
+      // Check for existing options to increment letter
+      const existingOptions = await storage.getRfpRequestsByParentId(id);
+      const optionCount = existingOptions.filter(rfp => rfp.isOption).length;
+      const optionLetter = String.fromCharCode(65 + optionCount); // A, B, C, etc.
+      
+      const optionRfpNumber = `${baseRfpNumber}.${optionLetter}`;
+
+      // Create option by duplicating original RFP data
+      const optionData = {
+        rfpNumber: optionRfpNumber,
+        parentRfpId: id,
+        isOption: true,
+        optionType: optionType,
+        property: originalRfp.property,
+        tenantName: originalRfp.tenantName,
+        projectName: `${originalRfp.projectName} (${optionTitle})`,
+        confidential: originalRfp.confidential,
+        sentBy: originalRfp.sentBy,
+        receivedOn: new Date(), // Use current date for option
+        internalDueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // Default 30 days from now
+        contractorDueDate: originalRfp.contractorDueDate,
+        architectDueDate: originalRfp.architectDueDate,
+        developmentContact: originalRfp.developmentContact,
+        projectArea: originalRfp.projectArea,
+        requestTypes: originalRfp.requestTypes,
+        status: 'in-progress', // Start as in-progress
+        workflowPhase: 'rfp-entry', // Always start options at step 1
+        notes: `RFP option (${optionTitle}) created from RFP ${originalRfp.rfpNumber}`,
+        files: [], // Start with no files
+        selectedBayConfigurations: originalRfp.selectedBayConfigurations || [],
+        // Copy validation fields
+        generalContractor: originalRfp.generalContractor,
+        architect: originalRfp.architect,
+        officeAreaExisting: originalRfp.officeAreaExisting,
+        officeAreaNew: originalRfp.officeAreaNew,
+        warehouseArea: originalRfp.warehouseArea,
+        warehouseAreaOverride: originalRfp.warehouseAreaOverride,
+        warehouseNotes: originalRfp.warehouseNotes,
+        areaBreakdown: originalRfp.areaBreakdown || [],
+        projectAddress: originalRfp.projectAddress,
+        projectSize: originalRfp.projectSize,
+        estimatedValue: originalRfp.estimatedValue,
+        timelineRequirements: originalRfp.timelineRequirements,
+        specialRequirements: originalRfp.specialRequirements,
+        contactPerson: originalRfp.contactPerson,
+        contactEmail: originalRfp.contactEmail,
+        dueDate: originalRfp.dueDate,
+        projectDescription: originalRfp.projectDescription,
+        documentsLink: originalRfp.documentsLink,
+      };
+
+      // Create the option RFP using storage method
+      const option = await storage.createRfpRequest({
+        ...optionData,
+        overrides: originalRfp.overrides || {},
+        metadata: {}
+      });
+
+      res.status(201).json(option);
+    } catch (error) {
+      console.error('Create RFP option error:', error);
+      res.status(400).json({ 
+        message: error instanceof Error ? error.message : "Failed to create RFP option" 
+      });
+    }
+  });
+
   // Create Counter Offer (duplicate RFP with versioned ID)
   app.post("/api/rfp-requests/:id/counter-offer", requireAuth, async (req, res) => {
     try {

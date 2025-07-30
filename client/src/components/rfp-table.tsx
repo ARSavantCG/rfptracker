@@ -149,6 +149,52 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
     },
   });
 
+  // RFP Option mutation
+  const [isCreateOptionModalOpen, setIsCreateOptionModalOpen] = useState(false);
+  const [selectedRfpForOption, setSelectedRfpForOption] = useState<number | null>(null);
+
+  const createOptionMutation = useMutation({
+    mutationFn: async ({ rfpId, optionType, optionTitle }: { rfpId: number; optionType: string; optionTitle: string }) => {
+      const token = localStorage.getItem('auth-token');
+      const response = await fetch(`/api/rfp-requests/${rfpId}/create-option`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ optionType, optionTitle }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to create RFP option');
+      }
+
+      return response.json();
+    },
+    onSuccess: (option) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
+      setIsCreateOptionModalOpen(false);
+      setSelectedRfpForOption(null);
+      toast({
+        title: "Success",
+        description: `RFP option ${option.rfpNumber} created successfully`,
+      });
+    },
+    onError: (error: Error) => {
+      if (error.message.includes('401')) {
+        handleAuthError(error);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const { data: rfpRequests = [], isLoading } = useQuery<RfpRequest[]>({
     queryKey: ["/api/rfp-requests", { search: searchQuery, status: statusFilter }],
     queryFn: async () => {
@@ -209,14 +255,16 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
     }
   };
 
-  // Organize RFPs hierarchically (parent RFPs with their counter offers)
+  // Organize RFPs hierarchically (parent RFPs with their counter offers and options)
   const organizedRfps = () => {
-    const parentRfps = rfpRequests.filter(rfp => !rfp.isCounterOffer);
+    const parentRfps = rfpRequests.filter(rfp => !rfp.isCounterOffer && !rfp.isOption);
     const counterOffers = rfpRequests.filter(rfp => rfp.isCounterOffer);
+    const options = rfpRequests.filter(rfp => rfp.isOption);
     
     return parentRfps.map(parent => ({
       ...parent,
-      counterOffers: counterOffers.filter(co => co.parentRfpId === parent.id)
+      counterOffers: counterOffers.filter(co => co.parentRfpId === parent.id),
+      options: options.filter(opt => opt.parentRfpId === parent.id)
     }));
   };
 
@@ -483,7 +531,7 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
                     onClick={() => onSelectRfp?.(parentRfp)}
                   >
                     <div className="flex items-center">
-                      {parentRfp.counterOffers.length > 0 && (
+                      {(parentRfp.counterOffers.length > 0 || parentRfp.options.length > 0) && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -498,6 +546,11 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
                       {parentRfp.counterOffers.length > 0 && (
                         <span className="ml-2 px-1.5 py-0.5 text-xs bg-blue-100 text-blue-700 rounded">
                           {parentRfp.counterOffers.length} counter{parentRfp.counterOffers.length > 1 ? 's' : ''}
+                        </span>
+                      )}
+                      {parentRfp.options.length > 0 && (
+                        <span className="ml-2 px-1.5 py-0.5 text-xs bg-purple-100 text-purple-700 rounded">
+                          {parentRfp.options.length} option{parentRfp.options.length > 1 ? 's' : ''}
                         </span>
                       )}
                     </div>
@@ -626,6 +679,21 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
                           title="Create counter offer"
                         >
                           <i className="fas fa-reply text-xs"></i>
+                        </button>
+                      )}
+                      
+                      {/* RFP Options button - available during any active phase */}
+                      {parentRfp.status !== 'archived' && (
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedRfpForOption(parentRfp.id);
+                            setIsCreateOptionModalOpen(true);
+                          }}
+                          className="text-purple-600 hover:text-purple-700 p-1"
+                          title="Create RFP option"
+                        >
+                          <i className="fas fa-code-branch text-xs"></i>
                         </button>
                       )}
                       
@@ -766,6 +834,128 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
                       </div>
                     </td>
                   </tr>
+                )) : []),
+                
+                // Render options if expanded
+                ...(expandedRfps.has(parentRfp.id) ? parentRfp.options.map((option) => (
+                  <tr 
+                    key={option.id} 
+                    className={`bg-purple-50 hover:bg-purple-100 transition-colors ${
+                      selectedRfpId === option.id ? 'bg-blue-50 border-l-4 border-blue-500' : 'border-l-4 border-transparent'
+                    }`}
+                    style={{
+                      height: '48px',
+                      minHeight: '48px',
+                      maxHeight: '48px'
+                    }}
+                  >
+                    <td 
+                      className="px-3 py-3 whitespace-nowrap text-xs font-medium text-gray-700 cursor-pointer"
+                      onClick={() => onSelectRfp?.(option)}
+                    >
+                      <div className="flex items-center pl-6">
+                        <i className="fas fa-code-branch mr-2 text-purple-400 text-xs"></i>
+                        {option.rfpNumber}
+                      </div>
+                    </td>
+                    <td 
+                      className="px-3 py-3 whitespace-nowrap text-xs text-gray-700 cursor-pointer"
+                      onClick={() => onSelectRfp?.(option)}
+                    >
+                      {option.tenantName}
+                    </td>
+                    <td 
+                      className="px-3 py-3 whitespace-nowrap text-xs text-gray-700 cursor-pointer"
+                      onClick={() => onSelectRfp?.(option)}
+                    >
+                      {getPropertyDisplayName(option.property)}
+                    </td>
+                    <td 
+                      className="px-3 py-3 whitespace-nowrap cursor-pointer"
+                      onClick={() => onSelectRfp?.(option)}
+                    >
+                      <span
+                        className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+                          option.status === "received" 
+                            ? "bg-purple-100 text-purple-700" 
+                            : option.status === "in-progress"
+                            ? "bg-orange-100 text-orange-700"
+                            : option.status === "completed"
+                            ? "bg-green-100 text-green-700"
+                            : option.status === "archived"
+                            ? "bg-gray-100 text-gray-700"
+                            : "bg-red-100 text-red-700"
+                        }`}
+                      >
+                        <div 
+                          className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
+                            option.status === "received" 
+                              ? "bg-purple-500" 
+                              : option.status === "in-progress"
+                              ? "bg-orange-500"
+                              : option.status === "completed"
+                              ? "bg-green-500"
+                              : option.status === "archived"
+                              ? "bg-gray-500"
+                              : "bg-red-500"
+                          }`}
+                        ></div>
+                        {option.status === "in-progress" ? "In Progress" : 
+                         option.status === "on-hold" ? "On Hold" :
+                         option.status === "archived" ? "Archived" :
+                         option.status.charAt(0).toUpperCase() + option.status.slice(1)}
+                      </span>
+                    </td>
+                    <td 
+                      className="px-3 py-3 whitespace-nowrap text-xs text-gray-500 cursor-pointer"
+                      onClick={() => onSelectRfp?.(option)}
+                    >
+                      {formatDate(option.receivedOn)}
+                    </td>
+                    <td 
+                      className="px-3 py-3 whitespace-nowrap text-xs text-gray-500 cursor-pointer"
+                      onClick={() => onSelectRfp?.(option)}
+                    >
+                      {option.internalDueDate ? formatDate(option.internalDueDate) : '—'}
+                    </td>
+                    <td 
+                      className="px-3 py-3 whitespace-nowrap text-xs text-gray-500 cursor-pointer"
+                      onClick={() => onSelectRfp?.(option)}
+                    >
+                      <div className="flex items-center space-x-1">
+                        <i className="fas fa-paperclip text-gray-400 text-xs"></i>
+                        <span>{fileCounts[option.id] || option.files.length}</span>
+                      </div>
+                    </td>
+                    <td className="px-3 py-3 whitespace-nowrap text-xs">
+                      <div className="flex items-center space-x-1">
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEditRfp(option);
+                          }}
+                          className="text-green-600 hover:text-green-700 p-1"
+                          title="Edit option"
+                        >
+                          <i className="fas fa-edit text-xs"></i>
+                        </button>
+                        
+                        {/* Delete button for options */}
+                        {canDeleteRfp && (
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(option);
+                            }}
+                            className="text-red-600 hover:text-red-700 p-1"
+                            title="Delete option"
+                          >
+                            <i className="fas fa-trash text-xs"></i>
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
                 )) : [])
               ].flat())
             )}
@@ -807,6 +997,147 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
           </div>
         </div>
       )}
+      
+      {/* Create RFP Option Modal */}
+      {isCreateOptionModalOpen && (
+        <CreateRfpOptionModal
+          isOpen={isCreateOptionModalOpen}
+          onClose={() => {
+            setIsCreateOptionModalOpen(false);
+            setSelectedRfpForOption(null);
+          }}
+          onSubmit={(optionType, optionTitle) => {
+            if (selectedRfpForOption) {
+              createOptionMutation.mutate({
+                rfpId: selectedRfpForOption,
+                optionType,
+                optionTitle
+              });
+            }
+          }}
+          isLoading={createOptionMutation.isPending}
+        />
+      )}
+    </div>
+  );
+}
+
+// Create RFP Option Modal Component
+function CreateRfpOptionModal({ 
+  isOpen, 
+  onClose, 
+  onSubmit, 
+  isLoading 
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmit: (optionType: string, optionTitle: string) => void;
+  isLoading: boolean;
+}) {
+  const [optionType, setOptionType] = useState('');
+  const [optionTitle, setOptionTitle] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (optionType && optionTitle) {
+      onSubmit(optionType, optionTitle);
+    }
+  };
+
+  const resetForm = () => {
+    setOptionType('');
+    setOptionTitle('');
+  };
+
+  const handleClose = () => {
+    resetForm();
+    onClose();
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-gray-900">Create RFP Option</h3>
+            <button
+              onClick={handleClose}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <i className="fas fa-times"></i>
+            </button>
+          </div>
+        </div>
+        
+        <form onSubmit={handleSubmit} className="px-6 py-4">
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="optionType" className="block text-sm font-medium text-gray-700 mb-2">
+                Option Type
+              </label>
+              <select
+                id="optionType"
+                value={optionType}
+                onChange={(e) => setOptionType(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              >
+                <option value="">Select option type...</option>
+                <option value="design">Design Alternative</option>
+                <option value="scope">Scope Variation</option>
+                <option value="timeline">Timeline Option</option>
+                <option value="budget">Budget Alternative</option>
+                <option value="layout">Layout Configuration</option>
+                <option value="materials">Materials Option</option>
+                <option value="phasing">Phasing Alternative</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            
+            <div>
+              <label htmlFor="optionTitle" className="block text-sm font-medium text-gray-700 mb-2">
+                Option Title
+              </label>
+              <input
+                type="text"
+                id="optionTitle"
+                value={optionTitle}
+                onChange={(e) => setOptionTitle(e.target.value)}
+                placeholder="e.g., Fast Track Option, Premium Finishes, etc."
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              />
+            </div>
+          </div>
+          
+          <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200">
+            <button
+              type="button"
+              onClick={handleClose}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+              disabled={isLoading}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isLoading || !optionType || !optionTitle}
+              className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoading ? (
+                <>
+                  <i className="fas fa-spinner fa-spin mr-2"></i>
+                  Creating...
+                </>
+              ) : (
+                'Create Option'
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

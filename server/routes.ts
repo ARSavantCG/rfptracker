@@ -5338,14 +5338,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     <div style="margin-top: 15px;">
       ${property.bayConfigurations.map((bay: any, index: number) => `
         <div style="display: inline-block; margin: 5px 15px 5px 0; padding: 4px 8px; background: #f0f9ff; border-radius: 4px; font-size: 11px;">
-          Bay ${index + 1} - ${(bay.squareFootage || 0).toLocaleString()} sf
+          Bay ${index + 1} - ${(bay.rentableSquareFootage || bay.squareFootage || 0).toLocaleString()} sf
         </div>
       `).join('')}
     </div>
-    ${property.mechanicalRoomArea ? `
+    ${property.mechanicalRoomSquareFootage ? `
     <div style="margin-top: 15px;">
       <div class="info-item">
-        <strong>Mechanical Room:</strong> ${property.mechanicalRoomArea.toLocaleString()} SF
+        <strong>Mechanical Room:</strong> ${property.mechanicalRoomSquareFootage.toLocaleString()} SF <em>(prorated across all bays)</em>
       </div>
     </div>
     ` : ''}

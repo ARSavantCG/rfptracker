@@ -235,23 +235,28 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     
     if (itemsToAssemble.length === 0) return;
 
-    // Calculate totals from selected items
-    const totalPrice = itemsToAssemble.reduce((sum, item) => sum + (parseFloat(item.totalPrice) || 0), 0);
-    const firstItem = itemsToAssemble[0];
-    const quantity = firstItem.quantity;
-    const unitPrice = quantity > 0 ? (totalPrice / quantity) : totalPrice;
+    // Calculate totals from selected items based on tenant share percentages
+    const totalPrice = itemsToAssemble.reduce((sum, item) => {
+      const itemPrice = parseFloat(item.totalPrice) || 0;
+      const tenantShare = (item.tenantShare || 100) / 100;
+      return sum + (itemPrice * tenantShare);
+    }, 0);
+    
+    // Calculate combined quantity (sum of all quantities)
+    const totalQuantity = itemsToAssemble.reduce((sum, item) => sum + (item.quantity || 0), 0);
+    const unitPrice = totalQuantity > 0 ? (totalPrice / totalQuantity) : totalPrice;
 
     // Create the assembly line item
     const assemblyLineItem: EvaluationLineItem = {
       id: `assembly_${Date.now()}`,
       description: newAssemblyName.trim(),
-      quantity: quantity,
-      unit: firstItem.unit,
+      quantity: totalQuantity,
+      unit: itemsToAssemble[0].unit,
       unitPrice: unitPrice.toFixed(2),
       totalPrice: totalPrice.toFixed(2),
-      tenantShare: 100, // Default to 100% tenant responsibility
-      bidCollectionId: firstItem.bidCollectionId,
-      bidLineItemId: firstItem.bidLineItemId,
+      tenantShare: 100, // Assembly cost is already calculated based on tenant shares
+      bidCollectionId: itemsToAssemble[0].bidCollectionId,
+      bidLineItemId: itemsToAssemble[0].bidLineItemId,
       isRolledUp: false,
       assemblyId: undefined
     };

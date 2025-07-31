@@ -503,18 +503,8 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         assemblies: (existingBudget as any).assemblies || {},
         oversizedDoors: doorCounts.oversized,
         regularDoors: doorCounts.regular,
-        vehicularParking: (() => {
-          const savedVehicular = (existingBudget as any).metadata?.vehicularParking;
-          const calculatedVehicular = parkingCounts.vehicular;
-          console.log('Parking Debug - Vehicular:', { saved: savedVehicular, calculated: calculatedVehicular });
-          return savedVehicular !== undefined ? savedVehicular : calculatedVehicular;
-        })(),
-        trailerParking: (() => {
-          const savedTrailer = (existingBudget as any).metadata?.trailerParking;
-          const calculatedTrailer = parkingCounts.trailer;
-          console.log('Parking Debug - Trailer:', { saved: savedTrailer, calculated: calculatedTrailer });
-          return savedTrailer !== undefined ? savedTrailer : calculatedTrailer;
-        })(),
+        vehicularParking: (existingBudget as any).metadata?.vehicularParking !== undefined ? (existingBudget as any).metadata.vehicularParking : parkingCounts.vehicular,
+        trailerParking: (existingBudget as any).metadata?.trailerParking !== undefined ? (existingBudget as any).metadata.trailerParking : parkingCounts.trailer,
       });
     } else if (allBidLineItems && Array.isArray(allBidLineItems) && allBidLineItems.length > 0) {
       // Initialize with bid line items if no saved budget exists
@@ -1884,8 +1874,22 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                     <p style="margin: 4px 0; font-size: 13px;"><strong>Door Configuration:</strong> ${budgetData.oversizedDoors + budgetData.regularDoors} doors total (${budgetData.oversizedDoors} oversized, ${budgetData.regularDoors} regular)</p>
                 </div>
                 <div>
-                    <p style="margin: 4px 0; font-size: 13px;"><strong>Vehicular Parking:</strong> ${budgetData.vehicularParking || 0} spaces</p>
-                    <p style="margin: 4px 0; font-size: 13px;"><strong>Trailer Parking:</strong> ${budgetData.trailerParking || 0} spaces</p>
+                    <p style="margin: 4px 0; font-size: 13px;"><strong>Vehicular Parking:</strong> ${(() => {
+                      // Check if we have existing budget data with metadata
+                      if (existingBudget?.metadata?.vehicularParking !== undefined) {
+                        return existingBudget.metadata.vehicularParking;
+                      }
+                      // Fall back to current form data
+                      return budgetData.vehicularParking || 0;
+                    })()} spaces</p>
+                    <p style="margin: 4px 0; font-size: 13px;"><strong>Trailer Parking:</strong> ${(() => {
+                      // Check if we have existing budget data with metadata
+                      if (existingBudget?.metadata?.trailerParking !== undefined) {
+                        return existingBudget.metadata.trailerParking;
+                      }
+                      // Fall back to current form data
+                      return budgetData.trailerParking || 0;
+                    })()} spaces</p>
                 </div>
             </div>
         </div>

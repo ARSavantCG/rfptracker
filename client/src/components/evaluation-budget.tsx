@@ -3469,12 +3469,11 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
             <Button
               onClick={() => cleanupAssemblyMutation.mutate()}
               disabled={cleanupAssemblyMutation.isPending}
-              variant="outline"
-              size="sm"
-              className="px-4 text-red-600 border-red-300 hover:bg-red-50"
-              title="Fix orphaned assembly items that appear struck through"
+              variant="outline" 
+              className="px-4 text-red-600 border-red-600 hover:bg-red-50 font-semibold"
+              title="Fix orphaned assembly items that appear struck through with 'Unknown Assembly'"
             >
-              {cleanupAssemblyMutation.isPending ? "Cleaning..." : "Fix Assembly Items"}
+              {cleanupAssemblyMutation.isPending ? "Cleaning..." : "🔧 Fix Assembly Items"}
             </Button>
             <Button
               onClick={saveAndAdvance}

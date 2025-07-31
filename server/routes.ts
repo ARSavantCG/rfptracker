@@ -5496,7 +5496,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Legal compliance rounding system
-  app.post("/api/properties/:id/apply-legal-rounding", isAuthenticated, async (req, res) => {
+  app.post("/api/properties/:id/apply-legal-rounding", requireAuth, async (req, res) => {
     try {
       const propertyId = parseInt(req.params.id);
       const property = await storage.getProperty(propertyId);
@@ -5548,7 +5548,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/properties/:id/legal-compliance", isAuthenticated, async (req, res) => {
+  app.get("/api/properties/:id/legal-compliance", requireAuth, async (req, res) => {
     try {
       const propertyId = parseInt(req.params.id);
       const property = await storage.getProperty(propertyId);

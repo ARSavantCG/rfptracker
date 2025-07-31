@@ -503,8 +503,18 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         assemblies: (existingBudget as any).assemblies || {},
         oversizedDoors: doorCounts.oversized,
         regularDoors: doorCounts.regular,
-        vehicularParking: (existingBudget as any).metadata?.vehicularParking !== undefined ? (existingBudget as any).metadata.vehicularParking : parkingCounts.vehicular,
-        trailerParking: (existingBudget as any).metadata?.trailerParking !== undefined ? (existingBudget as any).metadata.trailerParking : parkingCounts.trailer,
+        vehicularParking: (() => {
+          const savedVehicular = (existingBudget as any).metadata?.vehicularParking;
+          const calculatedVehicular = parkingCounts.vehicular;
+          console.log('Parking Debug - Vehicular:', { saved: savedVehicular, calculated: calculatedVehicular });
+          return savedVehicular !== undefined ? savedVehicular : calculatedVehicular;
+        })(),
+        trailerParking: (() => {
+          const savedTrailer = (existingBudget as any).metadata?.trailerParking;
+          const calculatedTrailer = parkingCounts.trailer;
+          console.log('Parking Debug - Trailer:', { saved: savedTrailer, calculated: calculatedTrailer });
+          return savedTrailer !== undefined ? savedTrailer : calculatedTrailer;
+        })(),
       });
     } else if (allBidLineItems && Array.isArray(allBidLineItems) && allBidLineItems.length > 0) {
       // Initialize with bid line items if no saved budget exists
@@ -1865,6 +1875,12 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 8px;">
                 <div>
                     <p style="margin: 4px 0; font-size: 13px;"><strong>Rentable Area:</strong> ${rentableArea > 0 ? new Intl.NumberFormat('en-US').format(rentableArea) + ' sf' : 'Not specified'}</p>
+                    <p style="margin: 4px 0; font-size: 13px;"><strong>Bay Count:</strong> ${(() => {
+                      if (rfp?.selectedBayConfigurations && rfp.selectedBayConfigurations.length > 0) {
+                        return rfp.selectedBayConfigurations.length + ' bays';
+                      }
+                      return 'Not specified';
+                    })()}</p>
                     <p style="margin: 4px 0; font-size: 13px;"><strong>Door Configuration:</strong> ${budgetData.oversizedDoors + budgetData.regularDoors} doors total (${budgetData.oversizedDoors} oversized, ${budgetData.regularDoors} regular)</p>
                 </div>
                 <div>

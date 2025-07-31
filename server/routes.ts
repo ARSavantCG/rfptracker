@@ -5460,7 +5460,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             <td>${improvement.description || ''}</td>
             <td>${quantity.toLocaleString()}</td>
             <td>${unit}</td>
-            <td>$${unitPrice.toFixed(2)}</td>
+            <td>$${unitPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
             <td>$${totalCostDollars.toLocaleString()}</td>
           </tr>
         `;}).join('')}

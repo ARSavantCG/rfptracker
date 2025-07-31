@@ -5312,7 +5312,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     <h2>Property Overview</h2>
     <div class="info-grid">
       <div class="info-item">
-        <strong>Property ID:</strong> ${property.propertyId || 'N/A'}<br>
         <strong>Total Rentable Area:</strong> ${totalRentableArea ? totalRentableArea.toLocaleString() + ' SF' : 'N/A'}<br>
         <strong>Bay Count:</strong> ${totalBays}<br>
         <strong>Single Building:</strong> ${property.isSingleBuilding ? 'Yes' : 'No'}

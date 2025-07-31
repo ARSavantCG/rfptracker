@@ -43,6 +43,7 @@ import { generateRfpPdf, generatePdfFilename } from "./pdf-generator";
 import archiver from "archiver";
 import fs from "fs";
 import path from "path";
+import { applyLegalRounding, validateLegalCompliance, LEGAL_TOTALS } from "./legal-rounding-system";
 import { deleteEntityFiles, cleanupOrphanedFiles, getCleanupStats, findOrphanedFiles } from "./file-cleanup";
 
 // Permission checking middleware
@@ -713,8 +714,6 @@ function generateAllBidCollectionsHtml(rfp: any, allBidsData: any[]) {
 import { generateDetailedReportPdf, generateReportFilename } from "./pdf-reports";
 import { generateHistoricalPricingPdf, generateHistoricalPricingFilename } from "./historical-pricing-reports";
 import multer from "multer";
-import path from "path";
-import fs from "fs";
 
 // Create uploads directory if it doesn't exist
 const uploadsDir = path.join(process.cwd(), "uploads");
@@ -5493,6 +5492,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error generating property print:", error);
       res.status(500).json({ message: "Failed to generate property print" });
+    }
+  });
+
+  // Legal compliance rounding system
+  app.post("/api/properties/:id/apply-legal-rounding", isAuthenticated, async (req, res) => {
+    try {
+      const propertyId = parseInt(req.params.id);
+      const property = await storage.getProperty(propertyId);
+      
+      if (!property) {
+        return res.status(404).json({ message: "Property not found" });
+      }
+
+      // Get legal total for this property
+      let legalTotal: number;
+      if (propertyId === 1) {
+        legalTotal = LEGAL_TOTALS.BRIDGE_POINT_GRATIGNY;
+      } else if (propertyId === 2) {
+        legalTotal = LEGAL_TOTALS.BRIDGE_595_BUILDING_2;
+      } else {
+        return res.status(400).json({ message: "Legal total not defined for this property" });
+      }
+
+      // Apply legal rounding
+      const { updatedBayConfigs, result } = applyLegalRounding(
+        property.bayConfigurations || [], 
+        legalTotal
+      );
+
+      if (result.success) {
+        // Update property with rounded bay configurations
+        await storage.updateProperty(propertyId, {
+          bayConfigurations: updatedBayConfigs
+        });
+
+        res.json({
+          success: true,
+          message: result.message,
+          adjustments: result.adjustedBays,
+          originalTotal: result.originalTotal,
+          finalTotal: result.finalTotal
+        });
+      } else {
+        res.status(400).json({
+          success: false,
+          message: result.message,
+          originalTotal: result.originalTotal,
+          finalTotal: result.finalTotal
+        });
+      }
+    } catch (error) {
+      console.error("Error applying legal rounding:", error);
+      res.status(500).json({ message: "Failed to apply legal rounding" });
+    }
+  });
+
+  app.get("/api/properties/:id/legal-compliance", isAuthenticated, async (req, res) => {
+    try {
+      const propertyId = parseInt(req.params.id);
+      const property = await storage.getProperty(propertyId);
+      
+      if (!property) {
+        return res.status(404).json({ message: "Property not found" });
+      }
+
+      // Get legal total for this property
+      let legalTotal: number;
+      if (propertyId === 1) {
+        legalTotal = LEGAL_TOTALS.BRIDGE_POINT_GRATIGNY;
+      } else if (propertyId === 2) {
+        legalTotal = LEGAL_TOTALS.BRIDGE_595_BUILDING_2;
+      } else {
+        return res.status(400).json({ message: "Legal total not defined for this property" });
+      }
+
+      // Validate compliance
+      const validation = validateLegalCompliance(
+        property.bayConfigurations || [], 
+        legalTotal
+      );
+
+      res.json({
+        propertyId,
+        propertyName: property.propertyName,
+        legalTotal,
+        ...validation
+      });
+    } catch (error) {
+      console.error("Error checking legal compliance:", error);
+      res.status(500).json({ message: "Failed to check legal compliance" });
     }
   });
 

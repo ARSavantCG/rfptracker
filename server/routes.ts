@@ -5432,16 +5432,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           <tr>
             <td>${(improvement.category || '').toUpperCase()}</td>
             <td>${improvement.description || ''}</td>
-            <td>${(improvement.quantity || 0).toLocaleString()}</td>
-            <td>${improvement.unit || ''}</td>
-            <td>$${(improvement.unitPrice || 0).toFixed(2)}</td>
-            <td>$${(((improvement.quantity || 0) * (improvement.unitPrice || 0)) || 0).toLocaleString()}</td>
+            <td>0</td>
+            <td></td>
+            <td>$0.00</td>
+            <td>$${((improvement.totalCost || 0) / 100).toLocaleString()}</td>
           </tr>
         `).join('')}
       </tbody>
     </table>
     <div style="margin-top: 15px; text-align: right;">
-      <strong>Total Existing Improvements: $${propertyImprovements.reduce((sum, imp) => sum + ((imp.quantity || 0) * (imp.unitPrice || 0)), 0).toLocaleString()}</strong>
+      <strong>Total Existing Improvements: $${propertyImprovements.reduce((sum, imp) => sum + ((imp.totalCost || 0) / 100), 0).toLocaleString()}</strong>
     </div>
   </div>
   ` : ''}

@@ -550,12 +550,32 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
                       )}
                       {parentRfp.rfpNumber}
                       {parentRfp.counterOffers.length > 0 && (
-                        <span className="ml-2 px-1.5 py-0.5 text-xs bg-blue-100 text-blue-700 rounded">
+                        <span className={`ml-2 px-1.5 py-0.5 text-xs rounded ${
+                          parentRfp.status === "received" 
+                            ? "bg-purple-100 text-purple-700" 
+                            : parentRfp.status === "in-progress"
+                            ? "bg-orange-100 text-orange-700"
+                            : parentRfp.status === "completed"
+                            ? "bg-green-100 text-green-700"
+                            : parentRfp.status === "archived"
+                            ? "bg-gray-100 text-gray-700"
+                            : "bg-red-100 text-red-700"
+                        }`}>
                           {parentRfp.counterOffers.length} counter{parentRfp.counterOffers.length > 1 ? 's' : ''}
                         </span>
                       )}
                       {parentRfp.options.length > 0 && (
-                        <span className="ml-2 px-1.5 py-0.5 text-xs bg-purple-100 text-purple-700 rounded">
+                        <span className={`ml-2 px-1.5 py-0.5 text-xs rounded ${
+                          parentRfp.status === "received" 
+                            ? "bg-purple-100 text-purple-700" 
+                            : parentRfp.status === "in-progress"
+                            ? "bg-orange-100 text-orange-700"
+                            : parentRfp.status === "completed"
+                            ? "bg-green-100 text-green-700"
+                            : parentRfp.status === "archived"
+                            ? "bg-gray-100 text-gray-700"
+                            : "bg-red-100 text-red-700"
+                        }`}>
                           {parentRfp.options.length} alternate{parentRfp.options.length > 1 ? 's' : ''}
                         </span>
                       )}

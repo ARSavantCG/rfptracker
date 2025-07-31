@@ -500,11 +500,16 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
   // Initialize budget with saved data or bid line items data
   useEffect(() => {
     const doorCounts = calculateDoorCounts();
-    const parkingCounts = calculateParkingCounts();
     const existingImprovementsFromProperty = populateExistingImprovements();
     
     if (existingBudget) {
       // Load saved budget data but override door counts with current bay configuration
+      // For parking, ALWAYS use saved metadata values if they exist, never recalculate
+      const savedVehicular = (existingBudget as any).metadata?.vehicularParking;
+      const savedTrailer = (existingBudget as any).metadata?.trailerParking;
+      
+
+      
       setBudgetData({
         tenantImprovements: (existingBudget as any).tenantImprovements || [],
         designSoftCosts: (existingBudget as any).designSoftCosts || [],
@@ -522,21 +527,12 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         assemblies: (existingBudget as any).assemblies || {},
         oversizedDoors: doorCounts.oversized,
         regularDoors: doorCounts.regular,
-        vehicularParking: (() => {
-          const savedVehicular = (existingBudget as any).metadata?.vehicularParking;
-          const calculatedVehicular = parkingCounts.vehicular;
-          console.log('Parking Debug - Vehicular:', { saved: savedVehicular, calculated: calculatedVehicular, hasMetadata: !!(existingBudget as any).metadata });
-          return savedVehicular !== undefined ? savedVehicular : calculatedVehicular;
-        })(),
-        trailerParking: (() => {
-          const savedTrailer = (existingBudget as any).metadata?.trailerParking;
-          const calculatedTrailer = parkingCounts.trailer;
-          console.log('Parking Debug - Trailer:', { saved: savedTrailer, calculated: calculatedTrailer, hasMetadata: !!(existingBudget as any).metadata });
-          return savedTrailer !== undefined ? savedTrailer : calculatedTrailer;
-        })(),
+        vehicularParking: savedVehicular !== undefined ? savedVehicular : 0,
+        trailerParking: savedTrailer !== undefined ? savedTrailer : 0,
       });
     } else if (allBidLineItems && Array.isArray(allBidLineItems) && allBidLineItems.length > 0) {
       // Initialize with bid line items if no saved budget exists
+      const parkingCounts = calculateParkingCounts();
       const initialItems = allBidLineItems.map((item: BidLineItem & { bidCollectionId: number }) => ({
         id: `tenant-${item.id}`,
         description: item.description,
@@ -562,6 +558,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
       }));
     } else {
       // Initialize with door counts and existing improvements even if no other data
+      const parkingCounts = calculateParkingCounts();
       setBudgetData(prev => ({
         ...prev,
         existingImprovements: existingImprovementsFromProperty,
@@ -572,7 +569,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         trailerParking: parkingCounts.trailer,
       }));
     }
-  }, [existingBudget, allBidLineItems, bidCollections, rfp?.selectedBayConfigurations, propertyImprovements, propertyData]);
+  }, [existingBudget, allBidLineItems, bidCollections, rfp?.selectedBayConfigurations, propertyImprovements]);
 
   const formatCurrency = (amount: string | number) => {
     const num = typeof amount === 'string' ? parseFloat(amount) : amount;
@@ -1903,10 +1900,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                     <p style="margin: 4px 0; font-size: 13px;"><strong>Door Configuration:</strong> ${budgetData.oversizedDoors + budgetData.regularDoors} doors total (${budgetData.oversizedDoors} oversized, ${budgetData.regularDoors} regular)</p>
                 </div>
                 <div>
-                    <p style="margin: 4px 0; font-size: 13px;"><strong>Vehicular Parking:</strong> ${(() => {
-                      console.log('PDF Generation - Parking Values:', { vehicular: budgetData.vehicularParking, trailer: budgetData.trailerParking });
-                      return budgetData.vehicularParking || 0;
-                    })()} spaces</p>
+                    <p style="margin: 4px 0; font-size: 13px;"><strong>Vehicular Parking:</strong> ${budgetData.vehicularParking || 0} spaces</p>
                     <p style="margin: 4px 0; font-size: 13px;"><strong>Trailer Parking:</strong> ${budgetData.trailerParking || 0} spaces</p>
                 </div>
             </div>

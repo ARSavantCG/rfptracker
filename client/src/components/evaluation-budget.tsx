@@ -357,7 +357,10 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
 
   // Calculate parking counts based on tenant's allocated area
   const calculateParkingCounts = () => {
-    if (!propertyData || !rfp?.selectedBayConfigurations) return { vehicular: 0, trailer: 0 };
+    if (!propertyData || !rfp?.selectedBayConfigurations) {
+      console.log('Parking Calc Debug - Missing data:', { hasProperty: !!propertyData, hasBays: !!rfp?.selectedBayConfigurations });
+      return { vehicular: 0, trailer: 0 };
+    }
     
     const property = propertyData as any;
     
@@ -369,7 +372,15 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     // Get total property rentable area
     const totalPropertyArea = parseFloat(property.rentableSquareFootage || '0');
     
+    console.log('Parking Calc Debug - Areas:', { 
+      tenantArea: tenantRentableArea, 
+      totalArea: totalPropertyArea,
+      mechanicalRoom: rfp.mechanicalRoomArea || 0,
+      selectedBays: rfp.selectedBayConfigurations.length
+    });
+    
     if (totalPropertyArea === 0 || tenantRentableArea === 0) {
+      console.log('Parking Calc Debug - Zero areas detected');
       return { vehicular: 0, trailer: 0 };
     }
     
@@ -382,6 +393,14 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     
     const allocatedVehicular = Math.round(totalVehicularParking * tenantPercentage);
     const allocatedTrailer = Math.round(totalTrailerParking * tenantPercentage);
+    
+    console.log('Parking Calc Debug - Results:', { 
+      percentage: tenantPercentage,
+      totalVehicular: totalVehicularParking,
+      totalTrailer: totalTrailerParking,
+      allocatedVehicular,
+      allocatedTrailer
+    });
     
     return { vehicular: allocatedVehicular, trailer: allocatedTrailer };
   };
@@ -503,8 +522,18 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         assemblies: (existingBudget as any).assemblies || {},
         oversizedDoors: doorCounts.oversized,
         regularDoors: doorCounts.regular,
-        vehicularParking: (existingBudget as any).metadata?.vehicularParking !== undefined ? (existingBudget as any).metadata.vehicularParking : parkingCounts.vehicular,
-        trailerParking: (existingBudget as any).metadata?.trailerParking !== undefined ? (existingBudget as any).metadata.trailerParking : parkingCounts.trailer,
+        vehicularParking: (() => {
+          const savedVehicular = (existingBudget as any).metadata?.vehicularParking;
+          const calculatedVehicular = parkingCounts.vehicular;
+          console.log('Parking Debug - Vehicular:', { saved: savedVehicular, calculated: calculatedVehicular, hasMetadata: !!(existingBudget as any).metadata });
+          return savedVehicular !== undefined ? savedVehicular : calculatedVehicular;
+        })(),
+        trailerParking: (() => {
+          const savedTrailer = (existingBudget as any).metadata?.trailerParking;
+          const calculatedTrailer = parkingCounts.trailer;
+          console.log('Parking Debug - Trailer:', { saved: savedTrailer, calculated: calculatedTrailer, hasMetadata: !!(existingBudget as any).metadata });
+          return savedTrailer !== undefined ? savedTrailer : calculatedTrailer;
+        })(),
       });
     } else if (allBidLineItems && Array.isArray(allBidLineItems) && allBidLineItems.length > 0) {
       // Initialize with bid line items if no saved budget exists
@@ -1874,22 +1903,8 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                     <p style="margin: 4px 0; font-size: 13px;"><strong>Door Configuration:</strong> ${budgetData.oversizedDoors + budgetData.regularDoors} doors total (${budgetData.oversizedDoors} oversized, ${budgetData.regularDoors} regular)</p>
                 </div>
                 <div>
-                    <p style="margin: 4px 0; font-size: 13px;"><strong>Vehicular Parking:</strong> ${(() => {
-                      // Check if we have existing budget data with metadata
-                      if (existingBudget?.metadata?.vehicularParking !== undefined) {
-                        return existingBudget.metadata.vehicularParking;
-                      }
-                      // Fall back to current form data
-                      return budgetData.vehicularParking || 0;
-                    })()} spaces</p>
-                    <p style="margin: 4px 0; font-size: 13px;"><strong>Trailer Parking:</strong> ${(() => {
-                      // Check if we have existing budget data with metadata
-                      if (existingBudget?.metadata?.trailerParking !== undefined) {
-                        return existingBudget.metadata.trailerParking;
-                      }
-                      // Fall back to current form data
-                      return budgetData.trailerParking || 0;
-                    })()} spaces</p>
+                    <p style="margin: 4px 0; font-size: 13px;"><strong>Vehicular Parking:</strong> ${budgetData.vehicularParking || 0} spaces</p>
+                    <p style="margin: 4px 0; font-size: 13px;"><strong>Trailer Parking:</strong> ${budgetData.trailerParking || 0} spaces</p>
                 </div>
             </div>
         </div>

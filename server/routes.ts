@@ -5428,16 +5428,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
         </tr>
       </thead>
       <tbody>
-        ${propertyImprovements.map(improvement => `
+        ${propertyImprovements.map(improvement => {
+          const totalCostDollars = (improvement.totalCost || 0) / 100;
+          let quantity = 1;
+          let unit = 'LS';
+          let unitPrice = totalCostDollars;
+          
+          // Calculate based on allocation type
+          if (improvement.allocationType === 'prorated') {
+            // For prorated items, show per square foot
+            const totalSF = totalRentableArea || 1;
+            quantity = totalSF;
+            unit = 'SF';
+            unitPrice = totalCostDollars / totalSF;
+          } else if (improvement.allocationType === 'bay-specific') {
+            // For bay-specific items, show per bay
+            const applicableBayCount = (improvement.applicableBays || []).length || 1;
+            quantity = applicableBayCount;
+            unit = 'Bay';
+            unitPrice = totalCostDollars / applicableBayCount;
+          } else if (improvement.allocationType === 'whole-property') {
+            // For whole property items, show as lump sum
+            quantity = 1;
+            unit = 'LS';
+            unitPrice = totalCostDollars;
+          }
+          
+          return `
           <tr>
             <td>${(improvement.category || '').toUpperCase()}</td>
             <td>${improvement.description || ''}</td>
-            <td>0</td>
-            <td></td>
-            <td>$0.00</td>
-            <td>$${((improvement.totalCost || 0) / 100).toLocaleString()}</td>
+            <td>${quantity.toLocaleString()}</td>
+            <td>${unit}</td>
+            <td>$${unitPrice.toFixed(2)}</td>
+            <td>$${totalCostDollars.toLocaleString()}</td>
           </tr>
-        `).join('')}
+        `;}).join('')}
       </tbody>
     </table>
     <div style="margin-top: 15px; text-align: right;">

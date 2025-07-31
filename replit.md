@@ -38,7 +38,7 @@ Preferred communication style: Simple, everyday language.
 - **Numbering System**: Versioned RFP numbering for counter offers (e.g., RFP-2025-001.01) with hierarchical display.
 - **Rentable Area Override**: Capability to override calculated rentable areas for specific RFPs.
 - **Document Editor**: Admin panel interface for customizing standard document content (e.g., RFP templates) with real-time preview.
-- **Legal Compliance Rounding System**: Critical requirement system that ensures exact leasable area totals to prevent legal issues. Distributes excess square footage across smallest bays (1 SF per bay) with consistent rule application across all properties. Overstating leasable area even by 1 SF can result in lawsuits.
+- **Legal Compliance Rounding System**: Critical requirement system that ensures exact leasable area totals to prevent legal issues. Distributes excess square footage by taking 1 SF from the smallest bays matching the exact difference (e.g., 5 SF excess = 1 SF from 5 smallest bays, 3 SF excess = 1 SF from 3 smallest bays). Overstating leasable area even by 1 SF can result in lawsuits.
 
 ## External Dependencies
 - **Database**: PostgreSQL (via Neon serverless).

@@ -28,7 +28,8 @@ export interface RoundingResult {
 
 /**
  * Applies legal compliance rounding to bay configurations
- * Distributes excess square footage across smallest bays (1 SF per bay)
+ * Distributes excess square footage by taking 1 SF from the smallest bays
+ * matching the exact difference (e.g., 5 SF excess = 1 SF from 5 smallest bays)
  * 
  * @param bayConfigs - Array of bay configurations
  * @param targetTotal - Exact total square footage allowed for leasing
@@ -74,8 +75,10 @@ export function applyLegalRounding(
   // Create updated configurations
   const updatedBayConfigs = [...bayConfigs];
   
-  // Distribute excess across smallest bays (1 SF reduction per bay)
-  for (let i = 0; i < excess && i < bayIndices.length; i++) {
+  // Distribute excess across the exact number of smallest bays matching the difference
+  // If 5 SF excess, take 1 SF from 5 smallest bays
+  // If 3 SF excess, take 1 SF from 3 smallest bays, etc.
+  for (let i = 0; i < excess; i++) {
     const bayIndex = bayIndices[i].index;
     const originalSF = updatedBayConfigs[bayIndex].rentableSquareFootage;
     

@@ -2919,6 +2919,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const budgetData = req.body;
       
+      // Clean up orphaned assembly items before saving
+      if (budgetData.tenantImprovements) {
+        budgetData.tenantImprovements = budgetData.tenantImprovements.map((item: any) => {
+          // If item is marked as assembled but assembly no longer exists, clear assembly flags
+          if (item.isAssembled && item.assemblyId && budgetData.assemblies) {
+            const assemblyExists = Object.keys(budgetData.assemblies).includes(item.assemblyId.toString());
+            if (!assemblyExists) {
+              return {
+                ...item,
+                isAssembled: false,
+                assemblyId: null
+              };
+            }
+          }
+          return item;
+        });
+      }
+      
+      // Also clean up existing assemblies data structure
+      if (budgetData.assemblies && typeof budgetData.assemblies === 'object') {
+        const cleanedAssemblies: Record<string, any> = {};
+        Object.entries(budgetData.assemblies).forEach(([key, value]) => {
+          if (value && typeof value === 'object' && 'components' in value) {
+            cleanedAssemblies[key] = value;
+          }
+        });
+        budgetData.assemblies = cleanedAssemblies;
+      }
+      
       // Check if evaluation budget already exists
       const existingBudget = await storage.getEvaluationBudget(rfpId);
       
@@ -2959,6 +2988,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Evaluation budget fetch error:', error);
       res.status(500).json({ message: "Failed to fetch evaluation budget" });
+    }
+  });
+
+  // Clean up orphaned assembly items in evaluation budget
+  app.post("/api/rfp-requests/:rfpId/evaluation-budget/cleanup-assemblies", requireAuth, async (req, res) => {
+    try {
+      const rfpId = parseInt(req.params.rfpId);
+      if (isNaN(rfpId)) {
+        return res.status(400).json({ message: "Invalid RFP ID" });
+      }
+
+      const budget = await storage.getEvaluationBudget(rfpId);
+      if (!budget) {
+        return res.status(404).json({ message: "Evaluation budget not found" });
+      }
+
+      let cleanupCount = 0;
+      
+      // Clean up tenant improvements
+      if (budget.tenantImprovements) {
+        const cleanedTI = budget.tenantImprovements.map((item: any) => {
+          if (item.isAssembled && item.assemblyId) {
+            const assemblyExists = budget.assemblies && Object.keys(budget.assemblies).includes(item.assemblyId.toString());
+            if (!assemblyExists) {
+              cleanupCount++;
+              return {
+                ...item,
+                isAssembled: false,
+                assemblyId: null
+              };
+            }
+          }
+          return item;
+        });
+        budget.tenantImprovements = cleanedTI;
+      }
+
+      // Clean up design/soft costs
+      if (budget.designSoftCosts) {
+        const cleanedDSC = budget.designSoftCosts.map((item: any) => {
+          if (item.isAssembled && item.assemblyId) {
+            const assemblyExists = budget.assemblies && Object.keys(budget.assemblies).includes(item.assemblyId.toString());
+            if (!assemblyExists) {
+              cleanupCount++;
+              return {
+                ...item,
+                isAssembled: false,
+                assemblyId: null
+              };
+            }
+          }
+          return item;
+        });
+        budget.designSoftCosts = cleanedDSC;
+      }
+
+      // Save the cleaned budget if any changes were made
+      if (cleanupCount > 0) {
+        await storage.updateEvaluationBudget(rfpId, budget);
+      }
+
+      res.json({ 
+        message: `Cleaned up ${cleanupCount} orphaned assembly items`,
+        cleanupCount
+      });
+    } catch (error) {
+      console.error('Assembly cleanup error:', error);
+      res.status(500).json({ message: "Failed to cleanup orphaned assembly items" });
     }
   });
 

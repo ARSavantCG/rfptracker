@@ -2174,6 +2174,37 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     }));
   };
 
+  // Clean up orphaned assembly items
+  const cleanupAssemblyMutation = useMutation({
+    mutationFn: async () => {
+      if (!rfp) throw new Error("No RFP selected");
+      
+      const response = await apiRequest(`/api/rfp-requests/${rfp.id}/evaluation-budget/cleanup-assemblies`, {
+        method: 'POST'
+      });
+      
+      if (!response.ok) {
+        throw new Error("Failed to cleanup orphaned assembly items");
+      }
+      
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Cleanup Complete",
+        description: `Cleaned up ${data.cleanupCount} orphaned assembly items`,
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/rfp-requests/${rfp?.id}/evaluation-budget`] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Cleanup Failed",
+        description: error instanceof Error ? error.message : "Failed to cleanup orphaned assembly items",
+        variant: "destructive",
+      });
+    }
+  });
+
   // Save progress without advancing workflow
   const saveProgressMutation = useMutation({
     mutationFn: async () => {
@@ -3434,6 +3465,16 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
               className="px-6"
             >
               {saveProgressMutation.isPending ? "Saving..." : "Save Progress"}
+            </Button>
+            <Button
+              onClick={() => cleanupAssemblyMutation.mutate()}
+              disabled={cleanupAssemblyMutation.isPending}
+              variant="outline"
+              size="sm"
+              className="px-4 text-red-600 border-red-300 hover:bg-red-50"
+              title="Fix orphaned assembly items that appear struck through"
+            >
+              {cleanupAssemblyMutation.isPending ? "Cleaning..." : "Fix Assembly Items"}
             </Button>
             <Button
               onClick={saveAndAdvance}

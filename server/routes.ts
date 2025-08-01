@@ -2776,8 +2776,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const totalWarehouseSF4 = property4.bayConfigurations?.reduce((sum: number, bay: any) => sum + (bay.rentableSquareFootage || bay.squareFootage || 0), 0) || 0;
         console.log(`🔍 DEBUG Properties API - Property 4 warehouse total: ${totalWarehouseSF4} SF`);
         
-        // Verify legal compliance total (exact requirement: 171,893 SF)
-        const legalRequirementTotal4 = 171893;
+        // Verify legal compliance total (exact requirement: 171,983 SF)
+        const legalRequirementTotal4 = 171983;
         if (totalWarehouseSF4 === legalRequirementTotal4) {
           console.log(`✅ PORT EVERGLADES LEGAL COMPLIANCE: Total matches exact requirement: ${totalWarehouseSF4} SF`);
         } else {

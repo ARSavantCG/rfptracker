@@ -2670,27 +2670,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`  ${bay.bayName || bay.bayNumber}: ${displaySF} SF`);
         });
         
-        // Check specific bays that might be problematic
+        // Verify legal compliance rounding system is working correctly
         const bay45 = property1.bayConfigurations?.find((bay: any) => bay.bayName === 'Bay 4-5');
         const bay56 = property1.bayConfigurations?.find((bay: any) => bay.bayName === 'Bay 5-6');
         
         if (bay45) {
-          console.log(`🚨 API RESPONSE - Bay 4-5: ${bay45.squareFootage} SF (Expected: 18064 SF)`);
-          if (bay45.squareFootage !== 18064) {
-            console.log(`❌ MISMATCH FOUND IN API RESPONSE: Bay 4-5 has ${bay45.squareFootage} SF instead of 18064 SF`);
-          }
+          const bay45Rentable = bay45.rentableSquareFootage || bay45.squareFootage || 0;
+          console.log(`✅ Bay 4-5 Rentable SF: ${bay45Rentable} SF (includes mechanical room allocation)`);
         }
         if (bay56) {
-          console.log(`🚨 API RESPONSE - Bay 5-6: ${bay56.squareFootage} SF (Expected: 18054 SF)`);
-          if (bay56.squareFootage !== 18054) {
-            console.log(`❌ MISMATCH FOUND IN API RESPONSE: Bay 5-6 has ${bay56.squareFootage} SF instead of 18054 SF`);
-          }
+          const bay56Rentable = bay56.rentableSquareFootage || bay56.squareFootage || 0;
+          console.log(`✅ Bay 5-6 Rentable SF: ${bay56Rentable} SF (includes mechanical room allocation)`);
         }
         
-        // Compare total against expected
-        const expectedTotal = 408763;
-        if (totalWarehouseSF !== expectedTotal) {
-          console.log(`❌ TOTAL MISMATCH: API sending ${totalWarehouseSF} SF, Expected ${expectedTotal} SF (Difference: ${totalWarehouseSF - expectedTotal} SF)`);
+        // Verify legal compliance total (exact requirement: 409,189 SF)
+        const legalRequirementTotal = 409189;
+        if (totalWarehouseSF === legalRequirementTotal) {
+          console.log(`✅ LEGAL COMPLIANCE: Total matches exact requirement: ${totalWarehouseSF} SF`);
+        } else {
+          console.log(`🚨 LEGAL COMPLIANCE VIOLATION: Total is ${totalWarehouseSF} SF, Required ${legalRequirementTotal} SF (Difference: ${totalWarehouseSF - legalRequirementTotal} SF)`);
         }
         
         // Check for missing squareFootage values

@@ -1314,18 +1314,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Parse with schema first, then convert dates for database
       const parsed = insertRfpRequestSchema.parse(formData);
       
-      // Convert date strings to Date objects for database storage
+      // Convert date strings to Date objects for database storage (preserve local date)
       if (parsed.receivedOn && typeof parsed.receivedOn === 'string') {
-        parsed.receivedOn = new Date(parsed.receivedOn);
+        const [year, month, day] = parsed.receivedOn.split('-').map(Number);
+        parsed.receivedOn = new Date(year, month - 1, day);
       }
       if (parsed.internalDueDate && typeof parsed.internalDueDate === 'string') {
-        parsed.internalDueDate = new Date(parsed.internalDueDate);
+        const [year, month, day] = parsed.internalDueDate.split('-').map(Number);
+        parsed.internalDueDate = new Date(year, month - 1, day);
       }
       if (parsed.contractorDueDate && typeof parsed.contractorDueDate === 'string') {
-        parsed.contractorDueDate = new Date(parsed.contractorDueDate);
+        const [year, month, day] = parsed.contractorDueDate.split('-').map(Number);
+        parsed.contractorDueDate = new Date(year, month - 1, day);
       }
       if (parsed.architectDueDate && typeof parsed.architectDueDate === 'string') {
-        parsed.architectDueDate = new Date(parsed.architectDueDate);
+        const [year, month, day] = parsed.architectDueDate.split('-').map(Number);
+        parsed.architectDueDate = new Date(year, month - 1, day);
       }
       
       // Handle uploaded files
@@ -1864,18 +1868,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         formData.confidential = Boolean(formData.confidential);
       }
 
-      // Convert date strings to Date objects for database
+      // Convert date strings to Date objects for database (preserve local date without timezone shift)
       if (formData.receivedOn && typeof formData.receivedOn === 'string') {
-        formData.receivedOn = new Date(formData.receivedOn);
+        // Parse as local date to prevent timezone conversion
+        const [year, month, day] = formData.receivedOn.split('-').map(Number);
+        formData.receivedOn = new Date(year, month - 1, day);
       }
       if (formData.internalDueDate && typeof formData.internalDueDate === 'string') {
-        formData.internalDueDate = new Date(formData.internalDueDate);
+        const [year, month, day] = formData.internalDueDate.split('-').map(Number);
+        formData.internalDueDate = new Date(year, month - 1, day);
       }
       if (formData.contractorDueDate && typeof formData.contractorDueDate === 'string') {
-        formData.contractorDueDate = new Date(formData.contractorDueDate);
+        const [year, month, day] = formData.contractorDueDate.split('-').map(Number);
+        formData.contractorDueDate = new Date(year, month - 1, day);
       }
       if (formData.architectDueDate && typeof formData.architectDueDate === 'string') {
-        formData.architectDueDate = new Date(formData.architectDueDate);
+        const [year, month, day] = formData.architectDueDate.split('-').map(Number);
+        formData.architectDueDate = new Date(year, month - 1, day);
       }
 
       // Handle selected bay configurations

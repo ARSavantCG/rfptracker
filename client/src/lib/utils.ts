@@ -10,7 +10,7 @@ export function formatDate(date: string | Date): string {
   
   if (typeof date === 'string') {
     // Handle YYYY-MM-DDTHH:MM:SS.sssZ format (ISO with zero time from database)
-    if (date.match(/^\d{4}-\d{2}-\d{2}T00:00:00(\.\d{3})?Z?$/)) {
+    if (date.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z?$/)) {
       // Extract just the date part to avoid timezone conversion issues
       const datePart = date.split('T')[0];
       const [year, month, day] = datePart.split('-').map(Number);
@@ -45,13 +45,17 @@ export function formatDate(date: string | Date): string {
         return 'Invalid Date';
       }
       
-      // Format directly in Eastern Time
-      return isoDate.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        timeZone: 'America/New_York'
-      });
+      // Use local date components instead of timezone conversion to preserve intended date
+      const year = isoDate.getFullYear();
+      const month = isoDate.getMonth();
+      const day = isoDate.getDate();
+      
+      const monthNames = [
+        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      ];
+      
+      return `${monthNames[month]} ${day}, ${year}`;
     }
     
     // Fallback for other string formats
@@ -61,27 +65,35 @@ export function formatDate(date: string | Date): string {
       return 'Invalid Date';
     }
     
-    return dateObj.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      timeZone: 'America/New_York'
-    });
+    // Use local date components to avoid timezone issues
+    const year = dateObj.getFullYear();
+    const month = dateObj.getMonth();
+    const day = dateObj.getDate();
+    
+    const monthNames = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+    
+    return `${monthNames[month]} ${day}, ${year}`;
   } else {
-    // Handle Date objects
+    // Handle Date objects - use local date components to preserve intended date
     const dateObj = new Date(date);
     if (isNaN(dateObj.getTime())) {
       console.warn('Invalid Date object passed to formatDate:', date);
       return 'Invalid Date';
     }
     
-    // Format in Eastern Time to match NYC timezone
-    return dateObj.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      timeZone: 'America/New_York'
-    });
+    const year = dateObj.getFullYear();
+    const month = dateObj.getMonth();
+    const day = dateObj.getDate();
+    
+    const monthNames = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+    
+    return `${monthNames[month]} ${day}, ${year}`;
   }
 }
 

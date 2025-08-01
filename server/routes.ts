@@ -2734,6 +2734,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
+      // Debug Bridge Point Port Everglades (Property 4)
+      const property4 = properties.find(p => p.id === 4);
+      if (property4) {
+        const totalWarehouseSF4 = property4.bayConfigurations?.reduce((sum: number, bay: any) => sum + (bay.rentableSquareFootage || bay.squareFootage || 0), 0) || 0;
+        console.log(`🔍 DEBUG Properties API - Property 4 warehouse total: ${totalWarehouseSF4} SF`);
+        
+        // Verify legal compliance total (exact requirement: 171,893 SF)
+        const legalRequirementTotal4 = 171893;
+        if (totalWarehouseSF4 === legalRequirementTotal4) {
+          console.log(`✅ PORT EVERGLADES LEGAL COMPLIANCE: Total matches exact requirement: ${totalWarehouseSF4} SF`);
+        } else {
+          console.log(`🚨 PORT EVERGLADES LEGAL COMPLIANCE VIOLATION: Total is ${totalWarehouseSF4} SF, Required ${legalRequirementTotal4} SF (Difference: ${totalWarehouseSF4 - legalRequirementTotal4} SF)`);
+        }
+      }
+      
       res.json(properties);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch properties" });

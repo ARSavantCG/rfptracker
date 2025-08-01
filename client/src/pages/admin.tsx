@@ -9,7 +9,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Shield, Users, Settings, Edit, Trash2, CheckCircle, XCircle, User as UserIcon, KeyRound, FileText, HardDrive, Layout } from "lucide-react";
+import { Shield, Users, Settings, Edit, Trash2, CheckCircle, XCircle, User as UserIcon, KeyRound, FileText, HardDrive, Layout, Clock, Scale } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
@@ -21,6 +21,8 @@ import AdminResetPasswordModal from "@/components/admin-reset-password-modal";
 import { FileCleanupPanel } from "@/components/file-cleanup-panel";
 import { RfpDocumentEditor } from "@/components/rfp-document-editor-fixed";
 import { EnhancedRfpCustomizer } from "@/components/enhanced-rfp-customizer";
+import { TimezoneAdminPanel } from "@/components/timezone-admin-panel";
+import { LegalCompliancePanel } from "@/components/legal-compliance-panel";
 import type { User, UserRole, Permission } from "@shared/schema";
 import { ROLE_PERMISSIONS } from "@shared/schema";
 
@@ -881,6 +883,14 @@ export default function Admin() {
               <HardDrive className="h-4 w-4" />
               File Storage
             </TabsTrigger>
+            <TabsTrigger value="timezone" className="flex items-center gap-2">
+              <Clock className="h-4 w-4" />
+              Date & Time
+            </TabsTrigger>
+            <TabsTrigger value="legal" className="flex items-center gap-2">
+              <Scale className="h-4 w-4" />
+              Legal Compliance
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="users" className="mt-6">
@@ -910,6 +920,14 @@ export default function Admin() {
 
           <TabsContent value="storage" className="mt-6">
             <FileCleanupPanel />
+          </TabsContent>
+
+          <TabsContent value="timezone" className="mt-6">
+            <TimezoneAdminPanel />
+          </TabsContent>
+
+          <TabsContent value="legal" className="mt-6">
+            <LegalCompliancePanel />
           </TabsContent>
         </Tabs>
       </div>

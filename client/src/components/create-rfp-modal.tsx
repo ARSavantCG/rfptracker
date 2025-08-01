@@ -8,6 +8,7 @@ import { FileUpload } from "./file-upload";
 import { PropertySelector } from "./property-selector";
 import { BayConfigurationModal } from "./bay-configuration-modal";
 import { useToast } from "@/hooks/use-toast";
+import { getCurrentDateString } from "@shared/date-utils";
 import { type Property, type Contact, type BayConfiguration } from "@shared/schema";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -64,7 +65,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
       tenantName: "",
       projectName: "",
       sentBy: "",
-      receivedOn: "",
+      receivedOn: getCurrentDateString(),
       internalDueDate: "",
       developmentContact: "",
       projectArea: "",

@@ -32,6 +32,7 @@ import {
   updateRomScopeItemSchema,
   insertPdfTemplateSchema
 } from "@shared/schema";
+import { convertFormDateToDbDate } from "@shared/date-utils";
 import { validateRfpForProgression, canAdvanceToPhase } from "./validation";
 import { AuthService } from "./auth";
 import { users, contacts } from "@shared/schema";
@@ -1314,22 +1315,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Parse with schema first, then convert dates for database
       const parsed = insertRfpRequestSchema.parse(formData);
       
-      // Convert date strings to Date objects for database storage (preserve local date)
+      // Convert date strings to Date objects for database storage using centralized utility
       if (parsed.receivedOn && typeof parsed.receivedOn === 'string') {
-        const [year, month, day] = parsed.receivedOn.split('-').map(Number);
-        parsed.receivedOn = new Date(year, month - 1, day);
+        parsed.receivedOn = convertFormDateToDbDate(parsed.receivedOn);
       }
       if (parsed.internalDueDate && typeof parsed.internalDueDate === 'string') {
-        const [year, month, day] = parsed.internalDueDate.split('-').map(Number);
-        parsed.internalDueDate = new Date(year, month - 1, day);
+        parsed.internalDueDate = convertFormDateToDbDate(parsed.internalDueDate);
       }
       if (parsed.contractorDueDate && typeof parsed.contractorDueDate === 'string') {
-        const [year, month, day] = parsed.contractorDueDate.split('-').map(Number);
-        parsed.contractorDueDate = new Date(year, month - 1, day);
+        parsed.contractorDueDate = convertFormDateToDbDate(parsed.contractorDueDate);
       }
       if (parsed.architectDueDate && typeof parsed.architectDueDate === 'string') {
-        const [year, month, day] = parsed.architectDueDate.split('-').map(Number);
-        parsed.architectDueDate = new Date(year, month - 1, day);
+        parsed.architectDueDate = convertFormDateToDbDate(parsed.architectDueDate);
       }
       
       // Handle uploaded files
@@ -1868,23 +1865,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         formData.confidential = Boolean(formData.confidential);
       }
 
-      // Convert date strings to Date objects for database (preserve local date without timezone shift)
+      // Convert date strings to Date objects for database using centralized utility
       if (formData.receivedOn && typeof formData.receivedOn === 'string') {
-        // Parse as local date to prevent timezone conversion
-        const [year, month, day] = formData.receivedOn.split('-').map(Number);
-        formData.receivedOn = new Date(year, month - 1, day);
+        formData.receivedOn = convertFormDateToDbDate(formData.receivedOn);
       }
       if (formData.internalDueDate && typeof formData.internalDueDate === 'string') {
-        const [year, month, day] = formData.internalDueDate.split('-').map(Number);
-        formData.internalDueDate = new Date(year, month - 1, day);
+        formData.internalDueDate = convertFormDateToDbDate(formData.internalDueDate);
       }
       if (formData.contractorDueDate && typeof formData.contractorDueDate === 'string') {
-        const [year, month, day] = formData.contractorDueDate.split('-').map(Number);
-        formData.contractorDueDate = new Date(year, month - 1, day);
+        formData.contractorDueDate = convertFormDateToDbDate(formData.contractorDueDate);
       }
       if (formData.architectDueDate && typeof formData.architectDueDate === 'string') {
-        const [year, month, day] = formData.architectDueDate.split('-').map(Number);
-        formData.architectDueDate = new Date(year, month - 1, day);
+        formData.architectDueDate = convertFormDateToDbDate(formData.architectDueDate);
       }
 
       // Handle selected bay configurations

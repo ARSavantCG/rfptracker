@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { formatDate, formatFileSize, getFileIcon, getStatusColor } from "@/lib/utils";
+import { formatDateForInput } from "@shared/date-utils";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { InvitationWorkflowModal } from "./invitation-workflow-modal";
@@ -122,8 +123,8 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
   // Initialize edit dates when modal opens or RFP changes
   useEffect(() => {
     if (rfp) {
-      setEditCompletedDate(rfp.completedDate ? new Date(rfp.completedDate).toISOString().split('T')[0] : "");
-      setEditPublishedDate(rfp.publishedDate ? new Date(rfp.publishedDate).toISOString().split('T')[0] : "");
+      setEditCompletedDate(formatDateForInput(rfp.completedDate));
+      setEditPublishedDate(formatDateForInput(rfp.publishedDate));
     }
   }, [rfp?.id]);
 
@@ -140,8 +141,8 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
   };
 
   const handleCancelDatesEdit = () => {
-    setEditCompletedDate(rfp.completedDate ? new Date(rfp.completedDate).toISOString().split('T')[0] : "");
-    setEditPublishedDate(rfp.publishedDate ? new Date(rfp.publishedDate).toISOString().split('T')[0] : "");
+    setEditCompletedDate(formatDateForInput(rfp?.completedDate));
+    setEditPublishedDate(formatDateForInput(rfp?.publishedDate));
     setIsEditingDates(false);
   };
 
@@ -371,8 +372,8 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
                       <button
                         onClick={() => {
                           setIsEditingDates(false);
-                          setEditCompletedDate(rfp.completedDate ? new Date(rfp.completedDate).toISOString().split('T')[0] : "");
-                          setEditPublishedDate(rfp.publishedDate ? new Date(rfp.publishedDate).toISOString().split('T')[0] : "");
+                          setEditCompletedDate(formatDateForInput(rfp?.completedDate));
+                          setEditPublishedDate(formatDateForInput(rfp?.publishedDate));
                         }}
                         className="flex items-center gap-1 px-2 py-1 text-xs text-gray-600 hover:text-gray-800"
                       >

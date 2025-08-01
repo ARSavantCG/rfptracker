@@ -5,96 +5,12 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+// Import centralized date utilities
+import { formatDateForDisplay } from "@shared/date-utils";
+
+// Re-export the centralized formatDate function
 export function formatDate(date: string | Date): string {
-  if (!date) return 'N/A';
-  
-  if (typeof date === 'string') {
-    // Handle YYYY-MM-DDTHH:MM:SS.sssZ format (ISO with zero time from database)
-    if (date.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z?$/)) {
-      // Extract just the date part to avoid timezone conversion issues
-      const datePart = date.split('T')[0];
-      const [year, month, day] = datePart.split('-').map(Number);
-      
-      // Direct formatting without Date object to avoid timezone issues
-      const monthNames = [
-        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-      ];
-      
-      return `${monthNames[month - 1]} ${day}, ${year}`;
-    }
-    
-    // Handle YYYY-MM-DD format (simple date string)
-    if (date.match(/^\d{4}-\d{2}-\d{2}$/)) {
-      const [year, month, day] = date.split('-').map(Number);
-      
-      // Direct formatting without Date object to avoid timezone issues
-      const monthNames = [
-        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-      ];
-      
-      return `${monthNames[month - 1]} ${day}, ${year}`;
-    }
-    
-    // Handle other ISO strings with time
-    if (date.includes('T')) {
-      const isoDate = new Date(date);
-      if (isNaN(isoDate.getTime())) {
-        console.warn('Invalid ISO date passed to formatDate:', date);
-        return 'Invalid Date';
-      }
-      
-      // Use local date components instead of timezone conversion to preserve intended date
-      const year = isoDate.getFullYear();
-      const month = isoDate.getMonth();
-      const day = isoDate.getDate();
-      
-      const monthNames = [
-        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-      ];
-      
-      return `${monthNames[month]} ${day}, ${year}`;
-    }
-    
-    // Fallback for other string formats
-    const dateObj = new Date(date);
-    if (isNaN(dateObj.getTime())) {
-      console.warn('Invalid date string passed to formatDate:', date);
-      return 'Invalid Date';
-    }
-    
-    // Use local date components to avoid timezone issues
-    const year = dateObj.getFullYear();
-    const month = dateObj.getMonth();
-    const day = dateObj.getDate();
-    
-    const monthNames = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-    ];
-    
-    return `${monthNames[month]} ${day}, ${year}`;
-  } else {
-    // Handle Date objects - use local date components to preserve intended date
-    const dateObj = new Date(date);
-    if (isNaN(dateObj.getTime())) {
-      console.warn('Invalid Date object passed to formatDate:', date);
-      return 'Invalid Date';
-    }
-    
-    const year = dateObj.getFullYear();
-    const month = dateObj.getMonth();
-    const day = dateObj.getDate();
-    
-    const monthNames = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-    ];
-    
-    return `${monthNames[month]} ${day}, ${year}`;
-  }
+  return formatDateForDisplay(date);
 }
 
 export function formatFileSize(bytes: number): string {

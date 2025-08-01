@@ -16,6 +16,7 @@ import { PropertySelector } from "./property-selector";
 import { FileUpload } from "./file-upload";
 import { BayConfigurationModal } from "./bay-configuration-modal";
 import { Edit, Save, X, Download, Trash2, Grid3x3 } from "lucide-react";
+import { formatDateForInput } from "@shared/date-utils";
 import type { RfpRequest, RfpFile, Property, BayConfiguration, Contact } from "@shared/schema";
 
 const editRfpSchema = z.object({
@@ -154,23 +155,8 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
         projectName: rfp.projectName || "",
         confidential: Boolean(rfp.confidential),
         sentBy: rfp.sentBy || "",
-        receivedOn: rfp.receivedOn ? (() => {
-          // Handle both ISO string and Date object, preserve local date without timezone shift
-          const date = new Date(rfp.receivedOn);
-          // Use local date components to avoid timezone conversion issues
-          const year = date.getFullYear();
-          const month = String(date.getMonth() + 1).padStart(2, '0');
-          const day = String(date.getDate()).padStart(2, '0');
-          return `${year}-${month}-${day}`;
-        })() : "",
-        internalDueDate: rfp.internalDueDate ? (() => {
-          const date = new Date(rfp.internalDueDate);
-          // Use local date components to avoid timezone conversion issues
-          const year = date.getFullYear();
-          const month = String(date.getMonth() + 1).padStart(2, '0');
-          const day = String(date.getDate()).padStart(2, '0');
-          return `${year}-${month}-${day}`;
-        })() : "",
+        receivedOn: formatDateForInput(rfp.receivedOn),
+        internalDueDate: formatDateForInput(rfp.internalDueDate),
         developmentContact: rfp.developmentContact || "",
         projectArea: rfp.projectArea || "",
         requestTypes: rfp.requestTypes || [],

@@ -47,6 +47,7 @@ Preferred communication style: Simple, everyday language.
   - Automatic property update middleware with legal compliance
   - Admin dashboard legal compliance monitoring panel
   - Manual enforcement API endpoint for admin controls
+- **Comprehensive Timezone & Date Management System**: System-wide centralized date handling utilities to eliminate persistent date shifting issues that occurred due to timezone conversions. Features shared date utilities (`@shared/date-utils.ts`), timezone admin panel monitoring, consistent form input/display formatting, and database storage that preserves local dates without conversion. Prevents all date-related timezone bugs across the application.
 
 ## External Dependencies
 - **Database**: PostgreSQL (via Neon serverless).

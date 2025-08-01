@@ -88,6 +88,7 @@ export type PropertyAttachment = SchemaPropertyAttachment;
 export type InsertPropertyAttachment = SchemaInsertPropertyAttachment;
 import { db } from "./db";
 import { eq, desc, sql, like, or, and, asc, gte, lte } from "drizzle-orm";
+import { formatDateForDisplay, parseInputDate } from "@shared/date-utils";
 
 export interface IStorage {
   getRfpRequest(id: number): Promise<RfpRequest | undefined>;
@@ -307,11 +308,12 @@ export class DatabaseStorage implements IStorage {
 
   async getRfpRequest(id: number): Promise<RfpRequest | undefined> {
     const [rfp] = await db.select().from(rfpRequests).where(eq(rfpRequests.id, id));
-    return rfp || undefined;
+    return rfp ? this.processRfpDates(rfp) : undefined;
   }
 
   async getAllRfpRequests(): Promise<RfpRequest[]> {
-    return await db.select().from(rfpRequests).orderBy(desc(rfpRequests.id));
+    const rfps = await db.select().from(rfpRequests).orderBy(desc(rfpRequests.id));
+    return rfps.map(rfp => this.processRfpDates(rfp));
   }
 
   async createRfpRequest(request: InsertRfpRequest): Promise<RfpRequest> {
@@ -410,7 +412,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(rfpRequests.id, id))
       .returning();
     
-    return updated || undefined;
+    return updated ? this.processRfpDates(updated) : undefined;
   }
 
   async deleteRfpRequest(id: number): Promise<boolean> {
@@ -586,6 +588,21 @@ export class DatabaseStorage implements IStorage {
     return (result.rowCount || 0) > 0;
   }
 
+  // Helper method to process RFP dates consistently using centralized utilities
+  private processRfpDates(rfp: RfpRequest): RfpRequest {
+    // Process all date fields to ensure consistent timezone handling
+    return {
+      ...rfp,
+      receivedOn: rfp.receivedOn ? new Date(rfp.receivedOn) : rfp.receivedOn,
+      internalDueDate: rfp.internalDueDate ? new Date(rfp.internalDueDate) : rfp.internalDueDate,
+      dueDate: rfp.dueDate ? new Date(rfp.dueDate) : rfp.dueDate,
+      completedDate: rfp.completedDate ? new Date(rfp.completedDate) : rfp.completedDate,
+      publishedDate: rfp.publishedDate ? new Date(rfp.publishedDate) : rfp.publishedDate,
+      createdAt: rfp.createdAt ? new Date(rfp.createdAt) : rfp.createdAt,
+      updatedAt: rfp.updatedAt ? new Date(rfp.updatedAt) : rfp.updatedAt
+    };
+  }
+
   // Workflow phase management
   async advanceWorkflowPhase(rfpId: number, newPhase: string): Promise<RfpRequest | undefined> {
     // Determine the appropriate status based on the workflow phase
@@ -605,7 +622,12 @@ export class DatabaseStorage implements IStorage {
       })
       .where(eq(rfpRequests.id, rfpId))
       .returning();
-    return updated || undefined;
+    
+    // Apply timezone conversion to the returned RFP to ensure consistent date handling
+    if (updated) {
+      return this.processRfpDates(updated);
+    }
+    return undefined;
   }
 
   async getProjectsByPhase(phase: string): Promise<RfpRequest[]> {

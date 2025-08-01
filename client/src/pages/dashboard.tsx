@@ -15,6 +15,7 @@ import { EvaluationBudget } from "@/components/evaluation-budget";
 import { FinancialSummary } from "@/components/financial-summary";
 import { PublishSummary } from "@/components/publish-summary";
 import { QuickActionsSidebar } from "@/components/quick-actions-sidebar";
+import { LegalCompliancePanel } from "@/components/legal-compliance-panel";
 import Navigation from "@/components/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

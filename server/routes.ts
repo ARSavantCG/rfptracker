@@ -40,6 +40,12 @@ import { tokenStore } from "./token-auth";
 import bcrypt from "bcryptjs";
 import { nanoid } from "nanoid";
 import { generateRfpPdf, generatePdfFilename } from "./pdf-generator";
+import { 
+  enforceAllPropertiesLegalCompliance, 
+  enforcePropertyLegalCompliance,
+  autoEnforceLegalComplianceMiddleware,
+  LEGAL_PROPERTY_TOTALS 
+} from "./property-legal-compliance";
 import archiver from "archiver";
 import fs from "fs";
 import path from "path";
@@ -854,6 +860,19 @@ async function requireAdmin(req: any, res: any, next: any) {
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-here';
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Auto-enforce legal compliance on startup for ALL properties
+  console.log('🏛️ STARTUP: Enforcing legal compliance across all properties...');
+  try {
+    const complianceResult = await enforceAllPropertiesLegalCompliance();
+    if (complianceResult.success) {
+      console.log(`✅ STARTUP LEGAL COMPLIANCE: ${complianceResult.summary}`);
+    } else {
+      console.error(`❌ STARTUP LEGAL COMPLIANCE FAILED: ${complianceResult.summary}`);
+    }
+  } catch (error) {
+    console.error('❌ STARTUP: Failed to enforce legal compliance:', error);
+  }
+
   // Setup session middleware
   setupSession(app);
   // Authentication routes - supports both admin users and contact emails
@@ -2644,6 +2663,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Legal compliance enforcement endpoint
+  app.post("/api/properties/enforce-legal-compliance", requireAuth, async (req, res) => {
+    try {
+      console.log('🏛️ Manual legal compliance enforcement requested...');
+      const result = await enforceAllPropertiesLegalCompliance();
+      
+      res.json({
+        success: result.success,
+        summary: result.summary,
+        details: result.results
+      });
+    } catch (error) {
+      console.error("Error enforcing legal compliance:", error);
+      res.status(500).json({ message: "Failed to enforce legal compliance" });
+    }
+  });
+
   // Property routes
   app.get("/api/properties", async (req, res) => {
     try {
@@ -2808,7 +2844,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid input", errors: result.error.issues });
       }
 
-      const property = await storage.updateProperty(id, result.data);
+      // Apply legal compliance middleware before saving
+      const legallyCompliantData = await autoEnforceLegalComplianceMiddleware(id, result.data);
+
+      const property = await storage.updateProperty(id, legallyCompliantData);
       if (!property) {
         return res.status(404).json({ message: "Property not found" });
       }
@@ -2839,7 +2878,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      const property = await storage.updateProperty(id, result.data);
+      // Apply legal compliance middleware before saving
+      const legallyCompliantData = await autoEnforceLegalComplianceMiddleware(id, result.data);
+
+      const property = await storage.updateProperty(id, legallyCompliantData);
       if (!property) {
         return res.status(404).json({ message: "Property not found" });
       }

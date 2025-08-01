@@ -2657,7 +2657,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Debug log the total warehouse area for property 1
       const property1 = properties.find(p => p.id === 1);
       if (property1) {
-        const totalWarehouseSF = property1.bayConfigurations?.reduce((sum: number, bay: any) => sum + (bay.squareFootage || 0), 0) || 0;
+        const totalWarehouseSF = property1.bayConfigurations?.reduce((sum: number, bay: any) => sum + (bay.rentableSquareFootage || bay.squareFootage || 0), 0) || 0;
         console.log(`🔍 DEBUG Properties API - Property 1 warehouse total: ${totalWarehouseSF} SF`);
         
         // Debug the bay configurations structure
@@ -2666,7 +2666,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Show ALL bay values being sent to frontend
         console.log('🏗️ ALL BAYS BEING SENT TO FRONTEND:');
         property1.bayConfigurations?.forEach((bay: any) => {
-          console.log(`  ${bay.bayName}: ${bay.squareFootage} SF`);
+          const displaySF = bay.rentableSquareFootage || bay.squareFootage || 0;
+          console.log(`  ${bay.bayName || bay.bayNumber}: ${displaySF} SF`);
         });
         
         // Check specific bays that might be problematic
@@ -5224,10 +5225,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Utility function to normalize bay configurations for consistent display
+  function normalizeBayConfigurations(bayConfigs: any[]): any[] {
+    if (!bayConfigs) return [];
+    
+    return bayConfigs.map(bay => ({
+      ...bay,
+      // Ensure we use rentableSquareFootage (with mechanical room) for display
+      displaySquareFootage: bay.rentableSquareFootage || bay.squareFootage || 0,
+      bayDisplayName: bay.bayNumber || bay.bayName || 'Unknown Bay'
+    }));
+  }
+
   // Property print HTML generator
   function generatePropertyPrintHtml(property: any, executedLeases: any[], propertyImprovements: any[]): string {
-    // Calculate total rentable area from bay configurations
-    const totalRentableArea = property.bayConfigurations?.reduce((sum: number, bay: any) => sum + (bay.rentableSquareFootage || 0), 0) || 0;
+    // Normalize bay configurations to ensure consistent data
+    const normalizedBays = normalizeBayConfigurations(property.bayConfigurations || []);
+    
+    // Calculate total rentable area from normalized bay configurations
+    const totalRentableArea = normalizedBays.reduce((sum: number, bay: any) => sum + bay.displaySquareFootage, 0);
     const totalBays = property.bayConfigurations?.length || 0;
     
     // Calculate remaining space after executed leases
@@ -5236,11 +5252,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (lease.rentableAreaOverride) {
         return sum + lease.rentableAreaOverride;
       }
-      const assignedBayConfigs = property.bayConfigurations?.filter(
+      const assignedBayConfigs = normalizedBays.filter(
         (bay: any) => lease.assignedBays?.includes(bay.id)
-      ) || [];
+      );
       const leaseArea = assignedBayConfigs.reduce(
-        (total: number, bay: any) => total + (bay.rentableSquareFootage || bay.squareFootage || 0),
+        (total: number, bay: any) => total + bay.displaySquareFootage,
         0
       );
       return sum + leaseArea;
@@ -5328,9 +5344,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     </div>
     <!-- Simplified bay configuration display -->
     <div style="margin-top: 15px;">
-      ${property.bayConfigurations.map((bay: any, index: number) => `
+      ${normalizedBays.map((bay: any, index: number) => `
         <div style="display: inline-block; margin: 5px 15px 5px 0; padding: 4px 8px; background: #f0f9ff; border-radius: 4px; font-size: 11px;">
-          Bay ${index + 1} - ${(bay.rentableSquareFootage || bay.squareFootage || 0).toLocaleString()} sf
+          ${bay.bayDisplayName} - ${bay.displaySquareFootage.toLocaleString()} sf
         </div>
       `).join('')}
     </div>
@@ -5364,11 +5380,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (lease.rentableAreaOverride) {
             totalRentableArea = lease.rentableAreaOverride;
           } else {
-            const assignedBayConfigs = property.bayConfigurations?.filter(
+            const assignedBayConfigs = normalizedBays.filter(
               (bay: any) => lease.assignedBays?.includes(bay.id)
-            ) || [];
+            );
             totalRentableArea = assignedBayConfigs.reduce(
-              (total: number, bay: any) => total + (bay.rentableSquareFootage || bay.squareFootage || 0),
+              (total: number, bay: any) => total + bay.displaySquareFootage,
               0
             );
           }

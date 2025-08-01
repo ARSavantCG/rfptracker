@@ -28,7 +28,7 @@ const LEGAL_REQUIREMENTS = {
   1: { name: 'Bridge Point Gratigny', requiredSF: 409189 },
   2: { name: 'Bridge 595', requiredSF: 290307 },
   3: { name: 'MG Westside', requiredSF: 794334 },
-  4: { name: 'Bridge Point Port Everglades', requiredSF: 171893 }
+  4: { name: 'Bridge Point Port Everglades', requiredSF: 171983 }
 };
 
 export function LegalCompliancePanel() {

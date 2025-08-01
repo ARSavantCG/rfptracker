@@ -6,6 +6,7 @@
  */
 
 import { applyLegalRounding, validateLegalCompliance } from './legal-rounding-system';
+import { applyLegalIncrease } from './legal-increase-system';
 import { storage } from './storage';
 
 /**
@@ -16,7 +17,7 @@ export const LEGAL_PROPERTY_TOTALS: Record<number, { name: string; requiredSF: n
   1: { name: 'Bridge Point Gratigny', requiredSF: 409189 },
   2: { name: 'Bridge 595', requiredSF: 290307 },
   3: { name: 'MG Westside', requiredSF: 794334 }, // Current total - verify this is correct
-  4: { name: 'Bridge Point Port Everglades', requiredSF: 171893 }
+  4: { name: 'Bridge Point Port Everglades', requiredSF: 171983 }
 };
 
 /**
@@ -69,14 +70,35 @@ export async function enforcePropertyLegalCompliance(propertyId: number): Promis
       };
     }
 
-    // Apply legal rounding
+    // Apply legal compliance (either increase or decrease as needed)
     const bayConfigs = property.bayConfigurations.map((bay: any) => ({
       bayNumber: bay.bayName || bay.bayNumber || 'Unknown',
       rentableSquareFootage: bay.rentableSquareFootage || 0,
       ...bay
     }));
 
-    const { updatedBayConfigs, result } = applyLegalRounding(bayConfigs, legalReq.requiredSF);
+    let updatedBayConfigs;
+    let result;
+
+    if (originalTotal > legalReq.requiredSF) {
+      // Need to reduce total - use rounding system
+      const roundingResult = applyLegalRounding(bayConfigs, legalReq.requiredSF);
+      updatedBayConfigs = roundingResult.updatedBayConfigs;
+      result = roundingResult.result;
+    } else if (originalTotal < legalReq.requiredSF) {
+      // Need to increase total - use increase system  
+      const increaseResult = applyLegalIncrease(bayConfigs, legalReq.requiredSF);
+      updatedBayConfigs = increaseResult.updatedBayConfigs;
+      result = increaseResult.result;
+    } else {
+      // Already compliant
+      updatedBayConfigs = bayConfigs;
+      result = {
+        success: true,
+        finalTotal: originalTotal,
+        message: `Already compliant at ${originalTotal} SF`
+      };
+    }
 
     if (!result.success) {
       return {

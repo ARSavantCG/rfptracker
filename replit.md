@@ -41,7 +41,7 @@ Preferred communication style: Simple, everyday language.
 - **Comprehensive Legal Compliance System**: Automated system that ensures exact leasable area totals across ALL properties (existing and new) to prevent legal issues. Features startup enforcement, automatic middleware integration, manual enforcement endpoint, admin monitoring panel, and consistent application to any new properties. Distributes excess square footage by taking 1 SF from the smallest bays matching the exact difference (e.g., 5 SF excess = 1 SF from 5 smallest bays). When multiple bays have identical square footage, prioritizes by bay number order (Bay 1, Bay 2, etc.) for consistent, predictable adjustments. Overstating leasable area even by 1 SF can result in lawsuits.
   - Bridge Point Gratigny: 409,189 SF (exact legal requirement)
   - Bridge 595: 290,307 SF (exact legal requirement) 
-  - Bridge Point Port Everglades: 171,893 SF (exact legal requirement)
+  - Bridge Point Port Everglades: 171,983 SF (exact legal requirement)
   - MG Westside: 794,334 SF (exact legal requirement)
   - Startup enforcement on server initialization
   - Automatic property update middleware with legal compliance

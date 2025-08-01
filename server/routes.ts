@@ -2698,6 +2698,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
+      // Debug Bridge Point Port Everglades (Property 2) 
+      const property2 = properties.find(p => p.id === 2);
+      if (property2) {
+        const totalWarehouseSF2 = property2.bayConfigurations?.reduce((sum: number, bay: any) => sum + (bay.rentableSquareFootage || bay.squareFootage || 0), 0) || 0;
+        console.log(`🔍 DEBUG Properties API - Property 2 warehouse total: ${totalWarehouseSF2} SF`);
+        
+        // Verify legal compliance total (exact requirement: 290,307 SF)
+        const legalRequirementTotal2 = 290307;
+        if (totalWarehouseSF2 === legalRequirementTotal2) {
+          console.log(`✅ PORT EVERGLADES LEGAL COMPLIANCE: Total matches exact requirement: ${totalWarehouseSF2} SF`);
+        } else {
+          console.log(`🚨 PORT EVERGLADES LEGAL COMPLIANCE VIOLATION: Total is ${totalWarehouseSF2} SF, Required ${legalRequirementTotal2} SF (Difference: ${totalWarehouseSF2 - legalRequirementTotal2} SF)`);
+        }
+        
+        // Verify the 5 adjusted bays have correct values after rounding
+        const adjustedBays = [
+          {name: 'Bay 3-4', expected: 15762}, 
+          {name: 'Bay 16-17', expected: 15762},
+          {name: 'Bay 11-12', expected: 15792}, 
+          {name: 'Bay 12-13', expected: 15792}, 
+          {name: 'Bay 15-16', expected: 15792}
+        ];
+        
+        adjustedBays.forEach(({name, expected}) => {
+          const bay = property2.bayConfigurations?.find((bay: any) => bay.bayName === name);
+          if (bay) {
+            const actual = bay.rentableSquareFootage || bay.squareFootage || 0;
+            if (actual === expected) {
+              console.log(`✅ ${name}: ${actual} SF (correctly adjusted)`);
+            } else {
+              console.log(`❌ ${name}: ${actual} SF (expected ${expected} SF after legal rounding)`);
+            }
+          }
+        });
+      }
+      
       res.json(properties);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch properties" });

@@ -126,9 +126,20 @@ export function FormulaInput({
 
   // Determine what to show in the input
   const getInputValue = () => {
-    // Debug specific problematic values
-    if (displayValue && (displayValue.includes('86797') || displayValue.includes('4339'))) {
-      console.log('🔍 DEBUGGING problematic value:', displayValue, typeof displayValue);
+    // Debug all formula inputs to catch $NaN issue
+    if (displayValue && displayValue.toString().includes('=')) {
+      console.log('🔍 FORMULA INPUT DEBUG:', {
+        displayValue,
+        type: typeof displayValue,
+        isEditing,
+        showFormula,
+        formulaResult: formulaResult ? { value: formulaResult.value, error: formulaResult.error } : null
+      });
+    }
+    
+    // Also debug if we see any NaN-related values
+    if (displayValue && (displayValue.toString().toLowerCase().includes('nan') || displayValue.toString().includes('86797'))) {
+      console.log('🚨 NaN or problematic value detected:', displayValue, typeof displayValue);
     }
     
     if (isEditing || showFormula) {
@@ -163,18 +174,21 @@ export function FormulaInput({
     // For non-formula values, format numbers properly
     if (displayValue && !displayValue.startsWith('=')) {
       const numValue = parseFloat(displayValue);
+      console.log('🔢 Number formatting:', { displayValue, numValue, isNaN: isNaN(numValue), isFinite: isFinite(numValue) });
       if (!isNaN(numValue) && isFinite(numValue)) {
-        if (type === 'quantity') {
-          return numValue.toLocaleString('en-US', {
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 2
-          });
-        } else {
-          return numValue.toLocaleString('en-US', {
-            minimumFractionDigits: decimalPlaces,
-            maximumFractionDigits: decimalPlaces
-          });
-        }
+        const formatted = type === 'quantity' 
+          ? numValue.toLocaleString('en-US', {
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 2
+            })
+          : numValue.toLocaleString('en-US', {
+              minimumFractionDigits: decimalPlaces,
+              maximumFractionDigits: decimalPlaces
+            });
+        console.log('✅ Formatted result:', formatted);
+        return formatted;
+      } else {
+        console.log('❌ Failed to format, returning original:', displayValue);
       }
     }
     

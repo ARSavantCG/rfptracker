@@ -93,9 +93,7 @@ export function BidCollectionTable({ rfp }: BidCollectionTableProps) {
   const deleteBidMutation = useMutation({
     mutationFn: async (bidId: number) => {
       if (!rfp) throw new Error("No RFP selected");
-      return apiRequest(`/api/rfp-requests/${rfp.id}/bid-collections/${bidId}`, {
-        method: 'DELETE',
-      });
+      return apiRequest(`/api/rfp-requests/${rfp.id}/bid-collections/${bidId}`, 'DELETE');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/rfp-requests/${rfp?.id}/bid-collections`] });

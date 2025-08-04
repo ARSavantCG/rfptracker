@@ -4720,9 +4720,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Generate HTML for bid collection
       const html = generateBidCollectionHtml(bidCollection, rfp, lineItems);
       
-      res.setHeader('Content-Type', 'text/html');
-      res.setHeader('Content-Disposition', `inline; filename="bid-collection-${bidCollection.contractorName.replace(/\s+/g, '-')}.html"`);
-      res.send(html);
+      // Convert HTML to PDF using Puppeteer
+      const puppeteer = require('puppeteer');
+      const browser = await puppeteer.launch({
+        headless: true,
+        executablePath: '/nix/store/zi4f80l169xlmivz8vja8wlphq74qqk0-chromium-125.0.6422.141/bin/chromium',
+        args: [
+          '--no-sandbox', 
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-accelerated-2d-canvas',
+          '--no-first-run',
+          '--no-zygote',
+          '--single-process',
+          '--disable-gpu'
+        ]
+      });
+
+      try {
+        const page = await browser.newPage();
+        await page.setContent(html, { waitUntil: 'networkidle0' });
+        
+        const pdf = await page.pdf({
+          format: 'A4',
+          printBackground: true,
+          margin: {
+            top: '0.75in',
+            right: '0.75in',
+            bottom: '0.75in',
+            left: '0.75in'
+          }
+        });
+        
+        // Create a safe filename
+        const contractorName = bidCollection.contractorCompany || bidCollection.contractorName || 'bid';
+        const propertyName = rfp.projectName || 'project';
+        const filename = `${contractorName.replace(/[^a-zA-Z0-9]/g, '-')}-${propertyName.replace(/[^a-zA-Z0-9]/g, '-')}-bid.pdf`;
+        
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        res.send(pdf);
+        
+      } finally {
+        await browser.close();
+      }
     } catch (error) {
       console.error("Bid collection PDF generation error:", error);
       res.status(500).json({ message: "Failed to generate bid collection PDF" });

@@ -211,7 +211,8 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
       formData.append('status', data.status);
       formData.append('notes', data.notes || '');
       
-      // Add line items
+      // Add line items - debug what we're sending
+      console.log('Sending line items to server:', data.lineItems);
       formData.append('lineItems', JSON.stringify(data.lineItems));
       
       // Add alternates
@@ -353,6 +354,12 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
   const updateLineItem = (index: number, field: keyof LineItemFormData, value: string) => {
     const updated = [...lineItems];
     updated[index] = { ...updated[index], [field]: value };
+    
+    // Debug logging for unit price updates
+    if (field === 'unitPrice') {
+      console.log(`Updating line item ${index} unitPrice to:`, value);
+      console.log('Updated line item:', updated[index]);
+    }
     
     // Auto-calculate total price when quantity and unit price change (only if not already being calculated by FormulaInput)
     if (field === 'quantity') {
@@ -797,16 +804,34 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                                       value={item.quantity || ''}
                                       onChange={(value, evaluatedValue) => {
                                         if (editingIndex === null) startEditing(index);
-                                        updateLineItem(index, 'quantity', String(value));
                                         
-                                        // Auto-calculate total if unit price exists
-                                        if (evaluatedValue && item.unitPrice) {
-                                          const unitPrice = parseFloat(item.unitPrice);
-                                          if (!isNaN(unitPrice)) {
-                                            const total = (evaluatedValue * unitPrice).toFixed(2);
-                                            updateLineItem(index, 'totalPrice', total);
+                                        // Update both quantity and totalPrice in a single state update to avoid race conditions
+                                        const updated = [...lineItems];
+                                        updated[index] = { ...updated[index], quantity: String(value) };
+                                        
+                                        // Auto-calculate total if unit price exists and we have an evaluated quantity
+                                        if (evaluatedValue && updated[index].unitPrice) {
+                                          let unitPriceValue = 0;
+                                          if (updated[index].unitPrice.startsWith('=')) {
+                                            const result = evaluateFormula(updated[index].unitPrice);
+                                            unitPriceValue = result.value || 0;
+                                          } else {
+                                            unitPriceValue = parseFloat(updated[index].unitPrice);
+                                          }
+                                          
+                                          if (!isNaN(unitPriceValue)) {
+                                            const total = (evaluatedValue * unitPriceValue).toFixed(2);
+                                            updated[index].totalPrice = total;
                                           }
                                         }
+                                        
+                                        setLineItems(updated);
+                                        
+                                        // Update total amount
+                                        const grandTotal = updated.reduce((sum, item) => {
+                                          return sum + parseFloat(item.totalPrice || '0');
+                                        }, 0);
+                                        form.setValue('totalAmount', grandTotal.toFixed(2));
                                       }}
                                       placeholder="0"
                                       type="quantity"
@@ -831,17 +856,26 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                                       onChange={(value, evaluatedValue) => {
                                         if (editingIndex === null) startEditing(index);
                                         
-                                        // Store the raw value (which could be a formula or number)
-                                        updateLineItem(index, 'unitPrice', String(value));
+                                        // Update both unitPrice and totalPrice in a single state update to avoid race conditions
+                                        const updated = [...lineItems];
+                                        updated[index] = { ...updated[index], unitPrice: String(value) };
                                         
                                         // Auto-calculate total if we have an evaluated value and quantity
-                                        if (evaluatedValue !== null && evaluatedValue !== undefined && item.quantity) {
-                                          const quantity = parseFloat(item.quantity);
+                                        if (evaluatedValue !== null && evaluatedValue !== undefined && updated[index].quantity) {
+                                          const quantity = parseFloat(updated[index].quantity);
                                           if (!isNaN(quantity) && quantity > 0) {
                                             const total = (quantity * evaluatedValue).toFixed(2);
-                                            updateLineItem(index, 'totalPrice', total);
+                                            updated[index].totalPrice = total;
                                           }
                                         }
+                                        
+                                        setLineItems(updated);
+                                        
+                                        // Update total amount
+                                        const grandTotal = updated.reduce((sum, item) => {
+                                          return sum + parseFloat(item.totalPrice || '0');
+                                        }, 0);
+                                        form.setValue('totalAmount', grandTotal.toFixed(2));
                                       }}
                                       onBlur={() => {
                                         // Only stop editing if this was the editing row
@@ -859,7 +893,17 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                                       value={item.totalPrice || ''}
                                       onChange={(value, evaluatedValue) => {
                                         if (editingIndex === null) startEditing(index);
-                                        updateLineItem(index, 'totalPrice', String(value));
+                                        
+                                        // Update totalPrice directly
+                                        const updated = [...lineItems];
+                                        updated[index] = { ...updated[index], totalPrice: String(value) };
+                                        setLineItems(updated);
+                                        
+                                        // Update total amount
+                                        const grandTotal = updated.reduce((sum, item) => {
+                                          return sum + parseFloat(item.totalPrice || '0');
+                                        }, 0);
+                                        form.setValue('totalAmount', grandTotal.toFixed(2));
                                       }}
                                       onBlur={() => {
                                         // Only stop editing if this was the editing row

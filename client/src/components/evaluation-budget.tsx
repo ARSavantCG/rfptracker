@@ -336,6 +336,40 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     setShowAssemblyCreator(false);
   };
 
+  // Import contractor/architect pricing from bid collections
+  const importContractorArchitectPricing = () => {
+    if (!allBidLineItems || !Array.isArray(allBidLineItems) || allBidLineItems.length === 0) {
+      toast({
+        title: "No Pricing Available",
+        description: "No contractor or architect pricing found to import.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const importedItems = allBidLineItems.map((item: BidLineItem & { bidCollectionId: number }) => ({
+      id: `imported-${Date.now()}-${item.id}`,
+      description: item.description,
+      quantity: typeof item.quantity === 'string' ? parseInt(item.quantity) || 1 : item.quantity || 1,
+      unit: item.unit || "ea",
+      unitPrice: item.unitPrice?.toString() || "0.00",
+      totalPrice: item.totalPrice?.toString() || "0.00",
+      tenantShare: 100, // Default to 100% tenant responsibility
+      bidCollectionId: item.bidCollectionId,
+      bidLineItemId: item.id,
+    })) as EvaluationLineItem[];
+
+    setBudgetData(prev => ({
+      ...prev,
+      tenantImprovements: [...prev.tenantImprovements, ...importedItems],
+    }));
+
+    toast({
+      title: "Pricing Imported",
+      description: `Successfully imported ${importedItems.length} line items from contractor/architect pricing.`,
+    });
+  };
+
   // Load existing evaluation budget data
   const { data: existingBudget } = useQuery({
     queryKey: [`/api/rfp-requests/${rfp?.id}/evaluation-budget`],
@@ -574,32 +608,6 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         vehicularParking: savedVehicular !== undefined ? savedVehicular : 0,
         trailerParking: savedTrailer !== undefined ? savedTrailer : 0,
       });
-    } else if (allBidLineItems && Array.isArray(allBidLineItems) && allBidLineItems.length > 0) {
-      // Initialize with bid line items if no saved budget exists
-      const parkingCounts = calculateParkingCounts();
-      const initialItems = allBidLineItems.map((item: BidLineItem & { bidCollectionId: number }) => ({
-        id: `tenant-${item.id}`,
-        description: item.description,
-        quantity: typeof item.quantity === 'string' ? parseInt(item.quantity) || 1 : item.quantity || 1,
-        unit: item.unit || "ea",
-        unitPrice: item.unitPrice?.toString() || "0.00",
-        totalPrice: item.totalPrice?.toString() || "0.00",
-        tenantShare: 100, // Default to 100% tenant responsibility
-        bidCollectionId: item.bidCollectionId,
-        bidLineItemId: item.id,
-      }));
-
-      setBudgetData(prev => ({
-        ...prev,
-        tenantImprovements: initialItems as EvaluationLineItem[],
-        existingImprovements: existingImprovementsFromProperty,
-        hasExistingImprovements: existingImprovementsFromProperty.length > 0,
-        separateDesignCosts: false,
-        oversizedDoors: doorCounts.oversized,
-        regularDoors: doorCounts.regular,
-        vehicularParking: parkingCounts.vehicular,
-        trailerParking: parkingCounts.trailer,
-      }));
     } else {
       // Initialize with door counts and existing improvements even if no other data
       const parkingCounts = calculateParkingCounts();
@@ -2625,6 +2633,19 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
             <span className="text-sm text-gray-500">
               (Base: {formatCurrency(total)})
             </span>
+          )}
+          {/* Import button only for Tenant Improvements */}
+          {category === 'tenantImprovements' && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={importContractorArchitectPricing}
+              className="h-8"
+              disabled={!allBidLineItems || !Array.isArray(allBidLineItems) || allBidLineItems.length === 0}
+            >
+              <Upload className="h-4 w-4 mr-1" />
+              Import Pricing
+            </Button>
           )}
           <Button
             size="sm"

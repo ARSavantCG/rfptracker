@@ -3011,37 +3011,64 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
       {/* Existing Improvements */}
       <Card>
         <CardHeader>
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="hasExistingImprovements"
-              checked={budgetData.hasExistingImprovements}
-              onCheckedChange={(checked) => {
-                setBudgetData(prev => {
-                  if (checked) {
-                    // Auto-populate existing improvements when checkbox is checked
-                    const existingImprovementsFromProperty = populateExistingImprovements();
-                    return {
-                      ...prev, 
-                      hasExistingImprovements: true,
-                      existingImprovements: existingImprovementsFromProperty
-                    };
-                  } else {
-                    // Clear existing improvements when checkbox is unchecked
-                    return {
-                      ...prev, 
-                      hasExistingImprovements: false,
-                      existingImprovements: []
-                    };
-                  }
-                });
-              }}
-            />
-            <Label htmlFor="hasExistingImprovements" className="text-lg font-semibold text-black">
-              Existing Improvements
-            </Label>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="hasExistingImprovements"
+                checked={budgetData.hasExistingImprovements}
+                onCheckedChange={(checked) => {
+                  setBudgetData(prev => {
+                    if (checked) {
+                      // Auto-populate existing improvements when checkbox is checked
+                      const existingImprovementsFromProperty = populateExistingImprovements();
+                      return {
+                        ...prev, 
+                        hasExistingImprovements: true,
+                        existingImprovements: existingImprovementsFromProperty
+                      };
+                    } else {
+                      // Clear existing improvements when checkbox is unchecked
+                      return {
+                        ...prev, 
+                        hasExistingImprovements: false,
+                        existingImprovements: []
+                      };
+                    }
+                  });
+                }}
+              />
+              <Label htmlFor="hasExistingImprovements" className="text-lg font-semibold text-black">
+                Existing Improvements
+              </Label>
+            </div>
+            {budgetData.hasExistingImprovements && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const existingImprovementsFromProperty = populateExistingImprovements();
+                  setBudgetData(prev => ({
+                    ...prev,
+                    existingImprovements: existingImprovementsFromProperty
+                  }));
+                  toast({
+                    title: "Refreshed from Property",
+                    description: `Updated with ${existingImprovementsFromProperty.length} existing improvements from the property.`,
+                  });
+                }}
+                className="text-xs"
+              >
+                🔄 Refresh from Property
+              </Button>
+            )}
           </div>
           <p className="text-sm text-gray-600">
             Check this box if there are costs associated with existing improvements that need to be factored into the budget.
+            {budgetData.hasExistingImprovements && propertyImprovements && propertyImprovements.length > 0 && (
+              <span className="text-blue-600 ml-1">
+                ({propertyImprovements.length} improvements available from property)
+              </span>
+            )}
           </p>
         </CardHeader>
         {budgetData.hasExistingImprovements && (

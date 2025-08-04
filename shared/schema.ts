@@ -430,15 +430,24 @@ export type UpdateProperty = z.infer<typeof updatePropertySchema>;
 export const propertyExistingImprovements = pgTable("property_existing_improvements", {
   id: serial("id").primaryKey(),
   propertyId: integer("property_id").references(() => properties.id, { onDelete: "cascade" }).notNull(),
-  category: text("category").notNull(), // lighting, restrooms, spec-office, hvac, fire-alarm, custom
+  category: text("category").notNull(), // lighting, restrooms, spec-office, hvac, fire-alarm, demising-wall, custom
   description: text("description").notNull(),
   totalCost: integer("total_cost").notNull(), // Cost in cents for precision
-  allocationType: text("allocation_type").notNull(), // "prorated", "bay-specific", "whole-property"
+  allocationType: text("allocation_type").notNull(), // "prorated", "bay-specific", "whole-property", "demising-wall"
   allocationValue: integer("allocation_value"), // For percentage-based or custom allocations
   units: text("units"), // Units for the allocation (sf, percentage, etc.)
   
   // For bay-specific items - which bays this improvement applies to
   applicableBays: json("applicable_bays").$type<string[]>().default([]), // Array of bay IDs
+  
+  // Demising wall specific fields
+  demisingWallData: json("demising_wall_data").$type<{
+    leftBayId?: string;
+    rightBayId?: string;
+    leftPercentage?: number;
+    rightPercentage?: number;
+    wallLocation?: string; // description of wall location
+  }>(),
   
   // Additional metadata
   notes: text("notes"),
@@ -454,6 +463,13 @@ export const insertPropertyExistingImprovementSchema = createInsertSchema(proper
   updatedAt: true,
 }).extend({
   totalCost: z.number().min(0),
+  demisingWallData: z.object({
+    leftBayId: z.string().optional(),
+    rightBayId: z.string().optional(),
+    leftPercentage: z.number().min(0).max(100).optional(),
+    rightPercentage: z.number().min(0).max(100).optional(),
+    wallLocation: z.string().optional(),
+  }).optional(),
 });
 
 export const updatePropertyExistingImprovementSchema = insertPropertyExistingImprovementSchema.partial().extend({
@@ -471,13 +487,15 @@ export const EXISTING_IMPROVEMENT_CATEGORIES = {
   'spec-office': 'Spec Office',
   hvac: 'HVAC (Ventilation)',
   'fire-alarm': 'Fire Alarm',
+  'demising-wall': 'Demising Wall',
   custom: 'Custom'
 } as const;
 
 export const ALLOCATION_TYPES = {
   prorated: 'Prorated by Square Footage',
   'bay-specific': 'Bay-Specific',
-  'whole-property': 'Whole Property'
+  'whole-property': 'Whole Property',
+  'demising-wall': 'Demising Wall (50/50 Split)'
 } as const;
 
 // Evaluation Budget table

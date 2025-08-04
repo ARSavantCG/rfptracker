@@ -25,11 +25,18 @@ const formSchema = z.object({
   category: z.string().min(1, "Category is required"),
   description: z.string().min(1, "Description is required"),
   totalCost: z.number().min(0, "Cost must be positive"),
-  allocationType: z.enum(["prorated", "bay-specific", "whole-property"]),
+  allocationType: z.enum(["prorated", "bay-specific", "whole-property", "demising-wall"]),
   allocationValue: z.number().optional(),
   units: z.string().optional(),
   applicableBays: z.array(z.string()).optional(),
   notes: z.string().optional(),
+  demisingWallData: z.object({
+    leftBayId: z.string().optional(),
+    rightBayId: z.string().optional(),
+    leftPercentage: z.number().min(0).max(100).optional(),
+    rightPercentage: z.number().min(0).max(100).optional(),
+    wallLocation: z.string().optional(),
+  }).optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -61,10 +68,14 @@ export function PropertyExistingImprovementsModal({
       allocationType: "prorated",
       applicableBays: [],
       notes: "",
+      demisingWallData: {
+        leftPercentage: 50,
+        rightPercentage: 50,
+      },
     },
   });
 
-  const { data: improvements = [], isLoading } = useQuery({
+  const { data: improvements = [], isLoading } = useQuery<PropertyExistingImprovement[]>({
     queryKey: [`/api/properties/${property.id}/existing-improvements`],
     enabled: open,
   });
@@ -115,12 +126,10 @@ export function PropertyExistingImprovementsModal({
       category: improvement.category,
       description: improvement.description,
       totalCost: improvement.totalCost / 100, // Convert from cents to dollars
-      allocationType: improvement.allocationType as "prorated" | "bay-specific" | "whole-property",
+      allocationType: improvement.allocationType as "prorated" | "bay-specific" | "whole-property" | "demising-wall",
       applicableBays: improvement.applicableBays || [],
       notes: improvement.notes || "",
-      vendor: improvement.vendor || "",
-      installationDate: improvement.installationDate ? 
-        new Date(improvement.installationDate).toISOString().split('T')[0] : "",
+      demisingWallData: improvement.demisingWallData || undefined,
     });
     setShowForm(true);
   };
@@ -337,6 +346,143 @@ export function PropertyExistingImprovementsModal({
                         </FormItem>
                       )}
                     />
+                  )}
+
+                  {allocationType === "demising-wall" && (
+                    <div className="space-y-4 p-4 border rounded-lg bg-blue-50 dark:bg-blue-900/20">
+                      <div className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                        Demising Wall Cost Allocation
+                      </div>
+                      
+                      <FormField
+                        control={form.control}
+                        name="demisingWallData.wallLocation"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Wall Location Description</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="e.g., North wall between Bay 5-6 and Bay 6-7" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="demisingWallData.leftBayId"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Left Bay</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select left bay" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {property.bayConfigurations?.map((bay: BayConfiguration) => (
+                                    <SelectItem key={bay.id} value={bay.id}>
+                                      {bay.bayName}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="demisingWallData.rightBayId"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Right Bay</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select right bay" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {property.bayConfigurations?.map((bay: BayConfiguration) => (
+                                    <SelectItem key={bay.id} value={bay.id}>
+                                      {bay.bayName}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="demisingWallData.leftPercentage"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Left Bay Percentage (%)</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  type="number"
+                                  min="0"
+                                  max="100"
+                                  {...field}
+                                  value={field.value ?? 50}
+                                  onChange={(e) => {
+                                    const leftPercentage = parseInt(e.target.value) || 0;
+                                    field.onChange(leftPercentage);
+                                    // Auto-calculate right percentage
+                                    const rightPercentage = 100 - leftPercentage;
+                                    form.setValue('demisingWallData.rightPercentage', rightPercentage);
+                                  }}
+                                  placeholder="50" 
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="demisingWallData.rightPercentage"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Right Bay Percentage (%)</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  type="number"
+                                  min="0"
+                                  max="100"
+                                  {...field}
+                                  value={field.value ?? 50}
+                                  onChange={(e) => {
+                                    const rightPercentage = parseInt(e.target.value) || 0;
+                                    field.onChange(rightPercentage);
+                                    // Auto-calculate left percentage
+                                    const leftPercentage = 100 - rightPercentage;
+                                    form.setValue('demisingWallData.leftPercentage', leftPercentage);
+                                  }}
+                                  placeholder="50" 
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <div className="text-xs text-slate-600 dark:text-slate-400">
+                        Cost will be split between the selected bays based on the percentages above. 
+                        Percentages must total 100%.
+                      </div>
+                    </div>
                   )}
 
                   <FormField

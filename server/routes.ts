@@ -4704,25 +4704,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bidCollectionId = parseInt(req.params.id);
       const fileId = req.params.fileId;
 
+      console.log(`🔍 DOWNLOAD DEBUG - Bid ${bidCollectionId}, File ${fileId}`);
+
       if (isNaN(bidCollectionId)) {
         return res.status(400).json({ message: "Invalid bid collection ID" });
       }
 
       const bidCollection = await storage.getBidCollection(bidCollectionId);
       if (!bidCollection) {
+        console.log(`❌ DOWNLOAD DEBUG - Bid collection ${bidCollectionId} not found`);
         return res.status(404).json({ message: "Bid collection not found" });
       }
 
+      console.log(`🔍 DOWNLOAD DEBUG - Bid collection found, attachments:`, bidCollection.attachments);
+
       const file = bidCollection.attachments?.find((f: any) => f.id === fileId);
       if (!file) {
+        console.log(`❌ DOWNLOAD DEBUG - File ${fileId} not found in attachments`);
         return res.status(404).json({ message: "File not found" });
       }
 
+      console.log(`🔍 DOWNLOAD DEBUG - File found:`, file);
+
       const filePath = path.join(uploadsDir, file.path || file.name);
+      console.log(`🔍 DOWNLOAD DEBUG - Checking file path: ${filePath}`);
+      
       if (!fs.existsSync(filePath)) {
+        console.log(`❌ DOWNLOAD DEBUG - File not found on disk: ${filePath}`);
         return res.status(404).json({ message: "File not found on disk" });
       }
 
+      console.log(`✅ DOWNLOAD DEBUG - File exists, starting download`);
       res.download(filePath, file.name);
     } catch (error) {
       console.error("Download error:", error);

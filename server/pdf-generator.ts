@@ -1,6 +1,7 @@
 import { createWriteStream } from "fs";
 import { promisify } from "util";
 import { storage } from "./storage";
+import { evaluateFormula } from "@shared/formula-utils";
 
 // Function to get template content for PDF generation
 async function getTemplateContent(recipientType: string): Promise<any> {
@@ -152,13 +153,29 @@ function generateFinancialSummaryHtml(options: PdfGenerationOptions, dates: any)
   const { today } = dates;
   
   // Calculate totals from evaluation budget data
-  const formatCurrency = (value: number) => {
+  // Helper function to safely evaluate formula or parse number
+  const evaluateValue = (value: string | number): number => {
+    if (typeof value === 'number') return value;
+    if (!value) return 0;
+    
+    const strValue = String(value).trim();
+    if (strValue.startsWith('=')) {
+      const result = evaluateFormula(strValue);
+      return result.value || 0;
+    }
+    
+    const numValue = parseFloat(strValue);
+    return isNaN(numValue) ? 0 : numValue;
+  };
+
+  const formatCurrency = (value: string | number) => {
+    const numValue = evaluateValue(value);
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
-    }).format(value);
+    }).format(numValue);
   };
 
   // Get evaluation budget data from rfp
@@ -207,8 +224,8 @@ function generateFinancialSummaryHtml(options: PdfGenerationOptions, dates: any)
                   <td class="description-col">${item.description}</td>
                   <td class="quantity-col">${item.quantity}</td>
                   <td class="unit-col">${item.unit}</td>
-                  <td class="unit-price-col">${formatCurrency(parseFloat(item.unitPrice) || 0)}</td>
-                  <td class="total-price-col">${formatCurrency(parseFloat(item.totalPrice) || 0)}</td>
+                  <td class="unit-price-col">${formatCurrency(item.unitPrice)}</td>
+                  <td class="total-price-col">${formatCurrency(item.totalPrice)}</td>
                 </tr>
               `).join('')}
             </tbody>

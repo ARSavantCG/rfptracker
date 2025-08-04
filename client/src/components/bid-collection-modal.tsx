@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Plus, Trash2, Upload, FileText, Save, X, Download, ChevronUp, ChevronDown, GripVertical } from "lucide-react";
 import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
 import { FileUpload } from "./file-upload";
+import { FormulaInput } from "./formula-input";
 import { useToast } from "@/hooks/use-toast";
 import { formatDate } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
@@ -780,17 +781,25 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                                     />
                                   </TableCell>
                                   <TableCell>
-                                    <Input
-                                      value={item.quantity ? parseFloat(item.quantity || '0').toLocaleString('en-US') : ''}
-                                      onChange={(e) => {
+                                    <FormulaInput
+                                      value={item.quantity || ''}
+                                      onChange={(value, evaluatedValue) => {
                                         if (editingIndex === null) startEditing(index);
-                                        const value = e.target.value.replace(/,/g, '');
-                                        updateLineItem(index, 'quantity', value);
+                                        updateLineItem(index, 'quantity', String(value));
+                                        
+                                        // Auto-calculate total if unit price exists
+                                        if (evaluatedValue && item.unitPrice) {
+                                          const unitPrice = parseFloat(item.unitPrice);
+                                          if (!isNaN(unitPrice)) {
+                                            const total = (evaluatedValue * unitPrice).toFixed(2);
+                                            updateLineItem(index, 'totalPrice', total);
+                                          }
+                                        }
                                       }}
-                                      placeholder=""
-                                      type="text"
-                                      className="w-full text-xs h-8 text-right [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                      style={{ MozAppearance: 'textfield' }}
+                                      placeholder="0"
+                                      type="quantity"
+                                      className="w-full text-xs h-8"
+                                      decimalPlaces={0}
                                     />
                                   </TableCell>
                                   <TableCell>
@@ -805,37 +814,38 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                                     />
                                   </TableCell>
                                   <TableCell>
-                                    <Input
-                                      value={editingIndex === index ? (item.unitPrice || '') : (item.unitPrice ? `$${parseFloat(item.unitPrice || '0').toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '')}
-                                      onChange={(e) => {
+                                    <FormulaInput
+                                      value={item.unitPrice || ''}
+                                      onChange={(value, evaluatedValue) => {
                                         if (editingIndex === null) startEditing(index);
-                                        const value = e.target.value.replace(/[$,]/g, '');
-                                        updateLineItem(index, 'unitPrice', value);
-                                      }}
-                                      onKeyDown={(e) => {
-                                        if (e.key === 'Enter' && e.ctrlKey && editingIndex === index) {
-                                          e.preventDefault();
-                                          saveEditing(true);
+                                        updateLineItem(index, 'unitPrice', String(value));
+                                        
+                                        // Auto-calculate total if quantity exists
+                                        if (evaluatedValue && item.quantity) {
+                                          const quantity = parseFloat(item.quantity);
+                                          if (!isNaN(quantity)) {
+                                            const total = (quantity * evaluatedValue).toFixed(2);
+                                            updateLineItem(index, 'totalPrice', total);
+                                          }
                                         }
                                       }}
-                                      onFocus={() => startEditing(index)}
+                                      onBlur={() => startEditing(index)}
                                       placeholder="0.00"
-                                      type="text"
-                                      className="w-full text-xs h-8 text-right"
+                                      type="rate"
+                                      className="w-full text-xs h-8"
                                     />
                                   </TableCell>
                                   <TableCell>
-                                    <Input
-                                      value={editingIndex === index ? (item.totalPrice || '') : (item.totalPrice ? `$${parseFloat(item.totalPrice || '0').toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '')}
-                                      onChange={(e) => {
+                                    <FormulaInput
+                                      value={item.totalPrice || ''}
+                                      onChange={(value, evaluatedValue) => {
                                         if (editingIndex === null) startEditing(index);
-                                        const value = e.target.value.replace(/[$,]/g, '');
-                                        updateLineItem(index, 'totalPrice', value);
+                                        updateLineItem(index, 'totalPrice', String(value));
                                       }}
-                                      onFocus={() => startEditing(index)}
+                                      onBlur={() => startEditing(index)}
                                       placeholder="0.00"
-                                      type="text"
-                                      className="w-full text-xs h-8 text-right"
+                                      type="total"
+                                      className="w-full text-xs h-8"
                                     />
                                   </TableCell>
                                   <TableCell>
@@ -947,15 +957,14 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                             />
                           </TableCell>
                           <TableCell>
-                            <Input
-                              value={alternate.cost}
-                              onChange={(e) => {
-                                const value = e.target.value.replace(/[$,]/g, '');
-                                updateAlternate(index, 'cost', value);
+                            <FormulaInput
+                              value={alternate.cost || ''}
+                              onChange={(value, evaluatedValue) => {
+                                updateAlternate(index, 'cost', String(value));
                               }}
                               placeholder="0.00"
-                              type="text"
-                              className="w-full text-xs h-8 text-right"
+                              type="total"
+                              className="w-full text-xs h-8"
                             />
                           </TableCell>
                           <TableCell>
@@ -1056,12 +1065,12 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                       <FileText className="h-2 w-2" />
                       <span className="max-w-[100px] truncate">{file.name}</span>
                       {/* Show download button for existing files */}
-                      {bidCollection && file.id && (
+                      {bidCollection && (file as any).id && (
                         <Button
                           type="button"
                           variant="ghost"
                           onClick={() => {
-                            const downloadUrl = `/api/bid-collections/${bidCollection.id}/attachments/${file.id}`;
+                            const downloadUrl = `/api/bid-collections/${bidCollection.id}/attachments/${(file as any).id}`;
                             window.open(downloadUrl, '_blank');
                           }}
                           className="h-3 w-3 p-0 hover:bg-blue-100"

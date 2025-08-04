@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, Edit, Trash2, Save, X, ArrowRight, Copy, FileDown, Upload, Package, Users, ChevronUp, ChevronDown, GripVertical, Check as CheckIcon } from "lucide-react";
 import { EvaluationAttachments } from "./evaluation-attachments";
 import { EvaluationBudgetHistory } from "./evaluation-budget-history";
+import { FormulaInput } from "./formula-input";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import { useToast } from "@/hooks/use-toast";
 import { formatDate } from "@/lib/utils";
@@ -2772,14 +2773,24 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                                   </TableCell>
                                   <TableCell>
                                     <div className="flex gap-1">
-                                      <Input
-                                        type="number"
+                                      <FormulaInput
                                         value={item.quantity}
-                                        onChange={(e) => {
-                                          const quantity = parseInt(e.target.value) || 1;
+                                        onChange={(value, evaluatedValue) => {
+                                          const quantity = evaluatedValue || parseInt(String(value)) || 1;
                                           updateItem(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', item.id, { quantity });
+                                          
+                                          // Auto-calculate total if unit price exists
+                                          if (evaluatedValue && item.unitPrice) {
+                                            const unitPrice = parseFloat(item.unitPrice);
+                                            if (!isNaN(unitPrice)) {
+                                              const total = (evaluatedValue * unitPrice).toFixed(2);
+                                              updateItem(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', item.id, { totalPrice: total });
+                                            }
+                                          }
                                         }}
                                         className="w-16 text-sm"
+                                        type="quantity"
+                                        decimalPlaces={0}
                                       />
                                       <Input
                                         value={item.unit}
@@ -2790,12 +2801,19 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                                     </div>
                                   </TableCell>
                                   <TableCell>
-                                    <Input
-                                      type="number"
-                                      step="0.01"
+                                    <FormulaInput
                                       value={item.unitPrice}
-                                      onChange={(e) => updateItem(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', item.id, { unitPrice: e.target.value })}
+                                      onChange={(value, evaluatedValue) => {
+                                        updateItem(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', item.id, { unitPrice: String(value) });
+                                        
+                                        // Auto-calculate total if quantity exists
+                                        if (evaluatedValue && item.quantity) {
+                                          const total = (item.quantity * evaluatedValue).toFixed(2);
+                                          updateItem(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', item.id, { totalPrice: total });
+                                        }
+                                      }}
                                       className="text-sm"
+                                      type="rate"
                                     />
                                   </TableCell>
                                   {!newItemCategory && <TableCell className="font-medium">{formatCurrency(item.totalPrice)}</TableCell>}
@@ -2959,10 +2977,23 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
               </div>
               <div>
                 <Label>Quantity</Label>
-                <Input
-                  type="number"
+                <FormulaInput
                   value={newItem.quantity || 1}
-                  onChange={(e) => setNewItem(prev => ({ ...prev, quantity: parseInt(e.target.value) || 1 }))}
+                  onChange={(value, evaluatedValue) => {
+                    const quantity = evaluatedValue || parseInt(String(value)) || 1;
+                    setNewItem(prev => ({ ...prev, quantity }));
+                    
+                    // Auto-calculate total if unit price exists
+                    if (evaluatedValue && newItem.unitPrice) {
+                      const unitPrice = parseFloat(newItem.unitPrice);
+                      if (!isNaN(unitPrice)) {
+                        const total = (evaluatedValue * unitPrice).toFixed(2);
+                        setNewItem(prev => ({ ...prev, totalPrice: total }));
+                      }
+                    }
+                  }}
+                  type="quantity"
+                  decimalPlaces={0}
                 />
               </div>
               <div>
@@ -2975,28 +3006,30 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
               </div>
               <div>
                 <Label>Unit Price</Label>
-                <Input
-                  type="number"
-                  step="0.01"
+                <FormulaInput
                   value={newItem.unitPrice || ""}
-                  onChange={(e) => setNewItem(prev => ({ ...prev, unitPrice: e.target.value }))}
-                  placeholder="0.00"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && e.ctrlKey && newItem.description && newItem.unitPrice) {
-                      e.preventDefault();
-                      addNewItem(category, true);
+                  onChange={(value, evaluatedValue) => {
+                    setNewItem(prev => ({ ...prev, unitPrice: String(value) }));
+                    
+                    // Auto-calculate total if quantity exists
+                    if (evaluatedValue && newItem.quantity) {
+                      const total = (newItem.quantity * evaluatedValue).toFixed(2);
+                      setNewItem(prev => ({ ...prev, totalPrice: total }));
                     }
                   }}
+                  placeholder="0.00"
+                  type="rate"
                 />
               </div>
               <div>
                 <Label>Total Price</Label>
-                <Input
-                  type="number"
-                  step="0.01"
+                <FormulaInput
                   value={newItem.totalPrice || ""}
-                  onChange={(e) => setNewItem(prev => ({ ...prev, totalPrice: e.target.value }))}
+                  onChange={(value, evaluatedValue) => {
+                    setNewItem(prev => ({ ...prev, totalPrice: String(value) }));
+                  }}
                   placeholder="0.00"
+                  type="total"
                 />
               </div>
               <div>

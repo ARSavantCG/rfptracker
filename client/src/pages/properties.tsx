@@ -2,7 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Building, MapPin, Plus, Search, Edit, Grid, ChevronDown, ChevronUp, Printer } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Building, MapPin, Plus, Search, Edit, Grid, ChevronDown, ChevronUp, Printer, Layers } from "lucide-react";
 import { useState } from "react";
 import Navigation from "@/components/navigation";
 import { PropertyFormModal } from "@/components/property-form-modal";
@@ -17,6 +18,7 @@ export default function Properties() {
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedProperty, setExpandedProperty] = useState<string | null>(null);
   const [expandedPropertyInfo, setExpandedPropertyInfo] = useState<number | null>(null);
+  const [selectedBuilding, setSelectedBuilding] = useState<Record<string, string>>({});
 
   const { data: properties, isLoading } = useQuery<Property[]>({
     queryKey: ["/api/properties"],
@@ -65,6 +67,23 @@ export default function Properties() {
 
   const togglePropertyExpansion = (baseName: string) => {
     setExpandedProperty(expandedProperty === baseName ? null : baseName);
+  };
+
+  const handleBuildingSelection = (baseName: string, value: string) => {
+    setSelectedBuilding(prev => ({
+      ...prev,
+      [baseName]: value
+    }));
+    
+    // Set expansion state based on selection
+    if (value === "all") {
+      setExpandedProperty(baseName);
+    } else if (value === "stacked") {
+      setExpandedProperty(null);
+    } else {
+      // Single building selected - show it expanded to display fully
+      setExpandedProperty(baseName);
+    }
   };
 
   // Helper functions
@@ -185,33 +204,45 @@ export default function Properties() {
             {Object.entries(groupedProperties).map(([baseName, buildings]) => {
               const isExpanded = expandedProperty === baseName;
               const isMultiBuilding = buildings.length > 1;
+              const selectedBuildingId = selectedBuilding[baseName];
+              
+              // Filter buildings based on selection
+              let displayBuildings = buildings;
+              if (selectedBuildingId && selectedBuildingId !== "all" && selectedBuildingId !== "stacked") {
+                displayBuildings = buildings.filter(b => b.id.toString() === selectedBuildingId);
+              }
+              
+              // Override isExpanded logic for single building selection
+              const effectiveExpansion = selectedBuildingId === "stacked" ? false : 
+                                       selectedBuildingId && selectedBuildingId !== "all" && selectedBuildingId !== "stacked" ? true : 
+                                       isExpanded;
               
               return (
                 <div key={baseName} className="relative">
                   {/* Stacked Cards Container */}
                   <div className="relative" style={{ minHeight: isMultiBuilding ? '400px' : 'auto' }}>
-                    {buildings.map((property, index) => {
-                      const isVisible = isExpanded || index < 3;
+                    {displayBuildings.map((property, index) => {
+                      const isVisible = effectiveExpansion || index < 3;
                       // Reverse the visual stacking order: A in back (index 0), B on top (index 1), etc.
-                      const visualIndex = buildings.length - 1 - index;
-                      const stackOffset = isExpanded ? index * 16 : visualIndex * 8;
-                      const zIndex = isExpanded ? buildings.length - index : index + 1;
+                      const visualIndex = displayBuildings.length - 1 - index;
+                      const stackOffset = effectiveExpansion ? index * 16 : visualIndex * 8;
+                      const zIndex = effectiveExpansion ? displayBuildings.length - index : index + 1;
                       
                       return (
                         <Card 
                           key={property.id} 
                           className={`
                             transition-all duration-300 ease-in-out
-                            ${index > 0 && !isExpanded ? 'absolute' : 'relative'}
+                            ${index > 0 && !effectiveExpansion ? 'absolute' : 'relative'}
                             ${isVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}
-                            ${isMultiBuilding && !isExpanded ? 'cursor-pointer' : ''}
+                            ${isMultiBuilding && !effectiveExpansion ? 'cursor-pointer' : ''}
                             hover:shadow-lg
-                            ${isMultiBuilding && !isExpanded && index === 0 ? 'hover:scale-[1.02]' : ''}
-                            ${isExpanded && index > 0 ? 'mt-4' : ''}
+                            ${isMultiBuilding && !effectiveExpansion && index === 0 ? 'hover:scale-[1.02]' : ''}
+                            ${effectiveExpansion && index > 0 ? 'mt-4' : ''}
                           `}
                           style={{
                             zIndex,
-                            ...(index > 0 && !isExpanded ? {
+                            ...(index > 0 && !effectiveExpansion ? {
                               top: `-${stackOffset * 4}px`,
                               left: `${stackOffset}px`,
                               right: `-${stackOffset}px`,
@@ -219,7 +250,7 @@ export default function Properties() {
                               boxShadow: `0 ${index * 4}px ${index * 8}px rgba(0,0,0,0.2)`
                             } : {})
                           }}
-                          onClick={() => isMultiBuilding && !isExpanded ? togglePropertyExpansion(baseName) : undefined}
+                          onClick={() => isMultiBuilding && !effectiveExpansion ? handleBuildingSelection(baseName, "all") : undefined}
                         >
                       <CardHeader>
                         <div className="flex items-start justify-between">
@@ -581,24 +612,38 @@ export default function Properties() {
                     {/* Expand/Collapse Button for Multi-Building Properties */}
                     {isMultiBuilding && (
                       <div className="absolute -bottom-4 left-1/2 transform -translate-x-1/2 z-40">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => togglePropertyExpansion(baseName)}
-                          className="bg-white shadow-lg hover:shadow-xl px-4 py-2 text-sm font-medium border border-gray-300 hover:border-blue-400 hover:bg-blue-50"
-                        >
-                          {isExpanded ? (
-                            <>
-                              <ChevronUp className="h-4 w-4 mr-1" />
-                              Stack Cards
-                            </>
-                          ) : (
-                            <>
-                              <ChevronDown className="h-4 w-4 mr-1" />
-                              View All Buildings ({buildings.length})
-                            </>
-                          )}
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Select
+                            value={selectedBuilding[baseName] || "stacked"}
+                            onValueChange={(value) => handleBuildingSelection(baseName, value)}
+                          >
+                            <SelectTrigger className="bg-white shadow-lg hover:shadow-xl px-4 py-2 text-sm font-medium border border-gray-300 hover:border-blue-400 hover:bg-blue-50 w-52">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="stacked">
+                                <div className="flex items-center">
+                                  <Layers className="h-4 w-4 mr-2" />
+                                  Stack Cards
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="all">
+                                <div className="flex items-center">
+                                  <Grid className="h-4 w-4 mr-2" />
+                                  View All Buildings ({buildings.length})
+                                </div>
+                              </SelectItem>
+                              {buildings.map((building) => (
+                                <SelectItem key={building.id} value={building.id.toString()}>
+                                  <div className="flex items-center">
+                                    <Building className="h-4 w-4 mr-2 text-blue-600" />
+                                    Building {building.building}
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
                     )}
                     

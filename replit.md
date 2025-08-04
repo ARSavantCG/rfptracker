@@ -29,7 +29,7 @@ Preferred communication style: Simple, everyday language.
 - **Document Generation**: PDF reports (executive summaries, financial reports, historical pricing, invitation to bid), custom HTML to PDF conversion via Puppeteer.
 - **Bay Calculator**: Real-time square footage calculations based on property bay selections.
 - **Bid Collection**: Structured bid data entry, line item reordering (drag-and-drop), Excel/CSV import, file attachments for bids.
-- **Evaluation Budget**: Assembly system for grouping line items, tenant share percentage calculations, comprehensive change tracking between reports, Excel export for detailed analysis.
+- **Evaluation Budget**: Assembly system for grouping line items, tenant share percentage calculations, comprehensive change tracking between reports, Excel export for detailed analysis, "Refresh from Property" functionality to synchronize existing improvements from property data.
 - **Authentication & Authorization**: PostgreSQL-backed session storage, token-based fallback, rolling sessions, role-based access control with granular permissions.
 - **File Management**: Local filesystem storage for files with database metadata tracking, file type validation, size limits.
 - **Database ORM**: Drizzle ORM with PostgreSQL.

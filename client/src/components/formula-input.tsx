@@ -126,31 +126,6 @@ export function FormulaInput({
 
   // Determine what to show in the input
   const getInputValue = () => {
-    // Debug ALL FormulaInput renders to find the $NaN issue
-    console.log('🔧 FormulaInput getInputValue called:', {
-      displayValue,
-      type: typeof displayValue,
-      isEditing,
-      showFormula,
-      componentType: type,
-      placeholder
-    });
-    
-    // Debug all formula inputs to catch $NaN issue
-    if (displayValue && displayValue.toString().includes('=')) {
-      console.log('🔍 FORMULA INPUT DEBUG:', {
-        displayValue,
-        type: typeof displayValue,
-        isEditing,
-        showFormula,
-        formulaResult: formulaResult ? { value: formulaResult.value, error: formulaResult.error } : null
-      });
-    }
-    
-    // Also debug if we see any NaN-related values
-    if (displayValue && (displayValue.toString().toLowerCase().includes('nan') || displayValue.toString().includes('86797'))) {
-      console.log('🚨 NaN or problematic value detected:', displayValue, typeof displayValue);
-    }
     
     if (isEditing || showFormula) {
       return displayValue;
@@ -212,21 +187,11 @@ export function FormulaInput({
     "font-mono text-right"
   );
 
-  const finalValue = getInputValue();
-  
-  // Debug what's actually being rendered
-  console.log('🎯 FormulaInput final render value:', {
-    finalValue,
-    originalDisplayValue: displayValue,
-    placeholder,
-    type
-  });
-  
   return (
     <div className="relative">
       <Input
         ref={inputRef}
-        value={finalValue}
+        value={getInputValue()}
         onChange={handleChange}
         onFocus={handleFocus}
         onBlur={handleBlur}

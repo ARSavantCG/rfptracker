@@ -1,12 +1,12 @@
+import { useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { FileText, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/utils";
 import { evaluateFormula } from "@shared/formula-utils";
+import { Printer } from "lucide-react";
 import type { BidCollection, BidLineItem } from "@shared/schema";
-import { useQuery } from "@tanstack/react-query";
 
 interface BidViewModalProps {
   isOpen: boolean;

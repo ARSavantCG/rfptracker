@@ -220,11 +220,11 @@ export default function Properties() {
               return (
                 <div key={baseName} className="relative">
                   {/* Stacked Cards Container */}
-                  <div className="relative" style={{ minHeight: isMultiBuilding ? '450px' : 'auto' }}>
+                  <div className="relative" style={{ minHeight: isMultiBuilding ? '380px' : 'auto' }}>
                     {displayBuildings.map((property, index) => {
                       const isVisible = effectiveExpansion || index < 3;
-                      // Create neat stacking: first card at back, subsequent cards stacked on top
-                      const stackOffset = effectiveExpansion ? 0 : index * 6; // Reduced offset for neater stacking
+                      // Proper stacking: offset each card slightly
+                      const stackOffset = effectiveExpansion ? 0 : index * 4; // Small offset for neat stacking
                       const zIndex = effectiveExpansion ? displayBuildings.length - index : (displayBuildings.length - index);
                       
                       return (
@@ -232,7 +232,7 @@ export default function Properties() {
                           key={property.id} 
                           className={`
                             transition-all duration-300 ease-in-out
-                            ${index > 0 && !effectiveExpansion ? 'absolute' : 'relative'}
+                            ${index > 0 && !effectiveExpansion ? 'absolute top-0 left-0 right-0' : 'relative'}
                             ${isVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}
                             ${isMultiBuilding && !effectiveExpansion ? 'cursor-pointer' : ''}
                             hover:shadow-lg
@@ -242,11 +242,8 @@ export default function Properties() {
                           style={{
                             zIndex,
                             ...(index > 0 && !effectiveExpansion ? {
-                              top: `-${(index) * 340}px`, // Stack cards properly from top
-                              left: `${stackOffset}px`,
-                              right: `-${stackOffset}px`,
-                              transform: `rotate(${index * 0.8}deg)`, // Better visual separation
-                              boxShadow: `0 ${index * 3}px ${index * 6}px rgba(0,0,0,0.12)` // Clean shadow
+                              transform: `translateX(${stackOffset}px) translateY(${stackOffset}px) rotate(${index * 0.5}deg)`,
+                              boxShadow: `0 ${index * 2}px ${index * 4}px rgba(0,0,0,0.08)`
                             } : {})
                           }}
                           onClick={() => isMultiBuilding && !effectiveExpansion ? handleBuildingSelection(baseName, "all") : undefined}

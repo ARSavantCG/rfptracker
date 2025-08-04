@@ -144,7 +144,25 @@ function generateRfpPreviewHtml(documentType: string, formatSettings: any): stri
 
 // Generate HTML for bid collection PDF
 function generateBidCollectionHtml(bidCollection: any, rfp: any, lineItems: any[]) {
-  const totalAmount = lineItems.reduce((sum, item) => sum + parseFloat(item.totalPrice || '0'), 0);
+  const totalAmount = lineItems.reduce((sum, item) => {
+    if (!item.totalPrice) return sum;
+    let value = item.totalPrice;
+    // If it's a formula, evaluate it
+    if (typeof value === 'string' && value.startsWith('=')) {
+      try {
+        const { evaluateFormula } = require('../shared/formula-utils');
+        const result = evaluateFormula(value);
+        if (result.success) {
+          value = result.value;
+        } else {
+          value = parseFloat(value.substring(1)) || 0; // fallback: try parsing after removing =
+        }
+      } catch {
+        value = parseFloat(value.substring(1)) || 0; // fallback: try parsing after removing =
+      }
+    }
+    return sum + (parseFloat(value) || 0);
+  }, 0);
   
   const currentDate = new Date().toLocaleDateString('en-US', {
     timeZone: 'America/New_York',
@@ -274,8 +292,47 @@ function generateBidCollectionHtml(bidCollection: any, rfp: any, lineItems: any[
                 <td>${item.description || ''}</td>
                 <td class="currency">${item.quantity ? parseFloat(item.quantity).toLocaleString('en-US') : ''}</td>
                 <td>${item.unit || ''}</td>
-                <td class="currency">${item.unitPrice ? '$' + parseFloat(item.unitPrice).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''}</td>
-                <td class="currency">${item.totalPrice ? '$' + parseFloat(item.totalPrice).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''}</td>
+                <td class="currency">${(() => {
+                  if (!item.unitPrice) return '';
+                  let value = item.unitPrice;
+                  // If it's a formula, evaluate it
+                  if (typeof value === 'string' && value.startsWith('=')) {
+                    try {
+                      // Import and use the evaluateFormula function
+                      const { evaluateFormula } = require('../shared/formula-utils');
+                      const result = evaluateFormula(value);
+                      if (result.success) {
+                        value = result.value;
+                      } else {
+                        value = parseFloat(value.substring(1)) || 0; // fallback: try parsing after removing =
+                      }
+                    } catch {
+                      value = parseFloat(value.substring(1)) || 0; // fallback: try parsing after removing =
+                    }
+                  }
+                  const numValue = parseFloat(value);
+                  return isNaN(numValue) ? '' : '$' + numValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                })()}</td>
+                <td class="currency">${(() => {
+                  if (!item.totalPrice) return '';
+                  let value = item.totalPrice;
+                  // If it's a formula, evaluate it
+                  if (typeof value === 'string' && value.startsWith('=')) {
+                    try {
+                      const { evaluateFormula } = require('../shared/formula-utils');
+                      const result = evaluateFormula(value);
+                      if (result.success) {
+                        value = result.value;
+                      } else {
+                        value = parseFloat(value.substring(1)) || 0; // fallback: try parsing after removing =
+                      }
+                    } catch {
+                      value = parseFloat(value.substring(1)) || 0; // fallback: try parsing after removing =
+                    }
+                  }
+                  const numValue = parseFloat(value);
+                  return isNaN(numValue) ? '' : '$' + numValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                })()}</td>
               </tr>
             `).join('')}
             <tr class="total-row">

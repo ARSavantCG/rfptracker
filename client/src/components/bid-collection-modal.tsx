@@ -832,7 +832,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                                         if (editingIndex === null) startEditing(index);
                                         
                                         // Store the raw value (which could be a formula or number)
-                                        updateLineItem(index, 'unitPrice', value);
+                                        updateLineItem(index, 'unitPrice', String(value));
                                         
                                         // Auto-calculate total if we have an evaluated value and quantity
                                         if (evaluatedValue !== null && evaluatedValue !== undefined && item.quantity) {
@@ -843,7 +843,12 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                                           }
                                         }
                                       }}
-                                      onBlur={() => startEditing(index)}
+                                      onBlur={() => {
+                                        // Only stop editing if this was the editing row
+                                        if (editingIndex === index) {
+                                          setEditingIndex(null);
+                                        }
+                                      }}
                                       placeholder="0.00"
                                       type="rate"
                                       className="w-full text-xs h-8"
@@ -856,7 +861,12 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                                         if (editingIndex === null) startEditing(index);
                                         updateLineItem(index, 'totalPrice', String(value));
                                       }}
-                                      onBlur={() => startEditing(index)}
+                                      onBlur={() => {
+                                        // Only stop editing if this was the editing row
+                                        if (editingIndex === index) {
+                                          setEditingIndex(null);
+                                        }
+                                      }}
                                       placeholder="0.00"
                                       type="total"
                                       className="w-full text-xs h-8"

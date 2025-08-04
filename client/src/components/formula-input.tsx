@@ -70,7 +70,16 @@ export function FormulaInput({
     }
     
     // Call the onChange with both the raw value and evaluated value
-    onChange(displayValue, result.value || undefined);
+    // For non-formula values, use the parsed number as evaluatedValue
+    let evaluatedValue = result.value;
+    if (!result.isFormula && displayValue) {
+      const numValue = parseFloat(displayValue);
+      if (!isNaN(numValue)) {
+        evaluatedValue = numValue;
+      }
+    }
+    
+    onChange(displayValue, evaluatedValue || undefined);
     onBlur?.();
   };
 

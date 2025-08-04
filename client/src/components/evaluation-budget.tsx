@@ -102,6 +102,8 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
   const [selectedImportItems, setSelectedImportItems] = useState<Set<string>>(new Set());
   const [showScopeImportModal, setShowScopeImportModal] = useState(false);
   const [selectedScopeItems, setSelectedScopeItems] = useState<Set<string>>(new Set());
+  const [showDesignImportModal, setShowDesignImportModal] = useState(false);
+  const [selectedDesignItems, setSelectedDesignItems] = useState<Set<string>>(new Set());
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -436,6 +438,54 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     setSelectedScopeItems(new Set());
   };
 
+  // Open design cost import modal
+  const openDesignImportModal = () => {
+    if (!allDesignLineItems || !Array.isArray(allDesignLineItems) || allDesignLineItems.length === 0) {
+      toast({
+        title: "No Design Costs Available",
+        description: "No architectural/design costs found to import.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setSelectedDesignItems(new Set());
+    setShowDesignImportModal(true);
+  };
+
+  // Import selected design costs
+  const importSelectedDesignItems = () => {
+    if (!allDesignLineItems || selectedDesignItems.size === 0) return;
+
+    const itemsToImport = allDesignLineItems.filter((item: any, index: number) => 
+      selectedDesignItems.has(`${item.bidCollectionId}-${item.id}`)
+    );
+
+    const importedItems = itemsToImport.map((item: any) => ({
+      id: `design-${Date.now()}-${item.id}`,
+      description: item.description,
+      quantity: parseFloat(item.quantity) || 1,
+      unit: item.unit || "ea",
+      unitPrice: item.unitPrice || "0.00",
+      totalPrice: item.totalPrice || "0.00",
+      tenantShare: 100, // Default to 100% tenant responsibility
+      bidCollectionId: item.bidCollectionId,
+      bidLineItemId: item.id,
+    })) as EvaluationLineItem[];
+
+    setBudgetData(prev => ({
+      ...prev,
+      designSoftCosts: [...prev.designSoftCosts, ...importedItems],
+    }));
+
+    toast({
+      title: "Design Costs Imported",
+      description: `Successfully imported ${importedItems.length} design/architectural cost items.`,
+    });
+
+    setShowDesignImportModal(false);
+    setSelectedDesignItems(new Set());
+  };
+
   // Load existing evaluation budget data
   const { data: existingBudget } = useQuery({
     queryKey: [`/api/rfp-requests/${rfp?.id}/evaluation-budget`],
@@ -458,7 +508,12 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         const response = await fetch(`/api/bid-collections/${bid.id}/line-items`);
         if (!response.ok) return [];
         const lineItems = await response.json();
-        return lineItems.map((item: BidLineItem) => ({ ...item, bidCollectionId: bid.id }));
+        return lineItems.map((item: BidLineItem) => ({ 
+          ...item, 
+          bidCollectionId: bid.id,
+          source: `${bid.contractorName || bid.architectName}`,
+          costCategory: bid.costCategory
+        }));
       });
       
       const results = await Promise.all(lineItemPromises);
@@ -466,6 +521,11 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     },
     enabled: !!bidCollections && Array.isArray(bidCollections) && bidCollections.length > 0,
   });
+
+  // Filter only design/architectural costs for design import
+  const allDesignLineItems = allBidLineItems?.filter((item: any) => 
+    item.costCategory === 'architectural'
+  ) || [];
 
   // State for budget data
   const [budgetData, setBudgetData] = useState<EvaluationBudgetData>({
@@ -2700,7 +2760,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
               (Base: {formatCurrency(total)})
             </span>
           )}
-          {/* Import buttons only for Tenant Improvements */}
+          {/* Import buttons for Tenant Improvements */}
           {category === 'tenantImprovements' && (
             <>
               <Button
@@ -2724,6 +2784,19 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                 Import Scope
               </Button>
             </>
+          )}
+          {/* Import button for Design Costs */}
+          {category === 'designSoftCosts' && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={openDesignImportModal}
+              className="h-8"
+              disabled={!allDesignLineItems || !Array.isArray(allDesignLineItems) || allDesignLineItems.length === 0}
+            >
+              <Upload className="h-4 w-4 mr-1" />
+              Import Design
+            </Button>
           )}
           <Button
             size="sm"
@@ -4003,6 +4076,95 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                 disabled={selectedScopeItems.size === 0}
               >
                 Import Selected ({selectedScopeItems.size})
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Design Costs Import Modal */}
+      <Dialog open={showDesignImportModal} onOpenChange={setShowDesignImportModal}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>Select Design/Architectural Costs to Import</DialogTitle>
+            <DialogDescription>
+              Choose which design/architectural costs from flagged bid collections you want to import into Design fees.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-12">Select</TableHead>
+                  <TableHead>Source</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead className="w-24">Quantity</TableHead>
+                  <TableHead className="w-20">Unit</TableHead>
+                  <TableHead className="w-32">Unit Price</TableHead>
+                  <TableHead className="w-32">Total Price</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {allDesignLineItems && Array.isArray(allDesignLineItems) && allDesignLineItems.map((item: any) => {
+                  const itemKey = `${item.bidCollectionId}-${item.id}`;
+                  return (
+                    <TableRow key={itemKey}>
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedDesignItems.has(itemKey)}
+                          onCheckedChange={(checked) => {
+                            const newSelected = new Set(selectedDesignItems);
+                            if (checked) {
+                              newSelected.add(itemKey);
+                            } else {
+                              newSelected.delete(itemKey);
+                            }
+                            setSelectedDesignItems(newSelected);
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell className="font-medium">{item.source}</TableCell>
+                      <TableCell>{item.description}</TableCell>
+                      <TableCell>{item.quantity || '1'}</TableCell>
+                      <TableCell>{item.unit || 'ea'}</TableCell>
+                      <TableCell>{formatCurrency(item.unitPrice || '0')}</TableCell>
+                      <TableCell className="font-medium">{formatCurrency(item.totalPrice || '0')}</TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+          <DialogFooter className="flex justify-between items-center">
+            <div className="text-sm text-gray-600">
+              {selectedDesignItems.size} item{selectedDesignItems.size !== 1 ? 's' : ''} selected
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowDesignImportModal(false);
+                  setSelectedDesignItems(new Set());
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  if (allDesignLineItems && Array.isArray(allDesignLineItems)) {
+                    const allKeys = allDesignLineItems.map((item: any) => `${item.bidCollectionId}-${item.id}`);
+                    setSelectedDesignItems(new Set(allKeys));
+                  }
+                }}
+              >
+                Select All
+              </Button>
+              <Button
+                onClick={importSelectedDesignItems}
+                disabled={selectedDesignItems.size === 0}
+              >
+                Import Selected ({selectedDesignItems.size})
               </Button>
             </div>
           </DialogFooter>

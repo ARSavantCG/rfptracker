@@ -135,6 +135,24 @@ export function FormulaInput({
       }
     }
     
+    // For non-formula values, format numbers properly
+    if (displayValue && !displayValue.startsWith('=')) {
+      const numValue = parseFloat(displayValue);
+      if (!isNaN(numValue)) {
+        if (type === 'quantity') {
+          return numValue.toLocaleString('en-US', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 2
+          });
+        } else {
+          return numValue.toLocaleString('en-US', {
+            minimumFractionDigits: decimalPlaces,
+            maximumFractionDigits: decimalPlaces
+          });
+        }
+      }
+    }
+    
     return displayValue;
   };
 

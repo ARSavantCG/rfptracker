@@ -97,6 +97,10 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
   // Premises edit mode state
   const [premisesEditMode, setPremisesEditMode] = useState(false);
 
+  // Selective import modal state
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [selectedImportItems, setSelectedImportItems] = useState<Set<string>>(new Set());
+
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -336,8 +340,8 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     setShowAssemblyCreator(false);
   };
 
-  // Import contractor/architect pricing from bid collections
-  const importContractorArchitectPricing = () => {
+  // Open selective import modal
+  const openImportModal = () => {
     if (!allBidLineItems || !Array.isArray(allBidLineItems) || allBidLineItems.length === 0) {
       toast({
         title: "No Pricing Available",
@@ -346,8 +350,19 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
       });
       return;
     }
+    setSelectedImportItems(new Set());
+    setShowImportModal(true);
+  };
 
-    const importedItems = allBidLineItems.map((item: BidLineItem & { bidCollectionId: number }) => ({
+  // Import selected contractor/architect pricing items
+  const importSelectedItems = () => {
+    if (!allBidLineItems || selectedImportItems.size === 0) return;
+
+    const itemsToImport = allBidLineItems.filter((item: BidLineItem & { bidCollectionId: number }) => 
+      selectedImportItems.has(`${item.bidCollectionId}-${item.id}`)
+    );
+
+    const importedItems = itemsToImport.map((item: BidLineItem & { bidCollectionId: number }) => ({
       id: `imported-${Date.now()}-${item.id}`,
       description: item.description,
       quantity: typeof item.quantity === 'string' ? parseInt(item.quantity) || 1 : item.quantity || 1,
@@ -366,8 +381,11 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
 
     toast({
       title: "Pricing Imported",
-      description: `Successfully imported ${importedItems.length} line items from contractor/architect pricing.`,
+      description: `Successfully imported ${importedItems.length} selected line items from contractor/architect pricing.`,
     });
+
+    setShowImportModal(false);
+    setSelectedImportItems(new Set());
   };
 
   // Load existing evaluation budget data
@@ -2639,7 +2657,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
             <Button
               size="sm"
               variant="outline"
-              onClick={importContractorArchitectPricing}
+              onClick={openImportModal}
               className="h-8"
               disabled={!allBidLineItems || !Array.isArray(allBidLineItems) || allBidLineItems.length === 0}
             >
@@ -3753,6 +3771,100 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
             >
               Create Assembly
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Selective Import Modal */}
+      <Dialog open={showImportModal} onOpenChange={setShowImportModal}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>Select Items to Import</DialogTitle>
+            <DialogDescription>
+              Choose which contractor/architect pricing items you want to import into Tenant Improvements.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-12">Select</TableHead>
+                  <TableHead>Source</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead>Quantity</TableHead>
+                  <TableHead>Unit</TableHead>
+                  <TableHead>Unit Price</TableHead>
+                  <TableHead>Total Price</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {allBidLineItems && Array.isArray(allBidLineItems) && allBidLineItems.map((item: BidLineItem & { bidCollectionId: number }) => {
+                  const itemKey = `${item.bidCollectionId}-${item.id}`;
+                  const bidCollection = bidCollections?.find((bid: any) => bid.id === item.bidCollectionId);
+                  return (
+                    <TableRow key={itemKey}>
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedImportItems.has(itemKey)}
+                          onCheckedChange={(checked) => {
+                            const newSelected = new Set(selectedImportItems);
+                            if (checked) {
+                              newSelected.add(itemKey);
+                            } else {
+                              newSelected.delete(itemKey);
+                            }
+                            setSelectedImportItems(newSelected);
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell className="text-sm text-gray-600">
+                        {bidCollection?.submittedBy || 'Unknown'}
+                      </TableCell>
+                      <TableCell>{item.description}</TableCell>
+                      <TableCell>{item.quantity}</TableCell>
+                      <TableCell>{item.unit}</TableCell>
+                      <TableCell>{formatCurrency(parseFloat(item.unitPrice) || 0)}</TableCell>
+                      <TableCell>{formatCurrency(parseFloat(item.totalPrice) || 0)}</TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+          <DialogFooter className="flex justify-between items-center">
+            <div className="text-sm text-gray-600">
+              {selectedImportItems.size} item{selectedImportItems.size !== 1 ? 's' : ''} selected
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowImportModal(false);
+                  setSelectedImportItems(new Set());
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  if (allBidLineItems && Array.isArray(allBidLineItems)) {
+                    const allKeys = allBidLineItems.map((item: BidLineItem & { bidCollectionId: number }) => 
+                      `${item.bidCollectionId}-${item.id}`
+                    );
+                    setSelectedImportItems(new Set(allKeys));
+                  }
+                }}
+              >
+                Select All
+              </Button>
+              <Button
+                onClick={importSelectedItems}
+                disabled={selectedImportItems.size === 0}
+              >
+                Import Selected ({selectedImportItems.size})
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>

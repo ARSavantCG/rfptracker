@@ -407,21 +407,48 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
   };
 
   const saveEditing = (addAnother: boolean = false) => {
-    setEditingIndex(null);
-    setOriginalLineItem(null);
+    // Save the current bid collection data to the server
+    const currentData = form.getValues();
+    const dataToSave = {
+      ...currentData,
+      lineItems,
+      alternates,
+      attachments: attachments.filter((att): att is File => att instanceof File)
+    };
     
-    // If user wants to add another line item, do so
-    if (addAnother) {
-      addLineItem();
-      // Focus on the new line item's description field
-      setTimeout(() => {
-        const newIndex = lineItems.length;
-        const descInput = document.querySelector(`input[data-line-item="${newIndex}"][data-field="description"]`) as HTMLInputElement;
-        if (descInput) {
-          descInput.focus();
+    saveBidMutation.mutate(dataToSave, {
+      onSuccess: () => {
+        setEditingIndex(null);
+        setOriginalLineItem(null);
+        
+        // Show success feedback
+        toast({
+          title: "Line item saved",
+          description: "Line item has been saved successfully.",
+        });
+        
+        // If user wants to add another line item, do so
+        if (addAnother) {
+          addLineItem();
+          // Focus on the new line item's description field
+          setTimeout(() => {
+            const newIndex = lineItems.length;
+            const descInput = document.querySelector(`input[data-line-item="${newIndex}"][data-field="description"]`) as HTMLInputElement;
+            if (descInput) {
+              descInput.focus();
+            }
+          }, 100);
         }
-      }, 100);
-    }
+      },
+      onError: (error) => {
+        toast({
+          title: "Save failed",
+          description: "Failed to save line item. Please try again.",
+          variant: "destructive",
+        });
+        console.error('Save error:', error);
+      }
+    });
   };
 
   const calculateTotal = () => {

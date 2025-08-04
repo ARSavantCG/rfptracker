@@ -220,13 +220,12 @@ export default function Properties() {
               return (
                 <div key={baseName} className="relative">
                   {/* Stacked Cards Container */}
-                  <div className="relative" style={{ minHeight: isMultiBuilding ? '400px' : 'auto' }}>
+                  <div className="relative" style={{ minHeight: isMultiBuilding ? '450px' : 'auto' }}>
                     {displayBuildings.map((property, index) => {
                       const isVisible = effectiveExpansion || index < 3;
-                      // Reverse the visual stacking order: A in back (index 0), B on top (index 1), etc.
-                      const visualIndex = displayBuildings.length - 1 - index;
-                      const stackOffset = effectiveExpansion ? index * 16 : visualIndex * 8;
-                      const zIndex = effectiveExpansion ? displayBuildings.length - index : index + 1;
+                      // Create neat stacking: first card at back, subsequent cards stacked on top
+                      const stackOffset = effectiveExpansion ? 0 : index * 6; // Reduced offset for neater stacking
+                      const zIndex = effectiveExpansion ? displayBuildings.length - index : (displayBuildings.length - index);
                       
                       return (
                         <Card 
@@ -243,11 +242,11 @@ export default function Properties() {
                           style={{
                             zIndex,
                             ...(index > 0 && !effectiveExpansion ? {
-                              top: `-${stackOffset * 4}px`,
+                              top: `-${(index) * 340}px`, // Stack cards properly from top
                               left: `${stackOffset}px`,
                               right: `-${stackOffset}px`,
-                              transform: `rotate(${index * 0.3}deg)`,
-                              boxShadow: `0 ${index * 4}px ${index * 8}px rgba(0,0,0,0.2)`
+                              transform: `rotate(${index * 0.8}deg)`, // Better visual separation
+                              boxShadow: `0 ${index * 3}px ${index * 6}px rgba(0,0,0,0.12)` // Clean shadow
                             } : {})
                           }}
                           onClick={() => isMultiBuilding && !effectiveExpansion ? handleBuildingSelection(baseName, "all") : undefined}

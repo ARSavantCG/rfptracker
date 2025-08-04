@@ -136,7 +136,7 @@ export function FormulaInput({
         return `Error: ${formulaResult.error}`;
       }
       
-      if (formulaResult.value !== null && !isNaN(formulaResult.value)) {
+      if (formulaResult.value !== null && formulaResult.value !== undefined && typeof formulaResult.value === 'number' && !isNaN(formulaResult.value)) {
         // Format based on the type
         const formattedValue = type === 'quantity' 
           ? formulaResult.value.toLocaleString('en-US', {
@@ -150,15 +150,15 @@ export function FormulaInput({
         console.log('💰 Formatted formula result:', displayValue, '=>', formattedValue);
         return formattedValue;
       } else {
-        console.log('⚠️ Invalid formula result:', displayValue, formulaResult);
-        return '0.00'; // Return a safe default instead of showing error
+        console.log('⚠️ Invalid formula result, returning original:', displayValue, formulaResult);
+        return displayValue; // Return original value instead of '0.00'
       }
     }
     
     // For non-formula values, format numbers properly
     if (displayValue && !displayValue.startsWith('=')) {
       const numValue = parseFloat(displayValue);
-      if (!isNaN(numValue)) {
+      if (!isNaN(numValue) && isFinite(numValue)) {
         if (type === 'quantity') {
           return numValue.toLocaleString('en-US', {
             minimumFractionDigits: 0,

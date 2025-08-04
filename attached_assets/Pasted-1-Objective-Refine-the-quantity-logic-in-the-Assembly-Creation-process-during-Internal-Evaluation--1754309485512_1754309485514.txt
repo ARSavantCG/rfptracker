@@ -1,0 +1,37 @@
+1. Objective
+Refine the quantity logic in the Assembly Creation process during Internal Evaluation to prioritize user-selected quantity units, preventing incorrect aggregation of mixed units (e.g., LF, SF).
+________________________________________
+2. Feature – Primary Quantity Source in Assemblies
+Current Issue:
+•	The system is auto-aggregating quantities (e.g., adding LF and SF together) when assembling components.
+•	This auto-sum logic disrupts assemblies where items have different measurement units, resulting in misleading totals.
+Desired Behavior:
+•	When a user adds multiple items to an assembly, the quantity and unit of the first-clicked item will determine the assembly’s base quantity and unit.
+•	Subsequent items added to the assembly will:
+o	Adopt the assembly’s primary unit context for pricing calculations.
+o	Calculate unit price contributions proportionally to the assembly's base quantity.
+•	The total price of the assembly remains accurate by distributing additional item costs over the assembly's primary quantity.
+________________________________________
+3. Rules & Requirements:
+•	First Click Rule:
+o	When creating an assembly, the first item clicked defines:
+	Quantity
+	Unit of Measure (UOM)
+o	This becomes the Assembly’s Base Quantity Context.
+•	Subsequent Items:
+o	Do not sum their quantities into the assembly total.
+o	Instead, calculate their price contribution per the base quantity.
+	Example:
+	Assembly base: 100 LF (from first item clicked)
+	Second item: 50 SF → Only its unit cost gets proportionally factored into the Assembly’s per LF pricing.
+•	Unit Price Recalculation:
+o	After adding all items, recalculate the assembly's total unit price based on the aggregate of all included item costs over the Assembly Base Quantity.
+•	Unit Conversion Logic: (Optional Future Scope)
+o	For advanced workflows, consider logic for unit conversions (e.g., LF to SF ratios), but exclude this in current implementation.
+________________________________________
+4. Developer Notes:
+•	This logic should override any existing quantity-sum behaviors when assemblies have mixed units.
+•	Maintain visual cues in UI to indicate:
+o	Which item is defining the assembly’s unit and quantity.
+o	How other items are being costed within that context.
+•	Ensure this change does not disrupt assemblies where all items share the same UOM (fallback to current behavior).

@@ -41,6 +41,7 @@ interface CustomAssembly {
   name: string;
   category: 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements';
   items: string[]; // Array of line item IDs
+  primaryItemId?: string; // ID of the first-clicked item that defines base quantity and unit
 }
 
 interface EvaluationBudgetData {
@@ -82,6 +83,8 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
   
   // Assembly creation state
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [primaryItemId, setPrimaryItemId] = useState<string | null>(null); // Track first-clicked item
+  const [itemSelectionOrder, setItemSelectionOrder] = useState<string[]>([]); // Track selection order
   const [showAssemblyCreator, setShowAssemblyCreator] = useState(false);
   const [newAssemblyName, setNewAssemblyName] = useState("");
   const [newAssemblyCategory, setNewAssemblyCategory] = useState<'tenantImprovements' | 'designSoftCosts' | 'existingImprovements' | ''>('');
@@ -204,14 +207,30 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     });
   };
 
-  // Assembly helper functions
+  // Assembly helper functions with "First Click Rule"
   const handleItemSelection = (itemId: string, checked: boolean) => {
     setSelectedItems(prev => {
       const newSet = new Set(prev);
       if (checked) {
+        // First Click Rule: The first item selected defines the assembly's base quantity and unit
+        if (newSet.size === 0) {
+          setPrimaryItemId(itemId);
+          setItemSelectionOrder([itemId]);
+        } else {
+          setItemSelectionOrder(order => [...order, itemId]);
+        }
         newSet.add(itemId);
       } else {
         newSet.delete(itemId);
+        // Reset primary item if it was deselected
+        if (itemId === primaryItemId) {
+          const remainingItems = Array.from(newSet);
+          const newOrder = itemSelectionOrder.filter(id => remainingItems.includes(id));
+          setPrimaryItemId(remainingItems.length > 0 ? newOrder[0] : null);
+          setItemSelectionOrder(newOrder);
+        } else {
+          setItemSelectionOrder(order => order.filter(id => id !== itemId));
+        }
       }
       return newSet;
     });
@@ -227,13 +246,17 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
   };
 
   const createAssembly = () => {
-    if (!newAssemblyName.trim() || selectedItems.size === 0 || !newAssemblyCategory) return;
+    if (!newAssemblyName.trim() || selectedItems.size === 0 || !newAssemblyCategory || !primaryItemId) return;
 
     const selectedItemsArray = Array.from(selectedItems);
     const categoryItems = budgetData[newAssemblyCategory];
     const itemsToAssemble = categoryItems.filter(item => selectedItemsArray.includes(item.id));
     
     if (itemsToAssemble.length === 0) return;
+
+    // Find the primary item (first-clicked item that defines base quantity and unit)
+    const primaryItem = itemsToAssemble.find(item => item.id === primaryItemId);
+    if (!primaryItem) return;
 
     // Calculate totals from selected items based on tenant share percentages
     const totalPrice = itemsToAssemble.reduce((sum, item) => {
@@ -242,21 +265,39 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
       return sum + (itemPrice * tenantShare);
     }, 0);
     
-    // Calculate combined quantity (sum of all quantities)
-    const totalQuantity = itemsToAssemble.reduce((sum, item) => sum + (item.quantity || 0), 0);
-    const unitPrice = totalQuantity > 0 ? (totalPrice / totalQuantity) : totalPrice;
+    // Check if all items have the same unit (fallback to current behavior)
+    const allUnits = itemsToAssemble.map(item => item.unit.toLowerCase().trim());
+    const hasMixedUnits = new Set(allUnits).size > 1;
+    
+    let assemblyQuantity: number;
+    let assemblyUnit: string;
+    let unitPrice: number;
+    
+    if (hasMixedUnits) {
+      // REFINED LOGIC: Use primary item's quantity and unit for mixed units
+      // The assembly uses the base quantity and unit from the first-clicked item
+      assemblyQuantity = primaryItem.quantity;
+      assemblyUnit = primaryItem.unit;
+      // Calculate unit price based on total price divided by primary item's quantity
+      unitPrice = assemblyQuantity > 0 ? (totalPrice / assemblyQuantity) : totalPrice;
+    } else {
+      // FALLBACK: For same units, use traditional summation behavior
+      assemblyQuantity = itemsToAssemble.reduce((sum, item) => sum + (item.quantity || 0), 0);
+      assemblyUnit = primaryItem.unit;
+      unitPrice = assemblyQuantity > 0 ? (totalPrice / assemblyQuantity) : totalPrice;
+    }
 
     // Create the assembly line item
     const assemblyLineItem: EvaluationLineItem = {
       id: `assembly_${Date.now()}`,
       description: newAssemblyName.trim(),
-      quantity: totalQuantity,
-      unit: itemsToAssemble[0].unit,
+      quantity: assemblyQuantity, // Use primary item's quantity, not sum
+      unit: assemblyUnit, // Use primary item's unit
       unitPrice: unitPrice.toFixed(2),
       totalPrice: totalPrice.toFixed(2),
       tenantShare: 100, // Assembly cost is already calculated based on tenant shares
-      bidCollectionId: itemsToAssemble[0].bidCollectionId,
-      bidLineItemId: itemsToAssemble[0].bidLineItemId,
+      bidCollectionId: primaryItem.bidCollectionId,
+      bidLineItemId: primaryItem.bidLineItemId,
       isRolledUp: false,
       assemblyId: undefined
     };
@@ -287,6 +328,8 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
 
     // Clear assembly creation state
     setSelectedItems(new Set());
+    setPrimaryItemId(null);
+    setItemSelectionOrder([]);
     setNewAssemblyName("");
     setNewAssemblyCategory('');
     setShowAssemblyCreator(false);
@@ -2675,11 +2718,16 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
 
                               {/* Assembly Checkbox */}
                               <TableCell className="text-center">
-                                <div className="flex items-center justify-center">
+                                <div className="flex items-center justify-center gap-1">
                                   <Checkbox
                                     checked={selectedItems.has(item.id)}
                                     onCheckedChange={(checked) => handleItemSelection(item.id, !!checked)}
                                   />
+                                  {item.id === primaryItemId && (
+                                    <div className="text-xs bg-blue-100 text-blue-800 px-1 rounded font-medium" title="Primary item - defines assembly quantity and unit">
+                                      Base
+                                    </div>
+                                  )}
                                 </div>
                               </TableCell>
 
@@ -3586,7 +3634,8 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
           <DialogHeader>
             <DialogTitle>Create Custom Assembly</DialogTitle>
             <DialogDescription>
-              Group selected line items under a custom assembly name like "Dock Package" or "Demising Wall Package".
+              Group selected line items under a custom assembly name like "Dock Package" or "Demising Wall Package". 
+              The first item you selected defines the assembly's quantity and unit - other items contribute their costs proportionally.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -3602,12 +3651,31 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
             </div>
             <div>
               <Label>Selected Items ({selectedItems.size})</Label>
+              {selectedItems.size > 1 && (() => {
+                const items = Array.from(selectedItems).map(id => findItemById(id)).filter((item): item is EvaluationLineItem => item !== null);
+                const units = items.map(item => item.unit.toLowerCase().trim());
+                const hasMixedUnits = new Set(units).size > 1;
+                const primaryItem = items.find(item => item.id === primaryItemId);
+                return hasMixedUnits ? (
+                  <div className="mt-1 text-xs text-orange-700 bg-orange-50 border border-orange-200 rounded p-2">
+                    <strong>Mixed Units Detected:</strong> Assembly will use "{primaryItem?.unit}" from the base item. Other items will contribute costs proportionally.
+                  </div>
+                ) : (
+                  <div className="mt-1 text-xs text-green-700 bg-green-50 border border-green-200 rounded p-2">
+                    <strong>Same Units:</strong> All items use "{items[0]?.unit}" - quantities will be summed normally.
+                  </div>
+                );
+              })()}
               <div className="mt-2 space-y-1 max-h-40 overflow-y-auto border rounded p-2">
                 {Array.from(selectedItems).map(itemId => {
                   const item = findItemById(itemId);
+                  const isPrimary = itemId === primaryItemId;
                   return item ? (
-                    <div key={itemId} className="text-sm text-gray-700">
-                      {item.description}
+                    <div key={itemId} className={`text-sm flex items-center justify-between ${isPrimary ? 'font-medium text-blue-800 bg-blue-50 p-1 rounded' : 'text-gray-700'}`}>
+                      <span>{item.description}</span>
+                      {isPrimary && (
+                        <span className="text-xs bg-blue-100 text-blue-800 px-1 rounded">Base: {item.quantity} {item.unit}</span>
+                      )}
                     </div>
                   ) : null;
                 })}

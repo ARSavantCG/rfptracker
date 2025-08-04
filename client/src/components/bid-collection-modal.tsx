@@ -211,8 +211,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
       formData.append('status', data.status);
       formData.append('notes', data.notes || '');
       
-      // Add line items - debug what we're sending
-      console.log('Sending line items to server:', data.lineItems);
+      // Add line items
       formData.append('lineItems', JSON.stringify(data.lineItems));
       
       // Add alternates
@@ -355,11 +354,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
     const updated = [...lineItems];
     updated[index] = { ...updated[index], [field]: value };
     
-    // Debug logging for unit price updates
-    if (field === 'unitPrice') {
-      console.log(`Updating line item ${index} unitPrice to:`, value);
-      console.log('Updated line item:', updated[index]);
-    }
+
     
     // Auto-calculate total price when quantity and unit price change (only if not already being calculated by FormulaInput)
     if (field === 'quantity') {

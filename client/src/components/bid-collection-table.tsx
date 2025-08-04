@@ -276,35 +276,40 @@ export function BidCollectionTable({ rfp }: BidCollectionTableProps) {
                             size="sm"
                             onClick={() => {
                               const token = localStorage.getItem('auth-token');
-                              const printUrl = `/api/bid-collections/${bid.id}/pdf`;
-                              // Open PDF with authentication
-                              fetch(printUrl, {
+                              const pdfUrl = `/api/bid-collections/${bid.id}/pdf`;
+                              // Download PDF with authentication
+                              fetch(pdfUrl, {
                                 headers: {
                                   'Authorization': `Bearer ${token}`
                                 }
                               }).then(response => {
                                 if (response.ok) {
-                                  return response.text();
+                                  return response.blob();
                                 } else {
-                                  throw new Error('Authentication failed');
+                                  throw new Error('Failed to generate PDF');
                                 }
-                              }).then(html => {
-                                const blob = new Blob([html], { type: 'text/html' });
+                              }).then(blob => {
+                                // Create download link
                                 const url = window.URL.createObjectURL(blob);
-                                window.open(url, '_blank');
-                                setTimeout(() => window.URL.revokeObjectURL(url), 100);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = `${bid.contractorCompany || bid.contractorName || 'bid'}-${rfp.projectName || 'project'}-bid.pdf`;
+                                document.body.appendChild(a);
+                                a.click();
+                                document.body.removeChild(a);
+                                window.URL.revokeObjectURL(url);
                               }).catch(error => {
-                                console.error('Print error:', error);
+                                console.error('Download error:', error);
                                 toast({
-                                  title: "Print Error",
-                                  description: "Unable to generate PDF. Please try logging in again.",
+                                  title: "Download Error",
+                                  description: `Failed to download ${bid.contractorCompany || bid.contractorName} bid PDF`,
                                   variant: "destructive",
                                 });
                               });
                             }}
-                            title="Print/PDF"
+                            title="Download PDF"
                           >
-                            <Printer className="h-4 w-4" />
+                            <Download className="h-4 w-4" />
                           </Button>
                           {(() => {
                             let attachments = bid.attachments;

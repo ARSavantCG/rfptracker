@@ -38,6 +38,7 @@ export function FormulaInput({
       
       if (strValue.startsWith('=')) {
         const result = evaluateFormula(strValue);
+        console.log('🧮 Formula evaluation:', strValue, '=>', result);
         setFormulaResult(result);
         setShowFormula(false); // Show result by default
       } else {
@@ -125,22 +126,23 @@ export function FormulaInput({
     
     if (formulaResult) {
       if (formulaResult.error) {
+        console.log('🚨 Formula error for', displayValue, ':', formulaResult.error);
         return `Error: ${formulaResult.error}`;
       }
       
       if (formulaResult.value !== null) {
         // Format based on the type
-        if (type === 'quantity') {
-          return formulaResult.value.toLocaleString('en-US', {
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 2
-          });
-        } else {
-          return formulaResult.value.toLocaleString('en-US', {
-            minimumFractionDigits: decimalPlaces,
-            maximumFractionDigits: decimalPlaces
-          });
-        }
+        const formattedValue = type === 'quantity' 
+          ? formulaResult.value.toLocaleString('en-US', {
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 2
+            })
+          : formulaResult.value.toLocaleString('en-US', {
+              minimumFractionDigits: decimalPlaces,
+              maximumFractionDigits: decimalPlaces
+            });
+        console.log('💰 Formatted formula result:', displayValue, '=>', formattedValue);
+        return formattedValue;
       }
     }
     

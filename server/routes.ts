@@ -2778,8 +2778,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         quantity: cleanInvalidValue(item.quantity)
       }));
       
+      console.log('🧹 Cleaned line items count:', cleanedLineItems.length);
+      console.log('🧹 Raw first item from DB:', lineItems[0] ? {
+        id: lineItems[0].id,
+        description: lineItems[0].description,
+        unitPrice: lineItems[0].unitPrice,
+        totalPrice: lineItems[0].totalPrice
+      } : 'No items');
+      console.log('🧹 Cleaned first item:', cleanedLineItems[0] ? {
+        id: cleanedLineItems[0].id,
+        description: cleanedLineItems[0].description,
+        unitPrice: cleanedLineItems[0].unitPrice,
+        totalPrice: cleanedLineItems[0].totalPrice
+      } : 'No items');
+      
+      // Set cache headers to prevent browser caching of this data
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      
       res.json(cleanedLineItems);
     } catch (error) {
+      console.error('Error fetching line items:', error);
       res.status(500).json({ message: "Failed to fetch line items" });
     }
   });

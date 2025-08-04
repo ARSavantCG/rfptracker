@@ -2482,12 +2482,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Handle both JSON and form-data formats
-      let bidData, lineItems;
+      let bidData, lineItems, alternates;
       
       if (req.body.bidData) {
         // Original JSON format
         bidData = JSON.parse(req.body.bidData);
         lineItems = JSON.parse(req.body.lineItems || '[]');
+        alternates = JSON.parse(req.body.alternates || '[]');
       } else {
         // New form-data format
         bidData = {
@@ -2502,7 +2503,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           notes: req.body.notes || ''
         };
         lineItems = JSON.parse(req.body.lineItems || '[]');
-        const alternates = JSON.parse(req.body.alternates || '[]');
+        alternates = JSON.parse(req.body.alternates || '[]');
       }
       
       // Convert date string back to Date object

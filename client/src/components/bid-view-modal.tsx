@@ -4,6 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { FileText, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/utils";
+import { evaluateFormula } from "@shared/formula-utils";
 import type { BidCollection, BidLineItem } from "@shared/schema";
 import { useQuery } from "@tanstack/react-query";
 
@@ -24,7 +25,27 @@ export function BidViewModal({ isOpen, onClose, bid }: BidViewModalProps) {
 
   const formatCurrency = (amount: string | null) => {
     if (!amount) return "TBD";
-    const num = parseFloat(amount);
+    
+    let num: number;
+    
+    // Handle formula values (starting with =)
+    if (amount.startsWith('=')) {
+      const result = evaluateFormula(amount);
+      
+      if (result.error || result.value === null || isNaN(result.value)) {
+        return "TBD"; // Return a safe fallback for invalid formulas
+      }
+      
+      num = result.value;
+    } else {
+      num = parseFloat(amount);
+    }
+    
+    // Ensure we have a valid number
+    if (isNaN(num) || !isFinite(num)) {
+      return "TBD";
+    }
+    
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',

@@ -827,9 +827,15 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                                       onChange={(value, evaluatedValue) => {
                                         if (editingIndex === null) startEditing(index);
                                         
+                                        // Filter out invalid values that contain "Error:", "$NaN", or other error indicators
+                                        const cleanValue = String(value);
+                                        if (cleanValue.includes('Error:') || cleanValue.includes('$NaN') || cleanValue === 'NaN') {
+                                          return; // Don't update with invalid values
+                                        }
+                                        
                                         // Update both quantity and totalPrice in a single state update to avoid race conditions
                                         const updated = [...lineItems];
-                                        updated[index] = { ...updated[index], quantity: String(value) };
+                                        updated[index] = { ...updated[index], quantity: cleanValue };
                                         
                                         // Auto-calculate total if unit price exists and we have an evaluated quantity
                                         if (evaluatedValue && updated[index].unitPrice) {
@@ -878,12 +884,18 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                                       onChange={(value, evaluatedValue) => {
                                         if (editingIndex === null) startEditing(index);
                                         
+                                        // Filter out invalid values that contain "Error:", "$NaN", or other error indicators
+                                        const cleanValue = String(value);
+                                        if (cleanValue.includes('Error:') || cleanValue.includes('$NaN') || cleanValue === 'NaN') {
+                                          return; // Don't update with invalid values
+                                        }
+                                        
                                         // Update both unitPrice and totalPrice in a single state update to avoid race conditions
                                         const updated = [...lineItems];
-                                        updated[index] = { ...updated[index], unitPrice: String(value) };
+                                        updated[index] = { ...updated[index], unitPrice: cleanValue };
                                         
                                         // Auto-calculate total if we have an evaluated value and quantity
-                                        if (evaluatedValue !== null && evaluatedValue !== undefined && updated[index].quantity) {
+                                        if (evaluatedValue !== null && evaluatedValue !== undefined && !isNaN(evaluatedValue) && updated[index].quantity) {
                                           const quantity = parseFloat(updated[index].quantity);
                                           if (!isNaN(quantity) && quantity > 0) {
                                             const total = (quantity * evaluatedValue).toFixed(2);

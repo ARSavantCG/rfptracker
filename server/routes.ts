@@ -301,7 +301,7 @@ function generateBidCollectionHtml(bidCollection: any, rfp: any, lineItems: any[
                       // Import and use the evaluateFormula function
                       const { evaluateFormula } = require('../shared/formula-utils');
                       const result = evaluateFormula(value);
-                      if (result.success) {
+                      if (result.value !== null && !result.error) {
                         value = result.value;
                       } else {
                         value = parseFloat(value.substring(1)) || 0; // fallback: try parsing after removing =
@@ -321,7 +321,7 @@ function generateBidCollectionHtml(bidCollection: any, rfp: any, lineItems: any[
                     try {
                       const { evaluateFormula } = require('../shared/formula-utils');
                       const result = evaluateFormula(value);
-                      if (result.success) {
+                      if (result.value !== null && !result.error) {
                         value = result.value;
                       } else {
                         value = parseFloat(value.substring(1)) || 0; // fallback: try parsing after removing =

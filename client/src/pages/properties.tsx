@@ -275,46 +275,54 @@ export default function Properties() {
                               )}
                             </div>
                           </div>
-                          <div className="flex gap-1">
-                            <PropertyFormModal 
-                              property={property}
-                              trigger={
-                                <Button variant="outline" size="sm">
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                              }
-                            />
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={async () => {
-                                try {
-                                  const token = localStorage.getItem('auth-token');
-                                  const response = await fetch(`/api/properties/${property.id}/print`, {
-                                    headers: {
-                                      'Authorization': `Bearer ${token}`
-                                    }
-                                  });
-                                  
-                                  if (!response.ok) {
-                                    throw new Error('Print failed');
-                                  }
-                                  
-                                  const blob = await response.blob();
-                                  const url = window.URL.createObjectURL(blob);
-                                  window.open(url, '_blank');
-                                } catch (error) {
-                                  console.error('Print error:', error);
+                          <div className="flex flex-col items-end gap-2">
+                            <div className="flex gap-1">
+                              <PropertyFormModal 
+                                property={property}
+                                trigger={
+                                  <Button variant="outline" size="sm">
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
                                 }
-                              }}
-                              title="Print property report"
-                            >
-                              <Printer className="h-4 w-4" />
-                            </Button>
-                            <PropertyAttachments 
-                              propertyId={property.id}
-                              propertyName={property.propertyName || 'Property'}
-                            />
+                              />
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={async () => {
+                                  try {
+                                    const token = localStorage.getItem('auth-token');
+                                    const response = await fetch(`/api/properties/${property.id}/print`, {
+                                      headers: {
+                                        'Authorization': `Bearer ${token}`
+                                      }
+                                    });
+                                    
+                                    if (!response.ok) {
+                                      throw new Error('Print failed');
+                                    }
+                                    
+                                    const blob = await response.blob();
+                                    const url = window.URL.createObjectURL(blob);
+                                    window.open(url, '_blank');
+                                  } catch (error) {
+                                    console.error('Print error:', error);
+                                  }
+                                }}
+                                title="Print property report"
+                              >
+                                <Printer className="h-4 w-4" />
+                              </Button>
+                              <PropertyAttachments 
+                                propertyId={property.id}
+                                propertyName={property.propertyName || 'Property'}
+                              />
+                            </div>
+                            {/* Building count indicator moved here */}
+                            {buildings.length > 1 && index === 0 && !effectiveExpansion && (
+                              <div className="bg-white shadow-sm border border-gray-200 px-2 py-1 rounded text-xs text-gray-600 font-medium">
+                                {buildings.length} Buildings
+                              </div>
+                            )}
                           </div>
                         </div>
                       </CardHeader>
@@ -643,14 +651,7 @@ export default function Properties() {
                       </div>
                     )}
                     
-                    {/* Subtle building count indicator */}
-                    {!isExpanded && isMultiBuilding && (
-                      <div className="absolute top-3 right-3 z-40">
-                        <div className="bg-white shadow-md border border-gray-200 px-2 py-1 rounded text-xs text-gray-600 font-medium">
-                          {buildings.length} Buildings
-                        </div>
-                      </div>
-                    )}
+
                 </div>
               );
             })}

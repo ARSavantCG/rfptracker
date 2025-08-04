@@ -250,11 +250,11 @@ export default function Properties() {
                         >
                       <CardHeader>
                         <div className="flex items-start justify-between">
-                          <div className="flex items-center space-x-3">
+                          <div className="flex items-center space-x-3 flex-1 min-w-0">
                             <div className="p-2 bg-blue-100 rounded-lg">
                               <Building className="h-6 w-6 text-blue-600" />
                             </div>
-                            <div>
+                            <div className="min-w-0 flex-1">
                               <CardTitle className="text-lg font-bold">
                                 {property.propertyName || 'Unnamed Property'}
                               </CardTitle>
@@ -275,41 +275,41 @@ export default function Properties() {
                               )}
                             </div>
                           </div>
-                          <div className="flex flex-col items-end gap-2">
+                          <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                            {/* Stack Cards Selector for Multi-Building Properties - moved to top */}
+                            {isMultiBuilding && index === 0 && (
+                              <Select
+                                value={selectedBuilding[baseName] || "stacked"}
+                                onValueChange={(value) => handleBuildingSelection(baseName, value)}
+                              >
+                                <SelectTrigger className="bg-white shadow-sm hover:shadow-md px-2 py-1 text-xs font-medium border border-gray-300 hover:border-blue-400 hover:bg-blue-50 w-28 h-7">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent align="end">
+                                  <SelectItem value="stacked">
+                                    <div className="flex items-center">
+                                      <Layers className="h-3 w-3 mr-1" />
+                                      Stack
+                                    </div>
+                                  </SelectItem>
+                                  <SelectItem value="all">
+                                    <div className="flex items-center">
+                                      <Grid className="h-3 w-3 mr-1" />
+                                      All ({buildings.length})
+                                    </div>
+                                  </SelectItem>
+                                  {buildings.map((building) => (
+                                    <SelectItem key={building.id} value={building.id.toString()}>
+                                      <div className="flex items-center">
+                                        <Building className="h-3 w-3 mr-1 text-blue-600" />
+                                        {building.building}
+                                      </div>
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
                             <div className="flex gap-1">
-                              {/* Stack Cards Selector for Multi-Building Properties */}
-                              {isMultiBuilding && index === 0 && (
-                                <Select
-                                  value={selectedBuilding[baseName] || "stacked"}
-                                  onValueChange={(value) => handleBuildingSelection(baseName, value)}
-                                >
-                                  <SelectTrigger className="bg-white shadow-sm hover:shadow-md px-3 py-1 text-xs font-medium border border-gray-300 hover:border-blue-400 hover:bg-blue-50 w-32">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="stacked">
-                                      <div className="flex items-center">
-                                        <Layers className="h-3 w-3 mr-1" />
-                                        Stack Cards
-                                      </div>
-                                    </SelectItem>
-                                    <SelectItem value="all">
-                                      <div className="flex items-center">
-                                        <Grid className="h-3 w-3 mr-1" />
-                                        View All ({buildings.length})
-                                      </div>
-                                    </SelectItem>
-                                    {buildings.map((building) => (
-                                      <SelectItem key={building.id} value={building.id.toString()}>
-                                        <div className="flex items-center">
-                                          <Building className="h-3 w-3 mr-1 text-blue-600" />
-                                          Bldg. {building.building}
-                                        </div>
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              )}
                               <PropertyFormModal 
                                 property={property}
                                 trigger={
@@ -350,7 +350,7 @@ export default function Properties() {
                                 propertyName={property.propertyName || 'Property'}
                               />
                             </div>
-                            {/* Building count indicator moved here */}
+                            {/* Building count indicator */}
                             {buildings.length > 1 && index === 0 && !effectiveExpansion && (
                               <div className="bg-white shadow-sm border border-gray-200 px-2 py-1 rounded text-xs text-gray-600 font-medium">
                                 {buildings.length} Buildings

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/utils";
 import { evaluateFormula } from "@shared/formula-utils";
-import { Printer } from "lucide-react";
+import { Printer, FileText } from "lucide-react";
 import type { BidCollection, BidLineItem } from "@shared/schema";
 
 interface BidViewModalProps {
@@ -136,19 +136,19 @@ export function BidViewModal({ isOpen, onClose, bid }: BidViewModalProps) {
             </div>
             <div>
               <label className="text-sm font-medium text-gray-600">Status</label>
-              <div className="mt-1">{getStatusBadge(bid.status)}</div>
+              <div className="mt-1">{getStatusBadge(bid.status as string)}</div>
             </div>
           </div>
 
           {/* Notes */}
-          {bid.notes && (
+          {bid.notes ? (
             <div>
               <label className="text-sm font-medium text-gray-600 block mb-2">Notes</label>
               <div className="p-3 bg-gray-50 rounded-lg">
-                <p className="whitespace-pre-wrap">{bid.notes}</p>
+                <p className="whitespace-pre-wrap">{String(bid.notes)}</p>
               </div>
             </div>
-          )}
+          ) : null}
 
           {/* Line Items */}
           {lineItems && (lineItems as BidLineItem[]).length > 0 && (
@@ -186,21 +186,26 @@ export function BidViewModal({ isOpen, onClose, bid }: BidViewModalProps) {
           {/* Attachments */}
           {(() => {
             // Parse attachments if they're stored as string
-            let attachments = bid.attachments;
-            if (typeof attachments === 'string') {
-              try {
-                attachments = JSON.parse(attachments);
-              } catch (e) {
-                console.error('Failed to parse attachments:', e);
-                attachments = [];
+            let attachments: any[] = [];
+            
+            if (bid.attachments) {
+              if (typeof bid.attachments === 'string') {
+                try {
+                  attachments = JSON.parse(bid.attachments);
+                } catch (e) {
+                  console.error('Failed to parse attachments:', e);
+                  attachments = [];
+                }
+              } else if (Array.isArray(bid.attachments)) {
+                attachments = bid.attachments;
               }
             }
             
-            return attachments && Array.isArray(attachments) && attachments.length > 0 && (
+            return attachments && attachments.length > 0 ? (
               <div>
                 <h3 className="text-lg font-semibold mb-3">Attachments</h3>
                 <div className="space-y-2">
-                  {attachments.map((file, index) => (
+                  {attachments.map((file: any, index: number) => (
                     <div key={index} className="flex items-center gap-2 p-2 border rounded-lg">
                       <FileText className="h-4 w-4 text-gray-400" />
                       <span className="flex-1">{file.name}</span>
@@ -211,7 +216,7 @@ export function BidViewModal({ isOpen, onClose, bid }: BidViewModalProps) {
                   ))}
                 </div>
               </div>
-            );
+            ) : null;
           })()}
         </div>
       </DialogContent>

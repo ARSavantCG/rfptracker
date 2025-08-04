@@ -53,6 +53,16 @@ import path from "path";
 import { applyLegalRounding, validateLegalCompliance, LEGAL_TOTALS } from "./legal-rounding-system";
 import { deleteEntityFiles, cleanupOrphanedFiles, getCleanupStats, findOrphanedFiles } from "./file-cleanup";
 
+// Helper function to clean invalid values like "$NaN", "NaN", etc.
+function cleanInvalidValue(value: any): string {
+  if (!value) return '';
+  const strValue = String(value);
+  if (strValue.includes('$NaN') || strValue === 'NaN' || strValue.includes('Error:')) {
+    return '';
+  }
+  return strValue;
+}
+
 // Permission checking middleware
 const checkPermission = (permission: string) => {
   return async (req: any, res: any, next: any) => {
@@ -2759,7 +2769,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const lineItems = await storage.getBidLineItemsByBid(id);
-      res.json(lineItems);
+      
+      // Clean up any invalid values like "$NaN" before returning
+      const cleanedLineItems = lineItems.map(item => ({
+        ...item,
+        unitPrice: cleanInvalidValue(item.unitPrice),
+        totalPrice: cleanInvalidValue(item.totalPrice),
+        quantity: cleanInvalidValue(item.quantity)
+      }));
+      
+      res.json(cleanedLineItems);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch line items" });
     }

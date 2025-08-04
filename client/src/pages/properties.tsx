@@ -277,6 +277,39 @@ export default function Properties() {
                           </div>
                           <div className="flex flex-col items-end gap-2">
                             <div className="flex gap-1">
+                              {/* Stack Cards Selector for Multi-Building Properties */}
+                              {isMultiBuilding && index === 0 && (
+                                <Select
+                                  value={selectedBuilding[baseName] || "stacked"}
+                                  onValueChange={(value) => handleBuildingSelection(baseName, value)}
+                                >
+                                  <SelectTrigger className="bg-white shadow-sm hover:shadow-md px-3 py-1 text-xs font-medium border border-gray-300 hover:border-blue-400 hover:bg-blue-50 w-32">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="stacked">
+                                      <div className="flex items-center">
+                                        <Layers className="h-3 w-3 mr-1" />
+                                        Stack Cards
+                                      </div>
+                                    </SelectItem>
+                                    <SelectItem value="all">
+                                      <div className="flex items-center">
+                                        <Grid className="h-3 w-3 mr-1" />
+                                        View All ({buildings.length})
+                                      </div>
+                                    </SelectItem>
+                                    {buildings.map((building) => (
+                                      <SelectItem key={building.id} value={building.id.toString()}>
+                                        <div className="flex items-center">
+                                          <Building className="h-3 w-3 mr-1 text-blue-600" />
+                                          Bldg. {building.building}
+                                        </div>
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              )}
                               <PropertyFormModal 
                                 property={property}
                                 trigger={
@@ -613,43 +646,7 @@ export default function Properties() {
                     })}
                   </div>
                     
-                    {/* Expand/Collapse Button for Multi-Building Properties */}
-                    {isMultiBuilding && (
-                      <div className="absolute -bottom-4 left-1/2 transform -translate-x-1/2 z-40">
-                        <div className="flex items-center gap-2">
-                          <Select
-                            value={selectedBuilding[baseName] || "stacked"}
-                            onValueChange={(value) => handleBuildingSelection(baseName, value)}
-                          >
-                            <SelectTrigger className="bg-white shadow-lg hover:shadow-xl px-4 py-2 text-sm font-medium border border-gray-300 hover:border-blue-400 hover:bg-blue-50 w-52">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="stacked">
-                                <div className="flex items-center">
-                                  <Layers className="h-4 w-4 mr-2" />
-                                  Stack Cards
-                                </div>
-                              </SelectItem>
-                              <SelectItem value="all">
-                                <div className="flex items-center">
-                                  <Grid className="h-4 w-4 mr-2" />
-                                  View All Buildings ({buildings.length})
-                                </div>
-                              </SelectItem>
-                              {buildings.map((building) => (
-                                <SelectItem key={building.id} value={building.id.toString()}>
-                                  <div className="flex items-center">
-                                    <Building className="h-4 w-4 mr-2 text-blue-600" />
-                                    Building {building.building}
-                                  </div>
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                    )}
+
                     
 
                 </div>

@@ -4,11 +4,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Edit, Eye, FileText, Download, ArrowRight, Printer } from "lucide-react";
+import { Plus, Edit, Eye, FileText, Download, ArrowRight, Printer, Trash2 } from "lucide-react";
 import { BidCollectionModal } from "./bid-collection-modal";
 import { BidViewModal } from "./bid-view-modal";
 import { useToast } from "@/hooks/use-toast";
 import { formatDate } from "@/lib/utils";
+import { apiRequest } from "@/lib/queryClient";
 import type { RfpRequest, BidCollection } from "@shared/schema";
 
 interface BidCollectionTableProps {
@@ -88,6 +89,30 @@ export function BidCollectionTable({ rfp }: BidCollectionTableProps) {
     },
   });
 
+  // Delete bid collection mutation
+  const deleteBidMutation = useMutation({
+    mutationFn: async (bidId: number) => {
+      if (!rfp) throw new Error("No RFP selected");
+      return apiRequest(`/api/rfp-requests/${rfp.id}/bid-collections/${bidId}`, {
+        method: 'DELETE',
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/rfp-requests/${rfp?.id}/bid-collections`] });
+      toast({
+        title: "Success",
+        description: "Bid deleted successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to delete bid",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleNewBid = () => {
     setSelectedBid(null);
     setIsModalOpen(true);
@@ -101,6 +126,12 @@ export function BidCollectionTable({ rfp }: BidCollectionTableProps) {
   const handleViewBid = (bid: BidCollection) => {
     setSelectedBid(bid);
     setIsViewModalOpen(true);
+  };
+
+  const handleDeleteBid = (bid: BidCollection) => {
+    if (window.confirm(`Are you sure you want to delete the bid from ${bid.contractorName} (${bid.contractorCompany})? This action cannot be undone.`)) {
+      deleteBidMutation.mutate(bid.id);
+    }
   };
 
   const handleAdvanceToEvaluation = () => {
@@ -351,6 +382,15 @@ export function BidCollectionTable({ rfp }: BidCollectionTableProps) {
                               <Download className="h-4 w-4" />
                             </Button>
                           )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteBid(bid)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            title="Delete Bid"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>

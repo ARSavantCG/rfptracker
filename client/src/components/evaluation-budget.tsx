@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Edit, Trash2, Save, X, ArrowRight, Copy, FileDown, Upload, Package, Users, ChevronUp, ChevronDown, GripVertical, Check as CheckIcon } from "lucide-react";
+import { Plus, Edit, Trash2, Save, X, ArrowRight, Copy, FileDown, Upload, Package, Users, ChevronUp, ChevronDown, GripVertical, Check as CheckIcon, FileText } from "lucide-react";
 import { EvaluationAttachments } from "./evaluation-attachments";
 import { EvaluationBudgetHistory } from "./evaluation-budget-history";
 import { FormulaInput } from "./formula-input";
@@ -100,6 +100,8 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
   // Selective import modal state
   const [showImportModal, setShowImportModal] = useState(false);
   const [selectedImportItems, setSelectedImportItems] = useState<Set<string>>(new Set());
+  const [showScopeImportModal, setShowScopeImportModal] = useState(false);
+  const [selectedScopeItems, setSelectedScopeItems] = useState<Set<string>>(new Set());
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -386,6 +388,52 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
 
     setShowImportModal(false);
     setSelectedImportItems(new Set());
+  };
+
+  // Open scope of work import modal
+  const openScopeImportModal = () => {
+    if (!rfp?.scopeOfWork || !Array.isArray(rfp.scopeOfWork) || rfp.scopeOfWork.length === 0) {
+      toast({
+        title: "No Scope of Work Available",
+        description: "No scope of work items found to import.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setSelectedScopeItems(new Set());
+    setShowScopeImportModal(true);
+  };
+
+  // Import selected scope of work items
+  const importSelectedScopeItems = () => {
+    if (!rfp?.scopeOfWork || selectedScopeItems.size === 0) return;
+
+    const itemsToImport = rfp.scopeOfWork.filter((item: any, index: number) => 
+      selectedScopeItems.has(index.toString())
+    );
+
+    const importedItems = itemsToImport.map((item: any, index: number) => ({
+      id: `scope-${Date.now()}-${index}`,
+      description: item.description || item.item || item,
+      quantity: 1,
+      unit: "ea",
+      unitPrice: "0.00",
+      totalPrice: "0.00",
+      tenantShare: 100, // Default to 100% tenant responsibility
+    })) as EvaluationLineItem[];
+
+    setBudgetData(prev => ({
+      ...prev,
+      tenantImprovements: [...prev.tenantImprovements, ...importedItems],
+    }));
+
+    toast({
+      title: "Scope Items Imported",
+      description: `Successfully imported ${importedItems.length} scope of work items.`,
+    });
+
+    setShowScopeImportModal(false);
+    setSelectedScopeItems(new Set());
   };
 
   // Load existing evaluation budget data
@@ -2652,18 +2700,30 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
               (Base: {formatCurrency(total)})
             </span>
           )}
-          {/* Import button only for Tenant Improvements */}
+          {/* Import buttons only for Tenant Improvements */}
           {category === 'tenantImprovements' && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={openImportModal}
-              className="h-8"
-              disabled={!allBidLineItems || !Array.isArray(allBidLineItems) || allBidLineItems.length === 0}
-            >
-              <Upload className="h-4 w-4 mr-1" />
-              Import Pricing
-            </Button>
+            <>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={openImportModal}
+                className="h-8"
+                disabled={!allBidLineItems || !Array.isArray(allBidLineItems) || allBidLineItems.length === 0}
+              >
+                <Upload className="h-4 w-4 mr-1" />
+                Import Pricing
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={openScopeImportModal}
+                className="h-8"
+                disabled={!rfp?.scopeOfWork || !Array.isArray(rfp.scopeOfWork) || rfp.scopeOfWork.length === 0}
+              >
+                <FileText className="h-4 w-4 mr-1" />
+                Import Scope
+              </Button>
+            </>
           )}
           <Button
             size="sm"
@@ -3863,6 +3923,86 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                 disabled={selectedImportItems.size === 0}
               >
                 Import Selected ({selectedImportItems.size})
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Scope of Work Import Modal */}
+      <Dialog open={showScopeImportModal} onOpenChange={setShowScopeImportModal}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>Select Scope of Work Items to Import</DialogTitle>
+            <DialogDescription>
+              Choose which scope of work items from the RFP you want to import into Tenant Improvements.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-12">Select</TableHead>
+                  <TableHead>Description</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rfp?.scopeOfWork && Array.isArray(rfp.scopeOfWork) && rfp.scopeOfWork.map((item: any, index: number) => {
+                  const itemKey = index.toString();
+                  const description = item.description || item.item || item;
+                  return (
+                    <TableRow key={itemKey}>
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedScopeItems.has(itemKey)}
+                          onCheckedChange={(checked) => {
+                            const newSelected = new Set(selectedScopeItems);
+                            if (checked) {
+                              newSelected.add(itemKey);
+                            } else {
+                              newSelected.delete(itemKey);
+                            }
+                            setSelectedScopeItems(newSelected);
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell>{description}</TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+          <DialogFooter className="flex justify-between items-center">
+            <div className="text-sm text-gray-600">
+              {selectedScopeItems.size} item{selectedScopeItems.size !== 1 ? 's' : ''} selected
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowScopeImportModal(false);
+                  setSelectedScopeItems(new Set());
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  if (rfp?.scopeOfWork && Array.isArray(rfp.scopeOfWork)) {
+                    const allKeys = rfp.scopeOfWork.map((_, index) => index.toString());
+                    setSelectedScopeItems(new Set(allKeys));
+                  }
+                }}
+              >
+                Select All
+              </Button>
+              <Button
+                onClick={importSelectedScopeItems}
+                disabled={selectedScopeItems.size === 0}
+              >
+                Import Selected ({selectedScopeItems.size})
               </Button>
             </div>
           </DialogFooter>

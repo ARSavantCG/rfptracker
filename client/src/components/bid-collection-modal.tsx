@@ -267,8 +267,8 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
     }
   };
 
-  const addLineItem = () => {
-    setLineItems([...lineItems, {
+  const addLineItem = (count: number = 1) => {
+    const newItems = Array(count).fill(null).map(() => ({
       category: "General",
       description: "",
       quantity: "",
@@ -276,7 +276,17 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
       unitPrice: "",
       totalPrice: "",
       notes: "",
-    }]);
+    }));
+    setLineItems([...lineItems, ...newItems]);
+    
+    // Auto-focus on the first new item's description field
+    setTimeout(() => {
+      const newIndex = lineItems.length;
+      const descInput = document.querySelector(`input[data-line-item="${newIndex}"][data-field="description"]`) as HTMLInputElement;
+      if (descInput) {
+        descInput.focus();
+      }
+    }, 100);
   };
 
   const removeLineItem = (index: number) => {
@@ -350,9 +360,22 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
     setOriginalLineItem(null);
   };
 
-  const saveEditing = () => {
+  const saveEditing = (addAnother: boolean = false) => {
     setEditingIndex(null);
     setOriginalLineItem(null);
+    
+    // If user wants to add another line item, do so
+    if (addAnother) {
+      addLineItem();
+      // Focus on the new line item's description field
+      setTimeout(() => {
+        const newIndex = lineItems.length;
+        const descInput = document.querySelector(`input[data-line-item="${newIndex}"][data-field="description"]`) as HTMLInputElement;
+        if (descInput) {
+          descInput.focus();
+        }
+      }, 100);
+    }
   };
 
   const calculateTotal = () => {
@@ -588,10 +611,21 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                       Import from Scope of Work
                     </Button>
                   )}
-                  <Button type="button" onClick={addLineItem} variant="outline" size="sm">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Line Item
-                  </Button>
+                  <div className="flex gap-1 items-center">
+                    <Button type="button" onClick={() => addLineItem(1)} variant="outline" size="sm">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Line Item
+                    </Button>
+                    <Button type="button" onClick={() => addLineItem(5)} variant="outline" size="sm" title="Add 5 line items at once">
+                      +5
+                    </Button>
+                    <Button type="button" onClick={() => addLineItem(10)} variant="outline" size="sm" title="Add 10 line items at once">
+                      +10
+                    </Button>
+                    <span className="text-xs text-gray-500 ml-2">
+                      Tip: Ctrl+Enter to save & add another
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -660,8 +694,16 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                                         if (editingIndex === null) startEditing(index);
                                         updateLineItem(index, 'description', e.target.value);
                                       }}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && e.ctrlKey && editingIndex === index) {
+                                          e.preventDefault();
+                                          saveEditing(true);
+                                        }
+                                      }}
                                       placeholder="Description"
                                       className="w-full text-xs h-8"
+                                      data-line-item={index}
+                                      data-field="description"
                                     />
                                   </TableCell>
                                   <TableCell>
@@ -696,6 +738,12 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                                         if (editingIndex === null) startEditing(index);
                                         const value = e.target.value.replace(/[$,]/g, '');
                                         updateLineItem(index, 'unitPrice', value);
+                                      }}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && e.ctrlKey && editingIndex === index) {
+                                          e.preventDefault();
+                                          saveEditing(true);
+                                        }
                                       }}
                                       onFocus={() => startEditing(index)}
                                       placeholder="0.00"
@@ -735,8 +783,9 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                                           type="button"
                                           variant="ghost"
                                           size="sm"
-                                          onClick={saveEditing}
+                                          onClick={() => saveEditing(false)}
                                           className="h-6 w-6 p-0 text-green-600 hover:text-green-700"
+                                          title="Save"
                                         >
                                           <Save className="h-3 w-3" />
                                         </Button>
@@ -744,8 +793,19 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                                           type="button"
                                           variant="ghost"
                                           size="sm"
+                                          onClick={() => saveEditing(true)}
+                                          className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700"
+                                          title="Save & Add Another"
+                                        >
+                                          <Plus className="h-3 w-3" />
+                                        </Button>
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="sm"
                                           onClick={cancelEditing}
                                           className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                                          title="Cancel"
                                         >
                                           <X className="h-3 w-3" />
                                         </Button>

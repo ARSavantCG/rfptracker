@@ -2150,7 +2150,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     }
   };
 
-  const addNewItem = (category: 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements') => {
+  const addNewItem = (category: 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', addAnother: boolean = false) => {
     if (!newItem.description || !newItem.unitPrice) return;
 
     const quantity = newItem.quantity || 1;
@@ -2172,15 +2172,27 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
       [category]: [...prev[category], item],
     }));
 
+    // Reset form but keep category if adding another
     setNewItem({
       description: "",
-      quantity: 0,
-      unit: "",
+      quantity: 1,
+      unit: newItem.unit || "", // Keep unit for convenience
       unitPrice: "",
       totalPrice: "",
       tenantShare: 100
     });
-    setNewItemCategory("");
+    
+    if (!addAnother) {
+      setNewItemCategory("");
+    } else {
+      // Auto-focus on description field for next item
+      setTimeout(() => {
+        const descInput = document.querySelector('input[placeholder="Enter item description"]') as HTMLInputElement;
+        if (descInput) {
+          descInput.focus();
+        }
+      }, 100);
+    }
   };
 
   const updateItem = (category: 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', itemId: string, updates: Partial<EvaluationLineItem>) => {
@@ -2888,7 +2900,13 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                 <Input
                   value={newItem.description || ""}
                   onChange={(e) => setNewItem(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Item description"
+                  placeholder="Enter item description"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && e.ctrlKey && newItem.description && newItem.unitPrice) {
+                      e.preventDefault();
+                      addNewItem(category, true);
+                    }
+                  }}
                 />
               </div>
               <div>
@@ -2915,6 +2933,12 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                   value={newItem.unitPrice || ""}
                   onChange={(e) => setNewItem(prev => ({ ...prev, unitPrice: e.target.value }))}
                   placeholder="0.00"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && e.ctrlKey && newItem.description && newItem.unitPrice) {
+                      e.preventDefault();
+                      addNewItem(category, true);
+                    }
+                  }}
                 />
               </div>
               <div>
@@ -2955,12 +2979,18 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                 />
               </div>
               <div className="flex items-end gap-2">
-                <Button onClick={() => addNewItem(category)} size="sm">
+                <Button onClick={() => addNewItem(category, false)} size="sm">
                   Add
+                </Button>
+                <Button onClick={() => addNewItem(category, true)} size="sm" variant="outline" title="Ctrl+Enter to add and continue">
+                  Add & Continue
                 </Button>
                 <Button onClick={() => setNewItemCategory("")} variant="outline" size="sm">
                   Cancel
                 </Button>
+                <div className="text-xs text-gray-500 self-center ml-2">
+                  Tip: Ctrl+Enter to add & continue
+                </div>
               </div>
             </div>
           </div>

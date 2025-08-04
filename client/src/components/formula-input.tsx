@@ -126,6 +126,16 @@ export function FormulaInput({
 
   // Determine what to show in the input
   const getInputValue = () => {
+    // Debug ALL FormulaInput renders to find the $NaN issue
+    console.log('🔧 FormulaInput getInputValue called:', {
+      displayValue,
+      type: typeof displayValue,
+      isEditing,
+      showFormula,
+      componentType: type,
+      placeholder
+    });
+    
     // Debug all formula inputs to catch $NaN issue
     if (displayValue && displayValue.toString().includes('=')) {
       console.log('🔍 FORMULA INPUT DEBUG:', {
@@ -202,11 +212,21 @@ export function FormulaInput({
     "font-mono text-right"
   );
 
+  const finalValue = getInputValue();
+  
+  // Debug what's actually being rendered
+  console.log('🎯 FormulaInput final render value:', {
+    finalValue,
+    originalDisplayValue: displayValue,
+    placeholder,
+    type
+  });
+  
   return (
     <div className="relative">
       <Input
         ref={inputRef}
-        value={getInputValue()}
+        value={finalValue}
         onChange={handleChange}
         onFocus={handleFocus}
         onBlur={handleBlur}

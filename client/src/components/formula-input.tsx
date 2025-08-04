@@ -63,6 +63,7 @@ export function FormulaInput({
     setIsEditing(false);
     
     const result = evaluateFormula(displayValue);
+    console.log('🔍 FormulaInput handleBlur evaluation:', displayValue, '=>', result);
     setFormulaResult(result);
     
     // If it's a valid formula, show the result
@@ -80,7 +81,12 @@ export function FormulaInput({
       }
     }
     
-    onChange(displayValue, evaluatedValue || undefined);
+    // Don't call onChange if we have invalid values
+    if (evaluatedValue !== null && !isNaN(evaluatedValue)) {
+      onChange(displayValue, evaluatedValue);
+    } else {
+      console.log('⚠️ Skipping onChange due to invalid value:', displayValue, evaluatedValue);
+    }
     onBlur?.();
   };
 
@@ -130,7 +136,7 @@ export function FormulaInput({
         return `Error: ${formulaResult.error}`;
       }
       
-      if (formulaResult.value !== null) {
+      if (formulaResult.value !== null && !isNaN(formulaResult.value)) {
         // Format based on the type
         const formattedValue = type === 'quantity' 
           ? formulaResult.value.toLocaleString('en-US', {
@@ -143,6 +149,9 @@ export function FormulaInput({
             });
         console.log('💰 Formatted formula result:', displayValue, '=>', formattedValue);
         return formattedValue;
+      } else {
+        console.log('⚠️ Invalid formula result:', displayValue, formulaResult);
+        return '0.00'; // Return a safe default instead of showing error
       }
     }
     

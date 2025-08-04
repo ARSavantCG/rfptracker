@@ -14,6 +14,7 @@ import { Plus, Trash2, Upload, FileText, Save, X, Download, ChevronUp, ChevronDo
 import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
 import { FileUpload } from "./file-upload";
 import { FormulaInput } from "./formula-input";
+import { evaluateFormula } from "@shared/formula-utils";
 import { useToast } from "@/hooks/use-toast";
 import { formatDate } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
@@ -132,7 +133,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
           description: item.description || "",
           quantity: item.quantity?.toString() || "",
           unit: item.unit || "",
-          unitPrice: item.unitPrice || "",
+          unitPrice: String(item.unitPrice || ""),
           totalPrice: item.totalPrice || "",
           notes: item.notes || ""
         }));
@@ -353,12 +354,23 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
     const updated = [...lineItems];
     updated[index] = { ...updated[index], [field]: value };
     
-    // Auto-calculate total price when quantity and unit price change
-    if (field === 'quantity' || field === 'unitPrice') {
+    // Auto-calculate total price when quantity and unit price change (only if not already being calculated by FormulaInput)
+    if (field === 'quantity') {
       const qty = parseFloat(updated[index].quantity || '0');
-      const price = parseFloat(updated[index].unitPrice || '0');
-      if (qty > 0 && price > 0) {
-        updated[index].totalPrice = (qty * price).toFixed(2);
+      
+      // Evaluate unit price using formula if it starts with =
+      let priceValue = 0;
+      if (updated[index].unitPrice) {
+        if (updated[index].unitPrice.startsWith('=')) {
+          const result = evaluateFormula(updated[index].unitPrice);
+          priceValue = result.value || 0;
+        } else {
+          priceValue = parseFloat(updated[index].unitPrice);
+        }
+      }
+      
+      if (qty > 0 && priceValue > 0) {
+        updated[index].totalPrice = (qty * priceValue).toFixed(2);
       }
     }
     
@@ -818,12 +830,14 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                                       value={item.unitPrice || ''}
                                       onChange={(value, evaluatedValue) => {
                                         if (editingIndex === null) startEditing(index);
-                                        updateLineItem(index, 'unitPrice', String(value));
                                         
-                                        // Auto-calculate total if quantity exists
-                                        if (evaluatedValue && item.quantity) {
+                                        // Store the raw value (which could be a formula or number)
+                                        updateLineItem(index, 'unitPrice', value);
+                                        
+                                        // Auto-calculate total if we have an evaluated value and quantity
+                                        if (evaluatedValue !== null && evaluatedValue !== undefined && item.quantity) {
                                           const quantity = parseFloat(item.quantity);
-                                          if (!isNaN(quantity)) {
+                                          if (!isNaN(quantity) && quantity > 0) {
                                             const total = (quantity * evaluatedValue).toFixed(2);
                                             updateLineItem(index, 'totalPrice', total);
                                           }

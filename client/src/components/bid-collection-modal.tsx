@@ -26,6 +26,7 @@ const bidCollectionSchema = z.object({
   contractorEmail: z.string().email("Valid email is required"),
   submissionDate: z.string(),
   totalAmount: z.string().optional(),
+  costCategory: z.enum(["architectural", "construction"]).default("construction"),
   status: z.string().default("received"),
   notes: z.string().optional(),
 });
@@ -40,8 +41,16 @@ const lineItemSchema = z.object({
   notes: z.string().optional(),
 });
 
+const alternateSchema = z.object({
+  description: z.string().min(1, "Alternate description is required"),
+  cost: z.string().min(1, "Cost is required"),
+  includeInEvaluation: z.boolean().default(false),
+  notes: z.string().optional(),
+});
+
 type BidCollectionFormData = z.infer<typeof bidCollectionSchema>;
 type LineItemFormData = z.infer<typeof lineItemSchema>;
+type AlternateFormData = z.infer<typeof alternateSchema>;
 
 interface BidCollectionModalProps {
   isOpen: boolean;
@@ -55,8 +64,11 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
   const queryClient = useQueryClient();
   const [attachments, setAttachments] = useState<File[]>([]);
   const [lineItems, setLineItems] = useState<LineItemFormData[]>([]);
+  const [alternates, setAlternates] = useState<AlternateFormData[]>([]);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [originalLineItem, setOriginalLineItem] = useState<LineItemFormData | null>(null);
+  const [editingAlternateIndex, setEditingAlternateIndex] = useState<number | null>(null);
+  const [originalAlternate, setOriginalAlternate] = useState<AlternateFormData | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<BidCollectionFormData>({
@@ -68,6 +80,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
       contractorEmail: "",
       submissionDate: new Date().toISOString().split('T')[0],
       totalAmount: "",
+      costCategory: "construction" as const,
       status: "received",
       notes: "",
     },
@@ -106,6 +119,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
         contractorEmail: bidCollection.contractorEmail,
         submissionDate: bidCollection.submissionDate.toString().split('T')[0],
         totalAmount: bidCollection.totalAmount || "",
+        costCategory: (bidCollection as any).costCategory || "construction",
         status: bidCollection.status,
         notes: bidCollection.notes || "",
       });
@@ -122,6 +136,17 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
           notes: item.notes || ""
         }));
         setLineItems(formattedLineItems);
+      }
+
+      // Load existing alternates if available
+      if ((bidCollection as any)?.alternates && Array.isArray((bidCollection as any).alternates)) {
+        const formattedAlternates = (bidCollection as any).alternates.map((alt: any) => ({
+          description: alt.description || "",
+          cost: alt.cost?.toString() || "",
+          includeInEvaluation: alt.includeInEvaluation || false,
+          notes: alt.notes || ""
+        }));
+        setAlternates(formattedAlternates);
       }
 
       // Load existing attachments
@@ -145,6 +170,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
         notes: "",
       });
       setLineItems([]);
+      setAlternates([]);
       setAttachments([]);
     }
   }, [bidCollection, form, isOpen, existingLineItems]);
@@ -165,7 +191,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
   }, [isOpen]);
 
   const saveBidMutation = useMutation({
-    mutationFn: async (data: BidCollectionFormData & { lineItems: LineItemFormData[], attachments: File[] }) => {
+    mutationFn: async (data: BidCollectionFormData & { lineItems: LineItemFormData[], alternates: AlternateFormData[], attachments: File[] }) => {
       const url = bidCollection 
         ? `/api/rfp-requests/${rfp?.id}/bid-collections/${bidCollection.id}`
         : `/api/rfp-requests/${rfp?.id}/bid-collections`;
@@ -179,11 +205,15 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
       formData.append('contractorEmail', data.contractorEmail);
       formData.append('submissionDate', data.submissionDate);
       formData.append('totalAmount', data.totalAmount || '');
+      formData.append('costCategory', data.costCategory);
       formData.append('status', data.status);
       formData.append('notes', data.notes || '');
       
       // Add line items
       formData.append('lineItems', JSON.stringify(data.lineItems));
+      
+      // Add alternates
+      formData.append('alternates', JSON.stringify(data.alternates));
       
       // Add new file attachments
       const newFiles = data.attachments.filter((file: any) => !file.isExisting);
@@ -251,6 +281,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
       contractorId: parseInt(data.contractorId.toString()),
       totalAmount, // Ensure calculated total is included
       lineItems,
+      alternates,
       attachments,
     };
     
@@ -533,6 +564,26 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
     setLineItems([...scopeItems, ...lineItems]);
   };
 
+  // Alternates Management Functions
+  const addAlternate = () => {
+    setAlternates([...alternates, {
+      description: "",
+      cost: "",
+      includeInEvaluation: false,
+      notes: "",
+    }]);
+  };
+
+  const updateAlternate = (index: number, field: keyof AlternateFormData, value: string | boolean) => {
+    const newAlternates = [...alternates];
+    (newAlternates[index] as any)[field] = value;
+    setAlternates(newAlternates);
+  };
+
+  const removeAlternate = (index: number) => {
+    setAlternates(alternates.filter((_, i) => i !== index));
+  };
+
   if (!rfp) return null;
 
   return (
@@ -572,6 +623,28 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                             {bidder.name} ({bidder.company}) - {bidder.type}
                           </SelectItem>
                         ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="costCategory"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Cost Category</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select cost category..." />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="architectural">Architectural & Design Fees</SelectItem>
+                        <SelectItem value="construction">Construction Costs</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -838,6 +911,112 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                   Total: {formatCurrencyForDisplay(calculateTotal())}
                 </div>
               </div>
+            </div>
+
+            {/* Alternates Section */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-medium">Alternates</h3>
+                <Button type="button" onClick={addAlternate} variant="outline" size="sm">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Alternate
+                </Button>
+              </div>
+
+              {alternates.length > 0 && (
+                <div className="border rounded-lg overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="text-xs">
+                        <TableHead className="w-[250px] text-xs">Description</TableHead>
+                        <TableHead className="w-[120px] text-xs">Cost</TableHead>
+                        <TableHead className="w-[150px] text-xs">Include in Evaluation</TableHead>
+                        <TableHead className="w-[150px] text-xs">Notes</TableHead>
+                        <TableHead className="w-[40px]"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {alternates.map((alternate, index) => (
+                        <TableRow key={`alternate-${index}`} className="text-xs">
+                          <TableCell>
+                            <Input
+                              value={alternate.description}
+                              onChange={(e) => updateAlternate(index, 'description', e.target.value)}
+                              placeholder="Alternate description"
+                              className="w-full text-xs h-8"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              value={alternate.cost}
+                              onChange={(e) => {
+                                const value = e.target.value.replace(/[$,]/g, '');
+                                updateAlternate(index, 'cost', value);
+                              }}
+                              placeholder="0.00"
+                              type="text"
+                              className="w-full text-xs h-8 text-right"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center space-x-2">
+                              <input
+                                type="checkbox"
+                                id={`alternate-${index}-include`}
+                                checked={alternate.includeInEvaluation}
+                                onChange={(e) => updateAlternate(index, 'includeInEvaluation', e.target.checked)}
+                                className="rounded"
+                              />
+                              <label 
+                                htmlFor={`alternate-${index}-include`}
+                                className="text-xs cursor-pointer"
+                              >
+                                Include in Evaluation
+                              </label>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              value={alternate.notes || ''}
+                              onChange={(e) => updateAlternate(index, 'notes', e.target.value)}
+                              placeholder="Notes"
+                              className="w-full text-xs h-8"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeAlternate(index)}
+                              className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+
+              {alternates.length > 0 && (
+                <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">
+                  <div className="flex justify-between items-center">
+                    <span>Total Alternates (not included in bid total):</span>
+                    <span className="font-medium">
+                      ${alternates.reduce((sum, alt) => sum + (parseFloat(alt.cost) || 0), 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center mt-1">
+                    <span>Alternates marked for evaluation:</span>
+                    <span className="font-medium text-blue-600">
+                      ${alternates.filter(alt => alt.includeInEvaluation).reduce((sum, alt) => sum + (parseFloat(alt.cost) || 0), 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Notes */}

@@ -13,6 +13,7 @@ import {
   invitationToBid,
   bidCollections,
   bidLineItems,
+  bidAlternates,
   properties,
   propertyExistingImprovements,
   propertyAttachments,
@@ -141,6 +142,13 @@ export interface IStorage {
   updateBidLineItem(id: number, updates: Partial<UpdateBidLineItem>): Promise<BidLineItem | undefined>;
   deleteBidLineItem(id: number): Promise<boolean>;
   deleteBidLineItemsByBidCollection(bidCollectionId: number): Promise<boolean>;
+
+  // Bid Alternate management
+  getBidAlternatesByBid(bidCollectionId: number): Promise<any[]>;
+  createBidAlternate(alternate: any): Promise<any>;
+  updateBidAlternate(id: number, updates: any): Promise<any>;
+  deleteBidAlternate(id: number): Promise<boolean>;
+  deleteBidAlternatesByBidCollection(bidCollectionId: number): Promise<boolean>;
 
   // Property management
   getAllProperties(): Promise<Property[]>;
@@ -724,6 +732,41 @@ export class DatabaseStorage implements IStorage {
 
   async deleteBidLineItemsByBidCollection(bidCollectionId: number): Promise<boolean> {
     const result = await db.delete(bidLineItems).where(eq(bidLineItems.bidCollectionId, bidCollectionId));
+    return (result.rowCount || 0) > 0;
+  }
+
+  // Bid Alternates implementation
+  async getBidAlternatesByBid(bidCollectionId: number): Promise<any[]> {
+    return await db.select().from(bidAlternates).where(eq(bidAlternates.bidCollectionId, bidCollectionId));
+  }
+
+  async createBidAlternate(alternate: any): Promise<any> {
+    const [created] = await db.insert(bidAlternates).values({
+      ...alternate,
+      cost: alternate.cost || "0",
+      includeInEvaluation: alternate.includeInEvaluation || false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }).returning();
+    return created;
+  }
+
+  async updateBidAlternate(id: number, updates: any): Promise<any> {
+    const [updated] = await db
+      .update(bidAlternates)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(bidAlternates.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteBidAlternate(id: number): Promise<boolean> {
+    const result = await db.delete(bidAlternates).where(eq(bidAlternates.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  async deleteBidAlternatesByBidCollection(bidCollectionId: number): Promise<boolean> {
+    const result = await db.delete(bidAlternates).where(eq(bidAlternates.bidCollectionId, bidCollectionId));
     return (result.rowCount || 0) > 0;
   }
 

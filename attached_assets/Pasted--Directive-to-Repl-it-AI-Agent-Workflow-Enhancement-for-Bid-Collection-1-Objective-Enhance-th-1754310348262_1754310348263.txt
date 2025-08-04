@@ -1,0 +1,39 @@
+🛠 Directive to Repl.it AI Agent – Workflow Enhancement for Bid Collection
+1. Objective
+Enhance the existing bid collection workflow to support alternate pricing inputs and cost type distinction for better downstream integration during internal evaluation.
+________________________________________
+2. Feature 1 – Alternate Pricing Input Handling
+Goal:
+Allow entry of optional/alternate costs at the bid collection stage, without affecting the current total bid pricing, but making them easily accessible for inclusion in later steps.
+Requirements:
+•	Add a dedicated section or table field in each contractor bid entry labeled "Alternates".
+•	Each alternate should include:
+o	A short description (text)
+o	An associated cost (number)
+o	A toggle flag or checkbox: "Include in Evaluation"
+•	By default, alternates should not affect the total bid price.
+•	If Include in Evaluation is toggled later (during internal evaluation), alternate costs should be included in the aggregate cost calculations.
+•	Display the sum of alternates (excluded from totals) as a note/line item at the bottom of the bid submission card or page.
+________________________________________
+3. Feature 2 – Cost Type Differentiation (Architect vs GC)
+Goal:
+During bid collection, associate each bid with a category (e.g., Architectural or Construction) so costs can route to the correct cost bucket downstream in the workflow.
+Requirements:
+•	Add a required dropdown or tag selector for each bid: "Cost Category" with options:
+o	Architectural & Design Fees
+o	Construction Costs
+o	(Optionally add more if needed later)
+•	When importing bids into the Internal Evaluation stage:
+o	If Architectural & Design Fees, populate these in the architectural cost fields.
+o	If Construction Costs, populate in the construction cost section.
+________________________________________
+4. Integration with Internal Evaluation Stage
+Ensure:
+•	All cost data—base and optionally flagged alternates—are available for evaluation.
+•	Alternates marked as Include in Evaluation are programmatically added to the proper section based on their cost category.
+•	Maintain traceability: keep original contractor notes or alternate descriptions for internal transparency.
+________________________________________
+5. Developer Notes
+•	Do not interrupt current bid collection experience.
+•	Implement this as an optional feature, allowing current workflows to proceed uninterrupted if the alternates or category tagging is unused.
+•	Include UI/UX cues to guide users during bid input (e.g., tooltips explaining alternates and categories).

@@ -2450,8 +2450,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const bidCollections = await storage.getBidCollectionsByRfp(id);
-      res.json(bidCollections);
+      
+      // Fetch line items and alternates for each bid collection
+      const enhancedBidCollections = await Promise.all(
+        bidCollections.map(async (bidCollection) => {
+          const [lineItems, alternates] = await Promise.all([
+            storage.getBidLineItemsByBid(bidCollection.id),
+            storage.getBidAlternatesByBid(bidCollection.id)
+          ]);
+          
+          return {
+            ...bidCollection,
+            lineItems,
+            alternates
+          };
+        })
+      );
+      
+      res.json(enhancedBidCollections);
     } catch (error) {
+      console.error("Error fetching bid collections:", error);
       res.status(500).json({ message: "Failed to fetch bid collections" });
     }
   });
@@ -2479,10 +2497,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           contractorEmail: req.body.contractorEmail,
           submissionDate: req.body.submissionDate,
           totalAmount: req.body.totalAmount,
+          costCategory: req.body.costCategory || 'construction',
           status: req.body.status || 'received',
           notes: req.body.notes || ''
         };
         lineItems = JSON.parse(req.body.lineItems || '[]');
+        const alternates = JSON.parse(req.body.alternates || '[]');
       }
       
       // Convert date string back to Date object
@@ -2514,6 +2534,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         for (const item of lineItems) {
           await storage.createBidLineItem({
             ...item,
+            bidCollectionId: bidCollection.id
+          });
+        }
+      }
+
+      // Create alternates if provided
+      if (alternates && alternates.length > 0) {
+        for (const alternate of alternates) {
+          await storage.createBidAlternate({
+            ...alternate,
             bidCollectionId: bidCollection.id
           });
         }
@@ -2569,11 +2599,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         contractorEmail: req.body.contractorEmail,
         submissionDate: req.body.submissionDate,
         totalAmount: req.body.totalAmount,
+        costCategory: req.body.costCategory || 'construction',
         status: req.body.status,
         notes: req.body.notes || ''
       };
       
       const lineItems = JSON.parse(req.body.lineItems || '[]');
+      const alternates = JSON.parse(req.body.alternates || '[]');
       
       // Convert date string back to Date object
       if (bidData.submissionDate) {
@@ -2619,6 +2651,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         for (const item of lineItems) {
           await storage.createBidLineItem({
             ...item,
+            bidCollectionId: id
+          });
+        }
+      }
+
+      // Update alternates - first delete existing ones, then create new ones
+      await storage.deleteBidAlternatesByBidCollection(id);
+      if (alternates && alternates.length > 0) {
+        for (const alternate of alternates) {
+          await storage.createBidAlternate({
+            ...alternate,
             bidCollectionId: id
           });
         }

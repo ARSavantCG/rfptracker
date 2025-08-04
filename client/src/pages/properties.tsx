@@ -234,9 +234,7 @@ export default function Properties() {
                             transition-all duration-300 ease-in-out
                             ${index > 0 && !effectiveExpansion ? 'absolute top-0 left-0 right-0' : 'relative'}
                             ${isVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}
-                            ${isMultiBuilding && !effectiveExpansion ? 'cursor-pointer' : ''}
                             hover:shadow-lg
-                            ${isMultiBuilding && !effectiveExpansion && index === 0 ? 'hover:scale-[1.02]' : ''}
                             ${effectiveExpansion && index > 0 ? 'mt-4' : ''}
                           `}
                           style={{
@@ -246,7 +244,7 @@ export default function Properties() {
                               boxShadow: `0 ${index * 2}px ${index * 4}px rgba(0,0,0,0.08)`
                             } : {})
                           }}
-                          onClick={() => isMultiBuilding && !effectiveExpansion ? handleBuildingSelection(baseName, "all") : undefined}
+
                         >
                       <CardHeader>
                         <div className="flex items-start justify-between">
@@ -263,14 +261,6 @@ export default function Properties() {
                                   <span className="text-xs font-medium text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
                                     Bldg. {property.building}
                                   </span>
-                                </div>
-                              )}
-                              {buildings.length > 1 && index === 0 && !isExpanded && (
-                                <div className="flex items-center gap-2 mt-2">
-                                  <p className="text-xs text-blue-600 font-medium">
-                                    {buildings.length} Buildings ({buildings.map(b => b.building).join(', ')})
-                                  </p>
-                                  <ChevronDown className="h-3 w-3 text-blue-600" />
                                 </div>
                               )}
                             </div>
@@ -350,7 +340,7 @@ export default function Properties() {
                                 propertyName={property.propertyName || 'Property'}
                               />
                             </div>
-                            {/* Building count indicator */}
+                            {/* Building count indicator - only show when stacked */}
                             {buildings.length > 1 && index === 0 && !effectiveExpansion && (
                               <div className="bg-white shadow-sm border border-gray-200 px-2 py-1 rounded text-xs text-gray-600 font-medium">
                                 {buildings.length} Buildings

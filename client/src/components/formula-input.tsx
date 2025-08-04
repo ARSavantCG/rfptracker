@@ -126,6 +126,11 @@ export function FormulaInput({
 
   // Determine what to show in the input
   const getInputValue = () => {
+    // Debug specific problematic values
+    if (displayValue && (displayValue.includes('86797') || displayValue.includes('4339'))) {
+      console.log('🔍 DEBUGGING problematic value:', displayValue, typeof displayValue);
+    }
+    
     if (isEditing || showFormula) {
       return displayValue;
     }
@@ -133,7 +138,7 @@ export function FormulaInput({
     if (formulaResult) {
       if (formulaResult.error) {
         console.log('🚨 Formula error for', displayValue, ':', formulaResult.error);
-        return `Error: ${formulaResult.error}`;
+        return displayValue; // Return original value instead of error message
       }
       
       if (formulaResult.value !== null && formulaResult.value !== undefined && typeof formulaResult.value === 'number' && !isNaN(formulaResult.value)) {

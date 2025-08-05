@@ -5002,7 +5002,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const propertyId = parseInt(req.params.propertyId);
       const property = await storage.getProperty(propertyId);
-      const leases = await storage.getExecutedLeasesByProperty(propertyId);
+      const leases = await storage.getExecutedLeases(propertyId);
       
       if (!property) {
         return res.status(404).json({ message: "Property not found" });

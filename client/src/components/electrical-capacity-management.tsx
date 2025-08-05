@@ -465,11 +465,11 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
       <Card>
         <CardContent className="p-6">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="transformers">Transformers</TabsTrigger>
-              <TabsTrigger value="panels">Panels</TabsTrigger>
-              <TabsTrigger value="reservations">Reservations</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-4 !h-6 !p-0.5">
+              <TabsTrigger value="overview" className="!px-2 !py-0.5 !text-xs !h-5">Overview</TabsTrigger>
+              <TabsTrigger value="transformers" className="!px-2 !py-0.5 !text-xs !h-5">Transformers</TabsTrigger>
+              <TabsTrigger value="panels" className="!px-2 !py-0.5 !text-xs !h-5">Panels</TabsTrigger>
+              <TabsTrigger value="reservations" className="!px-2 !py-0.5 !text-xs !h-5">Reservations</TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview" className="mt-6">
@@ -535,10 +535,14 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
             <TabsContent value="transformers" className="mt-6">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-lg font-semibold">Transformers</h3>
-                <Button onClick={() => { setEditingTransformer(null); setShowTransformerDialog(true); }}>
-                  <Plus className="h-4 w-4 mr-2" />
+                <button 
+                  onClick={() => { setEditingTransformer(null); setShowTransformerDialog(true); }}
+                  className="inline-flex items-center justify-center rounded-md bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+                  style={{ fontSize: '10px', height: '20px', padding: '2px 6px', minHeight: '20px', lineHeight: '1' }}
+                >
+                  <Plus style={{ width: '8px', height: '8px', marginRight: '3px' }} />
                   Add Transformer
-                </Button>
+                </button>
               </div>
 
               <div className="border rounded-lg">
@@ -561,20 +565,20 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
                         <TableCell>{transformer.manufacturer || 'N/A'}</TableCell>
                         <TableCell>
                           <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
+                            <button
                               onClick={() => { setEditingTransformer(transformer); setShowTransformerDialog(true); }}
+                              className="inline-flex items-center justify-center rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+                              style={{ fontSize: '8px', height: '16px', padding: '1px 3px', minHeight: '16px' }}
                             >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="destructive"
+                              <Edit style={{ width: '6px', height: '6px' }} />
+                            </button>
+                            <button
                               onClick={() => deleteTransformerMutation.mutate(transformer.id)}
+                              className="inline-flex items-center justify-center rounded bg-red-600 text-white hover:bg-red-700"
+                              style={{ fontSize: '8px', height: '16px', padding: '1px 3px', minHeight: '16px' }}
                             >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                              <Trash2 style={{ width: '6px', height: '6px' }} />
+                            </button>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -595,13 +599,15 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
             <TabsContent value="panels" className="mt-6">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-lg font-semibold">Main Panels</h3>
-                <Button 
+                <button 
                   onClick={() => { setEditingPanel(null); setShowPanelDialog(true); }}
                   disabled={transformers.length === 0}
+                  className="inline-flex items-center justify-center rounded-md bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ fontSize: '10px', height: '20px', padding: '2px 6px', minHeight: '20px', lineHeight: '1' }}
                 >
-                  <Plus className="h-4 w-4 mr-2" />
+                  <Plus style={{ width: '8px', height: '8px', marginRight: '3px' }} />
                   Add Main Panel
-                </Button>
+                </button>
               </div>
 
               <div className="border rounded-lg">
@@ -626,20 +632,20 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
                           <TableCell>{panel.location}</TableCell>
                           <TableCell>
                             <div className="flex gap-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
+                              <button
                                 onClick={() => { setEditingPanel(panel); setShowPanelDialog(true); }}
+                                className="inline-flex items-center justify-center rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+                                style={{ fontSize: '8px', height: '16px', padding: '1px 3px', minHeight: '16px' }}
                               >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="destructive"
+                                <Edit style={{ width: '6px', height: '6px' }} />
+                              </button>
+                              <button
                                 onClick={() => deleteMainPanelMutation.mutate(panel.id)}
+                                className="inline-flex items-center justify-center rounded bg-red-600 text-white hover:bg-red-700"
+                                style={{ fontSize: '8px', height: '16px', padding: '1px 3px', minHeight: '16px' }}
                               >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                                <Trash2 style={{ width: '6px', height: '6px' }} />
+                              </button>
                             </div>
                           </TableCell>
                         </TableRow>

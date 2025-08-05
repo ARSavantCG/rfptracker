@@ -465,11 +465,38 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
       <Card>
         <CardContent className="p-6">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-4 !h-6 !p-0.5">
-              <TabsTrigger value="overview" className="!px-2 !py-0.5 !text-xs !h-5">Overview</TabsTrigger>
-              <TabsTrigger value="transformers" className="!px-2 !py-0.5 !text-xs !h-5">Transformers</TabsTrigger>
-              <TabsTrigger value="panels" className="!px-2 !py-0.5 !text-xs !h-5">Panels</TabsTrigger>
-              <TabsTrigger value="reservations" className="!px-2 !py-0.5 !text-xs !h-5">Reservations</TabsTrigger>
+            <TabsList 
+              className="grid w-full grid-cols-4" 
+              style={{ height: '24px', padding: '2px' }}
+            >
+              <TabsTrigger 
+                value="overview" 
+                className="!text-xs" 
+                style={{ height: '20px', padding: '2px 8px', fontSize: '10px' }}
+              >
+                Overview
+              </TabsTrigger>
+              <TabsTrigger 
+                value="transformers" 
+                className="!text-xs" 
+                style={{ height: '20px', padding: '2px 8px', fontSize: '10px' }}
+              >
+                Transformers
+              </TabsTrigger>
+              <TabsTrigger 
+                value="panels" 
+                className="!text-xs" 
+                style={{ height: '20px', padding: '2px 8px', fontSize: '10px' }}
+              >
+                Panels
+              </TabsTrigger>
+              <TabsTrigger 
+                value="reservations" 
+                className="!text-xs" 
+                style={{ height: '20px', padding: '2px 8px', fontSize: '10px' }}
+              >
+                Reservations
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview" className="mt-6">

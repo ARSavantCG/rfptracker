@@ -18,7 +18,7 @@ interface PropertyGroup {
 export function HierarchicalPropertySelector({ value, onChange, className }: HierarchicalPropertySelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [expandedProperty, setExpandedProperty] = useState<string | null>(null);
-  const [hoveredProperty, setHoveredProperty] = useState<string | null>(null);
+
   const dropdownRef = useRef<HTMLDivElement>(null);
   const submenuRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
@@ -55,7 +55,7 @@ export function HierarchicalPropertySelector({ value, onChange, className }: Hie
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false);
         setExpandedProperty(null);
-        setHoveredProperty(null);
+
       }
     }
 
@@ -67,7 +67,7 @@ export function HierarchicalPropertySelector({ value, onChange, className }: Hie
     onChange(propertyId);
     setIsOpen(false);
     setExpandedProperty(null);
-    setHoveredProperty(null);
+
   };
 
   const handlePropertyGroupClick = (group: PropertyGroup) => {
@@ -80,15 +80,7 @@ export function HierarchicalPropertySelector({ value, onChange, className }: Hie
     }
   };
 
-  const handlePropertyGroupHover = (propertyName: string | null) => {
-    setHoveredProperty(propertyName);
-    if (propertyName) {
-      const group = propertyGroups.find(g => g.propertyName === propertyName);
-      if (group && !group.isSingleBuilding) {
-        setExpandedProperty(propertyName);
-      }
-    }
-  };
+
 
   return (
     <div className={`relative ${className || ""}`} ref={dropdownRef}>
@@ -117,12 +109,8 @@ export function HierarchicalPropertySelector({ value, onChange, className }: Hie
                 <div key={group.propertyName} className="relative">
                   {/* Property group item */}
                   <div
-                    className={`flex items-center px-3 py-2 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground ${
-                      hoveredProperty === group.propertyName ? "bg-accent text-accent-foreground" : ""
-                    }`}
+                    className="flex items-center px-3 py-2 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground"
                     onClick={() => handlePropertyGroupClick(group)}
-                    onMouseEnter={() => handlePropertyGroupHover(group.propertyName)}
-                    onMouseLeave={() => handlePropertyGroupHover(null)}
                   >
                     {/* Property icon */}
                     {group.isSingleBuilding ? (

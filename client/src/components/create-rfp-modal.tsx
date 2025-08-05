@@ -33,6 +33,8 @@ const createRfpSchema = z.object({
   projectArea: z.string().optional(),
   confidential: z.boolean().default(false),
   requestTypes: z.array(z.string()).min(1, "At least one request type is required"),
+  anticipatedLeaseExecutionDate: z.string().optional(),
+  anticipatedOccupancyDate: z.string().optional(),
   notes: z.string().optional(),
   areaBreakdown: z.array(z.object({
     id: z.string(),
@@ -72,6 +74,8 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
       projectArea: "",
       confidential: false,
       requestTypes: [],
+      anticipatedLeaseExecutionDate: "",
+      anticipatedOccupancyDate: "",
       notes: "",
       areaBreakdown: [],
     },
@@ -602,9 +606,51 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
               )}
             </div>
 
-            {/* Notes */}
+            {/* Additional Information */}
             <div className="space-y-4">
               <h3 className="text-lg font-medium text-gray-900 border-b pb-2">Additional Information</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="anticipatedLeaseExecutionDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Anticipated Lease Execution Date</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="date"
+                          {...field}
+                        />
+                      </FormControl>
+                      <p className="text-sm text-muted-foreground">
+                        Expected date for lease signing
+                      </p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="anticipatedOccupancyDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Anticipated Occupancy Date</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="date"
+                          {...field}
+                        />
+                      </FormControl>
+                      <p className="text-sm text-muted-foreground">
+                        Expected tenant move-in date
+                      </p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
               
               <FormField
                 control={form.control}

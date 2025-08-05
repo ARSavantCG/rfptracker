@@ -32,6 +32,8 @@ export const rfpRequests = pgTable("rfp_requests", {
   internalDueDate: timestamp("internal_due_date").notNull(),
   contractorDueDate: timestamp("contractor_due_date"),
   architectDueDate: timestamp("architect_due_date"),
+  anticipatedLeaseExecutionDate: timestamp("anticipated_lease_execution_date"),
+  anticipatedOccupancyDate: timestamp("anticipated_occupancy_date"),
   developmentContact: text("development_contact"),
   projectArea: text("project_area"),
   requestTypes: json("request_types").$type<string[]>().notNull(), // pricing, schedule, space-plan
@@ -90,6 +92,8 @@ export const insertRfpRequestSchema = createInsertSchema(rfpRequests).omit({
   internalDueDate: z.string().transform((val) => new Date(val)),
   contractorDueDate: z.string().optional().transform((val) => val ? new Date(val) : null),
   architectDueDate: z.string().optional().transform((val) => val ? new Date(val) : null),
+  anticipatedLeaseExecutionDate: z.string().optional().transform((val) => val ? new Date(val) : null),
+  anticipatedOccupancyDate: z.string().optional().transform((val) => val ? new Date(val) : null),
   dueDate: z.string().optional().transform((val) => val ? new Date(val) : undefined),
   warehouseAreaOverride: z.string().optional().nullable(),
   areaBreakdown: z.array(z.object({

@@ -105,11 +105,7 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
   // Mutations for CRUD operations
   const createTransformerMutation = useMutation({
     mutationFn: async (transformer: Omit<Transformer, 'id'>) => 
-      apiRequest(`/api/properties/${propertyId}/transformers`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(transformer),
-      }),
+      apiRequest(`/api/properties/${propertyId}/transformers`, 'POST', transformer),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/properties/${propertyId}/transformers`] });
       setShowTransformerDialog(false);
@@ -120,11 +116,7 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
 
   const updateTransformerMutation = useMutation({
     mutationFn: async ({ id, ...transformer }: Transformer) =>
-      apiRequest(`/api/transformers/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(transformer),
-      }),
+      apiRequest(`/api/transformers/${id}`, 'PUT', transformer),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/properties/${propertyId}/transformers`] });
       setShowTransformerDialog(false);
@@ -134,7 +126,7 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
   });
 
   const deleteTransformerMutation = useMutation({
-    mutationFn: async (id: number) => apiRequest(`/api/transformers/${id}`, { method: 'DELETE' }),
+    mutationFn: async (id: number) => apiRequest(`/api/transformers/${id}`, 'DELETE'),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/properties/${propertyId}/transformers`] });
       toast({ title: "Transformer deleted successfully" });
@@ -143,11 +135,7 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
 
   const createMainPanelMutation = useMutation({
     mutationFn: async (panel: Omit<MainPanel, 'id'>) =>
-      apiRequest(`/api/properties/${propertyId}/main-panels`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(panel),
-      }),
+      apiRequest(`/api/properties/${propertyId}/main-panels`, 'POST', panel),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/properties/${propertyId}/main-panels`] });
       setShowPanelDialog(false);
@@ -158,11 +146,7 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
 
   const updateMainPanelMutation = useMutation({
     mutationFn: async ({ id, ...panel }: MainPanel) =>
-      apiRequest(`/api/main-panels/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(panel),
-      }),
+      apiRequest(`/api/main-panels/${id}`, 'PUT', panel),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/properties/${propertyId}/main-panels`] });
       setShowPanelDialog(false);
@@ -172,7 +156,7 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
   });
 
   const deleteMainPanelMutation = useMutation({
-    mutationFn: async (id: number) => apiRequest(`/api/main-panels/${id}`, { method: 'DELETE' }),
+    mutationFn: async (id: number) => apiRequest(`/api/main-panels/${id}`, 'DELETE'),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/properties/${propertyId}/main-panels`] });
       toast({ title: "Main panel deleted successfully" });
@@ -181,11 +165,7 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
 
   const createBayAssignmentMutation = useMutation({
     mutationFn: async (assignment: Omit<BayPanelAssignment, 'id'>) =>
-      apiRequest(`/api/properties/${propertyId}/bay-panel-assignments`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(assignment),
-      }),
+      apiRequest(`/api/properties/${propertyId}/bay-panel-assignments`, 'POST', assignment),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/properties/${propertyId}/bay-panel-assignments`] });
       setShowAssignmentDialog(false);
@@ -196,11 +176,7 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
 
   const updateBayAssignmentMutation = useMutation({
     mutationFn: async ({ id, ...assignment }: BayPanelAssignment) =>
-      apiRequest(`/api/bay-panel-assignments/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(assignment),
-      }),
+      apiRequest(`/api/bay-panel-assignments/${id}`, 'PUT', assignment),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/properties/${propertyId}/bay-panel-assignments`] });
       setShowAssignmentDialog(false);
@@ -210,7 +186,7 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
   });
 
   const deleteBayAssignmentMutation = useMutation({
-    mutationFn: async (id: number) => apiRequest(`/api/bay-panel-assignments/${id}`, { method: 'DELETE' }),
+    mutationFn: async (id: number) => apiRequest(`/api/bay-panel-assignments/${id}`, 'DELETE'),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/properties/${propertyId}/bay-panel-assignments`] });
       toast({ title: "Bay assignment deleted successfully" });
@@ -219,11 +195,7 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
 
   const createReservationMutation = useMutation({
     mutationFn: async (reservation: Omit<ElectricalReservation, 'id'>) =>
-      apiRequest(`/api/properties/${propertyId}/electrical-reservations`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(reservation),
-      }),
+      apiRequest(`/api/properties/${propertyId}/electrical-reservations`, 'POST', reservation),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/properties/${propertyId}/electrical-reservations`] });
       setShowReservationDialog(false);
@@ -234,11 +206,7 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
 
   const updateReservationMutation = useMutation({
     mutationFn: async ({ id, ...reservation }: ElectricalReservation) =>
-      apiRequest(`/api/electrical-reservations/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(reservation),
-      }),
+      apiRequest(`/api/electrical-reservations/${id}`, 'PUT', reservation),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/properties/${propertyId}/electrical-reservations`] });
       setShowReservationDialog(false);
@@ -248,7 +216,7 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
   });
 
   const deleteReservationMutation = useMutation({
-    mutationFn: async (id: number) => apiRequest(`/api/electrical-reservations/${id}`, { method: 'DELETE' }),
+    mutationFn: async (id: number) => apiRequest(`/api/electrical-reservations/${id}`, 'DELETE'),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/properties/${propertyId}/electrical-reservations`] });
       toast({ title: "Electrical reservation deleted successfully" });
@@ -819,7 +787,7 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
           <DialogHeader>
             <DialogTitle>{editingPanel ? 'Edit Main Panel' : 'Add New Main Panel'}</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handlePanelSubmit} className="space-y-4">
+          <form onSubmit={handleMainPanelSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="name">Name *</Label>
@@ -882,7 +850,7 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
           <DialogHeader>
             <DialogTitle>{editingAssignment ? 'Edit Bay Assignment' : 'Add New Bay Assignment'}</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleAssignmentSubmit} className="space-y-4">
+          <form onSubmit={handleBayAssignmentSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="bayConfiguration">Bay Configuration *</Label>

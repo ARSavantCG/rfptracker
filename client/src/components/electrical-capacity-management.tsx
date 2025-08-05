@@ -401,58 +401,61 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
           <Zap className="h-12 w-12 mx-auto text-gray-400 mb-4" />
           <h3 className="text-lg font-semibold mb-2">Get Started with Electrical Management</h3>
           <p className="text-gray-600 mb-4">Add your first transformer to begin tracking electrical capacity</p>
-          <Button 
+          <button 
             onClick={() => { setEditingTransformer(null); setShowTransformerDialog(true); }}
-            className="!px-2 !py-1 !text-xs !h-6 !min-h-6 !leading-none !font-normal"
-            style={{ fontSize: '11px', height: '24px', padding: '2px 8px' }}
+            className="inline-flex items-center justify-center rounded-md bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+            style={{ 
+              fontSize: '10px', 
+              height: '20px', 
+              padding: '2px 6px',
+              minHeight: '20px',
+              lineHeight: '1'
+            }}
           >
-            <Plus className="h-3 w-3 mr-1" style={{ width: '10px', height: '10px' }} />
-            <span style={{ fontSize: '10px' }}>Add Transformer</span>
-          </Button>
+            <Plus style={{ width: '8px', height: '8px', marginRight: '3px' }} />
+            Add Transformer
+          </button>
         </Card>
       ) : (
         <Card className="p-4">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold">Quick Actions</h3>
             <div className="flex gap-2">
-              <Button 
-                variant="outline"
+              <button 
                 onClick={() => { setEditingTransformer(null); setShowTransformerDialog(true); }}
-                className="!px-1 !py-0.5 !text-xs !h-5 !min-h-5 !leading-none"
-                style={{ fontSize: '10px', height: '20px', padding: '1px 6px' }}
+                className="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+                style={{ fontSize: '9px', height: '18px', padding: '1px 4px', minHeight: '18px', lineHeight: '1' }}
               >
-                <Plus className="h-2 w-2 mr-0.5" style={{ width: '8px', height: '8px' }} />
-                <span style={{ fontSize: '9px' }}>Transformer</span>
-              </Button>
-              <Button 
-                variant="outline"
+                <Plus style={{ width: '6px', height: '6px', marginRight: '2px' }} />
+                Transformer
+              </button>
+              <button 
                 onClick={() => { setEditingPanel(null); setShowPanelDialog(true); }}
                 disabled={transformers.length === 0}
-                className="!px-1 !py-0.5 !text-xs !h-5 !min-h-5 !leading-none"
-                style={{ fontSize: '10px', height: '20px', padding: '1px 6px' }}
+                className="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ fontSize: '9px', height: '18px', padding: '1px 4px', minHeight: '18px', lineHeight: '1' }}
               >
-                <Plus className="h-2 w-2 mr-0.5" style={{ width: '8px', height: '8px' }} />
-                <span style={{ fontSize: '9px' }}>Panel</span>
-              </Button>
-              <Button 
-                variant="outline"
+                <Plus style={{ width: '6px', height: '6px', marginRight: '2px' }} />
+                Panel
+              </button>
+              <button 
                 onClick={() => { setEditingAssignment(null); setShowAssignmentDialog(true); }}
                 disabled={mainPanels.length === 0}
-                className="!px-1 !py-0.5 !text-xs !h-5 !min-h-5 !leading-none"
-                style={{ fontSize: '10px', height: '20px', padding: '1px 6px' }}
+                className="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ fontSize: '9px', height: '18px', padding: '1px 4px', minHeight: '18px', lineHeight: '1' }}
               >
-                <Plus className="h-2 w-2 mr-0.5" style={{ width: '8px', height: '8px' }} />
-                <span style={{ fontSize: '9px' }}>Bay</span>
-              </Button>
-              <Button 
+                <Plus style={{ width: '6px', height: '6px', marginRight: '2px' }} />
+                Bay
+              </button>
+              <button 
                 onClick={() => { setEditingReservation(null); setShowReservationDialog(true); }}
                 disabled={bayAssignments.length === 0}
-                className="!px-1 !py-0.5 !text-xs !h-5 !min-h-5 !leading-none"
-                style={{ fontSize: '10px', height: '20px', padding: '1px 6px' }}
+                className="inline-flex items-center justify-center rounded-md bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ fontSize: '9px', height: '18px', padding: '1px 4px', minHeight: '18px', lineHeight: '1' }}
               >
-                <Plus className="h-2 w-2 mr-0.5" style={{ width: '8px', height: '8px' }} />
-                <span style={{ fontSize: '9px' }}>Reserve</span>
-              </Button>
+                <Plus style={{ width: '6px', height: '6px', marginRight: '2px' }} />
+                Reserve
+              </button>
             </div>
           </div>
         </Card>

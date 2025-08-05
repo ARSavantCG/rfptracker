@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { apiRequest } from "@/lib/queryClient";
 import { FileUpload } from "./file-upload";
-import { PropertySelector } from "./property-selector";
+import { HierarchicalPropertySelector } from "./hierarchical-property-selector";
 import { BayConfigurationModal } from "./bay-configuration-modal";
 import { useToast } from "@/hooks/use-toast";
 import { getCurrentDateString } from "@shared/date-utils";
@@ -277,7 +277,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Property *</FormLabel>
-                      <PropertySelector
+                      <HierarchicalPropertySelector
                         value={field.value}
                         onChange={(value) => {
                           field.onChange(value);

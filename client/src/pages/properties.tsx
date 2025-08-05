@@ -272,21 +272,21 @@ export default function Properties() {
                                     <SelectTrigger className="bg-white shadow-sm hover:shadow-md px-2 py-1 text-xs font-medium border border-gray-300 hover:border-blue-400 hover:bg-blue-50 w-20 h-6">
                                       <SelectValue />
                                     </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="stacked">
+                                    <SelectContent className="bg-white border shadow-lg">
+                                      <SelectItem value="stacked" className="text-gray-900">
                                         <div className="flex items-center">
-                                          <Layers className="h-3 w-3 mr-1" />
+                                          <Layers className="h-3 w-3 mr-1 text-gray-600" />
                                           Stack
                                         </div>
                                       </SelectItem>
-                                      <SelectItem value="all">
+                                      <SelectItem value="all" className="text-gray-900">
                                         <div className="flex items-center">
-                                          <Grid className="h-3 w-3 mr-1" />
+                                          <Grid className="h-3 w-3 mr-1 text-gray-600" />
                                           All ({buildings.length})
                                         </div>
                                       </SelectItem>
                                       {buildings.map((building) => (
-                                        <SelectItem key={building.id} value={building.id.toString()}>
+                                        <SelectItem key={building.id} value={building.id.toString()} className="text-gray-900">
                                           <div className="flex items-center">
                                             <Building className="h-3 w-3 mr-1 text-blue-600" />
                                             {building.building}

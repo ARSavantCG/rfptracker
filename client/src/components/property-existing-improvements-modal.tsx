@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Trash2, Plus, Edit3, Save, X, Grid } from "lucide-react";
+import { Trash2, Plus, Edit3, Save, X, Grid, Printer } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
 import { 
@@ -140,6 +140,27 @@ export function PropertyExistingImprovementsModal({
     form.reset();
   };
 
+  const handlePrint = async () => {
+    try {
+      const token = localStorage.getItem('auth-token');
+      const response = await fetch(`/api/properties/${property.id}/existing-improvements/print`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Print failed');
+      }
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, '_blank');
+    } catch (error) {
+      console.error('Existing improvements print error:', error);
+    }
+  };
+
   const allocationType = form.watch("allocationType");
 
   const formatCurrency = (cents: number) => {
@@ -162,10 +183,19 @@ export function PropertyExistingImprovementsModal({
       
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+        <DialogHeader className="flex flex-row items-center justify-between">
           <DialogTitle>
             Manage Existing Improvements - {property.propertyName}
           </DialogTitle>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handlePrint}
+            className="flex items-center gap-1"
+          >
+            <Printer className="h-4 w-4" />
+            Print
+          </Button>
         </DialogHeader>
 
         <div className="space-y-6">

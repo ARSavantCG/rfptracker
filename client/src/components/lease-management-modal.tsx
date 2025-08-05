@@ -22,7 +22,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { formatDate } from "@/lib/utils";
-import { Calendar, Trash2, Edit, Plus, Building, Users } from "lucide-react";
+import { Calendar, Trash2, Edit, Plus, Building, Users, Printer } from "lucide-react";
 import type { Property, ExecutedLease, BayConfiguration } from "@shared/schema";
 
 const leaseFormSchema = z.object({
@@ -142,6 +142,32 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
     form.reset();
   };
 
+  const handlePrint = async () => {
+    try {
+      const token = localStorage.getItem('auth-token');
+      const response = await fetch(`/api/properties/${property.id}/executed-leases/print`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Print failed');
+      }
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, '_blank');
+    } catch (error) {
+      console.error('Leases print error:', error);
+      toast({
+        title: "Print Error",
+        description: "Failed to generate leases report",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Get leased bays to filter from available bays
   const leasedBays = leases.flatMap(lease => lease.assignedBays || []);
   const unassignedBays = availableBays.filter(bay => !leasedBays.includes(bay.id));
@@ -155,11 +181,20 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+        <DialogHeader className="flex flex-row items-center justify-between">
           <DialogTitle className="flex items-center gap-2">
             <Building className="h-5 w-5" />
             Executed Leases - {property.propertyName}
           </DialogTitle>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handlePrint}
+            className="flex items-center gap-1"
+          >
+            <Printer className="h-4 w-4" />
+            Print
+          </Button>
         </DialogHeader>
 
         <div className="space-y-6">

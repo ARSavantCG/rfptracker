@@ -12,7 +12,7 @@ import { formatDate } from "@/lib/utils";
 import LeaseManagementModal from "@/components/lease-management-modal";
 import { PropertyExistingImprovementsModal } from "@/components/property-existing-improvements-modal";
 import { PropertyAttachments } from "@/components/property-attachments";
-import { ElectricalCapacityManagement } from "@/components/electrical-capacity-management";
+import { ElectricalManagementModal } from "@/components/electrical-management-modal";
 import type { Property, BayConfiguration } from "@shared/schema";
 
 export default function Properties() {
@@ -20,7 +20,7 @@ export default function Properties() {
   const [expandedProperty, setExpandedProperty] = useState<string | null>(null);
   const [expandedPropertyInfo, setExpandedPropertyInfo] = useState<number | null>(null);
   const [selectedBuilding, setSelectedBuilding] = useState<Record<string, string>>({});
-  const [showElectricalCapacity, setShowElectricalCapacity] = useState<number | null>(null);
+
 
   const { data: properties, isLoading } = useQuery<Property[]>({
     queryKey: ["/api/properties"],
@@ -374,14 +374,7 @@ export default function Properties() {
                           <PropertyExistingImprovementsModal 
                             property={property}
                           />
-                          <Button
-                            variant="outline"
-                            onClick={() => setShowElectricalCapacity(showElectricalCapacity === property.id ? null : property.id)}
-                            className="flex items-center gap-1 text-xs px-2 py-1 h-6"
-                          >
-                            <Zap className="h-3 w-3" />
-                            {showElectricalCapacity === property.id ? 'Hide' : 'Manage'} Electrical
-                          </Button>
+                          <ElectricalManagementModal property={property} />
                         </div>
                         
                         {/* Property Info Section */}
@@ -631,16 +624,7 @@ export default function Properties() {
                             </div>
                           )}
                         </div>
-                        
-                        {/* Electrical Capacity Management */}
-                        {showElectricalCapacity === property.id && (
-                          <div className="mt-6 pt-6 border-t">
-                            <ElectricalCapacityManagement 
-                              propertyId={property.id} 
-                              propertyName={property.propertyName} 
-                            />
-                          </div>
-                        )}
+
                       </CardContent>
                     </Card>
                       );

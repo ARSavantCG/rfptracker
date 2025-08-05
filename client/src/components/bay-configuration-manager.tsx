@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Trash2, Edit, Settings, Copy, ChevronDown, ChevronRight, Compass, Navigation } from "lucide-react";
+import { Plus, Trash2, Edit, Settings, Copy, ChevronDown, ChevronRight, Compass, Navigation, Printer } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -40,6 +40,32 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
   // Directional orientation state
   const [firstBayDirection, setFirstBayDirection] = useState<string>(property.firstBayDirection || "");
   const [bayProgressionDirection, setBayProgressionDirection] = useState<string>(property.bayProgressionDirection || "");
+
+  const handlePrint = async () => {
+    try {
+      const token = localStorage.getItem('auth-token');
+      const response = await fetch(`/api/properties/${property.id}/bay-configurations/print`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Print failed');
+      }
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, '_blank');
+    } catch (error) {
+      console.error('Bay configurations print error:', error);
+      toast({
+        title: "Print Error",
+        description: "Failed to generate bay configurations report",
+        variant: "destructive",
+      });
+    }
+  };
 
   // Auto-populate start bay when bay configurations change
   useEffect(() => {
@@ -362,8 +388,17 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[900px] max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
+        <DialogHeader className="flex flex-row items-center justify-between">
           <DialogTitle>Bay Configurations - {property.propertyName}</DialogTitle>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handlePrint}
+            className="flex items-center gap-1"
+          >
+            <Printer className="h-4 w-4" />
+            Print
+          </Button>
         </DialogHeader>
 
         <div className="space-y-6">

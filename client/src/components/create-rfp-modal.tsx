@@ -33,8 +33,8 @@ const createRfpSchema = z.object({
   projectArea: z.string().optional(),
   confidential: z.boolean().default(false),
   requestTypes: z.array(z.string()).min(1, "At least one request type is required"),
-  anticipatedLeaseExecutionDate: z.string().optional(),
-  anticipatedOccupancyDate: z.string().optional(),
+  anticipatedLeaseExecutionDate: z.string().min(1, "Anticipated lease execution date is required"),
+  anticipatedOccupancyDate: z.string().min(1, "Anticipated occupancy date is required"),
   notes: z.string().optional(),
   areaBreakdown: z.array(z.object({
     id: z.string(),

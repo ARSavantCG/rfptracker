@@ -399,7 +399,7 @@ export default function BayConfigurationSelector({
                   key={bay.id}
                   variant={isSelected ? "default" : "outline"}
                   disabled={isLeased}
-                  className={`h-16 w-12 flex flex-col items-center justify-center text-xs p-1 flex-shrink-0 ${
+                  className={`h-18 w-12 flex flex-col items-center justify-center text-xs p-1 flex-shrink-0 ${
                     isLeased
                       ? "bg-red-800 border-red-900 text-white cursor-not-allowed opacity-95"
                       : isSelected 
@@ -408,12 +408,12 @@ export default function BayConfigurationSelector({
                   }`}
                   onClick={() => toggleBaySelection(bay.id)}
                 >
-                  <div className="font-bold text-[10px] mb-0.5 leading-tight truncate w-full text-center">{bay.bayName}</div>
-                  <div className="text-[9px] opacity-75 leading-tight">
+                  <div className="font-bold text-[10px] mb-1 leading-none truncate w-full text-center">{bay.bayName}</div>
+                  <div className="text-[9px] opacity-75 leading-none">
                     {isLeased ? "LEA" : `${(bay.squareFootage / 1000).toFixed(0)}K`}
                   </div>
                   {(bay.standardDockDoors > 0 || bay.oversizedDockDoors > 0) && (
-                    <div className="text-[8px] opacity-60 leading-tight mt-0.5">
+                    <div className="text-[8px] opacity-60 leading-none mt-1">
                       {bay.standardDockDoors + bay.oversizedDockDoors} drs.
                     </div>
                   )}

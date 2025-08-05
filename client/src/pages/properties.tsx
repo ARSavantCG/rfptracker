@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Building, MapPin, Plus, Search, Edit, Grid, ChevronDown, ChevronUp, Printer, Layers } from "lucide-react";
+import { Building, MapPin, Plus, Search, Edit, Grid, ChevronDown, ChevronUp, Printer, Layers, Zap } from "lucide-react";
 import { useState } from "react";
 import Navigation from "@/components/navigation";
 import { PropertyFormModal } from "@/components/property-form-modal";
@@ -12,6 +12,7 @@ import { formatDate } from "@/lib/utils";
 import LeaseManagementModal from "@/components/lease-management-modal";
 import { PropertyExistingImprovementsModal } from "@/components/property-existing-improvements-modal";
 import { PropertyAttachments } from "@/components/property-attachments";
+import { ElectricalCapacityManagement } from "@/components/electrical-capacity-management";
 import type { Property, BayConfiguration } from "@shared/schema";
 
 export default function Properties() {
@@ -19,6 +20,7 @@ export default function Properties() {
   const [expandedProperty, setExpandedProperty] = useState<string | null>(null);
   const [expandedPropertyInfo, setExpandedPropertyInfo] = useState<number | null>(null);
   const [selectedBuilding, setSelectedBuilding] = useState<Record<string, string>>({});
+  const [showElectricalCapacity, setShowElectricalCapacity] = useState<number | null>(null);
 
   const { data: properties, isLoading } = useQuery<Property[]>({
     queryKey: ["/api/properties"],
@@ -381,6 +383,15 @@ export default function Properties() {
                           <PropertyExistingImprovementsModal 
                             property={property}
                           />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setShowElectricalCapacity(showElectricalCapacity === property.id ? null : property.id)}
+                            className="flex items-center gap-2"
+                          >
+                            <Zap className="h-4 w-4" />
+                            {showElectricalCapacity === property.id ? 'Hide' : 'Manage'} Electrical
+                          </Button>
                         </div>
                         
                         {/* Property Info Section */}
@@ -630,6 +641,16 @@ export default function Properties() {
                             </div>
                           )}
                         </div>
+                        
+                        {/* Electrical Capacity Management */}
+                        {showElectricalCapacity === property.id && (
+                          <div className="mt-6 pt-6 border-t">
+                            <ElectricalCapacityManagement 
+                              propertyId={property.id} 
+                              propertyName={property.propertyName} 
+                            />
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
                       );

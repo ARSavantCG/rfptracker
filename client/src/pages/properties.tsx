@@ -272,24 +272,24 @@ export default function Properties() {
                                     <SelectTrigger className="bg-white shadow-sm hover:shadow-md px-2 py-1 text-xs font-medium border border-gray-300 hover:border-blue-400 hover:bg-blue-50 w-20 h-6">
                                       <SelectValue />
                                     </SelectTrigger>
-                                    <SelectContent align="start" className="z-50 min-w-40 bg-white border border-gray-200 shadow-lg">
-                                      <SelectItem value="stacked" className="text-gray-900 hover:bg-blue-50 cursor-pointer px-3 py-2">
-                                        <div className="flex items-center text-sm">
-                                          <Layers className="h-4 w-4 mr-2 text-gray-600" />
-                                          <span className="font-medium">Stack</span>
+                                    <SelectContent>
+                                      <SelectItem value="stacked">
+                                        <div className="flex items-center">
+                                          <Layers className="h-3 w-3 mr-1" />
+                                          Stack
                                         </div>
                                       </SelectItem>
-                                      <SelectItem value="all" className="text-gray-900 hover:bg-blue-50 cursor-pointer px-3 py-2">
-                                        <div className="flex items-center text-sm">
-                                          <Grid className="h-4 w-4 mr-2 text-gray-600" />
-                                          <span className="font-medium">All ({buildings.length})</span>
+                                      <SelectItem value="all">
+                                        <div className="flex items-center">
+                                          <Grid className="h-3 w-3 mr-1" />
+                                          All ({buildings.length})
                                         </div>
                                       </SelectItem>
                                       {buildings.map((building) => (
-                                        <SelectItem key={building.id} value={building.id.toString()} className="text-gray-900 hover:bg-blue-50 cursor-pointer px-3 py-2">
-                                          <div className="flex items-center text-sm">
-                                            <Building className="h-4 w-4 mr-2 text-blue-600" />
-                                            <span className="font-medium">{building.building}</span>
+                                        <SelectItem key={building.id} value={building.id.toString()}>
+                                          <div className="flex items-center">
+                                            <Building className="h-3 w-3 mr-1 text-blue-600" />
+                                            {building.building}
                                           </div>
                                         </SelectItem>
                                       ))}

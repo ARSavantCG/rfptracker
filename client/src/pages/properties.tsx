@@ -251,12 +251,16 @@ export default function Properties() {
                       <CardHeader>
                         <div className="flex items-start justify-between">
                           <div className="flex items-center space-x-3 flex-1 min-w-0">
-                            <div className="p-2 bg-blue-100 rounded-lg">
+                            <div className="relative p-2 bg-blue-100 rounded-lg">
                               <Building className="h-6 w-6 text-blue-600" />
+                              {/* Building count under icon */}
+                              <div className="absolute -bottom-1 -right-1 bg-blue-600 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center font-medium">
+                                {isMultiBuilding ? buildings.length : 1}
+                              </div>
                             </div>
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-3 mb-1">
-                                <CardTitle className="text-lg font-bold">
+                                <CardTitle className="text-sm font-semibold truncate">
                                   {property.propertyName || 'Unnamed Property'}
                                 </CardTitle>
                                 {/* Stack Cards Selector for Multi-Building Properties - moved to left */}
@@ -297,12 +301,6 @@ export default function Properties() {
                                 {property.building && (
                                   <span className="text-xs font-medium text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
                                     Bldg. {property.building}
-                                  </span>
-                                )}
-                                {/* Building count indicator - moved to left */}
-                                {isMultiBuilding && index === 0 && (
-                                  <span className="text-xs text-gray-500">
-                                    {buildings.length} Buildings
                                   </span>
                                 )}
                               </div>

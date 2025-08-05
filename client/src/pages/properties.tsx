@@ -208,6 +208,11 @@ export default function Properties() {
               const isMultiBuilding = buildings.length > 1;
               const selectedBuildingId = selectedBuilding[baseName];
               
+              // Debug logging for dropdown issues
+              if (isMultiBuilding) {
+                console.log(`Property: ${baseName}, Buildings:`, buildings.map(b => ({ id: b.id, building: b.building })));
+              }
+              
               // Filter buildings based on selection
               let displayBuildings = buildings;
               if (selectedBuildingId && selectedBuildingId !== "all" && selectedBuildingId !== "stacked") {
@@ -270,26 +275,39 @@ export default function Properties() {
                                     onValueChange={(value) => handleBuildingSelection(baseName, value)}
                                   >
                                     <SelectTrigger className="bg-white shadow-sm hover:shadow-md px-2 py-1 text-xs font-medium border border-gray-300 hover:border-blue-400 hover:bg-blue-50 w-20 h-6">
-                                      <SelectValue />
+                                      <SelectValue placeholder="Stack" />
                                     </SelectTrigger>
-                                    <SelectContent className="bg-white border shadow-lg max-h-none min-w-[160px]" sideOffset={5}>
-                                      <SelectItem value="stacked" className="text-gray-900 py-2 px-3">
-                                        <div className="flex items-center">
-                                          <Layers className="h-4 w-4 mr-2 text-gray-600" />
-                                          Stack
+                                    <SelectContent 
+                                      className="bg-white border shadow-lg z-50" 
+                                      sideOffset={5}
+                                      style={{ 
+                                        maxHeight: 'none',
+                                        minWidth: '160px',
+                                        zIndex: 9999 
+                                      }}
+                                      position="popper"
+                                    >
+                                      <SelectItem value="stacked" className="text-gray-900 py-2 px-3 cursor-pointer hover:bg-gray-100">
+                                        <div className="flex items-center w-full">
+                                          <Layers className="h-4 w-4 mr-2 text-gray-600 flex-shrink-0" />
+                                          <span>Stack</span>
                                         </div>
                                       </SelectItem>
-                                      <SelectItem value="all" className="text-gray-900 py-2 px-3">
-                                        <div className="flex items-center">
-                                          <Grid className="h-4 w-4 mr-2 text-gray-600" />
-                                          All ({buildings.length})
+                                      <SelectItem value="all" className="text-gray-900 py-2 px-3 cursor-pointer hover:bg-gray-100">
+                                        <div className="flex items-center w-full">
+                                          <Grid className="h-4 w-4 mr-2 text-gray-600 flex-shrink-0" />
+                                          <span>All ({buildings.length})</span>
                                         </div>
                                       </SelectItem>
                                       {buildings.map((building) => (
-                                        <SelectItem key={building.id} value={building.id.toString()} className="text-gray-900 py-2 px-3">
-                                          <div className="flex items-center">
-                                            <Building className="h-4 w-4 mr-2 text-blue-600" />
-                                            {building.building}
+                                        <SelectItem 
+                                          key={building.id} 
+                                          value={building.id.toString()} 
+                                          className="text-gray-900 py-2 px-3 cursor-pointer hover:bg-gray-100"
+                                        >
+                                          <div className="flex items-center w-full">
+                                            <Building className="h-4 w-4 mr-2 text-blue-600 flex-shrink-0" />
+                                            <span>{building.building}</span>
                                           </div>
                                         </SelectItem>
                                       ))}

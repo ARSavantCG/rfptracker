@@ -5388,26 +5388,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/properties/:id/attachments/:attachmentId/download", requireAuth, async (req, res) => {
     try {
+      console.log(`🔽 Download request: Property ${req.params.id}, Attachment ${req.params.attachmentId}, User: ${req.user?.username}`);
+      
       const propertyId = parseInt(req.params.id);
       const attachmentId = parseInt(req.params.attachmentId);
       
       if (isNaN(propertyId) || isNaN(attachmentId)) {
+        console.log("❌ Invalid IDs provided");
         return res.status(400).json({ message: "Invalid property or attachment ID" });
       }
 
       const attachment = await storage.getPropertyAttachment(attachmentId);
+      console.log(`📁 Attachment lookup result:`, attachment ? `Found: ${attachment.filename}` : 'Not found');
+      
       if (!attachment || attachment.propertyId !== propertyId) {
+        console.log(`❌ Attachment not found or property mismatch`);
         return res.status(404).json({ message: "Attachment not found" });
       }
 
       const filePath = path.join(uploadsDir, attachment.filename);
+      console.log(`📂 Checking file path: ${filePath}`);
+      
       if (!fs.existsSync(filePath)) {
+        console.log(`❌ File not found on disk: ${filePath}`);
         return res.status(404).json({ message: "File not found on disk" });
       }
 
-      res.download(filePath, attachment.originalName);
+      console.log(`✅ Starting download: ${attachment.originalName}`);
+      res.download(filePath, attachment.originalName, (err) => {
+        if (err) {
+          console.error("❌ Download error:", err);
+        } else {
+          console.log(`✅ Download completed: ${attachment.originalName}`);
+        }
+      });
     } catch (error) {
-      console.error("Error downloading property attachment:", error);
+      console.error("❌ Error downloading property attachment:", error);
       res.status(500).json({ message: "Failed to download attachment" });
     }
   });

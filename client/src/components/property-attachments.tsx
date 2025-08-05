@@ -129,14 +129,47 @@ export function PropertyAttachments({ propertyId, propertyName }: PropertyAttach
   const handleDownload = async (attachment: PropertyAttachment) => {
     try {
       const token = localStorage.getItem('auth-token');
+      if (!token) {
+        toast({
+          title: "Authentication required",
+          description: "Please log in again to download files",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const response = await fetch(`/api/properties/${propertyId}/attachments/${attachment.id}/download`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
 
+      if (response.status === 401) {
+        toast({
+          title: "Authentication expired",
+          description: "Please log in again to download files",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (response.status === 404) {
+        toast({
+          title: "File not found",
+          description: "The requested file could not be found",
+          variant: "destructive",
+        });
+        return;
+      }
+
       if (!response.ok) {
-        throw new Error('Download failed');
+        const errorData = await response.text().catch(() => 'Unknown error');
+        toast({
+          title: "Download failed",
+          description: `Error ${response.status}: ${errorData}`,
+          variant: "destructive",
+        });
+        return;
       }
 
       const blob = await response.blob();
@@ -148,10 +181,16 @@ export function PropertyAttachments({ propertyId, propertyName }: PropertyAttach
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
+
+      toast({
+        title: "Download started",
+        description: `Downloading ${attachment.originalName}`,
+      });
     } catch (error) {
+      console.error('Download error:', error);
       toast({
         title: "Download failed",
-        description: "Failed to download file",
+        description: error instanceof Error ? error.message : "Failed to download file",
         variant: "destructive",
       });
     }

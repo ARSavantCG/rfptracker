@@ -404,9 +404,9 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
           <Button 
             size="sm" 
             onClick={() => { setEditingTransformer(null); setShowTransformerDialog(true); }}
-            className="px-3 py-1.5 text-sm"
+            className="px-2 py-0.5 text-xs h-6"
           >
-            <Plus className="h-3 w-3 mr-1" />
+            <Plus className="h-2.5 w-2.5 mr-0.5" />
             Add Your First Transformer
           </Button>
         </Card>
@@ -419,9 +419,9 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
                 size="sm" 
                 variant="outline"
                 onClick={() => { setEditingTransformer(null); setShowTransformerDialog(true); }}
-                className="px-2 py-1 text-xs"
+                className="px-1.5 py-0.5 text-xs h-6"
               >
-                <Plus className="h-3 w-3 mr-1" />
+                <Plus className="h-2.5 w-2.5 mr-0.5" />
                 Transformer
               </Button>
               <Button 
@@ -429,9 +429,9 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
                 variant="outline"
                 onClick={() => { setEditingPanel(null); setShowPanelDialog(true); }}
                 disabled={transformers.length === 0}
-                className="px-2 py-1 text-xs"
+                className="px-1.5 py-0.5 text-xs h-6"
               >
-                <Plus className="h-3 w-3 mr-1" />
+                <Plus className="h-2.5 w-2.5 mr-0.5" />
                 Main Panel
               </Button>
               <Button 
@@ -439,18 +439,18 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
                 variant="outline"
                 onClick={() => { setEditingAssignment(null); setShowAssignmentDialog(true); }}
                 disabled={mainPanels.length === 0}
-                className="px-2 py-1 text-xs"
+                className="px-1.5 py-0.5 text-xs h-6"
               >
-                <Plus className="h-3 w-3 mr-1" />
+                <Plus className="h-2.5 w-2.5 mr-0.5" />
                 Bay Assignment
               </Button>
               <Button 
                 size="sm"
                 onClick={() => { setEditingReservation(null); setShowReservationDialog(true); }}
                 disabled={bayAssignments.length === 0}
-                className="px-2 py-1 text-xs"
+                className="px-1.5 py-0.5 text-xs h-6"
               >
-                <Plus className="h-3 w-3 mr-1" />
+                <Plus className="h-2.5 w-2.5 mr-0.5" />
                 New Reservation
               </Button>
             </div>

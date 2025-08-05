@@ -91,10 +91,14 @@ button.electrical-btn-compact {
 }
 
 /* Ultimate nuclear override - force all buttons in electrical to be small */
+.electrical-management-compact button,
+.electrical-management-compact [role="button"],
+.electrical-management-compact [data-state],
+.electrical-management-compact [role="tab"],
 div[class*="electrical-management-compact"] button,
 div[class*="electrical-management-compact"] [role="button"],
-.electrical-management-compact button,
-.electrical-management-compact [role="button"] {
+div[class*="electrical-management-compact"] [data-state],
+div[class*="electrical-management-compact"] [role="tab"] {
   font-size: 10px !important;
   height: 20px !important;
   min-height: 20px !important;
@@ -102,6 +106,10 @@ div[class*="electrical-management-compact"] [role="button"],
   padding: 2px 6px !important;
   line-height: 1 !important;
   box-sizing: border-box !important;
+  border: none !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 
 /* Force tabs to be small */

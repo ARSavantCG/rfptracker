@@ -10,6 +10,7 @@ import { BayConfigurationModal } from "./bay-configuration-modal";
 import { useToast } from "@/hooks/use-toast";
 import { getCurrentDateString } from "@shared/date-utils";
 import { type Property, type Contact, type BayConfiguration } from "@shared/schema";
+import { usePermissions } from "@/hooks/usePermissions";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Grid3x3, ChevronDown } from "lucide-react";
@@ -51,6 +52,7 @@ interface CreateRfpModalProps {
 export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { isAdmin, user } = usePermissions();
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [calculatedFloorArea, setCalculatedFloorArea] = useState<number>(0);
@@ -74,6 +76,16 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
       areaBreakdown: [],
     },
   });
+
+  // Auto-populate sentBy field for non-admin users
+  useEffect(() => {
+    if (user && !isAdmin()) {
+      const userDisplayName = user.firstName && user.lastName 
+        ? `${user.firstName} ${user.lastName}` 
+        : user.username;
+      form.setValue("sentBy", userDisplayName);
+    }
+  }, [user, isAdmin, form]);
 
   const { data: properties = [] } = useQuery<Property[]>({
     queryKey: ["/api/properties"],
@@ -335,22 +347,33 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                   <FormItem>
                     <FormLabel>RFP Request *</FormLabel>
                     <FormControl>
-                      <div className="relative">
-                        <select
+                      {isAdmin() ? (
+                        // Admin can select from dropdown
+                        <div className="relative">
+                          <select
+                            {...field}
+                            className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background data-[placeholder]:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none"
+                          >
+                            <option value="">Select request source</option>
+                            {(contacts as Contact[])
+                              .filter((contact: Contact) => contact.type === "owner")
+                              .map((contact: Contact) => (
+                                <option key={contact.id} value={`${contact.name} - ${contact.company}`}>
+                                  {contact.name} - {contact.company}
+                                </option>
+                              ))}
+                          </select>
+                          <ChevronDown className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50" />
+                        </div>
+                      ) : (
+                        // Non-admin users see their name greyed out
+                        <Input 
                           {...field}
-                          className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background data-[placeholder]:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none"
-                        >
-                          <option value="">Select request source</option>
-                          {(contacts as Contact[])
-                            .filter((contact: Contact) => contact.type === "owner")
-                            .map((contact: Contact) => (
-                              <option key={contact.id} value={`${contact.name} - ${contact.company}`}>
-                                {contact.name} - {contact.company}
-                              </option>
-                            ))}
-                        </select>
-                        <ChevronDown className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50" />
-                      </div>
+                          disabled
+                          className="bg-muted text-muted-foreground cursor-not-allowed"
+                          placeholder="Your name will be auto-populated"
+                        />
+                      )}
                     </FormControl>
                     <FormMessage />
                   </FormItem>

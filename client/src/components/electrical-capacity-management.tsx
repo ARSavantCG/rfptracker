@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, Zap, Cable, Building2, Activity } from "lucide-react";
+import { Plus, Edit, Trash2, Zap, Cable, Building2, Activity, ChevronDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatDate } from "@/lib/utils";
 
@@ -29,15 +29,13 @@ interface Transformer {
 
 interface MainPanel {
   id: number;
-  propertyId: number;
   transformerId: number;
-  name: string;
-  capacity: number;
-  location: string;
-  manufacturer?: string;
-  model?: string;
-  serialNumber?: string;
-  notes?: string;
+  panelName: string;
+  maxCapacityKva: number;
+  panelLocation?: string;
+  isActive?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface BayPanelAssignment {
@@ -145,7 +143,7 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
 
   const updateMainPanelMutation = useMutation({
     mutationFn: async ({ id, ...panel }: MainPanel) =>
-      apiRequest(`/api/main-panels/${id}`, 'PUT', panel),
+      apiRequest(`/api/main-panels/${id}`, 'PATCH', panel),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/properties/${propertyId}/main-panels`] });
       setShowPanelDialog(false);
@@ -263,15 +261,10 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const panel = {
-      propertyId,
       transformerId: parseInt(formData.get('transformerId') as string),
-      name: formData.get('name') as string,
-      capacity: parseFloat(formData.get('capacity') as string),
-      location: formData.get('location') as string,
-      manufacturer: formData.get('manufacturer') as string || undefined,
-      model: formData.get('model') as string || undefined,
-      serialNumber: formData.get('serialNumber') as string || undefined,
-      notes: formData.get('notes') as string || undefined,
+      panelName: formData.get('name') as string,
+      maxCapacityKva: parseFloat(formData.get('capacity') as string),
+      panelLocation: formData.get('location') as string,
     };
 
     if (editingPanel) {
@@ -589,10 +582,10 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
                       const transformer = transformers.find((t: Transformer) => t.id === panel.transformerId);
                       return (
                         <TableRow key={panel.id}>
-                          <TableCell className="font-medium">{panel.name}</TableCell>
-                          <TableCell>{transformer?.name || 'Unknown'}</TableCell>
-                          <TableCell>{panel.capacity.toLocaleString()} kVA</TableCell>
-                          <TableCell>{panel.location}</TableCell>
+                          <TableCell className="font-medium">{panel.panelName}</TableCell>
+                          <TableCell>{transformer?.transformerName || 'Unknown'}</TableCell>
+                          <TableCell>{panel.maxCapacityKva.toLocaleString()} kVA</TableCell>
+                          <TableCell>{panel.panelLocation || 'N/A'}</TableCell>
                           <TableCell>
                             <div className="flex gap-2">
                               <button
@@ -786,7 +779,7 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
                 <Label htmlFor="name">Name *</Label>
                 <Input
                   name="name"
-                  defaultValue={editingPanel?.name || ''}
+                  defaultValue={editingPanel?.panelName || ''}
                   placeholder="e.g., Main Panel A"
                   required
                 />
@@ -796,31 +789,35 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
                 <Input
                   name="capacity"
                   type="number"
-                  defaultValue={editingPanel?.capacity || ''}
+                  defaultValue={editingPanel?.maxCapacityKva || ''}
                   placeholder="e.g., 800"
                   required
                 />
               </div>
               <div>
                 <Label htmlFor="transformerId">Transformer *</Label>
-                <Select name="transformerId" defaultValue={editingPanel?.transformerId?.toString()}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select transformer" />
-                  </SelectTrigger>
-                  <SelectContent>
+                <div className="relative">
+                  <select
+                    name="transformerId"
+                    defaultValue={editingPanel?.transformerId?.toString() || ''}
+                    required
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none pr-8"
+                  >
+                    <option value="">Select transformer</option>
                     {transformers.map((transformer: Transformer) => (
-                      <SelectItem key={transformer.id} value={transformer.id.toString()}>
-                        {transformer.name} ({transformer.capacity} kVA)
-                      </SelectItem>
+                      <option key={transformer.id} value={transformer.id.toString()}>
+                        {transformer.transformerName} ({transformer.totalCapacityKva} kVA)
+                      </option>
                     ))}
-                  </SelectContent>
-                </Select>
+                  </select>
+                  <ChevronDown className="absolute right-3 top-3 h-4 w-4 opacity-50 pointer-events-none" />
+                </div>
               </div>
               <div>
                 <Label htmlFor="location">Location *</Label>
                 <Input
                   name="location"
-                  defaultValue={editingPanel?.location || ''}
+                  defaultValue={editingPanel?.panelLocation || ''}
                   placeholder="e.g., Electrical Room North"
                   required
                 />
@@ -875,18 +872,22 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
               </div>
               <div className="col-span-2">
                 <Label htmlFor="mainPanelId">Main Panel *</Label>
-                <Select name="mainPanelId" defaultValue={editingAssignment?.mainPanelId?.toString()}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select main panel" />
-                  </SelectTrigger>
-                  <SelectContent>
+                <div className="relative">
+                  <select
+                    name="mainPanelId"
+                    defaultValue={editingAssignment?.mainPanelId?.toString() || ''}
+                    required
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none pr-8"
+                  >
+                    <option value="">Select main panel</option>
                     {mainPanels.map((panel: MainPanel) => (
-                      <SelectItem key={panel.id} value={panel.id.toString()}>
-                        {panel.name} ({panel.capacity} kVA)
-                      </SelectItem>
+                      <option key={panel.id} value={panel.id.toString()}>
+                        {panel.panelName} ({panel.maxCapacityKva} kVA)
+                      </option>
                     ))}
-                  </SelectContent>
-                </Select>
+                  </select>
+                  <ChevronDown className="absolute right-3 top-3 h-4 w-4 opacity-50 pointer-events-none" />
+                </div>
               </div>
             </div>
             <div className="flex justify-end gap-2">

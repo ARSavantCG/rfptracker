@@ -264,6 +264,7 @@ export interface IStorage {
 
   // Main Panel management
   getMainPanelsByTransformer(transformerId: number): Promise<MainPanel[]>;
+  getMainPanelsByProperty(propertyId: number): Promise<MainPanel[]>;
   getMainPanel(id: number): Promise<MainPanel | undefined>;
   createMainPanel(panel: InsertMainPanel): Promise<MainPanel>;
   updateMainPanel(id: number, updates: UpdateMainPanel): Promise<MainPanel | undefined>;
@@ -1788,6 +1789,27 @@ class ExtendedDatabaseStorage extends DatabaseStorage {
       .select()
       .from(mainPanels)
       .where(and(eq(mainPanels.transformerId, transformerId), eq(mainPanels.isActive, true)))
+      .orderBy(mainPanels.panelName);
+  }
+
+  async getMainPanelsByProperty(propertyId: number): Promise<MainPanel[]> {
+    return await db
+      .select({
+        id: mainPanels.id,
+        transformerId: mainPanels.transformerId,
+        panelName: mainPanels.panelName,
+        maxCapacityKva: mainPanels.maxCapacityKva,
+        panelLocation: mainPanels.panelLocation,
+        isActive: mainPanels.isActive,
+        createdAt: mainPanels.createdAt,
+        updatedAt: mainPanels.updatedAt,
+      })
+      .from(mainPanels)
+      .leftJoin(transformers, eq(mainPanels.transformerId, transformers.id))
+      .where(and(
+        eq(transformers.propertyId, propertyId),
+        eq(mainPanels.isActive, true)
+      ))
       .orderBy(mainPanels.panelName);
   }
 

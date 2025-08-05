@@ -6359,8 +6359,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/properties/:propertyId/main-panels", async (req, res) => {
+    try {
+      const propertyId = parseInt(req.params.propertyId);
+      if (isNaN(propertyId)) {
+        return res.status(400).json({ message: "Invalid property ID" });
+      }
+
+      const panels = await storage.getMainPanelsByProperty(propertyId);
+      res.json(panels);
+    } catch (error) {
+      console.error("Error fetching property main panels:", error);
+      res.status(500).json({ message: "Failed to fetch property main panels" });
+    }
+  });
+
   app.post("/api/main-panels", requireAuth, checkPermission('properties.create'), async (req, res) => {
     try {
+      const parsed = insertMainPanelSchema.parse(req.body);
+      const panel = await storage.createMainPanel(parsed);
+      res.status(201).json(panel);
+    } catch (error) {
+      console.error("Main panel creation error:", error);
+      res.status(400).json({ 
+        message: "Invalid main panel data", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
+  app.post("/api/properties/:propertyId/main-panels", requireAuth, checkPermission('properties.create'), async (req, res) => {
+    try {
+      const propertyId = parseInt(req.params.propertyId);
+      if (isNaN(propertyId)) {
+        return res.status(400).json({ message: "Invalid property ID" });
+      }
+
+      // Get the property to verify it exists
+      const property = await storage.getProperty(propertyId);
+      if (!property) {
+        return res.status(404).json({ message: "Property not found" });
+      }
+
       const parsed = insertMainPanelSchema.parse(req.body);
       const panel = await storage.createMainPanel(parsed);
       res.status(201).json(panel);

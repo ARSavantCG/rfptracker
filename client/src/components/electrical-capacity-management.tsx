@@ -399,6 +399,56 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
             </TabsList>
 
             <TabsContent value="overview" className="space-y-2 mt-3">
+              {/* Quick Actions Bar */}
+              <div className="bg-blue-50 rounded-lg p-3 mb-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-sm text-blue-800">Quick Setup</span>
+                  <div className="flex gap-2">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => { setEditingTransformer(null); setShowTransformerDialog(true); }}
+                      className="text-xs h-7"
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Add Transformer
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => { setEditingPanel(null); setShowPanelDialog(true); }}
+                      disabled={transformers.length === 0}
+                      className="text-xs h-7"
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Add Panel
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => { setEditingAssignment(null); setShowAssignmentDialog(true); }}
+                      disabled={mainPanels.length === 0}
+                      className="text-xs h-7"
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Bay Assignment
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      onClick={() => { setEditingReservation(null); setShowReservationDialog(true); }}
+                      disabled={bayAssignments.length === 0}
+                      className="text-xs h-7"
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      New Reservation
+                    </Button>
+                  </div>
+                </div>
+                {transformers.length === 0 && (
+                  <p className="text-xs text-blue-600 mt-2">Start by adding a transformer to begin electrical capacity management</p>
+                )}
+              </div>
+
               {/* Compact Overview Grid */}
               <div className="grid grid-cols-2 gap-3">
                 {/* Active Reservations - Compact */}
@@ -427,20 +477,28 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
                   )}
                 </div>
 
-                {/* Recent Activity - Compact */}
+                {/* System Status - Compact */}
                 <div className="border rounded-lg p-3">
                   <div className="flex items-center gap-2 mb-2">
                     <Activity className="h-4 w-4 text-green-500" />
-                    <span className="font-medium text-sm">Recent Activity</span>
+                    <span className="font-medium text-sm">System Status</span>
                   </div>
                   <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-xs">
-                      <Activity className="h-3 w-3 text-blue-500" />
-                      <span>System monitoring active</span>
+                    <div className="flex justify-between text-xs">
+                      <span>Transformers:</span>
+                      <span className="font-medium">{transformers.length}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-xs">
-                      <Cable className="h-3 w-3 text-green-500" />
-                      <span>All panels operational</span>
+                    <div className="flex justify-between text-xs">
+                      <span>Main Panels:</span>
+                      <span className="font-medium">{mainPanels.length}</span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span>Bay Assignments:</span>
+                      <span className="font-medium">{bayAssignments.length}</span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span>Active Reservations:</span>
+                      <span className="font-medium">{reservations.filter((r: ElectricalReservation) => r.status === 'active').length}</span>
                     </div>
                   </div>
                 </div>

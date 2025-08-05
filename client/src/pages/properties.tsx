@@ -272,23 +272,23 @@ export default function Properties() {
                                     <SelectTrigger className="bg-white shadow-sm hover:shadow-md px-2 py-1 text-xs font-medium border border-gray-300 hover:border-blue-400 hover:bg-blue-50 w-20 h-6">
                                       <SelectValue />
                                     </SelectTrigger>
-                                    <SelectContent className="bg-white border shadow-lg">
-                                      <SelectItem value="stacked" className="text-gray-900">
+                                    <SelectContent className="bg-white border shadow-lg max-h-none min-w-[160px]" sideOffset={5}>
+                                      <SelectItem value="stacked" className="text-gray-900 py-2 px-3">
                                         <div className="flex items-center">
-                                          <Layers className="h-3 w-3 mr-1 text-gray-600" />
+                                          <Layers className="h-4 w-4 mr-2 text-gray-600" />
                                           Stack
                                         </div>
                                       </SelectItem>
-                                      <SelectItem value="all" className="text-gray-900">
+                                      <SelectItem value="all" className="text-gray-900 py-2 px-3">
                                         <div className="flex items-center">
-                                          <Grid className="h-3 w-3 mr-1 text-gray-600" />
+                                          <Grid className="h-4 w-4 mr-2 text-gray-600" />
                                           All ({buildings.length})
                                         </div>
                                       </SelectItem>
                                       {buildings.map((building) => (
-                                        <SelectItem key={building.id} value={building.id.toString()} className="text-gray-900">
+                                        <SelectItem key={building.id} value={building.id.toString()} className="text-gray-900 py-2 px-3">
                                           <div className="flex items-center">
-                                            <Building className="h-3 w-3 mr-1 text-blue-600" />
+                                            <Building className="h-4 w-4 mr-2 text-blue-600" />
                                             {building.building}
                                           </div>
                                         </SelectItem>

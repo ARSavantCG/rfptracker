@@ -468,44 +468,40 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
 
       {/* Management Sections */}
       <Card>
-        <CardContent className="p-6">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="electrical-tabs-compact">
-            <TabsList 
-              className="grid w-full grid-cols-4 tabslist-compact" 
-              style={{ height: '24px', padding: '2px' }}
-            >
-              <TabsTrigger 
-                value="overview" 
-                className="!text-xs" 
-                style={{ height: '20px', padding: '2px 8px', fontSize: '10px' }}
+        <CardContent className="p-3">
+            <div className="grid w-full grid-cols-4 gap-1 p-1 bg-gray-100 rounded-lg" style={{ height: '24px' }}>
+              <button 
+                onClick={() => setActiveTab('overview')}
+                className={`text-xs rounded px-2 py-1 transition-colors ${activeTab === 'overview' ? 'bg-white shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}
+                style={{ height: '20px', fontSize: '10px', padding: '2px 4px', lineHeight: '1' }}
               >
                 Overview
-              </TabsTrigger>
-              <TabsTrigger 
-                value="transformers" 
-                className="!text-xs" 
-                style={{ height: '20px', padding: '2px 8px', fontSize: '10px' }}
+              </button>
+              <button 
+                onClick={() => setActiveTab('transformers')}
+                className={`text-xs rounded px-2 py-1 transition-colors ${activeTab === 'transformers' ? 'bg-white shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}
+                style={{ height: '20px', fontSize: '10px', padding: '2px 4px', lineHeight: '1' }}
               >
                 Transformers
-              </TabsTrigger>
-              <TabsTrigger 
-                value="panels" 
-                className="!text-xs" 
-                style={{ height: '20px', padding: '2px 8px', fontSize: '10px' }}
+              </button>
+              <button 
+                onClick={() => setActiveTab('panels')}
+                className={`text-xs rounded px-2 py-1 transition-colors ${activeTab === 'panels' ? 'bg-white shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}
+                style={{ height: '20px', fontSize: '10px', padding: '2px 4px', lineHeight: '1' }}
               >
                 Panels
-              </TabsTrigger>
-              <TabsTrigger 
-                value="reservations" 
-                className="!text-xs" 
-                style={{ height: '20px', padding: '2px 8px', fontSize: '10px' }}
+              </button>
+              <button 
+                onClick={() => setActiveTab('reservations')}
+                className={`text-xs rounded px-2 py-1 transition-colors ${activeTab === 'reservations' ? 'bg-white shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}
+                style={{ height: '20px', fontSize: '10px', padding: '2px 4px', lineHeight: '1' }}
               >
                 Reservations
-              </TabsTrigger>
-            </TabsList>
+              </button>
+            </div>
 
-            <TabsContent value="overview" className="mt-6">
-              <div className="grid grid-cols-2 gap-6">
+            {activeTab === 'overview' && (
+              <div className="mt-3 grid grid-cols-2 gap-4">
                 {/* Active Reservations */}
                 <div>
                   <div className="flex items-center gap-2 mb-4">
@@ -562,10 +558,11 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
                   </div>
                 </div>
               </div>
-            </TabsContent>
+            )}
 
-            <TabsContent value="transformers" className="mt-6">
-              <div className="flex justify-between items-center mb-6">
+            {activeTab === 'transformers' && (
+              <div className="mt-3">
+                <div className="flex justify-between items-center mb-6">
                 <h3 className="text-lg font-semibold">Transformers</h3>
                 <button 
                   onClick={() => { setEditingTransformer(null); setShowTransformerDialog(true); }}
@@ -626,9 +623,11 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
                   <p className="text-sm">Add a transformer to begin electrical capacity management</p>
                 </div>
               )}
-            </TabsContent>
+              </div>
+            )}
 
-            <TabsContent value="panels" className="mt-6">
+            {activeTab === 'panels' && (
+              <div className="mt-3">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-lg font-semibold">Main Panels</h3>
                 <button 
@@ -694,10 +693,12 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
                   <p className="text-sm">Add main panels to distribute electrical capacity from transformers</p>
                 </div>
               )}
-            </TabsContent>
+              </div>
+            )}
 
-            <TabsContent value="reservations" className="mt-6">
-              <div className="flex justify-between items-center mb-6">
+            {activeTab === 'reservations' && (
+              <div className="mt-3">
+                <div className="flex justify-between items-center mb-6">
                 <h3 className="text-lg font-semibold">Electrical Reservations</h3>
                 <button 
                   onClick={() => { setEditingReservation(null); setShowReservationDialog(true); }}
@@ -771,8 +772,8 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
                   <p className="text-sm">Reserve electrical capacity for specific tenants or projects</p>
                 </div>
               )}
-            </TabsContent>
-          </Tabs>
+              </div>
+            )}
         </CardContent>
       </Card>
 

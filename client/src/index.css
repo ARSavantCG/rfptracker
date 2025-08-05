@@ -112,27 +112,57 @@ div[class*="electrical-management-compact"] [role="tab"] {
   justify-content: center !important;
 }
 
-/* Force tabs to be small */
-div[class*="electrical-tabs-compact"] [data-state],
+/* Force tabs to be small - most aggressive approach */
+.electrical-tabs-compact [data-state] *,
+.electrical-tabs-compact [role="tab"] *,
+.electrical-tabs-compact button *,
 .electrical-tabs-compact [data-state],
+.electrical-tabs-compact [role="tab"],
 .electrical-tabs-compact button,
-.electrical-tabs-compact [role="tab"] {
+[data-state][class*="text"],
+[role="tab"][class*="text"] {
   font-size: 10px !important;
   height: 20px !important;
   min-height: 20px !important;
   max-height: 20px !important;
-  padding: 2px 8px !important;
+  padding: 2px 4px !important;
   line-height: 1 !important;
   box-sizing: border-box !important;
 }
 
 /* Fix overlapping text at bottom by adding proper spacing */
 .electrical-management-compact .space-y-4 > * + * {
-  margin-top: 1rem !important;
+  margin-top: 0.5rem !important;
 }
 
+.electrical-management-compact .mt-3,
 .electrical-management-compact .mt-6 {
-  margin-top: 1rem !important;
+  margin-top: 0.5rem !important;
+}
+
+/* Specific overrides for Radix UI tabs */
+.electrical-tabs-compact [data-radix-collection-item],
+.electrical-tabs-compact [role="tablist"] > *,
+.electrical-tabs-compact [role="tablist"] button {
+  height: 20px !important;
+  min-height: 20px !important;
+  max-height: 20px !important;
+  font-size: 10px !important;
+  padding: 2px 4px !important;
+  line-height: 1 !important;
+}
+
+/* Final nuclear option for tabs */
+* [class*="electrical-tabs-compact"] [data-state="active"],
+* [class*="electrical-tabs-compact"] [data-state="inactive"],
+* .electrical-tabs-compact [data-state="active"],
+* .electrical-tabs-compact [data-state="inactive"] {
+  height: 20px !important;
+  min-height: 20px !important;
+  max-height: 20px !important;
+  font-size: 10px !important;
+  padding: 2px 4px !important;
+  line-height: 1 !important;
 }
 
 /* Fix table row height consistency */

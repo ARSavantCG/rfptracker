@@ -299,22 +299,22 @@ export default function BayConfigurationSelector({
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Building-like Bay Layout */}
-        <div className="bg-gray-50 p-3 rounded-lg relative">
-          <div className="mb-3">
-            <Label className="text-sm font-medium text-gray-700">Building Layout</Label>
-            <p className="text-xs text-gray-500">Click bays to select for rentable area calculation. Red bays are already leased and unavailable.</p>
+        <div className="bg-gray-50 p-2 rounded-lg relative">
+          <div className="mb-2">
+            <Label className="text-[11px] font-medium text-gray-700">Building Layout</Label>
+            <p className="text-[9px] text-gray-500">Click bays to select for rentable area calculation. Red bays are already leased.</p>
           </div>
 
           {/* Building Orientation Compass */}
-          <div className="flex items-start gap-4 mb-3">
-            <div className="bg-white border border-gray-300 rounded-lg p-4 shadow-sm">
-              <div className="relative w-20 h-20">
+          <div className="flex items-start gap-2 mb-2">
+            <div className="bg-white border border-gray-300 rounded-lg p-2 shadow-sm">
+              <div className="relative w-12 h-12">
                 {/* Compass Rose Background */}
                 <div className="absolute inset-0 border-2 border-gray-800 rounded-full"></div>
                 <div className="absolute inset-0.5 border border-gray-600 rounded-full"></div>
                 
                 {/* Compass Rose Star Pattern */}
-                <svg className="absolute inset-1 w-18 h-18" viewBox="0 0 72 72">
+                <svg className="absolute inset-0.5 w-11 h-11" viewBox="0 0 72 72">
                   {/* Main star points (N, S, E, W) */}
                   <path d="M36 4 L37.5 32 L36 36 L34.5 32 Z" fill="#374151" stroke="#1f2937" strokeWidth="0.5"/>
                   <path d="M68 36 L40 37.5 L36 36 L40 34.5 Z" fill="#374151" stroke="#1f2937" strokeWidth="0.5"/>
@@ -332,36 +332,36 @@ export default function BayConfigurationSelector({
                 </svg>
                 
                 {/* Direction labels - positioned outside the circle */}
-                <div className={`absolute -top-5 left-1/2 transform -translate-x-1/2 text-sm font-bold ${
+                <div className={`absolute -top-3 left-1/2 transform -translate-x-1/2 text-[10px] font-bold ${
                   property.firstBayDirection === 'north' ? 'text-red-600' : 'text-gray-800'
                 }`}>N</div>
-                <div className={`absolute top-1/2 -right-5 transform -translate-y-1/2 text-sm font-bold ${
+                <div className={`absolute top-1/2 -right-3 transform -translate-y-1/2 text-[10px] font-bold ${
                   property.firstBayDirection === 'east' ? 'text-red-600' : 'text-gray-800'
                 }`}>E</div>
-                <div className={`absolute -bottom-5 left-1/2 transform -translate-x-1/2 text-sm font-bold ${
+                <div className={`absolute -bottom-3 left-1/2 transform -translate-x-1/2 text-[10px] font-bold ${
                   property.firstBayDirection === 'south' ? 'text-red-600' : 'text-gray-800'
                 }`}>S</div>
-                <div className={`absolute top-1/2 -left-5 transform -translate-y-1/2 text-sm font-bold ${
+                <div className={`absolute top-1/2 -left-3 transform -translate-y-1/2 text-[10px] font-bold ${
                   property.firstBayDirection === 'west' ? 'text-red-600' : 'text-gray-800'
                 }`}>W</div>
                 
                 {/* Diagonal direction labels */}
-                <div className={`absolute top-1 right-1 text-xs font-medium ${
+                <div className={`absolute top-0.5 right-0.5 text-[8px] font-medium ${
                   property.firstBayDirection === 'northeast' ? 'text-red-600' : 'text-gray-600'
                 }`}>NE</div>
-                <div className={`absolute bottom-1 right-1 text-xs font-medium ${
+                <div className={`absolute bottom-0.5 right-0.5 text-[8px] font-medium ${
                   property.firstBayDirection === 'southeast' ? 'text-red-600' : 'text-gray-600'
                 }`}>SE</div>
-                <div className={`absolute bottom-1 left-1 text-xs font-medium ${
+                <div className={`absolute bottom-0.5 left-0.5 text-[8px] font-medium ${
                   property.firstBayDirection === 'southwest' ? 'text-red-600' : 'text-gray-600'
                 }`}>SW</div>
-                <div className={`absolute top-1 left-1 text-xs font-medium ${
+                <div className={`absolute top-0.5 left-0.5 text-[8px] font-medium ${
                   property.firstBayDirection === 'northwest' ? 'text-red-600' : 'text-gray-600'
                 }`}>NW</div>
               </div>
             </div>
-            <div className="text-xs text-gray-600 pt-2">
-              <div className="font-medium mb-1">Building Orientation</div>
+            <div className="text-[10px] text-gray-600 pt-1">
+              <div className="font-medium mb-0.5">Building Orientation</div>
               <div className="text-gray-500">
                 {property.firstBayDirection 
                   ? `Bay 1 faces ${property.firstBayDirection.charAt(0).toUpperCase() + property.firstBayDirection.slice(1)}`
@@ -372,17 +372,17 @@ export default function BayConfigurationSelector({
           </div>
 
           {/* Directional Labels */}
-          <div className="mb-3">
-            <div className="flex justify-between items-center text-xs text-gray-600">
-              <div className="flex items-center gap-2">
-                <Navigation className="w-3 h-3 rotate-180" />
+          <div className="mb-2">
+            <div className="flex justify-between items-center text-[9px] text-gray-600">
+              <div className="flex items-center gap-1">
+                <Navigation className="w-2 h-2 rotate-180" />
                 <span className="font-medium">West</span>
-                <span className="text-gray-400">(Street / Entrance)</span>
+                <span className="text-gray-400">(Street)</span>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-gray-400">(Loading Docks)</span>
+              <div className="flex items-center gap-1">
+                <span className="text-gray-400">(Docks)</span>
                 <span className="font-medium">East</span>
-                <Navigation className="w-3 h-3" />
+                <Navigation className="w-2 h-2" />
               </div>
             </div>
           </div>
@@ -399,7 +399,7 @@ export default function BayConfigurationSelector({
                   key={bay.id}
                   variant={isSelected ? "default" : "outline"}
                   disabled={isLeased}
-                  className={`h-20 w-16 flex flex-col items-center justify-center text-xs p-2 flex-shrink-0 ${
+                  className={`h-16 w-12 flex flex-col items-center justify-center text-xs p-1 flex-shrink-0 ${
                     isLeased
                       ? "bg-red-800 border-red-900 text-white cursor-not-allowed opacity-95"
                       : isSelected 
@@ -408,13 +408,13 @@ export default function BayConfigurationSelector({
                   }`}
                   onClick={() => toggleBaySelection(bay.id)}
                 >
-                  <div className="font-bold text-xs mb-1">{bay.bayName}</div>
-                  <div className="text-xs opacity-75 leading-tight">
-                    {isLeased ? "LEA" : `${(bay.squareFootage / 1000).toFixed(0)}K SF`}
+                  <div className="font-bold text-[10px] mb-0.5 leading-tight truncate w-full text-center">{bay.bayName}</div>
+                  <div className="text-[9px] opacity-75 leading-tight">
+                    {isLeased ? "LEA" : `${(bay.squareFootage / 1000).toFixed(0)}K`}
                   </div>
                   {(bay.standardDockDoors > 0 || bay.oversizedDockDoors > 0) && (
-                    <div className="text-xs opacity-60 leading-tight mt-1">
-                      {bay.standardDockDoors + bay.oversizedDockDoors} Doors
+                    <div className="text-[8px] opacity-60 leading-tight mt-0.5">
+                      {bay.standardDockDoors + bay.oversizedDockDoors} drs.
                     </div>
                   )}
                 </Button>
@@ -435,8 +435,8 @@ export default function BayConfigurationSelector({
                 else position = "Center";
                 
                 return (
-                  <div key={`pos-${bay.id}`} className="w-16 flex-shrink-0">
-                    <div className="text-xs text-center text-gray-500 py-1">
+                  <div key={`pos-${bay.id}`} className="w-12 flex-shrink-0">
+                    <div className="text-[8px] text-center text-gray-500 py-1 leading-tight">
                       {position}
                     </div>
                   </div>

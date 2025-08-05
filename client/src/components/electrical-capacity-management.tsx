@@ -343,8 +343,8 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
       {/* Stats Cards */}
       <div className="grid grid-cols-4 gap-2">
         <Card className="p-2">
-          <div className="flex items-center gap-2">
-            <div className="p-1 bg-blue-100 rounded-md">
+          <div className="flex items-start gap-2">
+            <div className="p-1 bg-blue-100 rounded-md mt-0.5">
               <Zap className="h-3 w-3 text-blue-600" />
             </div>
             <div>
@@ -356,8 +356,8 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
         </Card>
         
         <Card className="p-2">
-          <div className="flex items-center gap-2">
-            <div className="p-1 bg-green-100 rounded-md">
+          <div className="flex items-start gap-2">
+            <div className="p-1 bg-green-100 rounded-md mt-0.5">
               <Activity className="h-3 w-3 text-green-600" />
             </div>
             <div>
@@ -369,8 +369,8 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
         </Card>
         
         <Card className="p-2">
-          <div className="flex items-center gap-2">
-            <div className="p-1 bg-orange-100 rounded-md">
+          <div className="flex items-start gap-2">
+            <div className="p-1 bg-orange-100 rounded-md mt-0.5">
               <Building2 className="h-3 w-3 text-orange-600" />
             </div>
             <div>
@@ -382,8 +382,8 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
         </Card>
         
         <Card className="p-2">
-          <div className="flex items-center gap-2">
-            <div className="p-1 bg-purple-100 rounded-md">
+          <div className="flex items-start gap-2">
+            <div className="p-1 bg-purple-100 rounded-md mt-0.5">
               <Cable className="h-3 w-3 text-purple-600" />
             </div>
             <div>
@@ -395,49 +395,7 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
         </Card>
       </div>
 
-      {/* Quick Actions */}
-      <Card className="p-2">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-semibold">Quick Actions</h3>
-          <div className="flex gap-2">
-            <button 
-              onClick={() => { setEditingTransformer(null); setShowTransformerDialog(true); }}
-              className="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
-              style={{ fontSize: '9px', height: '18px', padding: '1px 4px', minHeight: '18px', lineHeight: '1' }}
-            >
-              <Plus style={{ width: '6px', height: '6px', marginRight: '2px' }} />
-              Transformer
-            </button>
-            <button 
-              onClick={() => { setEditingPanel(null); setShowPanelDialog(true); }}
-              disabled={transformers.length === 0}
-              className="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ fontSize: '9px', height: '18px', padding: '1px 4px', minHeight: '18px', lineHeight: '1' }}
-            >
-              <Plus style={{ width: '6px', height: '6px', marginRight: '2px' }} />
-              Panel
-            </button>
-            <button 
-              onClick={() => { setEditingAssignment(null); setShowAssignmentDialog(true); }}
-              disabled={mainPanels.length === 0}
-              className="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ fontSize: '9px', height: '18px', padding: '1px 4px', minHeight: '18px', lineHeight: '1' }}
-            >
-              <Plus style={{ width: '6px', height: '6px', marginRight: '2px' }} />
-              Bay
-            </button>
-            <button 
-              onClick={() => { setEditingReservation(null); setShowReservationDialog(true); }}
-              disabled={bayAssignments.length === 0}
-              className="inline-flex items-center justify-center rounded-md bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ fontSize: '9px', height: '18px', padding: '1px 4px', minHeight: '18px', lineHeight: '1' }}
-            >
-              <Plus style={{ width: '6px', height: '6px', marginRight: '2px' }} />
-              Reserve
-            </button>
-          </div>
-        </div>
-      </Card>
+
 
       {/* Management Sections */}
       <Card>

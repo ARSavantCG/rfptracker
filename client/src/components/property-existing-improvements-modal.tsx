@@ -155,8 +155,8 @@ export function PropertyExistingImprovementsModal({
 
   return (
     <>
-      <Button variant="outline" size="sm" onClick={() => setOpen(true)} className="flex items-center gap-2">
-        <Grid className="h-4 w-4" />
+      <Button variant="outline" size="sm" onClick={() => setOpen(true)} className="flex items-center gap-1 text-xs px-2 py-1 h-6">
+        <Grid className="h-3 w-3" />
         Manage Costs in Place
       </Button>
       

@@ -387,9 +387,9 @@ export default function Properties() {
                             variant="outline"
                             size="sm"
                             onClick={() => setShowElectricalCapacity(showElectricalCapacity === property.id ? null : property.id)}
-                            className="flex items-center gap-2"
+                            className="flex items-center gap-1 text-xs px-2 py-1 h-6"
                           >
-                            <Zap className="h-4 w-4" />
+                            <Zap className="h-3 w-3" />
                             {showElectricalCapacity === property.id ? 'Hide' : 'Manage'} Electrical
                           </Button>
                         </div>

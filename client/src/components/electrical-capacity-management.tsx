@@ -358,441 +358,398 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
   };
 
   return (
-    <div className="space-y-3">
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Zap className="h-4 w-4" />
-            Electrical Capacity Management - {propertyName}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-2">
-          {/* Compact Stats Bar */}
-          <div className="flex items-center justify-between bg-gray-50 rounded-lg p-3 mb-3">
-            <div className="flex items-center gap-6">
-              <div className="text-center">
-                <div className="text-lg font-bold text-blue-600">{capacityStats.total.toLocaleString()}</div>
-                <div className="text-xs text-gray-600">Total Capacity (kVA)</div>
-              </div>
-              <div className="text-center">
-                <div className="text-lg font-bold text-green-600">{capacityStats.available.toLocaleString()}</div>
-                <div className="text-xs text-gray-600">Available (kVA)</div>
-              </div>
-              <div className="text-center">
-                <div className="text-lg font-bold text-orange-600">{capacityStats.reserved.toLocaleString()}</div>
-                <div className="text-xs text-gray-600">Reserved (kVA)</div>
-              </div>
-              <div className="text-center">
-                <div className="text-lg font-bold text-purple-600">{capacityStats.utilizationPercent.toFixed(1)}%</div>
-                <div className="text-xs text-gray-600">Utilization</div>
-              </div>
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-blue-100 rounded-lg">
+            <Zap className="h-5 w-5 text-blue-600" />
+          </div>
+          <div>
+            <h2 className="text-xl font-semibold">Electrical Capacity Management</h2>
+            <p className="text-sm text-gray-600">{propertyName}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-4 gap-4">
+        <Card className="p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Total Capacity</p>
+              <p className="text-2xl font-bold text-blue-600">{capacityStats.total.toLocaleString()}</p>
+              <p className="text-xs text-gray-500">kVA</p>
+            </div>
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <Zap className="h-4 w-4 text-blue-600" />
             </div>
           </div>
+        </Card>
+        
+        <Card className="p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Available</p>
+              <p className="text-2xl font-bold text-green-600">{capacityStats.available.toLocaleString()}</p>
+              <p className="text-xs text-gray-500">kVA</p>
+            </div>
+            <div className="p-2 bg-green-100 rounded-lg">
+              <Activity className="h-4 w-4 text-green-600" />
+            </div>
+          </div>
+        </Card>
+        
+        <Card className="p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Reserved</p>
+              <p className="text-2xl font-bold text-orange-600">{capacityStats.reserved.toLocaleString()}</p>
+              <p className="text-xs text-gray-500">kVA</p>
+            </div>
+            <div className="p-2 bg-orange-100 rounded-lg">
+              <Building2 className="h-4 w-4 text-orange-600" />
+            </div>
+          </div>
+        </Card>
+        
+        <Card className="p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Utilization</p>
+              <p className="text-2xl font-bold text-purple-600">{capacityStats.utilizationPercent.toFixed(1)}%</p>
+              <p className="text-xs text-gray-500">capacity used</p>
+            </div>
+            <div className="p-2 bg-purple-100 rounded-lg">
+              <Cable className="h-4 w-4 text-purple-600" />
+            </div>
+          </div>
+        </Card>
+      </div>
 
+      {/* Quick Actions */}
+      {transformers.length === 0 ? (
+        <Card className="p-6 text-center border-dashed border-2 border-gray-300">
+          <Zap className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+          <h3 className="text-lg font-semibold mb-2">Get Started with Electrical Management</h3>
+          <p className="text-gray-600 mb-4">Add your first transformer to begin tracking electrical capacity</p>
+          <Button onClick={() => { setEditingTransformer(null); setShowTransformerDialog(true); }}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Your First Transformer
+          </Button>
+        </Card>
+      ) : (
+        <Card className="p-4">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold">Quick Actions</h3>
+            <div className="flex gap-2">
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={() => { setEditingTransformer(null); setShowTransformerDialog(true); }}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Transformer
+              </Button>
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={() => { setEditingPanel(null); setShowPanelDialog(true); }}
+                disabled={transformers.length === 0}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Main Panel
+              </Button>
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={() => { setEditingAssignment(null); setShowAssignmentDialog(true); }}
+                disabled={mainPanels.length === 0}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Bay Assignment
+              </Button>
+              <Button 
+                size="sm"
+                onClick={() => { setEditingReservation(null); setShowReservationDialog(true); }}
+                disabled={bayAssignments.length === 0}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                New Reservation
+              </Button>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Management Sections */}
+      <Card>
+        <CardContent className="p-6">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-5 h-8">
-              <TabsTrigger value="overview" className="text-xs">Overview</TabsTrigger>
-              <TabsTrigger value="transformers" className="text-xs">Transformers</TabsTrigger>
-              <TabsTrigger value="panels" className="text-xs">Main Panels</TabsTrigger>
-              <TabsTrigger value="assignments" className="text-xs">Bay Assignments</TabsTrigger>
-              <TabsTrigger value="reservations" className="text-xs">Reservations</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="transformers">Transformers</TabsTrigger>
+              <TabsTrigger value="panels">Panels</TabsTrigger>
+              <TabsTrigger value="reservations">Reservations</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="overview" className="space-y-2 mt-3">
-              {/* Quick Actions Bar */}
-              <div className="bg-blue-50 rounded-lg p-3 mb-3">
-                <div className="flex items-center justify-between">
-                  <span className="font-medium text-sm text-blue-800">Quick Setup</span>
-                  <div className="flex gap-2">
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      onClick={() => { setEditingTransformer(null); setShowTransformerDialog(true); }}
-                      className="text-xs h-7"
-                    >
-                      <Plus className="h-3 w-3 mr-1" />
-                      Add Transformer
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      onClick={() => { setEditingPanel(null); setShowPanelDialog(true); }}
-                      disabled={transformers.length === 0}
-                      className="text-xs h-7"
-                    >
-                      <Plus className="h-3 w-3 mr-1" />
-                      Add Panel
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      onClick={() => { setEditingAssignment(null); setShowAssignmentDialog(true); }}
-                      disabled={mainPanels.length === 0}
-                      className="text-xs h-7"
-                    >
-                      <Plus className="h-3 w-3 mr-1" />
-                      Bay Assignment
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      onClick={() => { setEditingReservation(null); setShowReservationDialog(true); }}
-                      disabled={bayAssignments.length === 0}
-                      className="text-xs h-7"
-                    >
-                      <Plus className="h-3 w-3 mr-1" />
-                      New Reservation
-                    </Button>
-                  </div>
-                </div>
-                {transformers.length === 0 && (
-                  <p className="text-xs text-blue-600 mt-2">Start by adding a transformer to begin electrical capacity management</p>
-                )}
-              </div>
-
-              {/* Compact Overview Grid */}
-              <div className="grid grid-cols-2 gap-3">
-                {/* Active Reservations - Compact */}
-                <div className="border rounded-lg p-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Building2 className="h-4 w-4 text-blue-500" />
-                    <span className="font-medium text-sm">Active Reservations</span>
+            <TabsContent value="overview" className="mt-6">
+              <div className="grid grid-cols-2 gap-6">
+                {/* Active Reservations */}
+                <div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <Building2 className="h-5 w-5 text-blue-600" />
+                    <h3 className="font-semibold">Active Reservations</h3>
                   </div>
                   {reservations.filter((r: ElectricalReservation) => r.status === 'active').length === 0 ? (
-                    <p className="text-xs text-gray-500">No active reservations</p>
+                    <div className="text-center py-8 text-gray-500">
+                      <p>No active reservations</p>
+                      <p className="text-sm mt-1">Create reservations to track electrical capacity usage</p>
+                    </div>
                   ) : (
-                    <div className="space-y-1">
+                    <div className="space-y-3">
                       {reservations
                         .filter((r: ElectricalReservation) => r.status === 'active')
-                        .slice(0, 3)
                         .map((reservation: ElectricalReservation) => (
-                          <div key={reservation.id} className="flex justify-between items-center py-1 text-xs">
-                            <div>
-                              <div className="font-medium">{reservation.reservedFor}</div>
-                              <div className="text-gray-600">{reservation.reservedCapacity} kVA</div>
+                          <div key={reservation.id} className="p-3 border rounded-lg">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <p className="font-medium">{reservation.reservedFor}</p>
+                                <p className="text-sm text-gray-600">{reservation.reservedCapacity.toLocaleString()} kVA</p>
+                              </div>
+                              <Badge variant="secondary">{reservation.status}</Badge>
                             </div>
-                            <Badge variant="secondary" className="text-xs py-0">{reservation.status}</Badge>
                           </div>
                         ))}
                     </div>
                   )}
                 </div>
 
-                {/* System Status - Compact */}
-                <div className="border rounded-lg p-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Activity className="h-4 w-4 text-green-500" />
-                    <span className="font-medium text-sm">System Status</span>
+                {/* System Status */}
+                <div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <Activity className="h-5 w-5 text-green-600" />
+                    <h3 className="font-semibold">System Status</h3>
                   </div>
-                  <div className="space-y-1">
-                    <div className="flex justify-between text-xs">
-                      <span>Transformers:</span>
-                      <span className="font-medium">{transformers.length}</span>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                      <span>Transformers</span>
+                      <span className="font-semibold">{transformers.length}</span>
                     </div>
-                    <div className="flex justify-between text-xs">
-                      <span>Main Panels:</span>
-                      <span className="font-medium">{mainPanels.length}</span>
+                    <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                      <span>Main Panels</span>
+                      <span className="font-semibold">{mainPanels.length}</span>
                     </div>
-                    <div className="flex justify-between text-xs">
-                      <span>Bay Assignments:</span>
-                      <span className="font-medium">{bayAssignments.length}</span>
+                    <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                      <span>Bay Assignments</span>
+                      <span className="font-semibold">{bayAssignments.length}</span>
                     </div>
-                    <div className="flex justify-between text-xs">
-                      <span>Active Reservations:</span>
-                      <span className="font-medium">{reservations.filter((r: ElectricalReservation) => r.status === 'active').length}</span>
+                    <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                      <span>Active Reservations</span>
+                      <span className="font-semibold">{reservations.filter((r: ElectricalReservation) => r.status === 'active').length}</span>
                     </div>
                   </div>
                 </div>
               </div>
             </TabsContent>
 
-            <TabsContent value="transformers" className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-medium">Transformers</h3>
+            <TabsContent value="transformers" className="mt-6">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-lg font-semibold">Transformers</h3>
                 <Button onClick={() => { setEditingTransformer(null); setShowTransformerDialog(true); }}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add Transformer
                 </Button>
               </div>
 
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Capacity (kVA)</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead>Manufacturer</TableHead>
-                    <TableHead>Installation Date</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {transformers.map((transformer: Transformer) => (
-                    <TableRow key={transformer.id}>
-                      <TableCell className="font-medium">{transformer.name}</TableCell>
-                      <TableCell>{transformer.capacity.toLocaleString()}</TableCell>
-                      <TableCell>{transformer.location}</TableCell>
-                      <TableCell>{transformer.manufacturer || 'N/A'}</TableCell>
-                      <TableCell>{transformer.installationDate || 'N/A'}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => { setEditingTransformer(transformer); setShowTransformerDialog(true); }}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => deleteTransformerMutation.mutate(transformer.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
+              <div className="border rounded-lg">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Capacity</TableHead>
+                      <TableHead>Location</TableHead>
+                      <TableHead>Manufacturer</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {transformers.map((transformer: Transformer) => (
+                      <TableRow key={transformer.id}>
+                        <TableCell className="font-medium">{transformer.name}</TableCell>
+                        <TableCell>{transformer.capacity.toLocaleString()} kVA</TableCell>
+                        <TableCell>{transformer.location}</TableCell>
+                        <TableCell>{transformer.manufacturer || 'N/A'}</TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => { setEditingTransformer(transformer); setShowTransformerDialog(true); }}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => deleteTransformerMutation.mutate(transformer.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {transformers.length === 0 && (
+                <div className="text-center py-12 text-gray-500">
+                  <Zap className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p className="mb-2">No transformers configured</p>
+                  <p className="text-sm">Add a transformer to begin electrical capacity management</p>
+                </div>
+              )}
             </TabsContent>
 
-            <TabsContent value="panels" className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-medium">Main Panels</h3>
-                <Button onClick={() => { setEditingPanel(null); setShowPanelDialog(true); }}>
+            <TabsContent value="panels" className="mt-6">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-lg font-semibold">Main Panels</h3>
+                <Button 
+                  onClick={() => { setEditingPanel(null); setShowPanelDialog(true); }}
+                  disabled={transformers.length === 0}
+                >
                   <Plus className="h-4 w-4 mr-2" />
                   Add Main Panel
                 </Button>
               </div>
 
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Transformer</TableHead>
-                    <TableHead>Capacity (kVA)</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {mainPanels.map((panel: MainPanel) => {
-                    const transformer = transformers.find((t: Transformer) => t.id === panel.transformerId);
-                    return (
-                      <TableRow key={panel.id}>
-                        <TableCell className="font-medium">{panel.name}</TableCell>
-                        <TableCell>{transformer?.name || 'Unknown'}</TableCell>
-                        <TableCell>{panel.capacity.toLocaleString()}</TableCell>
-                        <TableCell>{panel.location}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => { setEditingPanel(panel); setShowPanelDialog(true); }}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => deleteMainPanelMutation.mutate(panel.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </TabsContent>
+              <div className="border rounded-lg">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Transformer</TableHead>
+                      <TableHead>Capacity</TableHead>
+                      <TableHead>Location</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {mainPanels.map((panel: MainPanel) => {
+                      const transformer = transformers.find((t: Transformer) => t.id === panel.transformerId);
+                      return (
+                        <TableRow key={panel.id}>
+                          <TableCell className="font-medium">{panel.name}</TableCell>
+                          <TableCell>{transformer?.name || 'Unknown'}</TableCell>
+                          <TableCell>{panel.capacity.toLocaleString()} kVA</TableCell>
+                          <TableCell>{panel.location}</TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => { setEditingPanel(panel); setShowPanelDialog(true); }}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => deleteMainPanelMutation.mutate(panel.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
 
-            <TabsContent value="assignments" className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-medium">Bay Panel Assignments & Reservations</h3>
-                <div className="flex gap-2">
-                  <Button onClick={() => { setEditingAssignment(null); setShowAssignmentDialog(true); }}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Bay Assignment
-                  </Button>
-                  <Button onClick={() => { setEditingReservation(null); setShowReservationDialog(true); }}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Reservation
-                  </Button>
+              {mainPanels.length === 0 && (
+                <div className="text-center py-12 text-gray-500">
+                  <Cable className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p className="mb-2">No main panels configured</p>
+                  <p className="text-sm">Add main panels to distribute electrical capacity from transformers</p>
                 </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Bay Assignments</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Bay</TableHead>
-                          <TableHead>Panel</TableHead>
-                          <TableHead>Capacity</TableHead>
-                          <TableHead>Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {bayAssignments.map((assignment: BayPanelAssignment) => {
-                          const panel = mainPanels.find((p: MainPanel) => p.id === assignment.mainPanelId);
-                          return (
-                            <TableRow key={assignment.id}>
-                              <TableCell>{assignment.bayConfiguration}</TableCell>
-                              <TableCell>{panel?.name || 'Unknown'}</TableCell>
-                              <TableCell>{assignment.capacity} kVA</TableCell>
-                              <TableCell>
-                                <div className="flex gap-1">
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => { setEditingAssignment(assignment); setShowAssignmentDialog(true); }}
-                                  >
-                                    <Edit className="h-3 w-3" />
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="destructive"
-                                    onClick={() => deleteBayAssignmentMutation.mutate(assignment.id)}
-                                  >
-                                    <Trash2 className="h-3 w-3" />
-                                  </Button>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Electrical Reservations</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Reserved For</TableHead>
-                          <TableHead>Capacity</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {reservations.map((reservation: ElectricalReservation) => (
-                          <TableRow key={reservation.id}>
-                            <TableCell>{reservation.reservedFor}</TableCell>
-                            <TableCell>{reservation.reservedCapacity} kVA</TableCell>
-                            <TableCell>
-                              <Badge variant={reservation.status === 'active' ? 'default' : 'secondary'}>
-                                {reservation.status}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex gap-1">
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => { setEditingReservation(reservation); setShowReservationDialog(true); }}
-                                >
-                                  <Edit className="h-3 w-3" />
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="destructive"
-                                  onClick={() => deleteReservationMutation.mutate(reservation.id)}
-                                >
-                                  <Trash2 className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                </Card>
-              </div>
+              )}
             </TabsContent>
 
-            <TabsContent value="reservations" className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-medium">Electrical Reservations</h3>
-                <Button onClick={() => { setEditingReservation(null); setShowReservationDialog(true); }}>
+            <TabsContent value="reservations" className="mt-6">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-lg font-semibold">Electrical Reservations</h3>
+                <Button 
+                  onClick={() => { setEditingReservation(null); setShowReservationDialog(true); }}
+                  disabled={bayAssignments.length === 0}
+                >
                   <Plus className="h-4 w-4 mr-2" />
-                  Create New Reservation
+                  Create Reservation
                 </Button>
               </div>
 
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Reserved For</TableHead>
-                    <TableHead>Bay Assignment</TableHead>
-                    <TableHead>Capacity (kVA)</TableHead>
-                    <TableHead>Start Date</TableHead>
-                    <TableHead>End Date</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {reservations.map((reservation: ElectricalReservation) => {
-                    const assignment = bayAssignments.find((a: BayPanelAssignment) => a.id === reservation.bayPanelAssignmentId);
-                    return (
-                      <TableRow key={reservation.id}>
-                        <TableCell className="font-medium">{reservation.reservedFor}</TableCell>
-                        <TableCell>{assignment?.bayConfiguration || 'N/A'}</TableCell>
-                        <TableCell>{reservation.reservedCapacity.toLocaleString()}</TableCell>
-                        <TableCell>{formatDate(reservation.startDate)}</TableCell>
-                        <TableCell>{reservation.endDate ? formatDate(reservation.endDate) : 'Open-ended'}</TableCell>
-                        <TableCell>
-                          <Badge variant={
-                            reservation.status === 'active' ? 'default' : 
-                            reservation.status === 'pending' ? 'secondary' : 'destructive'
-                          }>
-                            {reservation.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => { setEditingReservation(reservation); setShowReservationDialog(true); }}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => deleteReservationMutation.mutate(reservation.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+              <div className="border rounded-lg">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Reserved For</TableHead>
+                      <TableHead>Bay Assignment</TableHead>
+                      <TableHead>Capacity</TableHead>
+                      <TableHead>Start Date</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {reservations.map((reservation: ElectricalReservation) => {
+                      const assignment = bayAssignments.find((a: BayPanelAssignment) => a.id === reservation.bayPanelAssignmentId);
+                      return (
+                        <TableRow key={reservation.id}>
+                          <TableCell className="font-medium">{reservation.reservedFor}</TableCell>
+                          <TableCell>{assignment?.bayConfiguration || 'N/A'}</TableCell>
+                          <TableCell>{reservation.reservedCapacity.toLocaleString()} kVA</TableCell>
+                          <TableCell>{formatDate(reservation.startDate)}</TableCell>
+                          <TableCell>
+                            <Badge variant={
+                              reservation.status === 'active' ? 'default' : 
+                              reservation.status === 'pending' ? 'secondary' : 'destructive'
+                            }>
+                              {reservation.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => { setEditingReservation(reservation); setShowReservationDialog(true); }}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => deleteReservationMutation.mutate(reservation.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
 
               {reservations.length === 0 && (
-                <div className="text-center py-8 text-gray-500">
+                <div className="text-center py-12 text-gray-500">
                   <Building2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p className="mb-2">No electrical reservations yet</p>
-                  <p className="text-sm">Start by adding transformers and main panels, then create bay assignments before making reservations.</p>
+                  <p className="mb-2">No electrical reservations</p>
+                  <p className="text-sm">Reserve electrical capacity for specific tenants or projects</p>
                 </div>
               )}
             </TabsContent>
@@ -800,7 +757,7 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
         </CardContent>
       </Card>
 
-      {/* Transformer Dialog */}
+      {/* Dialogs */}
       <Dialog open={showTransformerDialog} onOpenChange={setShowTransformerDialog}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
@@ -823,7 +780,7 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
                   name="capacity"
                   type="number"
                   defaultValue={editingTransformer?.capacity || ''}
-                  placeholder="e.g., 1500"
+                  placeholder="e.g., 2000"
                   required
                 />
               </div>
@@ -832,7 +789,7 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
                 <Input
                   name="location"
                   defaultValue={editingTransformer?.location || ''}
-                  placeholder="e.g., North Electrical Room"
+                  placeholder="e.g., Main Electrical Room"
                   required
                 />
               </div>
@@ -841,91 +798,35 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
                 <Input
                   name="manufacturer"
                   defaultValue={editingTransformer?.manufacturer || ''}
-                  placeholder="e.g., General Electric"
+                  placeholder="e.g., ABB"
                 />
               </div>
-              <div>
-                <Label htmlFor="model">Model</Label>
-                <Input
-                  name="model"
-                  defaultValue={editingTransformer?.model || ''}
-                  placeholder="e.g., 9T23B3874G02"
-                />
-              </div>
-              <div>
-                <Label htmlFor="serialNumber">Serial Number</Label>
-                <Input
-                  name="serialNumber"
-                  defaultValue={editingTransformer?.serialNumber || ''}
-                  placeholder="e.g., ABC123456"
-                />
-              </div>
-              <div>
-                <Label htmlFor="installationDate">Installation Date</Label>
-                <Input
-                  name="installationDate"
-                  type="date"
-                  defaultValue={editingTransformer?.installationDate || ''}
-                />
-              </div>
-              <div>
-                <Label htmlFor="maintenanceSchedule">Maintenance Schedule</Label>
-                <Input
-                  name="maintenanceSchedule"
-                  defaultValue={editingTransformer?.maintenanceSchedule || ''}
-                  placeholder="e.g., Annual"
-                />
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="notes">Notes</Label>
-              <Input
-                name="notes"
-                defaultValue={editingTransformer?.notes || ''}
-                placeholder="Additional notes..."
-              />
             </div>
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => setShowTransformerDialog(false)}>
                 Cancel
               </Button>
               <Button type="submit">
-                {editingTransformer ? 'Update' : 'Create'} Transformer
+                {editingTransformer ? 'Update' : 'Add'} Transformer
               </Button>
             </div>
           </form>
         </DialogContent>
       </Dialog>
 
-      {/* Main Panel Dialog */}
       <Dialog open={showPanelDialog} onOpenChange={setShowPanelDialog}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>{editingPanel ? 'Edit Main Panel' : 'Add New Main Panel'}</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleMainPanelSubmit} className="space-y-4">
+          <form onSubmit={handlePanelSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="transformerId">Transformer *</Label>
-                <Select name="transformerId" defaultValue={editingPanel?.transformerId?.toString()} required>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select transformer" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {transformers.map((transformer: Transformer) => (
-                      <SelectItem key={transformer.id} value={transformer.id.toString()}>
-                        {transformer.name} ({transformer.capacity} kVA)
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="name">Panel Name *</Label>
+                <Label htmlFor="name">Name *</Label>
                 <Input
                   name="name"
                   defaultValue={editingPanel?.name || ''}
-                  placeholder="e.g., Main Panel 1A"
+                  placeholder="e.g., Main Panel A"
                   required
                 />
               </div>
@@ -940,168 +841,156 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
                 />
               </div>
               <div>
+                <Label htmlFor="transformerId">Transformer *</Label>
+                <Select name="transformerId" defaultValue={editingPanel?.transformerId?.toString()}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select transformer" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {transformers.map((transformer: Transformer) => (
+                      <SelectItem key={transformer.id} value={transformer.id.toString()}>
+                        {transformer.name} ({transformer.capacity} kVA)
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
                 <Label htmlFor="location">Location *</Label>
                 <Input
                   name="location"
                   defaultValue={editingPanel?.location || ''}
-                  placeholder="e.g., Bay 1 Electrical Room"
+                  placeholder="e.g., Electrical Room North"
                   required
                 />
               </div>
-              <div>
-                <Label htmlFor="manufacturer">Manufacturer</Label>
-                <Input
-                  name="manufacturer"
-                  defaultValue={editingPanel?.manufacturer || ''}
-                  placeholder="e.g., Square D"
-                />
-              </div>
-              <div>
-                <Label htmlFor="model">Model</Label>
-                <Input
-                  name="model"
-                  defaultValue={editingPanel?.model || ''}
-                  placeholder="e.g., NF442L1C"
-                />
-              </div>
-              <div>
-                <Label htmlFor="serialNumber">Serial Number</Label>
-                <Input
-                  name="serialNumber"
-                  defaultValue={editingPanel?.serialNumber || ''}
-                  placeholder="e.g., XYZ789012"
-                />
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="notes">Notes</Label>
-              <Input
-                name="notes"
-                defaultValue={editingPanel?.notes || ''}
-                placeholder="Additional notes..."
-              />
             </div>
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => setShowPanelDialog(false)}>
                 Cancel
               </Button>
               <Button type="submit">
-                {editingPanel ? 'Update' : 'Create'} Main Panel
+                {editingPanel ? 'Update' : 'Add'} Main Panel
               </Button>
             </div>
           </form>
         </DialogContent>
       </Dialog>
 
-      {/* Bay Assignment Dialog */}
       <Dialog open={showAssignmentDialog} onOpenChange={setShowAssignmentDialog}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>{editingAssignment ? 'Edit Bay Assignment' : 'Add New Bay Assignment'}</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleBayAssignmentSubmit} className="space-y-4">
-            <div>
-              <Label htmlFor="mainPanelId">Main Panel *</Label>
-              <Select name="mainPanelId" defaultValue={editingAssignment?.mainPanelId?.toString()} required>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select main panel" />
-                </SelectTrigger>
-                <SelectContent>
-                  {mainPanels.map((panel: MainPanel) => (
-                    <SelectItem key={panel.id} value={panel.id.toString()}>
-                      {panel.name} ({panel.capacity} kVA)
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="bayConfiguration">Bay Configuration *</Label>
-              <Input
-                name="bayConfiguration"
-                defaultValue={editingAssignment?.bayConfiguration || ''}
-                placeholder="e.g., Bay 1-2"
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="capacity">Assigned Capacity (kVA) *</Label>
-              <Input
-                name="capacity"
-                type="number"
-                defaultValue={editingAssignment?.capacity || ''}
-                placeholder="e.g., 200"
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="notes">Notes</Label>
-              <Input
-                name="notes"
-                defaultValue={editingAssignment?.notes || ''}
-                placeholder="Additional notes..."
-              />
+          <form onSubmit={handleAssignmentSubmit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="bayConfiguration">Bay Configuration *</Label>
+                <Input
+                  name="bayConfiguration"
+                  defaultValue={editingAssignment?.bayConfiguration || ''}
+                  placeholder="e.g., Bay 1-2"
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="capacity">Capacity (kVA) *</Label>
+                <Input
+                  name="capacity"
+                  type="number"
+                  defaultValue={editingAssignment?.capacity || ''}
+                  placeholder="e.g., 200"
+                  required
+                />
+              </div>
+              <div className="col-span-2">
+                <Label htmlFor="mainPanelId">Main Panel *</Label>
+                <Select name="mainPanelId" defaultValue={editingAssignment?.mainPanelId?.toString()}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select main panel" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {mainPanels.map((panel: MainPanel) => (
+                      <SelectItem key={panel.id} value={panel.id.toString()}>
+                        {panel.name} ({panel.capacity} kVA)
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => setShowAssignmentDialog(false)}>
                 Cancel
               </Button>
               <Button type="submit">
-                {editingAssignment ? 'Update' : 'Create'} Bay Assignment
+                {editingAssignment ? 'Update' : 'Add'} Bay Assignment
               </Button>
             </div>
           </form>
         </DialogContent>
       </Dialog>
 
-      {/* Electrical Reservation Dialog */}
       <Dialog open={showReservationDialog} onOpenChange={setShowReservationDialog}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>{editingReservation ? 'Edit Electrical Reservation' : 'Add New Electrical Reservation'}</DialogTitle>
+            <DialogTitle>{editingReservation ? 'Edit Reservation' : 'Create New Reservation'}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleReservationSubmit} className="space-y-4">
-            <div>
-              <Label htmlFor="bayPanelAssignmentId">Bay Panel Assignment *</Label>
-              <Select name="bayPanelAssignmentId" defaultValue={editingReservation?.bayPanelAssignmentId?.toString()} required>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select bay assignment" />
-                </SelectTrigger>
-                <SelectContent>
-                  {bayAssignments.map((assignment: BayPanelAssignment) => (
-                    <SelectItem key={assignment.id} value={assignment.id.toString()}>
-                      {assignment.bayConfiguration} ({assignment.capacity} kVA)
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="reservedFor">Reserved For *</Label>
-              <Input
-                name="reservedFor"
-                defaultValue={editingReservation?.reservedFor || ''}
-                placeholder="e.g., Tenant ABC Corp"
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="reservedCapacity">Reserved Capacity (kVA) *</Label>
-              <Input
-                name="reservedCapacity"
-                type="number"
-                defaultValue={editingReservation?.reservedCapacity || ''}
-                placeholder="e.g., 150"
-                required
-              />
-            </div>
             <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="reservedFor">Reserved For *</Label>
+                <Input
+                  name="reservedFor"
+                  defaultValue={editingReservation?.reservedFor || ''}
+                  placeholder="e.g., ABC Manufacturing Co."
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="reservedCapacity">Reserved Capacity (kVA) *</Label>
+                <Input
+                  name="reservedCapacity"
+                  type="number"
+                  defaultValue={editingReservation?.reservedCapacity || ''}
+                  placeholder="e.g., 150"
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="bayPanelAssignmentId">Bay Assignment *</Label>
+                <Select name="bayPanelAssignmentId" defaultValue={editingReservation?.bayPanelAssignmentId?.toString()}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select bay assignment" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {bayAssignments.map((assignment: BayPanelAssignment) => (
+                      <SelectItem key={assignment.id} value={assignment.id.toString()}>
+                        {assignment.bayConfiguration} ({assignment.capacity} kVA)
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="status">Status *</Label>
+                <Select name="status" defaultValue={editingReservation?.status || 'pending'}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="expired">Expired</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <div>
                 <Label htmlFor="startDate">Start Date *</Label>
                 <Input
                   name="startDate"
                   type="date"
-                  defaultValue={editingReservation?.startDate || ''}
+                  defaultValue={editingReservation?.startDate ? new Date(editingReservation.startDate).toISOString().split('T')[0] : ''}
                   required
                 />
               </div>
@@ -1110,30 +999,9 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
                 <Input
                   name="endDate"
                   type="date"
-                  defaultValue={editingReservation?.endDate || ''}
+                  defaultValue={editingReservation?.endDate ? new Date(editingReservation.endDate).toISOString().split('T')[0] : ''}
                 />
               </div>
-            </div>
-            <div>
-              <Label htmlFor="status">Status *</Label>
-              <Select name="status" defaultValue={editingReservation?.status || 'pending'} required>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="expired">Expired</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="notes">Notes</Label>
-              <Input
-                name="notes"
-                defaultValue={editingReservation?.notes || ''}
-                placeholder="Additional notes..."
-              />
             </div>
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => setShowReservationDialog(false)}>
@@ -1148,4 +1016,4 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
       </Dialog>
     </div>
   );
-}
+};

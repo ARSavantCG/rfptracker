@@ -302,14 +302,13 @@ export default function Properties() {
                               <PropertyFormModal 
                                 property={property}
                                 trigger={
-                                  <Button variant="outline" size="sm" className="h-9 p-0 w-9 flex items-center justify-center">
+                                  <Button variant="outline" className="h-9 w-9 p-0 flex items-center justify-center border border-input bg-background hover:bg-accent hover:text-accent-foreground">
                                     <Edit className="h-4 w-4" />
                                   </Button>
                                 }
                               />
                               <Button 
                                 variant="outline" 
-                                size="sm"
                                 onClick={async () => {
                                   try {
                                     const token = localStorage.getItem('auth-token');
@@ -331,7 +330,7 @@ export default function Properties() {
                                   }
                                 }}
                                 title="Print property report"
-                                className="h-9 p-0 w-9 flex items-center justify-center"
+                                className="h-9 w-9 p-0 flex items-center justify-center border border-input bg-background hover:bg-accent hover:text-accent-foreground"
                               >
                                 <Printer className="h-4 w-4" />
                               </Button>

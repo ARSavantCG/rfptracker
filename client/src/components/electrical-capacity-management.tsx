@@ -17,15 +17,14 @@ import { formatDate } from "@/lib/utils";
 interface Transformer {
   id: number;
   propertyId: number;
-  name: string;
-  capacity: number;
-  location: string;
-  manufacturer?: string;
-  model?: string;
-  serialNumber?: string;
+  transformerName: string;
+  totalCapacityKva: number;
+  fplId?: string;
   installationDate?: string;
-  maintenanceSchedule?: string;
   notes?: string;
+  isActive?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface MainPanel {
@@ -225,7 +224,7 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
 
   // Calculate capacity utilization
   const calculateCapacityUtilization = () => {
-    const totalTransformerCapacity = transformers.reduce((sum: number, t: Transformer) => sum + t.capacity, 0);
+    const totalTransformerCapacity = transformers.reduce((sum: number, t: Transformer) => sum + t.totalCapacityKva, 0);
     const totalReservedCapacity = reservations
       .filter((r: ElectricalReservation) => r.status === 'active')
       .reduce((sum: number, r: ElectricalReservation) => sum + r.reservedCapacity, 0);
@@ -246,14 +245,10 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
     const formData = new FormData(e.currentTarget);
     const transformer = {
       propertyId,
-      name: formData.get('name') as string,
-      capacity: parseFloat(formData.get('capacity') as string),
-      location: formData.get('location') as string,
-      manufacturer: formData.get('manufacturer') as string || undefined,
-      model: formData.get('model') as string || undefined,
-      serialNumber: formData.get('serialNumber') as string || undefined,
+      transformerName: formData.get('name') as string,
+      totalCapacityKva: parseFloat(formData.get('capacity') as string),
+      fplId: formData.get('manufacturer') as string || undefined, // FPL Designation No.
       installationDate: formData.get('installationDate') as string || undefined,
-      maintenanceSchedule: formData.get('maintenanceSchedule') as string || undefined,
       notes: formData.get('notes') as string || undefined,
     };
 
@@ -511,18 +506,24 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
                     <TableRow>
                       <TableHead>Name</TableHead>
                       <TableHead>Capacity</TableHead>
-                      <TableHead>Location</TableHead>
-                      <TableHead>Manufacturer</TableHead>
+                      <TableHead>FPL Designation No.</TableHead>
+                      <TableHead>Status</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {transformers.map((transformer: Transformer) => (
                       <TableRow key={transformer.id}>
-                        <TableCell className="font-medium">{transformer.name}</TableCell>
-                        <TableCell>{transformer.capacity.toLocaleString()} kVA</TableCell>
-                        <TableCell>{transformer.location}</TableCell>
-                        <TableCell>{transformer.manufacturer || 'N/A'}</TableCell>
+                        <TableCell className="font-medium">{transformer.transformerName}</TableCell>
+                        <TableCell>{transformer.totalCapacityKva.toLocaleString()} kVA</TableCell>
+                        <TableCell>{transformer.fplId || 'N/A'}</TableCell>
+                        <TableCell>
+                          <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                            transformer.isActive !== false ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                          }`}>
+                            {transformer.isActive !== false ? 'Active' : 'Inactive'}
+                          </span>
+                        </TableCell>
                         <TableCell>
                           <div className="flex gap-2">
                             <button
@@ -720,7 +721,7 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
                 <Label htmlFor="name">Name *</Label>
                 <Input
                   name="name"
-                  defaultValue={editingTransformer?.name || ''}
+                  defaultValue={editingTransformer?.transformerName || ''}
                   placeholder="e.g., Main Transformer A"
                   required
                 />
@@ -730,7 +731,7 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
                 <Input
                   name="capacity"
                   type="number"
-                  defaultValue={editingTransformer?.capacity || ''}
+                  defaultValue={editingTransformer?.totalCapacityKva || ''}
                   placeholder="e.g., 2000"
                   required
                 />
@@ -745,11 +746,11 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
                 />
               </div>
               <div>
-                <Label htmlFor="manufacturer">Manufacturer</Label>
+                <Label htmlFor="manufacturer">FPL Designation No.</Label>
                 <Input
                   name="manufacturer"
-                  defaultValue={editingTransformer?.manufacturer || ''}
-                  placeholder="e.g., ABB"
+                  defaultValue={editingTransformer?.fplId || ''}
+                  placeholder="e.g., FPL-TR-001"
                 />
               </div>
             </div>

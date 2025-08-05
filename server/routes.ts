@@ -5241,7 +5241,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               <tr>
                 <th>Name</th>
                 <th>Capacity (kVA)</th>
-                <th>Location</th>
+                <th>FPL Designation No.</th>
                 <th>Status</th>
               </tr>
             </thead>
@@ -6267,6 +6267,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/transformers", requireAuth, checkPermission('properties.create'), async (req, res) => {
     try {
       const parsed = insertTransformerSchema.parse(req.body);
+      const transformer = await storage.createTransformer(parsed);
+      res.status(201).json(transformer);
+    } catch (error) {
+      console.error("Transformer creation error:", error);
+      res.status(400).json({ 
+        message: "Invalid transformer data", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
+  app.post("/api/properties/:propertyId/transformers", requireAuth, checkPermission('properties.create'), async (req, res) => {
+    try {
+      const propertyId = parseInt(req.params.propertyId);
+      if (isNaN(propertyId)) {
+        return res.status(400).json({ message: "Invalid property ID" });
+      }
+
+      const parsed = insertTransformerSchema.parse({
+        ...req.body,
+        propertyId
+      });
       const transformer = await storage.createTransformer(parsed);
       res.status(201).json(transformer);
     } catch (error) {

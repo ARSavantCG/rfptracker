@@ -107,13 +107,24 @@ div[class*="electrical-management-compact"] [role="button"],
 /* Force tabs to be small */
 div[class*="electrical-tabs-compact"] [data-state],
 .electrical-tabs-compact [data-state],
-.electrical-tabs-compact button {
+.electrical-tabs-compact button,
+.electrical-tabs-compact [role="tab"] {
   font-size: 10px !important;
   height: 20px !important;
   min-height: 20px !important;
   max-height: 20px !important;
   padding: 2px 8px !important;
   line-height: 1 !important;
+  box-sizing: border-box !important;
+}
+
+/* Fix overlapping text at bottom by adding proper spacing */
+.electrical-management-compact .space-y-4 > * + * {
+  margin-top: 1rem !important;
+}
+
+.electrical-management-compact .mt-6 {
+  margin-top: 1rem !important;
 }
 
 /* Fix table row height consistency */

@@ -699,13 +699,15 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
             <TabsContent value="reservations" className="mt-6">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-lg font-semibold">Electrical Reservations</h3>
-                <Button 
+                <button 
                   onClick={() => { setEditingReservation(null); setShowReservationDialog(true); }}
                   disabled={bayAssignments.length === 0}
+                  className="inline-flex items-center justify-center rounded-md bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ fontSize: '10px', height: '20px', padding: '2px 6px', minHeight: '20px', lineHeight: '1' }}
                 >
-                  <Plus className="h-4 w-4 mr-2" />
+                  <Plus style={{ width: '8px', height: '8px', marginRight: '3px' }} />
                   Create Reservation
-                </Button>
+                </button>
               </div>
 
               <div className="border rounded-lg">
@@ -739,20 +741,20 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
                           </TableCell>
                           <TableCell>
                             <div className="flex gap-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
+                              <button
                                 onClick={() => { setEditingReservation(reservation); setShowReservationDialog(true); }}
+                                className="inline-flex items-center justify-center rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+                                style={{ fontSize: '8px', height: '16px', padding: '1px 3px', minHeight: '16px' }}
                               >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="destructive"
+                                <Edit style={{ width: '6px', height: '6px' }} />
+                              </button>
+                              <button
                                 onClick={() => deleteReservationMutation.mutate(reservation.id)}
+                                className="inline-flex items-center justify-center rounded bg-red-600 text-white hover:bg-red-700"
+                                style={{ fontSize: '8px', height: '16px', padding: '1px 3px', minHeight: '16px' }}
                               >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                                <Trash2 style={{ width: '6px', height: '6px' }} />
+                              </button>
                             </div>
                           </TableCell>
                         </TableRow>
@@ -820,12 +822,21 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
               </div>
             </div>
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => setShowTransformerDialog(false)}>
+              <button 
+                type="button" 
+                onClick={() => setShowTransformerDialog(false)}
+                className="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+                style={{ fontSize: '11px', height: '24px', padding: '4px 8px', minHeight: '24px', lineHeight: '1' }}
+              >
                 Cancel
-              </Button>
-              <Button type="submit">
+              </button>
+              <button 
+                type="submit"
+                className="inline-flex items-center justify-center rounded-md bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+                style={{ fontSize: '11px', height: '24px', padding: '4px 8px', minHeight: '24px', lineHeight: '1' }}
+              >
                 {editingTransformer ? 'Update' : 'Add'} Transformer
-              </Button>
+              </button>
             </div>
           </form>
         </DialogContent>
@@ -883,12 +894,21 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
               </div>
             </div>
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => setShowPanelDialog(false)}>
+              <button 
+                type="button" 
+                onClick={() => setShowPanelDialog(false)}
+                className="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+                style={{ fontSize: '11px', height: '24px', padding: '4px 8px', minHeight: '24px', lineHeight: '1' }}
+              >
                 Cancel
-              </Button>
-              <Button type="submit">
+              </button>
+              <button 
+                type="submit"
+                className="inline-flex items-center justify-center rounded-md bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+                style={{ fontSize: '11px', height: '24px', padding: '4px 8px', minHeight: '24px', lineHeight: '1' }}
+              >
                 {editingPanel ? 'Update' : 'Add'} Main Panel
-              </Button>
+              </button>
             </div>
           </form>
         </DialogContent>
@@ -937,12 +957,21 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
               </div>
             </div>
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => setShowAssignmentDialog(false)}>
+              <button 
+                type="button" 
+                onClick={() => setShowAssignmentDialog(false)}
+                className="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+                style={{ fontSize: '11px', height: '24px', padding: '4px 8px', minHeight: '24px', lineHeight: '1' }}
+              >
                 Cancel
-              </Button>
-              <Button type="submit">
+              </button>
+              <button 
+                type="submit"
+                className="inline-flex items-center justify-center rounded-md bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+                style={{ fontSize: '11px', height: '24px', padding: '4px 8px', minHeight: '24px', lineHeight: '1' }}
+              >
                 {editingAssignment ? 'Update' : 'Add'} Bay Assignment
-              </Button>
+              </button>
             </div>
           </form>
         </DialogContent>
@@ -1021,12 +1050,21 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
               </div>
             </div>
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => setShowReservationDialog(false)}>
+              <button 
+                type="button" 
+                onClick={() => setShowReservationDialog(false)}
+                className="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+                style={{ fontSize: '11px', height: '24px', padding: '4px 8px', minHeight: '24px', lineHeight: '1' }}
+              >
                 Cancel
-              </Button>
-              <Button type="submit">
+              </button>
+              <button 
+                type="submit"
+                className="inline-flex items-center justify-center rounded-md bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+                style={{ fontSize: '11px', height: '24px', padding: '4px 8px', minHeight: '24px', lineHeight: '1' }}
+              >
                 {editingReservation ? 'Update' : 'Create'} Reservation
-              </Button>
+              </button>
             </div>
           </form>
         </DialogContent>

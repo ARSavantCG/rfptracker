@@ -356,8 +356,8 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="flex items-center gap-2">
-          <Settings className="h-4 w-4" />
+        <Button variant="outline" className="flex items-center gap-1 text-xs px-2 py-1 h-6">
+          <Settings className="h-3 w-3" />
           Manage Bay Configurations
         </Button>
       </DialogTrigger>

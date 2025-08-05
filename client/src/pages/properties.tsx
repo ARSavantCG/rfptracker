@@ -376,7 +376,6 @@ export default function Properties() {
                           />
                           <Button
                             variant="outline"
-                            size="sm"
                             onClick={() => setShowElectricalCapacity(showElectricalCapacity === property.id ? null : property.id)}
                             className="flex items-center gap-1 text-xs px-2 py-1 h-6"
                           >

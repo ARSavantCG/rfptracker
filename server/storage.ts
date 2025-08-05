@@ -606,16 +606,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   async searchRfpRequests(query: string): Promise<RfpRequest[]> {
-    // For now, we'll get all and filter client-side
-    // In production, you'd want to use proper SQL LIKE queries
+    // Search across relevant RFP fields
     const allRfps = await this.getAllRfpRequests();
     const lowerQuery = query.toLowerCase();
     
     return allRfps.filter(rfp => 
-      rfp.client.toLowerCase().includes(lowerQuery) ||
-      rfp.project.toLowerCase().includes(lowerQuery) ||
+      rfp.tenantName.toLowerCase().includes(lowerQuery) ||
+      rfp.projectName.toLowerCase().includes(lowerQuery) ||
       rfp.rfpNumber.toLowerCase().includes(lowerQuery) ||
-      (rfp.contactPerson && rfp.contactPerson.toLowerCase().includes(lowerQuery))
+      rfp.property.toLowerCase().includes(lowerQuery) ||
+      (rfp.developmentContact && rfp.developmentContact.toLowerCase().includes(lowerQuery)) ||
+      (rfp.sentBy && rfp.sentBy.toLowerCase().includes(lowerQuery))
     );
   }
 

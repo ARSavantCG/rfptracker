@@ -80,9 +80,9 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
   // Auto-populate sentBy field for non-admin users
   useEffect(() => {
     if (user && !isAdmin()) {
-      const userDisplayName = user.firstName && user.lastName 
-        ? `${user.firstName} ${user.lastName}` 
-        : user.username;
+      const userDisplayName = (user as any).firstName && (user as any).lastName 
+        ? `${(user as any).firstName} ${(user as any).lastName}` 
+        : (user as any).username;
       form.setValue("sentBy", userDisplayName);
     }
   }, [user, isAdmin, form]);
@@ -424,34 +424,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
 
 
 
-              <FormField
-                control={form.control}
-                name="developmentContact"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Development Contact</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <select
-                          {...field}
-                          className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background data-[placeholder]:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none"
-                        >
-                          <option value="">Select development contact</option>
-                          {contacts
-                            .filter((contact) => contact.tags && contact.tags.includes("Development"))
-                            .map((contact) => (
-                              <option key={contact.id} value={`${contact.name} - ${contact.company}`}>
-                                {contact.name} - {contact.company}
-                              </option>
-                            ))}
-                        </select>
-                        <ChevronDown className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50" />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+
 
               {/* Bay Configuration Button for Automatic Floor Area Calculation */}
               {selectedProperty ? (

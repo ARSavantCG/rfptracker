@@ -16,7 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ChevronDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, X, Save } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
@@ -26,6 +26,7 @@ import { nanoid } from "nanoid";
 const validationSchema = z.object({
   generalContractor: z.string().optional(),
   architect: z.string().optional(),
+  developmentContact: z.string().optional(),
   contactPerson: z.string().optional(),
   contactEmail: z.string().optional(),
   areaBreakdown: z.array(z.object({
@@ -54,6 +55,7 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
     defaultValues: {
       generalContractor: "",
       architect: "",
+      developmentContact: "",
       contactPerson: "",
       contactEmail: "",
       areaBreakdown: [],
@@ -93,6 +95,7 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
       form.reset({
         generalContractor: rfp.generalContractor || "",
         architect: rfp.architect || "",
+        developmentContact: rfp.developmentContact || "",
         contactPerson: rfp.contactPerson || contactDetails.name || "",
         contactEmail: rfp.contactEmail || contactDetails.email || "",
         areaBreakdown: rfp.areaBreakdown || [],
@@ -313,7 +316,7 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                             }
                             
                             // Priority: calculated area from bays > warehouseArea > projectArea
-                            totalArea = calculatedArea > 0 ? calculatedArea : (warehouseArea || projectArea || 0);
+                            totalArea = calculatedArea > 0 ? calculatedArea : parseInt((warehouseArea || projectArea || 0).toString());
                           }
                           
                           const additionalAreas = form.watch("areaBreakdown").reduce((sum, area) => 
@@ -406,7 +409,39 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
               </div>
             </div>
 
-
+            {/* Contact Information */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium text-gray-900 border-b pb-2">Contact Information</h3>
+              
+              <FormField
+                control={form.control}
+                name="developmentContact"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Development Contact</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <select
+                          {...field}
+                          className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background data-[placeholder]:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none"
+                        >
+                          <option value="">Select development contact</option>
+                          {contacts
+                            .filter((contact) => contact.tags && contact.tags.includes("Development"))
+                            .map((contact) => (
+                              <option key={contact.id} value={`${contact.name} - ${contact.company}`}>
+                                {contact.name} - {contact.company}
+                              </option>
+                            ))}
+                        </select>
+                        <ChevronDown className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50" />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <div className="flex justify-end space-x-2 pt-4">
               <Button

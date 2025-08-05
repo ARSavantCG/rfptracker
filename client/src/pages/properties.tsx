@@ -298,17 +298,16 @@ export default function Properties() {
                             </div>
                           </div>
                           <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                            <div className="flex gap-1">
+                            <div className="flex gap-1 items-center">
                               <PropertyFormModal 
                                 property={property}
                                 trigger={
-                                  <Button variant="outline" className="h-9 w-9 p-0 flex items-center justify-center border border-input bg-background hover:bg-accent hover:text-accent-foreground">
+                                  <button className="h-8 w-8 p-0 flex items-center justify-center rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors">
                                     <Edit className="h-4 w-4" />
-                                  </Button>
+                                  </button>
                                 }
                               />
-                              <Button 
-                                variant="outline" 
+                              <button 
                                 onClick={async () => {
                                   try {
                                     const token = localStorage.getItem('auth-token');
@@ -330,10 +329,10 @@ export default function Properties() {
                                   }
                                 }}
                                 title="Print property report"
-                                className="h-9 w-9 p-0 flex items-center justify-center border border-input bg-background hover:bg-accent hover:text-accent-foreground"
+                                className="h-8 w-8 p-0 flex items-center justify-center rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors"
                               >
                                 <Printer className="h-4 w-4" />
-                              </Button>
+                              </button>
                               <PropertyAttachments 
                                 propertyId={property.id}
                                 propertyName={property.propertyName || 'Property'}

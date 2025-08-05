@@ -218,10 +218,10 @@ export function PropertyAttachments({ propertyId, propertyName }: PropertyAttach
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="h-9 px-3 flex items-center justify-center border border-input bg-background hover:bg-accent hover:text-accent-foreground">
+        <button className="h-8 px-3 flex items-center justify-center rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors">
           <Download className="h-4 w-4 mr-2" />
           ({attachments.length})
-        </Button>
+        </button>
       </DialogTrigger>
       <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>

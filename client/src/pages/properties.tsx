@@ -307,6 +307,10 @@ export default function Properties() {
                                   </button>
                                 }
                               />
+                              <PropertyAttachments 
+                                propertyId={property.id}
+                                propertyName={property.propertyName || 'Property'}
+                              />
                               <button 
                                 onClick={async () => {
                                   try {
@@ -333,10 +337,6 @@ export default function Properties() {
                               >
                                 <Printer className="h-4 w-4" />
                               </button>
-                              <PropertyAttachments 
-                                propertyId={property.id}
-                                propertyName={property.propertyName || 'Property'}
-                              />
                             </div>
 
                           </div>

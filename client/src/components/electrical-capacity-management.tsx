@@ -402,12 +402,12 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
           <h3 className="text-lg font-semibold mb-2">Get Started with Electrical Management</h3>
           <p className="text-gray-600 mb-4">Add your first transformer to begin tracking electrical capacity</p>
           <Button 
-            size="sm" 
             onClick={() => { setEditingTransformer(null); setShowTransformerDialog(true); }}
-            className="px-2 py-0.5 text-xs h-6"
+            className="!px-2 !py-1 !text-xs !h-6 !min-h-6 !leading-none !font-normal"
+            style={{ fontSize: '11px', height: '24px', padding: '2px 8px' }}
           >
-            <Plus className="h-2.5 w-2.5 mr-0.5" />
-            Add Your First Transformer
+            <Plus className="h-3 w-3 mr-1" style={{ width: '10px', height: '10px' }} />
+            <span style={{ fontSize: '10px' }}>Add Transformer</span>
           </Button>
         </Card>
       ) : (
@@ -416,42 +416,42 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
             <h3 className="font-semibold">Quick Actions</h3>
             <div className="flex gap-2">
               <Button 
-                size="sm" 
                 variant="outline"
                 onClick={() => { setEditingTransformer(null); setShowTransformerDialog(true); }}
-                className="px-1.5 py-0.5 text-xs h-6"
+                className="!px-1 !py-0.5 !text-xs !h-5 !min-h-5 !leading-none"
+                style={{ fontSize: '10px', height: '20px', padding: '1px 6px' }}
               >
-                <Plus className="h-2.5 w-2.5 mr-0.5" />
-                Transformer
+                <Plus className="h-2 w-2 mr-0.5" style={{ width: '8px', height: '8px' }} />
+                <span style={{ fontSize: '9px' }}>Transformer</span>
               </Button>
               <Button 
-                size="sm" 
                 variant="outline"
                 onClick={() => { setEditingPanel(null); setShowPanelDialog(true); }}
                 disabled={transformers.length === 0}
-                className="px-1.5 py-0.5 text-xs h-6"
+                className="!px-1 !py-0.5 !text-xs !h-5 !min-h-5 !leading-none"
+                style={{ fontSize: '10px', height: '20px', padding: '1px 6px' }}
               >
-                <Plus className="h-2.5 w-2.5 mr-0.5" />
-                Main Panel
+                <Plus className="h-2 w-2 mr-0.5" style={{ width: '8px', height: '8px' }} />
+                <span style={{ fontSize: '9px' }}>Panel</span>
               </Button>
               <Button 
-                size="sm" 
                 variant="outline"
                 onClick={() => { setEditingAssignment(null); setShowAssignmentDialog(true); }}
                 disabled={mainPanels.length === 0}
-                className="px-1.5 py-0.5 text-xs h-6"
+                className="!px-1 !py-0.5 !text-xs !h-5 !min-h-5 !leading-none"
+                style={{ fontSize: '10px', height: '20px', padding: '1px 6px' }}
               >
-                <Plus className="h-2.5 w-2.5 mr-0.5" />
-                Bay Assignment
+                <Plus className="h-2 w-2 mr-0.5" style={{ width: '8px', height: '8px' }} />
+                <span style={{ fontSize: '9px' }}>Bay</span>
               </Button>
               <Button 
-                size="sm"
                 onClick={() => { setEditingReservation(null); setShowReservationDialog(true); }}
                 disabled={bayAssignments.length === 0}
-                className="px-1.5 py-0.5 text-xs h-6"
+                className="!px-1 !py-0.5 !text-xs !h-5 !min-h-5 !leading-none"
+                style={{ fontSize: '10px', height: '20px', padding: '1px 6px' }}
               >
-                <Plus className="h-2.5 w-2.5 mr-0.5" />
-                New Reservation
+                <Plus className="h-2 w-2 mr-0.5" style={{ width: '8px', height: '8px' }} />
+                <span style={{ fontSize: '9px' }}>Reserve</span>
               </Button>
             </div>
           </div>

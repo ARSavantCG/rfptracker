@@ -385,10 +385,28 @@ export class DatabaseStorage implements IStorage {
 
   private async generateRfpNumber(): Promise<string> {
     const year = new Date().getFullYear();
-    // Only count non-counter offer RFPs for sequential numbering
-    const count = await db.$count(rfpRequests, eq(rfpRequests.isCounterOffer, false));
-    const number = (count + 1).toString().padStart(3, '0');
-    return `RFP-${year}-${number}`;
+    
+    // Get all RFP numbers for the current year to find the highest number
+    const allRfps = await db.select({ rfpNumber: rfpRequests.rfpNumber })
+      .from(rfpRequests)
+      .where(like(rfpRequests.rfpNumber, `RFP-${year}-%`));
+    
+    // Extract numeric parts and find the highest
+    let maxNumber = 0;
+    for (const rfp of allRfps) {
+      // Extract the base number (before any dot for alternates/counters)
+      const match = rfp.rfpNumber.match(new RegExp(`RFP-${year}-(\\d+)`));
+      if (match) {
+        const num = parseInt(match[1], 10);
+        if (num > maxNumber) {
+          maxNumber = num;
+        }
+      }
+    }
+    
+    // Next sequential number is always +1 from the highest existing
+    const nextNumber = (maxNumber + 1).toString().padStart(3, '0');
+    return `RFP-${year}-${nextNumber}`;
   }
 
   private async generateProjectName(propertyId: string, tenantName: string, confidential: boolean): Promise<string> {

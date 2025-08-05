@@ -358,87 +358,91 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Zap className="h-5 w-5" />
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Zap className="h-4 w-4" />
             Electrical Capacity Management - {propertyName}
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-4 gap-4 mb-6">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">{capacityStats.total.toLocaleString()}</div>
-              <div className="text-sm text-gray-600">Total Capacity (kVA)</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">{capacityStats.available.toLocaleString()}</div>
-              <div className="text-sm text-gray-600">Available (kVA)</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-orange-600">{capacityStats.reserved.toLocaleString()}</div>
-              <div className="text-sm text-gray-600">Reserved (kVA)</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-purple-600">{capacityStats.utilizationPercent.toFixed(1)}%</div>
-              <div className="text-sm text-gray-600">Utilization</div>
+        <CardContent className="pt-2">
+          {/* Compact Stats Bar */}
+          <div className="flex items-center justify-between bg-gray-50 rounded-lg p-3 mb-3">
+            <div className="flex items-center gap-6">
+              <div className="text-center">
+                <div className="text-lg font-bold text-blue-600">{capacityStats.total.toLocaleString()}</div>
+                <div className="text-xs text-gray-600">Total Capacity (kVA)</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-bold text-green-600">{capacityStats.available.toLocaleString()}</div>
+                <div className="text-xs text-gray-600">Available (kVA)</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-bold text-orange-600">{capacityStats.reserved.toLocaleString()}</div>
+                <div className="text-xs text-gray-600">Reserved (kVA)</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-bold text-purple-600">{capacityStats.utilizationPercent.toFixed(1)}%</div>
+                <div className="text-xs text-gray-600">Utilization</div>
+              </div>
             </div>
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="transformers">Transformers</TabsTrigger>
-              <TabsTrigger value="panels">Main Panels</TabsTrigger>
-              <TabsTrigger value="assignments">Bay Assignments</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-4 h-8">
+              <TabsTrigger value="overview" className="text-xs">Overview</TabsTrigger>
+              <TabsTrigger value="transformers" className="text-xs">Transformers</TabsTrigger>
+              <TabsTrigger value="panels" className="text-xs">Main Panels</TabsTrigger>
+              <TabsTrigger value="assignments" className="text-xs">Bay Assignments</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="overview" className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Active Reservations</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {reservations.filter((r: ElectricalReservation) => r.status === 'active').length === 0 ? (
-                      <p className="text-gray-500">No active reservations</p>
-                    ) : (
-                      <div className="space-y-2">
-                        {reservations
-                          .filter((r: ElectricalReservation) => r.status === 'active')
-                          .slice(0, 5)
-                          .map((reservation: ElectricalReservation) => (
-                            <div key={reservation.id} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                              <div>
-                                <div className="font-medium">{reservation.reservedFor}</div>
-                                <div className="text-sm text-gray-600">{reservation.reservedCapacity} kVA</div>
-                              </div>
-                              <Badge variant="secondary">{reservation.status}</Badge>
+            <TabsContent value="overview" className="space-y-2 mt-3">
+              {/* Compact Overview Grid */}
+              <div className="grid grid-cols-2 gap-3">
+                {/* Active Reservations - Compact */}
+                <div className="border rounded-lg p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Building2 className="h-4 w-4 text-blue-500" />
+                    <span className="font-medium text-sm">Active Reservations</span>
+                  </div>
+                  {reservations.filter((r: ElectricalReservation) => r.status === 'active').length === 0 ? (
+                    <p className="text-xs text-gray-500">No active reservations</p>
+                  ) : (
+                    <div className="space-y-1">
+                      {reservations
+                        .filter((r: ElectricalReservation) => r.status === 'active')
+                        .slice(0, 3)
+                        .map((reservation: ElectricalReservation) => (
+                          <div key={reservation.id} className="flex justify-between items-center py-1 text-xs">
+                            <div>
+                              <div className="font-medium">{reservation.reservedFor}</div>
+                              <div className="text-gray-600">{reservation.reservedCapacity} kVA</div>
                             </div>
-                          ))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Recent Activity</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 p-2 bg-gray-50 rounded">
-                        <Activity className="h-4 w-4 text-blue-500" />
-                        <div className="text-sm">System monitoring active</div>
-                      </div>
-                      <div className="flex items-center gap-2 p-2 bg-gray-50 rounded">
-                        <Cable className="h-4 w-4 text-green-500" />
-                        <div className="text-sm">All panels operational</div>
-                      </div>
+                            <Badge variant="secondary" className="text-xs py-0">{reservation.status}</Badge>
+                          </div>
+                        ))}
                     </div>
-                  </CardContent>
-                </Card>
+                  )}
+                </div>
+
+                {/* Recent Activity - Compact */}
+                <div className="border rounded-lg p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Activity className="h-4 w-4 text-green-500" />
+                    <span className="font-medium text-sm">Recent Activity</span>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-xs">
+                      <Activity className="h-3 w-3 text-blue-500" />
+                      <span>System monitoring active</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs">
+                      <Cable className="h-3 w-3 text-green-500" />
+                      <span>All panels operational</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </TabsContent>
 

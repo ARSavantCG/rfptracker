@@ -626,9 +626,6 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                       <p className="text-sm text-muted-foreground">
                         Expected date for lease signing
                       </p>
-                      <p className="text-sm text-red-600">
-                        Anticipated lease execution date is required
-                      </p>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -648,9 +645,6 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                       </FormControl>
                       <p className="text-sm text-muted-foreground">
                         Expected tenant move-in date
-                      </p>
-                      <p className="text-sm text-red-600">
-                        Anticipated occupancy date is required
                       </p>
                       <FormMessage />
                     </FormItem>

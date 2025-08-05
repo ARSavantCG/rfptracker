@@ -326,70 +326,70 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
   };
 
   return (
-    <div className="space-y-4 electrical-management-compact">
+    <div className="space-y-2 electrical-management-compact">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-blue-100 rounded-lg">
-            <Zap className="h-5 w-5 text-blue-600" />
+        <div className="flex items-center gap-2">
+          <div className="p-1 bg-blue-100 rounded-md">
+            <Zap className="h-4 w-4 text-blue-600" />
           </div>
           <div>
-            <h2 className="text-xl font-semibold">Electrical Capacity Management</h2>
-            <p className="text-sm text-gray-600">{propertyName}</p>
+            <h2 className="text-lg font-semibold">Electrical Capacity Management</h2>
+            <p className="text-xs text-gray-600">{propertyName}</p>
           </div>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-4 gap-4">
-        <Card className="p-4">
+      <div className="grid grid-cols-4 gap-2">
+        <Card className="p-2">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Total Capacity</p>
-              <p className="text-2xl font-bold text-blue-600">{capacityStats.total.toLocaleString()}</p>
+              <p className="text-xs font-medium text-gray-600">Total Capacity</p>
+              <p className="text-lg font-bold text-blue-600">{capacityStats.total.toLocaleString()}</p>
               <p className="text-xs text-gray-500">kVA</p>
             </div>
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Zap className="h-4 w-4 text-blue-600" />
+            <div className="p-1 bg-blue-100 rounded-md">
+              <Zap className="h-3 w-3 text-blue-600" />
             </div>
           </div>
         </Card>
         
-        <Card className="p-4">
+        <Card className="p-2">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Available</p>
-              <p className="text-2xl font-bold text-green-600">{capacityStats.available.toLocaleString()}</p>
+              <p className="text-xs font-medium text-gray-600">Available</p>
+              <p className="text-lg font-bold text-green-600">{capacityStats.available.toLocaleString()}</p>
               <p className="text-xs text-gray-500">kVA</p>
             </div>
-            <div className="p-2 bg-green-100 rounded-lg">
-              <Activity className="h-4 w-4 text-green-600" />
+            <div className="p-1 bg-green-100 rounded-md">
+              <Activity className="h-3 w-3 text-green-600" />
             </div>
           </div>
         </Card>
         
-        <Card className="p-4">
+        <Card className="p-2">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Reserved</p>
-              <p className="text-2xl font-bold text-orange-600">{capacityStats.reserved.toLocaleString()}</p>
+              <p className="text-xs font-medium text-gray-600">Reserved</p>
+              <p className="text-lg font-bold text-orange-600">{capacityStats.reserved.toLocaleString()}</p>
               <p className="text-xs text-gray-500">kVA</p>
             </div>
-            <div className="p-2 bg-orange-100 rounded-lg">
-              <Building2 className="h-4 w-4 text-orange-600" />
+            <div className="p-1 bg-orange-100 rounded-md">
+              <Building2 className="h-3 w-3 text-orange-600" />
             </div>
           </div>
         </Card>
         
-        <Card className="p-4">
+        <Card className="p-2">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Utilization</p>
-              <p className="text-2xl font-bold text-purple-600">{capacityStats.utilizationPercent.toFixed(1)}%</p>
+              <p className="text-xs font-medium text-gray-600">Utilization</p>
+              <p className="text-lg font-bold text-purple-600">{capacityStats.utilizationPercent.toFixed(1)}%</p>
               <p className="text-xs text-gray-500">capacity used</p>
             </div>
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <Cable className="h-4 w-4 text-purple-600" />
+            <div className="p-1 bg-purple-100 rounded-md">
+              <Cable className="h-3 w-3 text-purple-600" />
             </div>
           </div>
         </Card>
@@ -397,10 +397,10 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
 
       {/* Quick Actions */}
       {transformers.length === 0 ? (
-        <Card className="p-6 text-center border-dashed border-2 border-gray-300">
-          <Zap className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-          <h3 className="text-lg font-semibold mb-2">Get Started with Electrical Management</h3>
-          <p className="text-gray-600 mb-4">Add your first transformer to begin tracking electrical capacity</p>
+        <Card className="p-3 text-center border-dashed border-2 border-gray-300">
+          <Zap className="h-8 w-8 mx-auto text-gray-400 mb-2" />
+          <h3 className="text-sm font-semibold mb-1">Get Started with Electrical Management</h3>
+          <p className="text-xs text-gray-600 mb-3">Add your first transformer to begin tracking electrical capacity</p>
           <button 
             onClick={() => { setEditingTransformer(null); setShowTransformerDialog(true); }}
             className="inline-flex items-center justify-center rounded-md bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors electrical-btn-compact"
@@ -422,9 +422,9 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
           </button>
         </Card>
       ) : (
-        <Card className="p-4">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold">Quick Actions</h3>
+        <Card className="p-2">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-semibold">Quick Actions</h3>
             <div className="flex gap-2">
               <button 
                 onClick={() => { setEditingTransformer(null); setShowTransformerDialog(true); }}

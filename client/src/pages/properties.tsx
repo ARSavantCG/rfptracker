@@ -208,10 +208,7 @@ export default function Properties() {
               const isMultiBuilding = buildings.length > 1;
               const selectedBuildingId = selectedBuilding[baseName];
               
-              // Debug logging for dropdown issues
-              if (isMultiBuilding) {
-                console.log(`Property: ${baseName}, Buildings:`, buildings.map(b => ({ id: b.id, building: b.building })));
-              }
+
               
               // Filter buildings based on selection
               let displayBuildings = buildings;

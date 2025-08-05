@@ -4922,6 +4922,390 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Print endpoints for property management modals
+  app.get('/api/properties/:propertyId/bay-configurations/print', requireAuth, async (req, res) => {
+    try {
+      const propertyId = parseInt(req.params.propertyId);
+      const property = await storage.getProperty(propertyId);
+      
+      if (!property) {
+        return res.status(404).json({ message: "Property not found" });
+      }
+
+      const html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Bay Configurations - ${property.propertyName}</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            h1 { color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+            table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #f5f5f5; }
+            .summary { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0; }
+          </style>
+        </head>
+        <body>
+          <h1>Bay Configurations Report</h1>
+          <h2>${property.propertyName}</h2>
+          
+          <div class="summary">
+            <h3>Property Summary</h3>
+            <p><strong>Total Bays:</strong> ${property.bayConfigurations?.length || 0}</p>
+            <p><strong>Total Square Footage:</strong> ${(property.bayConfigurations || []).reduce((sum, bay) => sum + bay.squareFootage, 0).toLocaleString()} SF</p>
+            <p><strong>Mechanical Room SF:</strong> ${property.mechanicalRoomSquareFootage?.toLocaleString() || 0} SF</p>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Bay Name</th>
+                <th>Square Footage</th>
+                <th>Standard Dock Doors</th>
+                <th>Oversized Dock Doors</th>
+                <th>Grade Level Doors</th>
+                <th>Truck Courts</th>
+                <th>Car Parking</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${(property.bayConfigurations || []).map(bay => `
+                <tr>
+                  <td>${bay.bayName}</td>
+                  <td>${bay.squareFootage.toLocaleString()}</td>
+                  <td>${bay.standardDockDoors || 0}</td>
+                  <td>${bay.oversizedDockDoors || 0}</td>
+                  <td>${bay.gradeLevelDoors || 0}</td>
+                  <td>${bay.truckCourts || 0}</td>
+                  <td>${bay.carParking || 0}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          
+          <p><em>Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}</em></p>
+        </body>
+        </html>
+      `;
+
+      res.setHeader('Content-Type', 'text/html');
+      res.send(html);
+    } catch (error) {
+      console.error("Bay configurations print error:", error);
+      res.status(500).json({ message: "Failed to generate bay configurations report" });
+    }
+  });
+
+  app.get('/api/properties/:propertyId/executed-leases/print', requireAuth, async (req, res) => {
+    try {
+      const propertyId = parseInt(req.params.propertyId);
+      const property = await storage.getProperty(propertyId);
+      const leases = await storage.getExecutedLeasesByProperty(propertyId);
+      
+      if (!property) {
+        return res.status(404).json({ message: "Property not found" });
+      }
+
+      const html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Executed Leases - ${property.propertyName}</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            h1 { color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+            table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #f5f5f5; }
+            .summary { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0; }
+          </style>
+        </head>
+        <body>
+          <h1>Executed Leases Report</h1>
+          <h2>${property.propertyName}</h2>
+          
+          <div class="summary">
+            <h3>Leasing Summary</h3>
+            <p><strong>Total Leases:</strong> ${leases.length}</p>
+            <p><strong>Total Leased SF:</strong> ${leases.reduce((sum, lease) => sum + (lease.rentableAreaOverride || 0), 0).toLocaleString()} SF</p>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Tenant Name</th>
+                <th>Assigned Bays</th>
+                <th>Rentable Area (SF)</th>
+                <th>Standard Parking</th>
+                <th>Accessible Parking</th>
+                <th>EV Parking</th>
+                <th>Trailer Parking</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${leases.map(lease => `
+                <tr>
+                  <td>${lease.tenantName}</td>
+                  <td>${(lease.assignedBays || []).join(', ')}</td>
+                  <td>${(lease.rentableAreaOverride || 0).toLocaleString()}</td>
+                  <td>${lease.standardParking || 0}</td>
+                  <td>${lease.accessibleParking || 0}</td>
+                  <td>${lease.evParking || 0}</td>
+                  <td>${lease.trailerParking || 0}</td>
+                  <td>${lease.notes || ''}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          
+          <p><em>Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}</em></p>
+        </body>
+        </html>
+      `;
+
+      res.setHeader('Content-Type', 'text/html');
+      res.send(html);
+    } catch (error) {
+      console.error("Executed leases print error:", error);
+      res.status(500).json({ message: "Failed to generate executed leases report" });
+    }
+  });
+
+  app.get('/api/properties/:propertyId/existing-improvements/print', requireAuth, async (req, res) => {
+    try {
+      const propertyId = parseInt(req.params.propertyId);
+      const property = await storage.getProperty(propertyId);
+      const improvements = await storage.getPropertyExistingImprovements(propertyId);
+      
+      if (!property) {
+        return res.status(404).json({ message: "Property not found" });
+      }
+
+      const totalValue = improvements.reduce((sum, imp) => sum + imp.totalCost, 0);
+
+      const html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Existing Improvements - ${property.propertyName}</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            h1 { color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+            table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #f5f5f5; }
+            .summary { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0; }
+            .currency { text-align: right; }
+          </style>
+        </head>
+        <body>
+          <h1>Existing Improvements Report</h1>
+          <h2>${property.propertyName}</h2>
+          
+          <div class="summary">
+            <h3>Investment Summary</h3>
+            <p><strong>Total Improvements:</strong> ${improvements.length}</p>
+            <p><strong>Total Investment:</strong> $${(totalValue / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+            <p><strong>Active Items:</strong> ${improvements.filter(i => i.isActive).length}</p>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th>Description</th>
+                <th>Total Cost</th>
+                <th>Allocation Type</th>
+                <th>Status</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${improvements.map(improvement => `
+                <tr>
+                  <td>${improvement.category}</td>
+                  <td>${improvement.description}</td>
+                  <td class="currency">$${(improvement.totalCost / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                  <td>${improvement.allocationType}</td>
+                  <td>${improvement.isActive ? 'Active' : 'Inactive'}</td>
+                  <td>${improvement.notes || ''}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          
+          <p><em>Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}</em></p>
+        </body>
+        </html>
+      `;
+
+      res.setHeader('Content-Type', 'text/html');
+      res.send(html);
+    } catch (error) {
+      console.error("Existing improvements print error:", error);
+      res.status(500).json({ message: "Failed to generate existing improvements report" });
+    }
+  });
+
+  app.get('/api/properties/:propertyId/electrical/print', requireAuth, async (req, res) => {
+    try {
+      const propertyId = parseInt(req.params.propertyId);
+      const property = await storage.getProperty(propertyId);
+      const transformers = await storage.getTransformersByProperty(propertyId);
+      const mainPanels = await storage.getMainPanelsByProperty(propertyId);
+      const reservations = await storage.getElectricalReservationsByProperty(propertyId);
+      const bayAssignments = await storage.getBayPanelAssignmentsByProperty(propertyId);
+      
+      if (!property) {
+        return res.status(404).json({ message: "Property not found" });
+      }
+
+      const totalCapacity = transformers.reduce((sum, t) => sum + (t.capacity || 0), 0);
+      const totalReserved = reservations.reduce((sum, r) => sum + (r.reservedCapacity || 0), 0);
+      const availableCapacity = totalCapacity - totalReserved;
+
+      const html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Electrical Capacity Management - ${property.propertyName}</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            h1 { color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+            h2 { color: #555; margin-top: 30px; }
+            table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #f5f5f5; }
+            .summary { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0; }
+            .capacity-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin: 20px 0; }
+            .capacity-item { text-align: center; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+          </style>
+        </head>
+        <body>
+          <h1>Electrical Capacity Management Report</h1>
+          <h2>${property.propertyName}</h2>
+          
+          <div class="summary">
+            <h3>Capacity Overview</h3>
+            <div class="capacity-grid">
+              <div class="capacity-item">
+                <h4>Total Capacity</h4>
+                <p><strong>${totalCapacity} kVA</strong></p>
+              </div>
+              <div class="capacity-item">
+                <h4>Available</h4>
+                <p><strong>${availableCapacity} kVA</strong></p>
+              </div>
+              <div class="capacity-item">
+                <h4>Reserved</h4>
+                <p><strong>${totalReserved} kVA</strong></p>
+              </div>
+              <div class="capacity-item">
+                <h4>Utilization</h4>
+                <p><strong>${totalCapacity > 0 ? ((totalReserved / totalCapacity) * 100).toFixed(1) : 0}%</strong></p>
+              </div>
+            </div>
+          </div>
+
+          <h2>System Status</h2>
+          <table>
+            <tr><td>Transformers</td><td>${transformers.length}</td></tr>
+            <tr><td>Main Panels</td><td>${mainPanels.length}</td></tr>
+            <tr><td>Bay Assignments</td><td>${bayAssignments.length}</td></tr>
+            <tr><td>Active Reservations</td><td>${reservations.length}</td></tr>
+          </table>
+
+          ${transformers.length > 0 ? `
+          <h2>Transformers</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Capacity (kVA)</th>
+                <th>Location</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${transformers.map(transformer => `
+                <tr>
+                  <td>${transformer.name}</td>
+                  <td>${transformer.capacity || 0}</td>
+                  <td>${transformer.location || 'N/A'}</td>
+                  <td>${transformer.isActive ? 'Active' : 'Inactive'}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          ` : ''}
+
+          ${mainPanels.length > 0 ? `
+          <h2>Main Panels</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Panel ID</th>
+                <th>Transformer</th>
+                <th>Capacity (A)</th>
+                <th>Location</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${mainPanels.map(panel => `
+                <tr>
+                  <td>${panel.panelId}</td>
+                  <td>${panel.transformerId || 'N/A'}</td>
+                  <td>${panel.capacity || 0}</td>
+                  <td>${panel.location || 'N/A'}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          ` : ''}
+
+          ${reservations.length > 0 ? `
+          <h2>Active Reservations</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Tenant</th>
+                <th>Reserved Capacity (kVA)</th>
+                <th>Description</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${reservations.map(reservation => `
+                <tr>
+                  <td>${reservation.tenantName || 'N/A'}</td>
+                  <td>${reservation.reservedCapacity || 0}</td>
+                  <td>${reservation.description || 'N/A'}</td>
+                  <td>${reservation.status || 'Active'}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          ` : ''}
+          
+          <p><em>Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}</em></p>
+        </body>
+        </html>
+      `;
+
+      res.setHeader('Content-Type', 'text/html');
+      res.send(html);
+    } catch (error) {
+      console.error("Electrical management print error:", error);
+      res.status(500).json({ message: "Failed to generate electrical management report" });
+    }
+  });
+
   // RFP Generation History routes
   // Evaluation Budget History routes
   app.get('/api/rfp-requests/:rfpId/evaluation-budget-history', requireAuth, async (req, res) => {

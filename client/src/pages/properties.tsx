@@ -253,38 +253,40 @@ export default function Properties() {
                       <CardHeader className="relative overflow-visible">
                         <div className="flex items-start justify-between overflow-visible">
                           <div className="flex items-center space-x-3 flex-1 min-w-0">
-                            <div className="relative p-2 bg-blue-100 rounded-lg">
-                              <Building className="h-6 w-6 text-blue-600" />
-                              {/* Building count under icon */}
-                              <div className="absolute -bottom-1 -right-1 bg-blue-600 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center font-medium">
-                                {isMultiBuilding ? buildings.length : 1}
+                            <div className="flex flex-col items-center">
+                              <div className="relative p-2 bg-blue-100 rounded-lg">
+                                <Building className="h-6 w-6 text-blue-600" />
+                                {/* Building count under icon */}
+                                <div className="absolute -bottom-1 -right-1 bg-blue-600 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center font-medium">
+                                  {isMultiBuilding ? buildings.length : 1}
+                                </div>
                               </div>
+                              {/* Stack Cards Selector for Multi-Building Properties - under building icon */}
+                              {isMultiBuilding && index === 0 && (
+                                <div className="relative mt-2">
+                                  <select
+                                    value={selectedBuilding[baseName] || "stacked"}
+                                    onChange={(e) => handleBuildingSelection(baseName, e.target.value)}
+                                    className="bg-white shadow-sm hover:shadow-md px-2 py-1 text-xs font-medium border border-gray-300 hover:border-blue-400 hover:bg-blue-50 w-20 h-6 rounded appearance-none cursor-pointer"
+                                    style={{ fontSize: '11px' }}
+                                  >
+                                    <option value="stacked">Stack</option>
+                                    <option value="all">All ({buildings.length})</option>
+                                    {buildings.map((building) => (
+                                      <option key={building.id} value={building.id.toString()}>
+                                        Bldg. {building.building}
+                                      </option>
+                                    ))}
+                                  </select>
+                                  <ChevronDown className="absolute right-1 top-1/2 transform -translate-y-1/2 h-3 w-3 text-gray-400 pointer-events-none" />
+                                </div>
+                              )}
                             </div>
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-3 mb-1">
                                 <CardTitle className="text-sm font-semibold truncate">
                                   {property.propertyName || 'Unnamed Property'}
                                 </CardTitle>
-                                {/* Stack Cards Selector for Multi-Building Properties - moved to left */}
-                                {isMultiBuilding && index === 0 && (
-                                  <div className="relative">
-                                    <select
-                                      value={selectedBuilding[baseName] || "stacked"}
-                                      onChange={(e) => handleBuildingSelection(baseName, e.target.value)}
-                                      className="bg-white shadow-sm hover:shadow-md px-2 py-1 text-xs font-medium border border-gray-300 hover:border-blue-400 hover:bg-blue-50 w-20 h-6 rounded appearance-none cursor-pointer"
-                                      style={{ fontSize: '11px' }}
-                                    >
-                                      <option value="stacked">Stack</option>
-                                      <option value="all">All ({buildings.length})</option>
-                                      {buildings.map((building) => (
-                                        <option key={building.id} value={building.id.toString()}>
-                                          Bldg. {building.building}
-                                        </option>
-                                      ))}
-                                    </select>
-                                    <ChevronDown className="absolute right-1 top-1/2 transform -translate-y-1/2 h-3 w-3 text-gray-400 pointer-events-none" />
-                                  </div>
-                                )}
                               </div>
                               <div className="flex items-center gap-2">
                                 {property.building && (

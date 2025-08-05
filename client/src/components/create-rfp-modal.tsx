@@ -616,7 +616,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                   name="anticipatedLeaseExecutionDate"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Anticipated Lease Execution Date</FormLabel>
+                      <FormLabel>Anticipated Lease Execution Date *</FormLabel>
                       <FormControl>
                         <Input 
                           type="date"
@@ -625,6 +625,9 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                       </FormControl>
                       <p className="text-sm text-muted-foreground">
                         Expected date for lease signing
+                      </p>
+                      <p className="text-sm text-red-600">
+                        Anticipated lease execution date is required
                       </p>
                       <FormMessage />
                     </FormItem>
@@ -636,7 +639,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                   name="anticipatedOccupancyDate"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Anticipated Occupancy Date</FormLabel>
+                      <FormLabel>Anticipated Occupancy Date *</FormLabel>
                       <FormControl>
                         <Input 
                           type="date"
@@ -645,6 +648,9 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                       </FormControl>
                       <p className="text-sm text-muted-foreground">
                         Expected tenant move-in date
+                      </p>
+                      <p className="text-sm text-red-600">
+                        Anticipated occupancy date is required
                       </p>
                       <FormMessage />
                     </FormItem>

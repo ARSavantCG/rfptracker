@@ -45,6 +45,77 @@ html {
   font-size: 14px; /* Reduce base font size from 16px to 14px */
 }
 
+/* Force small electrical buttons - highest specificity */
+.electrical-management-compact button[style*="height: 20px"],
+.electrical-management-compact .electrical-btn-compact,
+button.electrical-btn-compact {
+  height: 20px !important;
+  min-height: 20px !important;
+  max-height: 20px !important;
+  font-size: 10px !important;
+  padding: 2px 6px !important;
+  line-height: 1 !important;
+  box-sizing: border-box !important;
+}
+
+.electrical-management-compact button[style*="height: 18px"] {
+  height: 18px !important;
+  min-height: 18px !important;
+  max-height: 18px !important;
+  font-size: 9px !important;
+  padding: 1px 4px !important;
+  line-height: 1 !important;
+}
+
+.electrical-management-compact button[style*="height: 16px"] {
+  height: 16px !important;
+  min-height: 16px !important;
+  max-height: 16px !important;
+  font-size: 8px !important;
+  padding: 1px 3px !important;
+  line-height: 1 !important;
+}
+
+/* Force small tabs */
+.electrical-tabs-compact [data-state] {
+  height: 20px !important;
+  min-height: 20px !important;
+  font-size: 10px !important;
+  padding: 2px 8px !important;
+}
+
+.electrical-tabs-compact .tabslist-compact {
+  height: 24px !important;
+  min-height: 24px !important;
+  padding: 2px !important;
+}
+
+/* Ultimate nuclear override - force all buttons in electrical to be small */
+div[class*="electrical-management-compact"] button,
+div[class*="electrical-management-compact"] [role="button"],
+.electrical-management-compact button,
+.electrical-management-compact [role="button"] {
+  font-size: 10px !important;
+  height: 20px !important;
+  min-height: 20px !important;
+  max-height: 20px !important;
+  padding: 2px 6px !important;
+  line-height: 1 !important;
+  box-sizing: border-box !important;
+}
+
+/* Force tabs to be small */
+div[class*="electrical-tabs-compact"] [data-state],
+.electrical-tabs-compact [data-state],
+.electrical-tabs-compact button {
+  font-size: 10px !important;
+  height: 20px !important;
+  min-height: 20px !important;
+  max-height: 20px !important;
+  padding: 2px 8px !important;
+  line-height: 1 !important;
+}
+
 /* Fix table row height consistency */
 .rfp-table tbody tr {
   height: 48px !important;

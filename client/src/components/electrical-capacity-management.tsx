@@ -326,7 +326,7 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 electrical-management-compact">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -403,17 +403,22 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
           <p className="text-gray-600 mb-4">Add your first transformer to begin tracking electrical capacity</p>
           <button 
             onClick={() => { setEditingTransformer(null); setShowTransformerDialog(true); }}
-            className="inline-flex items-center justify-center rounded-md bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+            className="inline-flex items-center justify-center rounded-md bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors electrical-btn-compact"
             style={{ 
-              fontSize: '10px', 
-              height: '20px', 
-              padding: '2px 6px',
-              minHeight: '20px',
-              lineHeight: '1'
+              fontSize: '10px !important', 
+              height: '20px !important', 
+              padding: '2px 6px !important',
+              minHeight: '20px !important',
+              maxHeight: '20px !important',
+              lineHeight: '1 !important',
+              border: 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center'
             }}
           >
-            <Plus style={{ width: '8px', height: '8px', marginRight: '3px' }} />
-            Add Transformer
+            <Plus style={{ width: '8px !important', height: '8px !important', marginRight: '3px' }} />
+            <span style={{ fontSize: '10px !important' }}>Add Transformer</span>
           </button>
         </Card>
       ) : (
@@ -464,9 +469,9 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
       {/* Management Sections */}
       <Card>
         <CardContent className="p-6">
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="electrical-tabs-compact">
             <TabsList 
-              className="grid w-full grid-cols-4" 
+              className="grid w-full grid-cols-4 tabslist-compact" 
               style={{ height: '24px', padding: '2px' }}
             >
               <TabsTrigger 

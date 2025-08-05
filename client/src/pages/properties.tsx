@@ -270,49 +270,23 @@ export default function Properties() {
                                 </CardTitle>
                                 {/* Stack Cards Selector for Multi-Building Properties - moved to left */}
                                 {isMultiBuilding && index === 0 && (
-                                  <Select
-                                    value={selectedBuilding[baseName] || "stacked"}
-                                    onValueChange={(value) => handleBuildingSelection(baseName, value)}
-                                  >
-                                    <SelectTrigger className="bg-white shadow-sm hover:shadow-md px-2 py-1 text-xs font-medium border border-gray-300 hover:border-blue-400 hover:bg-blue-50 w-20 h-6">
-                                      <SelectValue placeholder="Stack" />
-                                    </SelectTrigger>
-                                    <SelectContent 
-                                      className="bg-white border shadow-lg z-50" 
-                                      sideOffset={5}
-                                      style={{ 
-                                        maxHeight: 'none',
-                                        minWidth: '160px',
-                                        zIndex: 9999 
-                                      }}
-                                      position="popper"
+                                  <div className="relative">
+                                    <select
+                                      value={selectedBuilding[baseName] || "stacked"}
+                                      onChange={(e) => handleBuildingSelection(baseName, e.target.value)}
+                                      className="bg-white shadow-sm hover:shadow-md px-2 py-1 text-xs font-medium border border-gray-300 hover:border-blue-400 hover:bg-blue-50 w-20 h-6 rounded appearance-none cursor-pointer"
+                                      style={{ fontSize: '11px' }}
                                     >
-                                      <SelectItem value="stacked" className="text-gray-900 py-2 px-3 cursor-pointer hover:bg-gray-100">
-                                        <div className="flex items-center w-full">
-                                          <Layers className="h-4 w-4 mr-2 text-gray-600 flex-shrink-0" />
-                                          <span>Stack</span>
-                                        </div>
-                                      </SelectItem>
-                                      <SelectItem value="all" className="text-gray-900 py-2 px-3 cursor-pointer hover:bg-gray-100">
-                                        <div className="flex items-center w-full">
-                                          <Grid className="h-4 w-4 mr-2 text-gray-600 flex-shrink-0" />
-                                          <span>All ({buildings.length})</span>
-                                        </div>
-                                      </SelectItem>
+                                      <option value="stacked">Stack</option>
+                                      <option value="all">All ({buildings.length})</option>
                                       {buildings.map((building) => (
-                                        <SelectItem 
-                                          key={building.id} 
-                                          value={building.id.toString()} 
-                                          className="text-gray-900 py-2 px-3 cursor-pointer hover:bg-gray-100"
-                                        >
-                                          <div className="flex items-center w-full">
-                                            <Building className="h-4 w-4 mr-2 text-blue-600 flex-shrink-0" />
-                                            <span>{building.building}</span>
-                                          </div>
-                                        </SelectItem>
+                                        <option key={building.id} value={building.id.toString()}>
+                                          Bldg. {building.building}
+                                        </option>
                                       ))}
-                                    </SelectContent>
-                                  </Select>
+                                    </select>
+                                    <ChevronDown className="absolute right-1 top-1/2 transform -translate-y-1/2 h-3 w-3 text-gray-400 pointer-events-none" />
+                                  </div>
                                 )}
                               </div>
                               <div className="flex items-center gap-2">

@@ -1443,7 +1443,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('About to create RFP with selectedBayConfigurations:', requestWithFiles.selectedBayConfigurations?.length || 0);
 
       const newRequest = await storage.createRfpRequest(requestWithFiles);
-      res.status(201).json(newRequest);
+      
+      // Automatically advance workflow from "rfp-entry" to "rfp-validation" after creation
+      // Step 1 (RFP Entry) is now complete, move to Step 2 (RFP Validation)
+      console.log('Auto-advancing RFP workflow from rfp-entry to rfp-validation');
+      const advancedRequest = await storage.updateRfpRequest(newRequest.id, {
+        workflowPhase: "rfp-validation",
+        status: "in-progress"
+      });
+      
+      res.status(201).json(advancedRequest || newRequest);
     } catch (error) {
       console.error('RFP creation error:', error);
       res.status(400).json({ 

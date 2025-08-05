@@ -404,7 +404,7 @@ export default function BayConfigurationSelector({
                       ? "bg-red-800 border-red-900 text-white cursor-not-allowed opacity-95"
                       : isSelected 
                         ? "bg-orange-600 hover:bg-orange-700 text-white border-orange-700" 
-                        : "hover:bg-orange-50 border-orange-200 bg-white"
+                        : "hover:bg-orange-50 border-orange-200 bg-white text-gray-900"
                   }`}
                   onClick={() => toggleBaySelection(bay.id)}
                 >

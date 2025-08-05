@@ -426,6 +426,120 @@ export type Property = typeof properties.$inferSelect;
 export type InsertProperty = z.infer<typeof insertPropertySchema>;
 export type UpdateProperty = z.infer<typeof updatePropertySchema>;
 
+// Electrical Capacity Management System
+// Transformers table - tracks FPL-provided transformers per property
+export const transformers = pgTable("transformers", {
+  id: serial("id").primaryKey(),
+  propertyId: integer("property_id").notNull().references(() => properties.id, { onDelete: "cascade" }),
+  transformerName: text("transformer_name").notNull(), // e.g., "Main Transformer", "Secondary Transformer"
+  totalCapacityKva: integer("total_capacity_kva").notNull(), // Total transformer capacity in kVA
+  fplId: text("fpl_id"), // FPL transformer identification
+  installationDate: timestamp("installation_date"),
+  notes: text("notes"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Main Panels table - electrical panels connected to transformers
+export const mainPanels = pgTable("main_panels", {
+  id: serial("id").primaryKey(),
+  transformerId: integer("transformer_id").notNull().references(() => transformers.id, { onDelete: "cascade" }),
+  panelName: text("panel_name").notNull(), // e.g., "Panel A", "Main Panel 1"
+  maxCapacityKva: integer("max_capacity_kva").notNull(), // Panel's maximum capacity in kVA
+  panelLocation: text("panel_location"), // Physical location description
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Bay Panel Assignments - associates tenant bays with main panels
+export const bayPanelAssignments = pgTable("bay_panel_assignments", {
+  id: serial("id").primaryKey(),
+  propertyId: integer("property_id").notNull().references(() => properties.id, { onDelete: "cascade" }),
+  bayId: text("bay_id").notNull(), // References BayConfiguration.id
+  mainPanelId: integer("main_panel_id").notNull().references(() => mainPanels.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Electrical Reservations - tracks both hard allocations and soft holds
+export const electricalReservations = pgTable("electrical_reservations", {
+  id: serial("id").primaryKey(),
+  transformerId: integer("transformer_id").notNull().references(() => transformers.id, { onDelete: "cascade" }),
+  rfpId: integer("rfp_id").references(() => rfpRequests.id, { onDelete: "cascade" }), // For soft holds
+  tenantName: text("tenant_name").notNull(),
+  reservedKva: integer("reserved_kva").notNull(), // kVA reserved for this tenant
+  reservationType: text("reservation_type").notNull(), // "hard_allocation" (signed lease) or "soft_hold" (pending RFP)
+  reservationDate: timestamp("reservation_date").defaultNow().notNull(),
+  releaseDate: timestamp("release_date"), // When reservation was released
+  isActive: boolean("is_active").default(true),
+  notes: text("notes"),
+  createdBy: text("created_by").notNull(), // User who created the reservation
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Create insert schemas for electrical capacity tables
+export const insertTransformerSchema = createInsertSchema(transformers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  installationDate: z.string().optional().transform((val) => val && val.trim() ? new Date(val) : undefined),
+});
+
+export const insertMainPanelSchema = createInsertSchema(mainPanels).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertBayPanelAssignmentSchema = createInsertSchema(bayPanelAssignments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertElectricalReservationSchema = createInsertSchema(electricalReservations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  reservationDate: z.string().optional().transform((val) => val && val.trim() ? new Date(val) : new Date()),
+  releaseDate: z.string().optional().transform((val) => val && val.trim() ? new Date(val) : undefined),
+  reservationType: z.enum(["hard_allocation", "soft_hold"]),
+});
+
+// Update schemas
+export const updateTransformerSchema = insertTransformerSchema.partial().extend({
+  id: z.number(),
+});
+
+export const updateMainPanelSchema = insertMainPanelSchema.partial().extend({
+  id: z.number(),
+});
+
+export const updateElectricalReservationSchema = insertElectricalReservationSchema.partial().extend({
+  id: z.number(),
+});
+
+// Export types
+export type Transformer = typeof transformers.$inferSelect;
+export type InsertTransformer = z.infer<typeof insertTransformerSchema>;
+export type UpdateTransformer = z.infer<typeof updateTransformerSchema>;
+
+export type MainPanel = typeof mainPanels.$inferSelect;
+export type InsertMainPanel = z.infer<typeof insertMainPanelSchema>;
+export type UpdateMainPanel = z.infer<typeof updateMainPanelSchema>;
+
+export type BayPanelAssignment = typeof bayPanelAssignments.$inferSelect;
+export type InsertBayPanelAssignment = z.infer<typeof insertBayPanelAssignmentSchema>;
+
+export type ElectricalReservation = typeof electricalReservations.$inferSelect;
+export type InsertElectricalReservation = z.infer<typeof insertElectricalReservationSchema>;
+export type UpdateElectricalReservation = z.infer<typeof updateElectricalReservationSchema>;
+
 // Property Existing Improvements table
 export const propertyExistingImprovements = pgTable("property_existing_improvements", {
   id: serial("id").primaryKey(),

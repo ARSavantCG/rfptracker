@@ -30,7 +30,14 @@ import {
   updatePropertySchema,
   insertRomScopeItemSchema,
   updateRomScopeItemSchema,
-  insertPdfTemplateSchema
+  insertPdfTemplateSchema,
+  insertTransformerSchema,
+  updateTransformerSchema,
+  insertMainPanelSchema,
+  updateMainPanelSchema,
+  insertBayPanelAssignmentSchema,
+  insertElectricalReservationSchema,
+  updateElectricalReservationSchema
 } from "@shared/schema";
 import { convertFormDateToDbDate } from "@shared/date-utils";
 import { validateRfpForProgression, canAdvanceToPhase } from "./validation";
@@ -5811,6 +5818,354 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error checking legal compliance:", error);
       res.status(500).json({ message: "Failed to check legal compliance" });
+    }
+  });
+
+  // ============================================================================
+  // ELECTRICAL CAPACITY MANAGEMENT API ROUTES
+  // ============================================================================
+
+  // Transformers endpoints
+  app.get("/api/transformers", async (req, res) => {
+    try {
+      const transformers = await storage.getTransformers();
+      res.json(transformers);
+    } catch (error) {
+      console.error("Error fetching transformers:", error);
+      res.status(500).json({ message: "Failed to fetch transformers" });
+    }
+  });
+
+  app.get("/api/properties/:propertyId/transformers", async (req, res) => {
+    try {
+      const propertyId = parseInt(req.params.propertyId);
+      if (isNaN(propertyId)) {
+        return res.status(400).json({ message: "Invalid property ID" });
+      }
+
+      const transformers = await storage.getTransformersByProperty(propertyId);
+      res.json(transformers);
+    } catch (error) {
+      console.error("Error fetching property transformers:", error);
+      res.status(500).json({ message: "Failed to fetch property transformers" });
+    }
+  });
+
+  app.post("/api/transformers", requireAuth, checkPermission('properties.create'), async (req, res) => {
+    try {
+      const parsed = insertTransformerSchema.parse(req.body);
+      const transformer = await storage.createTransformer(parsed);
+      res.status(201).json(transformer);
+    } catch (error) {
+      console.error("Transformer creation error:", error);
+      res.status(400).json({ 
+        message: "Invalid transformer data", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
+  app.patch("/api/transformers/:id", requireAuth, checkPermission('properties.edit'), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid transformer ID" });
+      }
+
+      const parsed = updateTransformerSchema.parse(req.body);
+      const transformer = await storage.updateTransformer(id, parsed);
+      
+      if (!transformer) {
+        return res.status(404).json({ message: "Transformer not found" });
+      }
+
+      res.json(transformer);
+    } catch (error) {
+      console.error("Transformer update error:", error);
+      res.status(400).json({ 
+        message: "Failed to update transformer", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
+  app.delete("/api/transformers/:id", requireAuth, checkPermission('properties.delete'), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid transformer ID" });
+      }
+
+      const deleted = await storage.deleteTransformer(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Transformer not found" });
+      }
+
+      res.status(204).send();
+    } catch (error) {
+      console.error("Transformer deletion error:", error);
+      res.status(500).json({ message: "Failed to delete transformer" });
+    }
+  });
+
+  // Main Panels endpoints
+  app.get("/api/transformers/:transformerId/panels", async (req, res) => {
+    try {
+      const transformerId = parseInt(req.params.transformerId);
+      if (isNaN(transformerId)) {
+        return res.status(400).json({ message: "Invalid transformer ID" });
+      }
+
+      const panels = await storage.getMainPanelsByTransformer(transformerId);
+      res.json(panels);
+    } catch (error) {
+      console.error("Error fetching main panels:", error);
+      res.status(500).json({ message: "Failed to fetch main panels" });
+    }
+  });
+
+  app.post("/api/main-panels", requireAuth, checkPermission('properties.create'), async (req, res) => {
+    try {
+      const parsed = insertMainPanelSchema.parse(req.body);
+      const panel = await storage.createMainPanel(parsed);
+      res.status(201).json(panel);
+    } catch (error) {
+      console.error("Main panel creation error:", error);
+      res.status(400).json({ 
+        message: "Invalid main panel data", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
+  app.patch("/api/main-panels/:id", requireAuth, checkPermission('properties.edit'), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid main panel ID" });
+      }
+
+      const parsed = updateMainPanelSchema.parse(req.body);
+      const panel = await storage.updateMainPanel(id, parsed);
+      
+      if (!panel) {
+        return res.status(404).json({ message: "Main panel not found" });
+      }
+
+      res.json(panel);
+    } catch (error) {
+      console.error("Main panel update error:", error);
+      res.status(400).json({ 
+        message: "Failed to update main panel", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
+  app.delete("/api/main-panels/:id", requireAuth, checkPermission('properties.delete'), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid main panel ID" });
+      }
+
+      const deleted = await storage.deleteMainPanel(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Main panel not found" });
+      }
+
+      res.status(204).send();
+    } catch (error) {
+      console.error("Main panel deletion error:", error);
+      res.status(500).json({ message: "Failed to delete main panel" });
+    }
+  });
+
+  // Bay Panel Assignments endpoints
+  app.get("/api/properties/:propertyId/bay-panel-assignments", async (req, res) => {
+    try {
+      const propertyId = parseInt(req.params.propertyId);
+      if (isNaN(propertyId)) {
+        return res.status(400).json({ message: "Invalid property ID" });
+      }
+
+      const assignments = await storage.getBayPanelAssignments(propertyId);
+      res.json(assignments);
+    } catch (error) {
+      console.error("Error fetching bay panel assignments:", error);
+      res.status(500).json({ message: "Failed to fetch bay panel assignments" });
+    }
+  });
+
+  app.post("/api/bay-panel-assignments", requireAuth, checkPermission('properties.edit'), async (req, res) => {
+    try {
+      const parsed = insertBayPanelAssignmentSchema.parse(req.body);
+      const assignment = await storage.createBayPanelAssignment(parsed);
+      res.status(201).json(assignment);
+    } catch (error) {
+      console.error("Bay panel assignment creation error:", error);
+      res.status(400).json({ 
+        message: "Invalid bay panel assignment data", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
+  app.delete("/api/bay-panel-assignments/:id", requireAuth, checkPermission('properties.edit'), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid assignment ID" });
+      }
+
+      const deleted = await storage.deleteBayPanelAssignment(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Bay panel assignment not found" });
+      }
+
+      res.status(204).send();
+    } catch (error) {
+      console.error("Bay panel assignment deletion error:", error);
+      res.status(500).json({ message: "Failed to delete bay panel assignment" });
+    }
+  });
+
+  // Electrical Reservations endpoints
+  app.get("/api/transformers/:transformerId/reservations", async (req, res) => {
+    try {
+      const transformerId = parseInt(req.params.transformerId);
+      if (isNaN(transformerId)) {
+        return res.status(400).json({ message: "Invalid transformer ID" });
+      }
+
+      const reservations = await storage.getElectricalReservations(transformerId);
+      res.json(reservations);
+    } catch (error) {
+      console.error("Error fetching electrical reservations:", error);
+      res.status(500).json({ message: "Failed to fetch electrical reservations" });
+    }
+  });
+
+  app.get("/api/rfp-requests/:rfpId/electrical-reservation", async (req, res) => {
+    try {
+      const rfpId = parseInt(req.params.rfpId);
+      if (isNaN(rfpId)) {
+        return res.status(400).json({ message: "Invalid RFP ID" });
+      }
+
+      const reservation = await storage.getElectricalReservationByRfp(rfpId);
+      res.json(reservation);
+    } catch (error) {
+      console.error("Error fetching RFP electrical reservation:", error);
+      res.status(500).json({ message: "Failed to fetch RFP electrical reservation" });
+    }
+  });
+
+  app.post("/api/electrical-reservations", requireAuth, checkPermission('rfp.create'), async (req, res) => {
+    try {
+      const parsed = insertElectricalReservationSchema.parse({
+        ...req.body,
+        createdBy: req.user?.username || 'unknown'
+      });
+      const reservation = await storage.createElectricalReservation(parsed);
+      res.status(201).json(reservation);
+    } catch (error) {
+      console.error("Electrical reservation creation error:", error);
+      res.status(400).json({ 
+        message: "Invalid electrical reservation data", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
+  app.patch("/api/electrical-reservations/:id", requireAuth, checkPermission('rfp.edit'), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid reservation ID" });
+      }
+
+      const parsed = updateElectricalReservationSchema.parse(req.body);
+      const reservation = await storage.updateElectricalReservation(id, parsed);
+      
+      if (!reservation) {
+        return res.status(404).json({ message: "Electrical reservation not found" });
+      }
+
+      res.json(reservation);
+    } catch (error) {
+      console.error("Electrical reservation update error:", error);
+      res.status(400).json({ 
+        message: "Failed to update electrical reservation", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
+  app.delete("/api/electrical-reservations/:id", requireAuth, checkPermission('rfp.delete'), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid reservation ID" });
+      }
+
+      const deleted = await storage.deleteElectricalReservation(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Electrical reservation not found" });
+      }
+
+      res.status(204).send();
+    } catch (error) {
+      console.error("Electrical reservation deletion error:", error);
+      res.status(500).json({ message: "Failed to delete electrical reservation" });
+    }
+  });
+
+  // Power Bank Dashboard - get capacity summary for a transformer
+  app.get("/api/transformers/:transformerId/capacity-summary", async (req, res) => {
+    try {
+      const transformerId = parseInt(req.params.transformerId);
+      if (isNaN(transformerId)) {
+        return res.status(400).json({ message: "Invalid transformer ID" });
+      }
+
+      const summary = await storage.getTransformerCapacitySummary(transformerId);
+      res.json(summary);
+    } catch (error) {
+      console.error("Error fetching transformer capacity summary:", error);
+      res.status(500).json({ message: "Failed to fetch transformer capacity summary" });
+    }
+  });
+
+  // Power Bank Dashboard - get capacity overview for all properties
+  app.get("/api/electrical-capacity/overview", async (req, res) => {
+    try {
+      const overview = await storage.getElectricalCapacityOverview();
+      res.json(overview);
+    } catch (error) {
+      console.error("Error fetching electrical capacity overview:", error);
+      res.status(500).json({ message: "Failed to fetch electrical capacity overview" });
+    }
+  });
+
+  // RFP Electrical Capacity Validation - check if capacity is available for RFP
+  app.post("/api/rfp-requests/:rfpId/validate-electrical-capacity", async (req, res) => {
+    try {
+      const rfpId = parseInt(req.params.rfpId);
+      if (isNaN(rfpId)) {
+        return res.status(400).json({ message: "Invalid RFP ID" });
+      }
+
+      const { transformerId, requestedKva } = req.body;
+      if (!transformerId || !requestedKva) {
+        return res.status(400).json({ message: "Transformer ID and requested kVA are required" });
+      }
+
+      const validation = await storage.validateElectricalCapacity(transformerId, requestedKva, rfpId);
+      res.json(validation);
+    } catch (error) {
+      console.error("Error validating electrical capacity:", error);
+      res.status(500).json({ message: "Failed to validate electrical capacity" });
     }
   });
 

@@ -1,0 +1,43 @@
+Objective:
+Enhance my RFPTracker app to manage, allocate, and reserve electrical service capacity across multiple industrial properties. Each property has an FPL-provided transformer with a defined capacity (kVA), feeding multiple main panels that distribute power to tenant bays. I need a system that ensures we never overcommit electrical capacity when preparing RFPs, LOIs, or leases.
+
+The system should enable me to:
+	1.	Track the total transformer capacity (kVA) per property.
+	2.	Map all main panels (with their individual capacity) connected to that transformer.
+	3.	Associate tenant bays with their respective main panels.
+	4.	Reserve electrical capacity (kVA) per tenant at lease signing.
+	5.	Pre-reserve (“soft hold”) capacity for active RFPs and leasing proposals.
+	6.	Auto-calculate remaining available capacity — updated dynamically as deals are signed or released.
+	7.	Trigger alerts/warnings if a new RFP exceeds available capacity.
+	8.	Maintain a reservation log with timestamps, tenant names, and kVA reserved.
+
+Desired Features:
+	•	Hierarchical structure: Property > Transformer > Main Panels > Tenant Bays.
+	•	Capacity split between “Hard Allocations” (signed leases) and “Soft Holds” (pending RFPs).
+	•	“Power Bank” dashboard showing:
+	•	Total Transformer Capacity.
+	•	Allocated Capacity.
+	•	Reserved (Soft Holds) Capacity.
+	•	Remaining Available Capacity.
+	•	Visual indicator (like a progress bar or heatmap) showing how “full” the transformer is.
+	•	Flexible enough to handle:
+	•	Multiple transformers per property.
+	•	Shared main panels across bays.
+	•	Simple data entry form for inputting tenant kVA needs during RFP creation.
+
+Technical Notes:
+	•	The app already tracks properties, leases, and bays.
+	•	This feature should integrate with the existing RFP workflow — when I draft a new RFP, I want to assign a kVA allocation.
+	•	Once an RFP converts to a signed lease, the “Soft Hold” becomes a “Hard Allocation.”
+	•	System should prevent overbooking and alert me if there’s not enough capacity left.
+
+Outcome:
+The system becomes my single source of truth for electrical capacity availability when issuing RFPs. It ensures I don’t promise more power than what’s actually available on the transformer and allows me to manage active deals in real time.
+
+⸻
+
+This prompt now:
+	•	Speaks directly to your RFP process.
+	•	Frames the capacity as a resource bank that RFPs draw from.
+	•	Defines business-critical safeguards (overcommit prevention).
+	•	Provides a clear UI/UX path (Power Bank view, Soft vs Hard Allocations).

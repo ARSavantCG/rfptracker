@@ -2354,7 +2354,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     setNewItem({
       description: "",
       quantity: 1,
-      unit: newItem.unit || "", // Keep unit for convenience
+      unit: "", // Always reset unit to blank
       unitPrice: "",
       totalPrice: "",
       tenantShare: 100
@@ -2371,6 +2371,29 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         }
       }, 100);
     }
+  };
+
+  // Add multiple blank line items (matching bid collection functionality)
+  const addMultipleBlankItems = (category: 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', count: number = 1) => {
+    const newItems = Array(count).fill(null).map((_, index) => ({
+      id: `${category}-${Date.now()}-${index}`,
+      description: "",
+      quantity: 1,
+      unit: "",
+      unitPrice: "",
+      totalPrice: "",
+      tenantShare: 100,
+    }));
+
+    setBudgetData(prev => ({
+      ...prev,
+      [category]: [...prev[category], ...newItems],
+    }));
+
+    toast({
+      title: "Line Items Added",
+      description: `${count} blank line item${count > 1 ? 's' : ''} added to ${category.replace(/([A-Z])/g, ' $1').toLowerCase().trim()}`,
+    });
   };
 
   const updateItem = (category: 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', itemId: string, updates: Partial<EvaluationLineItem>) => {
@@ -2798,14 +2821,38 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
               Import Design
             </Button>
           )}
-          <Button
-            size="sm"
-            onClick={() => setNewItemCategory(category)}
-            className="h-8"
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            Add Item
-          </Button>
+          <div className="flex gap-1 items-center">
+            <Button
+              size="sm"
+              onClick={() => setNewItemCategory(category)}
+              className="h-8"
+              variant="outline"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Line Item
+            </Button>
+            <Button 
+              size="sm" 
+              onClick={() => addMultipleBlankItems(category, 5)} 
+              variant="outline" 
+              className="h-8"
+              title="Add 5 line items at once"
+            >
+              +5
+            </Button>
+            <Button 
+              size="sm" 
+              onClick={() => addMultipleBlankItems(category, 10)} 
+              variant="outline" 
+              className="h-8"
+              title="Add 10 line items at once"
+            >
+              +10
+            </Button>
+            <span className="text-xs text-gray-500 ml-2">
+              Tip: Ctrl+Enter to save & add another
+            </span>
+          </div>
           <Button
             size="sm"
             variant="outline"

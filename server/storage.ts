@@ -25,6 +25,10 @@ import {
   romPilotLineItems,
   rfpGenerationHistory,
   executedLeases,
+  transformers,
+  mainPanels,
+  bayPanelAssignments,
+  electricalReservations,
   type RfpRequest, 
   type InsertRfpRequest, 
   type UpdateRfpRequest,
@@ -72,6 +76,17 @@ import {
   type ExecutedLease,
   type InsertExecutedLease,
   type RfpFile,
+  type Transformer,
+  type InsertTransformer,
+  type UpdateTransformer,
+  type MainPanel,
+  type InsertMainPanel,
+  type UpdateMainPanel,
+  type BayPanelAssignment,
+  type InsertBayPanelAssignment,
+  type ElectricalReservation,
+  type InsertElectricalReservation,
+  type UpdateElectricalReservation,
   users,
   type User,
   type UpsertUser,
@@ -88,7 +103,7 @@ import {
 export type PropertyAttachment = SchemaPropertyAttachment;
 export type InsertPropertyAttachment = SchemaInsertPropertyAttachment;
 import { db } from "./db";
-import { eq, desc, sql, like, or, and, asc, gte, lte } from "drizzle-orm";
+import { eq, desc, sql, like, or, and, asc, gte, lte, ne } from "drizzle-orm";
 import { formatDateForDisplay, parseInputDate } from "@shared/date-utils";
 
 export interface IStorage {
@@ -234,6 +249,87 @@ export interface IStorage {
   updateExecutedLease(id: number, updates: Partial<ExecutedLease>): Promise<ExecutedLease | undefined>;
   deleteExecutedLease(id: number): Promise<boolean>;
   getExecutedLease(id: number): Promise<ExecutedLease | undefined>;
+
+  // ============================================================================
+  // ELECTRICAL CAPACITY MANAGEMENT METHODS
+  // ============================================================================
+
+  // Transformer management
+  getTransformers(): Promise<Transformer[]>;
+  getTransformersByProperty(propertyId: number): Promise<Transformer[]>;
+  getTransformer(id: number): Promise<Transformer | undefined>;
+  createTransformer(transformer: InsertTransformer): Promise<Transformer>;
+  updateTransformer(id: number, updates: UpdateTransformer): Promise<Transformer | undefined>;
+  deleteTransformer(id: number): Promise<boolean>;
+
+  // Main Panel management
+  getMainPanelsByTransformer(transformerId: number): Promise<MainPanel[]>;
+  getMainPanel(id: number): Promise<MainPanel | undefined>;
+  createMainPanel(panel: InsertMainPanel): Promise<MainPanel>;
+  updateMainPanel(id: number, updates: UpdateMainPanel): Promise<MainPanel | undefined>;
+  deleteMainPanel(id: number): Promise<boolean>;
+
+  // Bay Panel Assignment management
+  getBayPanelAssignments(propertyId: number): Promise<BayPanelAssignment[]>;
+  getBayPanelAssignment(id: number): Promise<BayPanelAssignment | undefined>;
+  createBayPanelAssignment(assignment: InsertBayPanelAssignment): Promise<BayPanelAssignment>;
+  deleteBayPanelAssignment(id: number): Promise<boolean>;
+
+  // Electrical Reservation management
+  getElectricalReservations(transformerId: number): Promise<ElectricalReservation[]>;
+  getElectricalReservationByRfp(rfpId: number): Promise<ElectricalReservation | undefined>;
+  getElectricalReservation(id: number): Promise<ElectricalReservation | undefined>;
+  createElectricalReservation(reservation: InsertElectricalReservation): Promise<ElectricalReservation>;
+  updateElectricalReservation(id: number, updates: UpdateElectricalReservation): Promise<ElectricalReservation | undefined>;
+  deleteElectricalReservation(id: number): Promise<boolean>;
+
+  // Power Bank Dashboard methods
+  getTransformerCapacitySummary(transformerId: number): Promise<{
+    transformerId: number;
+    transformerName: string;
+    totalCapacityKva: number;
+    hardAllocationsKva: number;
+    softHoldsKva: number;
+    availableCapacityKva: number;
+    utilizationPercentage: number;
+    panels: Array<{
+      id: number;
+      panelName: string;
+      maxCapacityKva: number;
+    }>;
+    reservations: Array<{
+      id: number;
+      tenantName: string;
+      reservedKva: number;
+      reservationType: string;
+      reservationDate: Date;
+    }>;
+  }>;
+  
+  getElectricalCapacityOverview(): Promise<Array<{
+    propertyId: number;
+    propertyName: string;
+    transformers: Array<{
+      id: number;
+      transformerName: string;
+      totalCapacityKva: number;
+      hardAllocationsKva: number;
+      softHoldsKva: number;
+      availableCapacityKva: number;
+      utilizationPercentage: number;
+    }>;
+  }>>;
+
+  // RFP Electrical Capacity Validation
+  validateElectricalCapacity(transformerId: number, requestedKva: number, rfpId?: number): Promise<{
+    isValid: boolean;
+    availableCapacity: number;
+    requestedCapacity: number;
+    totalCapacity: number;
+    currentAllocations: number;
+    currentSoftHolds: number;
+    message: string;
+  }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1630,6 +1726,396 @@ class ExtendedDatabaseStorage extends DatabaseStorage {
       console.error("Error saving RFP format settings:", error);
       throw error;
     }
+  }
+
+  // ============================================================================
+  // ELECTRICAL CAPACITY MANAGEMENT METHODS IMPLEMENTATION
+  // ============================================================================
+
+  // Transformer management
+  async getTransformers(): Promise<Transformer[]> {
+    return await db
+      .select()
+      .from(transformers)
+      .where(eq(transformers.isActive, true))
+      .orderBy(transformers.propertyId, transformers.transformerName);
+  }
+
+  async getTransformersByProperty(propertyId: number): Promise<Transformer[]> {
+    return await db
+      .select()
+      .from(transformers)
+      .where(and(eq(transformers.propertyId, propertyId), eq(transformers.isActive, true)))
+      .orderBy(transformers.transformerName);
+  }
+
+  async getTransformer(id: number): Promise<Transformer | undefined> {
+    const [transformer] = await db
+      .select()
+      .from(transformers)
+      .where(eq(transformers.id, id));
+    return transformer || undefined;
+  }
+
+  async createTransformer(transformer: InsertTransformer): Promise<Transformer> {
+    const [created] = await db
+      .insert(transformers)
+      .values(transformer)
+      .returning();
+    return created;
+  }
+
+  async updateTransformer(id: number, updates: UpdateTransformer): Promise<Transformer | undefined> {
+    const [updated] = await db
+      .update(transformers)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(transformers.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteTransformer(id: number): Promise<boolean> {
+    const result = await db
+      .update(transformers)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(eq(transformers.id, id));
+    return result.rowCount! > 0;
+  }
+
+  // Main Panel management
+  async getMainPanelsByTransformer(transformerId: number): Promise<MainPanel[]> {
+    return await db
+      .select()
+      .from(mainPanels)
+      .where(and(eq(mainPanels.transformerId, transformerId), eq(mainPanels.isActive, true)))
+      .orderBy(mainPanels.panelName);
+  }
+
+  async getMainPanel(id: number): Promise<MainPanel | undefined> {
+    const [panel] = await db
+      .select()
+      .from(mainPanels)
+      .where(eq(mainPanels.id, id));
+    return panel || undefined;
+  }
+
+  async createMainPanel(panel: InsertMainPanel): Promise<MainPanel> {
+    const [created] = await db
+      .insert(mainPanels)
+      .values(panel)
+      .returning();
+    return created;
+  }
+
+  async updateMainPanel(id: number, updates: UpdateMainPanel): Promise<MainPanel | undefined> {
+    const [updated] = await db
+      .update(mainPanels)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(mainPanels.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteMainPanel(id: number): Promise<boolean> {
+    const result = await db
+      .update(mainPanels)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(eq(mainPanels.id, id));
+    return result.rowCount! > 0;
+  }
+
+  // Bay Panel Assignment management
+  async getBayPanelAssignments(propertyId: number): Promise<BayPanelAssignment[]> {
+    return await db
+      .select()
+      .from(bayPanelAssignments)
+      .where(eq(bayPanelAssignments.propertyId, propertyId))
+      .orderBy(bayPanelAssignments.bayId);
+  }
+
+  async getBayPanelAssignment(id: number): Promise<BayPanelAssignment | undefined> {
+    const [assignment] = await db
+      .select()
+      .from(bayPanelAssignments)
+      .where(eq(bayPanelAssignments.id, id));
+    return assignment || undefined;
+  }
+
+  async createBayPanelAssignment(assignment: InsertBayPanelAssignment): Promise<BayPanelAssignment> {
+    const [created] = await db
+      .insert(bayPanelAssignments)
+      .values(assignment)
+      .returning();
+    return created;
+  }
+
+  async deleteBayPanelAssignment(id: number): Promise<boolean> {
+    const result = await db
+      .delete(bayPanelAssignments)
+      .where(eq(bayPanelAssignments.id, id));
+    return result.rowCount! > 0;
+  }
+
+  // Electrical Reservation management
+  async getElectricalReservations(transformerId: number): Promise<ElectricalReservation[]> {
+    return await db
+      .select()
+      .from(electricalReservations)
+      .where(and(eq(electricalReservations.transformerId, transformerId), eq(electricalReservations.isActive, true)))
+      .orderBy(desc(electricalReservations.reservationDate));
+  }
+
+  async getElectricalReservationByRfp(rfpId: number): Promise<ElectricalReservation | undefined> {
+    const [reservation] = await db
+      .select()
+      .from(electricalReservations)
+      .where(and(eq(electricalReservations.rfpId, rfpId), eq(electricalReservations.isActive, true)));
+    return reservation || undefined;
+  }
+
+  async getElectricalReservation(id: number): Promise<ElectricalReservation | undefined> {
+    const [reservation] = await db
+      .select()
+      .from(electricalReservations)
+      .where(eq(electricalReservations.id, id));
+    return reservation || undefined;
+  }
+
+  async createElectricalReservation(reservation: InsertElectricalReservation): Promise<ElectricalReservation> {
+    const [created] = await db
+      .insert(electricalReservations)
+      .values(reservation)
+      .returning();
+    return created;
+  }
+
+  async updateElectricalReservation(id: number, updates: UpdateElectricalReservation): Promise<ElectricalReservation | undefined> {
+    const [updated] = await db
+      .update(electricalReservations)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(electricalReservations.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteElectricalReservation(id: number): Promise<boolean> {
+    const result = await db
+      .update(electricalReservations)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(eq(electricalReservations.id, id));
+    return result.rowCount! > 0;
+  }
+
+  // Power Bank Dashboard methods
+  async getTransformerCapacitySummary(transformerId: number): Promise<{
+    transformerId: number;
+    transformerName: string;
+    totalCapacityKva: number;
+    hardAllocationsKva: number;
+    softHoldsKva: number;
+    availableCapacityKva: number;
+    utilizationPercentage: number;
+    panels: Array<{
+      id: number;
+      panelName: string;
+      maxCapacityKva: number;
+    }>;
+    reservations: Array<{
+      id: number;
+      tenantName: string;
+      reservedKva: number;
+      reservationType: string;
+      reservationDate: Date;
+    }>;
+  }> {
+    // Get transformer details
+    const [transformer] = await db
+      .select()
+      .from(transformers)
+      .where(eq(transformers.id, transformerId));
+
+    if (!transformer) {
+      throw new Error('Transformer not found');
+    }
+
+    // Get all active reservations for this transformer
+    const reservations = await db
+      .select()
+      .from(electricalReservations)
+      .where(and(eq(electricalReservations.transformerId, transformerId), eq(electricalReservations.isActive, true)));
+
+    // Calculate totals
+    const hardAllocationsKva = reservations
+      .filter(r => r.reservationType === 'hard_allocation')
+      .reduce((sum, r) => sum + r.reservedKva, 0);
+
+    const softHoldsKva = reservations
+      .filter(r => r.reservationType === 'soft_hold')
+      .reduce((sum, r) => sum + r.reservedKva, 0);
+
+    const availableCapacityKva = transformer.totalCapacityKva - hardAllocationsKva - softHoldsKva;
+    const utilizationPercentage = ((hardAllocationsKva + softHoldsKva) / transformer.totalCapacityKva) * 100;
+
+    // Get main panels
+    const panels = await db
+      .select({
+        id: mainPanels.id,
+        panelName: mainPanels.panelName,
+        maxCapacityKva: mainPanels.maxCapacityKva,
+      })
+      .from(mainPanels)
+      .where(and(eq(mainPanels.transformerId, transformerId), eq(mainPanels.isActive, true)));
+
+    return {
+      transformerId: transformer.id,
+      transformerName: transformer.transformerName,
+      totalCapacityKva: transformer.totalCapacityKva,
+      hardAllocationsKva,
+      softHoldsKva,
+      availableCapacityKva,
+      utilizationPercentage: Math.round(utilizationPercentage * 100) / 100,
+      panels,
+      reservations: reservations.map(r => ({
+        id: r.id,
+        tenantName: r.tenantName,
+        reservedKva: r.reservedKva,
+        reservationType: r.reservationType,
+        reservationDate: r.reservationDate,
+      })),
+    };
+  }
+
+  async getElectricalCapacityOverview(): Promise<Array<{
+    propertyId: number;
+    propertyName: string;
+    transformers: Array<{
+      id: number;
+      transformerName: string;
+      totalCapacityKva: number;
+      hardAllocationsKva: number;
+      softHoldsKva: number;
+      availableCapacityKva: number;
+      utilizationPercentage: number;
+    }>;
+  }>> {
+    // Get all properties with their transformers
+    const propertiesWithTransformers = await db
+      .select({
+        propertyId: properties.id,
+        propertyName: properties.propertyName,
+        transformerId: transformers.id,
+        transformerName: transformers.transformerName,
+        totalCapacityKva: transformers.totalCapacityKva,
+      })
+      .from(properties)
+      .leftJoin(transformers, and(eq(transformers.propertyId, properties.id), eq(transformers.isActive, true)))
+      .orderBy(properties.propertyName, transformers.transformerName);
+
+    // Group by property and calculate summaries for each transformer
+    const propertyMap = new Map();
+
+    for (const row of propertiesWithTransformers) {
+      if (!propertyMap.has(row.propertyId)) {
+        propertyMap.set(row.propertyId, {
+          propertyId: row.propertyId,
+          propertyName: row.propertyName,
+          transformers: [],
+        });
+      }
+
+      if (row.transformerId) {
+        // Get reservations for this transformer
+        const reservations = await db
+          .select()
+          .from(electricalReservations)
+          .where(and(eq(electricalReservations.transformerId, row.transformerId), eq(electricalReservations.isActive, true)));
+
+        const hardAllocationsKva = reservations
+          .filter(r => r.reservationType === 'hard_allocation')
+          .reduce((sum, r) => sum + r.reservedKva, 0);
+
+        const softHoldsKva = reservations
+          .filter(r => r.reservationType === 'soft_hold')
+          .reduce((sum, r) => sum + r.reservedKva, 0);
+
+        const availableCapacityKva = row.totalCapacityKva - hardAllocationsKva - softHoldsKva;
+        const utilizationPercentage = ((hardAllocationsKva + softHoldsKva) / row.totalCapacityKva) * 100;
+
+        propertyMap.get(row.propertyId).transformers.push({
+          id: row.transformerId,
+          transformerName: row.transformerName,
+          totalCapacityKva: row.totalCapacityKva,
+          hardAllocationsKva,
+          softHoldsKva,
+          availableCapacityKva,
+          utilizationPercentage: Math.round(utilizationPercentage * 100) / 100,
+        });
+      }
+    }
+
+    return Array.from(propertyMap.values());
+  }
+
+  // RFP Electrical Capacity Validation
+  async validateElectricalCapacity(transformerId: number, requestedKva: number, rfpId?: number): Promise<{
+    isValid: boolean;
+    availableCapacity: number;
+    requestedCapacity: number;
+    totalCapacity: number;
+    currentAllocations: number;
+    currentSoftHolds: number;
+    message: string;
+  }> {
+    // Get transformer details
+    const [transformer] = await db
+      .select()
+      .from(transformers)
+      .where(eq(transformers.id, transformerId));
+
+    if (!transformer) {
+      throw new Error('Transformer not found');
+    }
+
+    // Get all active reservations for this transformer (excluding current RFP if updating)
+    let reservationsQuery = db
+      .select()
+      .from(electricalReservations)
+      .where(and(eq(electricalReservations.transformerId, transformerId), eq(electricalReservations.isActive, true)));
+
+    if (rfpId) {
+      reservationsQuery = reservationsQuery.where(ne(electricalReservations.rfpId, rfpId));
+    }
+
+    const reservations = await reservationsQuery;
+
+    // Calculate current allocations
+    const currentAllocations = reservations
+      .filter(r => r.reservationType === 'hard_allocation')
+      .reduce((sum, r) => sum + r.reservedKva, 0);
+
+    const currentSoftHolds = reservations
+      .filter(r => r.reservationType === 'soft_hold')
+      .reduce((sum, r) => sum + r.reservedKva, 0);
+
+    const availableCapacity = transformer.totalCapacityKva - currentAllocations - currentSoftHolds;
+    const isValid = requestedKva <= availableCapacity;
+
+    let message = '';
+    if (isValid) {
+      message = `Capacity validation passed. ${requestedKva} kVA can be allocated.`;
+    } else {
+      message = `Insufficient capacity. Requested ${requestedKva} kVA exceeds available capacity of ${availableCapacity} kVA.`;
+    }
+
+    return {
+      isValid,
+      availableCapacity,
+      requestedCapacity: requestedKva,
+      totalCapacity: transformer.totalCapacityKva,
+      currentAllocations,
+      currentSoftHolds,
+      message,
+    };
   }
 }
 

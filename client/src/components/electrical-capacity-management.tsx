@@ -401,8 +401,12 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
           <Zap className="h-12 w-12 mx-auto text-gray-400 mb-4" />
           <h3 className="text-lg font-semibold mb-2">Get Started with Electrical Management</h3>
           <p className="text-gray-600 mb-4">Add your first transformer to begin tracking electrical capacity</p>
-          <Button onClick={() => { setEditingTransformer(null); setShowTransformerDialog(true); }}>
-            <Plus className="h-4 w-4 mr-2" />
+          <Button 
+            size="sm" 
+            onClick={() => { setEditingTransformer(null); setShowTransformerDialog(true); }}
+            className="px-3 py-1.5 text-sm"
+          >
+            <Plus className="h-3 w-3 mr-1" />
             Add Your First Transformer
           </Button>
         </Card>

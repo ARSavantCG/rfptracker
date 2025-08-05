@@ -419,8 +419,9 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
                 size="sm" 
                 variant="outline"
                 onClick={() => { setEditingTransformer(null); setShowTransformerDialog(true); }}
+                className="px-2 py-1 text-xs"
               >
-                <Plus className="h-4 w-4 mr-2" />
+                <Plus className="h-3 w-3 mr-1" />
                 Transformer
               </Button>
               <Button 
@@ -428,8 +429,9 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
                 variant="outline"
                 onClick={() => { setEditingPanel(null); setShowPanelDialog(true); }}
                 disabled={transformers.length === 0}
+                className="px-2 py-1 text-xs"
               >
-                <Plus className="h-4 w-4 mr-2" />
+                <Plus className="h-3 w-3 mr-1" />
                 Main Panel
               </Button>
               <Button 
@@ -437,16 +439,18 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
                 variant="outline"
                 onClick={() => { setEditingAssignment(null); setShowAssignmentDialog(true); }}
                 disabled={mainPanels.length === 0}
+                className="px-2 py-1 text-xs"
               >
-                <Plus className="h-4 w-4 mr-2" />
+                <Plus className="h-3 w-3 mr-1" />
                 Bay Assignment
               </Button>
               <Button 
                 size="sm"
                 onClick={() => { setEditingReservation(null); setShowReservationDialog(true); }}
                 disabled={bayAssignments.length === 0}
+                className="px-2 py-1 text-xs"
               >
-                <Plus className="h-4 w-4 mr-2" />
+                <Plus className="h-3 w-3 mr-1" />
                 New Reservation
               </Button>
             </div>

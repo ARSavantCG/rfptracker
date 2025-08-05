@@ -67,6 +67,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
   const queryClient = useQueryClient();
   const [isGeneratingPdfs, setIsGeneratingPdfs] = useState(false);
   const [keyDates, setKeyDates] = useState<Array<{label: string, date: string}>>([]);
+  const [additionalAreas, setAdditionalAreas] = useState<Array<{id: string, description: string, squareFootage: string, notes: string}>>([]);
 
   // Fetch properties for project location
   const { data: properties = [] } = useQuery<Property[]>({
@@ -266,9 +267,26 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
     enabled: !!rfp?.id && isOpen,
   });
 
+  // Reset additional areas when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setAdditionalAreas([]);
+    }
+  }, [isOpen]);
+
   // Pre-populate form with existing data
   useEffect(() => {
     if (rfp && isOpen && properties.length > 0 && contacts.length > 0) {
+      // Load existing additional areas if they exist
+      if (existingInvitation?.additionalAreas) {
+        setAdditionalAreas(existingInvitation.additionalAreas.map((area: any) => ({
+          id: `existing-${Date.now()}-${Math.random()}`,
+          description: area.description || "",
+          squareFootage: area.squareFootage || "",
+          notes: area.notes || ""
+        })));
+      }
+      
       const defaultValues = {
         generateArchitectRfp: false,
         generateContractorRfp: false,
@@ -348,6 +366,14 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
         // Include contractor and architect selections
         selectedContractor: data.selectedContractor !== 'none' ? data.selectedContractor : null,
         selectedArchitect: data.selectedArchitect !== 'none' ? data.selectedArchitect : null,
+        // Include additional areas from step 3
+        additionalAreas: additionalAreas.filter(area => 
+          area.description.trim() && area.squareFootage.trim()
+        ).map(area => ({
+          description: area.description.trim(),
+          squareFootage: area.squareFootage.trim(),
+          notes: area.notes.trim() || null
+        })),
       };
       
       // Save or update invitation to bid record
@@ -867,8 +893,28 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
 
             {/* Area Breakdown */}
             <div className="space-y-4">
-              <h3 className="text-lg font-medium">Area Breakdown</h3>
-              {rfp?.areaBreakdown && rfp.areaBreakdown.length > 0 ? (
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-medium">Area Breakdown</h3>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const newArea = {
+                      id: `additional-${Date.now()}`,
+                      description: "",
+                      squareFootage: "",
+                      notes: ""
+                    };
+                    setAdditionalAreas(prev => [...prev, newArea]);
+                  }}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Area
+                </Button>
+              </div>
+              
+              {((rfp?.areaBreakdown && rfp.areaBreakdown.length > 0) || additionalAreas.length > 0) ? (
                 <div className="space-y-2">
                   {/* Column Headers */}
                   <div className="grid grid-cols-4 gap-4 pb-2 border-b text-sm font-medium text-gray-600">
@@ -878,23 +924,73 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                     <div></div>
                   </div>
                   
-                  {/* Area Items */}
-                  {rfp.areaBreakdown.map((area, index) => (
+                  {/* Original Area Items from Step 2 */}
+                  {rfp?.areaBreakdown && rfp.areaBreakdown.map((area, index) => (
                     <div key={area.id || index} className="grid grid-cols-4 gap-4 items-center py-2 border-b border-gray-100">
                       <div className="text-sm">{area.description}</div>
                       <div className="text-sm font-medium">{parseInt(area.squareFootage || '0').toLocaleString()} SF</div>
                       <div className="text-sm text-gray-600">{area.notes || '—'}</div>
-                      <div></div>
+                      <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">From Step 2</div>
                     </div>
                   ))}
                   
-                  <div className="text-sm text-gray-500 italic">
-                    Area breakdown defined during RFP validation phase
-                  </div>
+                  {/* Additional Area Items */}
+                  {additionalAreas.map((area, index) => (
+                    <div key={area.id} className="grid grid-cols-4 gap-4 items-center py-2 border-b border-gray-100">
+                      <Input
+                        placeholder="Area description"
+                        value={area.description}
+                        onChange={(e) => {
+                          const updatedAreas = [...additionalAreas];
+                          updatedAreas[index].description = e.target.value;
+                          setAdditionalAreas(updatedAreas);
+                        }}
+                        className="text-sm"
+                      />
+                      <Input
+                        placeholder="0"
+                        type="number"
+                        value={area.squareFootage}
+                        onChange={(e) => {
+                          const updatedAreas = [...additionalAreas];
+                          updatedAreas[index].squareFootage = e.target.value;
+                          setAdditionalAreas(updatedAreas);
+                        }}
+                        className="text-sm"
+                      />
+                      <Input
+                        placeholder="Notes (optional)"
+                        value={area.notes}
+                        onChange={(e) => {
+                          const updatedAreas = [...additionalAreas];
+                          updatedAreas[index].notes = e.target.value;
+                          setAdditionalAreas(updatedAreas);
+                        }}
+                        className="text-sm"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setAdditionalAreas(prev => prev.filter((_, i) => i !== index));
+                        }}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  
+                  {rfp?.areaBreakdown && rfp.areaBreakdown.length > 0 && (
+                    <div className="text-sm text-gray-500 italic">
+                      Area breakdown defined during RFP validation phase
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="text-center text-gray-500 py-4 border border-dashed border-gray-300 rounded-lg">
-                  No area breakdown defined. Areas can be defined during RFP validation phase.
+                  No area breakdown defined. Areas can be defined during RFP validation phase or added here.
                 </div>
               )}
             </div>

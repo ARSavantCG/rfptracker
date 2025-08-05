@@ -5178,8 +5178,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Property not found" });
       }
 
-      const totalCapacity = transformers.reduce((sum, t) => sum + (t.capacity || 0), 0);
-      const totalReserved = allReservations.reduce((sum, r) => sum + (r.reservedCapacity || 0), 0);
+      const totalCapacity = transformers.reduce((sum, t) => sum + (t.totalCapacityKva || 0), 0);
+      const totalReserved = allReservations.reduce((sum, r) => sum + (r.reservedKva || 0), 0);
       const availableCapacity = totalCapacity - totalReserved;
 
       const html = `
@@ -5248,9 +5248,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             <tbody>
               ${transformers.map(transformer => `
                 <tr>
-                  <td>${transformer.name}</td>
-                  <td>${transformer.capacity || 0}</td>
-                  <td>${transformer.location || 'N/A'}</td>
+                  <td>${transformer.transformerName}</td>
+                  <td>${transformer.totalCapacityKva || 0}</td>
+                  <td>${transformer.fplId || 'N/A'}</td>
                   <td>${transformer.isActive ? 'Active' : 'Inactive'}</td>
                 </tr>
               `).join('')}
@@ -5274,8 +5274,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 <tr>
                   <td>${panel.panelName}</td>
                   <td>${panel.transformerId || 'N/A'}</td>
-                  <td>${panel.capacity || 0}</td>
-                  <td>${panel.location || 'N/A'}</td>
+                  <td>${panel.maxCapacityKva || 0}</td>
+                  <td>${panel.panelLocation || 'N/A'}</td>
                 </tr>
               `).join('')}
             </tbody>
@@ -5297,8 +5297,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               ${allReservations.map(reservation => `
                 <tr>
                   <td>${reservation.tenantName || 'N/A'}</td>
-                  <td>${reservation.reservedCapacity || 0}</td>
-                  <td>${reservation.description || 'N/A'}</td>
+                  <td>${reservation.reservedKva || 0}</td>
+                  <td>${reservation.notes || 'N/A'}</td>
                   <td>${reservation.isActive ? 'Active' : 'Inactive'}</td>
                 </tr>
               `).join('')}

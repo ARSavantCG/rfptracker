@@ -390,11 +390,12 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-4 h-8">
+            <TabsList className="grid w-full grid-cols-5 h-8">
               <TabsTrigger value="overview" className="text-xs">Overview</TabsTrigger>
               <TabsTrigger value="transformers" className="text-xs">Transformers</TabsTrigger>
               <TabsTrigger value="panels" className="text-xs">Main Panels</TabsTrigger>
               <TabsTrigger value="assignments" className="text-xs">Bay Assignments</TabsTrigger>
+              <TabsTrigger value="reservations" className="text-xs">Reservations</TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview" className="space-y-2 mt-3">
@@ -664,6 +665,78 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
                   </CardContent>
                 </Card>
               </div>
+            </TabsContent>
+
+            <TabsContent value="reservations" className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-medium">Electrical Reservations</h3>
+                <Button onClick={() => { setEditingReservation(null); setShowReservationDialog(true); }}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create New Reservation
+                </Button>
+              </div>
+
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Reserved For</TableHead>
+                    <TableHead>Bay Assignment</TableHead>
+                    <TableHead>Capacity (kVA)</TableHead>
+                    <TableHead>Start Date</TableHead>
+                    <TableHead>End Date</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {reservations.map((reservation: ElectricalReservation) => {
+                    const assignment = bayAssignments.find((a: BayPanelAssignment) => a.id === reservation.bayPanelAssignmentId);
+                    return (
+                      <TableRow key={reservation.id}>
+                        <TableCell className="font-medium">{reservation.reservedFor}</TableCell>
+                        <TableCell>{assignment?.bayConfiguration || 'N/A'}</TableCell>
+                        <TableCell>{reservation.reservedCapacity.toLocaleString()}</TableCell>
+                        <TableCell>{formatDate(reservation.startDate)}</TableCell>
+                        <TableCell>{reservation.endDate ? formatDate(reservation.endDate) : 'Open-ended'}</TableCell>
+                        <TableCell>
+                          <Badge variant={
+                            reservation.status === 'active' ? 'default' : 
+                            reservation.status === 'pending' ? 'secondary' : 'destructive'
+                          }>
+                            {reservation.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => { setEditingReservation(reservation); setShowReservationDialog(true); }}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => deleteReservationMutation.mutate(reservation.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+
+              {reservations.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  <Building2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p className="mb-2">No electrical reservations yet</p>
+                  <p className="text-sm">Start by adding transformers and main panels, then create bay assignments before making reservations.</p>
+                </div>
+              )}
             </TabsContent>
           </Tabs>
         </CardContent>

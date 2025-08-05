@@ -233,7 +233,7 @@ export default function Properties() {
                         <Card 
                           key={property.id} 
                           className={`
-                            transition-all duration-300 ease-in-out
+                            transition-all duration-300 ease-in-out overflow-visible
                             ${index > 0 && !effectiveExpansion ? 'absolute top-0 left-0 right-0' : 'relative'}
                             ${isVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}
                             hover:shadow-lg
@@ -248,8 +248,8 @@ export default function Properties() {
                           }}
 
                         >
-                      <CardHeader>
-                        <div className="flex items-start justify-between">
+                      <CardHeader className="relative overflow-visible">
+                        <div className="flex items-start justify-between overflow-visible">
                           <div className="flex items-center space-x-3 flex-1 min-w-0">
                             <div className="relative p-2 bg-blue-100 rounded-lg">
                               <Building className="h-6 w-6 text-blue-600" />
@@ -272,7 +272,7 @@ export default function Properties() {
                                     <SelectTrigger className="bg-white shadow-sm hover:shadow-md px-2 py-1 text-xs font-medium border border-gray-300 hover:border-blue-400 hover:bg-blue-50 w-20 h-6">
                                       <SelectValue />
                                     </SelectTrigger>
-                                    <SelectContent align="start">
+                                    <SelectContent align="start" className="z-50 min-w-32">
                                       <SelectItem value="stacked">
                                         <div className="flex items-center">
                                           <Layers className="h-3 w-3 mr-1" />

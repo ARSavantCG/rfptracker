@@ -5157,16 +5157,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const propertyId = parseInt(req.params.propertyId);
       const property = await storage.getProperty(propertyId);
       const transformers = await storage.getTransformersByProperty(propertyId);
-      const mainPanels = await storage.getMainPanelsByProperty(propertyId);
-      const reservations = await storage.getElectricalReservationsByProperty(propertyId);
-      const bayAssignments = await storage.getBayPanelAssignmentsByProperty(propertyId);
+      
+      // Get all main panels for all transformers at this property
+      const allMainPanels = [];
+      for (const transformer of transformers) {
+        const panels = await storage.getMainPanelsByTransformer(transformer.id);
+        allMainPanels.push(...panels);
+      }
+      
+      // Get all electrical reservations for all transformers at this property
+      const allReservations = [];
+      for (const transformer of transformers) {
+        const reservations = await storage.getElectricalReservations(transformer.id);
+        allReservations.push(...reservations);
+      }
+      
+      const bayAssignments = await storage.getBayPanelAssignments(propertyId);
       
       if (!property) {
         return res.status(404).json({ message: "Property not found" });
       }
 
       const totalCapacity = transformers.reduce((sum, t) => sum + (t.capacity || 0), 0);
-      const totalReserved = reservations.reduce((sum, r) => sum + (r.reservedCapacity || 0), 0);
+      const totalReserved = allReservations.reduce((sum, r) => sum + (r.reservedCapacity || 0), 0);
       const availableCapacity = totalCapacity - totalReserved;
 
       const html = `
@@ -5216,9 +5229,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           <h2>System Status</h2>
           <table>
             <tr><td>Transformers</td><td>${transformers.length}</td></tr>
-            <tr><td>Main Panels</td><td>${mainPanels.length}</td></tr>
+            <tr><td>Main Panels</td><td>${allMainPanels.length}</td></tr>
             <tr><td>Bay Assignments</td><td>${bayAssignments.length}</td></tr>
-            <tr><td>Active Reservations</td><td>${reservations.length}</td></tr>
+            <tr><td>Active Reservations</td><td>${allReservations.length}</td></tr>
           </table>
 
           ${transformers.length > 0 ? `
@@ -5245,7 +5258,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           </table>
           ` : ''}
 
-          ${mainPanels.length > 0 ? `
+          ${allMainPanels.length > 0 ? `
           <h2>Main Panels</h2>
           <table>
             <thead>
@@ -5257,9 +5270,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               </tr>
             </thead>
             <tbody>
-              ${mainPanels.map(panel => `
+              ${allMainPanels.map(panel => `
                 <tr>
-                  <td>${panel.panelId}</td>
+                  <td>${panel.panelName}</td>
                   <td>${panel.transformerId || 'N/A'}</td>
                   <td>${panel.capacity || 0}</td>
                   <td>${panel.location || 'N/A'}</td>
@@ -5269,7 +5282,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           </table>
           ` : ''}
 
-          ${reservations.length > 0 ? `
+          ${allReservations.length > 0 ? `
           <h2>Active Reservations</h2>
           <table>
             <thead>
@@ -5281,12 +5294,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
               </tr>
             </thead>
             <tbody>
-              ${reservations.map(reservation => `
+              ${allReservations.map(reservation => `
                 <tr>
                   <td>${reservation.tenantName || 'N/A'}</td>
                   <td>${reservation.reservedCapacity || 0}</td>
                   <td>${reservation.description || 'N/A'}</td>
-                  <td>${reservation.status || 'Active'}</td>
+                  <td>${reservation.isActive ? 'Active' : 'Inactive'}</td>
                 </tr>
               `).join('')}
             </tbody>

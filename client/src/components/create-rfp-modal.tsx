@@ -12,13 +12,12 @@ import { getCurrentDateString } from "@shared/date-utils";
 import { type Property, type Contact, type BayConfiguration } from "@shared/schema";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Grid3x3 } from "lucide-react";
+import { Grid3x3, ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { X } from "lucide-react";
 
 const createRfpSchema = z.object({
@@ -335,22 +334,24 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>RFP Request *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select request source" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {(contacts as Contact[])
-                          .filter((contact: Contact) => contact.type === "owner")
-                          .map((contact: Contact) => (
-                            <SelectItem key={contact.id} value={`${contact.name} - ${contact.company}`}>
-                              {contact.name} - {contact.company}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <div className="relative">
+                        <select
+                          {...field}
+                          className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background data-[placeholder]:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none"
+                        >
+                          <option value="">Select request source</option>
+                          {(contacts as Contact[])
+                            .filter((contact: Contact) => contact.type === "owner")
+                            .map((contact: Contact) => (
+                              <option key={contact.id} value={`${contact.name} - ${contact.company}`}>
+                                {contact.name} - {contact.company}
+                              </option>
+                            ))}
+                        </select>
+                        <ChevronDown className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50" />
+                      </div>
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -406,22 +407,24 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Development Contact</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select development contact" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {contacts
-                          .filter((contact) => contact.tags && contact.tags.includes("Development"))
-                          .map((contact) => (
-                            <SelectItem key={contact.id} value={`${contact.name} - ${contact.company}`}>
-                              {contact.name} - {contact.company}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <div className="relative">
+                        <select
+                          {...field}
+                          className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background data-[placeholder]:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none"
+                        >
+                          <option value="">Select development contact</option>
+                          {contacts
+                            .filter((contact) => contact.tags && contact.tags.includes("Development"))
+                            .map((contact) => (
+                              <option key={contact.id} value={`${contact.name} - ${contact.company}`}>
+                                {contact.name} - {contact.company}
+                              </option>
+                            ))}
+                        </select>
+                        <ChevronDown className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50" />
+                      </div>
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}

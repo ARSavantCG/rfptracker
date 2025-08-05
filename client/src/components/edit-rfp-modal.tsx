@@ -8,14 +8,13 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { PropertySelector } from "./property-selector";
 import { FileUpload } from "./file-upload";
 import { BayConfigurationModal } from "./bay-configuration-modal";
-import { Edit, Save, X, Download, Trash2, Grid3x3 } from "lucide-react";
+import { Edit, Save, X, Download, Trash2, Grid3x3, ChevronDown } from "lucide-react";
 import { formatDateForInput } from "@shared/date-utils";
 import type { RfpRequest, RfpFile, Property, BayConfiguration, Contact } from "@shared/schema";
 
@@ -478,22 +477,24 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Sent By</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select property owner" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {(contacts as Contact[])
-                          .filter((contact: Contact) => contact.type === "owner")
-                          .map((contact: Contact) => (
-                            <SelectItem key={contact.id} value={`${contact.name} - ${contact.company}`}>
-                              {contact.name} - {contact.company}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <div className="relative">
+                        <select
+                          {...field}
+                          className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background data-[placeholder]:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none"
+                        >
+                          <option value="">Select property owner</option>
+                          {(contacts as Contact[])
+                            .filter((contact: Contact) => contact.type === "owner")
+                            .map((contact: Contact) => (
+                              <option key={contact.id} value={`${contact.name} - ${contact.company}`}>
+                                {contact.name} - {contact.company}
+                              </option>
+                            ))}
+                        </select>
+                        <ChevronDown className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50" />
+                      </div>
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -535,22 +536,24 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Development Contact</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select development contact" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {(contacts as Contact[])
-                          .filter((contact: Contact) => contact.tags && contact.tags.includes("Development"))
-                          .map((contact: Contact) => (
-                            <SelectItem key={contact.id} value={`${contact.name} - ${contact.company}`}>
-                              {contact.name} - {contact.company}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <div className="relative">
+                        <select
+                          {...field}
+                          className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background data-[placeholder]:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none"
+                        >
+                          <option value="">Select development contact</option>
+                          {(contacts as Contact[])
+                            .filter((contact: Contact) => contact.tags && contact.tags.includes("Development"))
+                            .map((contact: Contact) => (
+                              <option key={contact.id} value={`${contact.name} - ${contact.company}`}>
+                                {contact.name} - {contact.company}
+                              </option>
+                            ))}
+                        </select>
+                        <ChevronDown className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50" />
+                      </div>
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -701,19 +704,21 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Status</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select status" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="received">Received</SelectItem>
-                        <SelectItem value="in-progress">In Progress</SelectItem>
-                        <SelectItem value="completed">Completed</SelectItem>
-                        <SelectItem value="on-hold">On Hold</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <div className="relative">
+                        <select
+                          {...field}
+                          className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background data-[placeholder]:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none"
+                        >
+                          <option value="">Select status</option>
+                          <option value="received">Received</option>
+                          <option value="in-progress">In Progress</option>
+                          <option value="completed">Completed</option>
+                          <option value="on-hold">On Hold</option>
+                        </select>
+                        <ChevronDown className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50" />
+                      </div>
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -725,21 +730,23 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Workflow Phase</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select phase" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="rfp-entry">RFP Entry</SelectItem>
-                        <SelectItem value="rfp-validation">RFP Validation</SelectItem>
-                        <SelectItem value="invitation-to-bid">Invitation to Bid</SelectItem>
-                        <SelectItem value="bid-collection">Bid Collection</SelectItem>
-                        <SelectItem value="evaluation">Evaluation</SelectItem>
-                        <SelectItem value="publish">Publish</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <div className="relative">
+                        <select
+                          {...field}
+                          className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background data-[placeholder]:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none"
+                        >
+                          <option value="">Select phase</option>
+                          <option value="rfp-entry">RFP Entry</option>
+                          <option value="rfp-validation">RFP Validation</option>
+                          <option value="invitation-to-bid">Invitation to Bid</option>
+                          <option value="bid-collection">Bid Collection</option>
+                          <option value="evaluation">Evaluation</option>
+                          <option value="publish">Publish</option>
+                        </select>
+                        <ChevronDown className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50" />
+                      </div>
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}

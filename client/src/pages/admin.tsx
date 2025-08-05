@@ -6,10 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Shield, Users, Settings, Edit, Trash2, CheckCircle, XCircle, User as UserIcon, KeyRound, FileText, HardDrive, Layout, Clock, Scale } from "lucide-react";
+import { Shield, Users, Settings, Edit, Trash2, CheckCircle, XCircle, User as UserIcon, KeyRound, FileText, HardDrive, Layout, Clock, Scale, ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
@@ -558,17 +557,20 @@ function ContactPermissionsDialog({ contact, open, onOpenChange, onSave, isSavin
           {/* User Role Selection */}
           <div className="space-y-4">
             <label className="text-base font-medium">User Role</label>
-            <Select value={selectedRole} onValueChange={handleRoleChange}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a role" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="admin">Admin - Full system access</SelectItem>
-                <SelectItem value="manager">Manager - Advanced access</SelectItem>
-                <SelectItem value="user">User - View only access</SelectItem>
-                <SelectItem value="custom">Custom - Manual permissions</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="relative">
+              <select
+                value={selectedRole}
+                onChange={(e) => handleRoleChange(e.target.value)}
+                className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background data-[placeholder]:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none"
+              >
+                <option value="">Select a role</option>
+                <option value="admin">Admin - Full system access</option>
+                <option value="manager">Manager - Advanced access</option>
+                <option value="user">User - View only access</option>
+                <option value="custom">Custom - Manual permissions</option>
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50" />
+            </div>
             <p className="text-sm text-gray-600">
               Selecting a role applies default permissions. You can customize individual permissions below.
             </p>
@@ -1066,16 +1068,20 @@ function UserEditDialog({ user, open, onOpenChange, onSave, isSaving }: UserEdit
           {/* Role Selection */}
           <div className="space-y-3">
             <label htmlFor="role" className="text-base font-medium">User Role</label>
-            <Select value={role} onValueChange={applyRolePermissions}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="admin">Admin - Full system access</SelectItem>
-                <SelectItem value="manager">Manager - Create and edit content</SelectItem>
-                <SelectItem value="user">User - View only access</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="relative">
+              <select
+                id="role"
+                value={role}
+                onChange={(e) => applyRolePermissions(e.target.value)}
+                className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background data-[placeholder]:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none"
+              >
+                <option value="">Select a role</option>
+                <option value="admin">Admin - Full system access</option>
+                <option value="manager">Manager - Create and edit content</option>
+                <option value="user">User - View only access</option>
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50" />
+            </div>
             <p className="text-sm text-gray-600">
               Selecting a role applies default permissions. You can customize individual permissions below.
             </p>

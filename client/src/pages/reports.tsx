@@ -5,8 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Download, FileText, Calendar, TrendingUp, Clock, CheckCircle, AlertTriangle, BarChart3 } from "lucide-react";
+import { Download, FileText, Calendar, TrendingUp, Clock, CheckCircle, AlertTriangle, BarChart3, ChevronDown } from "lucide-react";
 import Navigation from "@/components/navigation";
 import { CustomReportModal } from "@/components/custom-report-modal";
 import { format, parseISO, isAfter, isBefore, addDays } from "date-fns";
@@ -163,60 +162,60 @@ export default function Reports() {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="status-filter">Status</Label>
-                <Select
-                  value={filters.status || ""}
-                  onValueChange={(value) => setFilters({ ...filters, status: value || undefined })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="All statuses" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All statuses</SelectItem>
-                    <SelectItem value="received">Received</SelectItem>
-                    <SelectItem value="in-progress">In Progress</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                    <SelectItem value="on-hold">On Hold</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="relative">
+                  <select
+                    id="status-filter"
+                    value={filters.status || ""}
+                    onChange={(e) => setFilters({ ...filters, status: e.target.value || undefined })}
+                    className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background data-[placeholder]:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none"
+                  >
+                    <option value="">All statuses</option>
+                    <option value="received">Received</option>
+                    <option value="in-progress">In Progress</option>
+                    <option value="completed">Completed</option>
+                    <option value="on-hold">On Hold</option>
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50" />
+                </div>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="property-filter">Property</Label>
-                <Select
-                  value={filters.property || ""}
-                  onValueChange={(value) => setFilters({ ...filters, property: value || undefined })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="All properties" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All properties</SelectItem>
+                <div className="relative">
+                  <select
+                    id="property-filter"
+                    value={filters.property || ""}
+                    onChange={(e) => setFilters({ ...filters, property: e.target.value || undefined })}
+                    className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background data-[placeholder]:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none"
+                  >
+                    <option value="">All properties</option>
                     {properties.map((property) => (
-                      <SelectItem key={property.id} value={property.propertyName}>
+                      <option key={property.id} value={property.propertyName}>
                         {property.propertyName}
-                      </SelectItem>
+                      </option>
                     ))}
-                  </SelectContent>
-                </Select>
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50" />
+                </div>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="due-filter">Due Within</Label>
-                <Select
-                  value={filters.dueInDays?.toString() || ""}
-                  onValueChange={(value) => setFilters({ ...filters, dueInDays: value === "all" ? undefined : parseInt(value) })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Any time" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Any time</SelectItem>
-                    <SelectItem value="1">1 day</SelectItem>
-                    <SelectItem value="3">3 days</SelectItem>
-                    <SelectItem value="7">1 week</SelectItem>
-                    <SelectItem value="30">1 month</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="relative">
+                  <select
+                    id="due-filter"
+                    value={filters.dueInDays?.toString() || ""}
+                    onChange={(e) => setFilters({ ...filters, dueInDays: e.target.value === "all" ? undefined : parseInt(e.target.value) })}
+                    className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background data-[placeholder]:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none"
+                  >
+                    <option value="">Any time</option>
+                    <option value="1">1 day</option>
+                    <option value="3">3 days</option>
+                    <option value="7">1 week</option>
+                    <option value="30">1 month</option>
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50" />
+                </div>
               </div>
 
               <div className="space-y-2">

@@ -302,7 +302,7 @@ export default function Properties() {
                               <PropertyFormModal 
                                 property={property}
                                 trigger={
-                                  <Button variant="outline" size="sm">
+                                  <Button variant="outline" size="sm" className="h-9 p-0 w-9 flex items-center justify-center">
                                     <Edit className="h-4 w-4" />
                                   </Button>
                                 }
@@ -331,6 +331,7 @@ export default function Properties() {
                                   }
                                 }}
                                 title="Print property report"
+                                className="h-9 p-0 w-9 flex items-center justify-center"
                               >
                                 <Printer className="h-4 w-4" />
                               </Button>

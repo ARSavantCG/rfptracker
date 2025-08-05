@@ -716,7 +716,10 @@ export class DatabaseStorage implements IStorage {
     
     if (newPhase === "rfp-entry") {
       newStatus = "received";
+    } else if (newPhase === "rfp-validation") {
+      newStatus = "received"; // Keep purple status during validation phase
     }
+    // Status changes to "in-progress" when advancing beyond validation phase
     // Note: 'publish' phase stays 'in-progress' until explicitly marked complete
     
     const [updated] = await db

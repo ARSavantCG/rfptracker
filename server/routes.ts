@@ -1341,10 +1341,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Automatically advance workflow from "rfp-entry" to "rfp-validation" after creation
       // Step 1 (RFP Entry) is now complete, move to Step 2 (RFP Validation)
+      // Keep status as "received" (purple) until validation team completes Step 2
       console.log('Auto-advancing RFP workflow from rfp-entry to rfp-validation');
       const advancedRequest = await storage.updateRfpRequest(newRequest.id, {
-        workflowPhase: "rfp-validation",
-        status: "in-progress"
+        workflowPhase: "rfp-validation"
+        // status remains "received" until Step 2 validation is completed
       });
       
       res.status(201).json(advancedRequest || newRequest);
@@ -1446,10 +1447,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Automatically advance workflow from "rfp-entry" to "rfp-validation" after creation
       // Step 1 (RFP Entry) is now complete, move to Step 2 (RFP Validation)
+      // Keep status as "received" (purple) until validation team completes Step 2
       console.log('Auto-advancing RFP workflow from rfp-entry to rfp-validation');
       const advancedRequest = await storage.updateRfpRequest(newRequest.id, {
-        workflowPhase: "rfp-validation",
-        status: "in-progress"
+        workflowPhase: "rfp-validation"
+        // status remains "received" until Step 2 validation is completed
       });
       
       res.status(201).json(advancedRequest || newRequest);

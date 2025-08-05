@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+// Removed Select import - using native HTML selects for consistency
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
@@ -813,23 +813,23 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>General Contractor</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select contractor" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="none">No contractor selected</SelectItem>
+                      <div className="relative">
+                        <select
+                          value={field.value || ""}
+                          onChange={(e) => field.onChange(e.target.value)}
+                          className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background data-[placeholder]:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none"
+                        >
+                          <option value="">No contractor selected</option>
                           {contacts
                             .filter(contact => contact.type === 'contractor')
                             .map(contact => (
-                              <SelectItem key={contact.id} value={contact.name}>
+                              <option key={contact.id} value={contact.name}>
                                 {contact.name} {contact.company && `(${contact.company})`}
-                              </SelectItem>
+                              </option>
                             ))}
-                        </SelectContent>
-                      </Select>
+                        </select>
+                        <ChevronDown className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50" />
+                      </div>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -841,23 +841,23 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Architect</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select architect" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="none">No architect selected</SelectItem>
+                      <div className="relative">
+                        <select
+                          value={field.value || ""}
+                          onChange={(e) => field.onChange(e.target.value)}
+                          className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background data-[placeholder]:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none"
+                        >
+                          <option value="">No architect selected</option>
                           {contacts
                             .filter(contact => contact.type === 'architect')
                             .map(contact => (
-                              <SelectItem key={contact.id} value={contact.name}>
+                              <option key={contact.id} value={contact.name}>
                                 {contact.name} {contact.company && `(${contact.company})`}
-                              </SelectItem>
+                              </option>
                             ))}
-                        </SelectContent>
-                      </Select>
+                        </select>
+                        <ChevronDown className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50" />
+                      </div>
                       <FormMessage />
                     </FormItem>
                   )}

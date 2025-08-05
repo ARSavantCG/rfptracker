@@ -158,7 +158,7 @@ export function HierarchicalPropertySelector({ value, onChange, className }: Hie
                             onClick={() => handlePropertySelect(property.id.toString())}
                           >
                             <Building className="mr-2 h-3 w-3 text-muted-foreground" />
-                            <span>Building {property.building}</span>
+                            <span>{property.propertyName} - Building {property.building}</span>
                             {value === property.id.toString() && (
                               <div className="ml-auto h-2 w-2 rounded-full bg-primary" />
                             )}

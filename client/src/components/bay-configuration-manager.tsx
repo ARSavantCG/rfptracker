@@ -122,6 +122,7 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
       toast({
         title: "Success",
         description: "Bay configurations updated successfully",
+        duration: 4000,
       });
       setIsOpen(false);
     },
@@ -130,6 +131,7 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to update bay configurations",
         variant: "destructive",
+        duration: 6000,
       });
     },
   });

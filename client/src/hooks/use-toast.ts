@@ -149,10 +149,18 @@ function toast({ ...props }: Toast) {
     })
   const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id })
 
+  // Enhanced default configuration for better visibility
+  const enhancedProps = {
+    duration: 4000, // Default 4 seconds
+    ...props,
+    // For destructive toasts, use longer duration
+    ...(props.variant === "destructive" && { duration: 6000 }),
+  }
+
   dispatch({
     type: "ADD_TOAST",
     toast: {
-      ...props,
+      ...enhancedProps,
       id,
       open: true,
       onOpenChange: (open) => {

@@ -110,6 +110,7 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
       toast({
         title: "Success",
         description: "Property deleted successfully",
+        duration: 4000,
       });
       setOpen(false);
       onSuccess?.();

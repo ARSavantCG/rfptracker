@@ -18,25 +18,28 @@ export function Toaster() {
           <Toast 
             key={id} 
             {...props} 
-            className="min-w-[600px] min-h-[140px] p-8 max-w-[700px]"
+            className="!min-w-[700px] !min-h-[160px] !p-8 !max-w-[800px] !overflow-visible"
             style={{
-              minWidth: '600px',
-              minHeight: '140px', 
-              maxWidth: '700px',
-              padding: '32px',
+              minWidth: '700px !important',
+              minHeight: '160px !important', 
+              maxWidth: '800px !important',
+              padding: '32px !important',
               fontSize: '16px',
-              lineHeight: '1.6'
+              lineHeight: '1.6',
+              overflow: 'visible !important',
+              zIndex: 9999
             }}
           >
             <div className="grid gap-3 flex-1">
               {title && (
                 <ToastTitle 
-                  className="text-xl font-bold leading-tight"
+                  className="!text-xl !font-bold !leading-tight"
                   style={{
-                    fontSize: '18px',
-                    fontWeight: '700',
-                    lineHeight: '1.3',
-                    wordWrap: 'break-word'
+                    fontSize: '16px !important',
+                    fontWeight: '700 !important',
+                    lineHeight: '1.3 !important',
+                    wordWrap: 'break-word',
+                    maxWidth: '600px'
                   }}
                 >
                   {title}
@@ -44,11 +47,12 @@ export function Toaster() {
               )}
               {description && (
                 <ToastDescription 
-                  className="text-base leading-relaxed"
+                  className="!text-base !leading-relaxed"
                   style={{
-                    fontSize: '14px',
-                    lineHeight: '1.5',
-                    wordWrap: 'break-word'
+                    fontSize: '13px !important',
+                    lineHeight: '1.4 !important',
+                    wordWrap: 'break-word',
+                    maxWidth: '600px'
                   }}
                 >
                   {description}

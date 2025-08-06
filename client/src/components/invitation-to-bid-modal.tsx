@@ -1084,6 +1084,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                           
                           // Refresh the RFP data to show the new area immediately
                           queryClient.invalidateQueries({ queryKey: [`/api/rfp-requests/${rfp.id}`] });
+                          queryClient.invalidateQueries({ queryKey: ['/api/rfp-requests'] });
                           
                           // Give user visual feedback that data is refreshing
                           setTimeout(() => {

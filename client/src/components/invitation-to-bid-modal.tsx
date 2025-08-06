@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -84,14 +84,14 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
     return formattedValue.replace(/,/g, '');
   };
 
-  // Update area field - optimized to prevent focus loss
-  const updateAreaField = (index: number, field: 'description' | 'squareFootage' | 'notes', value: string) => {
+  // Update area field - optimized to prevent focus loss with useCallback
+  const updateAreaField = useCallback((index: number, field: 'description' | 'squareFootage' | 'notes', value: string) => {
     setAdditionalAreas(prevAreas => {
       const newAreas = [...prevAreas];
       newAreas[index] = { ...newAreas[index], [field]: value };
       return newAreas;
     });
-  };
+  }, []);
 
   // Fetch properties for project location
   const { data: properties = [] } = useQuery<Property[]>({
@@ -929,7 +929,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                   size="sm"
                   onClick={() => {
                     const newArea = {
-                      id: `additional-${Date.now()}`,
+                      id: `additional-${Math.random().toString(36).substr(2, 9)}`,
                       description: "",
                       squareFootage: "",
                       notes: ""

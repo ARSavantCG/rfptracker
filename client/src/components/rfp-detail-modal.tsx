@@ -185,15 +185,17 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
       window.URL.revokeObjectURL(url);
 
       toast({
-        title: "Success",
-        description: "All files downloaded successfully",
+        title: "Download Complete",
+        description: `All files for RFP ${rfpNumber} have been downloaded as a ZIP file`,
+        duration: 5000,
       });
     } catch (error) {
       console.error('Download all files error:', error);
       toast({
         title: "Download Failed",
-        description: "Could not download all files. Please try again.",
+        description: `Could not download files for RFP ${rfpNumber}. Please check your connection and try again.`,
         variant: "destructive",
+        duration: 6000,
       });
     }
   };

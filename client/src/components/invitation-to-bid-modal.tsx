@@ -1088,35 +1088,37 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                           
                           // Force immediate display of the new saved area
                           setTimeout(() => {
-                            // Add the new area directly to the saved section
-                            const savedTableBody = areaTableBody;
-                            const newSavedRow = document.createElement('tr');
-                            newSavedRow.className = 'bg-green-50 border border-green-200';
-                            newSavedRow.innerHTML = `
-                              <td class="px-3 py-2 text-sm font-medium text-gray-900">${description}</td>
-                              <td class="px-3 py-2 text-sm text-gray-900">${parseInt(squareFootage).toLocaleString()} SF</td>
-                              <td class="px-3 py-2 text-sm text-gray-500">—</td>
-                              <td class="px-3 py-2 text-sm">
-                                <div class="flex items-center space-x-2">
-                                  <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                    ✓ Saved
-                                  </span>
-                                </div>
-                              </td>
-                            `;
-                            // Insert at the beginning of saved areas (after header but before any existing rows)
-                            const firstExistingRow = savedTableBody.querySelector('tr');
-                            if (firstExistingRow) {
-                              savedTableBody.insertBefore(newSavedRow, firstExistingRow);
-                            } else {
-                              savedTableBody.appendChild(newSavedRow);
-                            }
-                            
-                            // Update section subtitle to show correct count
-                            const savedAreas = savedTableBody.querySelectorAll('tr').length;
-                            const subtitleText = document.querySelector('.text-sm.text-gray-500');
-                            if (subtitleText) {
-                              subtitleText.textContent = `Area breakdown defined during RFP validation phase (${savedAreas} areas saved)`;
+                            // Find the area table body by looking for the existing saved areas section
+                            const savedTableBody = document.querySelector('table tbody');
+                            if (savedTableBody) {
+                              const newSavedRow = document.createElement('tr');
+                              newSavedRow.className = 'bg-green-50 border border-green-200';
+                              newSavedRow.innerHTML = `
+                                <td class="px-3 py-2 text-sm font-medium text-gray-900">${description}</td>
+                                <td class="px-3 py-2 text-sm text-gray-900">${parseInt(squareFootage).toLocaleString()} SF</td>
+                                <td class="px-3 py-2 text-sm text-gray-500">—</td>
+                                <td class="px-3 py-2 text-sm">
+                                  <div class="flex items-center space-x-2">
+                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                      ✓ Saved
+                                    </span>
+                                  </div>
+                                </td>
+                              `;
+                              // Insert at the beginning of saved areas
+                              const firstExistingRow = savedTableBody.querySelector('tr');
+                              if (firstExistingRow) {
+                                savedTableBody.insertBefore(newSavedRow, firstExistingRow);
+                              } else {
+                                savedTableBody.appendChild(newSavedRow);
+                              }
+                              
+                              // Update section subtitle to show correct count
+                              const savedAreas = savedTableBody.querySelectorAll('tr').length;
+                              const subtitleText = document.querySelector('.text-sm.text-gray-500');
+                              if (subtitleText) {
+                                subtitleText.textContent = `Area breakdown defined during RFP validation phase (${savedAreas} areas saved)`;
+                              }
                             }
                           }, 500);
                         } catch (error) {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, memo } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -65,6 +65,67 @@ const cleanProjectName = (projectName: string): string => {
 // Global counter to ensure unique IDs across all modal instances
 let globalAreaCounter = 0;
 
+// Memoized Area Input Component to prevent re-rendering
+const AreaInputRow = memo(({ 
+  area, 
+  index, 
+  onUpdate, 
+  onRemove,
+  formatNumber,
+  getRawNumber 
+}: { 
+  area: {id: string, description: string, squareFootage: string, notes: string},
+  index: number,
+  onUpdate: (index: number, field: string, value: string) => void,
+  onRemove: (index: number) => void,
+  formatNumber: (value: string) => string,
+  getRawNumber: (value: string) => string
+}) => {
+  return (
+    <div className="grid grid-cols-4 gap-4 items-center py-2 border-b border-gray-100">
+      <input
+        type="text"
+        placeholder="Area description"
+        value={area.description}
+        onChange={(e) => onUpdate(index, 'description', e.target.value)}
+        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+      />
+      <input
+        type="text"
+        placeholder="0"
+        value={formatNumber(area.squareFootage)}
+        onChange={(e) => {
+          const rawValue = getRawNumber(e.target.value);
+          onUpdate(index, 'squareFootage', rawValue);
+        }}
+        onBlur={(e) => {
+          const formatted = formatNumber(area.squareFootage);
+          onUpdate(index, 'squareFootage', getRawNumber(formatted));
+        }}
+        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+      />
+      <input
+        type="text"
+        placeholder="Notes (optional)"
+        value={area.notes}
+        onChange={(e) => onUpdate(index, 'notes', e.target.value)}
+        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+      />
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        onClick={() => onRemove(index)}
+        className="text-red-500 hover:text-red-700"
+      >
+        <Trash2 className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+});
+
+AreaInputRow.displayName = 'AreaInputRow';
+
 export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -94,6 +155,11 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
       newAreas[index] = { ...newAreas[index], [field]: value };
       return newAreas;
     });
+  }, []);
+
+  // Remove area field - memoized to prevent re-renders
+  const removeAreaField = useCallback((index: number) => {
+    setAdditionalAreas(prev => prev.filter((_, i) => i !== index));
   }, []);
 
   // Fetch properties for project location
@@ -967,53 +1033,17 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                   ))}
                   
                   {/* Additional Area Items */}
-                  {additionalAreas.map((area, index) => {
-                    const uniqueKey = `${area.id}-${index}`; // More stable key
-                    return (
-                      <div key={uniqueKey} className="grid grid-cols-4 gap-4 items-center py-2 border-b border-gray-100">
-                        <input
-                          type="text"
-                          placeholder="Area description"
-                          value={area.description}
-                          onChange={(e) => updateAreaField(index, 'description', e.target.value)}
-                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                        />
-                        <input
-                          type="text"
-                          placeholder="0"
-                          value={formatNumberWithCommas(area.squareFootage)}
-                          onChange={(e) => {
-                            const rawValue = getRawNumber(e.target.value);
-                            updateAreaField(index, 'squareFootage', rawValue);
-                          }}
-                          onBlur={(e) => {
-                            // Format with commas on blur for better UX
-                            const formatted = formatNumberWithCommas(area.squareFootage);
-                            updateAreaField(index, 'squareFootage', getRawNumber(formatted));
-                          }}
-                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                        />
-                        <input
-                          type="text"
-                          placeholder="Notes (optional)"
-                          value={area.notes}
-                          onChange={(e) => updateAreaField(index, 'notes', e.target.value)}
-                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setAdditionalAreas(prev => prev.filter((_, i) => i !== index));
-                          }}
-                          className="text-red-500 hover:text-red-700"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    );
-                  })}
+                  {additionalAreas.map((area, index) => (
+                    <AreaInputRow
+                      key={area.id}
+                      area={area}
+                      index={index}
+                      onUpdate={updateAreaField}
+                      onRemove={removeAreaField}
+                      formatNumber={formatNumberWithCommas}
+                      getRawNumber={getRawNumber}
+                    />
+                  ))}
                   
                   {rfp?.areaBreakdown && rfp.areaBreakdown.length > 0 && (
                     <div className="text-sm text-gray-500 italic">

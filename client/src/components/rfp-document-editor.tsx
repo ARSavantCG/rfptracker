@@ -550,7 +550,14 @@ export function RfpDocumentEditor() {
                 )}
               </CardContent>
             </Card>
-          ))}
+                      )}
+                    </Draggable>
+                  ))}
+                  {provided.placeholder}
+                </div>
+              )}
+            </Droppable>
+          </DragDropContext>
         </div>
       )}
 

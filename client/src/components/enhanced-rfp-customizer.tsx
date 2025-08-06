@@ -528,24 +528,23 @@ export function EnhancedRfpCustomizer() {
             </div>
             <div>
               <Label className="text-sm">Header Alignment</Label>
-              <Select
-                value={formatSettings.layout.headerAlignment}
-                onValueChange={(value: 'left' | 'center' | 'right') => {
-                  const newSettings = { ...formatSettings };
-                  newSettings.layout.headerAlignment = value;
-                  setFormatSettings(newSettings);
-                  setUnsavedChanges(true);
-                }}
-              >
-                <SelectTrigger className="mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="left">Left</SelectItem>
-                  <SelectItem value="center">Center</SelectItem>
-                  <SelectItem value="right">Right</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="relative mt-1">
+                <select
+                  value={formatSettings.layout.headerAlignment}
+                  onChange={(e) => {
+                    const newSettings = { ...formatSettings };
+                    newSettings.layout.headerAlignment = e.target.value as 'left' | 'center' | 'right';
+                    setFormatSettings(newSettings);
+                    setUnsavedChanges(true);
+                  }}
+                  className="w-full h-10 px-3 py-2 text-sm bg-background border border-input rounded-md appearance-none pr-8 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                >
+                  <option value="left">Left</option>
+                  <option value="center">Center</option>
+                  <option value="right">Right</option>
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+              </div>
             </div>
           </CardContent>
         </Card>

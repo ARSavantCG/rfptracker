@@ -107,7 +107,7 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
       queryClient.invalidateQueries({ queryKey: [`/api/properties/${propertyId}/transformers`] });
       setShowTransformerDialog(false);
       setEditingTransformer(null);
-      toast({ title: "Transformer created successfully" });
+      toast({ title: "Transformer created successfully", duration: 4000 });
     },
   });
 
@@ -118,7 +118,7 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
       queryClient.invalidateQueries({ queryKey: [`/api/properties/${propertyId}/transformers`] });
       setShowTransformerDialog(false);
       setEditingTransformer(null);
-      toast({ title: "Transformer updated successfully" });
+      toast({ title: "Transformer updated successfully", duration: 4000 });
     },
   });
 
@@ -126,7 +126,7 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
     mutationFn: async (id: number) => apiRequest(`/api/transformers/${id}`, 'DELETE'),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/properties/${propertyId}/transformers`] });
-      toast({ title: "Transformer deleted successfully" });
+      toast({ title: "Transformer deleted successfully", duration: 4000 });
     },
   });
 
@@ -137,7 +137,7 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
       queryClient.invalidateQueries({ queryKey: [`/api/properties/${propertyId}/main-panels`] });
       setShowPanelDialog(false);
       setEditingPanel(null);
-      toast({ title: "Main panel created successfully" });
+      toast({ title: "Main panel created successfully", duration: 4000 });
     },
   });
 
@@ -148,7 +148,7 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
       queryClient.invalidateQueries({ queryKey: [`/api/properties/${propertyId}/main-panels`] });
       setShowPanelDialog(false);
       setEditingPanel(null);
-      toast({ title: "Main panel updated successfully" });
+      toast({ title: "Main panel updated successfully", duration: 4000 });
     },
   });
 
@@ -156,7 +156,7 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
     mutationFn: async (id: number) => apiRequest(`/api/main-panels/${id}`, 'DELETE'),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/properties/${propertyId}/main-panels`] });
-      toast({ title: "Main panel deleted successfully" });
+      toast({ title: "Main panel deleted successfully", duration: 4000 });
     },
   });
 
@@ -167,7 +167,7 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
       queryClient.invalidateQueries({ queryKey: [`/api/properties/${propertyId}/bay-panel-assignments`] });
       setShowAssignmentDialog(false);
       setEditingAssignment(null);
-      toast({ title: "Bay assignment created successfully" });
+      toast({ title: "Bay assignment created successfully", duration: 4000 });
     },
   });
 
@@ -178,7 +178,7 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
       queryClient.invalidateQueries({ queryKey: [`/api/properties/${propertyId}/bay-panel-assignments`] });
       setShowAssignmentDialog(false);
       setEditingAssignment(null);
-      toast({ title: "Bay assignment updated successfully" });
+      toast({ title: "Bay assignment updated successfully", duration: 4000 });
     },
   });
 
@@ -186,7 +186,7 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
     mutationFn: async (id: number) => apiRequest(`/api/bay-panel-assignments/${id}`, 'DELETE'),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/properties/${propertyId}/bay-panel-assignments`] });
-      toast({ title: "Bay assignment deleted successfully" });
+      toast({ title: "Bay assignment deleted successfully", duration: 4000 });
     },
   });
 
@@ -197,7 +197,7 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
       queryClient.invalidateQueries({ queryKey: [`/api/properties/${propertyId}/electrical-reservations`] });
       setShowReservationDialog(false);
       setEditingReservation(null);
-      toast({ title: "Electrical reservation created successfully" });
+      toast({ title: "Electrical reservation created successfully", duration: 4000 });
     },
   });
 
@@ -208,7 +208,7 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
       queryClient.invalidateQueries({ queryKey: [`/api/properties/${propertyId}/electrical-reservations`] });
       setShowReservationDialog(false);
       setEditingReservation(null);
-      toast({ title: "Electrical reservation updated successfully" });
+      toast({ title: "Electrical reservation updated successfully", duration: 4000 });
     },
   });
 
@@ -216,7 +216,7 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
     mutationFn: async (id: number) => apiRequest(`/api/electrical-reservations/${id}`, 'DELETE'),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/properties/${propertyId}/electrical-reservations`] });
-      toast({ title: "Electrical reservation deleted successfully" });
+      toast({ title: "Electrical reservation deleted successfully", duration: 4000 });
     },
   });
 

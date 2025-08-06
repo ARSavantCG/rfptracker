@@ -65,6 +65,7 @@ export function FileCleanupPanel() {
       toast({
         title: "Cleanup Completed",
         description: `Deleted ${result.deletedFiles.length} files (${formatBytes(result.totalSize)}). ${result.errors.length} errors.`,
+        duration: 5000,
       });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/file-cleanup/stats'] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/file-cleanup/orphaned'] });
@@ -75,6 +76,7 @@ export function FileCleanupPanel() {
         title: "Cleanup Failed",
         description: "Failed to cleanup orphaned files",
         variant: "destructive",
+        duration: 6000,
       });
     },
   });

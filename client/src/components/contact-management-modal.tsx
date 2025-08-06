@@ -72,6 +72,7 @@ export function ContactManagementModal({ isOpen, onClose }: ContactManagementMod
       toast({
         title: "Contact created",
         description: "New contact has been added successfully",
+        duration: 4000,
       });
       form.reset();
       setActiveTab("manage");
@@ -81,6 +82,7 @@ export function ContactManagementModal({ isOpen, onClose }: ContactManagementMod
         title: "Error",
         description: "Failed to create contact. Please try again.",
         variant: "destructive",
+        duration: 6000,
       });
     },
   });
@@ -95,6 +97,7 @@ export function ContactManagementModal({ isOpen, onClose }: ContactManagementMod
       toast({
         title: "Contact deleted",
         description: "Contact has been removed successfully",
+        duration: 4000,
       });
     },
     onError: () => {
@@ -102,6 +105,7 @@ export function ContactManagementModal({ isOpen, onClose }: ContactManagementMod
         title: "Error",
         description: "Failed to delete contact. Please try again.",
         variant: "destructive",
+        duration: 6000,
       });
     },
   });
@@ -116,6 +120,7 @@ export function ContactManagementModal({ isOpen, onClose }: ContactManagementMod
       toast({
         title: "Contact updated",
         description: "Contact has been updated successfully",
+        duration: 4000,
       });
       setEditingContact(null);
       editForm.reset();
@@ -125,6 +130,7 @@ export function ContactManagementModal({ isOpen, onClose }: ContactManagementMod
         title: "Error",
         description: "Failed to update contact. Please try again.",
         variant: "destructive",
+        duration: 6000,
       });
     },
   });

@@ -84,6 +84,7 @@ export function CustomReportModal({ isOpen, onClose, filters }: CustomReportModa
         title: "No Fields Selected",
         description: "Please select at least one field for your report.",
         variant: "destructive",
+        duration: 6000,
       });
       return;
     }
@@ -111,6 +112,7 @@ export function CustomReportModal({ isOpen, onClose, filters }: CustomReportModa
       toast({
         title: "Report Generated",
         description: "Your custom report has been generated and opened in a new tab.",
+        duration: 4000,
       });
       
       onClose();
@@ -119,6 +121,7 @@ export function CustomReportModal({ isOpen, onClose, filters }: CustomReportModa
         title: "Error",
         description: "Failed to generate custom report. Please try again.",
         variant: "destructive",
+        duration: 6000,
       });
     }
   };

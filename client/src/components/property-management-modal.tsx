@@ -87,8 +87,9 @@ export function PropertyManagementModal({ isOpen, onClose }: PropertyManagementM
       setIsAddModalOpen(false);
       createForm.reset();
       toast({
-        title: "Success",
+        title: "Success", 
         description: "Property added successfully",
+        duration: 4000,
       });
     },
     onError: (error: Error) => {
@@ -96,6 +97,7 @@ export function PropertyManagementModal({ isOpen, onClose }: PropertyManagementM
         title: "Error",
         description: error.message || "Failed to add property",
         variant: "destructive",
+        duration: 6000,
       });
     },
   });
@@ -122,6 +124,7 @@ export function PropertyManagementModal({ isOpen, onClose }: PropertyManagementM
       toast({
         title: "Success",
         description: "Property with buildings added successfully",
+        duration: 4000,
       });
     },
     onError: (error: Error) => {
@@ -129,6 +132,7 @@ export function PropertyManagementModal({ isOpen, onClose }: PropertyManagementM
         title: "Error",
         description: error.message || "Failed to add property",
         variant: "destructive",
+        duration: 6000,
       });
     },
   });
@@ -146,6 +150,7 @@ export function PropertyManagementModal({ isOpen, onClose }: PropertyManagementM
       toast({
         title: "Success",
         description: "Property updated successfully",
+        duration: 4000,
       });
     },
     onError: (error: Error) => {
@@ -153,6 +158,7 @@ export function PropertyManagementModal({ isOpen, onClose }: PropertyManagementM
         title: "Error",
         description: error.message || "Failed to update property",
         variant: "destructive",
+        duration: 6000,
       });
     },
   });
@@ -167,6 +173,7 @@ export function PropertyManagementModal({ isOpen, onClose }: PropertyManagementM
       toast({
         title: "Success",
         description: "Property deleted successfully",
+        duration: 4000,
       });
     },
     onError: (error: Error) => {
@@ -174,6 +181,7 @@ export function PropertyManagementModal({ isOpen, onClose }: PropertyManagementM
         title: "Error",
         description: error.message || "Failed to delete property",
         variant: "destructive",
+        duration: 6000,
       });
     },
   });
@@ -214,6 +222,7 @@ export function PropertyManagementModal({ isOpen, onClose }: PropertyManagementM
         title: "Error",
         description: "Property name is required",
         variant: "destructive",
+        duration: 6000,
       });
       return;
     }
@@ -231,6 +240,7 @@ export function PropertyManagementModal({ isOpen, onClose }: PropertyManagementM
         title: "Error", 
         description: "At least one complete building is required",
         variant: "destructive",
+        duration: 6000,
       });
       return;
     }

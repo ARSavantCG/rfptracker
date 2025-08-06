@@ -95,6 +95,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
       toast({
         title: "Success",
         description: "Generation history item deleted successfully",
+        duration: 4000,
       });
     },
     onError: (error) => {
@@ -102,6 +103,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
         title: "Error",
         description: "Failed to delete generation history item",
         variant: "destructive",
+        duration: 6000,
       });
     },
   });
@@ -390,6 +392,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
       toast({
         title: "Invitation Saved",
         description: "Your invitation details have been saved successfully.",
+        duration: 4000,
       });
       
       // Preserve current form state completely
@@ -419,6 +422,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
         title: "Save Failed",
         description: error instanceof Error ? error.message : "Failed to save invitation",
         variant: "destructive",
+        duration: 6000,
       });
     },
   });

@@ -78,6 +78,7 @@ export function BidCollectionTable({ rfp }: BidCollectionTableProps) {
       toast({
         title: "Success",
         description: "Advanced to Evaluation phase successfully",
+        duration: 4000,
       });
     },
     onError: (error: Error) => {
@@ -85,6 +86,7 @@ export function BidCollectionTable({ rfp }: BidCollectionTableProps) {
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to advance to evaluation phase",
         variant: "destructive",
+        duration: 6000,
       });
     },
   });
@@ -100,6 +102,7 @@ export function BidCollectionTable({ rfp }: BidCollectionTableProps) {
       toast({
         title: "Success",
         description: "Bid deleted successfully",
+        duration: 4000,
       });
     },
     onError: (error: Error) => {
@@ -107,6 +110,7 @@ export function BidCollectionTable({ rfp }: BidCollectionTableProps) {
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to delete bid",
         variant: "destructive",
+        duration: 6000,
       });
     },
   });

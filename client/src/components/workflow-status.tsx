@@ -77,6 +77,7 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValida
       toast({
         title: "Workflow advanced",
         description: "Project has been moved to the next phase",
+        duration: 4000,
       });
     },
     onError: () => {
@@ -84,6 +85,7 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValida
         title: "Error",
         description: "Failed to advance workflow phase",
         variant: "destructive",
+        duration: 6000,
       });
     },
   });
@@ -98,6 +100,7 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValida
       toast({
         title: "Project Completed",
         description: "RFP has been marked as completed successfully",
+        duration: 4000,
       });
     },
     onError: () => {
@@ -105,6 +108,7 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValida
         title: "Error",
         description: "Failed to mark project as completed",
         variant: "destructive",
+        duration: 6000,
       });
     },
   });

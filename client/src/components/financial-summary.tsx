@@ -167,6 +167,7 @@ export function FinancialSummary({ rfp }: FinancialSummaryProps) {
       toast({
         title: "Financial Summary Generated",
         description: "HTML file downloaded and preview opened. Use the Print button to save as PDF.",
+        duration: 5000,
       });
     },
     onError: (error) => {
@@ -174,6 +175,7 @@ export function FinancialSummary({ rfp }: FinancialSummaryProps) {
         title: "Generation Failed",
         description: error instanceof Error ? error.message : "Failed to generate PDF",
         variant: "destructive",
+        duration: 6000,
       });
     },
   });
@@ -325,6 +327,7 @@ export function FinancialSummary({ rfp }: FinancialSummaryProps) {
                     toast({
                       title: "Totals Updated",
                       description: "Cost breakdown has been saved with your custom values.",
+                      duration: 4000,
                     });
                   }}
                 >

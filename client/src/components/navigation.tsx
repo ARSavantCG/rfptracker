@@ -39,6 +39,7 @@ export default function Navigation() {
         title: "Logout Error",
         description: "Failed to logout properly",
         variant: "destructive",
+        duration: 6000,
       });
       window.location.reload();
     },

@@ -63,6 +63,7 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
         title: "Print Error",
         description: "Failed to generate bay configurations report",
         variant: "destructive",
+        duration: 6000,
       });
     }
   };
@@ -173,6 +174,7 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
         title: "Error",
         description: "Please fill in start bay, end bay, and square footage",
         variant: "destructive",
+        duration: 6000,
       });
       return;
     }

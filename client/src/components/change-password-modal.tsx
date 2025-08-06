@@ -30,6 +30,7 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
       toast({
         title: "Password Changed",
         description: "Your password has been changed successfully.",
+        duration: 4000,
       });
       handleClose();
     },
@@ -38,6 +39,7 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
         title: "Password Change Failed",
         description: error.message || "Failed to change password",
         variant: "destructive",
+        duration: 6000,
       });
     },
   });
@@ -50,6 +52,7 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
         title: "Passwords Don't Match",
         description: "New password and confirm password must match.",
         variant: "destructive",
+        duration: 6000,
       });
       return;
     }
@@ -59,6 +62,7 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
         title: "Password Too Short",
         description: "New password must be at least 6 characters long.",
         variant: "destructive",
+        duration: 6000,
       });
       return;
     }

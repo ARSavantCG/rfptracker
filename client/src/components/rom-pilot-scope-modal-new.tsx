@@ -248,6 +248,7 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
       toast({
         title: "Success",
         description: "ROM scope items saved successfully",
+        duration: 4000,
       });
       queryClient.invalidateQueries({ queryKey: [`/api/rom-pilots/${romPilotId}/line-items`] });
       queryClient.invalidateQueries({ queryKey: ["/api/rom-pilots"] });
@@ -259,6 +260,7 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
         title: "Error",
         description: `Failed to save ROM scope items: ${error.message || 'Unknown error'}`,
         variant: "destructive",
+        duration: 6000,
       });
     },
   });

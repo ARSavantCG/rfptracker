@@ -52,6 +52,7 @@ export function CreateUserModal({ isOpen, onClose }: CreateUserModalProps) {
       toast({
         title: "User Created Successfully",
         description: `Account created for ${data.user.firstName} ${data.user.lastName}`,
+        duration: 4000,
       });
     },
     onError: (error: Error) => {
@@ -59,6 +60,7 @@ export function CreateUserModal({ isOpen, onClose }: CreateUserModalProps) {
         title: "Failed to Create User",
         description: error.message,
         variant: "destructive",
+        duration: 6000,
       });
     },
   });
@@ -70,6 +72,7 @@ export function CreateUserModal({ isOpen, onClose }: CreateUserModalProps) {
         title: "Missing Information",
         description: "Please fill in all required fields",
         variant: "destructive",
+        duration: 6000,
       });
       return;
     }
@@ -79,6 +82,7 @@ export function CreateUserModal({ isOpen, onClose }: CreateUserModalProps) {
         title: "Password Required",
         description: "Please provide a password or enable auto-generation",
         variant: "destructive",
+        duration: 6000,
       });
       return;
     }
@@ -91,6 +95,7 @@ export function CreateUserModal({ isOpen, onClose }: CreateUserModalProps) {
     toast({
       title: "Copied",
       description: `${type} copied to clipboard`,
+      duration: 3000,
     });
   };
 

@@ -73,6 +73,7 @@ export function PropertyAttachments({ propertyId, propertyName }: PropertyAttach
       toast({
         title: "Files uploaded successfully",
         description: `${selectedFiles?.length} file(s) uploaded to ${propertyName}`,
+        duration: 4000,
       });
       queryClient.invalidateQueries({ queryKey: [`/api/properties/${propertyId}/attachments`] });
       setSelectedFiles(null);
@@ -84,6 +85,7 @@ export function PropertyAttachments({ propertyId, propertyName }: PropertyAttach
         title: "Upload failed",
         description: error.message || "Failed to upload files",
         variant: "destructive",
+        duration: 6000,
       });
     },
   });
@@ -96,6 +98,7 @@ export function PropertyAttachments({ propertyId, propertyName }: PropertyAttach
       toast({
         title: "File deleted",
         description: "Attachment removed successfully",
+        duration: 4000,
       });
       queryClient.invalidateQueries({ queryKey: [`/api/properties/${propertyId}/attachments`] });
     },
@@ -104,6 +107,7 @@ export function PropertyAttachments({ propertyId, propertyName }: PropertyAttach
         title: "Delete failed",
         description: error.message || "Failed to delete attachment",
         variant: "destructive",
+        duration: 6000,
       });
     },
   });
@@ -114,6 +118,7 @@ export function PropertyAttachments({ propertyId, propertyName }: PropertyAttach
         title: "No files selected",
         description: "Please select files to upload",
         variant: "destructive",
+        duration: 5000,
       });
       return;
     }
@@ -134,6 +139,7 @@ export function PropertyAttachments({ propertyId, propertyName }: PropertyAttach
           title: "Authentication required",
           description: "Please log in again to download files",
           variant: "destructive",
+          duration: 6000,
         });
         return;
       }
@@ -149,6 +155,7 @@ export function PropertyAttachments({ propertyId, propertyName }: PropertyAttach
           title: "Authentication expired",
           description: "Please log in again to download files",
           variant: "destructive",
+          duration: 6000,
         });
         return;
       }
@@ -158,6 +165,7 @@ export function PropertyAttachments({ propertyId, propertyName }: PropertyAttach
           title: "File not found",
           description: "The requested file could not be found",
           variant: "destructive",
+          duration: 6000,
         });
         return;
       }
@@ -168,6 +176,7 @@ export function PropertyAttachments({ propertyId, propertyName }: PropertyAttach
           title: "Download failed",
           description: `Error ${response.status}: ${errorData}`,
           variant: "destructive",
+          duration: 6000,
         });
         return;
       }
@@ -185,6 +194,7 @@ export function PropertyAttachments({ propertyId, propertyName }: PropertyAttach
       toast({
         title: "Download started",
         description: `Downloading ${attachment.originalName}`,
+        duration: 4000,
       });
     } catch (error) {
       console.error('Download error:', error);
@@ -192,6 +202,7 @@ export function PropertyAttachments({ propertyId, propertyName }: PropertyAttach
         title: "Download failed",
         description: error instanceof Error ? error.message : "Failed to download file",
         variant: "destructive",
+        duration: 6000,
       });
     }
   };

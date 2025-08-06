@@ -83,6 +83,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
       toast({
         title: "Success",
         description: "Scope item created successfully",
+        duration: 4000,
       });
     },
     onError: () => {
@@ -90,6 +91,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
         title: "Error",
         description: "Failed to create scope item",
         variant: "destructive",
+        duration: 6000,
       });
     },
   });
@@ -102,6 +104,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
       toast({
         title: "Success",
         description: "Scope item updated successfully",
+        duration: 4000,
       });
     },
     onError: () => {
@@ -109,6 +112,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
         title: "Error", 
         description: "Failed to update scope item",
         variant: "destructive",
+        duration: 6000,
       });
     },
   });
@@ -120,6 +124,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
       toast({
         title: "Success",
         description: "Scope item deleted successfully",
+        duration: 4000,
       });
     },
     onError: () => {
@@ -127,6 +132,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
         title: "Error",
         description: "Failed to delete scope item",
         variant: "destructive",
+        duration: 6000,
       });
     },
   });
@@ -153,6 +159,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
         title: "Error",
         description: "Please fill in all required fields",
         variant: "destructive",
+        duration: 6000,
       });
       return;
     }

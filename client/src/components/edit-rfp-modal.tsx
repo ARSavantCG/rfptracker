@@ -93,6 +93,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
       toast({
         title: "Success",
         description: "File deleted successfully",
+        duration: 4000,
       });
     },
     onError: (error) => {
@@ -100,6 +101,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to delete file",
         variant: "destructive",
+        duration: 6000,
       });
     },
   });
@@ -295,6 +297,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
       toast({
         title: "Success",
         description: "RFP updated successfully",
+        duration: 4000,
       });
       onClose();
     },
@@ -303,6 +306,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to update RFP",
         variant: "destructive",
+        duration: 6000,
       });
     },
   });

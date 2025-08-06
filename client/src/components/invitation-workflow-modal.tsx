@@ -54,6 +54,7 @@ export function InvitationWorkflowModal({ isOpen, onClose, rfp }: InvitationWork
       toast({
         title: "Invitations sent",
         description: `Successfully sent ${selectedContacts.length} invitation(s)`,
+        duration: 4000,
       });
       setSelectedContacts([]);
       onClose();
@@ -63,6 +64,7 @@ export function InvitationWorkflowModal({ isOpen, onClose, rfp }: InvitationWork
         title: "Error",
         description: "Failed to send invitations. Please try again.",
         variant: "destructive",
+        duration: 6000,
       });
     },
   });
@@ -81,6 +83,7 @@ export function InvitationWorkflowModal({ isOpen, onClose, rfp }: InvitationWork
         title: "No contacts selected",
         description: "Please select at least one contact to send invitations.",
         variant: "destructive",
+        duration: 6000,
       });
       return;
     }

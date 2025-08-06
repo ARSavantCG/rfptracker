@@ -30,6 +30,7 @@ export default function AdminResetPasswordModal({ isOpen, onClose, contact }: Ad
       toast({
         title: "Password Reset Successful",
         description: `Password has been reset for ${contact?.name}`,
+        duration: 4000,
       });
       queryClient.invalidateQueries({ queryKey: ['/api/contacts'] });
       // Don't close modal immediately so admin can copy password
@@ -39,6 +40,7 @@ export default function AdminResetPasswordModal({ isOpen, onClose, contact }: Ad
         title: "Password Reset Failed",
         description: error.message || "Failed to reset password",
         variant: "destructive",
+        duration: 6000,
       });
     },
   });
@@ -62,6 +64,7 @@ export default function AdminResetPasswordModal({ isOpen, onClose, contact }: Ad
         title: "Password Too Short",
         description: "Password must be at least 6 characters long.",
         variant: "destructive",
+        duration: 6000,
       });
       return;
     }
@@ -80,12 +83,14 @@ export default function AdminResetPasswordModal({ isOpen, onClose, contact }: Ad
       toast({
         title: "Password Copied",
         description: "The new password has been copied to your clipboard.",
+        duration: 3000,
       });
     } catch (error) {
       toast({
         title: "Copy Failed",
         description: "Could not copy password. Please select and copy manually.",
         variant: "destructive",
+        duration: 6000,
       });
     }
   };

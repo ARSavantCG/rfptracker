@@ -54,6 +54,7 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
       toast({
         title: "Success",
         description: "RFP status updated successfully",
+        duration: 4000,
       });
       setIsEditing(false);
     },
@@ -62,6 +63,7 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to update status",
         variant: "destructive",
+        duration: 6000,
       });
     },
   });
@@ -86,6 +88,7 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
       toast({
         title: "Success",
         description: "Project completion dates updated successfully",
+        duration: 4000,
       });
       setIsEditingDates(false);
     },
@@ -94,6 +97,7 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to update completion dates",
         variant: "destructive",
+        duration: 6000,
       });
     },
   });
@@ -109,6 +113,7 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
       toast({
         title: "Success",
         description: "File deleted successfully",
+        duration: 4000,
       });
     },
     onError: (error) => {
@@ -116,6 +121,7 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to delete file",
         variant: "destructive",
+        duration: 6000,
       });
     },
   });

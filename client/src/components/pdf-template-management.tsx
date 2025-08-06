@@ -52,6 +52,7 @@ export function PdfTemplateManagement() {
       toast({
         title: "Template created",
         description: "PDF template has been created successfully.",
+        duration: 4000,
       });
     },
   });
@@ -70,6 +71,7 @@ export function PdfTemplateManagement() {
       toast({
         title: "Template updated",
         description: "PDF template has been updated successfully.",
+        duration: 4000,
       });
     },
   });
@@ -85,6 +87,7 @@ export function PdfTemplateManagement() {
       toast({
         title: "Template deleted",
         description: "PDF template has been deleted successfully.",
+        duration: 4000,
       });
     },
   });

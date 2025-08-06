@@ -145,6 +145,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
       toast({
         title: "Success",
         description: "RFP request created successfully",
+        duration: 4000,
       });
       handleClose();
     },
@@ -157,12 +158,14 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
           title: "Session Expired",
           description: "Please log out and log back in to continue",
           variant: "destructive",
+          duration: 8000,
         });
       } else {
         toast({
           title: "Error",
           description: errorMessage,
           variant: "destructive",
+          duration: 6000,
         });
       }
     },

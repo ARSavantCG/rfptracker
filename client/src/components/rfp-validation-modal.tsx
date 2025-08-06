@@ -116,6 +116,7 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
       toast({
         title: "Success",
         description: "RFP validation details saved successfully",
+        duration: 4000,
       });
     },
     onError: (error) => {
@@ -123,6 +124,7 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to update RFP validation",
         variant: "destructive",
+        duration: 6000,
       });
     },
   });
@@ -145,6 +147,7 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
       toast({
         title: "Success",
         description: "RFP validation completed and advanced to Invitation to Bid",
+        duration: 4000,
       });
       handleClose();
       onValidationComplete?.();
@@ -154,6 +157,7 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to advance workflow",
         variant: "destructive",
+        duration: 6000,
       });
     },
   });

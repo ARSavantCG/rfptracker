@@ -234,6 +234,7 @@ export function ContactPermissionsModal({ contact, isOpen, onClose }: ContactPer
       toast({
         title: "Permissions Updated",
         description: "Contact permissions have been updated successfully.",
+        duration: 4000,
       });
     },
     onError: () => {
@@ -241,6 +242,7 @@ export function ContactPermissionsModal({ contact, isOpen, onClose }: ContactPer
         title: "Error",
         description: "Failed to update permissions. Please try again.",
         variant: "destructive",
+        duration: 6000,
       });
     },
   });

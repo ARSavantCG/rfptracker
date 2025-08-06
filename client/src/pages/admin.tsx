@@ -57,6 +57,7 @@ function SystemUsersAndContacts() {
       toast({
         title: "Success",
         description: "User deleted successfully",
+        duration: 4000,
       });
     },
     onError: (error) => {
@@ -64,6 +65,7 @@ function SystemUsersAndContacts() {
         title: "Error",
         description: error.message,
         variant: "destructive",
+        duration: 6000,
       });
     },
   });
@@ -80,6 +82,7 @@ function SystemUsersAndContacts() {
       toast({
         title: "Success",
         description: "User updated successfully",
+        duration: 4000,
       });
     },
     onError: (error) => {
@@ -87,6 +90,7 @@ function SystemUsersAndContacts() {
         title: "Error",
         description: error.message,
         variant: "destructive",
+        duration: 6000,
       });
     },
   });
@@ -103,6 +107,7 @@ function SystemUsersAndContacts() {
       toast({
         title: "Success",
         description: "Contact permissions updated successfully",
+        duration: 4000,
       });
     },
     onError: (error) => {

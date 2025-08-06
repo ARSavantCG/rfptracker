@@ -258,6 +258,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
       toast({
         title: "Success",
         description: `Bid collection ${bidCollection ? 'updated' : 'created'} successfully.`,
+        duration: 4000,
       });
       onClose();
     },
@@ -266,6 +267,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
         title: "Error",
         description: error.message,
         variant: "destructive",
+        duration: 6000,
       });
     },
   });
@@ -425,6 +427,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
         toast({
           title: "Line item saved",
           description: "Line item has been saved successfully.",
+          duration: 4000,
         });
         
         // If user wants to add another line item, do so
@@ -445,6 +448,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
           title: "Save failed",
           description: "Failed to save line item. Please try again.",
           variant: "destructive",
+          duration: 6000,
         });
         console.error('Save error:', error);
       }
@@ -499,6 +503,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
             title: "Import Error",
             description: "File must contain at least a header row and one data row.",
             variant: "destructive",
+            duration: 6000,
           });
           return;
         }
@@ -518,6 +523,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
             title: "Import Error",
             description: "Could not find 'Description' column. Please ensure your file has the correct column headers.",
             variant: "destructive",
+            duration: 6000,
           });
           return;
         }

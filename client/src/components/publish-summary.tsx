@@ -45,6 +45,7 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
       toast({
         title: "Project Published & Completed",
         description: "RFP has been published and marked as completed successfully",
+        duration: 4000,
       });
     },
     onError: () => {
@@ -52,6 +53,7 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
         title: "Error",
         description: "Failed to publish and complete project",
         variant: "destructive",
+        duration: 6000,
       });
     },
   });

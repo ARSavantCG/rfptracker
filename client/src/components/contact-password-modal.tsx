@@ -55,6 +55,7 @@ export default function ContactPasswordModal({
       toast({
         title: isReset ? "Password Reset" : "Password Set",
         description: isReset ? "Password has been reset successfully" : "Password has been set successfully",
+        duration: 4000,
       });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/authorized-contacts'] });
       onClose();
@@ -67,6 +68,7 @@ export default function ContactPasswordModal({
         title: "Error",
         description: error.message || "Failed to set password",
         variant: "destructive",
+        duration: 6000,
       });
     },
   });
@@ -81,6 +83,7 @@ export default function ContactPasswordModal({
       toast({
         title: "Password Generated",
         description: "Temporary password has been generated",
+        duration: 4000,
       });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/authorized-contacts'] });
     },
@@ -89,6 +92,7 @@ export default function ContactPasswordModal({
         title: "Error",
         description: error.message || "Failed to generate password",
         variant: "destructive",
+        duration: 6000,
       });
     },
   });
@@ -111,12 +115,14 @@ export default function ContactPasswordModal({
       toast({
         title: "Copied",
         description: "Copied to clipboard",
+        duration: 2000,
       });
     } catch (error) {
       toast({
         title: "Error",
         description: "Failed to copy to clipboard",
         variant: "destructive",
+        duration: 6000,
       });
     }
   };

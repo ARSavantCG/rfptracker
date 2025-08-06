@@ -172,13 +172,13 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
       return await apiRequest(`/api/rom-pilots/${romPilotId}/line-items`, "POST", { lineItems: allLineItems });
     },
     onSuccess: () => {
-      toast({ title: "Success", description: "ROM scope items saved successfully" });
+      toast({ title: "Success", description: "ROM scope items saved successfully", duration: 4000 });
       queryClient.invalidateQueries({ queryKey: [`/api/rom-pilots/${romPilotId}/line-items`] });
       queryClient.invalidateQueries({ queryKey: ["/api/rom-pilots"] });
       onClose();
     },
     onError: () => {
-      toast({ title: "Error", description: "Failed to save ROM scope items", variant: "destructive" });
+      toast({ title: "Error", description: "Failed to save ROM scope items", variant: "destructive", duration: 6000 });
     },
   });
 

@@ -69,6 +69,7 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
       toast({
         title: "Success",
         description: "Property created successfully",
+        duration: 4000,
       });
       setOpen(false);
       resetForm();
@@ -79,6 +80,7 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
         title: "Error",
         description: error.message || "Failed to create property",
         variant: "destructive",
+        duration: 6000,
       });
     },
   });
@@ -90,6 +92,7 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
       toast({
         title: "Success",
         description: "Property updated successfully",
+        duration: 4000,
       });
       setOpen(false);
       onSuccess?.();
@@ -99,6 +102,7 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
         title: "Error",
         description: error.message || "Failed to update property",
         variant: "destructive",
+        duration: 6000,
       });
     },
   });
@@ -120,6 +124,7 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
         title: "Error",
         description: error.message || "Failed to delete property",
         variant: "destructive",
+        duration: 6000,
       });
     },
   });

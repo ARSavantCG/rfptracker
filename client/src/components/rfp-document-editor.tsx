@@ -249,6 +249,7 @@ export function RfpDocumentEditor() {
       toast({
         title: "Templates updated",
         description: "Your changes have been saved and will apply to future RFPs.",
+        duration: 4000,
       });
     },
   });
@@ -263,6 +264,7 @@ export function RfpDocumentEditor() {
           title: "No RFPs Available",
           description: "Please create an RFP first to preview the document template.",
           variant: "destructive",
+          duration: 6000,
         });
         return;
       }
@@ -275,6 +277,7 @@ export function RfpDocumentEditor() {
         title: "Preview Error",
         description: "Failed to generate preview. Please try again.",
         variant: "destructive",
+        duration: 6000,
       });
     }
   };

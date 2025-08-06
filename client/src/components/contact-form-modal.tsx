@@ -64,6 +64,7 @@ export function ContactFormModal({ contact, trigger, onSuccess }: ContactFormMod
       toast({
         title: "Contact created",
         description: "Contact has been successfully created.",
+        duration: 4000,
       });
       setOpen(false);
       onSuccess?.();
@@ -74,6 +75,7 @@ export function ContactFormModal({ contact, trigger, onSuccess }: ContactFormMod
         title: "Error",
         description: "Failed to create contact. Please try again.",
         variant: "destructive",
+        duration: 6000,
       });
     },
   });
@@ -86,6 +88,7 @@ export function ContactFormModal({ contact, trigger, onSuccess }: ContactFormMod
       toast({
         title: "Contact updated",
         description: "Contact has been successfully updated.",
+        duration: 4000,
       });
       setOpen(false);
       onSuccess?.();
@@ -95,6 +98,7 @@ export function ContactFormModal({ contact, trigger, onSuccess }: ContactFormMod
         title: "Error",
         description: "Failed to update contact. Please try again.",
         variant: "destructive",
+        duration: 6000,
       });
     },
   });
@@ -106,6 +110,7 @@ export function ContactFormModal({ contact, trigger, onSuccess }: ContactFormMod
       toast({
         title: "Contact deleted",
         description: "Contact has been successfully deleted.",
+        duration: 4000,
       });
       setOpen(false);
       onSuccess?.();
@@ -115,6 +120,7 @@ export function ContactFormModal({ contact, trigger, onSuccess }: ContactFormMod
         title: "Error",
         description: "Failed to delete contact. Please try again.",
         variant: "destructive",
+        duration: 6000,
       });
     },
   });
@@ -140,6 +146,7 @@ export function ContactFormModal({ contact, trigger, onSuccess }: ContactFormMod
         title: "Validation Error",
         description: "Please fill in all required fields.",
         variant: "destructive",
+        duration: 6000,
       });
       return;
     }

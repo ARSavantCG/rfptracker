@@ -342,6 +342,7 @@ export function RfpDocumentEditor() {
       toast({
         title: "Templates Updated",
         description: "Document templates have been saved successfully.",
+        duration: 4000,
       });
       queryClient.invalidateQueries({ queryKey: ['/api/pdf-templates'] });
     },
@@ -350,6 +351,7 @@ export function RfpDocumentEditor() {
         title: "Error",
         description: error.message || "Failed to save templates",
         variant: "destructive",
+        duration: 6000,
       });
     },
   });

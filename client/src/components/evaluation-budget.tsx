@@ -184,12 +184,14 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
       toast({
         title: "File Deleted",
         description: "The attachment has been removed successfully.",
+        duration: 4000,
       });
     } catch (error) {
       toast({
         title: "Delete Failed",
         description: "Failed to delete the attachment. Please try again.",
         variant: "destructive",
+        duration: 6000,
       });
     }
   };
@@ -351,6 +353,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         title: "No Pricing Available",
         description: "No contractor or architect pricing found to import.",
         variant: "destructive",
+        duration: 6000,
       });
       return;
     }
@@ -386,6 +389,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     toast({
       title: "Pricing Imported",
       description: `Successfully imported ${importedItems.length} selected line items from contractor/architect pricing.`,
+      duration: 4000,
     });
 
     setShowImportModal(false);
@@ -399,6 +403,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         title: "No Scope of Work Available",
         description: "No scope of work items found to import.",
         variant: "destructive",
+        duration: 6000,
       });
       return;
     }
@@ -432,6 +437,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     toast({
       title: "Scope Items Imported",
       description: `Successfully imported ${importedItems.length} scope of work items.`,
+      duration: 4000,
     });
 
     setShowScopeImportModal(false);
@@ -445,6 +451,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         title: "No Design Costs Available",
         description: "No architectural/design costs found to import.",
         variant: "destructive",
+        duration: 6000,
       });
       return;
     }
@@ -480,6 +487,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     toast({
       title: "Design Costs Imported",
       description: `Successfully imported ${importedItems.length} design/architectural cost items.`,
+      duration: 4000,
     });
 
     setShowDesignImportModal(false);

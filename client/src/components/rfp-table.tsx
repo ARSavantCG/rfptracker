@@ -54,6 +54,7 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
       toast({
         title: "Success",
         description: "RFP has been archived successfully",
+        duration: 4000,
       });
     },
     onError: (error: Error) => {
@@ -65,6 +66,7 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
         title: "Error",
         description: error.message,
         variant: "destructive",
+        duration: 6000,
       });
     },
   });
@@ -94,6 +96,7 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
       toast({
         title: "Success",
         description: "RFP has been reopened and moved back to in-progress",
+        duration: 4000,
       });
     },
     onError: (error: Error) => {
@@ -105,6 +108,7 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
         title: "Error",
         description: error.message,
         variant: "destructive",
+        duration: 6000,
       });
     },
   });
@@ -134,6 +138,7 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
       toast({
         title: "Success",
         description: `Counter offer ${counterOffer.rfpNumber} created successfully`,
+        duration: 4000,
       });
     },
     onError: (error: Error) => {
@@ -145,6 +150,7 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
         title: "Error",
         description: error.message,
         variant: "destructive",
+        duration: 6000,
       });
     },
   });
@@ -186,6 +192,7 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
       toast({
         title: "Success",
         description: `RFP alternate ${option.rfpNumber} created successfully`,
+        duration: 4000,
       });
     },
     onError: (error: Error) => {
@@ -197,6 +204,7 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
         title: "Error",
         description: error.message,
         variant: "destructive",
+        duration: 6000,
       });
     },
   });
@@ -317,6 +325,7 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
       toast({
         title: "Success",
         description: "RFP deleted successfully",
+        duration: 4000,
       });
     },
     onError: (error) => {
@@ -325,6 +334,7 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
         title: "Error", 
         description: "Failed to delete RFP",
         variant: "destructive",
+        duration: 6000,
       });
     },
   });

@@ -92,6 +92,7 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess, editingRomPilo
         title: "Validation Error",
         description: "Project name is required",
         variant: "destructive",
+        duration: 6000,
       });
       return;
     }
@@ -101,6 +102,7 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess, editingRomPilo
         title: "Validation Error", 
         description: "Property selection is required",
         variant: "destructive",
+        duration: 6000,
       });
       return;
     }
@@ -138,6 +140,7 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess, editingRomPilo
       toast({
         title: "Success",
         description: `ROM ${isEditing ? 'updated' : 'created'} successfully. ${!isEditing ? "Opening scope management..." : ""}`,
+        duration: 4000,
       });
 
       onSuccess(isEditing ? undefined : result);
@@ -147,6 +150,7 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess, editingRomPilo
         title: "Error",
         description: "Failed to create ROM. Please try again.",
         variant: "destructive",
+        duration: 6000,
       });
     } finally {
       setIsSubmitting(false);

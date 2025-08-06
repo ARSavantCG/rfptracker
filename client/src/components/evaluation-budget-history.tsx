@@ -67,6 +67,7 @@ export function EvaluationBudgetHistory({ rfpId }: EvaluationBudgetHistoryProps)
       toast({
         title: "Success",
         description: "Report details updated successfully",
+        duration: 4000,
       });
     },
     onError: (error: Error) => {
@@ -74,6 +75,7 @@ export function EvaluationBudgetHistory({ rfpId }: EvaluationBudgetHistoryProps)
         title: "Error",
         description: error.message || "Failed to update report details",
         variant: "destructive",
+        duration: 6000,
       });
     },
   });
@@ -87,6 +89,7 @@ export function EvaluationBudgetHistory({ rfpId }: EvaluationBudgetHistoryProps)
       toast({
         title: "Success",
         description: "Report deleted successfully",
+        duration: 4000,
       });
     },
     onError: (error: Error) => {
@@ -94,6 +97,7 @@ export function EvaluationBudgetHistory({ rfpId }: EvaluationBudgetHistoryProps)
         title: "Error",
         description: error.message || "Failed to delete report",
         variant: "destructive",
+        duration: 6000,
       });
     },
   });
@@ -126,6 +130,7 @@ export function EvaluationBudgetHistory({ rfpId }: EvaluationBudgetHistoryProps)
         title: "Error",
         description: "Authentication required",
         variant: "destructive",
+        duration: 6000,
       });
       return;
     }
@@ -153,6 +158,7 @@ export function EvaluationBudgetHistory({ rfpId }: EvaluationBudgetHistoryProps)
         title: "Error",
         description: error.message || "Failed to view report",
         variant: "destructive",
+        duration: 6000,
       });
     });
   };

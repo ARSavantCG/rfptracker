@@ -50,6 +50,7 @@ export function LegalCompliancePanel() {
         title: "Legal Compliance Enforced",
         description: data.summary,
         variant: data.success ? "default" : "destructive",
+        duration: data.success ? 4000 : 6000,
       });
       
       // Refresh properties data
@@ -60,6 +61,7 @@ export function LegalCompliancePanel() {
         title: "Enforcement Failed",
         description: "Failed to enforce legal compliance across properties",
         variant: "destructive",
+        duration: 6000,
       });
     },
   });

@@ -143,6 +143,7 @@ export function EnhancedRfpCustomizer() {
       toast({
         title: "Settings Saved",
         description: "RFP formatting settings have been updated successfully.",
+        duration: 4000,
       });
     },
     onError: (error: any) => {
@@ -150,6 +151,7 @@ export function EnhancedRfpCustomizer() {
         title: "Error",
         description: error.message || "Failed to save settings",
         variant: "destructive",
+        duration: 6000,
       });
     },
   });
@@ -171,6 +173,7 @@ export function EnhancedRfpCustomizer() {
         title: "Preview Error",
         description: error.message || "Failed to generate preview",
         variant: "destructive",
+        duration: 6000,
       });
     },
   });

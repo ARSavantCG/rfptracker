@@ -54,6 +54,7 @@ export function EvaluationAttachments({ rfpId }: EvaluationAttachmentsProps) {
       toast({
         title: "Success",
         description: "Files uploaded successfully",
+        duration: 4000,
       });
     },
     onError: (error) => {
@@ -61,6 +62,7 @@ export function EvaluationAttachments({ rfpId }: EvaluationAttachmentsProps) {
         title: "Error",
         description: "Failed to upload files",
         variant: "destructive",
+        duration: 6000,
       });
     },
   });
@@ -76,6 +78,7 @@ export function EvaluationAttachments({ rfpId }: EvaluationAttachmentsProps) {
       toast({
         title: "Success",
         description: "File deleted successfully",
+        duration: 4000,
       });
     },
     onError: () => {
@@ -83,6 +86,7 @@ export function EvaluationAttachments({ rfpId }: EvaluationAttachmentsProps) {
         title: "Error",
         description: "Failed to delete file",
         variant: "destructive",
+        duration: 6000,
       });
     },
   });
@@ -139,6 +143,7 @@ export function EvaluationAttachments({ rfpId }: EvaluationAttachmentsProps) {
         title: "Download Failed",
         description: "Could not download the file. Please try again.",
         variant: "destructive",
+        duration: 6000,
       });
     }
   };

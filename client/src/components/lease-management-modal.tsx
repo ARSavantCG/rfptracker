@@ -77,10 +77,10 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
       queryClient.invalidateQueries({ queryKey: [`/api/properties/${property.id}/executed-leases`] });
       setShowForm(false);
       form.reset();
-      toast({ title: "Success", description: "Lease created successfully" });
+      toast({ title: "Success", description: "Lease created successfully", duration: 4000 });
     },
     onError: () => {
-      toast({ title: "Error", description: "Failed to create lease", variant: "destructive" });
+      toast({ title: "Error", description: "Failed to create lease", variant: "destructive", duration: 6000 });
     },
   });
 
@@ -93,10 +93,10 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
       setEditingLease(null);
       setShowForm(false);
       form.reset();
-      toast({ title: "Success", description: "Lease updated successfully" });
+      toast({ title: "Success", description: "Lease updated successfully", duration: 4000 });
     },
     onError: () => {
-      toast({ title: "Error", description: "Failed to update lease", variant: "destructive" });
+      toast({ title: "Error", description: "Failed to update lease", variant: "destructive", duration: 6000 });
     },
   });
 
@@ -106,10 +106,10 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/properties/${property.id}/executed-leases`] });
-      toast({ title: "Success", description: "Lease deleted successfully" });
+      toast({ title: "Success", description: "Lease deleted successfully", duration: 4000 });
     },
     onError: () => {
-      toast({ title: "Error", description: "Failed to delete lease", variant: "destructive" });
+      toast({ title: "Error", description: "Failed to delete lease", variant: "destructive", duration: 6000 });
     },
   });
 
@@ -164,6 +164,7 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
         title: "Print Error",
         description: "Failed to generate leases report",
         variant: "destructive",
+        duration: 6000,
       });
     }
   };

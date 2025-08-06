@@ -1181,12 +1181,13 @@ async function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dat
       <title>Broker Response RFP - Architect Services</title>
       <style>
         body { font-family: Arial, sans-serif; margin: 0; padding: 20px; line-height: 1.4; color: #333; }
-        .header { border-bottom: 3px solid #2563eb; padding-bottom: 20px; margin-bottom: 30px; }
+        .header { border-bottom: 3px solid rgb(0,50,130); padding-bottom: 20px; margin-bottom: 30px; position: relative; }
+        .company-logo { position: absolute; left: 0; top: 0; height: 40px; }
         .company-info { text-align: right; margin-bottom: 20px; }
-        .document-title { font-size: 24px; font-weight: bold; color: #2563eb; margin-bottom: 10px; }
+        .document-title { font-size: 24px; font-weight: bold; color: rgb(0,50,130); margin-bottom: 10px; background: rgb(0,50,130); color: white; padding: 10px; border-radius: 5px; }
         .project-title { font-size: 18px; color: #666; margin-bottom: 20px; }
         .section { margin-bottom: 25px; }
-        .section-title { font-size: 16px; font-weight: bold; color: #2563eb; margin-bottom: 10px; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; }
+        .section-title { font-size: 16px; font-weight: bold; color: rgb(0,50,130); margin-bottom: 10px; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; }
         .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
         .info-item { margin-bottom: 10px; }
         .label { font-weight: bold; color: #666; }
@@ -1205,6 +1206,7 @@ async function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dat
     </head>
     <body>
       <div class="header">
+        <div style="background: rgb(0,50,130); color: white; padding: 10px; margin-bottom: 20px; text-align: center; font-weight: bold; font-size: 14px;">BRIDGE INDUSTRIAL - REQUEST FOR PROPOSAL</div>
         <div class="company-info">
           <div><strong>Development Team</strong></div>
           <div>${contactPerson}</div>
@@ -1424,19 +1426,19 @@ async function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, da
       <title>Broker Response RFP - General Contractor Services</title>
       <style>
         body { font-family: Arial, sans-serif; margin: 0; padding: 20px; line-height: 1.4; color: #333; }
-        .header { border-bottom: 3px solid #059669; padding-bottom: 20px; margin-bottom: 30px; }
+        .header { border-bottom: 3px solid rgb(0,50,130); padding-bottom: 20px; margin-bottom: 30px; }
         .company-info { text-align: right; margin-bottom: 20px; }
-        .document-title { font-size: 24px; font-weight: bold; color: #059669; margin-bottom: 10px; }
+        .document-title { font-size: 24px; font-weight: bold; color: rgb(0,50,130); margin-bottom: 10px; background: rgb(0,50,130); color: white; padding: 10px; border-radius: 5px; }
         .project-title { font-size: 18px; color: #666; margin-bottom: 20px; }
         .section { margin-bottom: 25px; }
-        .section-title { font-size: 16px; font-weight: bold; color: #059669; margin-bottom: 10px; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; }
+        .section-title { font-size: 16px; font-weight: bold; color: rgb(0,50,130); margin-bottom: 10px; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; }
         .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
         .info-item { margin-bottom: 10px; }
         .label { font-weight: bold; color: #666; }
         .value { margin-left: 10px; }
         .requirements { background-color: #fef3c7; padding: 15px; border-left: 4px solid #f59e0b; margin: 15px 0; }
         .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #666; }
-        .preliminary-notice { background-color: #d1fae5; padding: 15px; border-left: 4px solid #10b981; margin: 20px 0; font-weight: bold; }
+        .preliminary-notice { background-color: #dbeafe; padding: 15px; border-left: 4px solid rgb(0,50,130); margin: 20px 0; font-weight: bold; }
         table { width: 100%; border-collapse: collapse; margin: 15px 0; }
         th, td { border: 1px solid #e5e7eb; padding: 8px; text-align: left; }
         th { background-color: #f9fafb; font-weight: bold; }
@@ -1448,6 +1450,9 @@ async function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, da
     </head>
     <body>
       <div class="header">
+        <div style="background: rgb(0,50,130); color: white; padding: 10px; margin-bottom: 20px; text-align: center; font-weight: bold; font-size: 14px;">
+          BRIDGE INDUSTRIAL - REQUEST FOR PROPOSAL
+        </div>
         <div class="company-info">
           <div><strong>Development Team</strong></div>
           <div>${contactPerson}</div>

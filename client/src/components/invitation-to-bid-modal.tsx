@@ -1074,26 +1074,18 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                           }
                           
                           toast({
-                            title: "✅ Area Saved Successfully",
-                            description: `${description} (${parseInt(squareFootage).toLocaleString()} SF) saved to database. Refreshing data...`,
-                            duration: 6000,
+                            title: "✅ AREA SAVED SUCCESSFULLY!",
+                            description: `${description} - ${parseInt(squareFootage).toLocaleString()} SF has been permanently saved to the database. The page will refresh in 3 seconds to show your new area.`,
+                            duration: 8000,
                           });
                           
                           // Remove the new row since it's now saved to database
                           newRow.remove();
                           
-                          // Refresh the RFP data to show the new area immediately
-                          queryClient.invalidateQueries({ queryKey: [`/api/rfp-requests/${rfp.id}`] });
-                          queryClient.invalidateQueries({ queryKey: ['/api/rfp-requests'] });
-                          
-                          // Give user visual feedback that data is refreshing
+                          // Force complete page refresh to show new area after short delay
                           setTimeout(() => {
-                            toast({
-                              title: "✅ Data Refreshed", 
-                              description: "Close and reopen this modal to see your saved area in the green section.",
-                              duration: 4000,
-                            });
-                          }, 1500);
+                            window.location.reload();
+                          }, 3000);
                         } catch (error) {
                           console.error('Save error:', error);
                           toast({

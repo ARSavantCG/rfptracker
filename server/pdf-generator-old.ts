@@ -67,7 +67,7 @@ function generateRfpHtml(options: PdfGenerationOptions): string {
         }
         
         .header {
-          border-bottom: 3px solid #2563eb;
+          border-bottom: 3px solid rgb(0,50,130);
           padding-bottom: 20px;
           margin-bottom: 30px;
         }
@@ -75,7 +75,7 @@ function generateRfpHtml(options: PdfGenerationOptions): string {
         .company-logo {
           font-size: 24px;
           font-weight: bold;
-          color: #2563eb;
+          color: rgb(0,50,130);
           margin-bottom: 10px;
         }
         

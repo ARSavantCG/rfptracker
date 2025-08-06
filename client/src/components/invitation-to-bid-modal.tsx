@@ -69,6 +69,30 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
   const [keyDates, setKeyDates] = useState<Array<{label: string, date: string}>>([]);
   const [additionalAreas, setAdditionalAreas] = useState<Array<{id: string, description: string, squareFootage: string, notes: string}>>([]);
 
+  // Helper function to format numbers with commas
+  const formatNumberWithCommas = (value: string): string => {
+    // Remove any non-digit characters except commas and periods
+    const cleanValue = value.replace(/[^\d]/g, '');
+    if (cleanValue === '') return '';
+    
+    // Add commas for thousands
+    return parseInt(cleanValue).toLocaleString();
+  };
+
+  // Helper function to get raw number from formatted string
+  const getRawNumber = (formattedValue: string): string => {
+    return formattedValue.replace(/,/g, '');
+  };
+
+  // Update area field - optimized to prevent focus loss
+  const updateAreaField = (index: number, field: 'description' | 'squareFootage' | 'notes', value: string) => {
+    setAdditionalAreas(prevAreas => {
+      const newAreas = [...prevAreas];
+      newAreas[index] = { ...newAreas[index], [field]: value };
+      return newAreas;
+    });
+  };
+
   // Fetch properties for project location
   const { data: properties = [] } = useQuery<Property[]>({
     queryKey: ["/api/properties"],
@@ -944,32 +968,27 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                       <Input
                         placeholder="Area description"
                         value={area.description}
-                        onChange={(e) => {
-                          const updatedAreas = [...additionalAreas];
-                          updatedAreas[index].description = e.target.value;
-                          setAdditionalAreas(updatedAreas);
-                        }}
+                        onChange={(e) => updateAreaField(index, 'description', e.target.value)}
                         className="text-sm"
                       />
                       <Input
                         placeholder="0"
-                        type="number"
-                        value={area.squareFootage}
+                        value={formatNumberWithCommas(area.squareFootage)}
                         onChange={(e) => {
-                          const updatedAreas = [...additionalAreas];
-                          updatedAreas[index].squareFootage = e.target.value;
-                          setAdditionalAreas(updatedAreas);
+                          const rawValue = getRawNumber(e.target.value);
+                          updateAreaField(index, 'squareFootage', rawValue);
+                        }}
+                        onBlur={(e) => {
+                          // Format with commas on blur for better UX
+                          const formatted = formatNumberWithCommas(area.squareFootage);
+                          updateAreaField(index, 'squareFootage', getRawNumber(formatted));
                         }}
                         className="text-sm"
                       />
                       <Input
                         placeholder="Notes (optional)"
                         value={area.notes}
-                        onChange={(e) => {
-                          const updatedAreas = [...additionalAreas];
-                          updatedAreas[index].notes = e.target.value;
-                          setAdditionalAreas(updatedAreas);
-                        }}
+                        onChange={(e) => updateAreaField(index, 'notes', e.target.value)}
                         className="text-sm"
                       />
                       <Button

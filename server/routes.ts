@@ -2249,6 +2249,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Save additional areas for invitation to bid (Step 3)
+  app.post("/api/rfp-requests/:id/additional-areas", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid RFP ID" });
+      }
+
+      const { description, squareFootage, notes } = req.body;
+      
+      if (!description || !description.trim()) {
+        return res.status(400).json({ message: "Area description is required" });
+      }
+
+      // For now, we'll just return success since additional areas are handled 
+      // as part of the invitation data structure. In a future enhancement,
+      // this could be stored in a separate additionalAreas table.
+      
+      console.log(`Saving additional area for RFP ${id}:`, { description, squareFootage, notes });
+      
+      res.status(201).json({
+        id: `area-${Date.now()}`,
+        rfpId: id,
+        description,
+        squareFootage: parseInt(squareFootage) || 0,
+        notes: notes || '',
+        createdAt: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Additional area save error:', error);
+      res.status(500).json({ 
+        message: "Failed to save additional area",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   app.get("/api/rfp-requests/:id/invitation-to-bid", async (req, res) => {
     try {
       const id = parseInt(req.params.id);

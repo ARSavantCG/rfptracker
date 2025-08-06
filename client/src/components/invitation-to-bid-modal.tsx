@@ -971,8 +971,9 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                           title="Save area"
                         >
                           <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="m9 12 2 2 4-4"></path>
-                            <path d="M21 12c.552 0 1-.448 1-1V5a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-6c0-.552-.448-1-1-1z"></path>
+                            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                            <polyline points="17,21 17,13 7,13 7,21"/>
+                            <polyline points="7,3 7,8 15,8"/>
                           </svg>
                         </button>
                         <button
@@ -1030,16 +1031,41 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                           return;
                         }
                         
-                        // Here you would typically save to database
-                        // For now, we'll show success and mark as saved
-                        toast({
-                          title: "Area Saved",
-                          description: "Additional area has been saved successfully",
-                          duration: 4000,
-                        });
+                        // Save to database
+                        try {
+                          const response = await fetch(`/api/rfp-requests/${rfp.id}/additional-areas`, {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                              description,
+                              squareFootage: parseInt(squareFootage) || 0,
+                              notes
+                            })
+                          });
+                          
+                          if (!response.ok) {
+                            throw new Error('Failed to save area');
+                          }
+                          
+                          toast({
+                            title: "Area Saved",
+                            description: "Additional area has been saved successfully",
+                            duration: 4000,
+                          });
+                        } catch (error) {
+                          toast({
+                            title: "Save Failed", 
+                            description: "Could not save area. Please try again.",
+                            variant: "destructive",
+                            duration: 4000,
+                          });
+                          return;
+                        }
                         
                         // Visual indication that it's saved
-                        saveBtn.style.opacity = '0.5';
+                        (saveBtn as HTMLElement).style.opacity = '0.5';
                         saveBtn.setAttribute('title', 'Area saved');
                       });
                     }

@@ -62,80 +62,7 @@ const cleanProjectName = (projectName: string): string => {
   return projectName.replace(/\s*-\s*$/, '').trim();
 };
 
-// Global counter to ensure unique IDs across all modal instances
-let globalAreaCounter = 0;
-
-// Simple controlled component with refs to maintain focus
-const AreaInputRow = ({ 
-  area, 
-  index, 
-  onUpdate, 
-  onRemove,
-  formatNumber,
-  getRawNumber 
-}: { 
-  area: {id: string, description: string, squareFootage: string, notes: string},
-  index: number,
-  onUpdate: (index: number, field: string, value: string) => void,
-  onRemove: (index: number) => void,
-  formatNumber: (value: string) => string,
-  getRawNumber: (value: string) => string
-}) => {
-  const descRef = useRef<HTMLInputElement>(null);
-  const sqftRef = useRef<HTMLInputElement>(null);
-  const notesRef = useRef<HTMLInputElement>(null);
-
-  return (
-    <div className="grid grid-cols-4 gap-4 items-center py-2 border-b border-gray-100">
-      <input
-        ref={descRef}
-        type="text"
-        placeholder="Area description"
-        defaultValue={area.description}
-        onChange={(e) => {
-          onUpdate(index, 'description', e.target.value);
-        }}
-        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-      />
-      <input
-        ref={sqftRef}
-        type="text"
-        placeholder="0"
-        defaultValue={formatNumber(area.squareFootage)}
-        onChange={(e) => {
-          const rawValue = getRawNumber(e.target.value);
-          onUpdate(index, 'squareFootage', rawValue);
-        }}
-        onBlur={(e) => {
-          const formatted = formatNumber(area.squareFootage);
-          if (sqftRef.current) {
-            sqftRef.current.value = formatted;
-          }
-        }}
-        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-      />
-      <input
-        ref={notesRef}
-        type="text"
-        placeholder="Notes (optional)"
-        defaultValue={area.notes}
-        onChange={(e) => {
-          onUpdate(index, 'notes', e.target.value);
-        }}
-        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-      />
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        onClick={() => onRemove(index)}
-        className="text-red-500 hover:text-red-700"
-      >
-        <Trash2 className="h-4 w-4" />
-      </Button>
-    </div>
-  );
-};
+// Pure DOM implementation - no React components to avoid re-rendering issues
 
 
 
@@ -1001,74 +928,130 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
               </div>
             </div>
 
-            {/* Area Breakdown */}
+            {/* Area Breakdown - Pure DOM Implementation */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-medium">Area Breakdown</h3>
-                <Button
+                <button
                   type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    globalAreaCounter++;
-                    const newArea = {
-                      id: `area-${globalAreaCounter}`,
-                      description: "",
-                      squareFootage: "",
-                      notes: ""
-                    };
-                    setAdditionalAreas(prev => [...prev, newArea]);
+                  onClick={(e) => {
+                    e.preventDefault();
+                    const container = document.getElementById('additional-areas-container');
+                    if (!container) return;
+                    
+                    const newId = `area-${Date.now()}-${Math.random()}`;
+                    const newRow = document.createElement('div');
+                    newRow.className = 'grid grid-cols-4 gap-4 items-center py-2 border-b border-gray-100';
+                    newRow.setAttribute('data-area-id', newId);
+                    
+                    newRow.innerHTML = `
+                      <input
+                        type="text"
+                        placeholder="Area description"
+                        data-field="description"
+                        class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      />
+                      <input
+                        type="text"
+                        placeholder="0"
+                        data-field="squareFootage"
+                        class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Notes (optional)"
+                        data-field="notes"
+                        class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      />
+                      <button
+                        type="button"
+                        data-remove="${newId}"
+                        class="flex h-8 w-8 items-center justify-center rounded-md text-red-500 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <polyline points="3,6 5,6 21,6"></polyline>
+                          <path d="m19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"></path>
+                          <line x1="10" y1="11" x2="10" y2="17"></line>
+                          <line x1="14" y1="11" x2="14" y2="17"></line>
+                        </svg>
+                      </button>
+                    `;
+                    
+                    container.appendChild(newRow);
+                    
+                    // Add event listeners for formatting and cleanup
+                    const sqftInput = newRow.querySelector('[data-field="squareFootage"]') as HTMLInputElement;
+                    if (sqftInput) {
+                      sqftInput.addEventListener('input', (event) => {
+                        const target = event.target as HTMLInputElement;
+                        const rawValue = target.value.replace(/,/g, '');
+                        if (rawValue && !isNaN(Number(rawValue)) && rawValue !== '0') {
+                          const formatted = Number(rawValue).toLocaleString();
+                          if (target.value !== formatted) {
+                            const cursorPos = target.selectionStart || 0;
+                            target.value = formatted;
+                            // Try to maintain cursor position
+                            target.setSelectionRange(cursorPos, cursorPos);
+                          }
+                        }
+                      });
+                    }
+                    
+                    // Remove button functionality
+                    const removeBtn = newRow.querySelector('[data-remove]');
+                    if (removeBtn) {
+                      removeBtn.addEventListener('click', () => {
+                        newRow.remove();
+                      });
+                    }
+                    
+                    // Focus first input
+                    const firstInput = newRow.querySelector('input') as HTMLInputElement;
+                    if (firstInput) {
+                      firstInput.focus();
+                    }
                   }}
+                  className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-3"
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Add Area
-                </Button>
+                </button>
               </div>
               
-              {((rfp?.areaBreakdown && rfp.areaBreakdown.length > 0) || additionalAreas.length > 0) ? (
-                <div className="space-y-2">
-                  {/* Column Headers */}
-                  <div className="grid grid-cols-4 gap-4 pb-2 border-b text-sm font-medium text-gray-600">
-                    <div>Description</div>
-                    <div>Square Footage</div>
-                    <div>Notes</div>
-                    <div></div>
+              <div className="space-y-2">
+                {/* Column Headers */}
+                <div className="grid grid-cols-4 gap-4 pb-2 border-b text-sm font-medium text-gray-600">
+                  <div>Description</div>
+                  <div>Square Footage</div>
+                  <div>Notes</div>
+                  <div></div>
+                </div>
+                
+                {/* Original Area Items from Step 2 */}
+                {rfp?.areaBreakdown && rfp.areaBreakdown.map((area, index) => (
+                  <div key={area.id || index} className="grid grid-cols-4 gap-4 items-center py-2 border-b border-gray-100">
+                    <div className="text-sm">{area.description}</div>
+                    <div className="text-sm font-medium">{parseInt(area.squareFootage || '0').toLocaleString()} SF</div>
+                    <div className="text-sm text-gray-600">{area.notes || '—'}</div>
+                    <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">From Step 2</div>
                   </div>
-                  
-                  {/* Original Area Items from Step 2 */}
-                  {rfp?.areaBreakdown && rfp.areaBreakdown.map((area, index) => (
-                    <div key={area.id || index} className="grid grid-cols-4 gap-4 items-center py-2 border-b border-gray-100">
-                      <div className="text-sm">{area.description}</div>
-                      <div className="text-sm font-medium">{parseInt(area.squareFootage || '0').toLocaleString()} SF</div>
-                      <div className="text-sm text-gray-600">{area.notes || '—'}</div>
-                      <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">From Step 2</div>
-                    </div>
-                  ))}
-                  
-                  {/* Additional Area Items */}
-                  {additionalAreas.map((area, index) => (
-                    <AreaInputRow
-                      key={area.id}
-                      area={area}
-                      index={index}
-                      onUpdate={updateAreaField}
-                      onRemove={removeAreaField}
-                      formatNumber={formatNumberWithCommas}
-                      getRawNumber={getRawNumber}
-                    />
-                  ))}
-                  
-                  {rfp?.areaBreakdown && rfp.areaBreakdown.length > 0 && (
-                    <div className="text-sm text-gray-500 italic">
-                      Area breakdown defined during RFP validation phase
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="text-center text-gray-500 py-4 border border-dashed border-gray-300 rounded-lg">
-                  No area breakdown defined. Areas can be defined during RFP validation phase or added here.
-                </div>
-              )}
+                ))}
+                
+                {/* Pure DOM Container for Additional Areas */}
+                <div id="additional-areas-container"></div>
+                
+                {!rfp?.areaBreakdown?.length && (
+                  <div className="text-center text-gray-500 py-4 border border-dashed border-gray-300 rounded-lg">
+                    No area breakdown defined. Areas can be defined during RFP validation phase or added here.
+                  </div>
+                )}
+                
+                {rfp?.areaBreakdown && rfp.areaBreakdown.length > 0 && (
+                  <div className="text-sm text-gray-500 italic">
+                    Area breakdown defined during RFP validation phase
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Scope of Work */}

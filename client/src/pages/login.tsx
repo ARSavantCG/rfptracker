@@ -54,6 +54,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
       toast({
         title: "Login Successful",
         description: "Welcome to RFP Tracker",
+        duration: 4000,
       });
       
       // Force a complete refresh to ensure clean authentication state
@@ -64,6 +65,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
         title: "Login Failed",
         description: error.message || "Invalid username or password",
         variant: "destructive",
+        duration: 6000,
       });
     },
   });
@@ -77,6 +79,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
         title: "Missing Information",
         description: "Please enter both username and password",
         variant: "destructive",
+        duration: 6000,
       });
       return;
     }

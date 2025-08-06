@@ -115,6 +115,7 @@ function SystemUsersAndContacts() {
         title: "Error",
         description: error.message,
         variant: "destructive",
+        duration: 6000,
       });
     },
   });

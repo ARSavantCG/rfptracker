@@ -53,6 +53,7 @@ export default function ResetPassword() {
       toast({
         title: "Reset Request Sent",
         description: "If this email is registered, you will receive a password reset link",
+        duration: 4000,
       });
     },
     onError: () => {
@@ -60,6 +61,7 @@ export default function ResetPassword() {
         title: "Error",
         description: "Failed to request password reset",
         variant: "destructive",
+        duration: 6000,
       });
     },
   });
@@ -83,6 +85,7 @@ export default function ResetPassword() {
       toast({
         title: "Password Reset Successful",
         description: "Your password has been reset. You can now log in.",
+        duration: 4000,
       });
       setLocation('/');
     },
@@ -91,6 +94,7 @@ export default function ResetPassword() {
         title: "Reset Failed",
         description: error.message,
         variant: "destructive",
+        duration: 6000,
       });
     },
   });
@@ -111,6 +115,7 @@ export default function ResetPassword() {
         title: "Password Mismatch",
         description: "Passwords do not match",
         variant: "destructive",
+        duration: 6000,
       });
       return;
     }
@@ -120,6 +125,7 @@ export default function ResetPassword() {
         title: "Password Too Short",
         description: "Password must be at least 8 characters long",
         variant: "destructive",
+        duration: 6000,
       });
       return;
     }

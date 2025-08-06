@@ -963,6 +963,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         title: "Error",
         description: "Please enter an assembly name and select at least one item.",
         variant: "destructive",
+        duration: 6000,
       });
       return;
     }
@@ -972,6 +973,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         title: "Error",
         description: "Please select a category for the assembly.",
         variant: "destructive",
+        duration: 6000,
       });
       return;
     }

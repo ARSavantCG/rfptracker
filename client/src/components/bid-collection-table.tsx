@@ -191,6 +191,7 @@ export function BidCollectionTable({ rfp }: BidCollectionTableProps) {
                       title: "Print Error",
                       description: "Unable to generate PDF. Please try logging in again.",
                       variant: "destructive",
+                      duration: 6000,
                     });
                   });
                 }}
@@ -321,6 +322,7 @@ export function BidCollectionTable({ rfp }: BidCollectionTableProps) {
                                         title: "Download Error",
                                         description: `Failed to download ${file.name}`,
                                         variant: "destructive",
+                                        duration: 6000,
                                       });
                                     });
                                   }
@@ -330,6 +332,7 @@ export function BidCollectionTable({ rfp }: BidCollectionTableProps) {
                                   title: "No Attachments",
                                   description: "This bid has no attachments to download.",
                                   variant: "destructive",
+                                  duration: 6000,
                                 });
                               }
                             }}

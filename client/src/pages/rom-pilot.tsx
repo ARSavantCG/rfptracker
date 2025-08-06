@@ -48,6 +48,7 @@ export default function RomPilotPage() {
       toast({
         title: "Success",
         description: "ROM Pilot deleted successfully",
+        duration: 4000,
       });
 
       refetch();
@@ -56,6 +57,7 @@ export default function RomPilotPage() {
         title: "Error",
         description: "Failed to delete ROM Pilot",
         variant: "destructive",
+        duration: 6000,
       });
     }
   };

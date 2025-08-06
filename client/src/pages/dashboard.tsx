@@ -72,6 +72,7 @@ export default function Dashboard() {
       toast({
         title: "Success",
         description: "You now have administrator privileges! The Admin Panel will appear in navigation.",
+        duration: 5000,
       });
     },
     onError: (error: any) => {
@@ -79,6 +80,7 @@ export default function Dashboard() {
         title: "Error",
         description: error.message || "Failed to assign admin privileges",
         variant: "destructive",
+        duration: 6000,
       });
     },
   });

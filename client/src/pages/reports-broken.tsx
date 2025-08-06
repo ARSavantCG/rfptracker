@@ -5,8 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Download, FileText, Calendar, TrendingUp, Clock, CheckCircle, AlertTriangle, BarChart3 } from "lucide-react";
+// Removed Select import - using native HTML selects for consistency
+import { Download, FileText, Calendar, TrendingUp, Clock, CheckCircle, AlertTriangle, BarChart3, ChevronDown } from "lucide-react";
 import Navigation from "@/components/navigation";
 import { format, parseISO, isAfter, isBefore, addDays } from "date-fns";
 import type { RfpRequest } from "@shared/schema";

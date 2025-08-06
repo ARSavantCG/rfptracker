@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+// Removed Select import - using native HTML selects for consistency
 import { Textarea } from "@/components/ui/textarea";
 import { Trash2, Plus, Calculator, Save, ChevronUp, ChevronDown, GripVertical } from "lucide-react";
 import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
@@ -335,22 +335,21 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
                               </div>
                             </td>
                             <td className="py-2 px-3">
-                              <Select
-                                value={item.scopeItemId ? item.scopeItemId.toString() : "0"}
-                                onValueChange={(value) => updateLineItem(category, index, 'scopeItemId', parseInt(value))}
-                              >
-                                <SelectTrigger className="h-7 text-xs">
-                                  <SelectValue placeholder="Select item" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="0">Custom Item</SelectItem>
+                              <div className="relative">
+                                <select
+                                  value={item.scopeItemId ? item.scopeItemId.toString() : "0"}
+                                  onChange={(e) => updateLineItem(category, index, 'scopeItemId', parseInt(e.target.value))}
+                                  className="w-full h-7 px-2 py-1 text-xs bg-background border border-input rounded-md appearance-none pr-6 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                                >
+                                  <option value="0">Custom Item</option>
                                   {(category === 'tenant-improvements' ? tenantImprovementItems : designSoftCostItems).map((scopeItem) => (
-                                    <SelectItem key={scopeItem.id} value={scopeItem.id.toString()}>
+                                    <option key={scopeItem.id} value={scopeItem.id.toString()}>
                                       {scopeItem.name} ({scopeItem.unit} @ ${scopeItem.unitPrice})
-                                    </SelectItem>
+                                    </option>
                                   ))}
-                                </SelectContent>
-                              </Select>
+                                </select>
+                                <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground pointer-events-none" />
+                              </div>
                             </td>
                             <td className="py-2 px-3">
                               <Input

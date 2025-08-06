@@ -21,17 +21,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+// Removed Select import - using native HTML selects for consistency
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit, Trash2, Save, X } from "lucide-react";
+import { Plus, Edit, Trash2, Save, X, ChevronDown } from "lucide-react";
 import type { PdfTemplate, InsertPdfTemplate } from "@shared/schema";
 
 export function PdfTemplateManagement() {
@@ -201,33 +195,39 @@ export function PdfTemplateManagement() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="templateType">Template Type</Label>
-                  <Select name="templateType" required>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select type" />
-                    </SelectTrigger>
-                    <SelectContent>
+                  <div className="relative">
+                    <select 
+                      name="templateType" 
+                      required
+                      className="w-full h-10 px-3 py-2 text-sm bg-background border border-input rounded-md appearance-none pr-8 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                    >
+                      <option value="">Select type</option>
                       {templateTypes.map((type) => (
-                        <SelectItem key={type.value} value={type.value}>
+                        <option key={type.value} value={type.value}>
                           {type.label}
-                        </SelectItem>
+                        </option>
                       ))}
-                    </SelectContent>
-                  </Select>
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  </div>
                 </div>
                 <div>
                   <Label htmlFor="section">Section</Label>
-                  <Select name="section" required>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select section" />
-                    </SelectTrigger>
-                    <SelectContent>
+                  <div className="relative">
+                    <select 
+                      name="section" 
+                      required
+                      className="w-full h-10 px-3 py-2 text-sm bg-background border border-input rounded-md appearance-none pr-8 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                    >
+                      <option value="">Select section</option>
                       {sectionTypes.map((section) => (
-                        <SelectItem key={section.value} value={section.value}>
+                        <option key={section.value} value={section.value}>
                           {section.label}
-                        </SelectItem>
+                        </option>
                       ))}
-                    </SelectContent>
-                  </Select>
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  </div>
                 </div>
               </div>
 
@@ -297,18 +297,20 @@ export function PdfTemplateManagement() {
                           </div>
                           <div>
                             <Label htmlFor={`edit-section-${template.id}`}>Section</Label>
-                            <Select name="section" defaultValue={template.section}>
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
+                            <div className="relative">
+                              <select 
+                                name="section" 
+                                defaultValue={template.section}
+                                className="w-full h-10 px-3 py-2 text-sm bg-background border border-input rounded-md appearance-none pr-8 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                              >
                                 {sectionTypes.map((section) => (
-                                  <SelectItem key={section.value} value={section.value}>
+                                  <option key={section.value} value={section.value}>
                                     {section.label}
-                                  </SelectItem>
+                                  </option>
                                 ))}
-                              </SelectContent>
-                            </Select>
+                              </select>
+                              <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                            </div>
                           </div>
                         </div>
                         

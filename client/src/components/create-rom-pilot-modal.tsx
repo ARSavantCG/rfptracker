@@ -5,9 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+// Removed Select import - using native HTML selects for consistency
 import { useToast } from "@/hooks/use-toast";
-import { Calculator, User, Building2 } from "lucide-react";
+import { Calculator, User, Building2, ChevronDown } from "lucide-react";
 import type { Property } from "@shared/schema";
 
 interface RomPilot {
@@ -167,18 +167,21 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess, editingRomPilo
           {/* Property Selection */}
           <div className="space-y-2">
             <Label htmlFor="property">Property *</Label>
-            <Select value={property} onValueChange={setProperty}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a property" />
-              </SelectTrigger>
-              <SelectContent>
+            <div className="relative">
+              <select
+                value={property}
+                onChange={(e) => setProperty(e.target.value)}
+                className="w-full h-10 px-3 py-2 text-sm bg-background border border-input rounded-md appearance-none pr-8 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              >
+                <option value="">Select a property</option>
                 {displayProperties.map((prop) => (
-                  <SelectItem key={prop.id} value={prop.displayName}>
+                  <option key={prop.id} value={prop.displayName}>
                     {prop.displayName}
-                  </SelectItem>
+                  </option>
                 ))}
-              </SelectContent>
-            </Select>
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+            </div>
           </div>
 
           {/* Project Name */}
@@ -468,18 +471,21 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess, editingRomPilo
           {/* Created By */}
           <div className="space-y-2">
             <Label htmlFor="created-by">Created By</Label>
-            <Select value={createdBy} onValueChange={setCreatedBy}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select user" />
-              </SelectTrigger>
-              <SelectContent>
+            <div className="relative">
+              <select
+                value={createdBy}
+                onChange={(e) => setCreatedBy(e.target.value)}
+                className="w-full h-10 px-3 py-2 text-sm bg-background border border-input rounded-md appearance-none pr-8 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              >
+                <option value="">Select user</option>
                 {ownerContacts.map((contact: any) => (
-                  <SelectItem key={contact.id} value={contact.name}>
+                  <option key={contact.id} value={contact.name}>
                     {contact.name}
-                  </SelectItem>
+                  </option>
                 ))}
-              </SelectContent>
-            </Select>
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+            </div>
           </div>
 
           {/* Notes */}

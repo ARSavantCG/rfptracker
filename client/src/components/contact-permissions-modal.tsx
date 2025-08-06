@@ -11,18 +11,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+// Removed Select import - using native HTML selects for consistency
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Settings, Shield, Users, Building, BarChart3, FileText, Workflow, Calculator } from "lucide-react";
+import { Settings, Shield, Users, Building, BarChart3, FileText, Workflow, Calculator, ChevronDown } from "lucide-react";
 
 interface Contact {
   id: number;
@@ -291,21 +285,21 @@ export function ContactPermissionsModal({ contact, isOpen, onClose }: ContactPer
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Select value={selectedRole} onValueChange={handleRoleChange}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a role" />
-                </SelectTrigger>
-                <SelectContent>
+              <div className="relative">
+                <select
+                  value={selectedRole}
+                  onChange={(e) => handleRoleChange(e.target.value)}
+                  className="w-full h-10 px-3 py-2 text-sm bg-background border border-input rounded-md appearance-none pr-8 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                >
+                  <option value="">Select a role</option>
                   {roles.map(role => (
-                    <SelectItem key={role.id} value={role.id}>
-                      <div>
-                        <div className="font-medium">{role.label}</div>
-                        <div className="text-sm text-muted-foreground">{role.description}</div>
-                      </div>
-                    </SelectItem>
+                    <option key={role.id} value={role.id}>
+                      {role.label}
+                    </option>
                   ))}
-                </SelectContent>
-              </Select>
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+              </div>
               
               {selectedRole !== 'custom' && (
                 <div className="mt-2 text-sm text-muted-foreground">

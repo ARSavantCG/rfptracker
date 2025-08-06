@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+// Removed Select import - using native HTML selects for consistency
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Trash2, Upload, FileText, Save, X, Download, ChevronUp, ChevronDown, GripVertical } from "lucide-react";
@@ -647,26 +647,26 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Respondent (Contractor/Architect)</FormLabel>
-                    <Select 
-                      onValueChange={(value) => {
-                        field.onChange(value);
-                        handleContractorSelect(value);
-                      }}
-                      value={field.value?.toString()}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select contractor or architect..." />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {allBidders.map((bidder) => (
-                          <SelectItem key={bidder.id} value={bidder.id.toString()}>
-                            {bidder.name} ({bidder.company}) - {bidder.type}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <div className="relative">
+                        <select
+                          value={field.value?.toString() || ""}
+                          onChange={(e) => {
+                            field.onChange(e.target.value);
+                            handleContractorSelect(e.target.value);
+                          }}
+                          className="w-full h-10 px-3 py-2 text-sm bg-background border border-input rounded-md appearance-none pr-8 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                        >
+                          <option value="">Select contractor or architect...</option>
+                          {allBidders.map((bidder) => (
+                            <option key={bidder.id} value={bidder.id.toString()}>
+                              {bidder.name} ({bidder.company}) - {bidder.type}
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                      </div>
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -678,17 +678,20 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Cost Category</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select cost category..." />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="architectural">Architectural & Design Fees</SelectItem>
-                        <SelectItem value="construction">Construction Costs</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <div className="relative">
+                        <select
+                          value={field.value || ""}
+                          onChange={(e) => field.onChange(e.target.value)}
+                          className="w-full h-10 px-3 py-2 text-sm bg-background border border-input rounded-md appearance-none pr-8 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                        >
+                          <option value="">Select cost category...</option>
+                          <option value="architectural">Architectural & Design Fees</option>
+                          <option value="construction">Construction Costs</option>
+                        </select>
+                        <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                      </div>
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}

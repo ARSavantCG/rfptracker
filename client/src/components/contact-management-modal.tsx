@@ -9,14 +9,14 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+// Removed Select import - using native HTML selects for consistency
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { TagInput } from "@/components/ui/tag-input";
-import { Plus, Building, User, Mail, Phone, Trash2, Users, Edit, Save, X } from "lucide-react";
+import { Plus, Building, User, Mail, Phone, Trash2, Users, Edit, Save, X, ChevronDown } from "lucide-react";
 import type { Contact } from "@shared/schema";
 
 const createContactSchema = insertContactSchema.extend({
@@ -378,19 +378,22 @@ export function ContactManagementModal({ isOpen, onClose }: ContactManagementMod
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-sm">Contact Type</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger className="h-8 text-sm">
-                              <SelectValue placeholder="Select contact type" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="architect">Architect</SelectItem>
-                            <SelectItem value="contractor">General Contractor</SelectItem>
-                            <SelectItem value="owner">Owner</SelectItem>
-                            <SelectItem value="other">Other</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <FormControl>
+                          <div className="relative">
+                            <select
+                              value={field.value || ""}
+                              onChange={(e) => field.onChange(e.target.value)}
+                              className="w-full h-8 px-3 py-2 text-sm bg-background border border-input rounded-md appearance-none pr-8 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                            >
+                              <option value="">Select contact type</option>
+                              <option value="architect">Architect</option>
+                              <option value="contractor">General Contractor</option>
+                              <option value="owner">Owner</option>
+                              <option value="other">Other</option>
+                            </select>
+                            <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                          </div>
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -544,19 +547,22 @@ export function ContactManagementModal({ isOpen, onClose }: ContactManagementMod
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-sm">Contact Type</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger className="h-8 text-sm">
-                              <SelectValue placeholder="Select contact type" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="architect">Architect</SelectItem>
-                            <SelectItem value="contractor">General Contractor</SelectItem>
-                            <SelectItem value="owner">Owner</SelectItem>
-                            <SelectItem value="other">Other</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <FormControl>
+                          <div className="relative">
+                            <select
+                              value={field.value || ""}
+                              onChange={(e) => field.onChange(e.target.value)}
+                              className="w-full h-8 px-3 py-2 text-sm bg-background border border-input rounded-md appearance-none pr-8 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                            >
+                              <option value="">Select contact type</option>
+                              <option value="architect">Architect</option>
+                              <option value="contractor">General Contractor</option>
+                              <option value="owner">Owner</option>
+                              <option value="other">Other</option>
+                            </select>
+                            <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                          </div>
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}

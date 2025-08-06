@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+// Removed Select import - using native HTML selects for consistency
 import { Plus, Edit, Trash2, Save, X, ArrowRight, Copy, FileDown, Upload, Package, Users, ChevronUp, ChevronDown, GripVertical, Check as CheckIcon, FileText } from "lucide-react";
 import { EvaluationAttachments } from "./evaluation-attachments";
 import { EvaluationBudgetHistory } from "./evaluation-budget-history";
@@ -2964,20 +2964,19 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
 
                               {/* Rollup Select */}
                               <TableCell className="text-center">
-                                <Select
-                                  value={budgetData.lineItemRollups[item.id] || 'none'}
-                                  onValueChange={(value) => handleLineItemRollup(item.id, category, value as any)}
-                                >
-                                  <SelectTrigger className="w-full text-xs">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="none">None</SelectItem>
-                                    <SelectItem value="tenantImprovements">TI</SelectItem>
-                                    <SelectItem value="designSoftCosts">Design</SelectItem>
-                                    <SelectItem value="tiAndDesign">TI & Design</SelectItem>
-                                  </SelectContent>
-                                </Select>
+                                <div className="relative">
+                                  <select
+                                    value={budgetData.lineItemRollups[item.id] || 'none'}
+                                    onChange={(e) => handleLineItemRollup(item.id, category, e.target.value as any)}
+                                    className="w-full text-xs bg-background border border-input rounded-md appearance-none pr-6 py-1 px-2 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                                  >
+                                    <option value="none">None</option>
+                                    <option value="tenantImprovements">TI</option>
+                                    <option value="designSoftCosts">Design</option>
+                                    <option value="tiAndDesign">TI & Design</option>
+                                  </select>
+                                  <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground pointer-events-none" />
+                                </div>
                               </TableCell>
 
                               {/* Editable cells vs Display cells */}

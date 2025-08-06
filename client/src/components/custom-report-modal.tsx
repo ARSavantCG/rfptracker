@@ -3,8 +3,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Download, Settings, ArrowUp, ArrowDown } from "lucide-react";
+// Removed Select import - using native HTML selects for consistency
+import { Download, Settings, ArrowUp, ArrowDown, ChevronDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface CustomReportModalProps {
@@ -178,34 +178,40 @@ export function CustomReportModal({ isOpen, onClose, filters }: CustomReportModa
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="sort-by">Sort By</Label>
-                <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
+                <div className="relative">
+                  <select
+                    id="sort-by"
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="w-full h-10 px-3 py-2 text-sm bg-background border border-input rounded-md appearance-none pr-8 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  >
                     {selectedFields.map(fieldId => {
                       const field = availableFields.find(f => f.id === fieldId);
                       return field ? (
-                        <SelectItem key={fieldId} value={fieldId}>
+                        <option key={fieldId} value={fieldId}>
                           {field.label}
-                        </SelectItem>
+                        </option>
                       ) : null;
                     })}
-                  </SelectContent>
-                </Select>
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                </div>
               </div>
 
               <div>
                 <Label htmlFor="sort-order">Sort Order</Label>
-                <Select value={sortOrder} onValueChange={(value: "asc" | "desc") => setSortOrder(value)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="asc">Ascending</SelectItem>
-                    <SelectItem value="desc">Descending</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="relative">
+                  <select
+                    id="sort-order"
+                    value={sortOrder}
+                    onChange={(e) => setSortOrder(e.target.value as "asc" | "desc")}
+                    className="w-full h-10 px-3 py-2 text-sm bg-background border border-input rounded-md appearance-none pr-8 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  >
+                    <option value="asc">Ascending</option>
+                    <option value="desc">Descending</option>
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                </div>
               </div>
             </div>
 

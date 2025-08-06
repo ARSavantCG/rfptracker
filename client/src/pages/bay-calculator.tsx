@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+// Removed Select import - using native HTML selects for consistency
 import { Label } from "@/components/ui/label";
-import { Calculator, Building2 } from "lucide-react";
+import { Calculator, Building2, ChevronDown } from "lucide-react";
 import Navigation from "@/components/navigation";
 import { BaySelectionGrid } from "@/components/bay-selection-grid";
 import type { Property, PropertyBay } from "@shared/schema";

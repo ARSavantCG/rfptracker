@@ -1049,17 +1049,42 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                             throw new Error('Failed to save area');
                           }
                           
+                          const savedArea = await response.json();
+                          console.log('Area saved successfully:', savedArea);
+                          
+                          // Mark inputs as readonly and change appearance to show saved state
+                          const inputs = newRow.querySelectorAll('input');
+                          inputs.forEach(input => {
+                            const htmlInput = input as HTMLInputElement;
+                            htmlInput.readOnly = true;
+                            htmlInput.style.backgroundColor = '#f8f9fa';
+                            htmlInput.style.border = '1px solid #28a745';
+                          });
+                          
+                          // Update the row to show it's from database
+                          const savedIndicator = document.createElement('div');
+                          savedIndicator.className = 'text-xs text-green-600 bg-green-50 px-2 py-1 rounded';
+                          savedIndicator.textContent = 'Saved';
+                          
+                          // Replace the actions column with saved indicator
+                          const actionsCell = newRow.children[3];
+                          if (actionsCell) {
+                            actionsCell.innerHTML = '';
+                            actionsCell.appendChild(savedIndicator);
+                          }
+                          
                           toast({
-                            title: "Area Saved",
-                            description: "Additional area has been saved successfully",
-                            duration: 4000,
+                            title: "✅ Additional Area Saved Successfully",
+                            description: `${description} (${parseInt(squareFootage).toLocaleString()} SF) has been saved to the database.`,
+                            duration: 6000,
                           });
                         } catch (error) {
+                          console.error('Save error:', error);
                           toast({
-                            title: "Save Failed", 
-                            description: "Could not save area. Please try again.",
+                            title: "❌ Save Failed", 
+                            description: "Could not save the additional area. Please check your connection and try again.",
                             variant: "destructive",
-                            duration: 4000,
+                            duration: 6000,
                           });
                           return;
                         }

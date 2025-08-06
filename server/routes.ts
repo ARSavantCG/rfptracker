@@ -2263,18 +2263,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Area description is required" });
       }
 
-      // For now, we'll just return success since additional areas are handled 
-      // as part of the invitation data structure. In a future enhancement,
-      // this could be stored in a separate additionalAreas table.
+      // Get current RFP to access existing area breakdown
+      const currentRfp = await storage.getRfpRequest(id);
+      if (!currentRfp) {
+        return res.status(404).json({ message: "RFP not found" });
+      }
+
+      // Create new area object
+      const newArea = {
+        id: `area-${Date.now()}`,
+        description: description.trim(),
+        squareFootage: squareFootage.toString(),
+        notes: notes || ''
+      };
+
+      // Add to existing area breakdown or create new array
+      const currentAreas = Array.isArray(currentRfp.areaBreakdown) ? currentRfp.areaBreakdown : [];
+      const updatedAreas = [...currentAreas, newArea];
+
+      // Update RFP with new area breakdown
+      const updatedRfp = await storage.updateRfpRequest(id, {
+        areaBreakdown: updatedAreas
+      });
       
-      console.log(`Saving additional area for RFP ${id}:`, { description, squareFootage, notes });
+      console.log(`Successfully saved additional area for RFP ${id}:`, newArea);
       
       res.status(201).json({
-        id: `area-${Date.now()}`,
+        id: newArea.id,
         rfpId: id,
-        description,
-        squareFootage: parseInt(squareFootage) || 0,
-        notes: notes || '',
+        description: newArea.description,
+        squareFootage: parseInt(newArea.squareFootage) || 0,
+        notes: newArea.notes,
         createdAt: new Date().toISOString()
       });
     } catch (error) {

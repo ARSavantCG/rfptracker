@@ -1126,13 +1126,13 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                   <div></div>
                 </div>
                 
-                {/* Original Area Items from Step 2 */}
+                {/* Saved Area Items (both from Step 2 and newly added) */}
                 {rfp?.areaBreakdown && rfp.areaBreakdown.map((area, index) => (
-                  <div key={area.id || index} className="grid grid-cols-5 gap-4 items-center py-2 border-b border-gray-100">
-                    <div className="text-sm">{area.description}</div>
-                    <div className="text-sm font-medium">{parseInt(area.squareFootage || '0').toLocaleString()} SF</div>
-                    <div className="text-sm text-gray-600">{area.notes || '—'}</div>
-                    <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">From Step 2</div>
+                  <div key={area.id || index} className="grid grid-cols-5 gap-4 items-center py-2 border-b border-gray-100 bg-green-50">
+                    <div className="text-sm font-medium text-green-800">{area.description}</div>
+                    <div className="text-sm font-medium text-green-800">{parseInt(area.squareFootage || '0').toLocaleString()} SF</div>
+                    <div className="text-sm text-green-600">{area.notes || '—'}</div>
+                    <div className="text-xs text-green-700 bg-green-100 px-2 py-1 rounded font-medium">✓ Saved</div>
                     <div></div>
                   </div>
                 ))}

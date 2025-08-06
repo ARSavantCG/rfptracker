@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, memo } from "react";
+import { useState, useEffect, useCallback, memo, useRef } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -65,8 +65,8 @@ const cleanProjectName = (projectName: string): string => {
 // Global counter to ensure unique IDs across all modal instances
 let globalAreaCounter = 0;
 
-// Memoized Area Input Component to prevent re-rendering
-const AreaInputRow = memo(({ 
+// Simple controlled component with refs to maintain focus
+const AreaInputRow = ({ 
   area, 
   index, 
   onUpdate, 
@@ -81,34 +81,47 @@ const AreaInputRow = memo(({
   formatNumber: (value: string) => string,
   getRawNumber: (value: string) => string
 }) => {
+  const descRef = useRef<HTMLInputElement>(null);
+  const sqftRef = useRef<HTMLInputElement>(null);
+  const notesRef = useRef<HTMLInputElement>(null);
+
   return (
     <div className="grid grid-cols-4 gap-4 items-center py-2 border-b border-gray-100">
       <input
+        ref={descRef}
         type="text"
         placeholder="Area description"
-        value={area.description}
-        onChange={(e) => onUpdate(index, 'description', e.target.value)}
+        defaultValue={area.description}
+        onChange={(e) => {
+          onUpdate(index, 'description', e.target.value);
+        }}
         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
       />
       <input
+        ref={sqftRef}
         type="text"
         placeholder="0"
-        value={formatNumber(area.squareFootage)}
+        defaultValue={formatNumber(area.squareFootage)}
         onChange={(e) => {
           const rawValue = getRawNumber(e.target.value);
           onUpdate(index, 'squareFootage', rawValue);
         }}
         onBlur={(e) => {
           const formatted = formatNumber(area.squareFootage);
-          onUpdate(index, 'squareFootage', getRawNumber(formatted));
+          if (sqftRef.current) {
+            sqftRef.current.value = formatted;
+          }
         }}
         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
       />
       <input
+        ref={notesRef}
         type="text"
         placeholder="Notes (optional)"
-        value={area.notes}
-        onChange={(e) => onUpdate(index, 'notes', e.target.value)}
+        defaultValue={area.notes}
+        onChange={(e) => {
+          onUpdate(index, 'notes', e.target.value);
+        }}
         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
       />
       <Button
@@ -122,9 +135,9 @@ const AreaInputRow = memo(({
       </Button>
     </div>
   );
-});
+};
 
-AreaInputRow.displayName = 'AreaInputRow';
+
 
 export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidModalProps) {
   const { toast } = useToast();

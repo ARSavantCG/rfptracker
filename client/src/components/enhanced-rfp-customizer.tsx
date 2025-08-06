@@ -13,14 +13,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+// Removed Select import - using native HTML selects for consistency
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/hooks/use-toast";
 import { 
   FileText, Save, Eye, Settings, Layout, Type, Columns, 
   Bold, Italic, Underline, Palette, AlignLeft, AlignCenter, 
-  AlignRight, Plus, Trash2, Copy, RotateCcw 
+  AlignRight, Plus, Trash2, Copy, RotateCcw, ChevronDown 
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
@@ -253,17 +253,20 @@ export function EnhancedRfpCustomizer() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <Select value={selectedDocumentType} onValueChange={setSelectedDocumentType}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select document type for preview" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="contractor">Contractor RFP</SelectItem>
-                <SelectItem value="architect">Architect RFP</SelectItem>
-                <SelectItem value="broker-contractor">Broker-Contractor RFP</SelectItem>
-                <SelectItem value="broker-architect">Broker-Architect RFP</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="relative">
+              <select
+                value={selectedDocumentType}
+                onChange={(e) => setSelectedDocumentType(e.target.value)}
+                className="w-full h-10 px-3 py-2 text-sm bg-background border border-input rounded-md appearance-none pr-8 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              >
+                <option value="">Select document type for preview</option>
+                <option value="contractor">Contractor RFP</option>
+                <option value="architect">Architect RFP</option>
+                <option value="broker-contractor">Broker-Contractor RFP</option>
+                <option value="broker-architect">Broker-Architect RFP</option>
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+            </div>
           </CardContent>
         </Card>
 

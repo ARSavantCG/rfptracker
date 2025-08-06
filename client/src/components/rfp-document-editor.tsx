@@ -21,13 +21,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+// Removed Select import - using native HTML selects for consistency
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -315,18 +309,22 @@ export function RfpDocumentEditor() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="type-select">Document Type</Label>
-              <Select value={selectedDocumentType} onValueChange={setSelectedDocumentType}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select document type to edit" />
-                </SelectTrigger>
-                <SelectContent>
+              <div className="relative">
+                <select
+                  id="type-select"
+                  value={selectedDocumentType}
+                  onChange={(e) => setSelectedDocumentType(e.target.value)}
+                  className="w-full h-10 px-3 py-2 text-sm bg-background border border-input rounded-md appearance-none pr-8 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                >
+                  <option value="">Select document type to edit</option>
                   {documentTypes.map((type) => (
-                    <SelectItem key={type.value} value={type.value}>
+                    <option key={type.value} value={type.value}>
                       {type.label}
-                    </SelectItem>
+                    </option>
                   ))}
-                </SelectContent>
-              </Select>
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+              </div>
             </div>
           </div>
 

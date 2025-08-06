@@ -1075,9 +1075,12 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                           
                           toast({
                             title: "✅ Additional Area Saved Successfully",
-                            description: `${description} (${parseInt(squareFootage).toLocaleString()} SF) has been saved to the database.`,
-                            duration: 6000,
+                            description: `${description} (${parseInt(squareFootage).toLocaleString()} SF) has been saved to the database. Close and reopen this modal to see it in the saved areas list.`,
+                            duration: 8000,
                           });
+                          
+                          // Force refresh RFP data to show new area
+                          window.location.reload();
                         } catch (error) {
                           console.error('Save error:', error);
                           toast({

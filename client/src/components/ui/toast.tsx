@@ -46,7 +46,8 @@ const Toast = React.forwardRef<
   return (
     <ToastPrimitives.Root
       ref={ref}
-      className={cn(toastVariants({ variant }), className)}
+      className={cn(toastVariants({ variant }), "!min-w-[500px] !min-h-[120px] !p-8", className)}
+      style={{ minWidth: '500px', minHeight: '120px', padding: '32px', fontSize: '18px', lineHeight: '1.5' }}
       {...props}
     />
   )
@@ -92,7 +93,8 @@ const ToastTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <ToastPrimitives.Title
     ref={ref}
-    className={cn("text-base font-semibold leading-relaxed", className)}
+    className={cn("text-xl font-bold leading-relaxed", className)}
+    style={{ fontSize: '20px', fontWeight: '700', lineHeight: '1.4' }}
     {...props}
   />
 ))
@@ -104,7 +106,8 @@ const ToastDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <ToastPrimitives.Description
     ref={ref}
-    className={cn("text-sm opacity-90 leading-relaxed", className)}
+    className={cn("text-lg opacity-90 leading-relaxed", className)}
+    style={{ fontSize: '16px', lineHeight: '1.5' }}
     {...props}
   />
 ))

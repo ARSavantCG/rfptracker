@@ -2430,7 +2430,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // PDF Generation routes  
-  app.get("/api/rfp-requests/:id/generate-pdf/:type", async (req, res) => {
+  app.get("/api/rfp-requests/:id/generate-pdf/:type", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const { type } = req.params;
@@ -2461,12 +2461,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get invitation to bid data if available
       const invitationToBid = await storage.getInvitationToBid(id);
 
+      // Get user email for contact information
+      const user = (req as any).user;
+      const userEmail = user?.email || user?.username || 'AReutlinger@bridgeindustrial.com';
+
       const pdfOptions = {
         rfp: rfpWithAddress,
         invitationToBid,
         recipientType: type as "architect" | "contractor" | "broker-architect" | "broker-contractor",
         recipientName: "Preview User",
-        recipientCompany: "Preview Company"
+        recipientCompany: "Preview Company",
+        userEmail  // Pass the authenticated user's email
       };
 
       // Generate HTML
@@ -2506,7 +2511,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/rfp-requests/:id/generate-pdf", async (req, res) => {
+  app.post("/api/rfp-requests/:id/generate-pdf", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const { recipientType, recipientName, recipientCompany, returnType = "html" } = req.body;

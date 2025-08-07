@@ -1180,7 +1180,7 @@ async function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dat
   
   // Prefer development contact from RFP, fallback to invitation contact
   const contactInfo = developmentContactInfo.length >= 2 ? developmentContactInfo : invitationContactInfo;
-  const contactPerson = contactInfo[0] || 'Development Team';
+  const contactPerson = contactInfo[0] || rfp.developmentContact || 'Development Contact';
   const contactEmail = contactInfo[1] || 'AReutlinger@bridgeindustrial.com';
   const contactPhone = contactInfo[2] || '';
 
@@ -1385,7 +1385,7 @@ async function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, da
   
   // Prefer development contact from RFP, fallback to invitation contact
   const contactInfo = developmentContactInfo.length >= 2 ? developmentContactInfo : invitationContactInfo;
-  const contactPerson = contactInfo[0] || 'Development Team';
+  const contactPerson = contactInfo[0] || rfp.developmentContact || 'Development Contact';
   const contactEmail = contactInfo[1] || 'AReutlinger@bridgeindustrial.com';
   const contactPhone = contactInfo[2] || '';
 
@@ -1585,138 +1585,7 @@ async function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, da
     </body>
   </html>
   `;
-        <div class="company-info">
-          <div><strong>Development Team</strong></div>
-          <div>${contactPerson}</div>
-          <div>Email: ${contactEmail}</div>
-          <div>Date: ${today}</div>
-        </div>
-        <div class="document-title">PRELIMINARY REQUEST FOR PROPOSAL</div>
-        <div class="project-title">${projectName}</div>
-        <div style="font-size: 14px; color: #666;">RFP Number: ${rfp.rfpNumber}</div>
-      </div>
-
-      <div class="preliminary-notice">
-        <strong>PRELIMINARY BROKER RESPONSE RFP</strong><br>
-        This is a preliminary request for conceptual pricing and scheduling to support broker discussions with a prospective tenant. This is not a formal project commitment.
-      </div>
-
-      <div class="section">
-        <div class="section-title">Project Overview</div>
-        <div class="info-grid">
-          <div>
-            <div class="info-item"><span class="label">Project:</span><span class="value">${invitationToBid?.projectScope || rfp.tenantName}</span></div>
-            <div class="info-item"><span class="label">Property Address:</span><span class="value">${invitationToBid?.projectLocation || rfp.propertyAddress || rfp.property}</span></div>
-          </div>
-          <div>
-            <div class="info-item"><span class="label">Requested Response:</span><span class="value">${formattedDeadline}</span></div>
-            <div class="info-item"><span class="label">Project Type:</span><span class="value">Preliminary Pricing</span></div>
-          </div>
-        </div>
-
-        ${invitationToBid?.projectDescription ? `
-        <div class="project-description">
-          <strong>Project Description:</strong><br>
-          ${invitationToBid.projectDescription}
-        </div>
-        ` : ''}
-
-        ${invitationToBid?.documentsLink ? `
-        <div class="info-item" style="margin-top: 15px;">
-          <span class="label">Project Documents:</span>
-          <span class="value"><a href="${invitationToBid.documentsLink}" target="_blank">${invitationToBid.documentsLink}</a></span>
-        </div>
-        ` : ''}
-      </div>
-
-      ${spaceRequirementsHtml}
-
-      ${invitationToBid?.scopeOfWork && invitationToBid.scopeOfWork.length > 0 ? `
-      <div class="section">
-        <div class="section-title">SCOPE OF WORK:</div>
-        <div class="description-box">
-          <p><strong>Please provide pricing and timeline for the following scope of work items:</strong></p>
-          <table class="info-table" style="margin-top: 15px; table-layout: fixed; width: 100%;">
-            <colgroup>
-              <col style="width: 30%;">
-              <col style="width: 12%;">
-              <col style="width: 8%;">
-              <col style="width: 50%;">
-            </colgroup>
-            <thead>
-              <tr>
-                <th style="text-align: left;">Description</th>
-                <th style="text-align: center;">Quantity</th>
-                <th style="text-align: center;">Unit</th>
-                <th style="text-align: left;">Notes</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${invitationToBid.scopeOfWork.map((item: any) => `
-                <tr>
-                  <td>${item.description || ''}</td>
-                  <td style="text-align: center;">${item.quantity || ''}</td>
-                  <td style="text-align: center;">${item.unit || ''}</td>
-                  <td>${item.notes || ''}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </div>
-      </div>
-      ` : ''}
-
-      ${rfp.requestTypes && rfp.requestTypes.length > 0 ? `
-      <div class="section">
-        <div class="section-title">Request Types</div>
-        <div class="description-box">
-          <p><strong>Please provide the following information in your proposal:</strong></p>
-          <ul class="requirements-list">
-            ${rfp.requestTypes.includes('pricing') ? '<li>✓ Pricing estimates and cost breakdown</li>' : ''}
-            ${rfp.requestTypes.includes('schedule') ? '<li>✓ Project schedule and timeline</li>' : ''}
-          </ul>
-        </div>
-      </div>
-      ` : ''}
-
-      <div class="section">
-        <div class="section-title">Requested Deliverables</div>
-        <ul>
-          <li>Preliminary cost estimate</li>
-          <li>Timeline estimate for construction phases${hasMilestones(invitationToBid, 'broker-contractor') ? ' based on milestone request(s) below' : ''}</li>
-          <li>Pricing proposal for full construction services</li>
-        </ul>
-      </div>
-
-      ${getMilestoneRequestsSection(invitationToBid, 'broker-contractor')}
-
-      <div class="section">
-        <div class="section-title">Pricing Considerations</div>
-        <ul>
-          <li>Review tenant improvement requirements and building conditions</li>
-          <li>Provide conceptual cost estimates for typical build-out scenarios</li>
-          <li>Identify potential challenges or special requirements</li>
-          <li>Unit cost guidance for common improvement types</li>
-          <li>Preliminary construction scheduling</li>
-          <li>Assessment of existing building systems and access requirements</li>
-        </ul>
-      </div>
-
-      <div class="requirements">
-        <strong>Important Note:</strong> This preliminary RFP is issued to support ongoing lease negotiations with a prospective tenant. 
-        The project may not proceed, and this request does not constitute a commitment to construction services. 
-        Please provide conceptual-level pricing suitable for initial tenant discussions.
-      </div>
-
-      <div class="footer">
-        <p>This preliminary RFP was generated on ${today} for broker response purposes. 
-        For questions, please contact ${rfp.developmentContact || 'Development Team'}.</p>
-      </div>
-    </body>
-    </html>
-  `;
 }
-
 export function generatePdfFilename(rfp: any, recipientType: string): string {
   const projectName = rfp.confidential ? `Confidential_${rfp.property}` : `${rfp.tenantName}_${rfp.property}`;
   const cleanProjectName = projectName.replace(/[^a-zA-Z0-9]/g, '_');

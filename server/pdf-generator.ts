@@ -1363,13 +1363,13 @@ async function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dat
       </div>
 
       <div class="requirements">
-        <strong>Important Note:</strong> This preliminary RFP is issued to support ongoing lease negotiations with a prospective tenant. 
+        <strong style="font-size: 0.75em;">Important Note:</strong> <span style="font-size: 0.75em;">This preliminary RFP is issued to support ongoing lease negotiations with a prospective tenant. 
         The project may not proceed, and this request does not constitute a commitment to architectural services. 
-        Please provide conceptual-level pricing suitable for initial tenant discussions.
+        Please provide conceptual-level pricing suitable for initial tenant discussions.</span>
       </div>
 
       <div class="footer">
-        <p>This preliminary RFP was generated on ${today} for broker response purposes. 
+        <p style="font-size: 0.75em;">This preliminary RFP was generated on ${today} for broker response purposes. 
         For questions, please contact ${contactPerson}.</p>
       </div>
     </body>
@@ -1552,13 +1552,13 @@ async function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, da
       </div>
 
       <div class="requirements">
-        <strong>Important Note:</strong> This preliminary RFP is issued to support ongoing lease negotiations with a prospective tenant. 
+        <strong style="font-size: 0.75em;">Important Note:</strong> <span style="font-size: 0.75em;">This preliminary RFP is issued to support ongoing lease negotiations with a prospective tenant. 
         The project may not proceed, and this request does not constitute a commitment to construction services. 
-        Please provide conceptual-level pricing suitable for initial tenant discussions.
+        Please provide conceptual-level pricing suitable for initial tenant discussions.</span>
       </div>
 
       <div class="footer">
-        <p>This preliminary RFP was generated on ${today} for broker response purposes. 
+        <p style="font-size: 0.75em;">This preliminary RFP was generated on ${today} for broker response purposes. 
         For questions, please contact ${contactPerson}.</p>
       </div>
     </body>

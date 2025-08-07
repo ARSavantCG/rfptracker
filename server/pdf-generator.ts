@@ -392,7 +392,7 @@ function generateFinancialSummaryHtml(options: PdfGenerationOptions, dates: any)
     <body>
       <div class="header">
         <div class="logo-container">
-          <img src="${getBridgeLogo()}" alt="Bridge Industrial" style="height: 50px; width: auto;" />
+          <img src="${getBridgeLogo()}" alt="Bridge Industrial" style="height: 25px; width: auto;" />
         </div>
         <div class="company-info">
           <div><strong>Financial Summary Report</strong></div>
@@ -555,7 +555,7 @@ async function generateContractorRfpHtml(options: PdfGenerationOptions, dates: a
   // Prefer development contact from RFP, fallback to invitation contact
   const contactInfo = developmentContactInfo.length >= 2 ? developmentContactInfo : invitationContactInfo;
   const contactPerson = contactInfo[0] || 'Development Contact';
-  const contactEmail = contactInfo[1] || options.userEmail || 'AReutlinger@bridgeindustrial.com';
+  const contactEmail = options.userEmail || contactInfo[1] || 'AReutlinger@bridgeindustrial.com';
   const contactPhone = contactInfo[2] || '';
   
   // Use Project Description from invitation data
@@ -868,7 +868,7 @@ async function generateArchitectRfpHtml(options: PdfGenerationOptions, dates: an
   // Prefer development contact from RFP, fallback to invitation contact
   const contactInfo = developmentContactInfo.length >= 2 ? developmentContactInfo : invitationContactInfo;
   const contactPerson = contactInfo[0] || 'Development Contact';
-  const contactEmail = contactInfo[1] || options.userEmail || 'AReutlinger@bridgeindustrial.com';
+  const contactEmail = options.userEmail || contactInfo[1] || 'AReutlinger@bridgeindustrial.com';
   const contactPhone = contactInfo[2] || '';
   
   return `
@@ -1183,7 +1183,7 @@ async function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dat
   // Prefer development contact from RFP, fallback to invitation contact
   const contactInfo = developmentContactInfo.length >= 2 ? developmentContactInfo : invitationContactInfo;
   const contactPerson = contactInfo[0] || rfp.developmentContact || 'Development Contact';
-  const contactEmail = contactInfo[1] || options.userEmail || 'AReutlinger@bridgeindustrial.com';
+  const contactEmail = options.userEmail || contactInfo[1] || 'AReutlinger@bridgeindustrial.com';
   const contactPhone = contactInfo[2] || '';
 
   const projectName = rfp.projectName || invitationToBid?.projectScope || (rfp.confidential ? `Confidential @ ${rfp.property}` : `${rfp.tenantName} @ ${rfp.property}`);
@@ -1202,7 +1202,7 @@ async function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dat
         .header { border-bottom: 3px solid rgb(0,50,130); padding-bottom: 20px; margin-bottom: 30px; position: relative; }
         .company-logo { position: absolute; left: 0; top: 0; height: 40px; }
         .company-info { text-align: right; margin-bottom: 20px; }
-        .document-title { font-size: 24px; font-weight: bold; color: rgb(0,50,130); margin-bottom: 10px; background: rgb(0,50,130); color: white; padding: 10px; border-radius: 5px; }
+        .document-title { font-size: 18px; font-weight: bold; color: rgb(0,50,130); margin-bottom: 10px; background: rgb(0,50,130); color: white; padding: 10px; border-radius: 5px; }
         .project-title { font-size: 18px; color: #666; margin-bottom: 20px; }
         .section { margin-bottom: 25px; }
         .section-title { font-size: 16px; font-weight: bold; color: rgb(0,50,130); margin-bottom: 10px; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; }
@@ -1226,7 +1226,7 @@ async function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dat
       <div class="header">
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
           <!-- Company logo -->
-          <img src="${getBridgeLogo()}" alt="Bridge Industrial" style="height: 60px; width: auto;" />
+          <img src="${getBridgeLogo()}" alt="Bridge Industrial" style="height: 30px; width: auto;" />
         </div>
         <div class="company-info">
           <div><strong>Development Team</strong></div>
@@ -1388,7 +1388,7 @@ async function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, da
   // Prefer development contact from RFP, fallback to invitation contact
   const contactInfo = developmentContactInfo.length >= 2 ? developmentContactInfo : invitationContactInfo;
   const contactPerson = contactInfo[0] || rfp.developmentContact || 'Development Contact';
-  const contactEmail = contactInfo[1] || options.userEmail || 'AReutlinger@bridgeindustrial.com';
+  const contactEmail = options.userEmail || contactInfo[1] || 'AReutlinger@bridgeindustrial.com';
   const contactPhone = contactInfo[2] || '';
 
   const projectName = rfp.projectName || invitationToBid?.projectScope || (rfp.confidential ? `Confidential @ ${rfp.property}` : `${rfp.tenantName} @ ${rfp.property}`);
@@ -1449,7 +1449,7 @@ async function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, da
         body { font-family: Arial, sans-serif; margin: 0; padding: 20px; line-height: 1.4; color: #333; }
         .header { border-bottom: 3px solid rgb(0,50,130); padding-bottom: 20px; margin-bottom: 30px; }
         .company-info { text-align: right; margin-bottom: 20px; }
-        .document-title { font-size: 24px; font-weight: bold; color: rgb(0,50,130); margin-bottom: 10px; background: rgb(0,50,130); color: white; padding: 10px; border-radius: 5px; }
+        .document-title { font-size: 18px; font-weight: bold; color: rgb(0,50,130); margin-bottom: 10px; background: rgb(0,50,130); color: white; padding: 10px; border-radius: 5px; }
         .project-title { font-size: 18px; color: #666; margin-bottom: 20px; }
         .section { margin-bottom: 25px; }
         .section-title { font-size: 16px; font-weight: bold; color: rgb(0,50,130); margin-bottom: 10px; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; }
@@ -1472,7 +1472,7 @@ async function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, da
     <body>
       <div class="header">
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
-          <img src="${getBridgeLogo()}" alt="Bridge Industrial" style="height: 50px; width: auto;" />
+          <img src="${getBridgeLogo()}" alt="Bridge Industrial" style="height: 25px; width: auto;" />
           <div style="background: rgb(0,50,130); color: white; padding: 5px 10px; font-weight: bold; font-size: 12px; border-radius: 3px;">
             REQUEST FOR PROPOSAL
           </div>
@@ -1488,7 +1488,7 @@ async function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, da
       </div>
 
       <div class="preliminary-notice">
-        <strong>PRELIMINARY BROKER RESPONSE RFP</strong><br>
+        <strong style="font-size: 0.75em;">PRELIMINARY BROKER RESPONSE RFP</strong><br>
         This is a preliminary request for conceptual pricing and scheduling to support broker discussions with a prospective tenant. This is not a formal project commitment.
       </div>
 

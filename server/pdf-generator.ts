@@ -1,7 +1,19 @@
 import { createWriteStream } from "fs";
 import { promisify } from "util";
+import { readFileSync } from "fs";
 import { storage } from "./storage";
 import { evaluateFormula } from "@shared/formula-utils";
+
+// Get Bridge Industrial logo as base64
+function getBridgeLogo(): string {
+  try {
+    const logoBase64 = readFileSync('./bridge_logo_new_base64.txt', 'utf8').trim();
+    return `data:image/png;base64,${logoBase64}`;
+  } catch (error) {
+    console.error('Error reading Bridge logo:', error);
+    return '';
+  }
+}
 
 // Function to get template content for PDF generation
 async function getTemplateContent(recipientType: string): Promise<any> {
@@ -255,8 +267,9 @@ function generateFinancialSummaryHtml(options: PdfGenerationOptions, dates: any)
           border-bottom: 2px solid #2563eb; 
           padding-bottom: 20px; 
         }
+        .logo-container { margin-bottom: 15px; }
         .company-info { text-align: left; margin-bottom: 20px; }
-        .document-title { font-size: 18px; font-weight: bold; color: #2563eb; margin: 10px 0; }
+        .document-title { font-size: 18px; font-weight: bold; color: rgb(0,50,130); margin: 10px 0; }
         .project-title { font-size: 16px; font-weight: bold; margin: 5px 0; }
         
         .section {
@@ -376,6 +389,9 @@ function generateFinancialSummaryHtml(options: PdfGenerationOptions, dates: any)
     </head>
     <body>
       <div class="header">
+        <div class="logo-container">
+          <img src="${getBridgeLogo()}" alt="Bridge Industrial" style="height: 50px; width: auto;" />
+        </div>
         <div class="company-info">
           <div><strong>Financial Summary Report</strong></div>
           <div>Generated: ${today}</div>
@@ -947,7 +963,7 @@ async function generateArchitectRfpHtml(options: PdfGenerationOptions, dates: an
     </head>
     <body>
       <div class="header">
-        <h1>REQUEST FOR PROPOSAL</h1>
+        <h1 style="color: rgb(0,50,130);">REQUEST FOR PROPOSAL</h1>
         <h2>Architectural Services - ${projectName}</h2>
       </div>
       
@@ -1207,10 +1223,8 @@ async function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dat
     <body>
       <div class="header">
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
-          <!-- Company logo placeholder -->
-          <div style="background: rgb(0,50,130); color: white; padding: 5px 10px; font-weight: bold; font-size: 12px; border-radius: 3px;">
-            BRIDGE INDUSTRIAL
-          </div>
+          <!-- Company logo -->
+          <img src="${getBridgeLogo()}" alt="Bridge Industrial" style="height: 60px; width: auto;" />
         </div>
         <div class="company-info">
           <div><strong>Development Team</strong></div>

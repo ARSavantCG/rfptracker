@@ -3,6 +3,7 @@ import { promisify } from "util";
 import { readFileSync } from "fs";
 import { storage } from "./storage";
 import { evaluateFormula } from "@shared/formula-utils";
+import { format } from "date-fns";
 
 // Get Bridge Industrial logo as base64
 function getBridgeLogo(): string {
@@ -1493,72 +1494,26 @@ async function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, da
       <div class="section">
         <div class="section-title">Project Overview</div>
         <div class="info-grid">
-          <div class="info-item">
-            <span class="label">Project:</span>
-            <span class="value">${projectName}</span>
+          <div>
+            <div class="info-item"><span class="label">Project:</span><span class="value">${invitationToBid?.projectScope || rfp.tenantName}</span></div>
+            <div class="info-item"><span class="label">Property Address:</span><span class="value">${invitationToBid?.projectLocation || rfp.propertyAddress || rfp.property}</span></div>
           </div>
-          <div class="info-item">
-            <span class="label">Requested Response:</span>
-            <span class="value">${format(new Date(invitation.contractorDueDate || invitation.bidSubmissionDeadline), "EEEE, MMMM d, yyyy")} E.O.B.</span>
-          </div>
-          <div class="info-item">
-            <span class="label">Property Address:</span>
-            <span class="value">${invitation.projectLocation}</span>
-          </div>
-          <div class="info-item">
-            <span class="label">Project Type:</span>
-            <span class="value">Preliminary Pricing</span>
+          <div>
+            <div class="info-item"><span class="label">Requested Response:</span><span class="value">${formattedDeadline}</span></div>
+            <div class="info-item"><span class="label">Project Type:</span><span class="value">Preliminary Assessment</span></div>
           </div>
         </div>
-      </div>
 
-      <div class="section">
-        <div class="section-title">Space Requirements</div>
-        <table>
-          <tr>
-            <th>Space Type</th>
-            <th>Area (sq ft)</th>
-            <th>Notes</th>
-          </tr>
-          ${rfp.warehouseSpace ? `<tr><td>Warehouse</td><td>${(rfp.warehouseSpace || 0).toLocaleString()}</td><td></td></tr>` : ''}
-          ${rfp.officeSpace ? `<tr><td>Office Area</td><td>${(rfp.officeSpace || 0).toLocaleString()}</td><td></td></tr>` : ''}
-          <tr>
-            <td><strong>Total</strong></td>
-            <td><strong>${((rfp.warehouseSpace || 0) + (rfp.officeSpace || 0)).toLocaleString()}</strong></td>
-            <td></td>
-          </tr>
-        </table>
-      </div>
-
-      <div class="section">
-        <div class="section-title">SCOPE OF WORK:</div>
-        <p style="margin-bottom: 15px;">Please provide pricing and timeline for the following scope of work items:</p>
-        <table>
-          <tr>
-            <th>Description</th>
-            <th>Quantity</th>
-            <th>Unit</th>
-            <th>Notes</th>
-          </tr>
-          ${invitation.scopeOfWork?.map(item => `
-            <tr>
-              <td>${item.description || ''}</td>
-              <td style="text-align: center;">${item.quantity || ''}</td>
-              <td style="text-align: center;">${item.unit || ''}</td>
-              <td></td>
-            </tr>
-          `).join('') || ''}
-        </table>
-      </div>
-
-      ${invitation.projectDescription ? `
-      <div class="section">
-        <div class="section-title">Project Description</div>
+        ${invitationToBid?.projectDescription ? `
         <div class="project-description">
-          ${invitation.projectDescription}
-        </div>
+          <strong>Project Description:</strong><br>
+          ${invitationToBid.projectDescription}
+        </div>` : ''}
       </div>
-      ` : ''}
+
+      ${spaceRequirementsHtml}
+
+      ${scopeOfWorkHtml}
 
       <div class="section">
         <div class="section-title">Submission Requirements</div>
@@ -1574,13 +1529,36 @@ async function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, da
         </div>
       </div>
 
+      <div class="section">
+        <div class="section-title">Requested Deliverables</div>
+        <ul>
+          <li>Preliminary cost estimate</li>
+          <li>Timeline estimate for construction phases</li>
+          <li>Pricing proposal for full construction services</li>
+        </ul>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Pricing Considerations</div>
+        <ul>
+          <li>Review tenant improvement requirements and building conditions</li>
+          <li>Provide conceptual cost estimates for typical build-out scenarios</li>
+          <li>Identify potential challenges or special requirements</li>
+          <li>Unit cost guidance for common improvement types</li>
+          <li>Preliminary construction scheduling</li>
+          <li>Assessment of existing building systems and access requirements</li>
+        </ul>
+      </div>
+
+      <div class="requirements">
+        <strong>Important Note:</strong> This preliminary RFP is issued to support ongoing lease negotiations with a prospective tenant. 
+        The project may not proceed, and this request does not constitute a commitment to construction services. 
+        Please provide conceptual-level pricing suitable for initial tenant discussions.
+      </div>
+
       <div class="footer">
-        <p><strong>Questions:</strong></p>
-        <p>For questions, please contact ${contactPerson} at ${contactEmail} at your earliest convenience.</p>
-        <p><strong>Response Due:</strong> ${format(new Date(invitation.contractorDueDate || invitation.bidSubmissionDeadline), "EEEE, MMMM d, yyyy")} E.O.B.</p>
-        <p style="margin-top: 20px; font-style: italic;">
-          Bridge Industrial appreciates your time and expertise in providing this preliminary pricing information.
-        </p>
+        <p>This preliminary RFP was generated on ${today} for broker response purposes. 
+        For questions, please contact ${contactPerson}.</p>
       </div>
     </body>
   </html>

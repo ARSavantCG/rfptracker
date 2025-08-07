@@ -2,38 +2,52 @@
 @tailwind components;
 @tailwind utilities;
 
-/* TINY TOAST NOTIFICATIONS - FINAL OVERRIDE */
+/* NUCLEAR TOAST FIX - OVERRIDE EVERYTHING */
 [data-radix-toast-viewport], 
+[data-radix-toast-viewport] *,
 .toast-viewport, 
-[class*="toast"] [data-radix-toast-viewport] {
+.toast-viewport *,
+[class*="toast"] [data-radix-toast-viewport],
+[class*="toast"] [data-radix-toast-viewport] *,
+[data-state="open"][data-radix-toast-viewport],
+[data-state="open"][data-radix-toast-viewport] * {
   position: fixed !important;
   bottom: 16px !important;
   right: 16px !important;
   z-index: 999999 !important;
-  max-width: 350px !important;
+  max-width: 320px !important;
   width: auto !important;
   margin: 0 !important;
   padding: 0 !important;
+  font-size: 9px !important;
+  line-height: 1.1 !important;
 }
 
 [data-radix-toast-root], 
+[data-radix-toast-root] *,
 .toast-root,
-[class*="toast"] [data-radix-toast-root] {
-  min-width: 280px !important;
-  max-width: 350px !important;
-  min-height: 60px !important;
-  max-height: 120px !important;
+.toast-root *,
+[class*="toast"] [data-radix-toast-root],
+[class*="toast"] [data-radix-toast-root] *,
+[data-state="open"][data-radix-toast-root],
+[data-state="open"][data-radix-toast-root] *,
+.group.pointer-events-auto,
+.group.pointer-events-auto * {
+  min-width: 240px !important;
+  max-width: 320px !important;
+  min-height: 50px !important;
+  max-height: 100px !important;
   width: auto !important;
   height: auto !important;
-  padding: 8px 12px !important;
-  font-size: 11px !important;
-  line-height: 1.2 !important;
+  padding: 6px 10px !important;
+  font-size: 9px !important;
+  line-height: 1.1 !important;
   background: white !important;
   border: 1px solid #d1d5db !important;
-  border-radius: 6px !important;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+  border-radius: 4px !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
   z-index: 999999 !important;
-  overflow: visible !important;
+  overflow: hidden !important;
   word-wrap: break-word !important;
   white-space: normal !important;
   display: flex !important;
@@ -43,45 +57,81 @@
 }
 
 [data-radix-toast-title], 
+[data-radix-toast-title] *,
 .toast-title,
-[class*="toast"] [data-radix-toast-title] {
-  font-size: 11px !important;
+.toast-title *,
+[class*="toast"] [data-radix-toast-title],
+[class*="toast"] [data-radix-toast-title] *,
+[data-state="open"][data-radix-toast-title],
+[data-state="open"][data-radix-toast-title] * {
+  font-size: 9px !important;
   font-weight: 500 !important;
-  line-height: 1.2 !important;
+  line-height: 1.1 !important;
   margin: 0 !important;
-  margin-bottom: 2px !important;
   color: #1f2937 !important;
   word-wrap: break-word !important;
-  max-width: 250px !important;
+  max-width: 200px !important;
   width: auto !important;
   display: block !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
+  white-space: nowrap !important;
 }
 
 [data-radix-toast-description], 
+[data-radix-toast-description] *,
 .toast-description,
-[class*="toast"] [data-radix-toast-description] {
-  font-size: 10px !important;
-  line-height: 1.2 !important;
+.toast-description *,
+[class*="toast"] [data-radix-toast-description],
+[class*="toast"] [data-radix-toast-description] *,
+[data-state="open"][data-radix-toast-description],
+[data-state="open"][data-radix-toast-description] * {
+  font-size: 8px !important;
+  line-height: 1.1 !important;
   color: #6b7280 !important;
   word-wrap: break-word !important;
-  max-width: 250px !important;
+  max-width: 200px !important;
   width: auto !important;
   display: block !important;
   font-weight: 400 !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
   margin: 0 !important;
+  white-space: nowrap !important;
 }
 
-/* Target all possible toast elements */
+/* Nuclear override - target EVERYTHING related to toasts */
 [data-radix-toast-root] *,
+[data-radix-toast-root] * *,
 .toast-root *,
-[class*="toast"] * {
-  font-size: 10px !important;
-  line-height: 1.2 !important;
-  max-width: 250px !important;
+.toast-root * *,
+[class*="toast"] *,
+[class*="toast"] * *,
+div[data-state="open"] *,
+div[data-state="open"] * *,
+.group *,
+.group * * {
+  font-size: 8px !important;
+  line-height: 1.1 !important;
+  max-width: 200px !important;
+  max-height: 80px !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* Override any possible conflicting styles */
+* {
+  font-size: inherit;
+}
+
+/* Specific toast container override */
+.fixed.bottom-4.right-4 {
+  max-width: 320px !important;
+}
+
+.fixed.bottom-4.right-4 * {
+  font-size: 8px !important;
+  line-height: 1.1 !important;
 }
 
 :root {

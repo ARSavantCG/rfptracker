@@ -20,36 +20,38 @@ export function Toaster() {
             {...props}
             style={{
               minWidth: 'auto',
-              maxWidth: '400px',
-              width: 'auto',
+              maxWidth: 'none',
+              width: 'fit-content',
               height: 'auto',
-              padding: '12px 32px 12px 16px',
+              padding: '12px 40px 12px 16px',
               fontSize: '13px',
               lineHeight: '1.4',
               overflow: 'visible',
-              whiteSpace: 'normal',
+              whiteSpace: 'nowrap',
               display: 'flex',
-              flexDirection: 'column',
+              alignItems: 'center',
               position: 'relative'
             }}
           >
-            <div className="grid gap-1 flex-1" style={{ 
-              width: '100%',
+            <div style={{ 
+              width: 'auto',
               overflow: 'visible',
               fontSize: '13px',
-              lineHeight: '1.4'
+              lineHeight: '1.4',
+              display: 'flex',
+              alignItems: 'center'
             }}>
               {title && (
                 <ToastTitle style={{
                   fontSize: '13px',
                   fontWeight: '600',
                   lineHeight: '1.3',
-                  margin: '0 0 4px 0',
-                  width: '100%',
+                  margin: '0',
+                  width: 'auto',
                   overflow: 'visible',
                   textOverflow: 'unset',
-                  whiteSpace: 'normal',
-                  display: 'block'
+                  whiteSpace: 'nowrap',
+                  display: 'inline'
                 }}>
                   {title}
                 </ToastTitle>
@@ -58,26 +60,18 @@ export function Toaster() {
                 <ToastDescription style={{
                   fontSize: '12px',
                   lineHeight: '1.4',
-                  margin: '0',
-                  width: '100%',
+                  margin: '0 0 0 4px',
+                  width: 'auto',
                   overflow: 'visible',
                   textOverflow: 'unset',
-                  whiteSpace: 'normal',
-                  display: 'block'
+                  whiteSpace: 'nowrap',
+                  display: 'inline'
                 }}>
                   {description}
                 </ToastDescription>
               )}
             </div>
-            <ToastClose style={{ 
-              fontSize: '12px', 
-              padding: '4px',
-              width: '16px',
-              height: '16px',
-              position: 'absolute',
-              top: '12px',
-              right: '12px'
-            }} />
+            <ToastClose />
           </Toast>
         )
       })}
@@ -86,7 +80,7 @@ export function Toaster() {
         bottom: '16px',
         right: '16px',
         zIndex: 999999,
-        maxWidth: '400px',
+        maxWidth: 'none',
         width: 'auto'
       }} />
     </ToastProvider>

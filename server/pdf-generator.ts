@@ -772,7 +772,7 @@ async function generateContractorRfpHtml(options: PdfGenerationOptions, dates: a
       <div class="section">
         <div class="section-title">KEY DATES:</div>
         <table class="info-table">
-          ${keyDates.map(keyDate => `
+          ${keyDates.map((keyDate: any) => `
           <tr>
             <td class="label">${keyDate.label}</td>
             <td>${keyDate.date}</td>
@@ -811,7 +811,7 @@ async function generateContractorRfpHtml(options: PdfGenerationOptions, dates: a
             <li>Affidavit</li>
             ${invitationToBid?.prequalificationCriteria ? 
               (Array.isArray(invitationToBid.prequalificationCriteria) ? 
-                invitationToBid.prequalificationCriteria.map(req => `<li>${req}</li>`).join('') :
+                invitationToBid.prequalificationCriteria.map((req: any) => `<li>${req}</li>`).join('') :
                 `<li>${invitationToBid.prequalificationCriteria}</li>`) : ''}
           </ul>
         </div>
@@ -1075,7 +1075,7 @@ async function generateArchitectRfpHtml(options: PdfGenerationOptions, dates: an
             <li>Insurance certificates (Professional Liability, General Liability)</li>
             ${invitationToBid?.prequalificationCriteria ? 
               (Array.isArray(invitationToBid.prequalificationCriteria) ? 
-                invitationToBid.prequalificationCriteria.map(req => `<li>${req}</li>`).join('') :
+                invitationToBid.prequalificationCriteria.map((req: any) => `<li>${req}</li>`).join('') :
                 `<li>${invitationToBid.prequalificationCriteria}</li>`) : ''}
           </ul>
         </div>
@@ -1135,7 +1135,7 @@ async function generateArchitectRfpHtml(options: PdfGenerationOptions, dates: an
         <div class="description-box">
           <ul class="requirements-list">
             ${Array.isArray(invitationToBid.evaluationCriteria) ? 
-              invitationToBid.evaluationCriteria.map(criteria => `<li>${criteria}</li>`).join('') :
+              invitationToBid.evaluationCriteria.map((criteria: any) => `<li>${criteria}</li>`).join('') :
               `<li>${invitationToBid.evaluationCriteria}</li>`}
           </ul>
         </div>
@@ -1207,7 +1207,7 @@ async function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dat
     <body>
       <div class="header">
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
-          <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABzkAAAFLCAYAAABFvjF4AAAACXBIWXMAAC4jAAAuIwF4pT92AAAgAElEQVR4nOz93XFbV5oGbN+7q8+pLwKxI5CmdgBCRyDOgUo6ExyB6ABQomoHYDoCQUfvzDsHTUVgKABUixE0FcFrRoDvYC9atKwf/gBYewPXVcVS2zMGb9MEAa57rWc1q9UqAAAAAAAATds9SPL42t86LB+38THJ71d/sVrOFvfNBfClRskJAAAAAAD7oWm7x0keJJmUP68KzSdb+PSfklx8+aEEBe5CyQkA7KXyS90kyVGSJ6vlrKmbiPtq2m6S5LfaOdi681zbIZ5kce3P31fL2cdtB9p1Tdv5JXKcrhYUryyu/em5MiBN2y2ynUXmIfpn7UXuPf/6D8WXP68urv31InEiDG6qabvD9AXm1cdhkkcVI/3I1fN/kf4k6MfVcnZRMQ8/4PdwKvvw99oJAAC2pWm7o/Sl5iTJw7ppgDX5cpHmamH6dZI0bZf0RejH8rFQ5rCnHubPr31fe658yOfnykfPFaCSb/28Sv78M+sy/c+ri1wrRVbL2fXNT7BXSuE0SV9oTpIcVIxzF1fP/z+e903bXeZz6bmwyQG4TskJAOyssmt1kr7YfFo1DFDTo/LxMvnTQskiyZnd4fCHJ/n6ouJZ+kXFizqxAL7qIH/+uXVVgH7Knzc3Laqkgy0oE4quNvLu6in0g/S/zz9N8vraxqyr9yc2ZcEeU3ICADvl2hjaaYY9hgeo5/pCyS9lMfQsydwiCfzJ9edKmrY7T196eq4AQ3Z1Eux6IXL182uRvhRx2pNRatruQT6XmkcZ30nNdfljg0N5L79Iv3nxrGYoYPuUnADA6JVic5r+lzxjaIHbepjkVZJXZZFknr7EuagZCgbo6lS05wowNn/8/EqSpu0+5HMpYtMGg3at2DSh6Osepp/Y8rJMoTiLwhP2hpITABgl92sCG/Iw/bi7103bvU9yaswdfNX158qH9GXnvG4kgBu7OgX22ikwhqppu2kUm7d1kL8WnnPv52F3KTkBgNG4Vmzu81geYHueJnlaFj9PFDjwTU+SPGna7jTJaZzuBMbFKTAGo0wpOo7fedfheuFpAgXsKCUnADBoik1gAB4medu03UmUnfA9B/l8uvNd+ufLRd1IALfy5SmwedxDzIZdG0d7nH6sMutnWgvsKCUnADA4TdtN8vmOTcUmMBTKTri5q5JA2QmM1UE+39l9ns+F5+9VU7EzmrY7TF9sTuP33m3407SW9Ce3Pa9hpP5WOwAAQNKP5Wna7rRpu4skv6VfHPWLHjBEV2XnomzKAL7tZZL/NG03L4u5AGP0KMkvSS7Kz7PHtQMxXk3bHTZtN0/yn/RFut9763iY5G365/VJOVELjIyTnABANWWxc1o+HtbMAnAHT5L81rTdr+lPqtkBDt92dbLzTfoRcZ4vwBhdH2f7If3JznndSIxF2Rx3kv49JMNxNW7/6Op+ce9TYDyc5AQAtqppuwdN2x03bfcx/c7V11FwAuP2Kv0O8KPaQWAEXqd/vkwr5wC4ryfpJzv4mcZ3lalFi/QTixScw3VVdjrZCSOi5AQAtqJpu6Om7c6S/H/pRz09qhwJYJ0OkvyrjN22IALfd5DPI58Pa4cBuKerMfYXZTOn9wEk+dNY2n9HuTkmyk4YESUnALAxZcfqvGm735P8K8nT2pkANuxVkoW7uuBGniT52LTdce0gAGvwMJ/v7ZzWjUJNZXrRafrJRS9r5+HOrsrOj57TMFxKTgBgra6No71Iv2P1ZfpfDgD2xaP0Ree0cg4Yg4MkvzjVCeyQq9Pqys49VDbuXKTf+MZuuDqtvSj3qgIDouQEANbiK+No3bMJ7LOrBc6T2kFgJK5OdbrbFtgVV8XIR8XI7mvabtK03cf0vwvb5LubniT5zfUUMCxKTgDgzsqdI6fl1KZxtAB/9br<response clipped><NOTE>To save on context only part of this file has been shown to you. You should retry this tool after you have searched inside the file with `grep -n` in order to find the line numbers of what you are looking for.</NOTE>
+          <!-- Company logo placeholder -->
           <div style="background: rgb(0,50,130); color: white; padding: 5px 10px; font-weight: bold; font-size: 12px; border-radius: 3px;">
             BRIDGE INDUSTRIAL
           </div>

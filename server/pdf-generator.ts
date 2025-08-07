@@ -159,6 +159,7 @@ export interface PdfGenerationOptions {
   recipientType: "architect" | "contractor" | "broker-architect" | "broker-contractor" | "financial-summary";
   recipientName?: string;
   recipientCompany?: string;
+  userEmail?: string;
 }
 
 function generateFinancialSummaryHtml(options: PdfGenerationOptions, dates: any): string {
@@ -554,7 +555,7 @@ async function generateContractorRfpHtml(options: PdfGenerationOptions, dates: a
   // Prefer development contact from RFP, fallback to invitation contact
   const contactInfo = developmentContactInfo.length >= 2 ? developmentContactInfo : invitationContactInfo;
   const contactPerson = contactInfo[0] || 'Development Contact';
-  const contactEmail = contactInfo[1] || 'AReutlinger@bridgeindustrial.com';
+  const contactEmail = contactInfo[1] || options.userEmail || 'AReutlinger@bridgeindustrial.com';
   const contactPhone = contactInfo[2] || '';
   
   // Use Project Description from invitation data
@@ -867,7 +868,7 @@ async function generateArchitectRfpHtml(options: PdfGenerationOptions, dates: an
   // Prefer development contact from RFP, fallback to invitation contact
   const contactInfo = developmentContactInfo.length >= 2 ? developmentContactInfo : invitationContactInfo;
   const contactPerson = contactInfo[0] || 'Development Contact';
-  const contactEmail = contactInfo[1] || 'AReutlinger@bridgeindustrial.com';
+  const contactEmail = contactInfo[1] || options.userEmail || 'AReutlinger@bridgeindustrial.com';
   const contactPhone = contactInfo[2] || '';
   
   return `
@@ -1182,7 +1183,7 @@ async function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dat
   // Prefer development contact from RFP, fallback to invitation contact
   const contactInfo = developmentContactInfo.length >= 2 ? developmentContactInfo : invitationContactInfo;
   const contactPerson = contactInfo[0] || rfp.developmentContact || 'Development Contact';
-  const contactEmail = contactInfo[1] || 'AReutlinger@bridgeindustrial.com';
+  const contactEmail = contactInfo[1] || options.userEmail || 'AReutlinger@bridgeindustrial.com';
   const contactPhone = contactInfo[2] || '';
 
   const projectName = rfp.projectName || invitationToBid?.projectScope || (rfp.confidential ? `Confidential @ ${rfp.property}` : `${rfp.tenantName} @ ${rfp.property}`);
@@ -1387,7 +1388,7 @@ async function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, da
   // Prefer development contact from RFP, fallback to invitation contact
   const contactInfo = developmentContactInfo.length >= 2 ? developmentContactInfo : invitationContactInfo;
   const contactPerson = contactInfo[0] || rfp.developmentContact || 'Development Contact';
-  const contactEmail = contactInfo[1] || 'AReutlinger@bridgeindustrial.com';
+  const contactEmail = contactInfo[1] || options.userEmail || 'AReutlinger@bridgeindustrial.com';
   const contactPhone = contactInfo[2] || '';
 
   const projectName = rfp.projectName || invitationToBid?.projectScope || (rfp.confidential ? `Confidential @ ${rfp.property}` : `${rfp.tenantName} @ ${rfp.property}`);

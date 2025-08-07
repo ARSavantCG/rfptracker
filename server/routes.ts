@@ -2536,12 +2536,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get invitation to bid data if available
       const invitationToBid = await storage.getInvitationToBid(id);
 
+      // Get user email for contact information
+      const user = (req as any).user;
+      const userEmail = user?.email || user?.username || 'AReutlinger@bridgeindustrial.com';
+
       const pdfOptions = {
         rfp: rfpWithAddress,
         invitationToBid,
         recipientType: recipientType as "architect" | "contractor" | "broker-architect" | "broker-contractor",
         recipientName,
-        recipientCompany
+        recipientCompany,
+        userEmail  // Pass the authenticated user's email
       };
 
       // Always return HTML for now to avoid encoding issues

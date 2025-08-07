@@ -2,6 +2,18 @@ import puppeteer from "puppeteer";
 import { db } from "./db";
 import { rfpRequests, bidCollections, bidLineItems } from "@shared/schema";
 import { eq } from "drizzle-orm";
+import { readFileSync } from "fs";
+
+// Get Bridge Industrial logo as base64
+function getBridgeLogo(): string {
+  try {
+    const logoBase64 = readFileSync('./bridge_logo_new_base64.txt', 'utf8').trim();
+    return `data:image/png;base64,${logoBase64}`;
+  } catch (error) {
+    console.error('Error reading Bridge logo:', error);
+    return '';
+  }
+}
 
 export interface HistoricalPricingData {
   completedProjects: CompletedProject[];
@@ -188,23 +200,29 @@ function generateHistoricalPricingHtml(data: HistoricalPricingData): string {
         }
         
         .header {
-          text-align: center;
-          margin-bottom: 20px;
-          border-bottom: 2px solid #2563eb;
-          padding-bottom: 10px;
+          border-bottom: 3px solid rgb(0,50,130);
+          padding-bottom: 20px;
+          margin-bottom: 30px;
+          position: relative;
         }
         
-        .header h1 {
-          color: #1e40af;
-          margin: 0 0 5px 0;
-          font-size: 22px;
-          font-weight: 600;
+        .document-title {
+          font-size: 24px;
+          font-weight: bold;
+          color: rgb(0,50,130);
+          margin-bottom: 10px;
+          background: rgb(0,50,130);
+          color: white;
+          padding: 10px;
+          border-radius: 5px;
+          text-align: center;
         }
         
         .header .subtitle {
-          color: #6b7280;
+          color: #666;
           font-size: 12px;
           margin: 5px 0;
+          text-align: center;
         }
         
         .summary-stats {
@@ -393,7 +411,11 @@ function generateHistoricalPricingHtml(data: HistoricalPricingData): string {
       </div>
       
       <div class="header">
-        <h1>Historical Pricing Report</h1>
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+          <!-- Company logo -->
+          <img src="${getBridgeLogo()}" alt="Bridge Industrial" style="height: 30px; width: auto;" />
+        </div>
+        <div class="document-title">Historical Pricing Report</div>
         <div class="subtitle">Completed RFP Projects - Pricing Analysis</div>
         <div class="subtitle">Generated on ${data.generatedAt}</div>
       </div>

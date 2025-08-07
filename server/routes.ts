@@ -795,7 +795,19 @@ function generateAllBidCollectionsHtml(rfp: any, allBidsData: any[]) {
 }
 import { generateDetailedReportPdf, generateReportFilename } from "./pdf-reports";
 import { generateHistoricalPricingPdf, generateHistoricalPricingFilename } from "./historical-pricing-reports";
+import { readFileSync } from "fs";
 import multer from "multer";
+
+// Get Bridge Industrial logo as base64
+function getBridgeLogo(): string {
+  try {
+    const logoBase64 = readFileSync('./bridge_logo_new_base64.txt', 'utf8').trim();
+    return `data:image/png;base64,${logoBase64}`;
+  } catch (error) {
+    console.error('Error reading Bridge logo:', error);
+    return '';
+  }
+}
 
 // Create uploads directory if it doesn't exist
 const uploadsDir = path.join(process.cwd(), "uploads");
@@ -3732,9 +3744,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             @media print { .no-print { display: none !important; } }
             body { font-family: 'Segoe UI', sans-serif; font-size: 12px; margin: 0; }
             .no-print { background: #3b82f6; color: white; padding: 15px; text-align: center; margin-bottom: 20px; border-radius: 8px; }
-            .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #e5e7eb; padding-bottom: 15px; }
-            .header h1 { font-size: 24px; margin: 0; color: #1f2937; }
-            .header .subtitle { font-size: 14px; color: #6b7280; margin: 5px 0; }
+            .header { border-bottom: 3px solid rgb(0,50,130); padding-bottom: 20px; margin-bottom: 30px; position: relative; }
+            .document-title { font-size: 24px; font-weight: bold; color: rgb(0,50,130); margin-bottom: 10px; background: rgb(0,50,130); color: white; padding: 10px; border-radius: 5px; text-align: center; }
+            .header .subtitle { font-size: 14px; color: #666; margin: 5px 0; text-align: center; }
             table { width: 100%; border-collapse: collapse; margin-top: 20px; }
             th, td { border: 1px solid #e5e7eb; padding: 8px; text-align: left; }
             th { background: #f9fafb; font-weight: 600; }
@@ -3768,7 +3780,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           </div>
           
           <div class="header">
-            <h1>Executive Summary Report</h1>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+              <!-- Company logo -->
+              <img src="${getBridgeLogo()}" alt="Bridge Industrial" style="height: 30px; width: auto;" />
+            </div>
+            <div class="document-title">Executive Summary Report</div>
             <div class="subtitle">RFP Status Overview - Generated on ${new Date().toLocaleDateString()}</div>
           </div>
           
@@ -4013,9 +4029,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             @media print { .no-print { display: none !important; } }
             body { font-family: 'Segoe UI', sans-serif; font-size: 12px; margin: 0; }
             .no-print { background: #3b82f6; color: white; padding: 15px; text-align: center; margin-bottom: 20px; border-radius: 8px; }
-            .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #e5e7eb; padding-bottom: 15px; }
-            .header h1 { font-size: 24px; margin: 0; color: #1f2937; }
-            .header .subtitle { font-size: 14px; color: #6b7280; margin: 5px 0; }
+            .header { border-bottom: 3px solid rgb(0,50,130); padding-bottom: 20px; margin-bottom: 30px; position: relative; }
+            .document-title { font-size: 24px; font-weight: bold; color: rgb(0,50,130); margin-bottom: 10px; background: rgb(0,50,130); color: white; padding: 10px; border-radius: 5px; text-align: center; }
+            .header .subtitle { font-size: 14px; color: #666; margin: 5px 0; text-align: center; }
             table { width: 100%; border-collapse: collapse; margin-top: 20px; }
             th, td { border: 1px solid #e5e7eb; padding: 8px; text-align: left; }
             th { background: #f9fafb; font-weight: 600; text-align: center; }
@@ -4036,7 +4052,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           </div>
           
           <div class="header">
-            <h1>${title}</h1>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+              <!-- Company logo -->
+              <img src="${getBridgeLogo()}" alt="Bridge Industrial" style="height: 30px; width: auto;" />
+            </div>
+            <div class="document-title">${title}</div>
             <div class="subtitle">Generated on ${new Date().toLocaleDateString()} • ${rfpData.length} records</div>
           </div>
           
@@ -5107,7 +5127,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           <meta charset="utf-8">
           <title>Bay Configurations - ${property.propertyName}</title>
           <style>
-            body { font-family: Arial, sans-serif; margin: 20px; }
+            body { font-family: 'Segoe UI', sans-serif; margin: 20px; }
+            .header { border-bottom: 3px solid rgb(0,50,130); padding-bottom: 20px; margin-bottom: 30px; position: relative; }
+            .document-title { font-size: 24px; font-weight: bold; color: rgb(0,50,130); margin-bottom: 10px; background: rgb(0,50,130); color: white; padding: 10px; border-radius: 5px; text-align: center; }
+            .property-name { font-size: 18px; color: #666; text-align: center; margin-bottom: 20px; }
             h1 { color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px; }
             table { width: 100%; border-collapse: collapse; margin: 20px 0; }
             th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
@@ -5116,8 +5139,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           </style>
         </head>
         <body>
-          <h1>Bay Configurations Report</h1>
-          <h2>${property.propertyName}</h2>
+          <div class="header">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+              <!-- Company logo -->
+              <img src="${getBridgeLogo()}" alt="Bridge Industrial" style="height: 30px; width: auto;" />
+            </div>
+            <div class="document-title">Bay Configurations Report</div>
+            <div class="property-name">${property.propertyName}</div>
+          </div>
           
           <div class="summary">
             <h3>Property Summary</h3>
@@ -5183,7 +5212,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           <meta charset="utf-8">
           <title>Executed Leases - ${property.propertyName}</title>
           <style>
-            body { font-family: Arial, sans-serif; margin: 20px; }
+            body { font-family: 'Segoe UI', sans-serif; margin: 20px; }
+            .header { border-bottom: 3px solid rgb(0,50,130); padding-bottom: 20px; margin-bottom: 30px; position: relative; }
+            .document-title { font-size: 24px; font-weight: bold; color: rgb(0,50,130); margin-bottom: 10px; background: rgb(0,50,130); color: white; padding: 10px; border-radius: 5px; text-align: center; }
+            .property-name { font-size: 18px; color: #666; text-align: center; margin-bottom: 20px; }
             h1 { color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px; }
             table { width: 100%; border-collapse: collapse; margin: 20px 0; }
             th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
@@ -5192,8 +5224,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           </style>
         </head>
         <body>
-          <h1>Executed Leases Report</h1>
-          <h2>${property.propertyName}</h2>
+          <div class="header">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+              <!-- Company logo -->
+              <img src="${getBridgeLogo()}" alt="Bridge Industrial" style="height: 30px; width: auto;" />
+            </div>
+            <div class="document-title">Executed Leases Report</div>
+            <div class="property-name">${property.propertyName}</div>
+          </div>
           
           <div class="summary">
             <h3>Leasing Summary</h3>
@@ -5262,7 +5300,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           <meta charset="utf-8">
           <title>Existing Improvements - ${property.propertyName}</title>
           <style>
-            body { font-family: Arial, sans-serif; margin: 20px; }
+            body { font-family: 'Segoe UI', sans-serif; margin: 20px; }
+            .header { border-bottom: 3px solid rgb(0,50,130); padding-bottom: 20px; margin-bottom: 30px; position: relative; }
+            .document-title { font-size: 24px; font-weight: bold; color: rgb(0,50,130); margin-bottom: 10px; background: rgb(0,50,130); color: white; padding: 10px; border-radius: 5px; text-align: center; }
+            .property-name { font-size: 18px; color: #666; text-align: center; margin-bottom: 20px; }
             h1 { color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px; }
             table { width: 100%; border-collapse: collapse; margin: 20px 0; }
             th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
@@ -5272,8 +5313,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           </style>
         </head>
         <body>
-          <h1>Existing Improvements Report</h1>
-          <h2>${property.propertyName}</h2>
+          <div class="header">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+              <!-- Company logo -->
+              <img src="${getBridgeLogo()}" alt="Bridge Industrial" style="height: 30px; width: auto;" />
+            </div>
+            <div class="document-title">Existing Improvements Report</div>
+            <div class="property-name">${property.propertyName}</div>
+          </div>
           
           <div class="summary">
             <h3>Investment Summary</h3>
@@ -5357,7 +5404,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           <meta charset="utf-8">
           <title>Electrical Capacity Management - ${property.propertyName}</title>
           <style>
-            body { font-family: Arial, sans-serif; margin: 20px; }
+            body { font-family: 'Segoe UI', sans-serif; margin: 20px; }
+            .header { border-bottom: 3px solid rgb(0,50,130); padding-bottom: 20px; margin-bottom: 30px; position: relative; }
+            .document-title { font-size: 24px; font-weight: bold; color: rgb(0,50,130); margin-bottom: 10px; background: rgb(0,50,130); color: white; padding: 10px; border-radius: 5px; text-align: center; }
+            .property-name { font-size: 18px; color: #666; text-align: center; margin-bottom: 20px; }
             h1 { color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px; }
             h2 { color: #555; margin-top: 30px; }
             table { width: 100%; border-collapse: collapse; margin: 20px 0; }
@@ -5369,8 +5419,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           </style>
         </head>
         <body>
-          <h1>Electrical Capacity Management Report</h1>
-          <h2>${property.propertyName}</h2>
+          <div class="header">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+              <!-- Company logo -->
+              <img src="${getBridgeLogo()}" alt="Bridge Industrial" style="height: 30px; width: auto;" />
+            </div>
+            <div class="document-title">Electrical Capacity Management Report</div>
+            <div class="property-name">${property.propertyName}</div>
+          </div>
           
           <div class="summary">
             <h3>Capacity Overview</h3>
@@ -6087,9 +6143,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     body { font-family: 'Segoe UI', sans-serif; font-size: 12px; margin: 0; padding: 20px; line-height: 1.4; }
     .no-print { background: #3b82f6; color: white; padding: 15px; text-align: center; margin-bottom: 20px; border-radius: 8px; }
-    .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #e5e7eb; padding-bottom: 20px; }
-    .header h1 { font-size: 28px; margin: 0; color: #1f2937; }
-    .header .subtitle { font-size: 16px; color: #6b7280; margin: 5px 0; }
+    .header { border-bottom: 3px solid rgb(0,50,130); padding-bottom: 20px; margin-bottom: 30px; position: relative; }
+    .document-title { font-size: 28px; font-weight: bold; color: rgb(0,50,130); margin-bottom: 10px; background: rgb(0,50,130); color: white; padding: 10px; border-radius: 5px; text-align: center; }
+    .header .subtitle { font-size: 16px; color: #666; margin: 5px 0; text-align: center; }
     .section { margin-bottom: 30px; }
     .section h2 { font-size: 18px; color: #1f2937; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; margin-bottom: 15px; }
     .section h3 { font-size: 14px; color: #374151; margin: 15px 0 10px 0; }
@@ -6113,7 +6169,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   </div>
   
   <div class="header">
-    <h1>${property.propertyName}</h1>
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+      <!-- Company logo -->
+      <img src="${getBridgeLogo()}" alt="Bridge Industrial" style="height: 30px; width: auto;" />
+    </div>
+    <div class="document-title">${property.propertyName}</div>
     <div class="subtitle">Property Report - Generated on ${new Date().toLocaleDateString()}</div>
   </div>
 

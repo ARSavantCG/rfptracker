@@ -95,31 +95,48 @@ export function generateExecutiveReportHtml(data: ReportData): string {
         }
         
         .header {
-          text-align: center;
-          margin-bottom: 20px;
-          border-bottom: 2px solid #e5e7eb;
-          padding-bottom: 15px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          flex-direction: column;
+          border-bottom: 3px solid rgb(0,50,130);
+          padding-bottom: 20px;
+          margin-bottom: 30px;
+          position: relative;
         }
         
-        .logo-container {
+        .company-info {
+          text-align: right;
+          margin-bottom: 20px;
+        }
+        
+        .document-title {
+          font-size: 24px;
+          font-weight: bold;
+          color: rgb(0,50,130);
           margin-bottom: 10px;
+          background: rgb(0,50,130);
+          color: white;
+          padding: 10px;
+          border-radius: 5px;
+          text-align: center;
+        }
+        
+        .project-title {
+          font-size: 18px;
+          color: #666;
+          margin-bottom: 20px;
+          text-align: center;
         }
         
         .header h1 {
-          font-size: 18px;
+          font-size: 24px;
           font-weight: bold;
-          color: #1f2937;
+          color: white;
           margin: 0 0 5px 0;
         }
         
         .header .subtitle {
           font-size: 11px;
-          color: #6b7280;
+          color: #666;
           margin: 0;
+          text-align: center;
         }
         
         .metrics {
@@ -248,10 +265,11 @@ export function generateExecutiveReportHtml(data: ReportData): string {
       </div>
       
       <div class="header">
-        <div class="logo-container">
-          <img src="${getBridgeLogo()}" alt="Bridge Industrial" style="height: 40px; width: auto;" />
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+          <!-- Company logo -->
+          <img src="${getBridgeLogo()}" alt="Bridge Industrial" style="height: 30px; width: auto;" />
         </div>
-        <h1>Executive Summary Report</h1>
+        <div class="document-title">Executive Summary Report</div>
         <p class="subtitle">RFP Status Overview - Generated on ${format(new Date(generatedAt), 'MMMM dd, yyyy \'at\' h:mm a')}</p>
       </div>
       

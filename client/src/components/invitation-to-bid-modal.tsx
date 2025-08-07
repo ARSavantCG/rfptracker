@@ -544,39 +544,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
       toast({
         title: "Documents Opened",
         description: `${documentsToOpen.length} document(s) opened in new tabs. Use Ctrl+P to save as PDF.`,
-        action: (
-          <ToastAction
-            altText="Complete Phase"
-            onClick={async () => {
-              try {
-                const response = await fetch(`/api/rfp-requests/${rfp.id}/advance-phase`, {
-                  method: 'PATCH',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ newPhase: 'bid-collection' })
-                });
-                
-                if (response.ok) {
-                  toast({
-                    title: "Phase Complete",
-                    description: "Invitation to Bid completed. Moving to Bid Collection phase.",
-                  });
-                  queryClient.invalidateQueries({ queryKey: ['/api/rfp-requests'] });
-                  onClose();
-                } else {
-                  throw new Error('Failed to advance workflow');
-                }
-              } catch (error) {
-                toast({
-                  title: "Error",
-                  description: "Failed to complete invitation phase.",
-                  variant: "destructive",
-                });
-              }
-            }}
-          >
-            Complete Phase
-          </ToastAction>
-        ),
+        duration: 6000,
       });
       
       setIsGeneratingPdfs(false);

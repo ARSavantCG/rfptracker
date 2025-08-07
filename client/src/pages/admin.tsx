@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Shield, Users, Settings, Edit, Trash2, CheckCircle, XCircle, User as UserIcon, KeyRound, FileText, HardDrive, Layout, Clock, Scale, ChevronDown } from "lucide-react";
+import { Shield, Users, Settings, Edit, Trash2, CheckCircle, XCircle, User as UserIcon, KeyRound, FileText, HardDrive, Layout, Clock, Scale, ChevronDown, Hash } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
@@ -22,6 +22,7 @@ import { RfpDocumentEditor } from "@/components/rfp-document-editor-fixed";
 import { EnhancedRfpCustomizer } from "@/components/enhanced-rfp-customizer";
 import { TimezoneAdminPanel } from "@/components/timezone-admin-panel";
 import { LegalCompliancePanel } from "@/components/legal-compliance-panel";
+import { PropertyRenumberingPanel } from "@/components/property-renumbering-panel";
 import type { User, UserRole, Permission } from "@shared/schema";
 import { ROLE_PERMISSIONS } from "@shared/schema";
 
@@ -874,7 +875,7 @@ export default function Admin() {
         </div>
 
         <Tabs defaultValue="users" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="users" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               User Management
@@ -898,6 +899,10 @@ export default function Admin() {
             <TabsTrigger value="legal" className="flex items-center gap-2">
               <Scale className="h-4 w-4" />
               Legal Compliance
+            </TabsTrigger>
+            <TabsTrigger value="renumber" className="flex items-center gap-2">
+              <Hash className="h-4 w-4" />
+              Properties
             </TabsTrigger>
           </TabsList>
 
@@ -936,6 +941,10 @@ export default function Admin() {
 
           <TabsContent value="legal" className="mt-6">
             <LegalCompliancePanel />
+          </TabsContent>
+
+          <TabsContent value="renumber" className="mt-6">
+            <PropertyRenumberingPanel />
           </TabsContent>
         </Tabs>
       </div>

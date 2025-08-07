@@ -40,6 +40,7 @@ import {
   updateElectricalReservationSchema
 } from "@shared/schema";
 import { convertFormDateToDbDate } from "@shared/date-utils";
+import { properties, rfpRequests } from "@shared/schema";
 import { validateRfpForProgression, canAdvanceToPhase } from "./validation";
 import { AuthService } from "./auth";
 import { users, contacts } from "@shared/schema";
@@ -3221,6 +3222,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error deleting property existing improvement:', error);
       res.status(500).json({ message: "Failed to delete existing improvement" });
+    }
+  });
+
+  // Property renumbering endpoint
+  app.post("/api/properties/renumber", requireAuth, checkPermission('properties.edit'), async (req, res) => {
+    try {
+      const { mappings } = req.body;
+      
+      if (!mappings || !Array.isArray(mappings)) {
+        return res.status(400).json({ message: "Invalid mappings format" });
+      }
+
+      // Validate mappings format
+      for (const mapping of mappings) {
+        if (!mapping.oldId || !mapping.newId) {
+          return res.status(400).json({ message: "Each mapping must have oldId and newId" });
+        }
+      }
+
+      // Begin transaction
+      await db.transaction(async (tx) => {
+        const updates = [];
+        
+        for (const { oldId, newId } of mappings) {
+          // Check if old property exists
+          const oldProperty = await storage.getProperty(oldId);
+          if (!oldProperty) {
+            throw new Error(`Property ${oldId} not found`);
+          }
+          
+          // Check if new ID is available (unless it's the same as old ID)
+          if (oldId !== newId) {
+            const existingProperty = await storage.getProperty(newId);
+            if (existingProperty) {
+              throw new Error(`Property ID ${newId} already exists`);
+            }
+          }
+          
+          updates.push({ oldId, newId, property: oldProperty });
+        }
+        
+        // Create a temporary mapping to avoid conflicts
+        const tempMappings = new Map();
+        
+        // First pass: Update all properties to temporary IDs
+        for (const { oldId, newId } of mappings) {
+          if (oldId !== newId) {
+            const tempId = 90000 + parseInt(oldId); // Use high temp IDs to avoid conflicts
+            tempMappings.set(oldId, { tempId, finalId: newId });
+            
+            await tx.update(properties)
+              .set({ id: tempId })
+              .where(eq(properties.id, oldId));
+          }
+        }
+        
+        // Second pass: Update all RFP requests to use temp IDs
+        for (const [oldId, { tempId }] of tempMappings) {
+          await tx.update(rfpRequests)
+            .set({ property: tempId.toString() })
+            .where(eq(rfpRequests.property, oldId.toString()));
+        }
+        
+        // Third pass: Update temp IDs to final IDs
+        for (const [oldId, { tempId, finalId }] of tempMappings) {
+          await tx.update(properties)
+            .set({ id: finalId })
+            .where(eq(properties.id, tempId));
+            
+          await tx.update(rfpRequests)
+            .set({ property: finalId.toString() })
+            .where(eq(rfpRequests.property, tempId.toString()));
+        }
+      });
+      
+      res.json({ success: true, message: "Properties renumbered successfully" });
+    } catch (error) {
+      console.error('Property renumbering error:', error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : "Failed to renumber properties" 
+      });
     }
   });
 

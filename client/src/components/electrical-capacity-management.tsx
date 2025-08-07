@@ -939,31 +939,38 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
               </div>
               <div>
                 <Label htmlFor="bayPanelAssignmentId">Bay Assignment *</Label>
-                <Select name="bayPanelAssignmentId" defaultValue={editingReservation?.bayPanelAssignmentId?.toString()}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select bay assignment" />
-                  </SelectTrigger>
-                  <SelectContent>
+                <div className="relative">
+                  <select
+                    name="bayPanelAssignmentId"
+                    defaultValue={editingReservation?.bayPanelAssignmentId?.toString() || ''}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white pr-8"
+                    required
+                  >
+                    <option value="">Select bay assignment</option>
                     {bayAssignments.map((assignment: BayPanelAssignment) => (
-                      <SelectItem key={assignment.id} value={assignment.id.toString()}>
+                      <option key={assignment.id} value={assignment.id.toString()}>
                         {assignment.bayConfiguration} ({assignment.capacity} kVA)
-                      </SelectItem>
+                      </option>
                     ))}
-                  </SelectContent>
-                </Select>
+                  </select>
+                  <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                </div>
               </div>
               <div>
                 <Label htmlFor="status">Status *</Label>
-                <Select name="status" defaultValue={editingReservation?.status || 'pending'}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="expired">Expired</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="relative">
+                  <select
+                    name="status"
+                    defaultValue={editingReservation?.status || 'pending'}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white pr-8"
+                    required
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="active">Active</option>
+                    <option value="expired">Expired</option>
+                  </select>
+                  <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                </div>
               </div>
               <div>
                 <Label htmlFor="startDate">Start Date *</Label>

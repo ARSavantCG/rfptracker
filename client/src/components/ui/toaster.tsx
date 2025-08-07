@@ -19,45 +19,45 @@ export function Toaster() {
             key={id} 
             {...props}
             style={{
-              minWidth: '240px !important',
-              maxWidth: '320px !important',
-              minHeight: '50px !important',
-              maxHeight: '100px !important',
-              padding: '6px 10px !important',
-              fontSize: '9px !important',
-              lineHeight: '1.1 !important',
-              overflow: 'hidden !important'
+              minWidth: '240px',
+              maxWidth: '320px',
+              minHeight: '50px',
+              maxHeight: '100px',
+              padding: '6px 10px',
+              fontSize: '11px',
+              lineHeight: '1.2',
+              overflow: 'hidden'
             }}
           >
             <div className="flex-1" style={{ 
-              maxWidth: '200px !important',
-              overflow: 'hidden !important',
-              fontSize: '9px !important',
-              lineHeight: '1.1 !important'
+              maxWidth: '200px',
+              overflow: 'hidden',
+              fontSize: '11px',
+              lineHeight: '1.2'
             }}>
               {title && (
                 <ToastTitle style={{
-                  fontSize: '9px !important',
-                  fontWeight: '500 !important',
-                  lineHeight: '1.1 !important',
-                  margin: '0 !important',
-                  maxWidth: '200px !important',
-                  overflow: 'hidden !important',
-                  textOverflow: 'ellipsis !important',
-                  whiteSpace: 'nowrap !important'
+                  fontSize: '11px',
+                  fontWeight: '500',
+                  lineHeight: '1.2',
+                  margin: '0',
+                  maxWidth: '200px',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
                 }}>
                   {title}
                 </ToastTitle>
               )}
               {description && (
                 <ToastDescription style={{
-                  fontSize: '8px !important',
-                  lineHeight: '1.1 !important',
-                  margin: '0 !important',
-                  maxWidth: '200px !important',
-                  overflow: 'hidden !important',
-                  textOverflow: 'ellipsis !important',
-                  whiteSpace: 'nowrap !important'
+                  fontSize: '10px',
+                  lineHeight: '1.2',
+                  margin: '0',
+                  maxWidth: '200px',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
                 }}>
                   {description}
                 </ToastDescription>
@@ -65,22 +65,20 @@ export function Toaster() {
             </div>
             {action}
             <ToastClose style={{ 
-              fontSize: '8px !important', 
-              padding: '2px !important',
-              width: '16px !important',
-              height: '16px !important'
+              fontSize: '10px', 
+              padding: '2px',
+              width: '16px',
+              height: '16px'
             }} />
           </Toast>
         )
       })}
       <ToastViewport style={{
-        position: 'fixed !important',
-        bottom: '16px !important',
-        right: '16px !important',
-        zIndex: '999999 !important',
-        maxWidth: '320px !important',
-        fontSize: '8px !important',
-        lineHeight: '1.1 !important'
+        position: 'fixed',
+        bottom: '16px',
+        right: '16px',
+        zIndex: 999999,
+        maxWidth: '320px'
       }} />
     </ToastProvider>
   )

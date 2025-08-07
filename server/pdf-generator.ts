@@ -1489,7 +1489,7 @@ async function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, da
 
       <div class="preliminary-notice">
         <strong style="font-size: 0.75em;">PRELIMINARY BROKER RESPONSE RFP</strong><br>
-        This is a preliminary request for conceptual pricing and scheduling to support broker discussions with a prospective tenant. This is not a formal project commitment.
+        <span style="font-size: 0.75em;">This is a preliminary request for conceptual pricing and scheduling to support broker discussions with a prospective tenant. This is not a formal project commitment.</span>
       </div>
 
       <div class="section">

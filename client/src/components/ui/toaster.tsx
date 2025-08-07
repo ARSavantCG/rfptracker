@@ -23,14 +23,15 @@ export function Toaster() {
               maxWidth: 'none',
               width: 'fit-content',
               height: 'auto',
-              padding: '12px 36px 12px 16px',
+              padding: '12px 48px 12px 16px',
               fontSize: '13px',
               lineHeight: '1.4',
-              overflow: 'hidden',
+              overflow: 'visible',
               whiteSpace: 'nowrap',
               display: 'flex',
               alignItems: 'center',
-              position: 'relative'
+              position: 'relative',
+              margin: '0'
             }}
           >
             <div style={{ 
@@ -71,7 +72,26 @@ export function Toaster() {
                 </ToastDescription>
               )}
             </div>
-            <ToastClose />
+            <ToastClose style={{
+              position: 'absolute',
+              top: '50%',
+              right: '8px',
+              transform: 'translateY(-50%)',
+              width: '20px',
+              height: '20px',
+              padding: '0',
+              border: 'none',
+              background: 'rgba(0, 0, 0, 0.05)',
+              color: '#6b7280',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '14px',
+              zIndex: '100',
+              borderRadius: '4px',
+              margin: '0'
+            }} />
           </Toast>
         )
       })}

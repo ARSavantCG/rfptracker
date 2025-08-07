@@ -1208,9 +1208,9 @@ async function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dat
         .info-item { margin-bottom: 10px; }
         .label { font-weight: bold; color: #666; }
         .value { margin-left: 10px; }
-        .requirements { background-color: #fef3c7; padding: 15px; border-left: 4px solid #f59e0b; margin: 15px 0; }
-        .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #666; }
-        .preliminary-notice { background-color: #dbeafe; padding: 15px; border-left: 4px solid #3b82f6; margin: 20px 0; font-weight: bold; }
+        .requirements { background-color: #fef3c7; padding: 15px; border-left: 4px solid #f59e0b; margin: 15px 0; font-size: 0.75em; }
+        .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 9px; color: #666; }
+        .preliminary-notice { background-color: #dbeafe; padding: 15px; border-left: 4px solid #3b82f6; margin: 20px 0; font-weight: bold; font-size: 0.75em; }
         table { width: 100%; border-collapse: collapse; margin: 15px 0; }
         th, td { border: 1px solid #e5e7eb; padding: 8px; text-align: left; }
         th { background-color: #f9fafb; font-weight: bold; }

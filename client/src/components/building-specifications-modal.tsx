@@ -104,7 +104,23 @@ export function BuildingSpecificationsModal({ property }: BuildingSpecifications
       
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
-      window.open(url, '_blank');
+      
+      // Create a temporary link to download the PDF
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Building_Specifications_${property.propertyName.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Clean up the object URL
+      window.URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Success",
+        description: "Building specifications PDF downloaded successfully",
+        duration: 4000,
+      });
     } catch (error) {
       console.error('Print error:', error);
       toast({

@@ -5373,8 +5373,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         </html>
       `;
 
-      res.setHeader('Content-Type', 'text/html');
-      res.send(html);
+      // Generate PDF using Puppeteer
+      const pdfBuffer = await generatePDF(html, `Building_Specifications_${property.propertyName.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`);
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="Building_Specifications_${property.propertyName.replace(/[^a-zA-Z0-9]/g, '_')}.pdf"`);
+      res.send(pdfBuffer);
     } catch (error) {
       console.error("Building specifications print error:", error);
       res.status(500).json({ message: "Failed to generate building specifications report" });

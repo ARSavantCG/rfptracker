@@ -73,44 +73,11 @@ export default function Reports() {
     }
     
     try {
+      let url = `/api/reports/${reportType}`;
       if (reportType === "vendor-workload") {
-        // Handle vendor workload report with authentication
-        const token = localStorage.getItem('auth-token');
-        const params = new URLSearchParams({
-          filters: JSON.stringify(filters),
-          format: exportFormat
-        });
-        
-        const headers: Record<string, string> = {};
-        if (token) {
-          headers["Authorization"] = `Bearer ${token}`;
-        }
-        
-        const response = await fetch(`/api/reports/vendor-workload/pdf?${params}`, {
-          headers,
-          credentials: 'include'
-        });
-        
-        if (!response.ok) {
-          throw new Error(`Report generation failed: ${response.status} ${response.statusText}`);
-        }
-        
-        // Get the PDF blob and create a download link
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `vendor-workload-report-${new Date().toISOString().slice(0, 10)}.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
-        
-        return;
+        url = `/api/reports/vendor-workload/html`;
       }
       
-      // Handle other report types with existing method
-      const url = `/api/reports/${reportType}`;
       const params = new URLSearchParams({
         filters: JSON.stringify(filters),
         format: exportFormat

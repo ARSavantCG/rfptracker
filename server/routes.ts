@@ -5860,6 +5860,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/reports/vendor-workload/html', requireAuth, async (req, res) => {
+    try {
+      const { startDate, endDate, vendors } = req.query;
+      
+      const options: any = {};
+      if (startDate) options.startDate = new Date(startDate as string);
+      if (endDate) options.endDate = new Date(endDate as string);
+      if (vendors) options.vendors = (vendors as string).split(',').map(v => v.trim());
+      
+      const { generateVendorWorkloadData, generateVendorWorkloadHtml } = await import('./vendor-workload-report');
+      
+      const data = await generateVendorWorkloadData(options);
+      const html = await generateVendorWorkloadHtml(data);
+      
+      res.setHeader('Content-Type', 'text/html');
+      res.send(html);
+    } catch (error) {
+      console.error("Error generating vendor workload HTML:", error);
+      res.status(500).json({ message: "Failed to generate vendor workload HTML" });
+    }
+  });
+
   app.get('/api/reports/vendor-workload/pdf', requireAuth, async (req, res) => {
     try {
       const { startDate, endDate, vendors } = req.query;

@@ -5373,39 +5373,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         </html>
       `;
 
-      // Generate PDF using Puppeteer - use the existing generateRfpPdf but with custom HTML
-      const puppeteer = await import('puppeteer');
-      const browser = await puppeteer.default.launch({
-        headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
-      });
+      // Return HTML content like other PDF generation in this project
+      // The browser will handle PDF conversion
+      const cleanHtml = html.replace(/[\u0000-\u0008\u000B-\u000C\u000E-\u001F\u007F-\u009F]/g, '');
+      const htmlBuffer = Buffer.from(cleanHtml, 'utf8');
 
-      try {
-        const page = await browser.newPage();
-        await page.setContent(html, { waitUntil: 'networkidle0' });
-        
-        const pdfBuffer = await page.pdf({
-          format: 'A4',
-          printBackground: true,
-          margin: {
-            top: '0.5in',
-            right: '0.5in',
-            bottom: '0.5in',
-            left: '0.5in'
-          }
-        });
-
-        await browser.close();
-        
-        const finalBuffer = Buffer.from(pdfBuffer);
-
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename="Building_Specifications_${property.propertyName.replace(/[^a-zA-Z0-9]/g, '_')}.pdf"`);
-        res.send(finalBuffer);
-      } catch (pdfError) {
-        await browser.close();
-        throw pdfError;
-      }
+      res.setHeader('Content-Type', 'text/html');
+      res.setHeader('Content-Disposition', `inline; filename="Building_Specifications_${property.propertyName.replace(/[^a-zA-Z0-9]/g, '_')}.html"`);
+      res.send(htmlBuffer);
     } catch (error) {
       console.error("Building specifications print error:", error);
       res.status(500).json({ message: "Failed to generate building specifications report" });

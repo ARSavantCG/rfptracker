@@ -92,40 +92,54 @@ export function BuildingSpecificationsModal({ property }: BuildingSpecifications
   const handlePrint = async () => {
     try {
       const token = localStorage.getItem('auth-token');
+      
+      if (!token) {
+        toast({
+          title: "Authentication required",
+          description: "Please log in to generate building specifications report",
+          variant: "destructive",
+          duration: 6000,
+        });
+        return;
+      }
+      
       const response = await fetch(`/api/properties/${property.id}/building-specifications/print`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
       
-      if (!response.ok) {
-        throw new Error('Print failed');
+      if (response.status === 401) {
+        toast({
+          title: "Authentication expired",
+          description: "Please log in again to generate the report",
+          variant: "destructive",
+          duration: 6000,
+        });
+        return;
       }
       
-      const blob = await response.blob();
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      // Get HTML content and open in new window for PDF conversion
+      const html = await response.text();
+      const blob = new Blob([html], { type: 'text/html' });
       const url = window.URL.createObjectURL(blob);
-      
-      // Create a temporary link to download the PDF
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `Building_Specifications_${property.propertyName.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      // Clean up the object URL
-      window.URL.revokeObjectURL(url);
+      window.open(url, '_blank');
+      setTimeout(() => window.URL.revokeObjectURL(url), 100);
       
       toast({
-        title: "Success",
-        description: "Building specifications PDF downloaded successfully",
+        title: "Report opened",
+        description: "Building specifications report opened in new window. Use browser's print function to save as PDF.",
         duration: 4000,
       });
     } catch (error) {
       console.error('Print error:', error);
       toast({
         title: "Error",
-        description: "Failed to generate building specifications report",
+        description: `Failed to generate building specifications report: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive",
         duration: 6000,
       });

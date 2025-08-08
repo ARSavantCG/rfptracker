@@ -656,6 +656,11 @@ export class DatabaseStorage implements IStorage {
     return contact || undefined;
   }
 
+  async getContactByName(name: string): Promise<Contact | undefined> {
+    const [contact] = await db.select().from(contacts).where(eq(contacts.name, name));
+    return contact || undefined;
+  }
+
   async createContact(contact: InsertContact): Promise<Contact> {
     const [created] = await db.insert(contacts).values(contact).returning();
     return created;

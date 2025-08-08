@@ -79,18 +79,34 @@ function categorizeRfpType(rfp: RfpRequest): 'architect' | 'contractor' | 'unkno
 }
 
 /**
- * Extracts vendor name from RFP based on type
+ * Extracts vendor company name from RFP based on type
  */
-function getVendorName(rfp: RfpRequest, type: 'architect' | 'contractor'): string {
+async function getVendorCompanyName(rfp: RfpRequest, type: 'architect' | 'contractor'): Promise<string> {
+  let contactName = '';
+  
   if (type === 'architect' && rfp.architect?.trim()) {
-    return rfp.architect.trim();
+    contactName = rfp.architect.trim();
+  } else if (type === 'contractor' && rfp.generalContractor?.trim()) {
+    contactName = rfp.generalContractor.trim();
   }
   
-  if (type === 'contractor' && rfp.generalContractor?.trim()) {
-    return rfp.generalContractor.trim();
+  if (!contactName) {
+    return 'Unknown Vendor';
   }
   
-  return 'Unknown Vendor';
+  // Try to find the contact in the database to get their company
+  try {
+    const contact = await storage.getContactByName(contactName);
+    if (contact && contact.company?.trim()) {
+      return contact.company.trim();
+    }
+  } catch (error) {
+    // If contact lookup fails, fall back to the individual name
+    console.log(`Could not find company for contact: ${contactName}`);
+  }
+  
+  // Fallback to individual name if no company found
+  return contactName;
 }
 
 /**
@@ -122,7 +138,7 @@ export async function generateVendorWorkloadData(options: {
   for (const rfp of filteredRfps) {
     const type = categorizeRfpType(rfp);
     if (type === 'architect' || type === 'contractor') {
-      const vendor = getVendorName(rfp, type);
+      const vendor = await getVendorCompanyName(rfp, type);
       
       // Filter by specific vendors if provided
       if (options.vendors && options.vendors.length > 0) {

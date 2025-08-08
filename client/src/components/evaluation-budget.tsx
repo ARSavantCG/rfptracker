@@ -2081,8 +2081,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
 <body>
     <div class="header">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <div style="flex: 1;"></div>
-            <div style="flex: 2; text-align: center;">
+            <div style="flex: 1;">
                 <img src="/api/bridge-logo" alt="Bridge Industrial" style="height: 30px; max-width: 200px;" />
             </div>
             <div style="flex: 1; text-align: right; font-size: 10px; color: #666;">

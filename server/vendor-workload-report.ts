@@ -13,11 +13,13 @@ import type { RfpRequest } from "@shared/schema";
 
 export interface VendorWorkloadData {
   vendor: string;
+  type: 'architect' | 'contractor';
   projects: {
     projectName: string;
     rfpNumber: string;
     sentDate: string | null;
     status: string;
+    property: string;
     selectedArchitect?: string;
     selectedGC?: string;
   }[];
@@ -25,9 +27,11 @@ export interface VendorWorkloadData {
 }
 
 export interface WorkloadReportData {
-  vendors: VendorWorkloadData[];
+  architects: VendorWorkloadData[];
+  contractors: VendorWorkloadData[];
   totalRfps: number;
-  totalVendors: number;
+  totalArchitects: number;
+  totalContractors: number;
   generatedAt: string;
   dateFilter?: {
     startDate?: string;
@@ -131,24 +135,29 @@ export async function generateVendorWorkloadData(options: {
     }
   }
   
-  // Group by vendor
-  const vendorMap = new Map<string, VendorWorkloadData>();
+  // Group by vendor and type
+  const architectMap = new Map<string, VendorWorkloadData>();
+  const contractorMap = new Map<string, VendorWorkloadData>();
   
-  for (const { rfp, vendor } of vendorRfps) {
-    if (!vendorMap.has(vendor)) {
-      vendorMap.set(vendor, {
+  for (const { rfp, type, vendor } of vendorRfps) {
+    const map = type === 'architect' ? architectMap : contractorMap;
+    
+    if (!map.has(vendor)) {
+      map.set(vendor, {
         vendor,
+        type,
         projects: [],
         totalProjects: 0
       });
     }
     
-    const vendorData = vendorMap.get(vendor)!;
+    const vendorData = map.get(vendor)!;
     vendorData.projects.push({
       projectName: rfp.projectName || 'Unnamed Project',
       rfpNumber: rfp.rfpNumber,
       sentDate: rfp.receivedOn ? format(new Date(rfp.receivedOn), 'yyyy-MM-dd') : null,
       status: rfp.status || 'Unknown',
+      property: rfp.property || 'Unknown Property',
       selectedArchitect: rfp.architect || undefined,
       selectedGC: rfp.generalContractor || undefined
     });
@@ -156,23 +165,28 @@ export async function generateVendorWorkloadData(options: {
   }
   
   // Sort vendors alphabetically and sort projects within each vendor
-  const vendors: VendorWorkloadData[] = Array.from(vendorMap.values())
-    .sort((a, b) => a.vendor.localeCompare(b.vendor))
-    .map(vendor => ({
-      ...vendor,
-      projects: vendor.projects.sort((a, b) => {
-        // Sort by sent date first, then by project name
-        const dateA = a.sentDate || '9999-12-31';
-        const dateB = b.sentDate || '9999-12-31';
-        if (dateA !== dateB) return dateA.localeCompare(dateB);
-        return a.projectName.localeCompare(b.projectName);
-      })
-    }));
+  const sortVendors = (vendors: VendorWorkloadData[]) => 
+    vendors.sort((a, b) => a.vendor.localeCompare(b.vendor))
+      .map(vendor => ({
+        ...vendor,
+        projects: vendor.projects.sort((a, b) => {
+          // Sort by sent date first, then by project name
+          const dateA = a.sentDate || '9999-12-31';
+          const dateB = b.sentDate || '9999-12-31';
+          if (dateA !== dateB) return dateA.localeCompare(dateB);
+          return a.projectName.localeCompare(b.projectName);
+        })
+      }));
+  
+  const architects = sortVendors(Array.from(architectMap.values()));
+  const contractors = sortVendors(Array.from(contractorMap.values()));
   
   return {
-    vendors,
+    architects,
+    contractors,
     totalRfps: vendorRfps.length,
-    totalVendors: vendors.length,
+    totalArchitects: architects.length,
+    totalContractors: contractors.length,
     generatedAt: format(new Date(), 'yyyy-MM-dd HH:mm:ss'),
     dateFilter: options.startDate || options.endDate ? {
       startDate: options.startDate ? format(options.startDate, 'yyyy-MM-dd') : undefined,
@@ -441,16 +455,20 @@ export function generateVendorWorkloadHtml(data: WorkloadReportData): string {
           <div class="stat-label">Total RFPs</div>
         </div>
         <div class="stat">
-          <div class="stat-value">${data.totalVendors}</div>
-          <div class="stat-label">Unique Vendors</div>
+          <div class="stat-value">${data.totalArchitects}</div>
+          <div class="stat-label">Architects</div>
         </div>
         <div class="stat">
-          <div class="stat-value">${data.totalRfps > 0 ? (data.totalRfps / data.totalVendors).toFixed(1) : '0'}</div>
-          <div class="stat-label">Avg RFPs/Vendor</div>
+          <div class="stat-value">${data.totalContractors}</div>
+          <div class="stat-label">Contractors</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value">${data.totalArchitects + data.totalContractors}</div>
+          <div class="stat-label">Total Vendors</div>
         </div>
       </div>
       
-      ${data.vendors.length === 0 ? `
+      ${(data.architects.length === 0 && data.contractors.length === 0) ? `
       <div class="no-rfps-message">
         <h3>No matching Architect/Contractor RFPs found</h3>
         <p>There are currently no RFPs matching the specified criteria.</p>
@@ -458,39 +476,77 @@ export function generateVendorWorkloadHtml(data: WorkloadReportData): string {
       </div>
       ` : ''}
       
-      ${data.vendors.map(vendor => `
-      <div class="vendor-section">
-        <div class="vendor-header">
-          <span>${vendor.vendor}</span>
-          <span class="vendor-project-count">${vendor.totalProjects} project${vendor.totalProjects !== 1 ? 's' : ''}</span>
-        </div>
-        <div class="project-list">
-          ${vendor.projects.map(project => `
-          <div class="project-item">
-            <div class="project-main">
-              <div class="project-name">${project.projectName}</div>
-              <div class="project-details">
-                RFP: ${project.rfpNumber}
-                ${project.selectedArchitect || project.selectedGC ? `
-                <div class="selected-info">
-                  Selected: ${[project.selectedArchitect, project.selectedGC].filter(Boolean).join(' / ')}
-                </div>
-                ` : ''}
-              </div>
-            </div>
-            <div class="project-meta">
-              <div class="status-badge status-${project.status.toLowerCase().replace(/\s+/g, '-')}">
-                ${project.status}
-              </div>
-              <div style="font-size: 9px; color: #6b7280;">
-                Sent: ${project.sentDate || '—'}
-              </div>
-            </div>
+      ${data.architects.length > 0 ? `
+      <div style="margin-bottom: 40px;">
+        <h2 style="color: rgb(0,50,130); border-bottom: 2px solid rgb(0,50,130); padding-bottom: 10px; margin-bottom: 20px; font-size: 18px;">
+          📐 Architects (${data.totalArchitects} firms)
+        </h2>
+        ${data.architects.map(vendor => `
+        <div class="vendor-section">
+          <div class="vendor-header">
+            <span>${vendor.vendor}</span>
+            <span class="vendor-project-count">${vendor.totalProjects} project${vendor.totalProjects !== 1 ? 's' : ''}</span>
           </div>
-          `).join('')}
+          <div class="project-list">
+            ${vendor.projects.map(project => `
+            <div class="project-item">
+              <div class="project-main">
+                <div class="project-name">${project.projectName}</div>
+                <div class="project-details">
+                  RFP: ${project.rfpNumber} • Property: ${project.property}
+                </div>
+              </div>
+              <div class="project-meta">
+                <div class="status-badge status-${project.status.toLowerCase().replace(/\s+/g, '-')}">
+                  ${project.status}
+                </div>
+                <div style="font-size: 9px; color: #6b7280;">
+                  Sent: ${project.sentDate || '—'}
+                </div>
+              </div>
+            </div>
+            `).join('')}
+          </div>
         </div>
+        `).join('')}
       </div>
-      `).join('')}
+      ` : ''}
+      
+      ${data.contractors.length > 0 ? `
+      <div style="margin-bottom: 40px;">
+        <h2 style="color: rgb(0,50,130); border-bottom: 2px solid rgb(0,50,130); padding-bottom: 10px; margin-bottom: 20px; font-size: 18px;">
+          🏗️ General Contractors (${data.totalContractors} firms)
+        </h2>
+        ${data.contractors.map(vendor => `
+        <div class="vendor-section">
+          <div class="vendor-header">
+            <span>${vendor.vendor}</span>
+            <span class="vendor-project-count">${vendor.totalProjects} project${vendor.totalProjects !== 1 ? 's' : ''}</span>
+          </div>
+          <div class="project-list">
+            ${vendor.projects.map(project => `
+            <div class="project-item">
+              <div class="project-main">
+                <div class="project-name">${project.projectName}</div>
+                <div class="project-details">
+                  RFP: ${project.rfpNumber} • Property: ${project.property}
+                </div>
+              </div>
+              <div class="project-meta">
+                <div class="status-badge status-${project.status.toLowerCase().replace(/\s+/g, '-')}">
+                  ${project.status}
+                </div>
+                <div style="font-size: 9px; color: #6b7280;">
+                  Sent: ${project.sentDate || '—'}
+                </div>
+              </div>
+            </div>
+            `).join('')}
+          </div>
+        </div>
+        `).join('')}
+      </div>
+      ` : ''}
       
       <div class="footer">
         <p>Generated from RFP Tracker database on ${data.generatedAt}</p>

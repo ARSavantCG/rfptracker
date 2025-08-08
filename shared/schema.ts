@@ -412,6 +412,17 @@ export const properties = pgTable("properties", {
   accessibleParking: integer("accessible_parking").default(0),
   evParking: integer("ev_parking").default(0),
   trailerParking: integer("trailer_parking").default(0),
+  
+  // Building Specifications
+  slabThickness: text("slab_thickness"), // e.g., "6 inches @ 4000 PSI"
+  clearHeight: text("clear_height"), // e.g., "32 feet"
+  floorFlatness: text("floor_flatness"), // FF/FL values e.g., "FF 25 / FL 20"
+  truckApronSlab: text("truck_apron_slab"), // e.g., "8 inches @ 4000 PSI"
+  rampCapacity: text("ramp_capacity"), // e.g., "80,000 lbs"
+  roofRValue: text("roof_r_value"), // e.g., "R-30"
+  firePumpInfo: text("fire_pump_info"), // e.g., "1500 GPM @ 100 PSI"
+  fireSprinklerInfo: text("fire_sprinkler_info"), // e.g., "Standard ESFR system"
+  
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

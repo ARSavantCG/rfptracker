@@ -12,6 +12,7 @@ import LeaseManagementModal from "@/components/lease-management-modal";
 import { PropertyExistingImprovementsModal } from "@/components/property-existing-improvements-modal";
 import { PropertyAttachments } from "@/components/property-attachments";
 import { ElectricalManagementModal } from "@/components/electrical-management-modal";
+import { BuildingSpecificationsModal } from "@/components/building-specifications-modal";
 import type { Property, BayConfiguration } from "@shared/schema";
 
 export default function Properties() {
@@ -374,6 +375,7 @@ export default function Properties() {
                             property={property}
                           />
                           <ElectricalManagementModal property={property} />
+                          <BuildingSpecificationsModal property={property} />
                         </div>
                         
                         {/* Property Info Section */}

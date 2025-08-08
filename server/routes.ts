@@ -5860,7 +5860,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/reports/vendor-workload/html', requireAuth, async (req, res) => {
+  app.get('/api/reports/vendor-workload/html', async (req, res) => {
     try {
       const { startDate, endDate, vendors } = req.query;
       

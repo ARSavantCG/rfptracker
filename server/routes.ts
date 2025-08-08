@@ -5862,12 +5862,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/reports/vendor-workload/html', async (req, res) => {
     try {
-      const { startDate, endDate, vendors } = req.query;
+      const { startDate, endDate, vendors, incompleteOnly } = req.query;
       
       const options: any = {};
       if (startDate) options.startDate = new Date(startDate as string);
       if (endDate) options.endDate = new Date(endDate as string);
       if (vendors) options.vendors = (vendors as string).split(',').map(v => v.trim());
+      if (incompleteOnly) options.incompleteOnly = incompleteOnly === 'true';
       
       const { generateVendorWorkloadData, generateVendorWorkloadHtml } = await import('./vendor-workload-report');
       
@@ -5884,12 +5885,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/reports/vendor-workload/pdf', requireAuth, async (req, res) => {
     try {
-      const { startDate, endDate, vendors } = req.query;
+      const { startDate, endDate, vendors, incompleteOnly } = req.query;
       
       const options: any = {};
       if (startDate) options.startDate = new Date(startDate as string);
       if (endDate) options.endDate = new Date(endDate as string);
       if (vendors) options.vendors = (vendors as string).split(',').map(v => v.trim());
+      if (incompleteOnly) options.incompleteOnly = incompleteOnly === 'true';
       
       const { generateVendorWorkloadData, generateVendorWorkloadPdf, generateVendorWorkloadFilename } = await import('./vendor-workload-report');
       

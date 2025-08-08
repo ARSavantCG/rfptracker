@@ -22,6 +22,7 @@ export default function Reports() {
   const [filters, setFilters] = useState<ReportFilters>({});
   const [exportFormat, setExportFormat] = useState<"pdf" | "excel">("pdf");
   const [customReportModalOpen, setCustomReportModalOpen] = useState(false);
+  const [incompleteOnly, setIncompleteOnly] = useState(false);
 
   const { data: rfpRequests = [], isLoading } = useQuery<RfpRequest[]>({
     queryKey: ["/api/rfp-requests"],
@@ -76,6 +77,20 @@ export default function Reports() {
       let url = `/api/reports/${reportType}`;
       if (reportType === "vendor-workload") {
         url = `/api/reports/vendor-workload/html`;
+        
+        // Add vendor workload specific parameters
+        const params = new URLSearchParams({
+          filters: JSON.stringify(filters),
+          format: exportFormat
+        });
+        
+        if (incompleteOnly) {
+          params.append('incompleteOnly', 'true');
+        }
+        
+        // Open report in new window
+        window.open(`${url}?${params}`, '_blank');
+        return;
       }
       
       const params = new URLSearchParams({
@@ -356,6 +371,18 @@ export default function Reports() {
                   <li>• Project details & timelines</li>
                   <li>• Workload summary metrics</li>
                 </ul>
+              </div>
+
+              <div className="flex items-center space-x-2 mt-2 p-2 bg-yellow-50 rounded">
+                <input
+                  type="checkbox"
+                  id="incomplete-only"
+                  className="w-3 h-3 rounded"
+                  onChange={(e) => setIncompleteOnly(e.target.checked)}
+                />
+                <label htmlFor="incomplete-only" className="text-xs text-gray-700 cursor-pointer">
+                  Show only incomplete projects
+                </label>
               </div>
               
               <Button 

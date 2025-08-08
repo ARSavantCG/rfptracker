@@ -116,6 +116,7 @@ export async function generateVendorWorkloadData(options: {
   startDate?: Date;
   endDate?: Date;
   vendors?: string[];
+  incompleteOnly?: boolean;
 } = {}): Promise<WorkloadReportData> {
   
   // Fetch all RFPs from database
@@ -138,6 +139,15 @@ export async function generateVendorWorkloadData(options: {
   for (const rfp of filteredRfps) {
     const type = categorizeRfpType(rfp);
     if (type === 'architect' || type === 'contractor') {
+      // Filter by incomplete projects if requested
+      if (options.incompleteOnly) {
+        // Consider project complete if it's in "publish" phase with "completed" status
+        const isComplete = rfp.workflowPhase === 'publish' && rfp.status === 'completed';
+        if (isComplete) {
+          continue; // Skip complete projects when filtering for incomplete only
+        }
+      }
+      
       const vendor = await getVendorCompanyName(rfp, type);
       
       // Filter by specific vendors if provided

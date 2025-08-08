@@ -1866,10 +1866,26 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
             background-color: white;
         }
         .header {
-            padding: 10px 0;
-            margin-bottom: 15px;
+            border-bottom: 3px solid rgb(0,50,130);
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+            position: relative;
+        }
+        .document-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: white;
+            margin-bottom: 10px;
+            background: rgb(0,50,130);
+            padding: 10px;
+            border-radius: 5px;
             text-align: center;
-            border-bottom: 1px solid #dee2e6;
+        }
+        .project-title {
+            font-size: 16px;
+            color: #666;
+            margin-bottom: 20px;
+            text-align: center;
         }
         .header h1 { margin: 0 0 5px 0; font-size: 18px; font-weight: 600; color: #333; }
         .header p { margin: 1px 0; font-size: 12px; color: #666; }
@@ -2064,10 +2080,21 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
 </head>
 <body>
     <div class="header">
-        <h1>Evaluation Budget Report</h1>
-        <p><strong>Project:</strong> ${rfp?.projectName}</p>
-        <p><strong>RFP Number:</strong> ${rfp?.rfpNumber}</p>
-        <p><strong>Generated:</strong> ${currentDate}</p>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <div style="flex: 1;"></div>
+            <div style="flex: 2; text-align: center;">
+                <img src="/api/bridge-logo" alt="Bridge Industrial" style="height: 30px; max-width: 200px;" />
+            </div>
+            <div style="flex: 1; text-align: right; font-size: 10px; color: #666;">
+                <p style="margin: 0;">Generated: ${currentDate}</p>
+            </div>
+        </div>
+        
+        <div class="document-title">Evaluation Budget Report</div>
+        <div class="project-title">
+            <strong>Project:</strong> ${rfp?.projectName}<br>
+            <strong>RFP Number:</strong> ${rfp?.rfpNumber}
+        </div>
     </div>
     
     <!-- Property Summary Section -->

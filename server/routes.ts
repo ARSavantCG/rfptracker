@@ -56,7 +56,7 @@ import {
   LEGAL_PROPERTY_TOTALS 
 } from "./property-legal-compliance";
 import archiver from "archiver";
-import fs from "fs";
+import fs, { readFileSync } from "fs";
 import path from "path";
 import { applyLegalRounding, validateLegalCompliance, LEGAL_TOTALS } from "./legal-rounding-system";
 import { deleteEntityFiles, cleanupOrphanedFiles, getCleanupStats, findOrphanedFiles } from "./file-cleanup";
@@ -5825,6 +5825,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting generation history item:", error);
       res.status(500).json({ message: "Failed to delete generation history item" });
+    }
+  });
+
+  // Bridge Industrial logo endpoint for evaluation reports
+  app.get('/api/bridge-logo', (req, res) => {
+    try {
+      const logoBase64 = readFileSync('./bridge_logo_new_base64.txt', 'utf8').trim();
+      res.setHeader('Content-Type', 'image/png');
+      res.send(Buffer.from(logoBase64, 'base64'));
+    } catch (error) {
+      console.error('Error serving Bridge logo:', error);
+      res.status(404).send('Logo not found');
     }
   });
 

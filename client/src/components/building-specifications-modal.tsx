@@ -166,56 +166,54 @@ export function BuildingSpecificationsModal({ property }: BuildingSpecifications
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <ClipboardList className="h-5 w-5" />
-              Building Specifications - {property.propertyName}
-            </div>
-            <div className="flex items-center gap-2">
+        <DialogHeader className="pb-4">
+          <DialogTitle className="flex items-center gap-2 pr-12">
+            <ClipboardList className="h-5 w-5" />
+            Building Specifications - {property.propertyName}
+          </DialogTitle>
+          <div className="flex items-center justify-end gap-2 pt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handlePrint}
+              className="gap-2"
+            >
+              <Printer className="h-4 w-4" />
+              Print
+            </Button>
+            {!isEditing ? (
               <Button
                 variant="outline"
                 size="sm"
-                onClick={handlePrint}
+                onClick={() => setIsEditing(true)}
                 className="gap-2"
               >
-                <Printer className="h-4 w-4" />
-                Print
+                <Edit className="h-4 w-4" />
+                Edit
               </Button>
-              {!isEditing ? (
+            ) : (
+              <div className="flex gap-2">
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setIsEditing(true)}
+                  onClick={handleCancel}
                   className="gap-2"
                 >
-                  <Edit className="h-4 w-4" />
-                  Edit
+                  <X className="h-4 w-4" />
+                  Cancel
                 </Button>
-              ) : (
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleCancel}
-                    className="gap-2"
-                  >
-                    <X className="h-4 w-4" />
-                    Cancel
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={handleSave}
-                    disabled={saveMutation.isPending}
-                    className="gap-2"
-                  >
-                    <Save className="h-4 w-4" />
-                    {saveMutation.isPending ? 'Saving...' : 'Save'}
-                  </Button>
-                </div>
-              )}
-            </div>
-          </DialogTitle>
+                <Button
+                  size="sm"
+                  onClick={handleSave}
+                  disabled={saveMutation.isPending}
+                  className="gap-2"
+                >
+                  <Save className="h-4 w-4" />
+                  {saveMutation.isPending ? 'Saving...' : 'Save'}
+                </Button>
+              </div>
+            )}
+          </div>
         </DialogHeader>
 
         <div className="space-y-6 mt-4">

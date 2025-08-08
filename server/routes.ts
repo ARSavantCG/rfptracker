@@ -5281,6 +5281,106 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/properties/:propertyId/building-specifications/print', requireAuth, async (req, res) => {
+    try {
+      const propertyId = parseInt(req.params.propertyId);
+      const property = await storage.getProperty(propertyId);
+      
+      if (!property) {
+        return res.status(404).json({ message: "Property not found" });
+      }
+
+      const html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Building Specifications - ${property.propertyName}</title>
+          <style>
+            body { font-family: 'Segoe UI', sans-serif; margin: 20px; line-height: 1.6; }
+            .header { border-bottom: 3px solid rgb(0,50,130); padding-bottom: 20px; margin-bottom: 30px; position: relative; }
+            .document-title { font-size: 24px; font-weight: bold; color: rgb(0,50,130); margin-bottom: 10px; background: rgb(0,50,130); color: white; padding: 10px; border-radius: 5px; text-align: center; }
+            .property-name { font-size: 18px; color: #666; text-align: center; margin-bottom: 20px; }
+            .section { margin-bottom: 30px; }
+            .section-title { font-size: 18px; font-weight: bold; color: rgb(0,50,130); margin-bottom: 15px; padding-bottom: 5px; border-bottom: 2px solid #e5e7eb; }
+            .spec-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 15px; margin-bottom: 15px; }
+            .spec-label { font-weight: 600; color: #374151; }
+            .spec-value { color: #1f2937; }
+            .empty-value { color: #9ca3af; font-style: italic; }
+            .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #6b7280; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+              <!-- Company logo -->
+              <img src="${getBridgeLogo()}" alt="Bridge Industrial" style="height: 30px; width: auto;" />
+            </div>
+            <div class="document-title">Building Specifications</div>
+            <div class="property-name">${property.propertyName}</div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">Structural Specifications</div>
+            <div class="spec-grid">
+              <div class="spec-label">Slab Thickness & PSI:</div>
+              <div class="spec-value ${!property.slabThickness ? 'empty-value' : ''}">${property.slabThickness || 'Not specified'}</div>
+            </div>
+            <div class="spec-grid">
+              <div class="spec-label">Clear Height:</div>
+              <div class="spec-value ${!property.clearHeight ? 'empty-value' : ''}">${property.clearHeight || 'Not specified'}</div>
+            </div>
+            <div class="spec-grid">
+              <div class="spec-label">Floor Flatness/Level (FF/FL):</div>
+              <div class="spec-value ${!property.floorFlatness ? 'empty-value' : ''}">${property.floorFlatness || 'Not specified'}</div>
+            </div>
+            <div class="spec-grid">
+              <div class="spec-label">Truck Apron Slab:</div>
+              <div class="spec-value ${!property.truckApronSlab ? 'empty-value' : ''}">${property.truckApronSlab || 'Not specified'}</div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">Operational Specifications</div>
+            <div class="spec-grid">
+              <div class="spec-label">Ramp Capacity:</div>
+              <div class="spec-value ${!property.rampCapacity ? 'empty-value' : ''}">${property.rampCapacity || 'No ramps / Not specified'}</div>
+            </div>
+            <div class="spec-grid">
+              <div class="spec-label">Roof R-Value:</div>
+              <div class="spec-value ${!property.roofRValue ? 'empty-value' : ''}">${property.roofRValue || 'Not specified'}</div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">Fire & Safety Systems</div>
+            <div class="spec-grid">
+              <div class="spec-label">Fire Pump Information:</div>
+              <div class="spec-value ${!property.firePumpInfo ? 'empty-value' : ''}">${property.firePumpInfo || 'Not specified'}</div>
+            </div>
+            <div class="spec-grid">
+              <div class="spec-label">Fire Sprinkler System:</div>
+              <div class="spec-value ${!property.fireSprinklerInfo ? 'empty-value' : ''}">${property.fireSprinklerInfo || 'Not specified'}</div>
+            </div>
+          </div>
+
+          <div class="footer">
+            <p><strong>Property Address:</strong> ${property.streetAddress}, ${property.city}, ${property.state} ${property.zip}</p>
+            <p><strong>Generated:</strong> ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}</p>
+            <p><em>This document is intended for lease documentation and RFP purposes.</em></p>
+          </div>
+        </body>
+        </html>
+      `;
+
+      res.setHeader('Content-Type', 'text/html');
+      res.send(html);
+    } catch (error) {
+      console.error("Building specifications print error:", error);
+      res.status(500).json({ message: "Failed to generate building specifications report" });
+    }
+  });
+
   app.get('/api/properties/:propertyId/existing-improvements/print', requireAuth, async (req, res) => {
     try {
       const propertyId = parseInt(req.params.propertyId);

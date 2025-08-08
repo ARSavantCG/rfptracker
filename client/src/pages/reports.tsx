@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Download, FileText, Calendar, TrendingUp, Clock, CheckCircle, AlertTriangle, BarChart3, ChevronDown } from "lucide-react";
+import { Download, FileText, Calendar, TrendingUp, Clock, CheckCircle, AlertTriangle, BarChart3, ChevronDown, Users } from "lucide-react";
 import Navigation from "@/components/navigation";
 import { CustomReportModal } from "@/components/custom-report-modal";
 import { format, parseISO, isAfter, isBefore, addDays } from "date-fns";
@@ -66,20 +66,24 @@ export default function Reports() {
     setFilters({});
   };
 
-  const generateReport = async (reportType: "executive" | "detailed" | "historical" | "custom") => {
+  const generateReport = async (reportType: "executive" | "detailed" | "historical" | "custom" | "vendor-workload") => {
     if (reportType === "custom") {
       setCustomReportModalOpen(true);
       return;
     }
     
     try {
-      const url = `/api/reports/${reportType}`;
+      let url = `/api/reports/${reportType}`;
+      if (reportType === "vendor-workload") {
+        url = `/api/reports/vendor-workload/pdf`;
+      }
+      
       const params = new URLSearchParams({
         filters: JSON.stringify(filters),
         format: exportFormat
       });
       
-      // Open report in new window
+      // Open report in new window or download directly
       window.open(`${url}?${params}`, '_blank');
     } catch (error) {
       console.error("Error generating report:", error);
@@ -229,7 +233,7 @@ export default function Reports() {
         </Card>
 
         {/* Report Generation Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center space-x-2 text-base">
@@ -316,6 +320,49 @@ export default function Reports() {
                   No completed projects available
                 </p>
               )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center space-x-2 text-base">
+                <Users className="h-4 w-4" />
+                <span>Vendor Workload</span>
+              </CardTitle>
+              <p className="text-xs text-gray-600">
+                Architect & contractor workload analysis
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <div className="grid grid-cols-2 gap-1">
+                <div className="bg-gray-50 p-1.5 rounded text-center">
+                  <p className="text-lg font-bold text-gray-900">
+                    {rfpRequests.filter(rfp => rfp.architect || rfp.generalContractor).length}
+                  </p>
+                  <p className="text-xs text-gray-600 uppercase font-medium">Vendor RFPs</p>
+                </div>
+                <div className="bg-blue-50 p-1.5 rounded text-center">
+                  <p className="text-lg font-bold text-blue-900">PDF</p>
+                  <p className="text-xs text-blue-600 uppercase font-medium">Format</p>
+                </div>
+              </div>
+              
+              <div className="bg-gray-50 p-2 rounded">
+                <h4 className="font-medium text-gray-900 mb-1 text-xs">Includes</h4>
+                <ul className="space-y-0 text-xs text-gray-600">
+                  <li>• RFPs grouped by vendor</li>
+                  <li>• Project details & timelines</li>
+                  <li>• Workload summary metrics</li>
+                </ul>
+              </div>
+              
+              <Button 
+                className="w-full h-8 text-xs" 
+                onClick={() => generateReport("vendor-workload")}
+              >
+                <Download className="h-3 w-3 mr-1" />
+                Generate Report
+              </Button>
             </CardContent>
           </Card>
 

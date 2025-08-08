@@ -66,6 +66,93 @@ npm run db:push
 npm run dev
 ```
 
+## 📊 Vendor Workload Report
+
+The RFP Tracker includes a comprehensive Vendor Workload reporting system that analyzes all Architect and General Contractor RFPs to provide workload summaries grouped by vendor/firm.
+
+### What it does
+
+- Analyzes all RFPs in the database to identify architect and contractor workloads
+- Groups RFPs by vendor (architect or general contractor)
+- Provides detailed project information including dates, status, and selections
+- Generates professional PDF reports with Bridge Industrial branding
+- Shows summary statistics (total RFPs, unique vendors, average workload per vendor)
+
+### How to generate reports
+
+#### Web Interface (Recommended)
+1. Navigate to the Reports page in the RFP Tracker
+2. Click "Generate Report" on the "Vendor Workload" card
+3. The PDF report will open in a new browser window for download
+
+#### Command Line
+```bash
+# Generate a basic vendor workload report
+python tools/vendor_workload_report.py
+
+# Generate report with date filtering  
+python tools/vendor_workload_report.py --start-date 2025-01-01 --end-date 2025-03-31
+
+# Generate report for specific vendors
+python tools/vendor_workload_report.py --vendors "Gensler,ABC Construction"
+
+# Specify custom output directory
+python tools/vendor_workload_report.py --output ./custom-reports/
+
+# TypeScript alternative
+tsx tools/vendor-workload-cli.ts --start-date 2025-01-01 --vendors "Gensler"
+```
+
+### Configuration
+
+The system works with your existing RFP database automatically. No additional configuration is required.
+
+**Environment Variables (optional):**
+- `DATABASE_URL` - Database connection (auto-configured in Replit)
+- `RFP_TABLE` - Table name for RFPs (default: rfp_requests)
+- `COLMAP` - JSON mapping for flexible column names (optional)
+
+**Example COLMAP for custom databases:**
+```json
+{
+  "type": "request_type",
+  "vendor": "company_name", 
+  "project": "project_title",
+  "status": "rfp_status",
+  "sent": "date_sent"
+}
+```
+
+### Output
+
+Reports are generated as PDFs in the `./reports/` directory with filenames like:
+- `vendor-workload-report-2025-08-08-1946.pdf`
+- `vendor-workload-report-2025-08-08-1946-2025-01-01-to-2025-03-31.pdf`
+- `vendor-workload-report-2025-08-08-1946-gensler.pdf`
+
+### Report Content
+
+Each vendor workload report includes:
+- **Header** with Bridge Industrial logo and generation timestamp
+- **Summary statistics** showing total RFPs, unique vendors, and averages
+- **Vendor sections** grouped alphabetically, each containing:
+  - Vendor name and project count
+  - Project details: name, RFP number, sent date, status
+  - Selected architect/contractor information (when available)
+- **Professional formatting** consistent with other system reports
+
+### Troubleshooting
+
+**No RFPs found:**
+- Ensure RFPs have either `architect` or `generalContractor` fields populated
+- Check date filters are not too restrictive
+- Verify vendor names are correctly entered in the system
+
+**Command not found:**
+- Ensure you're in the project root directory
+- For Python: Check Python is installed and script is executable
+- For TypeScript: Ensure `tsx` is available globally or use `npx tsx`
+
 ### Environment Variables
 ```env
 DATABASE_URL=postgresql://...

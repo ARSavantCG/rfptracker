@@ -5840,6 +5840,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Vendor Workload Report API endpoints
+  app.get('/api/reports/vendor-workload', requireAuth, async (req, res) => {
+    try {
+      const { startDate, endDate, vendors } = req.query;
+      
+      const options: any = {};
+      if (startDate) options.startDate = new Date(startDate as string);
+      if (endDate) options.endDate = new Date(endDate as string);
+      if (vendors) options.vendors = (vendors as string).split(',').map(v => v.trim());
+      
+      const { generateVendorWorkloadData } = await import('./vendor-workload-report');
+      const data = await generateVendorWorkloadData(options);
+      
+      res.json(data);
+    } catch (error) {
+      console.error("Error generating vendor workload data:", error);
+      res.status(500).json({ message: "Failed to generate vendor workload data" });
+    }
+  });
+
+  app.get('/api/reports/vendor-workload/pdf', requireAuth, async (req, res) => {
+    try {
+      const { startDate, endDate, vendors } = req.query;
+      
+      const options: any = {};
+      if (startDate) options.startDate = new Date(startDate as string);
+      if (endDate) options.endDate = new Date(endDate as string);
+      if (vendors) options.vendors = (vendors as string).split(',').map(v => v.trim());
+      
+      const { generateVendorWorkloadData, generateVendorWorkloadPdf, generateVendorWorkloadFilename } = await import('./vendor-workload-report');
+      
+      const data = await generateVendorWorkloadData(options);
+      const pdfBuffer = await generateVendorWorkloadPdf(data);
+      const filename = generateVendorWorkloadFilename(options);
+      
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.send(pdfBuffer);
+    } catch (error) {
+      console.error("Error generating vendor workload PDF:", error);
+      res.status(500).json({ message: "Failed to generate vendor workload PDF" });
+    }
+  });
+
   // Executed Leases API routes
   app.get('/api/executed-leases/all', requireAuth, async (req, res) => {
     try {

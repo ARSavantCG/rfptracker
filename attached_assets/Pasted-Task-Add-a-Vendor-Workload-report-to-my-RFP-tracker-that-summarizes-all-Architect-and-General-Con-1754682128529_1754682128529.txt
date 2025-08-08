@@ -1,0 +1,52 @@
+Task: Add a “Vendor Workload” report to my RFP tracker that summarizes all Architect and General Contractor RFPs and exports a PDF I can download from Replit.
+
+Constraints / Context:
+	•	Do not use CSVs. Pull directly from my database.
+	•	The app already creates PDFs for other reports—match that behavior.
+	•	I need this to reflect current data (no manual export step).
+
+Data source:
+	•	Detect DB from DB_URL env var (supports SQLite/Postgres/MySQL via SQLAlchemy).
+	•	Default table name: rfp (make this configurable via RFP_TABLE).
+	•	Column names vary; add a COLMAP env var (JSON) to map flexible headers.
+	•	Expected logical fields (map via COLMAP):
+	•	type (RFP type/category — values like “Architect”, “GC”, “Contractor”, “Design”, “Construction”)
+	•	vendor (architect/GC firm name)
+	•	project (project/property/building name)
+	•	status (rfp status/stage)
+	•	sent (date/time the RFP was issued)
+	•	Optional per-project selections: selected_architect, selected_gc (if present, include in output)
+
+Report definition (“Vendor Workload”):
+	•	Filter to only Architect/GC RFPs. Use a smart fallback: if type is missing/empty, infer from vendor keywords (architect, architecture, design, contractor, construction, builders, gc).
+	•	Group by vendor. For each vendor list: Project name, Sent date (ISO or friendly), Status; if known, inline the selected architect / GC for that project.
+	•	Show a summary at the top: total # of matching RFPs and total # of vendors.
+	•	Sort vendors alphabetically; inside each vendor, sort by sent date then project.
+	•	Handle blanks gracefully: display — for missing dates/status.
+
+Output:
+	•	Generate a PDF named reports/vendor_workload.pdf.
+	•	Use the same font/branding style as other PDFs in this repo if available; otherwise a simple, readable layout (title, timestamp header, page numbers).
+	•	Make the code idempotent and safe to re-run.
+
+Dev deliverables:
+	1.	Create a script/command I can run from the Replit shell, e.g. python tools/vendor_workload_report.py, that writes the PDF to ./reports/.
+	2.	If the project already has a reporting CLI or make/npm script, add an entry like make vendor-report or npm run vendor-report.
+	3.	Add a brief README section titled “Vendor Workload Report” with:
+	•	What it does
+	•	How to set DB_URL, RFP_TABLE, and COLMAP (with a JSON example)
+	•	Example invocation and expected output path
+	4.	Add light validation: if required fields are missing, print a clear error suggesting a COLMAP mapping.
+
+Acceptance criteria:
+	•	Running the command produces reports/vendor_workload.pdf without needing CSVs.
+	•	The PDF shows a top summary and, for each vendor, bullet lines like:
+	•	“• 123 Main Street Buildout (Sent: 2025-07-08 | Status: Issued) | Selected: Gensler / ABC Construction” (only show “Selected:” part if those fields exist)
+	•	Works on SQLite (default), and Postgres/MySQL when DB_URL is set.
+	•	Handles 0-result cases politely (“No matching Architect/Contractor RFPs found…”).
+
+Nice-to-have (if quick):
+	•	Add optional date filters via env: START_DATE, END_DATE (filter by sent).
+	•	Add a --vendors="ABC Construction,Gensler" arg to limit output to specific firms.
+
+Now implement this end-to-end (code + any minimal config + README snippet). Ask me only if you truly need my exact table/column names; otherwise proceed with sensible defaults and the COLMAP override.

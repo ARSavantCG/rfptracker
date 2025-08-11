@@ -1396,10 +1396,45 @@ async function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, da
   // Format bid deadline with E.O.B.
   const formattedDeadline = bidDeadline.replace(/(\d{4})$/, '$1 E.O.B.');
 
-  // Generate scope of work HTML using template content instead of invitation data
+  // Generate scope of work HTML using actual invitation data (same as architect RFP)
   let scopeOfWorkHtml = '';
-  if (templateContent.scopeOfWork) {
-    // Convert template content to HTML format
+  if (invitationToBid?.scopeOfWork && invitationToBid.scopeOfWork.length > 0) {
+    scopeOfWorkHtml = `
+      <div class="section">
+        <div class="section-title">SCOPE OF WORK:</div>
+        <div class="description-box">
+          <p><strong>Please provide pricing and timeline for the following scope of work items:</strong></p>
+          <table style="border-collapse: collapse; width: 100%; table-layout: fixed; margin-top: 15px;">
+            <colgroup>
+              <col style="width: 30%;">
+              <col style="width: 12%;">
+              <col style="width: 8%;">
+              <col style="width: 50%;">
+            </colgroup>
+            <thead>
+              <tr>
+                <th style="border: 1px solid #e5e7eb; padding: 8px; text-align: left;">Description</th>
+                <th style="border: 1px solid #e5e7eb; padding: 8px; text-align: center;">Quantity</th>
+                <th style="border: 1px solid #e5e7eb; padding: 8px; text-align: center;">Unit</th>
+                <th style="border: 1px solid #e5e7eb; padding: 8px; text-align: left;">Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${invitationToBid.scopeOfWork.map((item: any) => `
+                <tr>
+                  <td style="border: 1px solid #e5e7eb; padding: 8px;">${item.description || ''}</td>
+                  <td style="border: 1px solid #e5e7eb; padding: 8px; text-align: center;">${item.quantity || ''}</td>
+                  <td style="border: 1px solid #e5e7eb; padding: 8px; text-align: center;">${item.unit || ''}</td>
+                  <td style="border: 1px solid #e5e7eb; padding: 8px;">${item.notes || ''}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  } else if (templateContent.scopeOfWork) {
+    // Fallback to template content if no invitation scope of work exists
     const scopeContent = templateContent.scopeOfWork.replace(/\n/g, '<br>');
     scopeOfWorkHtml = `<div class="section"><div class="section-title">Scope of Work</div><div>${scopeContent}</div></div>`;
   }

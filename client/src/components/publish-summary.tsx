@@ -199,15 +199,68 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
       
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      const uploadedCount = uploadedFiles.length;
       setUploadedFiles([]);
       toast({ 
         title: "Success", 
         description: "Files uploaded successfully" 
       });
-      // Only invalidate file count queries, not the main RFP list to keep current view
+      
+      // Update file count cache directly instead of invalidating
       if (rfp?.id) {
-        queryClient.invalidateQueries({ queryKey: [`/api/rfp-requests/${rfp.id}/file-count`] });
+        queryClient.setQueryData([`/api/rfp-requests/${rfp.id}/file-count`], (oldData: any) => ({
+          ...oldData,
+          totalFiles: (oldData?.totalFiles || 0) + uploadedCount
+        }));
+
+        // Update RFP data to include newly uploaded files
+        const updateRfpWithFiles = (oldData: any) => {
+          if (!oldData) return oldData;
+          
+          if (Array.isArray(oldData)) {
+            return oldData.map((item: any) => {
+              if (item.id === rfp.id) {
+                // Add the uploaded files to the RFP's file list
+                const newFiles = uploadedFiles.map((file, index) => ({
+                  id: `temp_${Date.now()}_${index}`, // Temporary ID until next refresh
+                  name: file.name,
+                  size: file.size,
+                  uploadedAt: new Date().toISOString(),
+                  stage: 'publish'
+                }));
+                
+                return {
+                  ...item,
+                  files: [...(item.files || []), ...newFiles]
+                };
+              }
+              return item;
+            });
+          }
+          
+          // Handle single RFP object
+          if (oldData.id === rfp.id) {
+            const newFiles = uploadedFiles.map((file, index) => ({
+              id: `temp_${Date.now()}_${index}`,
+              name: file.name,
+              size: file.size,
+              uploadedAt: new Date().toISOString(),
+              stage: 'publish'
+            }));
+            
+            return {
+              ...oldData,
+              files: [...(oldData.files || []), ...newFiles]
+            };
+          }
+          
+          return oldData;
+        };
+
+        // Update all possible RFP query variations
+        queryClient.setQueryData(["/api/rfp-requests"], updateRfpWithFiles);
+        queryClient.setQueryData(["/api/rfp-requests", "all-including-archived"], updateRfpWithFiles);
       }
     },
     onError: (error: any) => {

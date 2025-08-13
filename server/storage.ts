@@ -105,6 +105,7 @@ export type InsertPropertyAttachment = SchemaInsertPropertyAttachment;
 import { db } from "./db";
 import { eq, desc, sql, like, or, and, asc, gte, lte, ne } from "drizzle-orm";
 import { formatDateForDisplay, parseInputDate } from "@shared/date-utils";
+import { LEGAL_PROPERTY_TOTALS } from './property-legal-compliance';
 
 export interface IStorage {
   getRfpRequest(id: number): Promise<RfpRequest | undefined>;
@@ -455,13 +456,18 @@ export class DatabaseStorage implements IStorage {
           warehouseAreaOverride = match[1].replace(/,/g, '');
         }
       } else if (request.selectedBayConfigurations && Array.isArray(request.selectedBayConfigurations)) {
-        // Calculate normal warehouse area from bay configurations
-        const totalRentableArea = request.selectedBayConfigurations.reduce((sum: number, bay: any) => {
+        // Calculate warehouse area using legally compliant totals
+        const rawTotalRentableArea = request.selectedBayConfigurations.reduce((sum: number, bay: any) => {
           return sum + (bay.rentableSquareFootage || 0);
         }, 0);
         
-        if (totalRentableArea > 0) {
-          warehouseArea = Math.round(totalRentableArea).toString();
+        if (rawTotalRentableArea > 0) {
+          // Apply legal compliance for full property selections
+          const legalTotal = Object.values(LEGAL_PROPERTY_TOTALS).find(
+            property => Math.abs(rawTotalRentableArea - property.requiredSF) <= 100
+          )?.requiredSF;
+          
+          warehouseArea = (legalTotal || Math.round(rawTotalRentableArea)).toString();
         }
       }
     }
@@ -514,13 +520,18 @@ export class DatabaseStorage implements IStorage {
           updateData.warehouseArea = null; // Clear normal warehouse area when override is used
         }
       } else if (updateData.selectedBayConfigurations && Array.isArray(updateData.selectedBayConfigurations)) {
-        // Calculate normal warehouse area from bay configurations
-        const totalRentableArea = updateData.selectedBayConfigurations.reduce((sum: number, bay: any) => {
+        // Calculate warehouse area using legally compliant totals
+        const rawTotalRentableArea = updateData.selectedBayConfigurations.reduce((sum: number, bay: any) => {
           return sum + (bay.rentableSquareFootage || 0);
         }, 0);
         
-        if (totalRentableArea > 0) {
-          updateData.warehouseArea = Math.round(totalRentableArea).toString();
+        if (rawTotalRentableArea > 0) {
+          // Apply legal compliance for full property selections
+          const legalTotal = Object.values(LEGAL_PROPERTY_TOTALS).find(
+            property => Math.abs(rawTotalRentableArea - property.requiredSF) <= 100
+          )?.requiredSF;
+          
+          updateData.warehouseArea = (legalTotal || Math.round(rawTotalRentableArea)).toString();
           updateData.warehouseAreaOverride = null; // Clear override when using calculated area
         }
       }

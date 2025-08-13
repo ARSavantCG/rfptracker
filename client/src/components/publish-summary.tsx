@@ -155,19 +155,11 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
       
       toast({
         title: "File Deleted",
-        description: "File has been removed successfully."
+        description: "File has been removed successfully. Refresh the page to see changes."
       });
       
-      // The files are embedded in the RFP object, so we need to refetch it
-      if (rfp?.id) {
-        // Use refetch instead of invalidate to avoid potential navigation triggers
-        setTimeout(() => {
-          queryClient.refetchQueries({ 
-            queryKey: ["/api/rfp-requests"],
-            exact: false
-          });
-        }, 100); // Small delay to ensure deletion is processed
-      }
+      // DON'T auto-refresh to avoid navigation issues
+      // Files will appear after manual page refresh or navigation
     },
     onError: (error: any) => {
       console.error("Delete file mutation error:", error);
@@ -224,19 +216,11 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
       
       toast({ 
         title: "Success", 
-        description: "Files uploaded successfully." 
+        description: "Files uploaded successfully. Refresh the page to see new files." 
       });
       
-      // The files are embedded in the RFP object, so we need to refetch it
-      if (rfp?.id) {
-        // Use refetch instead of invalidate to avoid potential navigation triggers
-        setTimeout(() => {
-          queryClient.refetchQueries({ 
-            queryKey: ["/api/rfp-requests"],
-            exact: false
-          });
-        }, 100); // Small delay to ensure upload is processed
-      }
+      // DON'T auto-refresh to avoid navigation issues
+      // Files will appear after manual page refresh or navigation
     },
     onError: (error: any) => {
       console.error("Upload mutation error:", error);
@@ -389,13 +373,25 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
       {/* Reports & Documentation */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Final Reports & Documentation
-          </CardTitle>
-          <p className="text-sm text-gray-600 mt-2">
-            Project-specific reports generated during the workflow process
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Final Reports & Documentation
+              </CardTitle>
+              <p className="text-sm text-gray-600 mt-2">
+                Project-specific reports generated during the workflow process
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => window.location.reload()}
+              className="text-xs"
+            >
+              Refresh Files
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
 

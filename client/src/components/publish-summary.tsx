@@ -386,10 +386,16 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => window.location.reload()}
+              onClick={() => {
+                toast({
+                  title: "Refresh Files",
+                  description: "To see the latest files, please navigate away and come back to this page, or refresh your browser.",
+                  duration: 5000
+                });
+              }}
               className="text-xs"
             >
-              Refresh Files
+              How to Refresh
             </Button>
           </div>
         </CardHeader>

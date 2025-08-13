@@ -117,7 +117,15 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
         const a = document.createElement('a');
         a.style.display = 'none';
         a.href = url;
-        a.download = `${rfp.rfpNumber}_Published_Files.zip`;
+        // Use project name for filename, with fallback to RFP number
+        const projectName = rfp.projectName || `${rfp.tenantName}_RFP_${rfp.rfpNumber}`;
+        const safeFileName = projectName
+          .replace(/@/g, '_at_')
+          .replace(/[^\w\s\-\.]/g, '_')
+          .replace(/\s+/g, '_')
+          .replace(/_+/g, '_')
+          .replace(/^_+|_+$/g, '');
+        a.download = `${safeFileName}_All_Files.zip`;
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);

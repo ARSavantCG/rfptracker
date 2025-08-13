@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, Calendar, Building, Users, CheckCircle, Eye, DollarSign, ChevronDown, ChevronUp, Check, Lock, Upload, FilePlus, X } from "lucide-react";
+import { FileText, Calendar, Building, Users, CheckCircle, Eye, DollarSign, ChevronDown, ChevronUp, Check, Lock, Upload, FilePlus, X, Download, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { formatDateForDisplay } from "@shared/date-utils";
@@ -77,6 +77,72 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
   const removeFile = (index: number) => {
     setUploadedFiles(prev => prev.filter((_, i) => i !== index));
   };
+
+  // Download file function
+  const downloadFile = async (fileId: string, fileName: string) => {
+    try {
+      const token = localStorage.getItem('auth-token');
+      const response = await fetch(`/api/rfp-requests/${rfp?.id}/files/${fileId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to download file",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error downloading file:', error);
+      toast({
+        title: "Error", 
+        description: "Failed to download file",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Delete file mutation
+  const deleteFileMutation = useMutation({
+    mutationFn: async (fileId: string) => {
+      if (!rfp) throw new Error("No RFP selected");
+      
+      const response = await apiRequest(`/api/rfp-requests/${rfp.id}/files/${fileId}`, "DELETE");
+      return response;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "File deleted successfully"
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
+      if (rfp?.id) {
+        queryClient.invalidateQueries({ queryKey: [`/api/rfp-requests/${rfp.id}/file-count`] });
+      }
+    },
+    onError: (error: any) => {
+      console.error("Failed to delete file:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete file",
+        variant: "destructive"
+      });
+    }
+  });
 
   // Mutation to upload files
   const uploadFilesMutation = useMutation({
@@ -340,6 +406,50 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
                 >
                   {uploadFilesMutation.isPending ? "Uploading..." : `Upload ${uploadedFiles.length} File(s)`}
                 </Button>
+              </div>
+            )}
+
+            {/* Show currently uploaded files */}
+            {rfp && rfp.files && rfp.files.length > 0 && (
+              <div className="space-y-2 mt-6">
+                <h5 className="text-sm font-medium text-gray-700">Published Files (these override all other reports):</h5>
+                <div className="space-y-1">
+                  {rfp.files.map((file: any) => (
+                    <div key={file.id} className="flex items-center justify-between p-3 bg-gray-50 rounded border">
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-gray-500" />
+                        <div>
+                          <span className="text-sm text-gray-700 font-medium">{file.name}</span>
+                          <div className="text-xs text-gray-500">
+                            {file.size ? `${(file.size / 1024).toFixed(1)} KB` : ''} 
+                            {file.uploadedAt && ` • Uploaded ${formatDateForDisplay(file.uploadedAt)}`}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => downloadFile(file.id, file.name)}
+                          className="h-8 w-8 p-0"
+                          title="Download file"
+                        >
+                          <Download className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => deleteFileMutation.mutate(file.id)}
+                          disabled={deleteFileMutation.isPending}
+                          className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                          title="Delete file"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>

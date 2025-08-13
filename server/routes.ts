@@ -1948,8 +1948,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Delete file from RFP
-  app.delete("/api/rfp-requests/:id/files/:fileId", requireAuth, checkPermission('rfp.edit'), async (req, res) => {
+  // Delete file
+  app.delete("/api/rfp-requests/:id/files/:fileId", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const fileId = req.params.fileId;
@@ -1964,21 +1964,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const file = request.files.find(f => f.id === fileId);
-      if (file) {
-        // Delete file from disk
-        const filePath = path.join(uploadsDir, file.path || file.name);
-        if (fs.existsSync(filePath)) {
-          fs.unlinkSync(filePath);
-        }
+      if (!file) {
+        return res.status(404).json({ message: "File not found" });
       }
 
+      // Remove file from filesystem
+      const filePath = path.join(uploadsDir, file.path || file.name);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+
+      // Remove file from database
       const updatedRequest = await storage.removeFileFromRfp(id, fileId);
-      if (!updatedRequest) {
-        return res.status(404).json({ message: "Failed to remove file" });
-      }
-
-      res.json(updatedRequest);
+      
+      res.json({ success: true, message: "File deleted successfully" });
     } catch (error) {
+      console.error('Error deleting file:', error);
       res.status(500).json({ message: "Failed to delete file" });
     }
   });

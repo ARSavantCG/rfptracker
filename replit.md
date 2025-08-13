@@ -29,7 +29,7 @@ Preferred communication style: Simple, everyday language.
     - **Rentable Area Override**: Manual override capability for calculated rentable areas.
     - **Document Editor**: Admin interface for customizing standard document content with real-time preview.
     - **Legal Compliance**: Automated system ensuring exact leasable area totals across all properties with startup enforcement, middleware integration, and admin monitoring.
-    - **Timezone Management**: System-wide centralized date handling utilities to eliminate timezone conversion issues.
+    - **Timezone Management**: System-wide centralized date handling utilities to eliminate timezone conversion issues. Critical fix applied 8/13/2025: Eliminated local formatDate function in publish-summary.tsx that was causing timezone conversion bugs, ensuring all date displays use centralized formatDateForDisplay.
     - **Formula System**: Excel-like formula evaluation for dynamic calculations in bid and evaluation interfaces, with atomic state management.
     - **Property Card Stacking**: Optimized visual stacking algorithm for multi-building properties.
     - **Dropdowns**: Migration to native HTML select for improved consistency and reliability.

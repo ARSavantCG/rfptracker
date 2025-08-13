@@ -5065,7 +5065,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // 1. RFP Entry and Published files (distinguish by upload timing)
       if (rfp.files && rfp.files.length > 0) {
-        const rfpCreated = new Date(rfp.createdAt || rfp.receivedDate);
+        const rfpCreated = new Date(rfp.createdAt || rfp.receivedDate || new Date());
         
         for (const file of rfp.files) {
           const fileUploadDate = new Date(file.uploadedAt);
@@ -5156,7 +5156,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
         
         // Get the creation date of the RFP to help distinguish file categories
-        const rfpCreated = new Date(rfp.createdAt || rfp.receivedDate);
+        const rfpCreated = new Date(rfp.createdAt || rfp.receivedDate || new Date());
         
         for (const file of sortedFiles) {
           const filePath = path.join(uploadsDir, file.path || file.name);
@@ -5244,7 +5244,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     } catch (error) {
       console.error("Download all files error:", error);
-      res.status(500).json({ message: "Failed to create zip file" });
+      console.error("Error message:", error.message);
+      console.error("Error stack:", error.stack);
+      res.status(500).json({ message: "Failed to create zip file", error: error.message });
     }
   });
 

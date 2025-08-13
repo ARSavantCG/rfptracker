@@ -151,23 +151,22 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
       }
     },
     onSuccess: (data, fileId) => {
-      console.log('Delete mutation success - safely refreshing file data only');
+      console.log('Delete mutation success - refreshing RFP data to update embedded files');
       
       toast({
         title: "File Deleted",
         description: "File has been removed successfully."
       });
       
-      // Safe approach: Only invalidate the specific file queries without touching main RFP data
+      // The files are embedded in the RFP object, so we need to refetch it
       if (rfp?.id) {
-        queryClient.invalidateQueries({ 
-          queryKey: [`/api/rfp-requests/${rfp.id}/files`],
-          exact: true 
-        });
-        queryClient.invalidateQueries({ 
-          queryKey: [`/api/rfp-requests/${rfp.id}/file-count`],
-          exact: true 
-        });
+        // Use refetch instead of invalidate to avoid potential navigation triggers
+        setTimeout(() => {
+          queryClient.refetchQueries({ 
+            queryKey: ["/api/rfp-requests"],
+            exact: false
+          });
+        }, 100); // Small delay to ensure deletion is processed
       }
     },
     onError: (error: any) => {
@@ -221,23 +220,22 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
       const uploadedCount = data?.uploadedCount || uploadedFiles.length;
       setUploadedFiles([]);
       
-      console.log('Upload mutation success - safely refreshing file data only');
+      console.log('Upload mutation success - refreshing RFP data to update embedded files');
       
       toast({ 
         title: "Success", 
         description: "Files uploaded successfully." 
       });
       
-      // Safe approach: Only invalidate the specific file queries without touching main RFP data
+      // The files are embedded in the RFP object, so we need to refetch it
       if (rfp?.id) {
-        queryClient.invalidateQueries({ 
-          queryKey: [`/api/rfp-requests/${rfp.id}/files`],
-          exact: true 
-        });
-        queryClient.invalidateQueries({ 
-          queryKey: [`/api/rfp-requests/${rfp.id}/file-count`],
-          exact: true 
-        });
+        // Use refetch instead of invalidate to avoid potential navigation triggers
+        setTimeout(() => {
+          queryClient.refetchQueries({ 
+            queryKey: ["/api/rfp-requests"],
+            exact: false
+          });
+        }, 100); // Small delay to ensure upload is processed
       }
     },
     onError: (error: any) => {

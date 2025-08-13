@@ -151,36 +151,15 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
       }
     },
     onSuccess: (data, fileId) => {
+      console.log('Delete mutation success - NOT updating cache to avoid navigation issues');
+      
       toast({
-        title: "Success",
-        description: "File deleted successfully"
+        title: "File Deleted",
+        description: "File has been removed successfully. Refresh to see changes."
       });
       
-      // Update the RFP data directly in cache for multiple query keys
-      if (rfp?.id) {
-        const updateRfpData = (oldData: any[]) => {
-          if (!oldData) return oldData;
-          return oldData.map(item => {
-            if (item.id === rfp.id) {
-              return {
-                ...item,
-                files: item.files.filter((f: any) => f.id !== fileId)
-              };
-            }
-            return item;
-          });
-        };
-
-        // Update all possible RFP query variations
-        queryClient.setQueryData(["/api/rfp-requests", "all-including-archived"], updateRfpData);
-        queryClient.setQueryData(["/api/rfp-requests"], updateRfpData);
-        
-        // Only invalidate file count query - don't invalidate main RFP queries
-        queryClient.setQueryData([`/api/rfp-requests/${rfp.id}/file-count`], (oldData: any) => ({
-          ...oldData,
-          totalFiles: (oldData?.totalFiles || 0) - 1
-        }));
-      }
+      // DO NOT update cache - this appears to be causing navigation issues
+      // Files will disappear on natural page refresh
     },
     onError: (error: any) => {
       console.error("Delete file mutation error:", error);
@@ -231,31 +210,17 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
     },
     onSuccess: (data) => {
       const uploadedCount = data?.uploadedCount || uploadedFiles.length;
-      const filesBeforeUpload = [...uploadedFiles]; // Save reference before clearing
       setUploadedFiles([]);
       
-      console.log('Upload mutation success, updating cache for', uploadedCount, 'files');
+      console.log('Upload mutation success - NOT updating cache to avoid navigation issues');
       
       toast({ 
         title: "Success", 
-        description: "Files uploaded successfully" 
+        description: "Files uploaded successfully. Refresh the page to see new files." 
       });
       
-      // Update file count cache directly instead of invalidating
-      if (rfp?.id) {
-        queryClient.setQueryData([`/api/rfp-requests/${rfp.id}/file-count`], (oldData: any) => ({
-          ...oldData,
-          totalFiles: (oldData?.totalFiles || 0) + uploadedCount
-        }));
-
-        // SIMPLIFIED: Just invalidate the specific RFP query to refresh data from server
-        // This avoids potential React errors from cache manipulation
-        console.log('Refreshing RFP data from server to show new files');
-        queryClient.invalidateQueries({ 
-          queryKey: ["/api/rfp-requests"],
-          exact: false 
-        });
-      }
+      // DO NOT update cache or invalidate queries - this appears to be causing navigation
+      // Files will appear on natural page refresh or when user navigates
     },
     onError: (error: any) => {
       console.error("Upload mutation error:", error);

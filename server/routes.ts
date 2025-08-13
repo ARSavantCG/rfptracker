@@ -5132,6 +5132,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "RFP not found" });
       }
 
+      // Debug the RFP details
+      console.log(`🚨 DOWNLOAD DEBUG - RFP ${rfpId}:`);
+      console.log(`  - Project Name: ${rfp.projectName}`);
+      console.log(`  - Tenant Name: ${rfp.tenantName}`);
+      console.log(`  - Property Name: ${rfp.propertyName}`);
+      console.log(`  - Workflow Phase: ${rfp.workflowPhase}`);
+      console.log(`  - Status: ${rfp.status}`);
+      console.log(`  - Created: ${rfp.createdAt}`);
+      console.log(`  - Received: ${rfp.receivedDate}`);
+      console.log(`  - Files count: ${rfp.files?.length || 0}`);
+
       // Create zip archive
       const archive = archiver('zip', {
         zlib: { level: 9 } // compression level

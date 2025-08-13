@@ -709,12 +709,11 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
           }
           
           if (propertyTotalArea > 0) {
-            // Calculate the prorated total cost for this tenant's area
-            const proratedTotalCost = (allocatedCost * totalSelectedArea) / propertyTotalArea;
-            unitPrice = proratedTotalCost / quantity; // Per square foot cost
-            allocatedCost = proratedTotalCost;
+            // Calculate unit price per SF from the original full property cost
+            unitPrice = allocatedCost / propertyTotalArea; // Original cost per SF of full property
             
-
+            // Calculate the prorated total cost for this tenant's area
+            allocatedCost = unitPrice * totalSelectedArea;
           }
         } else if (improvement.allocationType === 'bay-specific') {
           // For bay-specific, only include cost for applicable selected bays

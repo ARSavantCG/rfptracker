@@ -5144,16 +5144,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const projectName = rfp.projectName || `${rfp.tenantName}_RFP_${rfp.rfpNumber}`;
       const zipFilename = `${projectName}_All_Files.zip`;
       
-      // Also create a browser-friendly fallback filename  
-      const fallbackFilename = projectName
-        .replace(/@/g, '_at_')              // Replace @ with _at_
-        .replace(/\(/g, '_')                // Replace ( with _
-        .replace(/\)/g, '_')                // Replace ) with _
-        .replace(/[^\w\s\-\.]/g, '_')       // Replace other special chars with underscore
-        .replace(/\s+/g, '_')               // Replace spaces with underscores
-        .replace(/_+/g, '_')                // Replace multiple underscores with single
-        .replace(/^_+|_+$/g, '')            // Remove leading/trailing underscores
-        + '_All_Files.zip';
+      // Create a simple, browser-friendly filename by replacing all problematic characters
+      let fallbackFilename = projectName;
+      console.log(`📁 Original project name: "${projectName}"`);
+      
+      // Step by step replacement with logging
+      fallbackFilename = fallbackFilename.replace(/@/g, '_at_');
+      console.log(`📁 After @ replacement: "${fallbackFilename}"`);
+      
+      fallbackFilename = fallbackFilename.replace(/\(/g, '_');
+      fallbackFilename = fallbackFilename.replace(/\)/g, '_');
+      fallbackFilename = fallbackFilename.replace(/\s+/g, '_');
+      fallbackFilename = fallbackFilename.replace(/_+/g, '_');
+      fallbackFilename = fallbackFilename.replace(/^_+|_+$/g, '');
+      fallbackFilename = fallbackFilename + '_All_Files.zip';
+      
+      console.log(`📁 Final fallback filename: "${fallbackFilename}"`);
       
       console.log(`📁 ZIP filename will be: ${zipFilename}`);
       console.log(`📁 Fallback filename: ${fallbackFilename}`);

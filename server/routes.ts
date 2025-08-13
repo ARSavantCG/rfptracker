@@ -1845,6 +1845,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Upload files for publish workflow
+  app.post("/api/rfp-requests/upload-files", upload.array("files"), async (req, res) => {
+    try {
+      const rfpId = parseInt(req.body.rfpId);
+      const stage = req.body.stage || 'general';
+      
+      if (isNaN(rfpId)) {
+        return res.status(400).json({ message: "Invalid RFP ID" });
+      }
+
+      const uploadedFiles = (req.files as Express.Multer.File[] || []).map(file => ({
+        id: nanoid(),
+        name: file.originalname,
+        size: file.size,
+        type: file.mimetype,
+        uploadedAt: new Date().toISOString(),
+        path: file.filename,
+        stage: stage,
+      }));
+
+      let updatedRequest = await storage.getRfpRequest(rfpId);
+      if (!updatedRequest) {
+        return res.status(404).json({ message: "RFP request not found" });
+      }
+
+      for (const file of uploadedFiles) {
+        updatedRequest = await storage.addFileToRfp(rfpId, file);
+      }
+
+      res.json({ 
+        success: true, 
+        message: `${uploadedFiles.length} file(s) uploaded successfully`,
+        files: uploadedFiles 
+      });
+    } catch (error) {
+      console.error('Upload error:', error);
+      res.status(500).json({ message: "Failed to upload files", error: error.message });
+    }
+  });
+
   // Upload additional files to existing RFP
   app.post("/api/rfp-requests/:id/files", upload.array("files"), async (req, res) => {
     try {

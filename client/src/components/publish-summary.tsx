@@ -129,7 +129,7 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
         title: "Success",
         description: "File deleted successfully"
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
+      // Only invalidate file count queries, not the main RFP list to keep current view
       if (rfp?.id) {
         queryClient.invalidateQueries({ queryKey: [`/api/rfp-requests/${rfp.id}/file-count`] });
       }

@@ -494,7 +494,8 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
                       <div>RFP Entry: {fileCountData.filesByStage.rfpEntry}</div>
                       <div>Bid Collection: {fileCountData.filesByStage.bidCollection}</div>
                       <div>Evaluation Budget: {fileCountData.filesByStage.evaluationBudget}</div>
-                      <div>Total: {fileCountData.totalFiles} files</div>
+                      <div>Published Files: {fileCountData.filesByStage.publishedFiles || 0}</div>
+                      <div className="col-span-2 font-medium">Total: {fileCountData.totalFiles} files</div>
                     </div>
                   </div>
                 )}

@@ -5059,13 +5059,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         rfpEntry: 0,
         invitationToBid: 0,
         bidCollection: 0,
-        evaluationBudget: 0
+        evaluationBudget: 0,
+        publishedFiles: 0
       };
 
-      // 1. RFP Entry files
+      // 1. RFP Entry and Published files (distinguish by upload timing)
       if (rfp.files && rfp.files.length > 0) {
-        filesByStage.rfpEntry = rfp.files.length;
-        totalFiles += rfp.files.length;
+        const rfpCreated = new Date(rfp.createdAt || rfp.receivedDate);
+        
+        for (const file of rfp.files) {
+          const fileUploadDate = new Date(file.uploadedAt);
+          const daysSinceRfpCreated = (fileUploadDate.getTime() - rfpCreated.getTime()) / (1000 * 60 * 60 * 24);
+          
+          // If file was uploaded more than 7 days after RFP creation, treat as Published file
+          if (daysSinceRfpCreated > 7) {
+            filesByStage.publishedFiles++;
+          } else {
+            filesByStage.rfpEntry++;
+          }
+          totalFiles++;
+        }
       }
 
       // 2. Bid Collection files
@@ -5130,12 +5143,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       let hasFiles = false;
 
-      // 1. RFP Entry files (original RFP documents)
+      // 1. RFP Entry and Published files (all files from rfp.files array)
+      // Note: This includes both original RFP entry files and published files
       if (rfp.files && rfp.files.length > 0) {
-        for (const file of rfp.files) {
+        // Sort files by upload date to distinguish between early (RFP Entry) and recent (Published) files
+        const sortedFiles = [...rfp.files].sort((a, b) => 
+          new Date(a.uploadedAt).getTime() - new Date(b.uploadedAt).getTime()
+        );
+        
+        // Get the creation date of the RFP to help distinguish file categories
+        const rfpCreated = new Date(rfp.createdAt || rfp.receivedDate);
+        
+        for (const file of sortedFiles) {
           const filePath = path.join(uploadsDir, file.path || file.name);
           if (fs.existsSync(filePath)) {
-            archive.file(filePath, { name: `1-RFP-Entry/${file.name}` });
+            const fileUploadDate = new Date(file.uploadedAt);
+            const daysSinceRfpCreated = (fileUploadDate.getTime() - rfpCreated.getTime()) / (1000 * 60 * 60 * 24);
+            
+            // If file was uploaded more than 7 days after RFP creation, treat as Published file
+            // Otherwise treat as RFP Entry file
+            const isPublishedFile = daysSinceRfpCreated > 7;
+            const folderName = isPublishedFile ? '6-Published-Files' : '1-RFP-Entry';
+            archive.file(filePath, { name: `${folderName}/${file.name}` });
             hasFiles = true;
           }
         }

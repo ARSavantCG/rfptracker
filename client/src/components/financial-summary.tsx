@@ -105,7 +105,15 @@ export function FinancialSummary({ rfp }: FinancialSummaryProps) {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `Financial_Summary_${rfp.rfpNumber}_${rfp.projectName.replace(/[^a-zA-Z0-9]/g, '_')}.html`;
+      const projectName = rfp.projectName || `RFP-${rfp.rfpNumber}`;
+      const cacheBuster = Date.now();
+      const safeFileName = projectName
+        .replace(/[@]/g, '_at_')
+        .replace(/[^\w\s\-\.]/g, '_')
+        .replace(/\s+/g, '_')
+        .replace(/_+/g, '_')
+        .replace(/^_+|_+$/g, '');
+      link.download = `${safeFileName}_Financial_Summary_${cacheBuster}.html`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

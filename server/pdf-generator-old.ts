@@ -431,6 +431,12 @@ function generateRfpHtml(options: PdfGenerationOptions): string {
 
 export function generatePdfFilename(rfp: RfpRequest, recipientType: string): string {
   const date = new Date().toISOString().split('T')[0];
-  const sanitizedProject = rfp.projectName.replace(/[^a-zA-Z0-9]/g, '_');
-  return `${rfp.rfpNumber}_${sanitizedProject}_${recipientType}_${date}.pdf`;
+  const projectName = rfp.projectName || `RFP-${rfp.rfpNumber}`;
+  const sanitizedProject = projectName
+    .replace(/[@]/g, '_at_')
+    .replace(/[^\w\s\-\.]/g, '_')
+    .replace(/\s+/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_+|_+$/g, '');
+  return `${sanitizedProject}_${recipientType}_${date}.pdf`;
 }

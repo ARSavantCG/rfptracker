@@ -197,7 +197,7 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
       const uniqueFilename = `${safeFileName}_All_Files_${cacheBuster}.zip`;
       
       link.download = uniqueFilename;
-      console.log(`🎯🎯🎯 RFP DETAIL MODAL - Setting filename to: ${uniqueFilename}`);
+      console.log(`🎯 RFP DETAIL MODAL - Setting filename to: ${uniqueFilename}`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

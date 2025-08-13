@@ -1601,8 +1601,14 @@ async function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, da
   `;
 }
 export function generatePdfFilename(rfp: any, recipientType: string): string {
-  const projectName = rfp.confidential ? `Confidential_${rfp.property}` : `${rfp.tenantName}_${rfp.property}`;
-  const cleanProjectName = projectName.replace(/[^a-zA-Z0-9]/g, '_');
+  // Use project name as primary identifier, fallback to tenant_property
+  const projectName = rfp.projectName || (rfp.confidential ? `Confidential_${rfp.property}` : `${rfp.tenantName}_${rfp.property}`);
+  const cleanProjectName = projectName
+    .replace(/[@]/g, '_at_')
+    .replace(/[^\w\s\-\.]/g, '_')
+    .replace(/\s+/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_+|_+$/g, '');
   const timestamp = new Date().toISOString().split('T')[0];
   
   // Determine document type prefix

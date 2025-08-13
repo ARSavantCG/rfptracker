@@ -5142,7 +5142,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Set response headers - use project name format
       // Use the project name directly since it's already complete
       const projectName = rfp.projectName || `${rfp.tenantName}_RFP_${rfp.rfpNumber}`;
-      const zipFilename = `${projectName}_All_Files.zip`.replace(/[^a-zA-Z0-9@()._\s-]/g, '_');
+      const zipFilename = `${projectName}_All_Files.zip`;
+      console.log(`📁 ZIP filename will be: ${zipFilename}`);
       res.setHeader('Content-Type', 'application/zip');
       res.setHeader('Content-Disposition', `attachment; filename="${zipFilename}"`);
       

@@ -5071,8 +5071,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const fileUploadDate = new Date(file.uploadedAt);
           const daysSinceRfpCreated = (fileUploadDate.getTime() - rfpCreated.getTime()) / (1000 * 60 * 60 * 24);
           
-          // If file was uploaded more than 7 days after RFP creation, treat as Published file
-          if (daysSinceRfpCreated > 7) {
+          // If RFP is in publish phase or completed, and file was uploaded recently, treat as Published file
+          const isInPublishPhase = rfp.workflowPhase === 'publish' || rfp.status === 'completed';
+          const isRecentUpload = daysSinceRfpCreated > 1; // More than 1 day after RFP creation
+          const isPublishedFile = isInPublishPhase && isRecentUpload;
+          
+          if (isPublishedFile) {
             filesByStage.publishedFiles++;
           } else {
             filesByStage.rfpEntry++;
@@ -5160,9 +5164,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const fileUploadDate = new Date(file.uploadedAt);
             const daysSinceRfpCreated = (fileUploadDate.getTime() - rfpCreated.getTime()) / (1000 * 60 * 60 * 24);
             
-            // If file was uploaded more than 7 days after RFP creation, treat as Published file
+            // If RFP is in publish phase or completed, and file was uploaded recently, treat as Published file
             // Otherwise treat as RFP Entry file
-            const isPublishedFile = daysSinceRfpCreated > 7;
+            const isInPublishPhase = rfp.workflowPhase === 'publish' || rfp.status === 'completed';
+            const isRecentUpload = daysSinceRfpCreated > 1; // More than 1 day after RFP creation
+            const isPublishedFile = isInPublishPhase && isRecentUpload;
             const folderName = isPublishedFile ? '6-Published-Files' : '1-RFP-Entry';
             archive.file(filePath, { name: `${folderName}/${file.name}` });
             hasFiles = true;

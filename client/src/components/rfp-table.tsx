@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { formatDate, getStatusColor, getStatusIcon } from "@/lib/utils";
+import { getStatusColor, getStatusIcon } from "@/lib/utils";
+import { formatDateForDisplay } from "@shared/date-utils";
 import { useToast } from "@/hooks/use-toast";
 import { handleAuthError } from "@/lib/authHelper";
 import { useAuth } from "@/hooks/useAuth";
@@ -643,13 +644,13 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
                     className="px-3 py-3 whitespace-nowrap text-xs text-gray-500 cursor-pointer"
                     onClick={() => onSelectRfp?.(parentRfp)}
                   >
-                    {formatDate(parentRfp.receivedOn)}
+                    {formatDateForDisplay(parentRfp.receivedOn)}
                   </td>
                   <td 
                     className="px-3 py-3 whitespace-nowrap text-xs text-gray-500 cursor-pointer"
                     onClick={() => onSelectRfp?.(parentRfp)}
                   >
-                    {parentRfp.internalDueDate ? formatDate(parentRfp.internalDueDate) : '—'}
+                    {parentRfp.internalDueDate ? formatDateForDisplay(parentRfp.internalDueDate) : '—'}
                   </td>
                   <td 
                     className="px-3 py-3 whitespace-nowrap text-xs text-gray-500 cursor-pointer"
@@ -824,13 +825,13 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
                       className="px-3 py-3 whitespace-nowrap text-xs text-gray-500 cursor-pointer"
                       onClick={() => onSelectRfp?.(counterOffer)}
                     >
-                      {formatDate(counterOffer.receivedOn)}
+                      {formatDateForDisplay(counterOffer.receivedOn)}
                     </td>
                     <td 
                       className="px-3 py-3 whitespace-nowrap text-xs text-gray-500 cursor-pointer"
                       onClick={() => onSelectRfp?.(counterOffer)}
                     >
-                      {counterOffer.internalDueDate ? formatDate(counterOffer.internalDueDate) : '—'}
+                      {counterOffer.internalDueDate ? formatDateForDisplay(counterOffer.internalDueDate) : '—'}
                     </td>
                     <td 
                       className="px-3 py-3 whitespace-nowrap text-xs text-gray-500 cursor-pointer"
@@ -946,13 +947,13 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
                       className="px-3 py-3 whitespace-nowrap text-xs text-gray-500 cursor-pointer"
                       onClick={() => onSelectRfp?.(option)}
                     >
-                      {formatDate(option.receivedOn)}
+                      {formatDateForDisplay(option.receivedOn)}
                     </td>
                     <td 
                       className="px-3 py-3 whitespace-nowrap text-xs text-gray-500 cursor-pointer"
                       onClick={() => onSelectRfp?.(option)}
                     >
-                      {option.internalDueDate ? formatDate(option.internalDueDate) : '—'}
+                      {option.internalDueDate ? formatDateForDisplay(option.internalDueDate) : '—'}
                     </td>
                     <td 
                       className="px-3 py-3 whitespace-nowrap text-xs text-gray-500 cursor-pointer"

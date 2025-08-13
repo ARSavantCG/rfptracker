@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { formatDate, formatFileSize, getFileIcon, getStatusColor } from "@/lib/utils";
-import { formatDateForInput } from "@shared/date-utils";
+import { formatFileSize, getFileIcon, getStatusColor } from "@/lib/utils";
+import { formatDateForInput, formatDateForDisplay } from "@shared/date-utils";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { InvitationWorkflowModal } from "./invitation-workflow-modal";
@@ -297,11 +297,11 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
                     </div>
                     <div className="flex items-start">
                       <span className="text-blue-700 font-medium">Received Date:</span>
-                      <span className="ml-2 text-blue-900">{formatDate(rfp.receivedOn)}</span>
+                      <span className="ml-2 text-blue-900">{formatDateForDisplay(rfp.receivedOn)}</span>
                     </div>
                     <div className="flex items-start">
                       <span className="text-blue-700 font-medium">Internal Due Date:</span>
-                      <span className="ml-2 text-blue-900">{formatDate(rfp.internalDueDate)}</span>
+                      <span className="ml-2 text-blue-900">{formatDateForDisplay(rfp.internalDueDate)}</span>
                     </div>
                     {rfp.estimatedValue && (
                       <div className="flex items-start">
@@ -331,7 +331,7 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
                         </div>
                       ) : (
                         <span className="text-blue-900">
-                          {rfp.completedDate ? formatDate(rfp.completedDate) : "Not completed"}
+                          {rfp.completedDate ? formatDateForDisplay(rfp.completedDate) : "Not completed"}
                         </span>
                       )}
                       {isAdmin && !isEditingDates && (
@@ -359,7 +359,7 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
                         </div>
                       ) : (
                         <span className="text-blue-900">
-                          {rfp.publishedDate ? formatDate(rfp.publishedDate) : "Not published"}
+                          {rfp.publishedDate ? formatDateForDisplay(rfp.publishedDate) : "Not published"}
                         </span>
                       )}
                       {isAdmin && !isEditingDates && (
@@ -405,7 +405,7 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div className="flex items-start">
                       <span className="text-gray-500">Last Updated:</span>
-                      <span className="ml-2 text-gray-900">{formatDate(rfp.updatedAt)}</span>
+                      <span className="ml-2 text-gray-900">{formatDateForDisplay(rfp.updatedAt)}</span>
                     </div>
                     <div className="flex items-start">
                       <span className="text-gray-500">Request Type:</span>
@@ -418,7 +418,7 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
                     {rfp.dueDate && (
                       <div>
                         <span className="text-gray-500">Due Date:</span>
-                        <span className="ml-2 text-gray-900">{formatDate(rfp.dueDate)}</span>
+                        <span className="ml-2 text-gray-900">{formatDateForDisplay(rfp.dueDate)}</span>
                       </div>
                     )}
                     {rfp.contactPerson && (

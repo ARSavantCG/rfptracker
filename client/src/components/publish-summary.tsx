@@ -130,9 +130,9 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
         description: "File deleted successfully"
       });
       
-      // Update the RFP data directly in cache instead of invalidating
+      // Update the RFP data directly in cache for multiple query keys
       if (rfp?.id) {
-        queryClient.setQueryData(["/api/rfp-requests", "all-including-archived"], (oldData: any[]) => {
+        const updateRfpData = (oldData: any[]) => {
           if (!oldData) return oldData;
           return oldData.map(item => {
             if (item.id === rfp.id) {
@@ -143,8 +143,17 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
             }
             return item;
           });
-        });
-        queryClient.invalidateQueries({ queryKey: [`/api/rfp-requests/${rfp.id}/file-count`] });
+        };
+
+        // Update all possible RFP query variations
+        queryClient.setQueryData(["/api/rfp-requests", "all-including-archived"], updateRfpData);
+        queryClient.setQueryData(["/api/rfp-requests"], updateRfpData);
+        
+        // Only invalidate file count query - don't invalidate main RFP queries
+        queryClient.setQueryData([`/api/rfp-requests/${rfp.id}/file-count`], (oldData: any) => ({
+          ...oldData,
+          totalFiles: (oldData?.totalFiles || 0) - 1
+        }));
       }
     },
     onError: (error: any) => {

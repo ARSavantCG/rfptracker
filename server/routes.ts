@@ -1984,6 +1984,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Download all published files as zip
+  app.post("/api/rfp-requests/:id/files/download-all", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { fileIds } = req.body;
+
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid ID" });
+      }
+
+      const request = await storage.getRfpRequest(id);
+      if (!request) {
+        return res.status(404).json({ message: "RFP request not found" });
+      }
+
+      // Filter files by provided fileIds (or get all files if no specific IDs provided)
+      const filesToDownload = fileIds && fileIds.length > 0 
+        ? request.files.filter(f => fileIds.includes(f.id))
+        : request.files || [];
+
+      if (filesToDownload.length === 0) {
+        return res.status(404).json({ message: "No files found to download" });
+      }
+
+      // Import archiver module
+      const archiver = require('archiver');
+      
+      // Create zip archive
+      const archive = archiver('zip', {
+        zlib: { level: 9 } // compression level
+      });
+
+      // Set response headers
+      const zipFilename = `${request.rfpNumber}_Published_Files.zip`;
+      res.setHeader('Content-Type', 'application/zip');
+      res.setHeader('Content-Disposition', `attachment; filename="${zipFilename}"`);
+      
+      // Pipe archive to response
+      archive.pipe(res);
+
+      let hasFiles = false;
+
+      // Add each file to the archive
+      for (const file of filesToDownload) {
+        const filePath = path.join(uploadsDir, file.path || file.name);
+        if (fs.existsSync(filePath)) {
+          archive.file(filePath, { name: file.name });
+          hasFiles = true;
+        }
+      }
+
+      if (!hasFiles) {
+        return res.status(404).json({ message: "No files found on disk" });
+      }
+
+      // Finalize the archive
+      archive.finalize();
+    } catch (error) {
+      console.error('Error creating zip download:', error);
+      res.status(500).json({ message: "Failed to create download archive" });
+    }
+  });
+
   // Update RFP request with files
   app.patch("/api/rfp-requests/:id/update-with-files", upload.array("files"), async (req, res) => {
     try {

@@ -80,6 +80,71 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
     setUploadedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
+  // Download all files function
+  const downloadAllFiles = async () => {
+    if (!rfp) return;
+    
+    try {
+      // Get all available files (existing + newly uploaded)
+      const existingFiles = rfp.files?.filter((file: any) => !deletedFileIds.has(file.id)) || [];
+      const allFiles = [...existingFiles, ...newlyUploadedFiles];
+      
+      if (allFiles.length === 0) {
+        toast({
+          title: "No Files",
+          description: "No files available to download",
+          variant: "default"
+        });
+        return;
+      }
+      
+      // Create a zip download request
+      const token = localStorage.getItem('auth-token');
+      const response = await fetch(`/api/rfp-requests/${rfp.id}/files/download-all`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          fileIds: existingFiles.map((file: any) => file.id)
+        })
+      });
+      
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = `${rfp.rfpNumber}_Published_Files.zip`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        toast({
+          title: "Download Started",
+          description: `Downloading ${allFiles.length} files as a zip archive`,
+          duration: 4000
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to create download archive",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error downloading all files:', error);
+      toast({
+        title: "Error",
+        description: "Failed to download files",
+        variant: "destructive"
+      });
+    }
+  };
+
   // Download file function
   const downloadFile = async (fileId: string, fileName: string) => {
     try {
@@ -395,16 +460,11 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => {
-                toast({
-                  title: "Refresh Files",
-                  description: "To see the latest files, please navigate away and come back to this page, or refresh your browser.",
-                  duration: 5000
-                });
-              }}
+              onClick={downloadAllFiles}
               className="text-xs"
+              disabled={!rfp || (!rfp.files?.length && !newlyUploadedFiles.length)}
             >
-              How to Refresh
+              Download All Files
             </Button>
           </div>
         </CardHeader>

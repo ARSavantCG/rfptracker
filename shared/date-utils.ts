@@ -30,7 +30,27 @@ export function parseLocalDate(dateString: string): Date {
 export function formatDateForInput(date: Date | string | null): string {
   if (!date) return '';
   
-  const dateObj = typeof date === 'string' ? new Date(date) : date;
+  let dateObj: Date;
+  
+  if (typeof date === 'string') {
+    // Handle ISO string from database - avoid timezone conversion
+    if (date.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)) {
+      // Extract date part to avoid timezone conversion
+      const datePart = date.split('T')[0];
+      const [year, month, day] = datePart.split('-').map(Number);
+      dateObj = new Date(year, month - 1, day);
+    } 
+    // Handle YYYY-MM-DD format
+    else if (date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      const [year, month, day] = date.split('-').map(Number);
+      dateObj = new Date(year, month - 1, day);
+    } 
+    else {
+      dateObj = new Date(date);
+    }
+  } else {
+    dateObj = new Date(date);
+  }
   
   if (isNaN(dateObj.getTime())) {
     console.warn('Invalid date passed to formatDateForInput:', date);

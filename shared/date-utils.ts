@@ -71,8 +71,6 @@ export function formatDateForInput(date: Date | string | null): string {
 export function formatDateForDisplay(date: Date | string | null): string {
   if (!date) return 'N/A';
   
-  console.log('formatDateForDisplay DEBUG - Input:', date, 'Type:', typeof date);
-  
   // For string dates, work directly with the date components to avoid any timezone issues
   if (typeof date === 'string') {
     // Handle ISO string from database (e.g., "2025-08-08T00:00:00.000Z")
@@ -81,29 +79,23 @@ export function formatDateForDisplay(date: Date | string | null): string {
       const datePart = date.split('T')[0];
       const [year, month, day] = datePart.split('-').map(Number);
       
-      console.log('formatDateForDisplay DEBUG - ISO match, datePart:', datePart, 'components:', { year, month, day });
-      
       const monthNames = [
-        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
       ];
       
-      const result = `${monthNames[month - 1]} ${day}, ${year}`;
-      console.log('formatDateForDisplay DEBUG - ISO result:', result);
-      return result;
+      return `${monthNames[month - 1]} ${day}, ${year}`;
     } 
     // Handle YYYY-MM-DD format
     else if (date.match(/^\d{4}-\d{2}-\d{2}$/)) {
       const [year, month, day] = date.split('-').map(Number);
       
       const monthNames = [
-        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
       ];
       
-      const result = `${monthNames[month - 1]} ${day}, ${year}`;
-      console.log('formatDateForDisplay DEBUG - YYYY-MM-DD result:', result);
-      return result;
+      return `${monthNames[month - 1]} ${day}, ${year}`;
     } 
   }
   

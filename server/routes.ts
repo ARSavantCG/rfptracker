@@ -5137,6 +5137,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`  - Project Name: ${rfp.projectName}`);
       console.log(`  - Tenant Name: ${rfp.tenantName}`);
       console.log(`  - Property Name: ${rfp.propertyName}`);
+      console.log(`  - Property ID: ${rfp.property}`);
       console.log(`  - Workflow Phase: ${rfp.workflowPhase}`);
       console.log(`  - Status: ${rfp.status}`);
       console.log(`  - Created: ${rfp.createdAt}`);
@@ -5151,17 +5152,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Set response headers - use project name format
       // Get property name from the properties table since rfp.propertyName might be undefined
       let propertyName = rfp.propertyName;
+      console.log(`🔍 PROPERTY DEBUG - Initial property name: ${propertyName}, Property ID: ${rfp.property}`);
+      
       if (!propertyName && rfp.property) {
         try {
           const property = await storage.getProperty(rfp.property);
+          console.log(`🔍 PROPERTY DEBUG - Found property from DB:`, property);
           propertyName = property?.propertyName || 'Unknown Property';
         } catch (e) {
+          console.log(`🔍 PROPERTY DEBUG - Error fetching property:`, e);
           propertyName = 'Unknown Property';
         }
       }
       
+      console.log(`🔍 PROPERTY DEBUG - Final property name: ${propertyName}`);
       const projectName = rfp.projectName || `${rfp.tenantName} @ ${propertyName}`;
+      console.log(`🔍 FILENAME DEBUG - Project name: ${projectName}`);
       const zipFilename = `${projectName}_All_Files.zip`.replace(/[^a-zA-Z0-9@()._-]/g, '_');
+      console.log(`🔍 FILENAME DEBUG - Final zip filename: ${zipFilename}`);
       res.setHeader('Content-Type', 'application/zip');
       res.setHeader('Content-Disposition', `attachment; filename="${zipFilename}"`);
       

@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, Calendar, Building, Users, CheckCircle, Eye, DollarSign, ChevronDown, ChevronUp, Check, Lock, Upload, FilePlus } from "lucide-react";
+import { FileText, Calendar, Building, Users, CheckCircle, Eye, DollarSign, ChevronDown, ChevronUp, Check, Lock, Upload, FilePlus, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { formatDateForDisplay } from "@shared/date-utils";
@@ -14,7 +14,9 @@ interface PublishSummaryProps {
 
 export function PublishSummary({ rfp }: PublishSummaryProps) {
   const [budgetReportsCollapsed, setBudgetReportsCollapsed] = useState(true);
-  const [bidDocumentsCollapsed, setBidDocumentsCollapsed] = useState(true);
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -34,10 +36,97 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
     queryKey: ["/api/properties"],
   });
 
+  // Handle drag and drop events
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    
+    const files = Array.from(e.dataTransfer.files);
+    setUploadedFiles(prev => [...prev, ...files]);
+    
+    toast({
+      title: "Files Added",
+      description: `${files.length} file(s) ready for upload`
+    });
+  };
+
+  const handleFileSelect = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    setUploadedFiles(prev => [...prev, ...files]);
+    
+    toast({
+      title: "Files Added",
+      description: `${files.length} file(s) ready for upload`
+    });
+  };
+
+  const removeFile = (index: number) => {
+    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Mutation to upload files
+  const uploadFilesMutation = useMutation({
+    mutationFn: async (files: File[]) => {
+      if (!rfp) throw new Error("No RFP selected");
+      
+      const formData = new FormData();
+      files.forEach(file => formData.append('files', file));
+      formData.append('rfpId', rfp.id.toString());
+      formData.append('stage', 'publish');
+      
+      const response = await fetch('/api/rfp-requests/upload-files', {
+        method: 'POST',
+        body: formData
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to upload files');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      setUploadedFiles([]);
+      toast({ 
+        title: "Success", 
+        description: "Files uploaded successfully" 
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
+    },
+    onError: (error: any) => {
+      console.error("Failed to upload files:", error);
+      toast({ 
+        title: "Error", 
+        description: "Failed to upload files", 
+        variant: "destructive" 
+      });
+    }
+  });
+
   // Mutation for completing the project
   const publishAndCompleteMutation = useMutation({
     mutationFn: async () => {
       if (!rfp) throw new Error("No RFP selected");
+      
+      // First upload any pending files
+      if (uploadedFiles.length > 0) {
+        await uploadFilesMutation.mutateAsync(uploadedFiles);
+      }
+      
       return apiRequest(`/api/rfp-requests/${rfp.id}`, "PATCH", { status: "completed" });
     },
     onSuccess: () => {
@@ -181,63 +270,78 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
           {/* File Upload Area for Publishing */}
           <div className="space-y-2">
             <h4 className="font-medium text-sm text-gray-700">Publish Files to Team</h4>
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
+            <div 
+              className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                isDragging 
+                  ? "border-blue-400 bg-blue-50" 
+                  : "border-gray-300 hover:border-gray-400"
+              }`}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
               <div className="flex flex-col items-center gap-3">
-                <Upload className="h-8 w-8 text-gray-400" />
+                <Upload className={`h-8 w-8 ${isDragging ? "text-blue-500" : "text-gray-400"}`} />
                 <div>
                   <p className="text-sm font-medium text-gray-700">Drag and drop files here</p>
                   <p className="text-xs text-gray-500">or click to select files that will be shared with the team</p>
                 </div>
-                <Button variant="outline" size="sm" className="mt-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="mt-2"
+                  onClick={handleFileSelect}
+                >
                   <FilePlus className="h-4 w-4 mr-2" />
                   Select Files
                 </Button>
               </div>
             </div>
-          </div>
 
-          {/* Generated Invitation to Bid Reports */}
-          {Array.isArray(generationHistory) && generationHistory.length > 0 && (
-            <div className="space-y-2">
-              <div 
-                className="flex items-center justify-between cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors"
-                onClick={() => setBidDocumentsCollapsed(!bidDocumentsCollapsed)}
-              >
-                <h4 className="font-medium text-sm text-gray-700">Invitation to Bid Documents</h4>
-                {bidDocumentsCollapsed ? (
-                  <ChevronDown className="h-4 w-4 text-gray-500" />
-                ) : (
-                  <ChevronUp className="h-4 w-4 text-gray-500" />
-                )}
-              </div>
-              {!bidDocumentsCollapsed && (
-                <div className="space-y-2">
-                  {generationHistory.map((report: any) => (
-                    <div key={report.id} className="flex items-center justify-between p-3 border rounded-lg bg-gray-50">
+            {/* Hidden file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              className="hidden"
+              onChange={handleFileInputChange}
+            />
+
+            {/* Show uploaded files */}
+            {uploadedFiles.length > 0 && (
+              <div className="space-y-2 mt-4">
+                <h5 className="text-sm font-medium text-gray-700">Files ready for upload:</h5>
+                <div className="space-y-1">
+                  {uploadedFiles.map((file, index) => (
+                    <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded border">
                       <div className="flex items-center gap-2">
-                        <FileText className="h-4 w-4 text-blue-600" />
-                        <div>
-                          <p className="text-sm font-medium">{report.title}</p>
-                          <p className="text-xs text-gray-500">
-                            Generated {report.generatedAt ? formatDateForDisplay(report.generatedAt) : 'Unknown date'}
-                            {report.notes && ` - ${report.notes}`}
-                          </p>
-                        </div>
+                        <FileText className="h-4 w-4 text-gray-500" />
+                        <span className="text-sm text-gray-700">{file.name}</span>
+                        <span className="text-xs text-gray-500">({(file.size / 1024).toFixed(1)} KB)</span>
                       </div>
                       <Button
-                        variant="outline"
+                        variant="ghost"
                         size="sm"
-                        onClick={() => viewReport('invitation-to-bid', report.id)}
+                        onClick={() => removeFile(index)}
+                        className="h-6 w-6 p-0"
                       >
-                        <Eye className="h-4 w-4 mr-1" />
-                        View
+                        <X className="h-3 w-3" />
                       </Button>
                     </div>
                   ))}
                 </div>
-              )}
-            </div>
-          )}
+                <Button
+                  onClick={() => uploadFilesMutation.mutate(uploadedFiles)}
+                  disabled={uploadFilesMutation.isPending}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  {uploadFilesMutation.isPending ? "Uploading..." : `Upload ${uploadedFiles.length} File(s)`}
+                </Button>
+              </div>
+            )}
+          </div>
+
+
 
 
 

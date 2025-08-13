@@ -16,6 +16,7 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
   const [budgetReportsCollapsed, setBudgetReportsCollapsed] = useState(true);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const [deletedFileIds, setDeletedFileIds] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -151,15 +152,15 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
       }
     },
     onSuccess: (data, fileId) => {
-      console.log('Delete mutation success - refreshing RFP data to update embedded files');
+      console.log('Delete mutation success - updating local UI state');
+      
+      // Hide the file locally without causing navigation
+      setDeletedFileIds(prev => new Set(prev).add(fileId));
       
       toast({
         title: "File Deleted",
-        description: "File has been removed successfully. Refresh the page to see changes."
+        description: "File has been removed successfully."
       });
-      
-      // DON'T auto-refresh to avoid navigation issues
-      // Files will appear after manual page refresh or navigation
     },
     onError: (error: any) => {
       console.error("Delete file mutation error:", error);
@@ -475,11 +476,11 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
             )}
 
             {/* Show currently uploaded files */}
-            {rfp && rfp.files && rfp.files.length > 0 && (
+            {rfp && rfp.files && rfp.files.filter((file: any) => !deletedFileIds.has(file.id)).length > 0 && (
               <div className="space-y-2 mt-6">
                 <h5 className="text-sm font-medium text-gray-700">Published Files (these override all other reports):</h5>
                 <div className="space-y-1">
-                  {rfp.files.map((file: any) => (
+                  {rfp.files.filter((file: any) => !deletedFileIds.has(file.id)).map((file: any) => (
                     <div key={file.id} className="flex items-center justify-between p-3 bg-gray-50 rounded border">
                       <div className="flex items-center gap-2">
                         <FileText className="h-4 w-4 text-gray-500" />

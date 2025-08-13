@@ -5164,14 +5164,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`📁 ZIP filename will be: ${zipFilename}`);
       console.log(`📁 Fallback filename: ${fallbackFilename}`);
       
-      // Set response headers with browser-friendly fallback
+      // Add timestamp to ensure unique downloads
+      const timestamp = Date.now();
+      const timestampedFilename = fallbackFilename.replace('.zip', `_${timestamp}.zip`);
+      
+      // Set response headers with browser-friendly fallback and strong cache busting
       res.setHeader('Content-Type', 'application/zip');
-      res.setHeader('Content-Disposition', `attachment; filename="${fallbackFilename}"`);
-      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Content-Disposition', `attachment; filename="${timestampedFilename}"`);
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, private');
       res.setHeader('Pragma', 'no-cache');
       res.setHeader('Expires', '0');
+      res.setHeader('Last-Modified', new Date().toUTCString());
+      res.setHeader('ETag', `"${timestamp}"`);
       
-      console.log(`📁 Using fallback filename in header: ${fallbackFilename}`);
+      console.log(`📁 Using timestamped filename in header: ${timestampedFilename}`);
       
       // Pipe archive to response
       archive.pipe(res);

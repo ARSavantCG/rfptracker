@@ -5144,8 +5144,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const projectName = rfp.projectName || `${rfp.tenantName}_RFP_${rfp.rfpNumber}`;
       const zipFilename = `${projectName}_All_Files.zip`;
       console.log(`📁 ZIP filename will be: ${zipFilename}`);
+      
+      // Set response headers with proper encoding
       res.setHeader('Content-Type', 'application/zip');
-      res.setHeader('Content-Disposition', `attachment; filename="${zipFilename}"`);
+      res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(zipFilename)}`);
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      
+      console.log(`📁 Content-Disposition header: attachment; filename*=UTF-8''${encodeURIComponent(zipFilename)}`);
       
       // Pipe archive to response
       archive.pipe(res);

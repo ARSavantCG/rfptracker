@@ -2008,8 +2008,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "No files found to download" });
       }
 
-      // Import archiver module
-      const archiver = require('archiver');
+      // Use archiver module (already imported at top of file)
       
       // Create zip archive
       const archive = archiver('zip', {

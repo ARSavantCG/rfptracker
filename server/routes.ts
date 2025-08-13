@@ -5146,7 +5146,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Also create a browser-friendly fallback filename
       const fallbackFilename = projectName
-        .replace(/[^\w\s\-\.\(\)@]/g, '_')  // Replace special chars with underscore
+        .replace(/@/g, '_at_')              // Replace @ with _at_
+        .replace(/[^\w\s\-\.\(\)]/g, '_')   // Replace other special chars with underscore
         .replace(/\s+/g, '_')               // Replace spaces with underscores
         .replace(/_+/g, '_')                // Replace multiple underscores with single
         + '_All_Files.zip';

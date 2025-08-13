@@ -297,11 +297,25 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
                     </div>
                     <div className="flex items-start">
                       <span className="text-blue-700 font-medium">Received Date:</span>
-                      <span className="ml-2 text-blue-900">{formatDateForDisplay(rfp.receivedOn)}</span>
+                      <span className="ml-2 text-blue-900">
+                        {(() => {
+                          console.log('RFP Detail Modal - Raw receivedOn:', rfp.receivedOn);
+                          const result = formatDateForDisplay(rfp.receivedOn);
+                          console.log('RFP Detail Modal - Formatted result:', result);
+                          return result;
+                        })()}
+                      </span>
                     </div>
                     <div className="flex items-start">
                       <span className="text-blue-700 font-medium">Internal Due Date:</span>
-                      <span className="ml-2 text-blue-900">{formatDateForDisplay(rfp.internalDueDate)}</span>
+                      <span className="ml-2 text-blue-900">
+                        {(() => {
+                          console.log('RFP Detail Modal - Raw internalDueDate:', rfp.internalDueDate);
+                          const result = formatDateForDisplay(rfp.internalDueDate);
+                          console.log('RFP Detail Modal - Formatted result:', result);
+                          return result;
+                        })()}
+                      </span>
                     </div>
                     {rfp.estimatedValue && (
                       <div className="flex items-start">

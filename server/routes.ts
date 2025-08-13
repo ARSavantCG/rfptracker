@@ -5144,12 +5144,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const projectName = rfp.projectName || `${rfp.tenantName}_RFP_${rfp.rfpNumber}`;
       const zipFilename = `${projectName}_All_Files.zip`;
       
-      // Also create a browser-friendly fallback filename
+      // Also create a browser-friendly fallback filename  
       const fallbackFilename = projectName
         .replace(/@/g, '_at_')              // Replace @ with _at_
-        .replace(/[^\w\s\-\.\(\)]/g, '_')   // Replace other special chars with underscore
+        .replace(/\(/g, '_')                // Replace ( with _
+        .replace(/\)/g, '_')                // Replace ) with _
+        .replace(/[^\w\s\-\.]/g, '_')       // Replace other special chars with underscore
         .replace(/\s+/g, '_')               // Replace spaces with underscores
         .replace(/_+/g, '_')                // Replace multiple underscores with single
+        .replace(/^_+|_+$/g, '')            // Remove leading/trailing underscores
         + '_All_Files.zip';
       
       console.log(`📁 ZIP filename will be: ${zipFilename}`);

@@ -5137,8 +5137,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         zlib: { level: 9 } // compression level
       });
 
-      // Set response headers
-      const zipFilename = `RFP-${rfp.rfpNumber}-All-Files.zip`;
+      // Set response headers - use project name format
+      const projectName = rfp.projectName || `${rfp.tenantName} @ ${rfp.propertyName}`;
+      const zipFilename = `${projectName}_All_Files.zip`.replace(/[^a-zA-Z0-9@()._-]/g, '_');
       res.setHeader('Content-Type', 'application/zip');
       res.setHeader('Content-Disposition', `attachment; filename="${zipFilename}"`);
       
@@ -5164,12 +5165,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const fileUploadDate = new Date(file.uploadedAt);
             const daysSinceRfpCreated = (fileUploadDate.getTime() - rfpCreated.getTime()) / (1000 * 60 * 60 * 24);
             
+            // Debug logging
+            console.log(`🔍 FILE DEBUG - ${file.name}:`);
+            console.log(`  - Upload date: ${file.uploadedAt}`);
+            console.log(`  - RFP created: ${rfp.createdAt || rfp.receivedDate}`);
+            console.log(`  - Days since RFP created: ${daysSinceRfpCreated}`);
+            console.log(`  - RFP workflow phase: ${rfp.workflowPhase}`);
+            console.log(`  - RFP status: ${rfp.status}`);
+            
             // If RFP is in publish phase or completed, and file was uploaded recently, treat as Published file
             // Otherwise treat as RFP Entry file
             const isInPublishPhase = rfp.workflowPhase === 'publish' || rfp.status === 'completed';
             const isRecentUpload = daysSinceRfpCreated > 1; // More than 1 day after RFP creation
             const isPublishedFile = isInPublishPhase && isRecentUpload;
+            
+            console.log(`  - Is in publish phase: ${isInPublishPhase}`);
+            console.log(`  - Is recent upload: ${isRecentUpload}`);
+            console.log(`  - Is published file: ${isPublishedFile}`);
+            
             const folderName = isPublishedFile ? '6-Published-Files' : '1-RFP-Entry';
+            console.log(`  - Folder assignment: ${folderName}`);
+            
             archive.file(filePath, { name: `${folderName}/${file.name}` });
             hasFiles = true;
           }

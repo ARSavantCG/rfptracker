@@ -98,17 +98,13 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
         return;
       }
       
-      // Create a zip download request
+      // Create a zip download request using the working GET endpoint
       const token = localStorage.getItem('auth-token');
-      const response = await fetch(`/api/rfp-requests/${rfp.id}/files/download-all`, {
-        method: 'POST',
+      const response = await fetch(`/api/rfp-requests/${rfp.id}/download-all-files`, {
+        method: 'GET',
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          fileIds: existingFiles.map((file: any) => file.id)
-        })
+        }
       });
       
       if (response.ok) {

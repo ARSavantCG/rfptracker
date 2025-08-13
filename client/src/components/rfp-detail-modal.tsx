@@ -184,7 +184,20 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `RFP-${rfpNumber}-All-Files.zip`;
+      
+      // Use project name for filename instead of RFP number
+      const projectName = rfp?.projectName || `RFP-${rfpNumber}`;
+      const cacheBuster = Date.now();
+      const safeFileName = projectName
+        .replace(/[@]/g, '_at_')
+        .replace(/[^\w\s\-\.]/g, '_')
+        .replace(/\s+/g, '_')
+        .replace(/_+/g, '_')
+        .replace(/^_+|_+$/g, '');
+      const uniqueFilename = `${safeFileName}_All_Files_${cacheBuster}.zip`;
+      
+      link.download = uniqueFilename;
+      console.log(`🎯🎯🎯 RFP DETAIL MODAL - Setting filename to: ${uniqueFilename}`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

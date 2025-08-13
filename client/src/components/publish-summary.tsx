@@ -126,9 +126,7 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
           .replace(/^_+|_+$/g, '');
         const uniqueFilename = `${safeFileName}_All_Files_${cacheBuster}.zip`;
         a.download = uniqueFilename;
-        console.log(`🎯🎯🎯 CLIENT DOWNLOAD FILENAME: ${uniqueFilename}`);
-        console.log(`🎯🎯🎯 ORIGINAL PROJECT NAME: ${projectName}`);
-        alert(`Setting download filename to: ${uniqueFilename}`);
+        console.log(`🎯 PUBLISH SUMMARY - Setting filename to: ${uniqueFilename}`);
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);

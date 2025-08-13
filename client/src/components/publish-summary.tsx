@@ -124,14 +124,26 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
       const response = await apiRequest(`/api/rfp-requests/${rfp.id}/files/${fileId}`, "DELETE");
       return response;
     },
-    onSuccess: () => {
+    onSuccess: (data, fileId) => {
       toast({
         title: "Success",
         description: "File deleted successfully"
       });
-      // Invalidate the specific RFP data to update file list without affecting navigation
+      
+      // Update the RFP data directly in cache instead of invalidating
       if (rfp?.id) {
-        queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests", "all-including-archived"] });
+        queryClient.setQueryData(["/api/rfp-requests", "all-including-archived"], (oldData: any[]) => {
+          if (!oldData) return oldData;
+          return oldData.map(item => {
+            if (item.id === rfp.id) {
+              return {
+                ...item,
+                files: item.files.filter((f: any) => f.id !== fileId)
+              };
+            }
+            return item;
+          });
+        });
         queryClient.invalidateQueries({ queryKey: [`/api/rfp-requests/${rfp.id}/file-count`] });
       }
     },
@@ -445,7 +457,7 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
                           className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
                           title="Delete file"
                         >
-                          <Trash2 className="h-3 w-3" />
+                          {deleteFileMutation.isPending ? "..." : <Trash2 className="h-3 w-3" />}
                         </Button>
                       </div>
                     </div>

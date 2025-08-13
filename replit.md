@@ -43,6 +43,7 @@ Preferred communication style: Simple, everyday language.
     - **Building Specifications**: Integrated system for capturing and reporting structural, operational, and safety specifications, with PDF report generation.
     - **Vendor Workload Report**: Advanced system for generating PDF reports summarizing architect and general contractor workloads with filtering and branding.
     - **Scope of Work Consistency**: Ensures detailed scope of work tables are displayed consistently in both architect and contractor RFPs.
+    - **Published Files Download**: Streamlined zip download system in Publish phase replacing refresh button with "Download All Files" functionality for organized file distribution.
 
 ## External Dependencies
 - **Database**: PostgreSQL (Neon serverless).

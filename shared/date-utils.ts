@@ -71,24 +71,38 @@ export function formatDateForInput(date: Date | string | null): string {
 export function formatDateForDisplay(date: Date | string | null): string {
   if (!date) return 'N/A';
   
-  let dateObj: Date;
-  
+  // For string dates, work directly with the date components to avoid any timezone issues
   if (typeof date === 'string') {
-    // Handle ISO string from database
+    // Handle ISO string from database (e.g., "2025-08-08T00:00:00.000Z")
     if (date.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)) {
-      // Extract date part to avoid timezone conversion
+      // Extract date part and parse directly without Date object conversion
       const datePart = date.split('T')[0];
       const [year, month, day] = datePart.split('-').map(Number);
-      dateObj = new Date(year, month - 1, day);
+      
+      const monthNames = [
+        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      ];
+      
+      return `${monthNames[month - 1]} ${day}, ${year}`;
     } 
     // Handle YYYY-MM-DD format
     else if (date.match(/^\d{4}-\d{2}-\d{2}$/)) {
       const [year, month, day] = date.split('-').map(Number);
-      dateObj = new Date(year, month - 1, day);
+      
+      const monthNames = [
+        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      ];
+      
+      return `${monthNames[month - 1]} ${day}, ${year}`;
     } 
-    else {
-      dateObj = new Date(date);
-    }
+  }
+  
+  // Fallback to Date object for non-string dates
+  let dateObj: Date;
+  if (typeof date === 'string') {
+    dateObj = new Date(date);
   } else {
     dateObj = new Date(date);
   }

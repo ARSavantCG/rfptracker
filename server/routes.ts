@@ -5143,16 +5143,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Use the project name directly since it's already complete
       const projectName = rfp.projectName || `${rfp.tenantName}_RFP_${rfp.rfpNumber}`;
       const zipFilename = `${projectName}_All_Files.zip`;
-      console.log(`📁 ZIP filename will be: ${zipFilename}`);
       
-      // Set response headers with proper encoding
+      // Also create a browser-friendly fallback filename
+      const fallbackFilename = projectName
+        .replace(/[^\w\s\-\.\(\)@]/g, '_')  // Replace special chars with underscore
+        .replace(/\s+/g, '_')               // Replace spaces with underscores
+        .replace(/_+/g, '_')                // Replace multiple underscores with single
+        + '_All_Files.zip';
+      
+      console.log(`📁 ZIP filename will be: ${zipFilename}`);
+      console.log(`📁 Fallback filename: ${fallbackFilename}`);
+      
+      // Set response headers with browser-friendly fallback
       res.setHeader('Content-Type', 'application/zip');
-      res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(zipFilename)}`);
+      res.setHeader('Content-Disposition', `attachment; filename="${fallbackFilename}"`);
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.setHeader('Pragma', 'no-cache');
       res.setHeader('Expires', '0');
       
-      console.log(`📁 Content-Disposition header: attachment; filename*=UTF-8''${encodeURIComponent(zipFilename)}`);
+      console.log(`📁 Using fallback filename in header: ${fallbackFilename}`);
       
       // Pipe archive to response
       archive.pipe(res);

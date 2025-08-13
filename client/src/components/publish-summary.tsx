@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { FileText, Calendar, Building, Users, CheckCircle, Eye, DollarSign, ChevronDown, ChevronUp, Check, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { formatDateForDisplay } from "@shared/date-utils";
 import type { RfpRequest } from "@shared/schema";
 
 interface PublishSummaryProps {
@@ -100,15 +101,7 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
     }
   };
 
-  const formatDate = (dateString: string | Date) => {
-    const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      timeZone: 'America/New_York'
-    });
-  };
+
 
   const getRentableArea = () => {
     if (rfp.selectedBayConfigurations && rfp.selectedBayConfigurations.length > 0) {
@@ -169,14 +162,14 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
                 <label className="text-sm font-medium text-gray-600">Received Date</label>
                 <p className="text-gray-900 flex items-center gap-1">
                   <Calendar className="h-4 w-4" />
-                  {formatDate(rfp.receivedOn)}
+                  {formatDateForDisplay(rfp.receivedOn)}
                 </p>
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-600">Internal Due Date</label>
                 <p className="text-gray-900 flex items-center gap-1">
                   <Calendar className="h-4 w-4" />
-                  {formatDate(rfp.internalDueDate)}
+                  {formatDateForDisplay(rfp.internalDueDate)}
                 </p>
               </div>
             </div>
@@ -255,7 +248,7 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
                         <div>
                           <p className="text-sm font-medium">Budget Evaluation Report</p>
                           <p className="text-xs text-gray-500">
-                            Generated {report.generatedAt ? formatDate(report.generatedAt) : 'Unknown date'}
+                            Generated {report.generatedAt ? formatDateForDisplay(report.generatedAt) : 'Unknown date'}
                           </p>
                         </div>
                       </div>
@@ -297,7 +290,7 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
                         <div>
                           <p className="text-sm font-medium">{report.title}</p>
                           <p className="text-xs text-gray-500">
-                            Generated {report.generatedAt ? formatDate(report.generatedAt) : 'Unknown date'}
+                            Generated {report.generatedAt ? formatDateForDisplay(report.generatedAt) : 'Unknown date'}
                             {report.notes && ` - ${report.notes}`}
                           </p>
                         </div>

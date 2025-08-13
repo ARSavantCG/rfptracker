@@ -3,7 +3,8 @@
  */
 
 export function clearAuthAndReload() {
-  console.log('Clearing authentication and reloading...');
+  console.log('🚨 CRITICAL: clearAuthAndReload called - this will navigate away from current page!');
+  console.trace('Stack trace for clearAuthAndReload call:');
   localStorage.removeItem('auth-token');
   window.location.reload();
 }
@@ -43,7 +44,12 @@ export async function validateToken(): Promise<boolean> {
 }
 
 export function handleAuthError(error: Error, showReloadMessage = true) {
+  console.log('🔍 handleAuthError called with:', error.message);
+  
   if (error.message.includes('401') || error.message.includes('Authentication')) {
+    console.log('🚨 AUTH ERROR DETECTED - this will trigger page reload!');
+    console.trace('Stack trace for handleAuthError call:');
+    
     if (showReloadMessage) {
       alert('Your session has expired. The page will reload to log you in again.');
     }

@@ -5149,7 +5149,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Set response headers - use project name format
-      const projectName = rfp.projectName || `${rfp.tenantName} @ ${rfp.propertyName}`;
+      // Get property name from the properties table since rfp.propertyName might be undefined
+      let propertyName = rfp.propertyName;
+      if (!propertyName && rfp.property) {
+        try {
+          const property = await storage.getProperty(rfp.property);
+          propertyName = property?.propertyName || 'Unknown Property';
+        } catch (e) {
+          propertyName = 'Unknown Property';
+        }
+      }
+      
+      const projectName = rfp.projectName || `${rfp.tenantName} @ ${propertyName}`;
       const zipFilename = `${projectName}_All_Files.zip`.replace(/[^a-zA-Z0-9@()._-]/g, '_');
       res.setHeader('Content-Type', 'application/zip');
       res.setHeader('Content-Disposition', `attachment; filename="${zipFilename}"`);
@@ -5184,14 +5195,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.log(`  - RFP workflow phase: ${rfp.workflowPhase}`);
             console.log(`  - RFP status: ${rfp.status}`);
             
-            // If RFP is in publish phase or completed, and file was uploaded recently, treat as Published file
-            // Otherwise treat as RFP Entry file
+            // Simplified logic: If RFP is in publish phase, ALL files are Published files
+            // This is because files in publish phase are the final deliverables
             const isInPublishPhase = rfp.workflowPhase === 'publish' || rfp.status === 'completed';
-            const isRecentUpload = daysSinceRfpCreated > 1; // More than 1 day after RFP creation
-            const isPublishedFile = isInPublishPhase && isRecentUpload;
+            const isPublishedFile = isInPublishPhase;
             
             console.log(`  - Is in publish phase: ${isInPublishPhase}`);
-            console.log(`  - Is recent upload: ${isRecentUpload}`);
             console.log(`  - Is published file: ${isPublishedFile}`);
             
             const folderName = isPublishedFile ? '6-Published-Files' : '1-RFP-Entry';

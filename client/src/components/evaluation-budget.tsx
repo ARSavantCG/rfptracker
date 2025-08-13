@@ -1090,14 +1090,37 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     // Create workbook
     const workbook = XLSX.utils.book_new();
     
-    // Calculate rentable area
+    // Calculate rentable area using legally compliant totals
     let rentableArea = 0;
     if (rfp?.warehouseArea) {
       rentableArea = parseInt(rfp.warehouseArea);
     } else if (rfp?.selectedBayConfigurations && Array.isArray(rfp.selectedBayConfigurations)) {
-      rentableArea = Math.round(rfp.selectedBayConfigurations.reduce((total, bay) => {
-        return total + (bay.rentableSquareFootage || 0);
-      }, 0));
+      // Use legal compliance totals based on property
+      const propertyLegalTotals: Record<string, number> = {
+        'Bridge Point Gratigny': 409189,
+        'Bridge 595': 290307,
+        'MG Westside': 794334,
+        'Bridge Point Port Everglades': 171983
+      };
+      
+      // Get legally compliant total for this property
+      const legalTotal = propertyLegalTotals[rfp.property];
+      if (legalTotal && rfp.selectedBayConfigurations.length > 0) {
+        // Use legal total if we have all bays selected or close to full property
+        const rawTotal = rfp.selectedBayConfigurations.reduce((total, bay) => total + (bay.rentableSquareFootage || 0), 0);
+        // If raw total is close to legal total (within 100 SF), use legal total for accuracy
+        if (Math.abs(rawTotal - legalTotal) <= 100) {
+          rentableArea = legalTotal;
+        } else {
+          // For partial selections, use calculated total
+          rentableArea = Math.round(rawTotal);
+        }
+      } else {
+        // Fallback to calculated total if no legal total available
+        rentableArea = Math.round(rfp.selectedBayConfigurations.reduce((total, bay) => {
+          return total + (bay.rentableSquareFootage || 0);
+        }, 0));
+      }
     }
 
     // Helper function to prepare line items for export
@@ -1273,14 +1296,37 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     // Create workbook
     const workbook = XLSX.utils.book_new();
     
-    // Calculate rentable area
+    // Calculate rentable area using legally compliant totals
     let rentableArea = 0;
     if (rfp?.warehouseArea) {
       rentableArea = parseInt(rfp.warehouseArea);
     } else if (rfp?.selectedBayConfigurations && Array.isArray(rfp.selectedBayConfigurations)) {
-      rentableArea = Math.round(rfp.selectedBayConfigurations.reduce((total, bay) => {
-        return total + (bay.rentableSquareFootage || 0);
-      }, 0));
+      // Use legal compliance totals based on property
+      const propertyLegalTotals: Record<string, number> = {
+        'Bridge Point Gratigny': 409189,
+        'Bridge 595': 290307,
+        'MG Westside': 794334,
+        'Bridge Point Port Everglades': 171983
+      };
+      
+      // Get legally compliant total for this property
+      const legalTotal = propertyLegalTotals[rfp.property];
+      if (legalTotal && rfp.selectedBayConfigurations.length > 0) {
+        // Use legal total if we have all bays selected or close to full property
+        const rawTotal = rfp.selectedBayConfigurations.reduce((total, bay) => total + (bay.rentableSquareFootage || 0), 0);
+        // If raw total is close to legal total (within 100 SF), use legal total for accuracy
+        if (Math.abs(rawTotal - legalTotal) <= 100) {
+          rentableArea = legalTotal;
+        } else {
+          // For partial selections, use calculated total
+          rentableArea = Math.round(rawTotal);
+        }
+      } else {
+        // Fallback to calculated total if no legal total available
+        rentableArea = Math.round(rfp.selectedBayConfigurations.reduce((total, bay) => {
+          return total + (bay.rentableSquareFootage || 0);
+        }, 0));
+      }
     }
 
     // Helper function to prepare ALL line items exactly as entered
@@ -1588,14 +1634,37 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     });
 
     // Extract property data for use in report - calculate from bay configurations if warehouse_area is null
+    // Use legally compliant totals to ensure accurate reporting
     let rentableArea = 0;
     if (rfp?.warehouseArea) {
       rentableArea = parseInt(rfp.warehouseArea);
     } else if (rfp?.selectedBayConfigurations && Array.isArray(rfp.selectedBayConfigurations)) {
-      // Calculate from bay configurations
-      rentableArea = Math.round(rfp.selectedBayConfigurations.reduce((total, bay) => {
-        return total + (bay.rentableSquareFootage || 0);
-      }, 0));
+      // Use legal compliance totals based on property
+      const propertyLegalTotals: Record<string, number> = {
+        'Bridge Point Gratigny': 409189,
+        'Bridge 595': 290307,
+        'MG Westside': 794334,
+        'Bridge Point Port Everglades': 171983
+      };
+      
+      // Get legally compliant total for this property
+      const legalTotal = propertyLegalTotals[rfp.property];
+      if (legalTotal && rfp.selectedBayConfigurations.length > 0) {
+        // Use legal total if we have all bays selected or close to full property
+        const rawTotal = rfp.selectedBayConfigurations.reduce((total, bay) => total + (bay.rentableSquareFootage || 0), 0);
+        // If raw total is close to legal total (within 100 SF), use legal total for accuracy
+        if (Math.abs(rawTotal - legalTotal) <= 100) {
+          rentableArea = legalTotal;
+        } else {
+          // For partial selections, use calculated total
+          rentableArea = Math.round(rawTotal);
+        }
+      } else {
+        // Fallback to calculated total if no legal total available
+        rentableArea = Math.round(rfp.selectedBayConfigurations.reduce((total, bay) => {
+          return total + (bay.rentableSquareFootage || 0);
+        }, 0));
+      }
     }
     const standardParking = (propertyData as any)?.standardParking || 0;
     const accessibleParking = (propertyData as any)?.accessibleParking || 0;

@@ -150,6 +150,8 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     queryKey: [`/api/properties/${rfp?.property}`],
     enabled: !!rfp?.property,
   });
+  
+
 
   // Load property existing improvements to auto-populate when relevant
   const { data: propertyImprovements, isLoading: isLoadingImprovements } = useQuery({
@@ -630,7 +632,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     if (rfp?.warehouseArea) {
       totalSelectedArea = parseInt(rfp.warehouseArea);
     } else {
-      // Use legal compliance totals based on property
+      // Use legal compliance totals based on property name
       const propertyLegalTotals: Record<string, number> = {
         'Bridge Point Gratigny': 409189,
         'Bridge 595': 290307,
@@ -638,8 +640,9 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         'Bridge Point Port Everglades': 171983
       };
       
-      // Get legally compliant total for this property
-      const legalTotal = propertyLegalTotals[rfp.property || ''];
+      // Get legally compliant total for this property using property name from propertyData
+      const propertyName = propertyData?.propertyName || '';
+      const legalTotal = propertyLegalTotals[propertyName];
       if (legalTotal && rfp.selectedBayConfigurations.length > 0) {
         // Use legal total if we have all bays selected or close to full property
         const rawTotal = rfp.selectedBayConfigurations.reduce((sum, bay) => sum + (bay.rentableSquareFootage || bay.squareFootage || 0), 0);
@@ -696,7 +699,9 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
             'Bridge Point Port Everglades': 171983
           };
           
-          let propertyTotalArea = propertyLegalTotals[rfp?.property || ''] || 0;
+          // Use property name from propertyData for legal total lookup
+          const propertyName = propertyData?.propertyName || '';
+          let propertyTotalArea = propertyLegalTotals[propertyName] || 0;
           
           // If no legal total available, calculate from property data
           if (!propertyTotalArea && propertyData) {
@@ -714,6 +719,8 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
             
             // Calculate the prorated total cost for this tenant's area
             allocatedCost = unitPrice * totalSelectedArea;
+            
+
           }
         } else if (improvement.allocationType === 'bay-specific') {
           // For bay-specific, only include cost for applicable selected bays

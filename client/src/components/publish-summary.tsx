@@ -17,6 +17,7 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [deletedFileIds, setDeletedFileIds] = useState<Set<string>>(new Set());
+  const [newlyUploadedFiles, setNewlyUploadedFiles] = useState<any[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -209,19 +210,26 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
         return { success: true, uploadedCount: files.length };
       }
     },
-    onSuccess: (data) => {
-      const uploadedCount = data?.uploadedCount || uploadedFiles.length;
+    onSuccess: (data, variables) => {
+      console.log('Upload mutation success - updating local UI state');
+      
+      // Create mock file objects for the uploaded files to show immediately
+      const newFiles = variables.map((file, index) => ({
+        id: `temp_${Date.now()}_${index}`, // Temporary ID for display
+        name: file.name,
+        size: file.size,
+        uploadedAt: new Date().toISOString(),
+        stage: 'publish'
+      }));
+      
+      // Add to local state and clear the upload queue
+      setNewlyUploadedFiles(prev => [...prev, ...newFiles]);
       setUploadedFiles([]);
       
-      console.log('Upload mutation success - refreshing RFP data to update embedded files');
-      
       toast({ 
-        title: "Success", 
-        description: "Files uploaded successfully. Refresh the page to see new files." 
+        title: "Files Uploaded", 
+        description: `${variables.length} file(s) uploaded successfully.` 
       });
-      
-      // DON'T auto-refresh to avoid navigation issues
-      // Files will appear after manual page refresh or navigation
     },
     onError: (error: any) => {
       console.error("Upload mutation error:", error);
@@ -476,11 +484,12 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
             )}
 
             {/* Show currently uploaded files */}
-            {rfp && rfp.files && rfp.files.filter((file: any) => !deletedFileIds.has(file.id)).length > 0 && (
+            {(rfp && rfp.files && rfp.files.filter((file: any) => !deletedFileIds.has(file.id)).length > 0) || newlyUploadedFiles.length > 0 ? (
               <div className="space-y-2 mt-6">
                 <h5 className="text-sm font-medium text-gray-700">Published Files (these override all other reports):</h5>
                 <div className="space-y-1">
-                  {rfp.files.filter((file: any) => !deletedFileIds.has(file.id)).map((file: any) => (
+                  {/* Show existing files (not deleted) */}
+                  {rfp && rfp.files && rfp.files.filter((file: any) => !deletedFileIds.has(file.id)).map((file: any) => (
                     <div key={file.id} className="flex items-center justify-between p-3 bg-gray-50 rounded border">
                       <div className="flex items-center gap-2">
                         <FileText className="h-4 w-4 text-gray-500" />
@@ -515,9 +524,28 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
                       </div>
                     </div>
                   ))}
+                  
+                  {/* Show newly uploaded files */}
+                  {newlyUploadedFiles.map((file: any) => (
+                    <div key={file.id} className="flex items-center justify-between p-3 bg-green-50 rounded border border-green-200">
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-green-600" />
+                        <div>
+                          <span className="text-sm text-gray-700 font-medium">{file.name}</span>
+                          <div className="text-xs text-green-600">
+                            {file.size ? `${(file.size / 1024).toFixed(1)} KB` : ''} 
+                            • Just uploaded
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs text-green-600 font-medium">New</span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
-            )}
+            ) : null}
           </div>
 
 

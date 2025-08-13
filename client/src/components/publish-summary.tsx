@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, Calendar, Building, Users, CheckCircle, Eye, DollarSign, ChevronDown, ChevronUp, Check, Lock } from "lucide-react";
+import { FileText, Calendar, Building, Users, CheckCircle, Eye, DollarSign, ChevronDown, ChevronUp, Check, Lock, Upload, FilePlus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { formatDateForDisplay } from "@shared/date-utils";
@@ -158,59 +158,12 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
                 <label className="text-sm font-medium text-gray-600">Rentable Area</label>
                 <p className="text-lg text-gray-900">{getRentableArea()} SF</p>
               </div>
-              <div>
-                <label className="text-sm font-medium text-gray-600">Received Date</label>
-                <p className="text-gray-900 flex items-center gap-1">
-                  <Calendar className="h-4 w-4" />
-                  {formatDateForDisplay(rfp.receivedOn)}
-                </p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-600">Internal Due Date</label>
-                <p className="text-gray-900 flex items-center gap-1">
-                  <Calendar className="h-4 w-4" />
-                  {formatDateForDisplay(rfp.internalDueDate)}
-                </p>
-              </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Workflow Status Summary */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Workflow Completion Status
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="flex items-center gap-3 p-3 border rounded-lg bg-green-50">
-              <CheckCircle className="h-5 w-5 text-green-600" />
-              <div>
-                <p className="text-sm font-medium text-green-800">RFP Processing</p>
-                <p className="text-xs text-green-600">Entry & Validation Complete</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 p-3 border rounded-lg bg-green-50">
-              <CheckCircle className="h-5 w-5 text-green-600" />
-              <div>
-                <p className="text-sm font-medium text-green-800">Bid Collection</p>
-                <p className="text-xs text-green-600">All Bids Received</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 p-3 border rounded-lg bg-green-50">
-              <CheckCircle className="h-5 w-5 text-green-600" />
-              <div>
-                <p className="text-sm font-medium text-green-800">Evaluation</p>
-                <p className="text-xs text-green-600">Budget Analysis Complete</p>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+
 
       {/* Reports & Documentation */}
       <Card>
@@ -225,47 +178,23 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
         </CardHeader>
         <CardContent className="space-y-4">
 
-          {/* Generated Budget Evaluation Reports */}
-          {Array.isArray(budgetHistory) && budgetHistory.length > 0 && (
-            <div className="space-y-2">
-              <div 
-                className="flex items-center justify-between cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors"
-                onClick={() => setBudgetReportsCollapsed(!budgetReportsCollapsed)}
-              >
-                <h4 className="font-medium text-sm text-gray-700">Budget Evaluation Reports</h4>
-                {budgetReportsCollapsed ? (
-                  <ChevronDown className="h-4 w-4 text-gray-500" />
-                ) : (
-                  <ChevronUp className="h-4 w-4 text-gray-500" />
-                )}
-              </div>
-              {!budgetReportsCollapsed && (
-                <div className="space-y-2">
-                  {budgetHistory.map((report: any) => (
-                    <div key={report.id} className="flex items-center justify-between p-3 border rounded-lg bg-gray-50">
-                      <div className="flex items-center gap-2">
-                        <DollarSign className="h-4 w-4 text-green-600" />
-                        <div>
-                          <p className="text-sm font-medium">Budget Evaluation Report</p>
-                          <p className="text-xs text-gray-500">
-                            Generated {report.generatedAt ? formatDateForDisplay(report.generatedAt) : 'Unknown date'}
-                          </p>
-                        </div>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => viewReport('budget-evaluation', report.id)}
-                      >
-                        <Eye className="h-4 w-4 mr-1" />
-                        View
-                      </Button>
-                    </div>
-                  ))}
+          {/* File Upload Area for Publishing */}
+          <div className="space-y-2">
+            <h4 className="font-medium text-sm text-gray-700">Publish Files to Team</h4>
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
+              <div className="flex flex-col items-center gap-3">
+                <Upload className="h-8 w-8 text-gray-400" />
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Drag and drop files here</p>
+                  <p className="text-xs text-gray-500">or click to select files that will be shared with the team</p>
                 </div>
-              )}
+                <Button variant="outline" size="sm" className="mt-2">
+                  <FilePlus className="h-4 w-4 mr-2" />
+                  Select Files
+                </Button>
+              </div>
             </div>
-          )}
+          </div>
 
           {/* Generated Invitation to Bid Reports */}
           {Array.isArray(generationHistory) && generationHistory.length > 0 && (

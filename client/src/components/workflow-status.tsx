@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronRight, FileText, Users, ClipboardCheck, Award, FileOutput } from "lucide-react";
+import { ChevronRight, FileText, Users, ClipboardCheck, Award, FileOutput, CheckCircle } from "lucide-react";
 import type { RfpRequest } from "@shared/schema";
 
 interface WorkflowStatusProps {
@@ -56,10 +56,10 @@ const workflowPhases = [
   },
   { 
     key: "publish", 
-    label: "Publish", 
+    label: "Publish Evaluation Data", 
     icon: FileOutput, 
     color: "bg-green-100 text-green-700 border-green-300",
-    description: "Generate financial summary report"
+    description: "Publish Evaluation Data"
   }
 ];
 
@@ -328,11 +328,12 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValida
                 <Button
                   onClick={() => completeProjectMutation.mutate()}
                   disabled={completeProjectMutation.isPending}
-                  className="w-full px-4 py-2 text-sm bg-green-600 hover:bg-green-700 text-white"
+                  className="w-full px-4 py-2 text-sm bg-green-600 hover:bg-green-700 text-white flex items-center justify-center gap-2"
                 >
+                  <CheckCircle className="h-4 w-4" />
                   {completeProjectMutation.isPending
                     ? "Marking Complete..."
-                    : "Mark Project as Complete"}
+                    : "Mark Project as Complete (Publish)"}
                 </Button>
               )}
             </div>

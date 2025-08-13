@@ -299,10 +299,20 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
                       <span className="text-blue-700 font-medium">Received Date:</span>
                       <span className="ml-2 text-blue-900">
                         {(() => {
-                          console.log('RFP Detail Modal - Raw receivedOn:', rfp.receivedOn);
-                          const result = formatDateForDisplay(rfp.receivedOn);
-                          console.log('RFP Detail Modal - Formatted result:', result);
-                          return result;
+                          // FORCE DIRECT DATE PARSING - NO TIMEZONE CONVERSION
+                          const dateStr = rfp.receivedOn;
+                          console.log('🚨 DEBUGGING DATE ISSUE - Raw input:', dateStr);
+                          
+                          if (typeof dateStr === 'string' && dateStr.includes('T')) {
+                            const datePart = dateStr.split('T')[0]; // "2025-08-08"
+                            const [year, month, day] = datePart.split('-').map(Number);
+                            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+                            const result = `${monthNames[month - 1]} ${day}, ${year}`;
+                            console.log('🚨 DIRECT PARSING RESULT:', result);
+                            return result;
+                          }
+                          
+                          return 'Date Error';
                         })()}
                       </span>
                     </div>
@@ -310,10 +320,17 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
                       <span className="text-blue-700 font-medium">Internal Due Date:</span>
                       <span className="ml-2 text-blue-900">
                         {(() => {
-                          console.log('RFP Detail Modal - Raw internalDueDate:', rfp.internalDueDate);
-                          const result = formatDateForDisplay(rfp.internalDueDate);
-                          console.log('RFP Detail Modal - Formatted result:', result);
-                          return result;
+                          // FORCE DIRECT DATE PARSING - NO TIMEZONE CONVERSION  
+                          const dateStr = rfp.internalDueDate;
+                          
+                          if (typeof dateStr === 'string' && dateStr.includes('T')) {
+                            const datePart = dateStr.split('T')[0];
+                            const [year, month, day] = datePart.split('-').map(Number);
+                            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+                            return `${monthNames[month - 1]} ${day}, ${year}`;
+                          }
+                          
+                          return 'Date Error';
                         })()}
                       </span>
                     </div>

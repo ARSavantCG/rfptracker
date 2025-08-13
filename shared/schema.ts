@@ -9,6 +9,7 @@
 import { pgTable, text, serial, integer, timestamp, json, jsonb, boolean, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { parseLocalDate } from "./date-utils";
 
 export const rfpRequests = pgTable("rfp_requests", {
   id: serial("id").primaryKey(),
@@ -88,13 +89,19 @@ export const insertRfpRequestSchema = createInsertSchema(rfpRequests).omit({
   requestTypes: z.array(z.string()).min(1, "At least one request type is required"),
   status: z.enum(["received", "in-progress", "completed", "on-hold", "archived"]).default("received"),
   workflowPhase: z.enum(["rfp-entry", "rfp-validation", "invitation-to-bid", "bid-collection", "evaluation", "publish"]).default("rfp-entry"),
-  receivedOn: z.string().transform((val) => new Date(val)),
-  internalDueDate: z.string().transform((val) => new Date(val)),
-  contractorDueDate: z.string().optional().transform((val) => val ? new Date(val) : null),
-  architectDueDate: z.string().optional().transform((val) => val ? new Date(val) : null),
-  anticipatedLeaseExecutionDate: z.string().optional().transform((val) => val ? new Date(val) : null),
-  anticipatedOccupancyDate: z.string().optional().transform((val) => val ? new Date(val) : null),
-  dueDate: z.string().optional().transform((val) => val ? new Date(val) : undefined),
+  receivedOn: z.string().transform((val) => {
+    if (!val) return new Date();
+    return parseLocalDate(val);
+  }),
+  internalDueDate: z.string().transform((val) => {
+    if (!val) return new Date();
+    return parseLocalDate(val);
+  }),
+  contractorDueDate: z.string().optional().transform((val) => val ? parseLocalDate(val) : null),
+  architectDueDate: z.string().optional().transform((val) => val ? parseLocalDate(val) : null),
+  anticipatedLeaseExecutionDate: z.string().optional().transform((val) => val ? parseLocalDate(val) : null),
+  anticipatedOccupancyDate: z.string().optional().transform((val) => val ? parseLocalDate(val) : null),
+  dueDate: z.string().optional().transform((val) => val ? parseLocalDate(val) : undefined),
   warehouseAreaOverride: z.string().optional().nullable(),
   areaBreakdown: z.array(z.object({
     id: z.string(),

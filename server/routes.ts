@@ -5132,17 +5132,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "RFP not found" });
       }
 
-      // Debug the RFP details
-      console.log(`🚨 DOWNLOAD DEBUG - RFP ${rfpId}:`);
-      console.log(`  - Project Name: ${rfp.projectName}`);
-      console.log(`  - Tenant Name: ${rfp.tenantName}`);
-      console.log(`  - Property Name: ${rfp.propertyName}`);
-      console.log(`  - Property ID: ${rfp.property}`);
-      console.log(`  - Workflow Phase: ${rfp.workflowPhase}`);
-      console.log(`  - Status: ${rfp.status}`);
-      console.log(`  - Created: ${rfp.createdAt}`);
-      console.log(`  - Received: ${rfp.receivedDate}`);
-      console.log(`  - Files count: ${rfp.files?.length || 0}`);
+      console.log(`📦 Generating download for RFP ${rfp.rfpNumber}: ${rfp.projectName}`);
 
       // Create zip archive
       const archive = archiver('zip', {
@@ -5150,26 +5140,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Set response headers - use project name format
-      // Get property name from the properties table since rfp.propertyName might be undefined
-      let propertyName = rfp.propertyName;
-      console.log(`🔍 PROPERTY DEBUG - Initial property name: ${propertyName}, Property ID: ${rfp.property}`);
-      
-      if (!propertyName && rfp.property) {
-        try {
-          const property = await storage.getProperty(rfp.property);
-          console.log(`🔍 PROPERTY DEBUG - Found property from DB:`, property);
-          propertyName = property?.propertyName || 'Unknown Property';
-        } catch (e) {
-          console.log(`🔍 PROPERTY DEBUG - Error fetching property:`, e);
-          propertyName = 'Unknown Property';
-        }
-      }
-      
-      console.log(`🔍 PROPERTY DEBUG - Final property name: ${propertyName}`);
-      const projectName = rfp.projectName || `${rfp.tenantName} @ ${propertyName}`;
-      console.log(`🔍 FILENAME DEBUG - Project name: ${projectName}`);
-      const zipFilename = `${projectName}_All_Files.zip`.replace(/[^a-zA-Z0-9@()._-]/g, '_');
-      console.log(`🔍 FILENAME DEBUG - Final zip filename: ${zipFilename}`);
+      // Use the project name directly since it's already complete
+      const projectName = rfp.projectName || `${rfp.tenantName}_RFP_${rfp.rfpNumber}`;
+      const zipFilename = `${projectName}_All_Files.zip`.replace(/[^a-zA-Z0-9@()._\s-]/g, '_');
       res.setHeader('Content-Type', 'application/zip');
       res.setHeader('Content-Disposition', `attachment; filename="${zipFilename}"`);
       
@@ -5195,24 +5168,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const fileUploadDate = new Date(file.uploadedAt);
             const daysSinceRfpCreated = (fileUploadDate.getTime() - rfpCreated.getTime()) / (1000 * 60 * 60 * 24);
             
-            // Debug logging
-            console.log(`🔍 FILE DEBUG - ${file.name}:`);
-            console.log(`  - Upload date: ${file.uploadedAt}`);
-            console.log(`  - RFP created: ${rfp.createdAt || rfp.receivedDate}`);
-            console.log(`  - Days since RFP created: ${daysSinceRfpCreated}`);
-            console.log(`  - RFP workflow phase: ${rfp.workflowPhase}`);
-            console.log(`  - RFP status: ${rfp.status}`);
-            
             // Simplified logic: If RFP is in publish phase, ALL files are Published files
-            // This is because files in publish phase are the final deliverables
             const isInPublishPhase = rfp.workflowPhase === 'publish' || rfp.status === 'completed';
-            const isPublishedFile = isInPublishPhase;
-            
-            console.log(`  - Is in publish phase: ${isInPublishPhase}`);
-            console.log(`  - Is published file: ${isPublishedFile}`);
-            
-            const folderName = isPublishedFile ? '6-Published-Files' : '1-RFP-Entry';
-            console.log(`  - Folder assignment: ${folderName}`);
+            const folderName = isInPublishPhase ? '6-Published-Files' : '1-RFP-Entry';
             
             archive.file(filePath, { name: `${folderName}/${file.name}` });
             hasFiles = true;

@@ -730,16 +730,17 @@ export class DatabaseStorage implements IStorage {
 
   // Helper method to process RFP dates consistently using centralized utilities
   private processRfpDates(rfp: RfpRequest): RfpRequest {
-    // Process all date fields to ensure consistent timezone handling
+    // Process all date fields WITHOUT timezone conversion to preserve original dates
+    // Leave dates as ISO strings from database to avoid timezone conversion issues
     return {
       ...rfp,
-      receivedOn: rfp.receivedOn ? new Date(rfp.receivedOn) : rfp.receivedOn,
-      internalDueDate: rfp.internalDueDate ? new Date(rfp.internalDueDate) : rfp.internalDueDate,
-      dueDate: rfp.dueDate ? new Date(rfp.dueDate) : rfp.dueDate,
-      completedDate: rfp.completedDate ? new Date(rfp.completedDate) : rfp.completedDate,
-      publishedDate: rfp.publishedDate ? new Date(rfp.publishedDate) : rfp.publishedDate,
-      createdAt: rfp.createdAt ? new Date(rfp.createdAt) : rfp.createdAt,
-      updatedAt: rfp.updatedAt ? new Date(rfp.updatedAt) : rfp.updatedAt
+      receivedOn: rfp.receivedOn,
+      internalDueDate: rfp.internalDueDate,
+      dueDate: rfp.dueDate,
+      completedDate: rfp.completedDate,
+      publishedDate: rfp.publishedDate,
+      createdAt: rfp.createdAt,
+      updatedAt: rfp.updatedAt
     };
   }
 

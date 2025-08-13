@@ -248,53 +248,13 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
           totalFiles: (oldData?.totalFiles || 0) + uploadedCount
         }));
 
-        // Update RFP data to include newly uploaded files
-        const updateRfpWithFiles = (oldData: any) => {
-          if (!oldData) return oldData;
-          
-          if (Array.isArray(oldData)) {
-            return oldData.map((item: any) => {
-              if (item.id === rfp.id) {
-                // Add the uploaded files to the RFP's file list
-                const newFiles = filesBeforeUpload.map((file, index) => ({
-                  id: `temp_${Date.now()}_${index}`, // Temporary ID until next refresh
-                  name: file.name,
-                  size: file.size,
-                  uploadedAt: new Date().toISOString(),
-                  stage: 'publish'
-                }));
-                
-                return {
-                  ...item,
-                  files: [...(item.files || []), ...newFiles]
-                };
-              }
-              return item;
-            });
-          }
-          
-          // Handle single RFP object
-          if (oldData.id === rfp.id) {
-            const newFiles = filesBeforeUpload.map((file, index) => ({
-              id: `temp_${Date.now()}_${index}`,
-              name: file.name,
-              size: file.size,
-              uploadedAt: new Date().toISOString(),
-              stage: 'publish'
-            }));
-            
-            return {
-              ...oldData,
-              files: [...(oldData.files || []), ...newFiles]
-            };
-          }
-          
-          return oldData;
-        };
-
-        // Update all possible RFP query variations
-        queryClient.setQueryData(["/api/rfp-requests"], updateRfpWithFiles);
-        queryClient.setQueryData(["/api/rfp-requests", "all-including-archived"], updateRfpWithFiles);
+        // SIMPLIFIED: Just invalidate the specific RFP query to refresh data from server
+        // This avoids potential React errors from cache manipulation
+        console.log('Refreshing RFP data from server to show new files');
+        queryClient.invalidateQueries({ 
+          queryKey: ["/api/rfp-requests"],
+          exact: false 
+        });
       }
     },
     onError: (error: any) => {

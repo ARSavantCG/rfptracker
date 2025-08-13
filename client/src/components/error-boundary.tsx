@@ -20,7 +20,8 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('Error boundary caught an error:', error, errorInfo);
+    console.error('🚨 ErrorBoundary caught an error - this will trigger navigation!:', error, errorInfo);
+    console.trace('Stack trace for ErrorBoundary error:');
   }
 
   render() {
@@ -34,10 +35,13 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
               An unexpected error occurred. Please refresh the page to try again.
             </p>
             <button
-              onClick={() => window.location.reload()}
+              onClick={() => {
+                console.log('🚨 ErrorBoundary reload disabled - click ignored to prevent navigation');
+                // window.location.reload() // DISABLED for debugging
+              }}
               className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
             >
-              Refresh Page
+              Refresh Page (Disabled)
             </button>
           </div>
         </div>

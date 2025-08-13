@@ -98,12 +98,15 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
         return;
       }
       
-      // Create a zip download request using the working GET endpoint
+      // Create a zip download request using the working GET endpoint with cache busting
       const token = localStorage.getItem('auth-token');
-      const response = await fetch(`/api/rfp-requests/${rfp.id}/download-all-files`, {
+      const cacheBuster = Date.now();
+      const response = await fetch(`/api/rfp-requests/${rfp.id}/download-all-files?t=${cacheBuster}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
         }
       });
       
@@ -121,7 +124,9 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
           .replace(/\s+/g, '_')
           .replace(/_+/g, '_')
           .replace(/^_+|_+$/g, '');
-        a.download = `${safeFileName}_All_Files.zip`;
+        const uniqueFilename = `${safeFileName}_All_Files_${cacheBuster}.zip`;
+        a.download = uniqueFilename;
+        console.log(`🎯 DOWNLOAD: Setting filename to: ${uniqueFilename}`);
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);

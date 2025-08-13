@@ -151,15 +151,24 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
       }
     },
     onSuccess: (data, fileId) => {
-      console.log('Delete mutation success - NOT updating cache to avoid navigation issues');
+      console.log('Delete mutation success - safely refreshing file data only');
       
       toast({
         title: "File Deleted",
-        description: "File has been removed successfully. Refresh to see changes."
+        description: "File has been removed successfully."
       });
       
-      // DO NOT update cache - this appears to be causing navigation issues
-      // Files will disappear on natural page refresh
+      // Safe approach: Only invalidate the specific file queries without touching main RFP data
+      if (rfp?.id) {
+        queryClient.invalidateQueries({ 
+          queryKey: [`/api/rfp-requests/${rfp.id}/files`],
+          exact: true 
+        });
+        queryClient.invalidateQueries({ 
+          queryKey: [`/api/rfp-requests/${rfp.id}/file-count`],
+          exact: true 
+        });
+      }
     },
     onError: (error: any) => {
       console.error("Delete file mutation error:", error);
@@ -212,15 +221,24 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
       const uploadedCount = data?.uploadedCount || uploadedFiles.length;
       setUploadedFiles([]);
       
-      console.log('Upload mutation success - NOT updating cache to avoid navigation issues');
+      console.log('Upload mutation success - safely refreshing file data only');
       
       toast({ 
         title: "Success", 
-        description: "Files uploaded successfully. Refresh the page to see new files." 
+        description: "Files uploaded successfully." 
       });
       
-      // DO NOT update cache or invalidate queries - this appears to be causing navigation
-      // Files will appear on natural page refresh or when user navigates
+      // Safe approach: Only invalidate the specific file queries without touching main RFP data
+      if (rfp?.id) {
+        queryClient.invalidateQueries({ 
+          queryKey: [`/api/rfp-requests/${rfp.id}/files`],
+          exact: true 
+        });
+        queryClient.invalidateQueries({ 
+          queryKey: [`/api/rfp-requests/${rfp.id}/file-count`],
+          exact: true 
+        });
+      }
     },
     onError: (error: any) => {
       console.error("Upload mutation error:", error);

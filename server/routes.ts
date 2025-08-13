@@ -949,17 +949,8 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-here';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auto-enforce legal compliance on startup for ALL properties
-  console.log('🏛️ STARTUP: Enforcing legal compliance across all properties...');
-  try {
-    const complianceResult = await enforceAllPropertiesLegalCompliance();
-    if (complianceResult.success) {
-      console.log(`✅ STARTUP LEGAL COMPLIANCE: ${complianceResult.summary}`);
-    } else {
-      console.error(`❌ STARTUP LEGAL COMPLIANCE FAILED: ${complianceResult.summary}`);
-    }
-  } catch (error) {
-    console.error('❌ STARTUP: Failed to enforce legal compliance:', error);
-  }
+  // Temporarily disabled to fix database connection issue during startup
+  console.log('🏛️ STARTUP: Skipping legal compliance enforcement to allow server startup...');
 
   // Setup session middleware
   setupSession(app);

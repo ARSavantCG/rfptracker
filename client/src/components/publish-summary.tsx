@@ -105,7 +105,10 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
         title: "Success", 
         description: "Files uploaded successfully" 
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
+      // Only invalidate file count queries, not the main RFP list to keep current view
+      if (rfp?.id) {
+        queryClient.invalidateQueries({ queryKey: [`/api/rfp-requests/${rfp.id}/file-count`] });
+      }
     },
     onError: (error: any) => {
       console.error("Failed to upload files:", error);

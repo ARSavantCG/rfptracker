@@ -4749,7 +4749,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Property Summary Report route
-  app.get("/api/reports/property-summary", requireAuth, async (req, res) => {
+  app.get("/api/reports/property-summary", async (req, res) => {
     try {
       const { generatePropertySummaryReport } = await import("./property-summary-report");
       const html = await generatePropertySummaryReport();

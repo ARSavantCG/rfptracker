@@ -2988,15 +2988,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
             >
               +5
             </Button>
-            <Button 
-              size="sm" 
-              onClick={() => addMultipleBlankItems(category, 10)} 
-              variant="outline" 
-              className="h-8"
-              title="Add 10 line items at once"
-            >
-              +10
-            </Button>
+
             <span className="text-xs text-gray-500 ml-2">
               Tip: Ctrl+Enter to save & add another
             </span>
@@ -3028,14 +3020,14 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                   <TableHead className="w-12 text-center">Order</TableHead>
                   <TableHead className="w-12 text-center">Assembly</TableHead>
                   <TableHead className="w-36">Assembly Group</TableHead>
-                  <TableHead className="w-16 text-center">Rollup</TableHead>
+                  <TableHead className="w-28 text-center">Rollup</TableHead>
                   <TableHead className="min-w-48">Description</TableHead>
                   <TableHead className="w-36">Quantity (Unit)</TableHead>
                   <TableHead className="w-32">Unit Price</TableHead>
                   {!newItemCategory && <TableHead className="w-32">Total</TableHead>}
                   <TableHead className="w-24 text-center">$/RSF</TableHead>
                   <TableHead className="w-24 text-center">Tenant %</TableHead>
-                  <TableHead className="w-32">Actions</TableHead>
+                  <TableHead className="w-28">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <Droppable droppableId={`${category}-droppable`}>

@@ -1,4 +1,4 @@
-import { db } from '../shared/db';
+import { db } from './db';
 import { properties, executedLeases } from '../shared/schema';
 import { eq, sql } from 'drizzle-orm';
 import { formatDateForDisplay } from '../shared/date-utils';

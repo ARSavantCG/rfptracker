@@ -47,7 +47,8 @@ Preferred communication style: Simple, everyday language.
     - **Download Naming Fix**: Comprehensive fix applied 8/13/2025 to all download functions across the system to use project names instead of RFP numbers for better file organization. Applied to rfp-detail-modal.tsx, financial-summary.tsx, and PDF generators.
     - **Missing Files Diagnostics**: Enhanced download system to provide detailed reports when files exist in database but are missing from disk, helping identify data integrity issues.
     - **Step-Specific Downloads**: Implemented workflow step-specific file downloads (8/14/2025). "Download Step Files" button now downloads only files from current workflow step, while "Download All Files" downloads files from all steps. Publish phase now properly filters to only files uploaded during that specific step.
-    - **Version Tracking System**: Comprehensive version management system (8/14/2025) displaying current version badge in navigation, detailed version modal with build info, runtime monitoring, and automatic environment detection. Includes update script and deployment guide for team coordination and version synchronization.
+    - **Version Tracking System**: Comprehensive version management system (8/14/2025) with footer-based version display, detailed modal with build info, runtime monitoring, and automatic environment detection. Includes update script and deployment guide for team coordination and version synchronization. Features subtle blue text styling and proper modal spacing.
+    - **Footer Copyright**: Clean footer implementation (8/14/2025) displaying "© 2025 All Rights Reserved" centered at bottom with version display aligned on same line. Professional, minimal design without company branding as requested.
 
 ## External Dependencies
 - **Database**: PostgreSQL (Neon serverless).

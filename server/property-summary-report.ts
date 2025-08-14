@@ -421,35 +421,36 @@ function generatePropertySummaryHTML(data: PropertySummaryData): string {
                         <p class="metric-value">${formatCurrency(property.costInPlace.plumbing || 0)}</p>
                         <p><strong>Per SF:</strong> ${formatCurrency((property.costInPlace.plumbing || 0) / (property.totalRentableArea || 1))}</p>
                     </div>
-                    <div class="info-card">
-                        <h4>Electrical</h4>
-                        <p class="metric-value">${formatCurrency(property.costInPlace.electrical || 0)}</p>
-                        <p><strong>Per SF:</strong> ${formatCurrency((property.costInPlace.electrical || 0) / (property.totalRentableArea || 1))}</p>
-                    </div>
-                    <div class="info-card">
-                        <h4>Flooring</h4>
-                        <p class="metric-value">${formatCurrency(property.costInPlace.flooring || 0)}</p>
-                        <p><strong>Per SF:</strong> ${formatCurrency((property.costInPlace.flooring || 0) / (property.totalRentableArea || 1))}</p>
-                    </div>
+
                     <div class="info-card">
                         <h4>LED Warehouse Lighting</h4>
                         <p class="metric-value">${formatCurrency(property.costInPlace.lighting || 0)}</p>
                         <p><strong>Per SF:</strong> ${formatCurrency((property.costInPlace.lighting || 0) / (property.totalRentableArea || 1))}</p>
                     </div>
-                    <div class="info-card">
-                        <h4>Security</h4>
-                        <p class="metric-value">${formatCurrency(property.costInPlace.security || 0)}</p>
-                        <p><strong>Per SF:</strong> ${formatCurrency((property.costInPlace.security || 0) / (property.totalRentableArea || 1))}</p>
-                    </div>
-                    <div class="info-card">
-                        <h4>HVAC</h4>
-                        <p class="metric-value">${formatCurrency(property.costInPlace.hvac || 0)}</p>
-                        <p><strong>Per SF:</strong> ${formatCurrency((property.costInPlace.hvac || 0) / (property.totalRentableArea || 1))}</p>
-                    </div>
+
                     <div class="info-card">
                         <h4>Speculative Office</h4>
                         <p class="metric-value">${formatCurrency(property.costInPlace.other || 0)}</p>
                         <p><strong>Per SF:</strong> ${formatCurrency((property.costInPlace.other || 0) / (property.totalRentableArea || 1))}</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Bay Summary -->
+            <div class="subsection">
+                <h3>Bay Summary</h3>
+                <div class="info-grid" style="grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));">
+                    <div class="info-card">
+                        <h4>Total Bays</h4>
+                        <p class="metric-value">${property.bayConfigurations.length}</p>
+                    </div>
+                    <div class="info-card">
+                        <h4>Largest Bay</h4>
+                        <p class="metric-value">${property.bayConfigurations.length > 0 ? formatNumber(Math.max(...property.bayConfigurations.map(bay => bay.rentableSquareFootage))) : 0} SF</p>
+                    </div>
+                    <div class="info-card">
+                        <h4>Smallest Bay</h4>
+                        <p class="metric-value">${property.bayConfigurations.length > 0 ? formatNumber(Math.min(...property.bayConfigurations.map(bay => bay.rentableSquareFootage))) : 0} SF</p>
                     </div>
                 </div>
             </div>
@@ -484,10 +485,45 @@ function generatePropertySummaryHTML(data: PropertySummaryData): string {
                 </div>
                 ` : '<div class="no-data">No electrical capacity data available</div>'}
             </div>
+            
+            <!-- Executed Leases -->
+            <div class="subsection">
+                <h3>Executed Leases</h3>
+                ${property.executedLeases.length > 0 ? `
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Tenant</th>
+                                <th>Lease Start</th>
+                                <th>Lease End</th>
+                                <th>Rentable SF</th>
+                                <th>Monthly Rent</th>
+                                <th>Rent/SF</th>
+                                <th>Bay Numbers</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${property.executedLeases.map(lease => `
+                            <tr>
+                                <td><strong>${lease.tenantName}</strong></td>
+                                <td>${lease.leaseStartDate}</td>
+                                <td>${lease.leaseEndDate}</td>
+                                <td class="metric-value">${formatNumber(lease.rentableSquareFootage)}</td>
+                                <td class="metric-value">${formatCurrency(lease.monthlyRent)}</td>
+                                <td class="metric-value">${formatCurrency(lease.rentPerSquareFoot)}</td>
+                                <td>${lease.bayNumbers}</td>
+                            </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+                ` : '<div class="no-data">No executed leases available</div>'}
+            </div>
 
             <!-- Building Specifications -->
             <div class="subsection">
-                <h3>Building Specifications <span style="font-size: 50%;">(${property.executedLeases.length > 0 ? property.executedLeases.map(lease => lease.tenantName).join(', ') : 'No executed leases available'})</span></h3>
+                <h3>Building Specifications <span style="font-size: 50%;">(Last Updated: ${formatDateForDisplay(property.buildingSpecs.lastUpdated) || 'Not Available'})</span></h3>
                 <div class="info-grid">
                     <div class="info-card">
                         <h4>Structural Specifications</h4>

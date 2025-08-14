@@ -3116,7 +3116,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                               </TableCell>
 
                               {/* Rollup Select */}
-                              <TableCell className="text-center">
+                              <TableCell className="text-center w-40">
                                 <div className="relative">
                                   <select
                                     value={budgetData.lineItemRollups[item.id] || 'none'}

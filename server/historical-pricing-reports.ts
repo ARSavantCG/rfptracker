@@ -28,6 +28,7 @@ export interface CompletedProject {
   projectName: string;
   tenantName: string;
   property: string;
+  rentableSquareFootage: number;
   completedDate: string;
   bids: ProjectBid[];
   totalBids: number;
@@ -146,12 +147,19 @@ async function getHistoricalPricingData(): Promise<HistoricalPricingData> {
       const highestBid = Math.max(...bidAmounts);
       const averageBid = bidAmounts.reduce((sum, amount) => sum + amount, 0) / bidAmounts.length;
 
+      // Calculate rentable square footage from area breakdown or warehouse area
+      const areaBreakdown = (rfp as any).areaBreakdown || [];
+      const totalBreakdownArea = areaBreakdown.reduce((sum: number, item: any) => sum + (parseInt(item.squareFootage) || 0), 0);
+      const warehouseAreaNumber = parseInt(rfp.warehouseArea?.replace(/,/g, '') || '0') || 0;
+      const rentableSquareFootage = warehouseAreaNumber || totalBreakdownArea;
+
       completedProjects.push({
         rfpId: rfp.id,
         rfpNumber: rfp.rfpNumber,
         projectName: rfp.projectName,
         tenantName: rfp.tenantName,
         property: rfp.property,
+        rentableSquareFootage,
         completedDate: formatDate(rfp.updatedAt),
         bids: projectBids,
         totalBids: projectBids.length,
@@ -446,7 +454,7 @@ function generateHistoricalPricingHtml(data: HistoricalPricingData): string {
               <div>
                 <div class="project-title">${project.rfpNumber} - ${project.projectName}</div>
                 <div class="project-meta">
-                  <span>${project.tenantName} • ${project.property}</span>
+                  <span>${project.tenantName} • ${project.property} • RSF: ${formatNumberWithCommas(project.rentableSquareFootage)}</span>
                 </div>
               </div>
             </div>

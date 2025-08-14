@@ -171,7 +171,7 @@ function generateHistoricalPricingHtml(data: HistoricalPricingData): string {
       <meta charset="utf-8">
       <style>
         @page {
-          size: A4 landscape;
+          size: A4 portrait;
           margin: 0.5in;
         }
         
@@ -439,20 +439,6 @@ function generateHistoricalPricingHtml(data: HistoricalPricingData): string {
                 <div class="project-title">${project.rfpNumber} - ${project.projectName}</div>
                 <div class="project-meta">
                   <span>${project.tenantName} • ${project.property} • Completed: ${project.completedDate}</span>
-                  <div class="project-stats">
-                    <div class="project-stat">
-                      <div class="project-stat-value">${formatCurrency(project.lowestBid)}</div>
-                      <div class="project-stat-label">Lowest Bid</div>
-                    </div>
-                    <div class="project-stat">
-                      <div class="project-stat-value">${formatCurrency(project.highestBid)}</div>
-                      <div class="project-stat-label">Highest Bid</div>
-                    </div>
-                    <div class="project-stat">
-                      <div class="project-stat-value">${formatCurrency(project.averageBid)}</div>
-                      <div class="project-stat-label">Average Bid</div>
-                    </div>
-                  </div>
                 </div>
               </div>
             </div>
@@ -475,11 +461,11 @@ function generateHistoricalPricingHtml(data: HistoricalPricingData): string {
                       <table class="line-items-table">
                         <thead>
                           <tr>
-                            <th style="width: 40%;">Description</th>
-                            <th style="width: 10%;">Qty</th>
-                            <th style="width: 10%;">Unit</th>
-                            <th style="width: 20%;">Unit Price</th>
-                            <th style="width: 20%;">Total</th>
+                            <th style="width: 40%; text-align: left;">Description</th>
+                            <th style="width: 10%; text-align: center;">Qty</th>
+                            <th style="width: 10%; text-align: center;">Unit</th>
+                            <th style="width: 20%; text-align: center;">Unit Price</th>
+                            <th style="width: 20%; text-align: center;">Total</th>
                           </tr>
                         </thead>
                         <tbody>

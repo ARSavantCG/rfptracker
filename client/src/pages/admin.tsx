@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Shield, Users, Settings, Edit, Trash2, CheckCircle, XCircle, User as UserIcon, KeyRound, FileText, HardDrive, Layout, Clock, Scale, ChevronDown, Hash } from "lucide-react";
+import { Shield, Users, Settings, Edit, Trash2, CheckCircle, XCircle, User as UserIcon, KeyRound, FileText, HardDrive, Layout, Clock, Scale, ChevronDown, Hash, BarChart, ExternalLink } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
@@ -875,7 +875,7 @@ export default function Admin() {
         </div>
 
         <Tabs defaultValue="users" className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-8">
             <TabsTrigger value="users" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               User Management
@@ -887,6 +887,10 @@ export default function Admin() {
             <TabsTrigger value="customizer" className="flex items-center gap-2">
               <Layout className="h-4 w-4" />
               RFP Customizer
+            </TabsTrigger>
+            <TabsTrigger value="reports" className="flex items-center gap-2">
+              <BarChart className="h-4 w-4" />
+              Reports
             </TabsTrigger>
             <TabsTrigger value="storage" className="flex items-center gap-2">
               <HardDrive className="h-4 w-4" />
@@ -929,6 +933,84 @@ export default function Admin() {
 
           <TabsContent value="customizer" className="mt-6">
             <EnhancedRfpCustomizer />
+          </TabsContent>
+
+          <TabsContent value="reports" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <BarChart className="h-5 w-5" />
+                  <span>System Reports</span>
+                </CardTitle>
+                <CardDescription>
+                  Administrative reports for system analysis and data export
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid md:grid-cols-2 gap-6">
+                  {/* Property Summary Report */}
+                  <div className="p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-blue-600" />
+                        Property Summary Report
+                      </h3>
+                      <ExternalLink className="h-4 w-4 text-gray-400" />
+                    </div>
+                    <p className="text-sm text-gray-600 mb-4">
+                      Comprehensive summary of all properties including bay configurations, 
+                      building specifications, electrical capacity, and executed leases.
+                    </p>
+                    <div className="flex gap-2">
+                      <Button 
+                        size="sm" 
+                        onClick={() => window.open('/admin/property-summary-report', '_blank')}
+                        className="flex-1"
+                      >
+                        <ExternalLink className="h-3 w-3 mr-1" />
+                        Open Report
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Vendor Workload Report */}
+                  <div className="p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                        <Users className="h-4 w-4 text-green-600" />
+                        Vendor Workload Report
+                      </h3>
+                      <ExternalLink className="h-4 w-4 text-gray-400" />
+                    </div>
+                    <p className="text-sm text-gray-600 mb-4">
+                      Analysis of architect and contractor workloads across all active RFPs 
+                      with filtering and PDF export capabilities.
+                    </p>
+                    <div className="flex gap-2">
+                      <Button 
+                        size="sm" 
+                        onClick={() => window.open('/reports', '_blank')}
+                        className="flex-1"
+                        variant="outline"
+                      >
+                        <ExternalLink className="h-3 w-3 mr-1" />
+                        View in Reports
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-blue-50 dark:bg-blue-950 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">Report Notes:</h4>
+                  <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
+                    <li>• All reports use real-time data from your database</li>
+                    <li>• Reports include Bridge Industrial branding and logos</li>
+                    <li>• Property Summary includes legal compliance totals</li>
+                    <li>• Reports can be viewed in browser or exported as HTML/PDF</li>
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="storage" className="mt-6">

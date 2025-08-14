@@ -4748,6 +4748,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Property Summary Report route
+  app.get("/api/reports/property-summary", requireAuth, async (req, res) => {
+    try {
+      const { generatePropertySummaryReport } = await import("./property-summary-report");
+      const html = await generatePropertySummaryReport();
+      
+      res.setHeader('Content-Type', 'text/html');
+      res.setHeader('Content-Disposition', 'inline; filename="property-summary-report.html"');
+      res.send(html);
+    } catch (error) {
+      console.error("Error generating property summary report:", error);
+      res.status(500).json({ message: "Failed to generate property summary report" });
+    }
+  });
+
   // ROM Report generation
   app.get("/api/rom-pilots/:id/report", requireAuth, async (req: any, res) => {
     try {

@@ -135,22 +135,32 @@ async function getHistoricalPricingData(): Promise<HistoricalPricingData> {
         totalAmount: bidTotal,
         lineItems: lineItems.map(item => {
           const quantity = typeof item.quantity === 'string' ? parseInt(item.quantity) : item.quantity || 0;
-          const unitPrice = parseFloat(item.unitPrice || '0');
           const totalPrice = parseFloat(item.totalPrice || '0');
           
-          // For percentage-based items where unit price is very small (like 0.01, 0.02), 
-          // calculate the actual unit price from total/quantity for better display
-          const calculatedUnitPrice = quantity > 0 && totalPrice > 0 ? totalPrice / quantity : unitPrice;
+          // Handle Excel-like formulas in unit price field
+          let unitPrice = 0;
+          const unitPriceStr = item.unitPrice || '0';
           
-          // Use calculated unit price if it makes more sense (avoids showing $0.01 when it should be $10.00)
-          const displayUnitPrice = (unitPrice < 1 && calculatedUnitPrice > 1) ? calculatedUnitPrice : unitPrice;
+          if (unitPriceStr.startsWith('=')) {
+            // This is a formula like "=49910/124"
+            try {
+              const formula = unitPriceStr.substring(1); // Remove the '=' 
+              // Simple evaluation for basic arithmetic (division, multiplication, addition, subtraction)
+              unitPrice = Function(`"use strict"; return (${formula})`)();
+            } catch (e) {
+              // If formula evaluation fails, calculate from total/quantity
+              unitPrice = quantity > 0 && totalPrice > 0 ? totalPrice / quantity : 0;
+            }
+          } else {
+            unitPrice = parseFloat(unitPriceStr);
+          }
           
           return {
             description: item.description,
             category: item.category || 'Other',
             quantity,
             unit: item.unit || 'SF',
-            unitPrice: displayUnitPrice,
+            unitPrice,
             totalPrice
           };
         }),

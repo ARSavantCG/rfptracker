@@ -187,81 +187,81 @@ function generatePropertySummaryHTML(data: PropertySummaryData): string {
         .header {
             background: linear-gradient(135deg, #003282 0%, #0056b3 100%);
             color: white;
-            padding: 30px;
-            border-radius: 12px;
-            margin-bottom: 30px;
-            box-shadow: 0 4px 15px rgba(0, 50, 130, 0.2);
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 8px rgba(0, 50, 130, 0.2);
         }
         
         .header h1 {
             margin: 0;
-            font-size: 2.5rem;
+            font-size: 1.25rem;
             font-weight: 300;
             text-align: center;
         }
         
         .header .subtitle {
             text-align: center;
-            margin-top: 10px;
+            margin-top: 5px;
             opacity: 0.9;
-            font-size: 1.1rem;
+            font-size: 0.55rem;
         }
         
         .property-section {
             background: white;
-            border-radius: 12px;
-            margin-bottom: 40px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-radius: 6px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.1);
             overflow: hidden;
         }
         
         .property-header {
             background: #003282;
             color: white;
-            padding: 20px 30px;
-            font-size: 1.8rem;
+            padding: 10px 15px;
+            font-size: 0.9rem;
             font-weight: 500;
         }
         
         .property-content {
-            padding: 30px;
+            padding: 15px;
         }
         
         .info-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
+            grid-template-columns: repeat(auto-fit, minmax(125px, 1fr));
+            gap: 10px;
+            margin-bottom: 15px;
         }
         
         .info-card {
             background: #f8f9fa;
-            border-radius: 8px;
-            padding: 20px;
-            border-left: 4px solid #003282;
+            border-radius: 4px;
+            padding: 10px;
+            border-left: 2px solid #003282;
         }
         
         .info-card h4 {
-            margin: 0 0 10px 0;
+            margin: 0 0 5px 0;
             color: #003282;
-            font-size: 1.1rem;
+            font-size: 0.55rem;
         }
         
         .info-card p {
-            margin: 5px 0;
-            font-size: 0.95rem;
+            margin: 2px 0;
+            font-size: 0.475rem;
         }
         
         .subsection {
-            margin-bottom: 40px;
+            margin-bottom: 20px;
         }
         
         .subsection h3 {
             color: #003282;
-            border-bottom: 2px solid #e9ecef;
-            padding-bottom: 10px;
-            margin-bottom: 20px;
-            font-size: 1.4rem;
+            border-bottom: 1px solid #e9ecef;
+            padding-bottom: 5px;
+            margin-bottom: 10px;
+            font-size: 0.7rem;
         }
         
         .table-container {
@@ -279,17 +279,17 @@ function generatePropertySummaryHTML(data: PropertySummaryData): string {
         th {
             background: #003282;
             color: white;
-            padding: 15px 12px;
+            padding: 6px 5px;
             text-align: left;
             font-weight: 600;
-            font-size: 0.9rem;
+            font-size: 0.45rem;
             border: none;
         }
         
         td {
-            padding: 12px;
+            padding: 5px;
             border-bottom: 1px solid #e9ecef;
-            font-size: 0.9rem;
+            font-size: 0.45rem;
         }
         
         tr:hover {
@@ -351,14 +351,15 @@ function generatePropertySummaryHTML(data: PropertySummaryData): string {
                 <div class="info-card">
                     <h4>Building Information</h4>
                     <p><strong>Total Buildings:</strong> ${property.totalBuildings}</p>
-                    <p><strong>Warehouse Area:</strong> ${property.totalWarehouseArea}</p>
-                    <p><strong>Office Area:</strong> ${property.totalOfficeArea}</p>
+                    <p><strong>Warehouse Area:</strong> ${formatNumber(parseInt(property.totalWarehouseArea))} SF</p>
+                    <p><strong>Office Area:</strong> ${formatNumber(parseInt(property.totalOfficeArea))} SF</p>
+                    <p><strong>Mechanical Room:</strong> ${formatNumber(property.mechanicalRoomSquareFootage || 0)} SF</p>
                     <p><strong>Parking Spaces:</strong> ${formatNumber(property.parkingSpaces)}</p>
                 </div>
                 <div class="info-card">
                     <h4>Area Summary</h4>
                     <p><strong>Total Rentable SF:</strong> <span class="metric-value">${formatNumber(property.totalRentableArea)}</span></p>
-                    <p><strong>Bay Configurations:</strong> ${property.bayConfigurations.length}</p>
+                    <p><strong>Total Bays:</strong> ${property.bayConfigurations.length}</p>
                     <p><strong>Active Leases:</strong> ${property.executedLeases.length}</p>
                 </div>
                 <div class="info-card">
@@ -369,41 +370,59 @@ function generatePropertySummaryHTML(data: PropertySummaryData): string {
                 </div>
             </div>
             
-            <!-- Bay Configurations -->
+            <!-- Detailed Cost Breakdown -->
             <div class="subsection">
-                <h3>Bay Configurations</h3>
-                ${property.bayConfigurations.length > 0 ? `
-                <div class="table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Bay Number</th>
-                                <th>Rentable SF</th>
-                                <th>Clear Height</th>
-                                <th>Dock Doors</th>
-                                <th>Grade Level</th>
-                                <th>Sprinkler</th>
-                                <th>Office</th>
-                                <th>Notes</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${property.bayConfigurations.map(bay => `
-                            <tr>
-                                <td><strong>${bay.bayNumber}</strong></td>
-                                <td class="metric-value">${formatNumber(bay.rentableSquareFootage)}</td>
-                                <td>${bay.clearHeight}</td>
-                                <td>${bay.dockDoors}</td>
-                                <td>${bay.gradeLevel}</td>
-                                <td>${bay.sprinkler}</td>
-                                <td>${bay.office}</td>
-                                <td>${bay.notes}</td>
-                            </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
+                <h3>Cost Breakdown Details</h3>
+                <div class="info-grid" style="grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));">
+                    <div class="info-card">
+                        <h4>Land Cost</h4>
+                        <p class="metric-value">${formatCurrency(property.costInPlace.landCost || 0)}</p>
+                        <p><strong>Per SF:</strong> ${formatCurrency((property.costInPlace.landCost || 0) / (property.totalRentableArea || 1))}</p>
+                    </div>
+                    <div class="info-card">
+                        <h4>Construction Cost</h4>
+                        <p class="metric-value">${formatCurrency(property.costInPlace.constructionCost || 0)}</p>
+                        <p><strong>Per SF:</strong> ${formatCurrency((property.costInPlace.constructionCost || 0) / (property.totalRentableArea || 1))}</p>
+                    </div>
+                    <div class="info-card">
+                        <h4>Site Improvements</h4>
+                        <p class="metric-value">${formatCurrency(property.costInPlace.siteImprovements || 0)}</p>
+                        <p><strong>Per SF:</strong> ${formatCurrency((property.costInPlace.siteImprovements || 0) / (property.totalRentableArea || 1))}</p>
+                    </div>
+                    <div class="info-card">
+                        <h4>Soft Costs</h4>
+                        <p class="metric-value">${formatCurrency(property.costInPlace.softCosts || 0)}</p>
+                        <p><strong>Per SF:</strong> ${formatCurrency((property.costInPlace.softCosts || 0) / (property.totalRentableArea || 1))}</p>
+                    </div>
+                    <div class="info-card">
+                        <h4>Other Costs</h4>
+                        <p class="metric-value">${formatCurrency(property.costInPlace.otherCosts || 0)}</p>
+                        <p><strong>Per SF:</strong> ${formatCurrency((property.costInPlace.otherCosts || 0) / (property.totalRentableArea || 1))}</p>
+                    </div>
                 </div>
-                ` : '<div class="no-data">No bay configurations available</div>'}
+            </div>
+            
+            <!-- Bay Summary -->
+            <div class="subsection">
+                <h3>Bay Summary</h3>
+                <div class="info-grid" style="grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));">
+                    <div class="info-card">
+                        <h4>Total Bays</h4>
+                        <p class="metric-value">${property.bayConfigurations.length}</p>
+                    </div>
+                    <div class="info-card">
+                        <h4>Average Bay Size</h4>
+                        <p class="metric-value">${property.bayConfigurations.length > 0 ? formatNumber(Math.round(property.bayConfigurations.reduce((sum, bay) => sum + bay.rentableSquareFootage, 0) / property.bayConfigurations.length)) : 0} SF</p>
+                    </div>
+                    <div class="info-card">
+                        <h4>Largest Bay</h4>
+                        <p class="metric-value">${property.bayConfigurations.length > 0 ? formatNumber(Math.max(...property.bayConfigurations.map(bay => bay.rentableSquareFootage))) : 0} SF</p>
+                    </div>
+                    <div class="info-card">
+                        <h4>Smallest Bay</h4>
+                        <p class="metric-value">${property.bayConfigurations.length > 0 ? formatNumber(Math.min(...property.bayConfigurations.map(bay => bay.rentableSquareFootage))) : 0} SF</p>
+                    </div>
+                </div>
             </div>
             
             <!-- Electrical Capacity -->

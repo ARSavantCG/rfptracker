@@ -49,6 +49,7 @@ export interface BidLineItem {
   description: string;
   category: string;
   quantity: number;
+  unit: string;
   unitPrice: number;
   totalPrice: number;
 }
@@ -108,6 +109,13 @@ async function getHistoricalPricingData(): Promise<HistoricalPricingData> {
     const projectBids: ProjectBid[] = [];
 
     for (const bid of bids) {
+      const bidTotal = parseFloat(bid.totalAmount || '0');
+      
+      // Skip $0.00 bids
+      if (bidTotal <= 0) {
+        continue;
+      }
+
       // Get line items for this bid
       const lineItems = await db
         .select()
@@ -119,11 +127,12 @@ async function getHistoricalPricingData(): Promise<HistoricalPricingData> {
         bidId: bid.id,
         contractorName: bid.contractorName,
         contractorCompany: bid.contractorCompany,
-        totalAmount: parseFloat(bid.totalAmount || '0'),
+        totalAmount: bidTotal,
         lineItems: lineItems.map(item => ({
           description: item.description,
           category: item.category || 'Other',
           quantity: typeof item.quantity === 'string' ? parseInt(item.quantity) : item.quantity || 0,
+          unit: item.unit || 'SF',
           unitPrice: parseFloat(item.unitPrice || '0'),
           totalPrice: parseFloat(item.totalPrice || '0')
         })),
@@ -361,7 +370,6 @@ function generateHistoricalPricingHtml(data: HistoricalPricingData): string {
         .line-items-table th {
           background: #f9fafb;
           padding: 8px 10px;
-          text-align: left;
           font-weight: 600;
           color: #374151;
           border-bottom: 1px solid #e5e7eb;
@@ -384,7 +392,7 @@ function generateHistoricalPricingHtml(data: HistoricalPricingData): string {
         }
         
         .amount {
-          text-align: right;
+          text-align: center;
           font-weight: 500;
         }
         
@@ -438,7 +446,7 @@ function generateHistoricalPricingHtml(data: HistoricalPricingData): string {
               <div>
                 <div class="project-title">${project.rfpNumber} - ${project.projectName}</div>
                 <div class="project-meta">
-                  <span>${project.tenantName} • ${project.property} • Completed: ${project.completedDate}</span>
+                  <span>${project.tenantName} • ${project.property}</span>
                 </div>
               </div>
             </div>
@@ -473,7 +481,7 @@ function generateHistoricalPricingHtml(data: HistoricalPricingData): string {
                             <tr>
                               <td>${item.description}</td>
                               <td class="quantity">${formatNumberWithCommas(item.quantity)}</td>
-                              <td class="unit">SF</td>
+                              <td class="unit">${item.unit || 'SF'}</td>
                               <td class="amount">${formatCurrency(item.unitPrice)}</td>
                               <td class="amount">${formatCurrency(item.totalPrice)}</td>
                             </tr>

@@ -81,6 +81,66 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
   };
 
   // Download all files function
+  const downloadPublishedFiles = async () => {
+    if (!rfp) return;
+    
+    try {
+      // Create a zip download request for published files only using the new endpoint
+      const token = localStorage.getItem('auth-token');
+      const cacheBuster = Date.now();
+      const response = await fetch(`/api/rfp-requests/${rfp.id}/download-published-files?t=${cacheBuster}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
+      });
+      
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        // Use project name for filename, with fallback to RFP number
+        const projectName = rfp.projectName || `${rfp.tenantName}_RFP_${rfp.rfpNumber}`;
+        const safeFileName = projectName
+          .replace(/@/g, '_at_')
+          .replace(/[^\w\s\-\.]/g, '_')
+          .replace(/\s+/g, '_')
+          .replace(/_+/g, '_')
+          .replace(/^_+|_+$/g, '');
+        const uniqueFilename = `${safeFileName}_Published_Files_${cacheBuster}.zip`;
+        a.download = uniqueFilename;
+        console.log(`🎯 PUBLISH SUMMARY - Setting filename to: ${uniqueFilename}`);
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        toast({
+          title: "Download Started",
+          description: "Downloading published files from this workflow step",
+          duration: 4000
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to create download archive",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error downloading all files:', error);
+      toast({
+        title: "Error",
+        description: "Failed to download files",
+        variant: "destructive"
+      });
+    }
+  };
+
   const downloadAllFiles = async () => {
     if (!rfp) return;
     
@@ -134,7 +194,7 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
         
         toast({
           title: "Download Started",
-          description: `Downloading ${allFiles.length} files as a zip archive`,
+          description: `Downloading ${allFiles.length} files from all workflow steps`,
           duration: 4000
         });
       } else {
@@ -147,8 +207,8 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
     } catch (error) {
       console.error('Error downloading all files:', error);
       toast({
-        title: "Error",
-        description: "Failed to download files",
+        title: "Error", 
+        description: "Failed to download all files",
         variant: "destructive"
       });
     }
@@ -466,15 +526,27 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
                 Project-specific reports generated during the workflow process
               </p>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={downloadAllFiles}
-              className="text-xs"
-              disabled={!rfp || (!rfp.files?.length && !newlyUploadedFiles.length)}
-            >
-              Download All Files
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={downloadPublishedFiles}
+                className="text-xs"
+                disabled={!rfp}
+              >
+                Download Step Files
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={downloadAllFiles}
+                className="text-xs"
+                disabled={!rfp}
+                title="Download files from all workflow steps"
+              >
+                Download All Files
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">

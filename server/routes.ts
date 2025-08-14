@@ -5109,6 +5109,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Download only published files for current workflow step
+  app.get("/api/rfp-requests/:id/download-published-files", requireAuth, async (req, res) => {
+    try {
+      const rfpId = parseInt(req.params.id);
+      if (isNaN(rfpId)) {
+        return res.status(400).json({ message: "Invalid RFP ID" });
+      }
+
+      const rfp = await storage.getRfpRequest(rfpId);
+      if (!rfp) {
+        return res.status(404).json({ message: "RFP request not found" });
+      }
+
+      console.log(`📦 Generating PUBLISHED FILES download for RFP ${rfp.rfpNumber}: ${rfp.projectName}`);
+
+      const uploadsDir = path.join(process.cwd(), 'uploads');
+      const archive = archiver('zip', { zlib: { level: 9 } });
+
+      // Set response headers for download
+      const projectName = rfp.projectName || `${rfp.tenantName}_RFP_${rfp.rfpNumber}`;
+      const safeFileName = projectName
+        .replace(/[@]/g, '_at_')
+        .replace(/[^\w\s\-\.]/g, '_')
+        .replace(/\s+/g, '_')
+        .replace(/_+/g, '_')
+        .replace(/^_+|_+$/g, '');
+      
+      const timestamp = Date.now();
+      const filename = `${safeFileName}_Published_Files_${timestamp}.zip`;
+      
+      res.setHeader('Content-Type', 'application/zip');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, private');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      
+      archive.pipe(res);
+
+      let hasFiles = false;
+      let missingFiles = [];
+
+      // Only include Published Files (files uploaded during publish phase)
+      if (rfp.files && rfp.files.length > 0) {
+        const rfpCreated = new Date(rfp.createdAt || rfp.receivedDate || new Date());
+        
+        for (const file of rfp.files) {
+          const fileUploadDate = new Date(file.uploadedAt);
+          const daysSinceRfpCreated = (fileUploadDate.getTime() - rfpCreated.getTime()) / (1000 * 60 * 60 * 24);
+          
+          // Only include files that are Published files (uploaded during publish phase)
+          const isInPublishPhase = rfp.workflowPhase === 'publish' || rfp.status === 'completed';
+          const isRecentUpload = daysSinceRfpCreated > 1; // More than 1 day after RFP creation
+          const isPublishedFile = isInPublishPhase && isRecentUpload;
+          
+          if (isPublishedFile) {
+            const filePath = path.join(uploadsDir, file.path || file.name);
+            if (fs.existsSync(filePath)) {
+              archive.file(filePath, { name: file.name });
+              hasFiles = true;
+              console.log(`📎 Adding published file: ${file.name}`);
+            } else {
+              console.log(`⚠️ Missing published file on disk: ${file.name} (path: ${file.path})`);
+              missingFiles.push(file.name);
+            }
+          }
+        }
+      }
+
+      if (!hasFiles) {
+        archive.append('No published files found for this RFP.\n\nThis download only includes files uploaded during the Publish phase (Step 6).\n\nTo download all files from all workflow steps, use the "Download All Files" option.', { name: 'README.txt' });
+      }
+
+      if (missingFiles.length > 0) {
+        archive.append(`Missing Files Report\n\nThe following files exist in the database but are missing from disk:\n\n${missingFiles.map(name => `- ${name}`).join('\n')}\n\nPlease contact support if you need these files.`, { name: 'MISSING_FILES.txt' });
+      }
+
+      await archive.finalize();
+      console.log(`📦 Published files download complete: ${hasFiles ? 'files included' : 'no files'}`);
+
+    } catch (error) {
+      console.error("Published files download error:", error);
+      res.status(500).json({ message: "Failed to download published files" });
+    }
+  });
+
   // Download all files for an RFP as organized zip
   app.get("/api/rfp-requests/:id/download-all-files", requireAuth, async (req, res) => {
     try {

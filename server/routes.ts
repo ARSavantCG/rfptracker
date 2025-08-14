@@ -5177,6 +5177,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // 1. RFP Entry and Published files (all files from rfp.files array)
       // Note: This includes both original RFP entry files and published files
+      let missingFiles = [];
       if (rfp.files && rfp.files.length > 0) {
         // Sort files by upload date to distinguish between early (RFP Entry) and recent (Published) files
         const sortedFiles = [...rfp.files].sort((a, b) => 
@@ -5198,6 +5199,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             archive.file(filePath, { name: `${folderName}/${file.name}` });
             hasFiles = true;
+          } else {
+            console.log(`⚠️ Missing file on disk: ${file.name} (path: ${file.path})`);
+            missingFiles.push(file.name);
           }
         }
       }
@@ -5260,9 +5264,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log('No invitation to bid files or method not available');
       }
 
-      // If no files found, add a readme
+      // If no files found, add a detailed readme
       if (!hasFiles) {
-        archive.append('No files have been uploaded for this RFP yet.', { name: 'README.txt' });
+        let readmeContent = `RFP Download Report for ${rfp.projectName}\n`;
+        readmeContent += `RFP Number: ${rfp.rfpNumber}\n`;
+        readmeContent += `Generated: ${new Date().toLocaleString()}\n\n`;
+        
+        if (missingFiles.length > 0) {
+          readmeContent += `ISSUE: The following files are registered in the database but missing from disk:\n`;
+          missingFiles.forEach(fileName => {
+            readmeContent += `- ${fileName}\n`;
+          });
+          readmeContent += `\nPlease contact your system administrator to restore these files.\n`;
+        } else {
+          readmeContent += `No files have been uploaded for this RFP yet.\n`;
+        }
+        
+        readmeContent += `\nFile locations checked:\n`;
+        readmeContent += `- RFP Entry files\n`;
+        readmeContent += `- Bid Collection files\n`;
+        readmeContent += `- Evaluation Budget files\n`;
+        readmeContent += `- Published files\n`;
+        
+        archive.append(readmeContent, { name: 'README.txt' });
       }
 
       // Finalize the archive

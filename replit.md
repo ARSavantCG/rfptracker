@@ -44,6 +44,8 @@ Preferred communication style: Simple, everyday language.
     - **Vendor Workload Report**: Advanced system for generating PDF reports summarizing architect and general contractor workloads with filtering and branding.
     - **Scope of Work Consistency**: Ensures detailed scope of work tables are displayed consistently in both architect and contractor RFPs.
     - **Published Files Download**: Streamlined zip download system in Publish phase replacing refresh button with "Download All Files" functionality for organized file distribution.
+    - **Download Naming Fix**: Comprehensive fix applied 8/13/2025 to all download functions across the system to use project names instead of RFP numbers for better file organization. Applied to rfp-detail-modal.tsx, financial-summary.tsx, and PDF generators.
+    - **Missing Files Diagnostics**: Enhanced download system to provide detailed reports when files exist in database but are missing from disk, helping identify data integrity issues.
 
 ## External Dependencies
 - **Database**: PostgreSQL (Neon serverless).

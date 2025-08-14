@@ -56,6 +56,10 @@ export interface BidLineItem {
 }
 
 function formatCurrency(amount: number): string {
+  // Handle NaN, null, undefined, or invalid numbers
+  if (isNaN(amount) || amount === null || amount === undefined) {
+    return '$0.00';
+  }
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD'
@@ -134,8 +138,8 @@ async function getHistoricalPricingData(): Promise<HistoricalPricingData> {
           category: item.category || 'Other',
           quantity: typeof item.quantity === 'string' ? parseInt(item.quantity) : item.quantity || 0,
           unit: item.unit || 'SF',
-          unitPrice: parseFloat(item.unitPrice || '0'),
-          totalPrice: parseFloat(item.totalPrice || '0')
+          unitPrice: isNaN(parseFloat(item.unitPrice || '0')) ? 0 : parseFloat(item.unitPrice || '0'),
+          totalPrice: isNaN(parseFloat(item.totalPrice || '0')) ? 0 : parseFloat(item.totalPrice || '0')
         })),
         submissionDate: formatDate(bid.submissionDate)
       });

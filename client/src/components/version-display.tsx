@@ -169,23 +169,18 @@ export function VersionDisplay() {
               <CardTitle className="text-lg">Recent Changes</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
+              <div className="space-y-1">
                 {versionInfo.changes && versionInfo.changes.map((change, index) => (
                   <div 
                     key={index}
-                    className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg border-l-4 border-blue-400"
+                    className="flex items-center gap-2 text-xs text-gray-600"
                   >
-                    <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-2"></div>
-                    <div>
-                      <div className="font-medium text-sm text-blue-900">{change.version}</div>
-                      <div className="text-sm text-gray-700 mt-1">{change.description}</div>
-                      <div className="text-xs text-gray-500 mt-1">{change.date}</div>
-                    </div>
+                    <div className="w-1 h-1 bg-blue-500 rounded-full flex-shrink-0"></div>
+                    <span>{change.description}</span>
                   </div>
                 )) || (
-                  <div className="text-center text-gray-500 py-4">
-                    <p>No recent changes recorded</p>
-                    <p className="text-xs mt-1">Changes will appear here after version updates</p>
+                  <div className="text-center text-gray-400 py-2 text-xs">
+                    No recent changes recorded
                   </div>
                 )}
               </div>

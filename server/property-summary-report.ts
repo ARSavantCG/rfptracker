@@ -435,8 +435,37 @@ function generatePropertySummaryHTML(data: PropertySummaryData): string {
                 </div>
             </div>
             
+            <!-- Electrical Capacity -->
+            <div class="subsection">
+                <h3>Electrical Capacity</h3>
+                ${property.electricalCapacity.length > 0 ? `
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Transformer</th>
+                                <th>Total Capacity</th>
+                                <th>Allocated</th>
+                                <th>Available</th>
+                                <th>Utilization</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${property.electricalCapacity.map(elec => `
+                            <tr>
+                                <td><strong>${elec.transformerName}</strong></td>
+                                <td class="metric-value">${formatNumber(elec.capacity)} kW</td>
+                                <td>${formatNumber(elec.allocated)} kW</td>
+                                <td class="metric-value">${formatNumber(elec.available)} kW</td>
+                                <td>${elec.utilizationPercentage}%</td>
+                            </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+                ` : '<div class="no-data">No electrical capacity data available</div>'}
+            </div>
 
-            
             <!-- Building Specifications -->
             <div class="subsection">
                 <h3>Building Specifications <span style="font-size: 50%;">(${property.executedLeases.length > 0 ? property.executedLeases.map(lease => lease.tenantName).join(', ') : 'No executed leases available'})</span></h3>

@@ -51,6 +51,7 @@ Preferred communication style: Simple, everyday language.
     - **Footer Copyright**: Clean footer implementation (8/14/2025) displaying "© 2025 All Rights Reserved" centered at bottom with version display aligned on same line. Professional, minimal design without company branding as requested.
     - **Historical Report Enhancements**: Revised historical pricing reports (8/14/2025) to remove summary metrics, display company names only, add Unit column with comma-formatted quantities, and eliminate Category column for cleaner data presentation.
     - **Excel Formula Evaluation**: Fixed "$NaN" issue in historical pricing reports (8/14/2025) by implementing Excel formula evaluation for unit prices stored as formulas like "=49910/124". System now properly calculates unit prices from Excel expressions, displaying correct values instead of NaN errors.
+    - **Property Summary Report**: Successfully integrated comprehensive property summary report (8/14/2025) accessible through admin interface Reports tab. Opens in new tab like other reports, displays all property data with Bridge Industrial branding, includes bay configurations, building specs, electrical capacity, executed leases, and cost estimates. Fixed authentication and database import issues for seamless functionality.
 
 ## External Dependencies
 - **Database**: PostgreSQL (Neon serverless).

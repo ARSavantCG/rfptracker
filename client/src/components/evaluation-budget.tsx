@@ -3014,13 +3014,13 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         ) : (
           <div className="overflow-x-auto">
             <DragDropContext onDragEnd={handleDragEnd}>
-              <Table className="min-w-full table-fixed">
+              <Table className="min-w-full">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-12 text-center">Order</TableHead>
-                  <TableHead className="w-12 text-center">Assembly</TableHead>
-                  <TableHead className="w-36">Assembly Group</TableHead>
-                  <TableHead className="w-40 text-center">Rollup</TableHead>
+                  <TableHead className="w-16 text-center">Order</TableHead>
+                  <TableHead className="w-20 text-center">Assembly</TableHead>
+                  <TableHead className="w-32">Assembly Group</TableHead>
+                  <TableHead className="w-36 text-center">Rollup</TableHead>
                   <TableHead className="min-w-48">Description</TableHead>
                   <TableHead className="w-36">Quantity (Unit)</TableHead>
                   <TableHead className="w-32">Unit Price</TableHead>

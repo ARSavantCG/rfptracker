@@ -1,0 +1,18 @@
+{
+  "version": "1.0.1",
+  "buildDate": "2025-08-14T14:01:33.732Z",
+  "gitCommit": "local-build",
+  "environment": "development",
+  "features": [
+    "RFP Management System",
+    "Bid Collection & Evaluation",
+    "PDF Report Generation",
+    "Property Management",
+    "Building Specifications",
+    "Vendor Workload Reports",
+    "Step-specific File Downloads",
+    "Drag-and-Drop Evaluation",
+    "Legal Compliance Monitoring",
+    "Version Tracking System"
+  ]
+}

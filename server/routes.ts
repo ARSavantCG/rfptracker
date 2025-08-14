@@ -7333,6 +7333,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Version endpoint
+  app.get("/api/version", async (req, res) => {
+    try {
+      const versionData = JSON.parse(readFileSync(path.join(process.cwd(), 'version.json'), 'utf-8'));
+      
+      // Add runtime information
+      const runtimeInfo = {
+        ...versionData,
+        nodeVersion: process.version,
+        uptime: Math.floor(process.uptime()),
+        timestamp: new Date().toISOString(),
+        environment: process.env.NODE_ENV || 'development'
+      };
+      
+      res.json(runtimeInfo);
+    } catch (error) {
+      console.error("Error reading version info:", error);
+      res.status(500).json({ 
+        message: "Failed to read version info",
+        version: "unknown",
+        environment: process.env.NODE_ENV || 'development'
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

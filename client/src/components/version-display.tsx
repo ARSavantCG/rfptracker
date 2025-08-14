@@ -69,19 +69,12 @@ export function VersionDisplay() {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className="h-6 px-2 text-xs font-mono text-gray-400 hover:text-gray-600 hover:bg-gray-100/50"
+        <button 
+          className="text-xs font-mono text-blue-600 hover:text-blue-800 cursor-pointer underline-offset-2 hover:underline"
           title="Click to view version details"
         >
-          <Badge 
-            variant="outline" 
-            className={`text-xs ${getEnvironmentColor(versionInfo.environment)} text-white border-none`}
-          >
-            v{versionInfo.version}
-          </Badge>
-        </Button>
+          v{versionInfo.version}
+        </button>
       </DialogTrigger>
       
       <DialogContent className="max-w-2xl">

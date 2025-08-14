@@ -15,7 +15,9 @@ export function PropertySummaryReport() {
     setIsLoading(true);
     try {
       const htmlContent = await apiRequest('/api/reports/property-summary', 'GET');
+      console.log('Report HTML received, length:', htmlContent?.length);
       setReportHtml(htmlContent);
+      console.log('Report HTML state set');
     } catch (error) {
       console.error('Error loading property summary report:', error);
       toast({
@@ -61,7 +63,9 @@ export function PropertySummaryReport() {
     }
   };
 
-  if (reportHtml) {
+  console.log('Current reportHtml state:', !!reportHtml, reportHtml?.length);
+
+  if (reportHtml && reportHtml.length > 0) {
     return (
       <div className="min-h-screen">
         <div className="p-4 bg-gray-100 border-b">

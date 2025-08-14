@@ -133,14 +133,27 @@ async function getHistoricalPricingData(): Promise<HistoricalPricingData> {
         contractorName: bid.contractorName,
         contractorCompany: bid.contractorCompany,
         totalAmount: bidTotal,
-        lineItems: lineItems.map(item => ({
-          description: item.description,
-          category: item.category || 'Other',
-          quantity: typeof item.quantity === 'string' ? parseInt(item.quantity) : item.quantity || 0,
-          unit: item.unit || 'SF',
-          unitPrice: isNaN(parseFloat(item.unitPrice || '0')) ? 0 : parseFloat(item.unitPrice || '0'),
-          totalPrice: isNaN(parseFloat(item.totalPrice || '0')) ? 0 : parseFloat(item.totalPrice || '0')
-        })),
+        lineItems: lineItems.map(item => {
+          const quantity = typeof item.quantity === 'string' ? parseInt(item.quantity) : item.quantity || 0;
+          const unitPrice = parseFloat(item.unitPrice || '0');
+          const totalPrice = parseFloat(item.totalPrice || '0');
+          
+          // For percentage-based items where unit price is very small (like 0.01, 0.02), 
+          // calculate the actual unit price from total/quantity for better display
+          const calculatedUnitPrice = quantity > 0 && totalPrice > 0 ? totalPrice / quantity : unitPrice;
+          
+          // Use calculated unit price if it makes more sense (avoids showing $0.01 when it should be $10.00)
+          const displayUnitPrice = (unitPrice < 1 && calculatedUnitPrice > 1) ? calculatedUnitPrice : unitPrice;
+          
+          return {
+            description: item.description,
+            category: item.category || 'Other',
+            quantity,
+            unit: item.unit || 'SF',
+            unitPrice: displayUnitPrice,
+            totalPrice
+          };
+        }),
         submissionDate: formatDate(bid.submissionDate)
       });
     }

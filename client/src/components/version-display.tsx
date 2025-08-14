@@ -86,7 +86,7 @@ export function VersionDisplay() {
               variant="outline" 
               size="sm" 
               onClick={() => refetch()}
-              className="ml-auto"
+              className="ml-auto mr-8"
             >
               <RefreshCw className="h-4 w-4" />
             </Button>

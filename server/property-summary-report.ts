@@ -31,11 +31,15 @@ interface PropertyDetails {
     totalCost: number;
     costPerSF: number;
     lastUpdated: string;
-    landCost?: number;
-    constructionCost?: number;
-    siteImprovements?: number;
-    softCosts?: number;
-    otherCosts?: number;
+    fireAlarm?: number;
+    ventilation?: number;
+    plumbing?: number;
+    electrical?: number;
+    flooring?: number;
+    lighting?: number;
+    security?: number;
+    hvac?: number;
+    other?: number;
   };
 }
 
@@ -372,41 +376,61 @@ function generatePropertySummaryHTML(data: PropertySummaryData): string {
                     <p><strong>Active Leases:</strong> ${property.executedLeases.length}</p>
                 </div>
                 <div class="info-card">
-                    <h4>Cost in Place</h4>
+                    <h4>Costs of Work in Place</h4>
                     <p><strong>Total Cost:</strong> <span class="metric-value">${formatCurrency(property.costInPlace.totalCost)}</span></p>
                     <p><strong>Cost per SF:</strong> <span class="metric-value">${formatCurrency(property.costInPlace.costPerSF)}</span></p>
                     <p><strong>Last Updated:</strong> ${formatDateForDisplay(property.costInPlace.lastUpdated) || 'Not Available'}</p>
                 </div>
             </div>
             
-            <!-- Detailed Cost Breakdown -->
+            <!-- Cost Breakdown Details (TI/Improvement Costs) -->
             <div class="subsection">
                 <h3>Cost Breakdown Details</h3>
                 <div class="info-grid" style="grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));">
                     <div class="info-card">
-                        <h4>Land Cost</h4>
-                        <p class="metric-value">${formatCurrency(property.costInPlace.landCost || 0)}</p>
-                        <p><strong>Per SF:</strong> ${formatCurrency((property.costInPlace.landCost || 0) / (property.totalRentableArea || 1))}</p>
+                        <h4>Fire Alarm</h4>
+                        <p class="metric-value">${formatCurrency(property.costInPlace.fireAlarm || 0)}</p>
+                        <p><strong>Per SF:</strong> ${formatCurrency((property.costInPlace.fireAlarm || 0) / (property.totalRentableArea || 1))}</p>
                     </div>
                     <div class="info-card">
-                        <h4>Construction Cost</h4>
-                        <p class="metric-value">${formatCurrency(property.costInPlace.constructionCost || 0)}</p>
-                        <p><strong>Per SF:</strong> ${formatCurrency((property.costInPlace.constructionCost || 0) / (property.totalRentableArea || 1))}</p>
+                        <h4>Ventilation</h4>
+                        <p class="metric-value">${formatCurrency(property.costInPlace.ventilation || 0)}</p>
+                        <p><strong>Per SF:</strong> ${formatCurrency((property.costInPlace.ventilation || 0) / (property.totalRentableArea || 1))}</p>
                     </div>
                     <div class="info-card">
-                        <h4>Site Improvements</h4>
-                        <p class="metric-value">${formatCurrency(property.costInPlace.siteImprovements || 0)}</p>
-                        <p><strong>Per SF:</strong> ${formatCurrency((property.costInPlace.siteImprovements || 0) / (property.totalRentableArea || 1))}</p>
+                        <h4>Plumbing</h4>
+                        <p class="metric-value">${formatCurrency(property.costInPlace.plumbing || 0)}</p>
+                        <p><strong>Per SF:</strong> ${formatCurrency((property.costInPlace.plumbing || 0) / (property.totalRentableArea || 1))}</p>
                     </div>
                     <div class="info-card">
-                        <h4>Soft Costs</h4>
-                        <p class="metric-value">${formatCurrency(property.costInPlace.softCosts || 0)}</p>
-                        <p><strong>Per SF:</strong> ${formatCurrency((property.costInPlace.softCosts || 0) / (property.totalRentableArea || 1))}</p>
+                        <h4>Electrical</h4>
+                        <p class="metric-value">${formatCurrency(property.costInPlace.electrical || 0)}</p>
+                        <p><strong>Per SF:</strong> ${formatCurrency((property.costInPlace.electrical || 0) / (property.totalRentableArea || 1))}</p>
                     </div>
                     <div class="info-card">
-                        <h4>Other Costs</h4>
-                        <p class="metric-value">${formatCurrency(property.costInPlace.otherCosts || 0)}</p>
-                        <p><strong>Per SF:</strong> ${formatCurrency((property.costInPlace.otherCosts || 0) / (property.totalRentableArea || 1))}</p>
+                        <h4>Flooring</h4>
+                        <p class="metric-value">${formatCurrency(property.costInPlace.flooring || 0)}</p>
+                        <p><strong>Per SF:</strong> ${formatCurrency((property.costInPlace.flooring || 0) / (property.totalRentableArea || 1))}</p>
+                    </div>
+                    <div class="info-card">
+                        <h4>Lighting</h4>
+                        <p class="metric-value">${formatCurrency(property.costInPlace.lighting || 0)}</p>
+                        <p><strong>Per SF:</strong> ${formatCurrency((property.costInPlace.lighting || 0) / (property.totalRentableArea || 1))}</p>
+                    </div>
+                    <div class="info-card">
+                        <h4>Security</h4>
+                        <p class="metric-value">${formatCurrency(property.costInPlace.security || 0)}</p>
+                        <p><strong>Per SF:</strong> ${formatCurrency((property.costInPlace.security || 0) / (property.totalRentableArea || 1))}</p>
+                    </div>
+                    <div class="info-card">
+                        <h4>HVAC</h4>
+                        <p class="metric-value">${formatCurrency(property.costInPlace.hvac || 0)}</p>
+                        <p><strong>Per SF:</strong> ${formatCurrency((property.costInPlace.hvac || 0) / (property.totalRentableArea || 1))}</p>
+                    </div>
+                    <div class="info-card">
+                        <h4>Other</h4>
+                        <p class="metric-value">${formatCurrency(property.costInPlace.other || 0)}</p>
+                        <p><strong>Per SF:</strong> ${formatCurrency((property.costInPlace.other || 0) / (property.totalRentableArea || 1))}</p>
                     </div>
                 </div>
             </div>

@@ -114,9 +114,26 @@ async function getPropertySummaryData(): Promise<PropertySummaryData> {
     const estimatedCostPerSF = 75; // Placeholder - replace with actual cost data
     const totalCost = totalRentableArea * estimatedCostPerSF;
 
+    // Assign building names/numbers based on property
+    let buildingName = '';
+    if (property.propertyName.includes('Bridge 595')) {
+      buildingName = 'A';
+    } else if (property.propertyName.includes('Bridge Point Doral') && property.streetAddress?.includes('10855')) {
+      buildingName = '1';
+    } else if (property.propertyName.includes('Bridge Point Doral') && property.streetAddress?.includes('3700')) {
+      buildingName = '2';
+    } else if (property.propertyName.includes('Bridge Point Doral') && property.streetAddress?.includes('3605')) {
+      buildingName = '3';
+    } else if (property.propertyName.includes('Bridge Point Gratigny')) {
+      buildingName = '1';
+    } else if (property.propertyName.includes('Bridge Point Port Everglades')) {
+      buildingName = '1';
+    }
+
     propertyDetails.push({
       id: property.id,
       propertyName: property.propertyName,
+      buildingName: buildingName,
       address: property.streetAddress || '',
       city: property.city || '',
       state: property.state || '',
@@ -126,6 +143,8 @@ async function getPropertySummaryData(): Promise<PropertySummaryData> {
       totalOfficeArea: '0', // Not tracked in current schema
       totalRentableArea,
       parkingSpaces: (property.standardParking || 0) + (property.accessibleParking || 0) + (property.evParking || 0) + (property.trailerParking || 0),
+      trailerParkingSpaces: property.trailerParking || 0,
+      mechanicalRoomSquareFootage: 0, // Not tracked in current schema
       bayConfigurations: bayConfigs.map((bay: any) => ({
         bayNumber: bay.bayName || bay.id || '',
         rentableSquareFootage: bay.rentableSquareFootage || bay.squareFootage || 0,

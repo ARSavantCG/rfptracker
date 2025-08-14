@@ -9,7 +9,6 @@ import { useState, useRef, useEffect } from "react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import ChangePasswordModal from "./change-password-modal";
-import { VersionDisplay } from "./version-display";
 
 export default function Navigation() {
   const [location] = useLocation();
@@ -106,7 +105,6 @@ export default function Navigation() {
         {/* User Profile Section */}
         {currentUser && (
           <div className="flex items-center space-x-3">
-            <VersionDisplay />
             <div className="relative" ref={dropdownRef}>
               <Button 
                 variant="ghost" 

@@ -72,7 +72,7 @@ export function VersionDisplay() {
         <Button 
           variant="ghost" 
           size="sm" 
-          className="h-8 px-2 text-xs font-mono"
+          className="h-6 px-2 text-xs font-mono text-gray-400 hover:text-gray-600 hover:bg-gray-100/50"
           title="Click to view version details"
         >
           <Badge 

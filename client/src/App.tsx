@@ -25,6 +25,7 @@ import NotFound from "@/pages/not-found";
 import { useAuth } from "@/hooks/useAuth";
 import { ErrorBoundary } from "@/components/error-boundary";
 import AuthCheck from "@/components/auth-check";
+import Footer from "@/components/footer";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -61,16 +62,21 @@ function Router() {
 
   return (
     <AuthCheck>
-      <Switch>
-        <Route path="/" component={Dashboard} />
-        <Route path="/contacts" component={Contacts} />
-        <Route path="/properties" component={Properties} />
-        <Route path="/rom-pilot" component={RomPilot} />
-        <Route path="/reports" component={Reports} />
-        <Route path="/admin" component={Admin} />
-        <Route path="/reset-password" component={ResetPassword} />
-        <Route component={NotFound} />
-      </Switch>
+      <div className="min-h-screen flex flex-col">
+        <div className="flex-1">
+          <Switch>
+            <Route path="/" component={Dashboard} />
+            <Route path="/contacts" component={Contacts} />
+            <Route path="/properties" component={Properties} />
+            <Route path="/rom-pilot" component={RomPilot} />
+            <Route path="/reports" component={Reports} />
+            <Route path="/admin" component={Admin} />
+            <Route path="/reset-password" component={ResetPassword} />
+            <Route component={NotFound} />
+          </Switch>
+        </div>
+        <Footer />
+      </div>
     </AuthCheck>
   );
 }

@@ -4,6 +4,7 @@ import { ArrowLeft, Download, Eye, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
 export function PropertySummaryReport() {
   const [isLoading, setIsLoading] = useState(false);
@@ -12,16 +13,7 @@ export function PropertySummaryReport() {
   const handleViewReport = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/reports/property-summary', {
-        method: 'GET',
-        credentials: 'include'
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to generate property summary report');
-      }
-      
-      const htmlContent = await response.text();
+      const htmlContent = await apiRequest('/api/reports/property-summary', 'GET');
       
       // Open in new window for viewing
       const newWindow = window.open('', '_blank');
@@ -50,16 +42,7 @@ export function PropertySummaryReport() {
   const handleDownloadReport = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/reports/property-summary', {
-        method: 'GET',
-        credentials: 'include'
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to generate property summary report');
-      }
-      
-      const htmlContent = await response.text();
+      const htmlContent = await apiRequest('/api/reports/property-summary', 'GET');
       
       // Create a blob and download as HTML file
       const blob = new Blob([htmlContent], { type: 'text/html' });

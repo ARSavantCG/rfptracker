@@ -3014,7 +3014,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         ) : (
           <div className="overflow-x-auto">
             <DragDropContext onDragEnd={handleDragEnd}>
-              <Table className="min-w-full">
+              <Table className="min-w-full table-fixed">
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-12 text-center">Order</TableHead>
@@ -3121,7 +3121,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                                   <select
                                     value={budgetData.lineItemRollups[item.id] || 'none'}
                                     onChange={(e) => handleLineItemRollup(item.id, category, e.target.value as any)}
-                                    className="w-full text-xs bg-background border border-input rounded-md appearance-none pr-6 py-1 px-2 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                                    className="w-full min-w-32 text-xs bg-background border border-input rounded-md appearance-none pr-6 py-1 px-2 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                                   >
                                     <option value="none">None</option>
                                     <option value="tenantImprovements">TI</option>

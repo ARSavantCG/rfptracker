@@ -10,33 +10,9 @@ export function PropertySummaryReport() {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const handleViewReport = async () => {
-    setIsLoading(true);
-    try {
-      const htmlContent = await apiRequest('/api/reports/property-summary', 'GET');
-      
-      // Open in new window for viewing
-      const newWindow = window.open('', '_blank');
-      if (newWindow) {
-        newWindow.document.write(htmlContent);
-        newWindow.document.close();
-      } else {
-        toast({
-          title: "Popup blocked",
-          description: "Please allow popups for this site to view the report.",
-          variant: "destructive"
-        });
-      }
-    } catch (error) {
-      console.error('Error viewing property summary report:', error);
-      toast({
-        title: "Error",
-        description: "Failed to generate property summary report. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
+  const handleViewReport = () => {
+    // Navigate directly to the report endpoint which will render the full HTML report
+    window.location.href = '/api/reports/property-summary';
   };
 
   const handleDownloadReport = async () => {

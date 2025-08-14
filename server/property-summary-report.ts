@@ -1,7 +1,7 @@
-import { db } from '../shared/db.js';
-import { properties, executedLeases } from '../shared/schema.js';
+import { db } from '../shared/db';
+import { properties, executedLeases } from '../shared/schema';
 import { eq, sql } from 'drizzle-orm';
-import { formatDateForDisplay } from '../shared/date-utils.js';
+import { formatDateForDisplay } from '../shared/date-utils';
 
 interface PropertySummaryData {
   properties: PropertyDetails[];

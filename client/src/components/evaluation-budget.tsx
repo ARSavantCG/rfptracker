@@ -3054,25 +3054,38 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                             >
                               {/* Order Controls */}
                               <TableCell className="text-center">
-                                <div className="flex flex-col items-center gap-1" {...provided.dragHandleProps}>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => moveItemUp(category, index)}
-                                    disabled={index === 0}
-                                    className="h-6 w-6 p-0"
+                                <div className="flex flex-col items-center gap-1">
+                                  {/* Drag Handle */}
+                                  <div 
+                                    {...provided.dragHandleProps}
+                                    className="cursor-grab active:cursor-grabbing p-1 hover:bg-gray-100 rounded"
+                                    title="Drag to reorder"
                                   >
-                                    <ChevronUp className="h-3 w-3" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => moveItemDown(category, index)}
-                                    disabled={index === items.length - 1}
-                                    className="h-6 w-6 p-0"
-                                  >
-                                    <ChevronDown className="h-3 w-3" />
-                                  </Button>
+                                    <GripVertical className="h-4 w-4 text-gray-400" />
+                                  </div>
+                                  {/* Manual reorder buttons */}
+                                  <div className="flex flex-col gap-0.5">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => moveItemUp(category, index)}
+                                      disabled={index === 0}
+                                      className="h-5 w-5 p-0"
+                                      title="Move up"
+                                    >
+                                      <ChevronUp className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => moveItemDown(category, index)}
+                                      disabled={index === items.length - 1}
+                                      className="h-5 w-5 p-0"
+                                      title="Move down"
+                                    >
+                                      <ChevronDown className="h-3 w-3" />
+                                    </Button>
+                                  </div>
                                 </div>
                               </TableCell>
 

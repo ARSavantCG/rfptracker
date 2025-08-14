@@ -4104,14 +4104,14 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
 
       {/* Selective Import Modal */}
       <Dialog open={showImportModal} onOpenChange={setShowImportModal}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
-          <DialogHeader>
+        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle>Select Items to Import</DialogTitle>
             <DialogDescription>
               Choose which contractor/architect pricing items you want to import into Tenant Improvements.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto min-h-0">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -4158,7 +4158,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
               </TableBody>
             </Table>
           </div>
-          <DialogFooter className="flex justify-between items-center">
+          <DialogFooter className="flex-shrink-0 flex justify-between items-center pt-4 border-t">
             <div className="text-sm text-gray-600">
               {selectedImportItems.size} item{selectedImportItems.size !== 1 ? 's' : ''} selected
             </div>

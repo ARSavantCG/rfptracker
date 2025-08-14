@@ -11,78 +11,23 @@ export function PropertySummaryReport() {
   const [reportHtml, setReportHtml] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const handleViewReport = async () => {
+  const handleViewReport = () => {
     setIsLoading(true);
-    try {
-      const htmlContent = await apiRequest('/api/reports/property-summary', 'GET');
-      console.log('Report HTML received, length:', htmlContent?.length);
-      setReportHtml(htmlContent);
-      console.log('Report HTML state set');
-    } catch (error) {
-      console.error('Error loading property summary report:', error);
+    // Open the report directly in a new tab like other reports
+    const newWindow = window.open('/api/reports/property-summary', '_blank');
+    if (!newWindow) {
       toast({
-        title: "Error",
-        description: "Failed to load property summary report. Please try again.",
+        title: "Popup blocked",
+        description: "Please allow popups for this site to view the report.",
         variant: "destructive"
       });
-    } finally {
-      setIsLoading(false);
     }
+    setIsLoading(false);
   };
 
-  const handleDownloadReport = async () => {
-    setIsLoading(true);
-    try {
-      const htmlContent = await apiRequest('/api/reports/property-summary', 'GET');
-      
-      // Create a blob and download as HTML file
-      const blob = new Blob([htmlContent], { type: 'text/html' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `property-summary-report-${new Date().toISOString().split('T')[0]}.html`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-      
-      toast({
-        title: "Success",
-        description: "Property summary report downloaded successfully.",
-        variant: "default"
-      });
-    } catch (error) {
-      console.error('Error downloading property summary report:', error);
-      toast({
-        title: "Error",
-        description: "Failed to download property summary report. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
-  console.log('Current reportHtml state:', !!reportHtml, reportHtml?.length);
 
-  if (reportHtml && reportHtml.length > 0) {
-    return (
-      <div className="min-h-screen">
-        <div className="p-4 bg-gray-100 border-b">
-          <Link href="/admin">
-            <Button variant="ghost" size="sm">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Admin
-            </Button>
-          </Link>
-        </div>
-        <div 
-          dangerouslySetInnerHTML={{ __html: reportHtml }}
-          className="w-full"
-        />
-      </div>
-    );
-  }
+
 
   return (
     <div className="container mx-auto p-6 max-w-4xl">
@@ -160,15 +105,7 @@ export function PropertySummaryReport() {
                 {isLoading ? "Generating..." : "View Report"}
               </Button>
               
-              <Button 
-                onClick={handleDownloadReport}
-                disabled={isLoading}
-                variant="outline"
-                className="flex items-center gap-2"
-              >
-                <Download className="w-4 h-4" />
-                {isLoading ? "Generating..." : "Download Report"}
-              </Button>
+
             </div>
 
             {/* Usage Notes */}

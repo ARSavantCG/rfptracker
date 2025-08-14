@@ -348,7 +348,7 @@ function generatePropertySummaryHTML(data: PropertySummaryData): string {
     html += `
     <div class="property-section">
         <div class="property-header">
-            ${property.propertyName} ${property.buildingName ? `- ${property.buildingName}` : ''}
+            ${property.propertyName} ${property.buildingName ? `- Building ${property.buildingName}` : ''}
         </div>
         <div class="property-content">
             <!-- Property Overview -->
@@ -377,8 +377,8 @@ function generatePropertySummaryHTML(data: PropertySummaryData): string {
                 </div>
                 <div class="info-card">
                     <h4>Costs of Work in Place</h4>
-                    <p><strong>Total Cost:</strong> <span class="metric-value">${formatCurrency(property.costInPlace.totalCost)}</span></p>
-                    <p><strong>Cost per SF:</strong> <span class="metric-value">${formatCurrency(property.costInPlace.costPerSF)}</span></p>
+                    <p><strong>Total Cost:</strong> <span class="metric-value">${formatCurrency((property.costInPlace.fireAlarm || 0) + (property.costInPlace.ventilation || 0) + (property.costInPlace.plumbing || 0) + (property.costInPlace.electrical || 0) + (property.costInPlace.flooring || 0) + (property.costInPlace.lighting || 0) + (property.costInPlace.security || 0) + (property.costInPlace.hvac || 0) + (property.costInPlace.other || 0))}</span></p>
+                    <p><strong>Cost per SF:</strong> <span class="metric-value">${formatCurrency(((property.costInPlace.fireAlarm || 0) + (property.costInPlace.ventilation || 0) + (property.costInPlace.plumbing || 0) + (property.costInPlace.electrical || 0) + (property.costInPlace.flooring || 0) + (property.costInPlace.lighting || 0) + (property.costInPlace.security || 0) + (property.costInPlace.hvac || 0) + (property.costInPlace.other || 0)) / (property.totalRentableArea || 1))}</span></p>
                     <p><strong>Last Updated:</strong> ${formatDateForDisplay(property.costInPlace.lastUpdated) || 'Not Available'}</p>
                 </div>
             </div>
@@ -398,7 +398,7 @@ function generatePropertySummaryHTML(data: PropertySummaryData): string {
                         <p><strong>Per SF:</strong> ${formatCurrency((property.costInPlace.ventilation || 0) / (property.totalRentableArea || 1))}</p>
                     </div>
                     <div class="info-card">
-                        <h4>Plumbing</h4>
+                        <h4>Restrooms</h4>
                         <p class="metric-value">${formatCurrency(property.costInPlace.plumbing || 0)}</p>
                         <p><strong>Per SF:</strong> ${formatCurrency((property.costInPlace.plumbing || 0) / (property.totalRentableArea || 1))}</p>
                     </div>
@@ -413,7 +413,7 @@ function generatePropertySummaryHTML(data: PropertySummaryData): string {
                         <p><strong>Per SF:</strong> ${formatCurrency((property.costInPlace.flooring || 0) / (property.totalRentableArea || 1))}</p>
                     </div>
                     <div class="info-card">
-                        <h4>Lighting</h4>
+                        <h4>LED Warehouse Lighting</h4>
                         <p class="metric-value">${formatCurrency(property.costInPlace.lighting || 0)}</p>
                         <p><strong>Per SF:</strong> ${formatCurrency((property.costInPlace.lighting || 0) / (property.totalRentableArea || 1))}</p>
                     </div>
@@ -428,105 +428,18 @@ function generatePropertySummaryHTML(data: PropertySummaryData): string {
                         <p><strong>Per SF:</strong> ${formatCurrency((property.costInPlace.hvac || 0) / (property.totalRentableArea || 1))}</p>
                     </div>
                     <div class="info-card">
-                        <h4>Other</h4>
+                        <h4>Speculative Office</h4>
                         <p class="metric-value">${formatCurrency(property.costInPlace.other || 0)}</p>
                         <p><strong>Per SF:</strong> ${formatCurrency((property.costInPlace.other || 0) / (property.totalRentableArea || 1))}</p>
                     </div>
                 </div>
             </div>
             
-            <!-- Bay Summary -->
-            <div class="subsection">
-                <h3>Bay Summary</h3>
-                <div class="info-grid" style="grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));">
-                    <div class="info-card">
-                        <h4>Total Bays</h4>
-                        <p class="metric-value">${property.bayConfigurations.length}</p>
-                    </div>
-                    <div class="info-card">
-                        <h4>Average Bay Size</h4>
-                        <p class="metric-value">${property.bayConfigurations.length > 0 ? formatNumber(Math.round(property.bayConfigurations.reduce((sum, bay) => sum + bay.rentableSquareFootage, 0) / property.bayConfigurations.length)) : 0} SF</p>
-                    </div>
-                    <div class="info-card">
-                        <h4>Largest Bay</h4>
-                        <p class="metric-value">${property.bayConfigurations.length > 0 ? formatNumber(Math.max(...property.bayConfigurations.map(bay => bay.rentableSquareFootage))) : 0} SF</p>
-                    </div>
-                    <div class="info-card">
-                        <h4>Smallest Bay</h4>
-                        <p class="metric-value">${property.bayConfigurations.length > 0 ? formatNumber(Math.min(...property.bayConfigurations.map(bay => bay.rentableSquareFootage))) : 0} SF</p>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Electrical Capacity -->
-            <div class="subsection">
-                <h3>Electrical Capacity</h3>
-                ${property.electricalCapacity.length > 0 ? `
-                <div class="table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Transformer</th>
-                                <th>Total Capacity</th>
-                                <th>Allocated</th>
-                                <th>Available</th>
-                                <th>Utilization</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${property.electricalCapacity.map(elec => `
-                            <tr>
-                                <td><strong>${elec.transformerName}</strong></td>
-                                <td class="metric-value">${formatNumber(elec.capacity)} kW</td>
-                                <td>${formatNumber(elec.allocated)} kW</td>
-                                <td class="metric-value">${formatNumber(elec.available)} kW</td>
-                                <td>${elec.utilizationPercentage}%</td>
-                            </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
-                ` : '<div class="no-data">No electrical capacity data available</div>'}
-            </div>
-            
-            <!-- Executed Leases -->
-            <div class="subsection">
-                <h3>Executed Leases</h3>
-                ${property.executedLeases.length > 0 ? `
-                <div class="table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Tenant</th>
-                                <th>Lease Start</th>
-                                <th>Lease End</th>
-                                <th>Rentable SF</th>
-                                <th>Monthly Rent</th>
-                                <th>Rent/SF</th>
-                                <th>Bay Numbers</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${property.executedLeases.map(lease => `
-                            <tr>
-                                <td><strong>${lease.tenantName}</strong></td>
-                                <td>${lease.leaseStartDate}</td>
-                                <td>${lease.leaseEndDate}</td>
-                                <td class="metric-value">${formatNumber(lease.rentableSquareFootage)}</td>
-                                <td class="metric-value">${formatCurrency(lease.monthlyRent)}</td>
-                                <td class="metric-value">${formatCurrency(lease.rentPerSquareFoot)}</td>
-                                <td>${lease.bayNumbers}</td>
-                            </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
-                ` : '<div class="no-data">No executed leases available</div>'}
-            </div>
+
             
             <!-- Building Specifications -->
             <div class="subsection">
-                <h3>Building Specifications</h3>
+                <h3>Building Specifications <span style="font-size: 50%;">(${property.executedLeases.length > 0 ? property.executedLeases.map(lease => lease.tenantName).join(', ') : 'No executed leases available'})</span></h3>
                 <div class="info-grid">
                     <div class="info-card">
                         <h4>Structural Specifications</h4>

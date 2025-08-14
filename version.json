@@ -3,16 +3,21 @@
   "buildDate": "2025-08-14T14:01:33.732Z",
   "gitCommit": "local-build",
   "environment": "development",
-  "features": [
-    "RFP Management System",
-    "Bid Collection & Evaluation",
-    "PDF Report Generation",
-    "Property Management",
-    "Building Specifications",
-    "Vendor Workload Reports",
-    "Step-specific File Downloads",
-    "Drag-and-Drop Evaluation",
-    "Legal Compliance Monitoring",
-    "Version Tracking System"
+  "changes": [
+    {
+      "version": "v1.0.1",
+      "description": "Version tracking system with footer display, detailed modal, and team coordination tools",
+      "date": "Aug 14, 2025"
+    },
+    {
+      "version": "v1.0.1",
+      "description": "Clean copyright footer implementation with professional styling",
+      "date": "Aug 14, 2025"
+    },
+    {
+      "version": "v1.0.1", 
+      "description": "Historical pricing report improvements: removed metrics, company names only, added Unit column, comma formatting",
+      "date": "Aug 14, 2025"
+    }
   ]
 }

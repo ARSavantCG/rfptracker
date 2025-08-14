@@ -53,7 +53,9 @@ function updateVersion(newVersionType) {
       version: newVersion,
       buildDate: new Date().toISOString(),
       gitCommit: process.env.REPLIT_DEPLOYMENT_GIT_SHA || 'local-build',
-      environment: process.env.NODE_ENV || 'development'
+      environment: process.env.NODE_ENV || 'development',
+      // Preserve existing changes, new ones should be added manually to version.json
+      changes: versionData.changes || []
     };
     
     // Write updated version

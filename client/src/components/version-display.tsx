@@ -163,18 +163,31 @@ export function VersionDisplay() {
             </Card>
           )}
 
-          {/* Features */}
+          {/* Recent Changes */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Current Features</CardTitle>
+              <CardTitle className="text-lg">Recent Changes</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 gap-2">
-                {versionInfo.features.map((feature, index) => (
-                  <Badge key={index} variant="secondary" className="text-xs">
-                    {feature}
-                  </Badge>
-                ))}
+              <div className="space-y-3">
+                {versionInfo.changes && versionInfo.changes.map((change, index) => (
+                  <div 
+                    key={index}
+                    className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg border-l-4 border-blue-400"
+                  >
+                    <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-2"></div>
+                    <div>
+                      <div className="font-medium text-sm text-blue-900">{change.version}</div>
+                      <div className="text-sm text-gray-700 mt-1">{change.description}</div>
+                      <div className="text-xs text-gray-500 mt-1">{change.date}</div>
+                    </div>
+                  </div>
+                )) || (
+                  <div className="text-center text-gray-500 py-4">
+                    <p>No recent changes recorded</p>
+                    <p className="text-xs mt-1">Changes will appear here after version updates</p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

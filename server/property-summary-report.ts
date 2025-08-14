@@ -11,6 +11,7 @@ interface PropertySummaryData {
 interface PropertyDetails {
   id: number;
   propertyName: string;
+  buildingName?: string;
   address: string;
   city: string;
   state: string;
@@ -20,6 +21,8 @@ interface PropertyDetails {
   totalOfficeArea: string;
   totalRentableArea: number;
   parkingSpaces: number;
+  trailerParkingSpaces?: number;
+  mechanicalRoomSquareFootage?: number;
   bayConfigurations: BayConfig[];
   electricalCapacity: ElectricalConfig[];
   executedLeases: LeaseInfo[];
@@ -28,6 +31,11 @@ interface PropertyDetails {
     totalCost: number;
     costPerSF: number;
     lastUpdated: string;
+    landCost?: number;
+    constructionCost?: number;
+    siteImprovements?: number;
+    softCosts?: number;
+    otherCosts?: number;
   };
 }
 
@@ -336,7 +344,7 @@ function generatePropertySummaryHTML(data: PropertySummaryData): string {
     html += `
     <div class="property-section">
         <div class="property-header">
-            ${property.propertyName}
+            ${property.propertyName} ${property.buildingName ? `- ${property.buildingName}` : ''}
         </div>
         <div class="property-content">
             <!-- Property Overview -->
@@ -352,9 +360,10 @@ function generatePropertySummaryHTML(data: PropertySummaryData): string {
                     <h4>Building Information</h4>
                     <p><strong>Total Buildings:</strong> ${property.totalBuildings}</p>
                     <p><strong>Warehouse Area:</strong> ${formatNumber(parseInt(property.totalWarehouseArea))} SF</p>
-                    <p><strong>Office Area:</strong> ${formatNumber(parseInt(property.totalOfficeArea))} SF</p>
+
                     <p><strong>Mechanical Room:</strong> ${formatNumber(property.mechanicalRoomSquareFootage || 0)} SF</p>
-                    <p><strong>Parking Spaces:</strong> ${formatNumber(property.parkingSpaces)}</p>
+                    <p><strong>Vehicular Parking:</strong> ${formatNumber(property.parkingSpaces)}</p>
+                    <p><strong>Trailer Parking:</strong> ${formatNumber(property.trailerParkingSpaces || 0)}</p>
                 </div>
                 <div class="info-card">
                     <h4>Area Summary</h4>
@@ -366,7 +375,7 @@ function generatePropertySummaryHTML(data: PropertySummaryData): string {
                     <h4>Cost in Place</h4>
                     <p><strong>Total Cost:</strong> <span class="metric-value">${formatCurrency(property.costInPlace.totalCost)}</span></p>
                     <p><strong>Cost per SF:</strong> <span class="metric-value">${formatCurrency(property.costInPlace.costPerSF)}</span></p>
-                    <p><strong>Last Updated:</strong> ${property.costInPlace.lastUpdated}</p>
+                    <p><strong>Last Updated:</strong> ${formatDateForDisplay(property.costInPlace.lastUpdated) || 'Not Available'}</p>
                 </div>
             </div>
             
@@ -512,19 +521,17 @@ function generatePropertySummaryHTML(data: PropertySummaryData): string {
                             ).join('') : 
                             '<p class="no-data">No operational specifications available</p>'
                         }
-                    </div>
-                    <div class="info-card">
-                        <h4>Safety Specifications</h4>
                         ${Object.keys(property.buildingSpecs.safetySpecs).length > 0 ? 
                             Object.entries(property.buildingSpecs.safetySpecs).map(([key, value]) => 
                                 `<p><strong>${key}:</strong> ${value}</p>`
                             ).join('') : 
-                            '<p class="no-data">No safety specifications available</p>'
+                            ''
                         }
                     </div>
+
                     <div class="info-card">
                         <h4>Specifications Status</h4>
-                        <p><strong>Last Updated:</strong> ${property.buildingSpecs.lastUpdated}</p>
+                        <p><strong>Last Updated:</strong> ${formatDateForDisplay(property.buildingSpecs.lastUpdated) || 'Not Available'}</p>
                     </div>
                 </div>
             </div>

@@ -970,11 +970,11 @@ export default function Admin() {
                     <div className="flex gap-2">
                       <Button 
                         size="sm" 
-                        onClick={() => window.open('/admin/property-summary-report', '_blank')}
+                        onClick={() => window.location.href = '/admin/property-summary-report'}
                         className="flex-1"
                       >
-                        <ExternalLink className="h-3 w-3 mr-1" />
-                        Open Report
+                        <FileText className="h-3 w-3 mr-1" />
+                        View Report
                       </Button>
                     </div>
                   </div>

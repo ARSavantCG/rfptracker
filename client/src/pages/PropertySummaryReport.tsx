@@ -8,11 +8,24 @@ import { apiRequest } from "@/lib/queryClient";
 
 export function PropertySummaryReport() {
   const [isLoading, setIsLoading] = useState(false);
+  const [reportHtml, setReportHtml] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const handleViewReport = () => {
-    // Navigate directly to the report endpoint which will render the full HTML report
-    window.location.href = '/api/reports/property-summary';
+  const handleViewReport = async () => {
+    setIsLoading(true);
+    try {
+      const htmlContent = await apiRequest('/api/reports/property-summary', 'GET');
+      setReportHtml(htmlContent);
+    } catch (error) {
+      console.error('Error loading property summary report:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load property summary report. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleDownloadReport = async () => {
@@ -47,6 +60,25 @@ export function PropertySummaryReport() {
       setIsLoading(false);
     }
   };
+
+  if (reportHtml) {
+    return (
+      <div className="min-h-screen">
+        <div className="p-4 bg-gray-100 border-b">
+          <Link href="/admin">
+            <Button variant="ghost" size="sm">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Admin
+            </Button>
+          </Link>
+        </div>
+        <div 
+          dangerouslySetInnerHTML={{ __html: reportHtml }}
+          className="w-full"
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto p-6 max-w-4xl">

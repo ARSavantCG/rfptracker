@@ -50,6 +50,7 @@ Preferred communication style: Simple, everyday language.
     - **Version Tracking System**: Comprehensive version management system (8/14/2025) with footer-based version display, detailed modal with build info, runtime monitoring, and automatic environment detection. Includes update script and deployment guide for team coordination and version synchronization. Features subtle blue text styling, proper modal spacing, and minimal Recent Changes section with tiny bullet points for clean tracking.
     - **Footer Copyright**: Clean footer implementation (8/14/2025) displaying "© 2025 All Rights Reserved" centered at bottom with version display aligned on same line. Professional, minimal design without company branding as requested.
     - **Historical Report Enhancements**: Revised historical pricing reports (8/14/2025) to remove summary metrics, display company names only, add Unit column with comma-formatted quantities, and eliminate Category column for cleaner data presentation.
+    - **Excel Formula Evaluation**: Fixed "$NaN" issue in historical pricing reports (8/14/2025) by implementing Excel formula evaluation for unit prices stored as formulas like "=49910/124". System now properly calculates unit prices from Excel expressions, displaying correct values instead of NaN errors.
 
 ## External Dependencies
 - **Database**: PostgreSQL (Neon serverless).

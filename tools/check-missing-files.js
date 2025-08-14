@@ -2,9 +2,10 @@
  * Check Missing Files Utility
  * This script checks which RFP files exist in database but are missing from disk
  */
-const fs = require('fs');
-const path = require('path');
-const { Client } = require('pg');
+import fs from 'fs';
+import path from 'path';
+import pg from 'pg';
+const { Client } = pg;
 
 async function checkMissingFiles() {
   const client = new Client({
@@ -73,8 +74,4 @@ async function checkMissingFiles() {
   }
 }
 
-if (require.main === module) {
-  checkMissingFiles();
-}
-
-module.exports = { checkMissingFiles };
+checkMissingFiles();

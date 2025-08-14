@@ -875,36 +875,42 @@ export default function Admin() {
         </div>
 
         <Tabs defaultValue="users" className="w-full">
-          <TabsList className="grid w-full grid-cols-8">
-            <TabsTrigger value="users" className="flex items-center gap-2">
+          <TabsList className="flex flex-wrap w-full gap-1 h-auto p-2">
+            <TabsTrigger value="users" className="flex items-center gap-2 flex-shrink-0">
               <Users className="h-4 w-4" />
-              User Management
+              <span className="hidden sm:inline">User Management</span>
+              <span className="sm:hidden">Users</span>
             </TabsTrigger>
-            <TabsTrigger value="templates" className="flex items-center gap-2">
+            <TabsTrigger value="templates" className="flex items-center gap-2 flex-shrink-0">
               <FileText className="h-4 w-4" />
-              Document Editor
+              <span className="hidden sm:inline">Document Editor</span>
+              <span className="sm:hidden">Docs</span>
             </TabsTrigger>
-            <TabsTrigger value="customizer" className="flex items-center gap-2">
+            <TabsTrigger value="customizer" className="flex items-center gap-2 flex-shrink-0">
               <Layout className="h-4 w-4" />
-              RFP Customizer
+              <span className="hidden sm:inline">RFP Customizer</span>
+              <span className="sm:hidden">RFP</span>
             </TabsTrigger>
-            <TabsTrigger value="reports" className="flex items-center gap-2">
+            <TabsTrigger value="reports" className="flex items-center gap-2 flex-shrink-0">
               <BarChart className="h-4 w-4" />
               Reports
             </TabsTrigger>
-            <TabsTrigger value="storage" className="flex items-center gap-2">
+            <TabsTrigger value="storage" className="flex items-center gap-2 flex-shrink-0">
               <HardDrive className="h-4 w-4" />
-              File Storage
+              <span className="hidden sm:inline">File Storage</span>
+              <span className="sm:hidden">Files</span>
             </TabsTrigger>
-            <TabsTrigger value="timezone" className="flex items-center gap-2">
+            <TabsTrigger value="timezone" className="flex items-center gap-2 flex-shrink-0">
               <Clock className="h-4 w-4" />
-              Date & Time
+              <span className="hidden sm:inline">Date & Time</span>
+              <span className="sm:hidden">Time</span>
             </TabsTrigger>
-            <TabsTrigger value="legal" className="flex items-center gap-2">
+            <TabsTrigger value="legal" className="flex items-center gap-2 flex-shrink-0">
               <Scale className="h-4 w-4" />
-              Legal Compliance
+              <span className="hidden sm:inline">Legal Compliance</span>
+              <span className="sm:hidden">Legal</span>
             </TabsTrigger>
-            <TabsTrigger value="renumber" className="flex items-center gap-2">
+            <TabsTrigger value="renumber" className="flex items-center gap-2 flex-shrink-0">
               <Hash className="h-4 w-4" />
               Properties
             </TabsTrigger>

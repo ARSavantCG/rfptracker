@@ -3020,7 +3020,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                   <TableHead className="w-12 text-center">Order</TableHead>
                   <TableHead className="w-12 text-center">Assembly</TableHead>
                   <TableHead className="w-36">Assembly Group</TableHead>
-                  <TableHead className="w-28 text-center">Rollup</TableHead>
+                  <TableHead className="w-40 text-center">Rollup</TableHead>
                   <TableHead className="min-w-48">Description</TableHead>
                   <TableHead className="w-36">Quantity (Unit)</TableHead>
                   <TableHead className="w-32">Unit Price</TableHead>

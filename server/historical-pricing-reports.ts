@@ -60,6 +60,10 @@ function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
+function formatNumberWithCommas(num: number): string {
+  return new Intl.NumberFormat('en-US').format(num);
+}
+
 function formatDate(date: string | Date): string {
   const d = new Date(date);
   return d.toLocaleDateString('en-US', {
@@ -388,6 +392,12 @@ function generateHistoricalPricingHtml(data: HistoricalPricingData): string {
           text-align: center;
         }
         
+        .unit {
+          text-align: center;
+          font-style: italic;
+          color: #6b7280;
+        }
+        
         .footer {
           margin-top: 30px;
           text-align: center;
@@ -421,20 +431,6 @@ function generateHistoricalPricingHtml(data: HistoricalPricingData): string {
       </div>
       
       ${data.completedProjects.length > 0 ? `
-        <div class="summary-stats">
-          <div class="stat-item">
-            <div class="stat-value">${data.totalProjects}</div>
-            <div class="stat-label">Completed Projects</div>
-          </div>
-          <div class="stat-item">
-            <div class="stat-value">${data.totalBids}</div>
-            <div class="stat-label">Total Bids Received</div>
-          </div>
-          <div class="stat-item">
-            <div class="stat-value">${(data.totalBids / data.totalProjects).toFixed(1)}</div>
-            <div class="stat-label">Avg Bids per Project</div>
-          </div>
-        </div>
         
         ${data.completedProjects.map(project => `
           <div class="project-section">
@@ -466,8 +462,7 @@ function generateHistoricalPricingHtml(data: HistoricalPricingData): string {
                 <div class="bid-section">
                   <div class="bid-header">
                     <div>
-                      <div class="bid-contractor">${bid.contractorName}</div>
-                      <div class="bid-company">${bid.contractorCompany}</div>
+                      <div class="bid-contractor">${bid.contractorCompany}</div>
                     </div>
                     <div style="text-align: right;">
                       <div class="bid-amount">${formatCurrency(bid.totalAmount)}</div>
@@ -480,23 +475,19 @@ function generateHistoricalPricingHtml(data: HistoricalPricingData): string {
                       <table class="line-items-table">
                         <thead>
                           <tr>
-                            <th style="width: 30%;">Description</th>
-                            <th style="width: 15%;">Category</th>
+                            <th style="width: 40%;">Description</th>
                             <th style="width: 10%;">Qty</th>
-                            <th style="width: 15%;">Unit Price</th>
-                            <th style="width: 15%;">Total</th>
+                            <th style="width: 10%;">Unit</th>
+                            <th style="width: 20%;">Unit Price</th>
+                            <th style="width: 20%;">Total</th>
                           </tr>
                         </thead>
                         <tbody>
                           ${bid.lineItems.map(item => `
                             <tr>
                               <td>${item.description}</td>
-                              <td>
-                                <span class="category-tag" style="background-color: ${getCategoryColor(item.category)};">
-                                  ${item.category}
-                                </span>
-                              </td>
-                              <td class="quantity">${item.quantity}</td>
+                              <td class="quantity">${formatNumberWithCommas(item.quantity)}</td>
+                              <td class="unit">SF</td>
                               <td class="amount">${formatCurrency(item.unitPrice)}</td>
                               <td class="amount">${formatCurrency(item.totalPrice)}</td>
                             </tr>

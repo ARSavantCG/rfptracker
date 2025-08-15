@@ -1,5 +1,5 @@
 import { db } from './db';
-import { properties, executedLeases } from '../shared/schema';
+import { properties, executedLeases, propertyExistingImprovements } from '../shared/schema';
 import { eq, sql } from 'drizzle-orm';
 import { formatDateForDisplay } from '../shared/date-utils';
 
@@ -106,15 +106,51 @@ async function getPropertySummaryData(): Promise<PropertySummaryData> {
       .where(eq(executedLeases.propertyId, property.id))
       .orderBy(executedLeases.tenantName);
 
+    // Get existing improvements (cost data)
+    const improvements = await db
+      .select()
+      .from(propertyExistingImprovements)
+      .where(eq(propertyExistingImprovements.propertyId, property.id));
+
     // Calculate totals from bay configurations stored in JSON
     const bayConfigs = property.bayConfigurations || [];
     const totalRentableArea = bayConfigs.reduce((sum: number, bay: any) => sum + (bay.rentableSquareFootage || bay.squareFootage || 0), 0);
     
-    // Calculate cost in place (placeholder - you may want to implement actual cost tracking)
-    const estimatedCostPerSF = 75; // Placeholder - replace with actual cost data
-    const totalCost = totalRentableArea * estimatedCostPerSF;
+    // Calculate cost breakdown from actual data
+    const costBreakdown = {
+      fireAlarm: 0,
+      ventilation: 0,
+      plumbing: 0, // Restrooms
+      lighting: 0, // LED Warehouse Lighting
+      other: 0 // Speculative Office
+    };
 
-    // Assign building names/numbers based on property
+    let totalImprovementCost = 0;
+    
+    improvements.forEach(improvement => {
+      const costInDollars = improvement.totalCost / 100; // Convert from cents
+      totalImprovementCost += costInDollars;
+      
+      switch (improvement.category) {
+        case 'fire-alarm':
+          costBreakdown.fireAlarm += costInDollars;
+          break;
+        case 'hvac':
+          costBreakdown.ventilation += costInDollars;
+          break;
+        case 'restrooms':
+          costBreakdown.plumbing += costInDollars;
+          break;
+        case 'lighting':
+          costBreakdown.lighting += costInDollars;
+          break;
+        case 'spec-office':
+          costBreakdown.other += costInDollars;
+          break;
+      }
+    });
+
+    // Assign building names/numbers based on property (only for multi-building properties)
     let buildingName = '';
     if (property.propertyName.includes('Bridge 595')) {
       buildingName = 'A';
@@ -124,11 +160,8 @@ async function getPropertySummaryData(): Promise<PropertySummaryData> {
       buildingName = '2';
     } else if (property.propertyName.includes('Bridge Point Doral') && property.streetAddress?.includes('3605')) {
       buildingName = '3';
-    } else if (property.propertyName.includes('Bridge Point Gratigny')) {
-      buildingName = '1';
-    } else if (property.propertyName.includes('Bridge Point Port Everglades')) {
-      buildingName = '1';
     }
+    // Note: Single building properties like Gratigny and Port Everglades don't get building numbers
 
     propertyDetails.push({
       id: property.id,
@@ -185,9 +218,14 @@ async function getPropertySummaryData(): Promise<PropertySummaryData> {
         lastUpdated: formatDateForDisplay(property.updatedAt)
       },
       costInPlace: {
-        totalCost,
-        costPerSF: estimatedCostPerSF,
-        lastUpdated: 'Estimated' // Replace with actual cost tracking date
+        totalCost: totalImprovementCost,
+        costPerSF: totalRentableArea > 0 ? totalImprovementCost / totalRentableArea : 0,
+        lastUpdated: improvements.length > 0 ? formatDateForDisplay(Math.max(...improvements.map(i => new Date(i.updatedAt).getTime()))) : 'No data',
+        fireAlarm: costBreakdown.fireAlarm,
+        ventilation: costBreakdown.ventilation,
+        plumbing: costBreakdown.plumbing,
+        lighting: costBreakdown.lighting,
+        other: costBreakdown.other
       }
     });
   }
@@ -396,9 +434,9 @@ function generatePropertySummaryHTML(data: PropertySummaryData): string {
                 </div>
                 <div class="info-card">
                     <h4>Costs of Work in Place</h4>
-                    <p><strong>Total Cost:</strong> <span class="metric-value">${formatCurrency((property.costInPlace.fireAlarm || 0) + (property.costInPlace.ventilation || 0) + (property.costInPlace.plumbing || 0) + (property.costInPlace.electrical || 0) + (property.costInPlace.flooring || 0) + (property.costInPlace.lighting || 0) + (property.costInPlace.security || 0) + (property.costInPlace.hvac || 0) + (property.costInPlace.other || 0))}</span></p>
-                    <p><strong>Cost per SF:</strong> <span class="metric-value">${formatCurrency(((property.costInPlace.fireAlarm || 0) + (property.costInPlace.ventilation || 0) + (property.costInPlace.plumbing || 0) + (property.costInPlace.electrical || 0) + (property.costInPlace.flooring || 0) + (property.costInPlace.lighting || 0) + (property.costInPlace.security || 0) + (property.costInPlace.hvac || 0) + (property.costInPlace.other || 0)) / (property.totalRentableArea || 1))}</span></p>
-                    <p><strong>Last Updated:</strong> ${formatDateForDisplay(property.costInPlace.lastUpdated) || 'Not Available'}</p>
+                    <p><strong>Total Cost:</strong> <span class="metric-value">${formatCurrency(property.costInPlace.totalCost)}</span></p>
+                    <p><strong>Cost per SF:</strong> <span class="metric-value">${formatCurrency(property.costInPlace.costPerSF)}</span></p>
+                    <p><strong>Last Updated:</strong> ${property.costInPlace.lastUpdated}</p>
                 </div>
             </div>
             
@@ -414,12 +452,12 @@ function generatePropertySummaryHTML(data: PropertySummaryData): string {
                     <div class="info-card">
                         <h4>Ventilation</h4>
                         <p class="metric-value">${formatCurrency(property.costInPlace.ventilation || 0)}</p>
-                        <p><strong>Per SF:</strong> ${formatCurrency((property.costInPlace.ventilation || 0) / (property.totalRentableArea || 1))}</p>
+                        <p><strong>Per Bay:</strong> ${formatCurrency((property.costInPlace.ventilation || 0) / Math.max(property.bayConfigurations.length, 1))}</p>
                     </div>
                     <div class="info-card">
                         <h4>Restrooms</h4>
                         <p class="metric-value">${formatCurrency(property.costInPlace.plumbing || 0)}</p>
-                        <p><strong>Per SF:</strong> ${formatCurrency((property.costInPlace.plumbing || 0) / (property.totalRentableArea || 1))}</p>
+                        <p><strong>Per Bay:</strong> ${formatCurrency((property.costInPlace.plumbing || 0) / Math.max(property.bayConfigurations.length, 1))}</p>
                     </div>
 
                     <div class="info-card">
@@ -431,7 +469,7 @@ function generatePropertySummaryHTML(data: PropertySummaryData): string {
                     <div class="info-card">
                         <h4>Speculative Office</h4>
                         <p class="metric-value">${formatCurrency(property.costInPlace.other || 0)}</p>
-                        <p><strong>Per SF:</strong> ${formatCurrency((property.costInPlace.other || 0) / (property.totalRentableArea || 1))}</p>
+                        <p><strong>Per Bay:</strong> ${formatCurrency((property.costInPlace.other || 0) / Math.max(property.bayConfigurations.length, 1))}</p>
                     </div>
                 </div>
             </div>
@@ -550,10 +588,7 @@ function generatePropertySummaryHTML(data: PropertySummaryData): string {
                         }
                     </div>
 
-                    <div class="info-card">
-                        <h4>Specifications Status</h4>
-                        <p><strong>Last Updated:</strong> ${formatDateForDisplay(property.buildingSpecs.lastUpdated) || 'Not Available'}</p>
-                    </div>
+
                 </div>
             </div>
         </div>

@@ -53,17 +53,14 @@ Preferred communication style: Simple, everyday language.
     - **Excel Formula Evaluation**: Fixed "$NaN" issue in historical pricing reports (8/14/2025) by implementing Excel formula evaluation for unit prices stored as formulas like "=49910/124". System now properly calculates unit prices from Excel expressions, displaying correct values instead of NaN errors.
     - **Property Summary Report**: Successfully integrated comprehensive property summary report (8/14/2025) accessible through admin interface Reports tab. Opens in new tab like other reports, displays all property data with Bridge Industrial branding, includes bay configurations, building specs, electrical capacity, executed leases, and cost estimates. Fixed authentication and database import issues for seamless functionality. Enhanced (8/15/2025) to pull real cost data from property_existing_improvements table with proper allocation methods: Fire Alarm (per SF), Ventilation (per bay), Restrooms (per bay), LED Warehouse Lighting (per SF), Speculative Office (per bay). Building numbers now only display for multi-building properties. Removed redundant specifications status section.
     - **Bay Configuration Direction Fix**: Enhanced bay configuration management (8/18/2025) with improved UI showing dynamic directional guide. Fixed Bridge Point Doral Building 5 bay progression direction issue - Bay 1 faces East (correct) but bay progression should be South (North→South numbering) instead of North. Added clear visual indicators with red/green dots and example flow display. Implemented dynamic directional labels in bay selection grid that adapt to actual building orientation (North End/South End vs West End/East End). Removed confusing hardcoded directional bars above bay buttons for cleaner interface.
-    - **Excel-like Tab Navigation**: Comprehensive system-wide implementation (8/18/2025) providing seamless tab navigation across ALL input forms throughout the application. Features include:
-      • **Scope of Work Tables**: Tab moves Description→Quantity→Unit→Next Row with automatic text selection
-      • **Contact Forms**: Name→Type→Email→Phone→Company flow with smart field focusing
-      • **Electrical Management**: Transformer/Panel forms with Name→Capacity→Location→FPL navigation
-      • **ROM Scope Tables**: Select→Quantity→Notes flow with auto row creation
-      • **Property Forms**: Multi-field forms with intelligent next-field focusing
-      • **Reverse Navigation**: Shift+Tab support for all forms
-      • **Text Selection**: Automatic text selection on focus for quick editing
-      • **Smart Row Creation**: Automatic new row creation when tabbing from last table row
-      • **Event Isolation**: Added preventDefault() and stopPropagation() to keep navigation strictly within intended form sections
-      Eliminates double-click requirements and provides Excel-like efficiency system-wide.
+    - **Excel-like Tab Navigation**: CRITICAL ONGOING ISSUE (8/18/2025) - Tab navigation in Invitation to Bid modal remains broken despite multiple comprehensive fixes attempted. Current status:
+      • **Problem**: Tab from Description cell jumps to top-of-page controls instead of Quantity cell in same row
+      • **Root Cause**: React Hook Form's natural tab order conflicts with desired Excel-like flow; DOM order doesn't match visual table layout
+      • **Failed Approaches**: Custom Tab handlers, tabIndex manipulation, DOM reordering, preventDefault/stopPropagation patterns
+      • **Architectural Challenge**: CSS Grid visual layout vs DOM tab sequence creates fundamental mismatch
+      • **User Impact**: Data entry impossible, breaks workflow efficiency expectations
+      • **Next Steps**: Need deeper architectural solution - potentially table restructure or complete navigation system redesign
+      Current implementation provides basic form navigation but falls short of Excel-like table navigation requirements.
     - **Executed Leases System**: Universal lease recognition system (8/18/2025) ensuring all properties display executed leases in bay configurators. Added comprehensive sample leases across all properties (Bridge 595, Bridge Point Doral Buildings 1-6, Bridge Point Gratigny, Bridge Point Miami Station Buildings 1-2, MG Westside Building 1) with realistic tenant names, bay assignments, and parking allocations for consistent bay configurator functionality.
 
 ## External Dependencies

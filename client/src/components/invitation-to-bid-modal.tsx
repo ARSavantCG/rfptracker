@@ -1228,14 +1228,17 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                                       e.preventDefault();
                                       e.stopPropagation();
                                       if (!e.shiftKey) {
-                                        // Focus next input (quantity)
-                                        const nextInput = document.querySelector(`input[name="scopeOfWork.${index}.quantity"]`) as HTMLInputElement ||
-                                                          document.querySelector(`[data-testid="quantity-${index}"]`) as HTMLInputElement;
-                                        if (nextInput) {
-                                          nextInput.focus();
-                                          nextInput.select();
-                                        }
+                                        // Focus next input (quantity) - use setTimeout to ensure proper focus
+                                        setTimeout(() => {
+                                          const nextInput = document.querySelector(`input[name="scopeOfWork.${index}.quantity"]`) as HTMLInputElement ||
+                                                            document.querySelector(`[data-testid="quantity-${index}"]`) as HTMLInputElement;
+                                          if (nextInput) {
+                                            nextInput.focus();
+                                            nextInput.select();
+                                          }
+                                        }, 0);
                                       }
+                                      return false; // Additional prevention
                                     }
                                   }}
                                 />
@@ -1265,20 +1268,25 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                                       e.stopPropagation();
                                       if (!e.shiftKey) {
                                         // Focus next input (unit)
-                                        const nextInput = document.querySelector(`input[name="scopeOfWork.${index}.unit"]`) as HTMLInputElement ||
-                                                          document.querySelector(`[data-testid="unit-${index}"]`) as HTMLInputElement;
-                                        if (nextInput) {
-                                          nextInput.focus();
-                                          nextInput.select();
-                                        }
+                                        setTimeout(() => {
+                                          const nextInput = document.querySelector(`input[name="scopeOfWork.${index}.unit"]`) as HTMLInputElement ||
+                                                            document.querySelector(`[data-testid="unit-${index}"]`) as HTMLInputElement;
+                                          if (nextInput) {
+                                            nextInput.focus();
+                                            nextInput.select();
+                                          }
+                                        }, 0);
                                       } else {
                                         // Focus previous input (description)
-                                        const prevInput = document.querySelector(`input[name="scopeOfWork.${index}.description"]`) as HTMLInputElement;
-                                        if (prevInput) {
-                                          prevInput.focus();
-                                          prevInput.select();
-                                        }
+                                        setTimeout(() => {
+                                          const prevInput = document.querySelector(`input[name="scopeOfWork.${index}.description"]`) as HTMLInputElement;
+                                          if (prevInput) {
+                                            prevInput.focus();
+                                            prevInput.select();
+                                          }
+                                        }, 0);
                                       }
+                                      return false; // Additional prevention
                                     }
                                   }}
                                 />
@@ -1306,34 +1314,39 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                                                   e.stopPropagation();
                                                   if (!e.shiftKey) {
                                                     // Focus next row's description input or add new row
-                                                    const nextRowInput = document.querySelector(`input[name="scopeOfWork.${index + 1}.description"]`) as HTMLInputElement;
-                                                    if (nextRowInput) {
-                                                      nextRowInput.focus();
-                                                      nextRowInput.select();
-                                                    } else {
-                                                      // If this is the last row, add a new row and focus it
-                                                      const addButton = document.querySelector('button[type="button"]') as HTMLButtonElement;
-                                                      if (addButton && addButton.textContent?.includes('Add Line Item')) {
-                                                        addButton.click();
-                                                        // Focus will be set to new row's description after it's created
-                                                        setTimeout(() => {
-                                                          const newRowInput = document.querySelector(`input[name="scopeOfWork.${index + 1}.description"]`) as HTMLInputElement;
-                                                          if (newRowInput) {
-                                                            newRowInput.focus();
-                                                            newRowInput.select();
-                                                          }
-                                                        }, 50);
+                                                    setTimeout(() => {
+                                                      const nextRowInput = document.querySelector(`input[name="scopeOfWork.${index + 1}.description"]`) as HTMLInputElement;
+                                                      if (nextRowInput) {
+                                                        nextRowInput.focus();
+                                                        nextRowInput.select();
+                                                      } else {
+                                                        // If this is the last row, add a new row and focus it
+                                                        const addButton = document.querySelector('button[type="button"]') as HTMLButtonElement;
+                                                        if (addButton && addButton.textContent?.includes('Add Line Item')) {
+                                                          addButton.click();
+                                                          // Focus will be set to new row's description after it's created
+                                                          setTimeout(() => {
+                                                            const newRowInput = document.querySelector(`input[name="scopeOfWork.${index + 1}.description"]`) as HTMLInputElement;
+                                                            if (newRowInput) {
+                                                              newRowInput.focus();
+                                                              newRowInput.select();
+                                                            }
+                                                          }, 50);
+                                                        }
                                                       }
-                                                    }
+                                                    }, 0);
                                                   } else {
                                                     // Focus previous input (quantity)
-                                                    const prevInput = document.querySelector(`input[name="scopeOfWork.${index}.quantity"]`) as HTMLInputElement ||
-                                                                      document.querySelector(`[data-testid="quantity-${index}"]`) as HTMLInputElement;
-                                                    if (prevInput) {
-                                                      prevInput.focus();
-                                                      prevInput.select();
-                                                    }
+                                                    setTimeout(() => {
+                                                      const prevInput = document.querySelector(`input[name="scopeOfWork.${index}.quantity"]`) as HTMLInputElement ||
+                                                                        document.querySelector(`[data-testid="quantity-${index}"]`) as HTMLInputElement;
+                                                      if (prevInput) {
+                                                        prevInput.focus();
+                                                        prevInput.select();
+                                                      }
+                                                    }, 0);
                                                   }
+                                                  return false; // Additional prevention
                                                 }
                                               }}
                                             />

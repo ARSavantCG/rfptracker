@@ -553,26 +553,32 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                           <SelectItem value="west">West</SelectItem>
                         </SelectContent>
                       </Select>
-                      <p className="text-xs text-gray-500">Which direction do bay numbers increase?</p>
+                      <p className="text-xs text-gray-500">Which direction do bay numbers increase? (Bay 1 → Bay 2 → Bay 3)</p>
                     </div>
                   </div>
 
-                  {/* Directional Layout Guide */}
-                  <div className="grid grid-cols-2 gap-4 text-xs">
-                    <div className="flex items-center gap-2 text-gray-600">
-                      <Navigation className="w-3 h-3 rotate-180" />
-                      <div>
-                        <div className="font-medium">West Side (Lower Numbers)</div>
-                        <div className="text-gray-400">Street/Entrance Side</div>
+                  {/* Dynamic Directional Layout Guide */}
+                  <div className="bg-blue-50 p-3 rounded-lg">
+                    <h4 className="font-medium text-sm text-blue-900 mb-2">Bay Numbering Guide</h4>
+                    {firstBayDirection && bayProgressionDirection ? (
+                      <div className="space-y-2 text-xs">
+                        <div className="flex items-center gap-2 text-blue-800">
+                          <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                          <span><strong>Bay 1</strong> faces <strong>{firstBayDirection.toUpperCase()}</strong></span>
+                        </div>
+                        <div className="flex items-center gap-2 text-blue-800">
+                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                          <span>Subsequent bays progress towards the <strong>{bayProgressionDirection.toUpperCase()}</strong></span>
+                        </div>
+                        <div className="text-blue-600 italic">
+                          Example: Bay 1 → Bay 2 → Bay 3 (going {bayProgressionDirection})
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-2 text-gray-600">
-                      <div className="text-right">
-                        <div className="font-medium">East Side (Higher Numbers)</div>
-                        <div className="text-gray-400">Loading Dock Side</div>
+                    ) : (
+                      <div className="text-orange-600 text-xs">
+                        ⚠️ Please set both bay direction and progression direction above to enable proper bay numbering
                       </div>
-                      <Navigation className="w-3 h-3" />
-                    </div>
+                    )}
                   </div>
 
                   {/* Visual Bay Example */}

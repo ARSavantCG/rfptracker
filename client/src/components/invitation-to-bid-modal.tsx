@@ -750,87 +750,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6" key={`itb-form-${Date.now()}`}>
-            {/* RFP Type Selection */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">Select RFP Types to Generate</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="generateArchitectRfp"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel>Architect RFP</FormLabel>
-                      </div>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="generateContractorRfp"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel>Contractor RFP</FormLabel>
-                      </div>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="generateBrokerArchitectRfp"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel>Broker Architect RFP</FormLabel>
-                      </div>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="generateBrokerContractorRfp"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel>Broker Contractor RFP</FormLabel>
-                      </div>
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </div>
-
-
-
-            {/* Project Information */}
+            {/* Project Information - MOVED TO TOP FOR BETTER TAB ORDER */}
             <div className="space-y-4">
               <h3 className="text-lg font-medium">Project Information</h3>
               <div className="grid grid-cols-2 gap-4">
@@ -841,23 +761,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                     <FormItem>
                       <FormLabel>Project Name</FormLabel>
                       <FormControl>
-                        <Input 
-                          {...field} 
-                          placeholder="Project scope" 
-                          onKeyDown={(e) => {
-                            if (e.key === 'Tab' && !e.shiftKey) {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              const locationInput = document.querySelector('input[name="projectLocation"]') as HTMLInputElement;
-                              if (locationInput) {
-                                setTimeout(() => {
-                                  locationInput.focus();
-                                  locationInput.select();
-                                }, 0);
-                              }
-                            }
-                          }}
-                        />
+                        <Input {...field} placeholder="Project scope" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -918,6 +822,88 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
               </div>
             </div>
 
+            {/* RFP Type Selection - MOVED DOWN */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium">Select RFP Types to Generate</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="generateArchitectRfp"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          tabIndex={-1}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>Architect RFP</FormLabel>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="generateContractorRfp"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          tabIndex={-1}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>Contractor RFP</FormLabel>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="generateBrokerArchitectRfp"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          tabIndex={-1}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>Broker Architect RFP</FormLabel>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="generateBrokerContractorRfp"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          tabIndex={-1}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>Broker Contractor RFP</FormLabel>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+
             {/* Contractor and Architect Selection */}
             <div className="space-y-4">
               <h3 className="text-lg font-medium">Contractor and Architect Selection</h3>
@@ -932,6 +918,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                         <select
                           value={field.value || ""}
                           onChange={(e) => field.onChange(e.target.value)}
+                          tabIndex={-1}
                           className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background data-[placeholder]:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none"
                         >
                           <option value="">No contractor selected</option>
@@ -960,6 +947,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                         <select
                           value={field.value || ""}
                           onChange={(e) => field.onChange(e.target.value)}
+                          tabIndex={-1}
                           className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background data-[placeholder]:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none"
                         >
                           <option value="">No architect selected</option>
@@ -1228,6 +1216,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                   type="button"
                   variant="outline"
                   size="sm"
+                  tabIndex={-1}
                   onClick={() => appendScope({ description: "", quantity: "", unit: "" })}
                 >
                   <Plus className="h-4 w-4 mr-2" />
@@ -1272,6 +1261,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                                           type="button"
                                           variant="ghost"
                                           size="sm"
+                                          tabIndex={-1}
                                           onClick={() => moveScopeUp(index)}
                                           disabled={index === 0}
                                           className="h-6 w-6 p-0"
@@ -1282,6 +1272,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                                           type="button"
                                           variant="ghost"
                                           size="sm"
+                                          tabIndex={-1}
                                           onClick={() => moveScopeDown(index)}
                                           disabled={index === scopeFields.length - 1}
                                           className="h-6 w-6 p-0"
@@ -1292,6 +1283,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                                       <div 
                                         {...provided.dragHandleProps}
                                         className="cursor-grab active:cursor-grabbing p-1 hover:bg-gray-100 rounded"
+                                        tabIndex={-1}
                                       >
                                         <GripVertical className="h-4 w-4 text-gray-400" />
                                       </div>
@@ -1304,23 +1296,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                           render={({ field }) => (
                             <FormItem>
                               <FormControl>
-                                <Input 
-                                  {...field} 
-                                  placeholder="Work description" 
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Tab' && !e.shiftKey) {
-                                      e.preventDefault();
-                                      e.stopPropagation();
-                                      const quantityInput = document.querySelector(`input[name="scopeOfWork.${index}.quantity"]`) as HTMLInputElement;
-                                      if (quantityInput) {
-                                        setTimeout(() => {
-                                          quantityInput.focus();
-                                          quantityInput.select();
-                                        }, 0);
-                                      }
-                                    }
-                                  }}
-                                />
+                                <Input {...field} placeholder="Work description" />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -1341,19 +1317,6 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                                   data-testid={`quantity-${index}`}
                                   onChange={(e) => field.onChange(e.target.value === "" ? "" : parseInt(e.target.value) || "")}
                                   placeholder="Quantity"
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Tab' && !e.shiftKey) {
-                                      e.preventDefault();
-                                      e.stopPropagation();
-                                      const unitInput = document.querySelector(`input[name="scopeOfWork.${index}.unit"]`) as HTMLInputElement;
-                                      if (unitInput) {
-                                        setTimeout(() => {
-                                          unitInput.focus();
-                                          unitInput.select();
-                                        }, 0);
-                                      }
-                                    }
-                                  }}
                                 />
                               </FormControl>
                               <FormMessage />
@@ -1369,37 +1332,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                                       render={({ field }) => (
                                         <FormItem>
                                           <FormControl>
-                                            <Input 
-                                              {...field} 
-                                              data-testid={`unit-${index}`} 
-                                              placeholder="sq ft, each, etc."
-                                              onKeyDown={(e) => {
-                                                if (e.key === 'Tab' && !e.shiftKey) {
-                                                  e.preventDefault();
-                                                  e.stopPropagation();
-                                                  const nextDescInput = document.querySelector(`input[name="scopeOfWork.${index + 1}.description"]`) as HTMLInputElement;
-                                                  if (nextDescInput) {
-                                                    setTimeout(() => {
-                                                      nextDescInput.focus();
-                                                      nextDescInput.select();
-                                                    }, 0);
-                                                  } else {
-                                                    // Add new row and focus it
-                                                    const addButton = Array.from(document.querySelectorAll('button')).find(btn => btn.textContent?.includes('Add Line Item'));
-                                                    if (addButton) {
-                                                      (addButton as HTMLButtonElement).click();
-                                                      setTimeout(() => {
-                                                        const newDescInput = document.querySelector(`input[name="scopeOfWork.${index + 1}.description"]`) as HTMLInputElement;
-                                                        if (newDescInput) {
-                                                          newDescInput.focus();
-                                                          newDescInput.select();
-                                                        }
-                                                      }, 100);
-                                                    }
-                                                  }
-                                                }
-                                              }}
-                                            />
+                                            <Input {...field} data-testid={`unit-${index}`} placeholder="sq ft, each, etc." />
                                           </FormControl>
                                           <FormMessage />
                                         </FormItem>
@@ -1414,6 +1347,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                                         variant="outline"
                                         size="sm"
                                         onClick={() => saveInvitationMutation.mutate(form.getValues())}
+                                        tabIndex={-1}
                                         className="h-8 w-8 p-0"
                                         title="Save"
                                       >
@@ -1424,6 +1358,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                                         variant="outline"
                                         size="sm"
                                         onClick={() => removeScope(index)}
+                                        tabIndex={-1}
                                         className="h-8 w-8 p-0"
                                         title="Delete"
                                       >

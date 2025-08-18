@@ -1,0 +1,46 @@
+TL;DR: When I press Tab inside a row (e.g., in the Description cell), focus does not move to the cell immediately to the right (Quantity). Instead, focus jumps to elements at the top of the page (headers, checkboxes, buttons), then eventually returns to the grid. After a new item/box is added, Tab starts over from the top again, with the newly added box appearing last in the cycle. This makes data entry impossible.
+
+Repro Steps
+	1.	Click into the Description field of any existing row.
+	2.	Press Tab once.
+	3.	Observe focus: rather than moving to Quantity (same row, next cell), it jumps to unrelated controls at the top (checkboxes/buttons/headers).
+	4.	Keep pressing Tab: focus cycles through ~4 unrelated controls, eventually returns to the grid, and after an “add new item/box” appears, the cycle resets from the top again.
+
+Expected
+	•	Tabbing from Description → Quantity → Unit → … → next row (Description) in strict left-to-right, then top-to-bottom order.
+	•	Adding a new row must not steal focus or reset the tab cycle.
+
+Actual
+	•	Focus jumps out of the row to top-of-page elements.
+	•	After a “new item/box” is added, the Tab order restarts from the top and the new box is appended at the end of the next cycle.
+
+Suspected Causes (please audit)
+	•	DOM order ≠ visual order (CSS grid/flex “reordered” visually, but DOM focus order still follows the underlying markup).
+	•	Focusable controls outside the grid (e.g., Add item, filters, checkboxes) are in the tab flow (tabindex not managed).
+	•	A re-render on change/add is remounting the row or the table and pushing focus back to the first focusable element.
+	•	Unstable keys in a mapped list (e.g., using array index) causing cells to remount and lose focus.
+	•	AutoFocus attributes or programmatic focus() firing on state updates.
+	•	Elements with tabindex ≥ 0 (or stray button, a, input) included before the grid in the DOM.
+
+What I need you to do
+	1.	Enforce sequential tabbing inside the grid
+	•	Ensure the DOM order matches the visual order of cells (left→right, then next row).
+	•	Remove non-grid controls from the tab sequence (e.g., tabindex="-1" for “Add item” and other controls above the table).
+	2.	Stabilize focus on edits/additions
+	•	Do not remount rows/cells on every keystroke.
+	•	Use stable keys for row items (e.g., UUID), not array indices.
+	•	On “add row,” preserve current focus and then move focus to the next cell in the same row (or to the first cell of the new row if that’s our spec). No scroll/focus jumps to the top.
+	3.	Guard against rogue focus changes
+	•	Remove any autoFocus that fires on rerender.
+	•	Eliminate element.focus() calls that trigger on change unless they intentionally move to the next cell.
+	4.	Accessibility checks
+	•	Every cell that should be tabbable is an actual input/select/button in correct DOM order.
+	•	No hidden/disabled/offscreen elements are unexpectedly tabbable.
+	5.	Write a regression test (React Testing Library):
+	•	Seed two rows. userEvent.tab() from Description → Quantity → Unit → … → next row; assert the focus path.
+	•	Add a new row and assert focus does not jump to top controls and the tab path remains sequential.
+
+Acceptance Criteria
+	•	From any Description cell, pressing Tab moves to Quantity, then Unit, etc., then the next row, with zero jumps to headers/checkboxes/buttons above the grid.
+	•	Adding a new row doesn’t reset focus to the top; the tab cycle remains strictly within the grid.
+	•	Automated tests pass proving the tab order and the no-jump behavior.

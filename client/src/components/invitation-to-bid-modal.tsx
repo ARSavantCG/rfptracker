@@ -73,6 +73,86 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
   const [keyDates, setKeyDates] = useState<Array<{label: string, date: string}>>([]);
   const [additionalAreas, setAdditionalAreas] = useState<Array<{id: string, description: string, squareFootage: string, notes: string}>>([]);
 
+  // Handle scope table navigation at document level
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Tab') {
+        const target = e.target as HTMLInputElement;
+        const name = target.name;
+        
+        // Only handle scope of work inputs
+        if (name && name.includes('scopeOfWork')) {
+          e.preventDefault();
+          e.stopPropagation();
+          
+          const match = name.match(/scopeOfWork\.(\d+)\.(\w+)/);
+          if (match) {
+            const rowIndex = parseInt(match[1]);
+            const fieldType = match[2];
+            
+            if (!e.shiftKey) {
+              // Forward navigation
+              if (fieldType === 'description') {
+                const quantityInput = document.querySelector(`input[name="scopeOfWork.${rowIndex}.quantity"]`) as HTMLInputElement;
+                if (quantityInput) {
+                  quantityInput.focus();
+                  quantityInput.select();
+                }
+              } else if (fieldType === 'quantity') {
+                const unitInput = document.querySelector(`input[name="scopeOfWork.${rowIndex}.unit"]`) as HTMLInputElement;
+                if (unitInput) {
+                  unitInput.focus();
+                  unitInput.select();
+                }
+              } else if (fieldType === 'unit') {
+                const nextDescInput = document.querySelector(`input[name="scopeOfWork.${rowIndex + 1}.description"]`) as HTMLInputElement;
+                if (nextDescInput) {
+                  nextDescInput.focus();
+                  nextDescInput.select();
+                } else {
+                  // Add new row
+                  const addButton = Array.from(document.querySelectorAll('button')).find(btn => btn.textContent?.includes('Add Line Item'));
+                  if (addButton) {
+                    (addButton as HTMLButtonElement).click();
+                    setTimeout(() => {
+                      const newDescInput = document.querySelector(`input[name="scopeOfWork.${rowIndex + 1}.description"]`) as HTMLInputElement;
+                      if (newDescInput) {
+                        newDescInput.focus();
+                        newDescInput.select();
+                      }
+                    }, 100);
+                  }
+                }
+              }
+            } else {
+              // Backward navigation (Shift+Tab)
+              if (fieldType === 'unit') {
+                const quantityInput = document.querySelector(`input[name="scopeOfWork.${rowIndex}.quantity"]`) as HTMLInputElement;
+                if (quantityInput) {
+                  quantityInput.focus();
+                  quantityInput.select();
+                }
+              } else if (fieldType === 'quantity') {
+                const descInput = document.querySelector(`input[name="scopeOfWork.${rowIndex}.description"]`) as HTMLInputElement;
+                if (descInput) {
+                  descInput.focus();
+                  descInput.select();
+                }
+              }
+            }
+          }
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown, true);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown, true);
+    };
+  }, [isOpen]);
+
   // Helper function to format numbers with commas
   const formatNumberWithCommas = (value: string): string => {
     // Remove any non-digit characters except commas and periods
@@ -1223,18 +1303,6 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                                 <Input 
                                   {...field} 
                                   placeholder="Work description"
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Tab') {
-                                      e.preventDefault();
-                                      e.stopPropagation();
-                                      // Simply move to the quantity field in the same row
-                                      const quantityInput = e.currentTarget.closest('.grid')?.querySelector(`input[name="scopeOfWork.${index}.quantity"]`) as HTMLInputElement;
-                                      if (quantityInput) {
-                                        quantityInput.focus();
-                                        quantityInput.select();
-                                      }
-                                    }
-                                  }}
                                 />
                               </FormControl>
                               <FormMessage />
@@ -1256,27 +1324,6 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                                   data-testid={`quantity-${index}`}
                                   onChange={(e) => field.onChange(e.target.value === "" ? "" : parseInt(e.target.value) || "")}
                                   placeholder="Enter quantity"
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Tab') {
-                                      e.preventDefault();
-                                      e.stopPropagation();
-                                      if (!e.shiftKey) {
-                                        // Move to unit field in the same row
-                                        const unitInput = e.currentTarget.closest('.grid')?.querySelector(`input[name="scopeOfWork.${index}.unit"]`) as HTMLInputElement;
-                                        if (unitInput) {
-                                          unitInput.focus();
-                                          unitInput.select();
-                                        }
-                                      } else {
-                                        // Move back to description field in the same row
-                                        const descInput = e.currentTarget.closest('.grid')?.querySelector(`input[name="scopeOfWork.${index}.description"]`) as HTMLInputElement;
-                                        if (descInput) {
-                                          descInput.focus();
-                                          descInput.select();
-                                        }
-                                      }
-                                    }
-                                  }}
                                 />
                               </FormControl>
                               <FormMessage />
@@ -1296,41 +1343,6 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                                               {...field} 
                                               data-testid={`unit-${index}`}
                                               placeholder="sq ft, each, etc."
-                                              onKeyDown={(e) => {
-                                                if (e.key === 'Tab') {
-                                                  e.preventDefault();
-                                                  e.stopPropagation();
-                                                  if (!e.shiftKey) {
-                                                    // Move to next row description or create new row
-                                                    const nextRowInput = document.querySelector(`input[name="scopeOfWork.${index + 1}.description"]`) as HTMLInputElement;
-                                                    if (nextRowInput) {
-                                                      nextRowInput.focus();
-                                                      nextRowInput.select();
-                                                    } else {
-                                                      // Create new row if this is the last one
-                                                      const addButton = document.querySelector('button[type="button"]:has-text("Add Line Item")') as HTMLButtonElement ||
-                                                                        Array.from(document.querySelectorAll('button[type="button"]')).find(btn => btn.textContent?.includes('Add Line Item')) as HTMLButtonElement;
-                                                      if (addButton) {
-                                                        addButton.click();
-                                                        setTimeout(() => {
-                                                          const newRowInput = document.querySelector(`input[name="scopeOfWork.${index + 1}.description"]`) as HTMLInputElement;
-                                                          if (newRowInput) {
-                                                            newRowInput.focus();
-                                                            newRowInput.select();
-                                                          }
-                                                        }, 100);
-                                                      }
-                                                    }
-                                                  } else {
-                                                    // Move back to quantity field in the same row
-                                                    const quantityInput = e.currentTarget.closest('.grid')?.querySelector(`input[name="scopeOfWork.${index}.quantity"]`) as HTMLInputElement;
-                                                    if (quantityInput) {
-                                                      quantityInput.focus();
-                                                      quantityInput.select();
-                                                    }
-                                                  }
-                                                }
-                                              }}
                                             />
                                           </FormControl>
                                           <FormMessage />

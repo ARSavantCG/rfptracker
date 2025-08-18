@@ -1224,19 +1224,14 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                                   {...field} 
                                   placeholder="Work description"
                                   onKeyDown={(e) => {
-                                    console.log('🔧 Description field tab key pressed:', e.key, e.shiftKey);
                                     if (e.key === 'Tab' && !e.shiftKey) {
                                       e.preventDefault();
-                                      console.log('🎯 Moving to quantity field for index:', index);
-                                      // Focus next input (quantity) - try multiple selectors
+                                      // Focus next input (quantity)
                                       const nextInput = document.querySelector(`input[name="scopeOfWork.${index}.quantity"]`) as HTMLInputElement ||
                                                         document.querySelector(`[data-testid="quantity-${index}"]`) as HTMLInputElement;
                                       if (nextInput) {
                                         nextInput.focus();
                                         nextInput.select();
-                                        console.log('✅ Successfully focused quantity field');
-                                      } else {
-                                        console.log('❌ Could not find quantity field');
                                       }
                                     }
                                   }}
@@ -1262,31 +1257,22 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                                   onChange={(e) => field.onChange(e.target.value === "" ? "" : parseInt(e.target.value) || "")}
                                   placeholder="Enter quantity"
                                   onKeyDown={(e) => {
-                                    console.log('🔧 Quantity field tab key pressed:', e.key, e.shiftKey);
                                     if (e.key === 'Tab' && !e.shiftKey) {
                                       e.preventDefault();
-                                      console.log('🎯 Moving to unit field for index:', index);
                                       // Focus next input (unit)
                                       const nextInput = document.querySelector(`input[name="scopeOfWork.${index}.unit"]`) as HTMLInputElement ||
                                                         document.querySelector(`[data-testid="unit-${index}"]`) as HTMLInputElement;
                                       if (nextInput) {
                                         nextInput.focus();
                                         nextInput.select();
-                                        console.log('✅ Successfully focused unit field');
-                                      } else {
-                                        console.log('❌ Could not find unit field');
                                       }
                                     } else if (e.key === 'Tab' && e.shiftKey) {
                                       e.preventDefault();
-                                      console.log('🎯 Moving back to description field for index:', index);
                                       // Focus previous input (description)
                                       const prevInput = document.querySelector(`input[name="scopeOfWork.${index}.description"]`) as HTMLInputElement;
                                       if (prevInput) {
                                         prevInput.focus();
                                         prevInput.select();
-                                        console.log('✅ Successfully focused description field');
-                                      } else {
-                                        console.log('❌ Could not find description field');
                                       }
                                     }
                                   }}
@@ -1310,19 +1296,15 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                                               data-testid={`unit-${index}`}
                                               placeholder="sq ft, each, etc."
                                               onKeyDown={(e) => {
-                                                console.log('🔧 Unit field tab key pressed:', e.key, e.shiftKey);
                                                 if (e.key === 'Tab' && !e.shiftKey) {
                                                   e.preventDefault();
-                                                  console.log('🎯 Moving to next row or creating new row for index:', index);
                                                   // Focus next row's description input or add new row
                                                   const nextRowInput = document.querySelector(`input[name="scopeOfWork.${index + 1}.description"]`) as HTMLInputElement;
                                                   if (nextRowInput) {
                                                     nextRowInput.focus();
                                                     nextRowInput.select();
-                                                    console.log('✅ Successfully focused next row description');
                                                   } else {
                                                     // If this is the last row, add a new row and focus it
-                                                    console.log('🆕 Adding new row since this is the last one');
                                                     const addButton = document.querySelector('button[type="button"]') as HTMLButtonElement;
                                                     if (addButton && addButton.textContent?.includes('Add Line Item')) {
                                                       addButton.click();
@@ -1332,27 +1314,18 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                                                         if (newRowInput) {
                                                           newRowInput.focus();
                                                           newRowInput.select();
-                                                          console.log('✅ Successfully focused new row description');
-                                                        } else {
-                                                          console.log('❌ Could not find new row description field');
                                                         }
                                                       }, 50);
-                                                    } else {
-                                                      console.log('❌ Could not find Add Line Item button');
                                                     }
                                                   }
                                                 } else if (e.key === 'Tab' && e.shiftKey) {
                                                   e.preventDefault();
-                                                  console.log('🎯 Moving back to quantity field for index:', index);
                                                   // Focus previous input (quantity)
                                                   const prevInput = document.querySelector(`input[name="scopeOfWork.${index}.quantity"]`) as HTMLInputElement ||
                                                                     document.querySelector(`[data-testid="quantity-${index}"]`) as HTMLInputElement;
                                                   if (prevInput) {
                                                     prevInput.focus();
                                                     prevInput.select();
-                                                    console.log('✅ Successfully focused quantity field');
-                                                  } else {
-                                                    console.log('❌ Could not find quantity field');
                                                   }
                                                 }
                                               }}

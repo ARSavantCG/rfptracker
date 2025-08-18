@@ -73,71 +73,72 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
   const [keyDates, setKeyDates] = useState<Array<{label: string, date: string}>>([]);
   const [additionalAreas, setAdditionalAreas] = useState<Array<{id: string, description: string, squareFootage: string, notes: string}>>([]);
   const modalRef = useRef<HTMLDivElement>(null);
+  
+  // Custom refs for scope of work navigation
+  const scopeRefs = useRef<{[key: string]: HTMLInputElement}>({});
 
-  // Simple navigation helper with delayed focus
-  const handleScopeNavigation = (currentIndex: number, currentField: 'description' | 'quantity' | 'unit', direction: 'forward' | 'backward' = 'forward') => {
-    console.log('🔥 SCOPE NAV:', currentField, 'row', currentIndex, direction);
+  // Ref-based navigation system
+  const navigateScope = (currentIndex: number, currentField: 'description' | 'quantity' | 'unit', direction: 'forward' | 'backward' = 'forward') => {
+    console.log('🎯 REF NAV:', currentField, 'row', currentIndex, direction);
     
-    // Use setTimeout to override React Hook Form's focus management
-    setTimeout(() => {
-      if (direction === 'forward') {
-        if (currentField === 'description') {
-          const quantityInput = document.querySelector(`input[name="scopeOfWork.${currentIndex}.quantity"]`) as HTMLInputElement;
-          console.log('🔥 FINDING QUANTITY INPUT:', quantityInput);
-          if (quantityInput) {
-            quantityInput.focus();
-            quantityInput.select();
-            console.log('🔥 FOCUSED QUANTITY INPUT');
-          }
-        } else if (currentField === 'quantity') {
-          const unitInput = document.querySelector(`input[name="scopeOfWork.${currentIndex}.unit"]`) as HTMLInputElement;
-          console.log('🔥 FINDING UNIT INPUT:', unitInput);
-          if (unitInput) {
-            unitInput.focus();
-            unitInput.select();
-            console.log('🔥 FOCUSED UNIT INPUT');
-          }
-        } else if (currentField === 'unit') {
-          const nextDescInput = document.querySelector(`input[name="scopeOfWork.${currentIndex + 1}.description"]`) as HTMLInputElement;
-          console.log('🔥 FINDING NEXT DESC INPUT:', nextDescInput);
-          if (nextDescInput) {
-            nextDescInput.focus();
-            nextDescInput.select();
-            console.log('🔥 FOCUSED NEXT DESC INPUT');
-          } else {
-            // Add new row
-            const addButton = Array.from(document.querySelectorAll('button')).find(btn => btn.textContent?.includes('Add Line Item'));
-            console.log('🔥 ADDING NEW ROW, BUTTON:', addButton);
-            if (addButton) {
-              (addButton as HTMLButtonElement).click();
-              setTimeout(() => {
-                const newDescInput = document.querySelector(`input[name="scopeOfWork.${currentIndex + 1}.description"]`) as HTMLInputElement;
-                if (newDescInput) {
-                  newDescInput.focus();
-                  newDescInput.select();
-                  console.log('🔥 FOCUSED NEW DESC INPUT');
-                }
-              }, 150);
-            }
-          }
+    if (direction === 'forward') {
+      if (currentField === 'description') {
+        const quantityRef = scopeRefs.current[`quantity-${currentIndex}`];
+        if (quantityRef) {
+          quantityRef.focus();
+          quantityRef.select();
+          console.log('🎯 REF FOCUSED QUANTITY');
+          return;
         }
-      } else {
-        // Backward navigation
-        if (currentField === 'unit') {
-          const quantityInput = document.querySelector(`input[name="scopeOfWork.${currentIndex}.quantity"]`) as HTMLInputElement;
-          if (quantityInput) {
-            quantityInput.focus();
-            quantityInput.select();
-          }
-        } else if (currentField === 'quantity') {
-          const descInput = document.querySelector(`input[name="scopeOfWork.${currentIndex}.description"]`) as HTMLInputElement;
-          if (descInput) {
-            descInput.focus();
-            descInput.select();
+      } else if (currentField === 'quantity') {
+        const unitRef = scopeRefs.current[`unit-${currentIndex}`];
+        if (unitRef) {
+          unitRef.focus();
+          unitRef.select();
+          console.log('🎯 REF FOCUSED UNIT');
+          return;
+        }
+      } else if (currentField === 'unit') {
+        const nextDescRef = scopeRefs.current[`description-${currentIndex + 1}`];
+        if (nextDescRef) {
+          nextDescRef.focus();
+          nextDescRef.select();
+          console.log('🎯 REF FOCUSED NEXT DESC');
+          return;
+        } else {
+          // Add new row
+          const addButton = Array.from(document.querySelectorAll('button')).find(btn => btn.textContent?.includes('Add Line Item'));
+          if (addButton) {
+            (addButton as HTMLButtonElement).click();
+            setTimeout(() => {
+              const newDescRef = scopeRefs.current[`description-${currentIndex + 1}`];
+              if (newDescRef) {
+                newDescRef.focus();
+                newDescRef.select();
+                console.log('🎯 REF FOCUSED NEW DESC');
+              }
+            }, 100);
           }
         }
       }
-    }, 10); // Small delay to override React Hook Form
+    } else {
+      // Backward navigation
+      if (currentField === 'unit') {
+        const quantityRef = scopeRefs.current[`quantity-${currentIndex}`];
+        if (quantityRef) {
+          quantityRef.focus();
+          quantityRef.select();
+          console.log('🎯 REF BACK TO QUANTITY');
+        }
+      } else if (currentField === 'quantity') {
+        const descRef = scopeRefs.current[`description-${currentIndex}`];
+        if (descRef) {
+          descRef.focus();
+          descRef.select();
+          console.log('🎯 REF BACK TO DESC');
+        }
+      }
+    }
   };
 
   // Helper function to format numbers with commas
@@ -1289,28 +1290,19 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                               <FormControl>
                                 <Input 
                                   {...field} 
-                                  placeholder="Work description (Press Tab to move to Quantity)"
+                                  ref={(el) => {
+                                    if (el) scopeRefs.current[`description-${index}`] = el;
+                                  }}
+                                  placeholder="Work description (Tab → Quantity)"
                                   onKeyDown={(e) => {
-                                    if (e.key === 'Tab' || (e.key === 'Enter' && !e.shiftKey)) {
+                                    if (e.key === 'Tab') {
                                       e.preventDefault();
                                       e.stopPropagation();
-                                      
-                                      const quantityInput = document.querySelector(`input[name="scopeOfWork.${index}.quantity"]`) as HTMLInputElement;
-                                      if (quantityInput) {
-                                        quantityInput.focus();
-                                        quantityInput.select();
-                                        console.log('✅ MOVED TO QUANTITY');
-                                      }
+                                      navigateScope(index, 'description', e.shiftKey ? 'backward' : 'forward');
                                     }
-                                    
                                     if (e.key === 'ArrowRight') {
                                       e.preventDefault();
-                                      const quantityInput = document.querySelector(`input[name="scopeOfWork.${index}.quantity"]`) as HTMLInputElement;
-                                      if (quantityInput) {
-                                        quantityInput.focus();
-                                        quantityInput.select();
-                                        console.log('✅ ARROW TO QUANTITY');
-                                      }
+                                      navigateScope(index, 'description', 'forward');
                                     }
                                   }}
                                 />
@@ -1331,49 +1323,25 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                                 <Input 
                                   type="number" 
                                   {...field} 
+                                  ref={(el) => {
+                                    if (el) scopeRefs.current[`quantity-${index}`] = el;
+                                  }}
                                   data-testid={`quantity-${index}`}
                                   onChange={(e) => field.onChange(e.target.value === "" ? "" : parseInt(e.target.value) || "")}
-                                  placeholder="Enter quantity (Tab to Unit)"
+                                  placeholder="Quantity (Tab → Unit)"
                                   onKeyDown={(e) => {
-                                    if (e.key === 'Tab' || (e.key === 'Enter' && !e.shiftKey)) {
+                                    if (e.key === 'Tab') {
                                       e.preventDefault();
                                       e.stopPropagation();
-                                      
-                                      if (!e.shiftKey) {
-                                        const unitInput = document.querySelector(`input[name="scopeOfWork.${index}.unit"]`) as HTMLInputElement;
-                                        if (unitInput) {
-                                          unitInput.focus();
-                                          unitInput.select();
-                                          console.log('✅ MOVED TO UNIT');
-                                        }
-                                      } else {
-                                        const descInput = document.querySelector(`input[name="scopeOfWork.${index}.description"]`) as HTMLInputElement;
-                                        if (descInput) {
-                                          descInput.focus();
-                                          descInput.select();
-                                          console.log('✅ BACK TO DESC');
-                                        }
-                                      }
+                                      navigateScope(index, 'quantity', e.shiftKey ? 'backward' : 'forward');
                                     }
-                                    
                                     if (e.key === 'ArrowRight') {
                                       e.preventDefault();
-                                      const unitInput = document.querySelector(`input[name="scopeOfWork.${index}.unit"]`) as HTMLInputElement;
-                                      if (unitInput) {
-                                        unitInput.focus();
-                                        unitInput.select();
-                                        console.log('✅ ARROW TO UNIT');
-                                      }
+                                      navigateScope(index, 'quantity', 'forward');
                                     }
-                                    
                                     if (e.key === 'ArrowLeft') {
                                       e.preventDefault();
-                                      const descInput = document.querySelector(`input[name="scopeOfWork.${index}.description"]`) as HTMLInputElement;
-                                      if (descInput) {
-                                        descInput.focus();
-                                        descInput.select();
-                                        console.log('✅ ARROW TO DESC');
-                                      }
+                                      navigateScope(index, 'quantity', 'backward');
                                     }
                                   }}
                                 />
@@ -1393,62 +1361,24 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                                           <FormControl>
                                             <Input 
                                               {...field} 
+                                              ref={(el) => {
+                                                if (el) scopeRefs.current[`unit-${index}`] = el;
+                                              }}
                                               data-testid={`unit-${index}`}
-                                              placeholder="sq ft, each, etc. (Tab to next row)"
+                                              placeholder="sq ft, each, etc. (Tab → Next Row)"
                                               onKeyDown={(e) => {
-                                                if (e.key === 'Tab' || (e.key === 'Enter' && !e.shiftKey)) {
+                                                if (e.key === 'Tab') {
                                                   e.preventDefault();
                                                   e.stopPropagation();
-                                                  
-                                                  if (!e.shiftKey) {
-                                                    let nextDescInput = document.querySelector(`input[name="scopeOfWork.${index + 1}.description"]`) as HTMLInputElement;
-                                                    if (nextDescInput) {
-                                                      nextDescInput.focus();
-                                                      nextDescInput.select();
-                                                      console.log('✅ MOVED TO NEXT ROW');
-                                                    } else {
-                                                      // Add new row
-                                                      const addButton = Array.from(document.querySelectorAll('button')).find(btn => btn.textContent?.includes('Add Line Item'));
-                                                      if (addButton) {
-                                                        (addButton as HTMLButtonElement).click();
-                                                        setTimeout(() => {
-                                                          nextDescInput = document.querySelector(`input[name="scopeOfWork.${index + 1}.description"]`) as HTMLInputElement;
-                                                          if (nextDescInput) {
-                                                            nextDescInput.focus();
-                                                            nextDescInput.select();
-                                                            console.log('✅ CREATED AND MOVED TO NEW ROW');
-                                                          }
-                                                        }, 100);
-                                                      }
-                                                    }
-                                                  } else {
-                                                    const quantityInput = document.querySelector(`input[name="scopeOfWork.${index}.quantity"]`) as HTMLInputElement;
-                                                    if (quantityInput) {
-                                                      quantityInput.focus();
-                                                      quantityInput.select();
-                                                      console.log('✅ BACK TO QUANTITY');
-                                                    }
-                                                  }
+                                                  navigateScope(index, 'unit', e.shiftKey ? 'backward' : 'forward');
                                                 }
-                                                
                                                 if (e.key === 'ArrowDown') {
                                                   e.preventDefault();
-                                                  const nextDescInput = document.querySelector(`input[name="scopeOfWork.${index + 1}.description"]`) as HTMLInputElement;
-                                                  if (nextDescInput) {
-                                                    nextDescInput.focus();
-                                                    nextDescInput.select();
-                                                    console.log('✅ ARROW TO NEXT ROW');
-                                                  }
+                                                  navigateScope(index, 'unit', 'forward');
                                                 }
-                                                
                                                 if (e.key === 'ArrowLeft') {
                                                   e.preventDefault();
-                                                  const quantityInput = document.querySelector(`input[name="scopeOfWork.${index}.quantity"]`) as HTMLInputElement;
-                                                  if (quantityInput) {
-                                                    quantityInput.focus();
-                                                    quantityInput.select();
-                                                    console.log('✅ ARROW TO QUANTITY');
-                                                  }
+                                                  navigateScope(index, 'unit', 'backward');
                                                 }
                                               }}
                                             />

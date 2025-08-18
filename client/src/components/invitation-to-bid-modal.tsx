@@ -1290,22 +1290,38 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                                 <Input 
                                   {...field} 
                                   placeholder="Work description"
+                                  tabIndex={-1}
                                   onKeyDown={(e) => {
                                     console.log('🔥 DESC KEY:', e.key, 'on row', index);
                                     if (e.key === 'Tab') {
                                       e.preventDefault();
                                       e.stopPropagation();
+                                      e.nativeEvent.preventDefault();
+                                      e.nativeEvent.stopPropagation();
+                                      e.nativeEvent.stopImmediatePropagation();
                                       console.log('🔥 DESC TAB BLOCKED');
                                       
-                                      // Force immediate focus change - don't wait for React
+                                      // Multiple attempts to focus
                                       const quantityInput = document.querySelector(`input[name="scopeOfWork.${index}.quantity"]`) as HTMLInputElement;
                                       if (quantityInput && !e.shiftKey) {
+                                        // Remove current focus
+                                        (e.target as HTMLInputElement).blur();
+                                        
+                                        // Force focus multiple ways
                                         quantityInput.focus();
+                                        quantityInput.click();
                                         quantityInput.select();
-                                        console.log('🔥 IMMEDIATE FOCUS TO QUANTITY');
-                                      } else {
-                                        handleScopeNavigation(index, 'description', e.shiftKey ? 'backward' : 'forward');
+                                        
+                                        // Try again after a microtask
+                                        requestAnimationFrame(() => {
+                                          quantityInput.focus();
+                                          quantityInput.select();
+                                        });
+                                        
+                                        console.log('🔥 AGGRESSIVE FOCUS TO QUANTITY');
                                       }
+                                      
+                                      return false;
                                     }
                                   }}
                                 />
@@ -1329,29 +1345,43 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                                   data-testid={`quantity-${index}`}
                                   onChange={(e) => field.onChange(e.target.value === "" ? "" : parseInt(e.target.value) || "")}
                                   placeholder="Enter quantity"
+                                  tabIndex={-1}
                                   onKeyDown={(e) => {
                                     console.log('🔥 QTY KEY:', e.key, 'on row', index);
                                     if (e.key === 'Tab') {
                                       e.preventDefault();
                                       e.stopPropagation();
+                                      e.nativeEvent.preventDefault();
+                                      e.nativeEvent.stopPropagation();
+                                      e.nativeEvent.stopImmediatePropagation();
                                       console.log('🔥 QTY TAB BLOCKED');
                                       
-                                      // Force immediate focus change
+                                      // Force focus change
+                                      (e.target as HTMLInputElement).blur();
+                                      
                                       if (!e.shiftKey) {
                                         const unitInput = document.querySelector(`input[name="scopeOfWork.${index}.unit"]`) as HTMLInputElement;
                                         if (unitInput) {
                                           unitInput.focus();
+                                          unitInput.click();
                                           unitInput.select();
-                                          console.log('🔥 IMMEDIATE FOCUS TO UNIT');
+                                          requestAnimationFrame(() => {
+                                            unitInput.focus();
+                                            unitInput.select();
+                                          });
+                                          console.log('🔥 AGGRESSIVE FOCUS TO UNIT');
                                         }
                                       } else {
                                         const descInput = document.querySelector(`input[name="scopeOfWork.${index}.description"]`) as HTMLInputElement;
                                         if (descInput) {
                                           descInput.focus();
+                                          descInput.click();
                                           descInput.select();
-                                          console.log('🔥 IMMEDIATE FOCUS TO DESC');
+                                          console.log('🔥 AGGRESSIVE FOCUS TO DESC');
                                         }
                                       }
+                                      
+                                      return false;
                                     }
                                   }}
                                 />
@@ -1373,20 +1403,31 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                                               {...field} 
                                               data-testid={`unit-${index}`}
                                               placeholder="sq ft, each, etc."
+                                              tabIndex={-1}
                                               onKeyDown={(e) => {
                                                 console.log('🔥 UNIT KEY:', e.key, 'on row', index);
                                                 if (e.key === 'Tab') {
                                                   e.preventDefault();
                                                   e.stopPropagation();
+                                                  e.nativeEvent.preventDefault();
+                                                  e.nativeEvent.stopPropagation();
+                                                  e.nativeEvent.stopImmediatePropagation();
                                                   console.log('🔥 UNIT TAB BLOCKED');
                                                   
-                                                  // Force immediate focus change
+                                                  // Force focus change
+                                                  (e.target as HTMLInputElement).blur();
+                                                  
                                                   if (!e.shiftKey) {
                                                     const nextDescInput = document.querySelector(`input[name="scopeOfWork.${index + 1}.description"]`) as HTMLInputElement;
                                                     if (nextDescInput) {
                                                       nextDescInput.focus();
+                                                      nextDescInput.click();
                                                       nextDescInput.select();
-                                                      console.log('🔥 IMMEDIATE FOCUS TO NEXT DESC');
+                                                      requestAnimationFrame(() => {
+                                                        nextDescInput.focus();
+                                                        nextDescInput.select();
+                                                      });
+                                                      console.log('🔥 AGGRESSIVE FOCUS TO NEXT DESC');
                                                     } else {
                                                       // Add new row
                                                       const addButton = Array.from(document.querySelectorAll('button')).find(btn => btn.textContent?.includes('Add Line Item'));
@@ -1396,8 +1437,9 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                                                           const newDescInput = document.querySelector(`input[name="scopeOfWork.${index + 1}.description"]`) as HTMLInputElement;
                                                           if (newDescInput) {
                                                             newDescInput.focus();
+                                                            newDescInput.click();
                                                             newDescInput.select();
-                                                            console.log('🔥 IMMEDIATE FOCUS TO NEW DESC');
+                                                            console.log('🔥 AGGRESSIVE FOCUS TO NEW DESC');
                                                           }
                                                         }, 50);
                                                       }
@@ -1406,10 +1448,13 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                                                     const quantityInput = document.querySelector(`input[name="scopeOfWork.${index}.quantity"]`) as HTMLInputElement;
                                                     if (quantityInput) {
                                                       quantityInput.focus();
+                                                      quantityInput.click();
                                                       quantityInput.select();
-                                                      console.log('🔥 IMMEDIATE FOCUS TO QTY');
+                                                      console.log('🔥 AGGRESSIVE FOCUS TO QTY');
                                                     }
                                                   }
+                                                  
+                                                  return false;
                                                 }
                                               }}
                                             />

@@ -1290,35 +1290,19 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                               <FormControl>
                                 <Input 
                                   {...field} 
-                                  ref={(el) => {
-                                    if (el) {
-                                      scopeRefs.current[`description-${index}`] = el;
-                                      // Completely remove from tab order
-                                      el.setAttribute('tabindex', '-1');
-                                    }
-                                  }}
-                                  placeholder="Work description (Enter → Quantity)"
+                                  placeholder="Work description"
                                   onKeyDown={(e) => {
-                                    console.log('🎯 DESC KEYDOWN:', e.key, 'row', index);
-                                    if (e.key === 'Enter') {
+                                    if (e.key === 'Tab' && !e.shiftKey) {
                                       e.preventDefault();
                                       e.stopPropagation();
-                                      console.log('🎯 DESC ENTER PRESSED');
-                                      
-                                      const quantityRef = scopeRefs.current[`quantity-${index}`];
-                                      if (quantityRef) {
-                                        quantityRef.focus();
-                                        quantityRef.select();
-                                        console.log('🎯 MOVED TO QUANTITY');
+                                      const quantityInput = document.querySelector(`input[name="scopeOfWork.${index}.quantity"]`) as HTMLInputElement;
+                                      if (quantityInput) {
+                                        setTimeout(() => {
+                                          quantityInput.focus();
+                                          quantityInput.select();
+                                        }, 0);
                                       }
                                     }
-                                    if (e.key === 'Tab') {
-                                      // Allow normal tab behavior for form navigation
-                                      console.log('🎯 DESC TAB - allowing normal behavior');
-                                    }
-                                  }}
-                                  onFocus={() => {
-                                    console.log('🎯 DESC FOCUSED:', index);
                                   }}
                                 />
                               </FormControl>
@@ -1338,35 +1322,21 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                                 <Input 
                                   type="number" 
                                   {...field} 
-                                  ref={(el) => {
-                                    if (el) {
-                                      scopeRefs.current[`quantity-${index}`] = el;
-                                      el.setAttribute('tabindex', '-1');
-                                    }
-                                  }}
                                   data-testid={`quantity-${index}`}
                                   onChange={(e) => field.onChange(e.target.value === "" ? "" : parseInt(e.target.value) || "")}
-                                  placeholder="Quantity (Enter → Unit)"
+                                  placeholder="Quantity"
                                   onKeyDown={(e) => {
-                                    console.log('🎯 QTY KEYDOWN:', e.key, 'row', index);
-                                    if (e.key === 'Enter') {
+                                    if (e.key === 'Tab' && !e.shiftKey) {
                                       e.preventDefault();
                                       e.stopPropagation();
-                                      console.log('🎯 QTY ENTER PRESSED');
-                                      
-                                      const unitRef = scopeRefs.current[`unit-${index}`];
-                                      if (unitRef) {
-                                        unitRef.focus();
-                                        unitRef.select();
-                                        console.log('🎯 MOVED TO UNIT');
+                                      const unitInput = document.querySelector(`input[name="scopeOfWork.${index}.unit"]`) as HTMLInputElement;
+                                      if (unitInput) {
+                                        setTimeout(() => {
+                                          unitInput.focus();
+                                          unitInput.select();
+                                        }, 0);
                                       }
                                     }
-                                    if (e.key === 'Tab') {
-                                      console.log('🎯 QTY TAB - allowing normal behavior');
-                                    }
-                                  }}
-                                  onFocus={() => {
-                                    console.log('🎯 QTY FOCUSED:', index);
                                   }}
                                 />
                               </FormControl>
@@ -1385,48 +1355,33 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                                           <FormControl>
                                             <Input 
                                               {...field} 
-                                              ref={(el) => {
-                                                if (el) {
-                                                  scopeRefs.current[`unit-${index}`] = el;
-                                                  el.setAttribute('tabindex', '-1');
-                                                }
-                                              }}
                                               data-testid={`unit-${index}`}
-                                              placeholder="sq ft, each, etc. (Enter → Next Row)"
+                                              placeholder="sq ft, each, etc."
                                               onKeyDown={(e) => {
-                                                console.log('🎯 UNIT KEYDOWN:', e.key, 'row', index);
-                                                if (e.key === 'Enter') {
+                                                if (e.key === 'Tab' && !e.shiftKey) {
                                                   e.preventDefault();
                                                   e.stopPropagation();
-                                                  console.log('🎯 UNIT ENTER PRESSED');
-                                                  
-                                                  const nextDescRef = scopeRefs.current[`description-${index + 1}`];
-                                                  if (nextDescRef) {
-                                                    nextDescRef.focus();
-                                                    nextDescRef.select();
-                                                    console.log('🎯 MOVED TO NEXT ROW');
+                                                  const nextDescInput = document.querySelector(`input[name="scopeOfWork.${index + 1}.description"]`) as HTMLInputElement;
+                                                  if (nextDescInput) {
+                                                    setTimeout(() => {
+                                                      nextDescInput.focus();
+                                                      nextDescInput.select();
+                                                    }, 0);
                                                   } else {
                                                     // Add new row and focus it
                                                     const addButton = Array.from(document.querySelectorAll('button')).find(btn => btn.textContent?.includes('Add Line Item'));
                                                     if (addButton) {
                                                       (addButton as HTMLButtonElement).click();
                                                       setTimeout(() => {
-                                                        const newDescRef = scopeRefs.current[`description-${index + 1}`];
-                                                        if (newDescRef) {
-                                                          newDescRef.focus();
-                                                          newDescRef.select();
-                                                          console.log('🎯 CREATED AND MOVED TO NEW ROW');
+                                                        const newDescInput = document.querySelector(`input[name="scopeOfWork.${index + 1}.description"]`) as HTMLInputElement;
+                                                        if (newDescInput) {
+                                                          newDescInput.focus();
+                                                          newDescInput.select();
                                                         }
                                                       }, 100);
                                                     }
                                                   }
                                                 }
-                                                if (e.key === 'Tab') {
-                                                  console.log('🎯 UNIT TAB - allowing normal behavior');
-                                                }
-                                              }}
-                                              onFocus={() => {
-                                                console.log('🎯 UNIT FOCUSED:', index);
                                               }}
                                             />
                                           </FormControl>

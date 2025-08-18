@@ -73,83 +73,105 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
   const [keyDates, setKeyDates] = useState<Array<{label: string, date: string}>>([]);
   const [additionalAreas, setAdditionalAreas] = useState<Array<{id: string, description: string, squareFootage: string, notes: string}>>([]);
 
-  // Handle scope table navigation at document level
+  // Handle scope table navigation with aggressive interception
   useEffect(() => {
     if (!isOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      console.log('Key pressed:', e.key, 'Target:', (e.target as HTMLElement)?.name);
+      
       if (e.key === 'Tab') {
         const target = e.target as HTMLInputElement;
         const name = target.name;
         
+        console.log('Tab pressed on element:', name);
+        
         // Only handle scope of work inputs
         if (name && name.includes('scopeOfWork')) {
+          console.log('Intercepting tab for scope of work field:', name);
+          
+          // AGGRESSIVE prevention - stop everything
           e.preventDefault();
           e.stopPropagation();
+          e.stopImmediatePropagation();
           
           const match = name.match(/scopeOfWork\.(\d+)\.(\w+)/);
           if (match) {
             const rowIndex = parseInt(match[1]);
             const fieldType = match[2];
             
-            if (!e.shiftKey) {
-              // Forward navigation
-              if (fieldType === 'description') {
-                const quantityInput = document.querySelector(`input[name="scopeOfWork.${rowIndex}.quantity"]`) as HTMLInputElement;
-                if (quantityInput) {
-                  quantityInput.focus();
-                  quantityInput.select();
+            console.log('Field type:', fieldType, 'Row:', rowIndex);
+            
+            setTimeout(() => {
+              if (!e.shiftKey) {
+                // Forward navigation
+                if (fieldType === 'description') {
+                  const quantityInput = document.querySelector(`input[name="scopeOfWork.${rowIndex}.quantity"]`) as HTMLInputElement;
+                  console.log('Moving to quantity input:', quantityInput);
+                  if (quantityInput) {
+                    quantityInput.focus();
+                    quantityInput.select();
+                  }
+                } else if (fieldType === 'quantity') {
+                  const unitInput = document.querySelector(`input[name="scopeOfWork.${rowIndex}.unit"]`) as HTMLInputElement;
+                  console.log('Moving to unit input:', unitInput);
+                  if (unitInput) {
+                    unitInput.focus();
+                    unitInput.select();
+                  }
+                } else if (fieldType === 'unit') {
+                  const nextDescInput = document.querySelector(`input[name="scopeOfWork.${rowIndex + 1}.description"]`) as HTMLInputElement;
+                  console.log('Moving to next row description:', nextDescInput);
+                  if (nextDescInput) {
+                    nextDescInput.focus();
+                    nextDescInput.select();
+                  } else {
+                    // Add new row
+                    const addButton = Array.from(document.querySelectorAll('button')).find(btn => btn.textContent?.includes('Add Line Item'));
+                    console.log('Adding new row, button:', addButton);
+                    if (addButton) {
+                      (addButton as HTMLButtonElement).click();
+                      setTimeout(() => {
+                        const newDescInput = document.querySelector(`input[name="scopeOfWork.${rowIndex + 1}.description"]`) as HTMLInputElement;
+                        if (newDescInput) {
+                          newDescInput.focus();
+                          newDescInput.select();
+                        }
+                      }, 100);
+                    }
+                  }
                 }
-              } else if (fieldType === 'quantity') {
-                const unitInput = document.querySelector(`input[name="scopeOfWork.${rowIndex}.unit"]`) as HTMLInputElement;
-                if (unitInput) {
-                  unitInput.focus();
-                  unitInput.select();
-                }
-              } else if (fieldType === 'unit') {
-                const nextDescInput = document.querySelector(`input[name="scopeOfWork.${rowIndex + 1}.description"]`) as HTMLInputElement;
-                if (nextDescInput) {
-                  nextDescInput.focus();
-                  nextDescInput.select();
-                } else {
-                  // Add new row
-                  const addButton = Array.from(document.querySelectorAll('button')).find(btn => btn.textContent?.includes('Add Line Item'));
-                  if (addButton) {
-                    (addButton as HTMLButtonElement).click();
-                    setTimeout(() => {
-                      const newDescInput = document.querySelector(`input[name="scopeOfWork.${rowIndex + 1}.description"]`) as HTMLInputElement;
-                      if (newDescInput) {
-                        newDescInput.focus();
-                        newDescInput.select();
-                      }
-                    }, 100);
+              } else {
+                // Backward navigation (Shift+Tab)
+                if (fieldType === 'unit') {
+                  const quantityInput = document.querySelector(`input[name="scopeOfWork.${rowIndex}.quantity"]`) as HTMLInputElement;
+                  if (quantityInput) {
+                    quantityInput.focus();
+                    quantityInput.select();
+                  }
+                } else if (fieldType === 'quantity') {
+                  const descInput = document.querySelector(`input[name="scopeOfWork.${rowIndex}.description"]`) as HTMLInputElement;
+                  if (descInput) {
+                    descInput.focus();
+                    descInput.select();
                   }
                 }
               }
-            } else {
-              // Backward navigation (Shift+Tab)
-              if (fieldType === 'unit') {
-                const quantityInput = document.querySelector(`input[name="scopeOfWork.${rowIndex}.quantity"]`) as HTMLInputElement;
-                if (quantityInput) {
-                  quantityInput.focus();
-                  quantityInput.select();
-                }
-              } else if (fieldType === 'quantity') {
-                const descInput = document.querySelector(`input[name="scopeOfWork.${rowIndex}.description"]`) as HTMLInputElement;
-                if (descInput) {
-                  descInput.focus();
-                  descInput.select();
-                }
-              }
-            }
+            }, 0);
           }
+          
+          return false; // Additional prevention
         }
       }
     };
 
-    document.addEventListener('keydown', handleKeyDown, true);
+    // Try multiple event attachment strategies
+    document.addEventListener('keydown', handleKeyDown, { capture: true, passive: false });
+    window.addEventListener('keydown', handleKeyDown, { capture: true, passive: false });
+    
     return () => {
       document.removeEventListener('keydown', handleKeyDown, true);
+      window.removeEventListener('keydown', handleKeyDown, true);
     };
   }, [isOpen]);
 

@@ -522,37 +522,37 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                   <div className="grid grid-cols-2 gap-4 mb-4">
                     <div className="space-y-2">
                       <Label className="text-sm font-medium text-gray-700">Direction of Bay 1</Label>
-                      <Select value={firstBayDirection} onValueChange={setFirstBayDirection}>
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select direction" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="north">North</SelectItem>
-                          <SelectItem value="northeast">Northeast</SelectItem>
-                          <SelectItem value="east">East</SelectItem>
-                          <SelectItem value="southeast">Southeast</SelectItem>
-                          <SelectItem value="south">South</SelectItem>
-                          <SelectItem value="southwest">Southwest</SelectItem>
-                          <SelectItem value="west">West</SelectItem>
-                          <SelectItem value="northwest">Northwest</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <select 
+                        value={firstBayDirection} 
+                        onChange={(e) => setFirstBayDirection(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">Select direction</option>
+                        <option value="north">North</option>
+                        <option value="northeast">Northeast</option>
+                        <option value="east">East</option>
+                        <option value="southeast">Southeast</option>
+                        <option value="south">South</option>
+                        <option value="southwest">Southwest</option>
+                        <option value="west">West</option>
+                        <option value="northwest">Northwest</option>
+                      </select>
                       <p className="text-xs text-gray-500">Which direction does the front door of the first bay face?</p>
                     </div>
                     
                     <div className="space-y-2">
                       <Label className="text-sm font-medium text-gray-700">Bay Progression Direction</Label>
-                      <Select value={bayProgressionDirection} onValueChange={setBayProgressionDirection}>
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select direction" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="north">North</SelectItem>
-                          <SelectItem value="east">East</SelectItem>
-                          <SelectItem value="south">South</SelectItem>
-                          <SelectItem value="west">West</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <select 
+                        value={bayProgressionDirection} 
+                        onChange={(e) => setBayProgressionDirection(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">Select direction</option>
+                        <option value="north">North</option>
+                        <option value="east">East</option>
+                        <option value="south">South</option>
+                        <option value="west">West</option>
+                      </select>
                       <p className="text-xs text-gray-500">Which direction do bay numbers increase? (Bay 1 → Bay 2 → Bay 3)</p>
                     </div>
                   </div>

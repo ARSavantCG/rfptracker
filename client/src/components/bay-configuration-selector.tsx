@@ -428,11 +428,39 @@ export default function BayConfigurationSelector({
                 const totalBays = individualBays.length;
                 let position = "";
                 
-                if (index === 0) position = "West End";
-                else if (index === totalBays - 1) position = "East End";
-                else if (index < totalBays / 3) position = "West";
-                else if (index > (totalBays * 2) / 3) position = "East";
-                else position = "Center";
+                // Calculate position labels based on actual bay progression direction
+                const progressionDirection = property.bayProgressionDirection || 'east';
+                
+                // For progression directions, the "start" and "end" are relative to direction
+                if (progressionDirection === 'south') {
+                  // North to South progression
+                  if (index === 0) position = "North End";
+                  else if (index === totalBays - 1) position = "South End";
+                  else if (index < totalBays / 3) position = "North";
+                  else if (index > (totalBays * 2) / 3) position = "South";
+                  else position = "Center";
+                } else if (progressionDirection === 'north') {
+                  // South to North progression
+                  if (index === 0) position = "South End";
+                  else if (index === totalBays - 1) position = "North End";
+                  else if (index < totalBays / 3) position = "South";
+                  else if (index > (totalBays * 2) / 3) position = "North";
+                  else position = "Center";
+                } else if (progressionDirection === 'west') {
+                  // East to West progression
+                  if (index === 0) position = "East End";
+                  else if (index === totalBays - 1) position = "West End";
+                  else if (index < totalBays / 3) position = "East";
+                  else if (index > (totalBays * 2) / 3) position = "West";
+                  else position = "Center";
+                } else {
+                  // Default: East progression (West to East)
+                  if (index === 0) position = "West End";
+                  else if (index === totalBays - 1) position = "East End";
+                  else if (index < totalBays / 3) position = "West";
+                  else if (index > (totalBays * 2) / 3) position = "East";
+                  else position = "Center";
+                }
                 
                 return (
                   <div key={`pos-${bay.id}`} className="w-12 flex-shrink-0">

@@ -1289,39 +1289,28 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                               <FormControl>
                                 <Input 
                                   {...field} 
-                                  placeholder="Work description"
-                                  tabIndex={-1}
+                                  placeholder="Work description (Press Tab to move to Quantity)"
                                   onKeyDown={(e) => {
-                                    console.log('🔥 DESC KEY:', e.key, 'on row', index);
-                                    if (e.key === 'Tab') {
+                                    if (e.key === 'Tab' || (e.key === 'Enter' && !e.shiftKey)) {
                                       e.preventDefault();
                                       e.stopPropagation();
-                                      e.nativeEvent.preventDefault();
-                                      e.nativeEvent.stopPropagation();
-                                      e.nativeEvent.stopImmediatePropagation();
-                                      console.log('🔥 DESC TAB BLOCKED');
                                       
-                                      // Multiple attempts to focus
                                       const quantityInput = document.querySelector(`input[name="scopeOfWork.${index}.quantity"]`) as HTMLInputElement;
-                                      if (quantityInput && !e.shiftKey) {
-                                        // Remove current focus
-                                        (e.target as HTMLInputElement).blur();
-                                        
-                                        // Force focus multiple ways
+                                      if (quantityInput) {
                                         quantityInput.focus();
-                                        quantityInput.click();
                                         quantityInput.select();
-                                        
-                                        // Try again after a microtask
-                                        requestAnimationFrame(() => {
-                                          quantityInput.focus();
-                                          quantityInput.select();
-                                        });
-                                        
-                                        console.log('🔥 AGGRESSIVE FOCUS TO QUANTITY');
+                                        console.log('✅ MOVED TO QUANTITY');
                                       }
-                                      
-                                      return false;
+                                    }
+                                    
+                                    if (e.key === 'ArrowRight') {
+                                      e.preventDefault();
+                                      const quantityInput = document.querySelector(`input[name="scopeOfWork.${index}.quantity"]`) as HTMLInputElement;
+                                      if (quantityInput) {
+                                        quantityInput.focus();
+                                        quantityInput.select();
+                                        console.log('✅ ARROW TO QUANTITY');
+                                      }
                                     }
                                   }}
                                 />
@@ -1344,44 +1333,47 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                                   {...field} 
                                   data-testid={`quantity-${index}`}
                                   onChange={(e) => field.onChange(e.target.value === "" ? "" : parseInt(e.target.value) || "")}
-                                  placeholder="Enter quantity"
-                                  tabIndex={-1}
+                                  placeholder="Enter quantity (Tab to Unit)"
                                   onKeyDown={(e) => {
-                                    console.log('🔥 QTY KEY:', e.key, 'on row', index);
-                                    if (e.key === 'Tab') {
+                                    if (e.key === 'Tab' || (e.key === 'Enter' && !e.shiftKey)) {
                                       e.preventDefault();
                                       e.stopPropagation();
-                                      e.nativeEvent.preventDefault();
-                                      e.nativeEvent.stopPropagation();
-                                      e.nativeEvent.stopImmediatePropagation();
-                                      console.log('🔥 QTY TAB BLOCKED');
-                                      
-                                      // Force focus change
-                                      (e.target as HTMLInputElement).blur();
                                       
                                       if (!e.shiftKey) {
                                         const unitInput = document.querySelector(`input[name="scopeOfWork.${index}.unit"]`) as HTMLInputElement;
                                         if (unitInput) {
                                           unitInput.focus();
-                                          unitInput.click();
                                           unitInput.select();
-                                          requestAnimationFrame(() => {
-                                            unitInput.focus();
-                                            unitInput.select();
-                                          });
-                                          console.log('🔥 AGGRESSIVE FOCUS TO UNIT');
+                                          console.log('✅ MOVED TO UNIT');
                                         }
                                       } else {
                                         const descInput = document.querySelector(`input[name="scopeOfWork.${index}.description"]`) as HTMLInputElement;
                                         if (descInput) {
                                           descInput.focus();
-                                          descInput.click();
                                           descInput.select();
-                                          console.log('🔥 AGGRESSIVE FOCUS TO DESC');
+                                          console.log('✅ BACK TO DESC');
                                         }
                                       }
-                                      
-                                      return false;
+                                    }
+                                    
+                                    if (e.key === 'ArrowRight') {
+                                      e.preventDefault();
+                                      const unitInput = document.querySelector(`input[name="scopeOfWork.${index}.unit"]`) as HTMLInputElement;
+                                      if (unitInput) {
+                                        unitInput.focus();
+                                        unitInput.select();
+                                        console.log('✅ ARROW TO UNIT');
+                                      }
+                                    }
+                                    
+                                    if (e.key === 'ArrowLeft') {
+                                      e.preventDefault();
+                                      const descInput = document.querySelector(`input[name="scopeOfWork.${index}.description"]`) as HTMLInputElement;
+                                      if (descInput) {
+                                        descInput.focus();
+                                        descInput.select();
+                                        console.log('✅ ARROW TO DESC');
+                                      }
                                     }
                                   }}
                                 />
@@ -1402,59 +1394,61 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                                             <Input 
                                               {...field} 
                                               data-testid={`unit-${index}`}
-                                              placeholder="sq ft, each, etc."
-                                              tabIndex={-1}
+                                              placeholder="sq ft, each, etc. (Tab to next row)"
                                               onKeyDown={(e) => {
-                                                console.log('🔥 UNIT KEY:', e.key, 'on row', index);
-                                                if (e.key === 'Tab') {
+                                                if (e.key === 'Tab' || (e.key === 'Enter' && !e.shiftKey)) {
                                                   e.preventDefault();
                                                   e.stopPropagation();
-                                                  e.nativeEvent.preventDefault();
-                                                  e.nativeEvent.stopPropagation();
-                                                  e.nativeEvent.stopImmediatePropagation();
-                                                  console.log('🔥 UNIT TAB BLOCKED');
-                                                  
-                                                  // Force focus change
-                                                  (e.target as HTMLInputElement).blur();
                                                   
                                                   if (!e.shiftKey) {
-                                                    const nextDescInput = document.querySelector(`input[name="scopeOfWork.${index + 1}.description"]`) as HTMLInputElement;
+                                                    let nextDescInput = document.querySelector(`input[name="scopeOfWork.${index + 1}.description"]`) as HTMLInputElement;
                                                     if (nextDescInput) {
                                                       nextDescInput.focus();
-                                                      nextDescInput.click();
                                                       nextDescInput.select();
-                                                      requestAnimationFrame(() => {
-                                                        nextDescInput.focus();
-                                                        nextDescInput.select();
-                                                      });
-                                                      console.log('🔥 AGGRESSIVE FOCUS TO NEXT DESC');
+                                                      console.log('✅ MOVED TO NEXT ROW');
                                                     } else {
                                                       // Add new row
                                                       const addButton = Array.from(document.querySelectorAll('button')).find(btn => btn.textContent?.includes('Add Line Item'));
                                                       if (addButton) {
                                                         (addButton as HTMLButtonElement).click();
                                                         setTimeout(() => {
-                                                          const newDescInput = document.querySelector(`input[name="scopeOfWork.${index + 1}.description"]`) as HTMLInputElement;
-                                                          if (newDescInput) {
-                                                            newDescInput.focus();
-                                                            newDescInput.click();
-                                                            newDescInput.select();
-                                                            console.log('🔥 AGGRESSIVE FOCUS TO NEW DESC');
+                                                          nextDescInput = document.querySelector(`input[name="scopeOfWork.${index + 1}.description"]`) as HTMLInputElement;
+                                                          if (nextDescInput) {
+                                                            nextDescInput.focus();
+                                                            nextDescInput.select();
+                                                            console.log('✅ CREATED AND MOVED TO NEW ROW');
                                                           }
-                                                        }, 50);
+                                                        }, 100);
                                                       }
                                                     }
                                                   } else {
                                                     const quantityInput = document.querySelector(`input[name="scopeOfWork.${index}.quantity"]`) as HTMLInputElement;
                                                     if (quantityInput) {
                                                       quantityInput.focus();
-                                                      quantityInput.click();
                                                       quantityInput.select();
-                                                      console.log('🔥 AGGRESSIVE FOCUS TO QTY');
+                                                      console.log('✅ BACK TO QUANTITY');
                                                     }
                                                   }
-                                                  
-                                                  return false;
+                                                }
+                                                
+                                                if (e.key === 'ArrowDown') {
+                                                  e.preventDefault();
+                                                  const nextDescInput = document.querySelector(`input[name="scopeOfWork.${index + 1}.description"]`) as HTMLInputElement;
+                                                  if (nextDescInput) {
+                                                    nextDescInput.focus();
+                                                    nextDescInput.select();
+                                                    console.log('✅ ARROW TO NEXT ROW');
+                                                  }
+                                                }
+                                                
+                                                if (e.key === 'ArrowLeft') {
+                                                  e.preventDefault();
+                                                  const quantityInput = document.querySelector(`input[name="scopeOfWork.${index}.quantity"]`) as HTMLInputElement;
+                                                  if (quantityInput) {
+                                                    quantityInput.focus();
+                                                    quantityInput.select();
+                                                    console.log('✅ ARROW TO QUANTITY');
+                                                  }
                                                 }
                                               }}
                                             />

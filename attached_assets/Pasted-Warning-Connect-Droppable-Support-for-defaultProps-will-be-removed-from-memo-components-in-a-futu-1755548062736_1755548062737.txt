@@ -1,0 +1,36 @@
+Warning: Connect(Droppable): Support for defaultProps will be removed from memo components in a future major release. Use JavaScript default parameters instead.
+    at div
+    at Provider (https://90854b36-95f6-4c7a-b7c4-696605785e7a-00-21wjdx2474kzx.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-beautiful-dnd.js?v=592ae3f4:945:20)
+    at App (https://90854b36-95f6-4c7a-b7c4-696605785e7a-00-21wjdx2474kzx.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-beautiful-dnd.js?v=592ae3f4:7462:25)
+    at ErrorBoundary2 (https://90854b36-95f6-4c7a-b7c4-696605785e7a-00-21wjdx2474kzx.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-beautiful-dnd.js?v=592ae3f4:1959:35)
+    at DragDropContext (https://90854b36-95f6-4c7a-b7c4-696605785e7a-00-21wjdx2474kzx.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-beautiful-dnd.js?v=592ae3f4:7582:19)
+    at div
+    at form
+    at FormProvider (https://90854b36-95f6-4c7a-b7c4-696605785e7a-00-21wjdx2474kzx.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-4BFJKWC4.js?v=592ae3f4:102:11)
+    at div
+    at https://90854b36-95f6-4c7a-b7c4-696605785e7a-00-21wjdx2474kzx.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-AXMZZQ2X.js?v=592ae3f4:42:13
+    at https://90854b36-95f6-4c7a-b7c4-696605785e7a-00-21wjdx2474kzx.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-KXRNPOTX.js?v=592ae3f4:59:7
+    at https://90854b36-95f6-4c7a-b7c4-696605785e7a-00-21wjdx2474kzx.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-2K77HOHX.js?v=592ae3f4:79:13
+    at https://90854b36-95f6-4c7a-b7c4-696605785e7a-00-21wjdx2474kzx.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-2K77HOHX.js?v=592ae3f4:56:13
+    at https://90854b36-95f6-4c7a-b7c4-696605785e7a-00-21wjdx2474kzx.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-AXMZZQ2X.js?v=592ae3f4:42:13
+    at https://90854b36-95f6-4c7a-b7c4-696605785e7a-00-21wjdx2474kzx.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-NHZYLRM3.js?v=592ae3f4:29:5
+    at https://90854b36-95f6-4c7a-b7c4-696605785e7a-00-21wjdx2474kzx.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-2D63TXD3.js?v=592ae3f4:233:13
+    at https://90854b36-95f6-4c7a-b7c4-696605785e7a-00-21wjdx2474kzx.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-2D63TXD3.js?v=592ae3f4:156:58
+    at Presence (https://90854b36-95f6-4c7a-b7c4-696605785e7a-00-21wjdx2474kzx.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-V4TQHOLD.js?v=592ae3f4:24:11)
+    at https://90854b36-95f6-4c7a-b7c4-696605785e7a-00-21wjdx2474kzx.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-2D63TXD3.js?v=592ae3f4:147:64
+    at https://90854b36-95f6-4c7a-b7c4-696605785e7a-00-21wjdx2474kzx.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-2K77HOHX.js?v=592ae3f4:79:13
+    at https://90854b36-95f6-4c7a-b7c4-696605785e7a-00-21wjdx2474kzx.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-2K77HOHX.js?v=592ae3f4:56:13
+    at https://90854b36-95f6-4c7a-b7c4-696605785e7a-00-21wjdx2474kzx.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-AXMZZQ2X.js?v=592ae3f4:42:13
+    at https://90854b36-95f6-4c7a-b7c4-696605785e7a-00-21wjdx2474kzx.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-KXRNPOTX.js?v=592ae3f4:258:22
+    at Presence (https://90854b36-95f6-4c7a-b7c4-696605785e7a-00-21wjdx2474kzx.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-V4TQHOLD.js?v=592ae3f4:24:11)
+    at Provider (https://90854b36-95f6-4c7a-b7c4-696605785e7a-00-21wjdx2474kzx.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-S34NKWM7.js?v=592ae3f4:48:15)
+    at DialogPortal (https://90854b36-95f6-4c7a-b7c4-696605785e7a-00-21wjdx2474kzx.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-2D63TXD3.js?v=592ae3f4:109:11)
+    at _c3 (https://90854b36-95f6-4c7a-b7c4-696605785e7a-00-21wjdx2474kzx.picard.replit.dev/src/components/ui/dialog.tsx:52:12)
+    at Provider (https://90854b36-95f6-4c7a-b7c4-696605785e7a-00-21wjdx2474kzx.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-S34NKWM7.js?v=592ae3f4:48:15)
+    at Dialog (https://90854b36-95f6-4c7a-b7c4-696605785e7a-00-21wjdx2474kzx.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-2D63TXD3.js?v=592ae3f4:50:5)
+    at InvitationToBidModal (https://90854b36-95f6-4c7a-b7c4-696605785e7a-00-21wjdx2474kzx.picard.replit.dev/src/components/invitation-to-bid-modal.tsx?t=1755547978833:67:40)
+    at div
+    at div
+    at div
+    at Dashboard (https://90854b36-95f6-4c7a-b7c4-696605785e7a-00-21wjdx2474kzx.picard.replit.dev/src/pages/dashboard.tsx:43:21)
+    at Route…

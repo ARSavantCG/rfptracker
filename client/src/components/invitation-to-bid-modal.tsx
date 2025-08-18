@@ -74,90 +74,60 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
   const [additionalAreas, setAdditionalAreas] = useState<Array<{id: string, description: string, squareFootage: string, notes: string}>>([]);
   const modalRef = useRef<HTMLDivElement>(null);
 
-  // Direct modal-level tab handling
-  useEffect(() => {
-    if (!isOpen || !modalRef.current) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      console.log('🔥 MODAL: Key pressed:', e.key, 'Target name:', (e.target as HTMLElement)?.name, 'Target:', e.target);
-      
-      if (e.key === 'Tab') {
-        const target = e.target as HTMLInputElement;
-        const name = target.name;
-        
-        console.log('🔥 MODAL: Tab detected on:', name);
-        
-        // Check if this is a scope of work field
-        if (name && name.includes('scopeOfWork')) {
-          console.log('🔥 MODAL: BLOCKING tab for scope field:', name);
-          
-          // COMPLETELY STOP the event
-          e.preventDefault();
-          e.stopPropagation();
-          e.stopImmediatePropagation();
-          
-          const match = name.match(/scopeOfWork\.(\d+)\.(\w+)/);
-          if (match) {
-            const rowIndex = parseInt(match[1]);
-            const fieldType = match[2];
-            
-            console.log('🔥 MODAL: Parsed - Row:', rowIndex, 'Field:', fieldType);
-            
-            // Manual navigation
-            if (!e.shiftKey) {
-              if (fieldType === 'description') {
-                const nextInput = modalRef.current?.querySelector(`input[name="scopeOfWork.${rowIndex}.quantity"]`) as HTMLInputElement;
-                console.log('🔥 MODAL: Moving desc → quantity:', nextInput);
-                if (nextInput) {
-                  nextInput.focus();
-                  nextInput.select();
-                }
-              } else if (fieldType === 'quantity') {
-                const nextInput = modalRef.current?.querySelector(`input[name="scopeOfWork.${rowIndex}.unit"]`) as HTMLInputElement;
-                console.log('🔥 MODAL: Moving quantity → unit:', nextInput);
-                if (nextInput) {
-                  nextInput.focus();
-                  nextInput.select();
-                }
-              } else if (fieldType === 'unit') {
-                const nextInput = modalRef.current?.querySelector(`input[name="scopeOfWork.${rowIndex + 1}.description"]`) as HTMLInputElement;
-                console.log('🔥 MODAL: Moving unit → next desc:', nextInput);
-                if (nextInput) {
-                  nextInput.focus();
-                  nextInput.select();
-                } else {
-                  // Add new row
-                  const addButton = modalRef.current?.querySelector('button[type="button"]') as HTMLButtonElement;
-                  console.log('🔥 MODAL: Adding new row with button:', addButton);
-                  if (addButton && addButton.textContent?.includes('Add Line Item')) {
-                    addButton.click();
-                    setTimeout(() => {
-                      const newInput = modalRef.current?.querySelector(`input[name="scopeOfWork.${rowIndex + 1}.description"]`) as HTMLInputElement;
-                      if (newInput) {
-                        newInput.focus();
-                        newInput.select();
-                      }
-                    }, 100);
-                  }
-                }
+  // Simple navigation helper
+  const handleScopeNavigation = (currentIndex: number, currentField: 'description' | 'quantity' | 'unit', direction: 'forward' | 'backward' = 'forward') => {
+    console.log('🔥 SCOPE NAV:', currentField, 'row', currentIndex, direction);
+    
+    if (direction === 'forward') {
+      if (currentField === 'description') {
+        const quantityInput = document.querySelector(`input[name="scopeOfWork.${currentIndex}.quantity"]`) as HTMLInputElement;
+        if (quantityInput) {
+          quantityInput.focus();
+          quantityInput.select();
+        }
+      } else if (currentField === 'quantity') {
+        const unitInput = document.querySelector(`input[name="scopeOfWork.${currentIndex}.unit"]`) as HTMLInputElement;
+        if (unitInput) {
+          unitInput.focus();
+          unitInput.select();
+        }
+      } else if (currentField === 'unit') {
+        const nextDescInput = document.querySelector(`input[name="scopeOfWork.${currentIndex + 1}.description"]`) as HTMLInputElement;
+        if (nextDescInput) {
+          nextDescInput.focus();
+          nextDescInput.select();
+        } else {
+          // Add new row
+          const addButton = Array.from(document.querySelectorAll('button')).find(btn => btn.textContent?.includes('Add Line Item'));
+          if (addButton) {
+            (addButton as HTMLButtonElement).click();
+            setTimeout(() => {
+              const newDescInput = document.querySelector(`input[name="scopeOfWork.${currentIndex + 1}.description"]`) as HTMLInputElement;
+              if (newDescInput) {
+                newDescInput.focus();
+                newDescInput.select();
               }
-            }
+            }, 100);
           }
-          
-          return false;
         }
       }
-    };
-
-    // Attach to the modal element directly
-    modalRef.current.addEventListener('keydown', handleKeyDown, { capture: true, passive: false });
-    
-    return () => {
-      if (modalRef.current) {
-        modalRef.current.removeEventListener('keydown', handleKeyDown, true);
+    } else {
+      // Backward navigation
+      if (currentField === 'unit') {
+        const quantityInput = document.querySelector(`input[name="scopeOfWork.${currentIndex}.quantity"]`) as HTMLInputElement;
+        if (quantityInput) {
+          quantityInput.focus();
+          quantityInput.select();
+        }
+      } else if (currentField === 'quantity') {
+        const descInput = document.querySelector(`input[name="scopeOfWork.${currentIndex}.description"]`) as HTMLInputElement;
+        if (descInput) {
+          descInput.focus();
+          descInput.select();
+        }
       }
-    };
-  }, [isOpen]);
+    }
+  };
 
   // Helper function to format numbers with commas
   const formatNumberWithCommas = (value: string): string => {
@@ -1309,6 +1279,16 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                                 <Input 
                                   {...field} 
                                   placeholder="Work description"
+                                  onKeyDown={(e) => {
+                                    console.log('🔥 DESC KEY:', e.key, 'on row', index);
+                                    if (e.key === 'Tab') {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      e.stopImmediatePropagation();
+                                      console.log('🔥 DESC TAB BLOCKED');
+                                      handleScopeNavigation(index, 'description', e.shiftKey ? 'backward' : 'forward');
+                                    }
+                                  }}
                                 />
                               </FormControl>
                               <FormMessage />
@@ -1330,6 +1310,16 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                                   data-testid={`quantity-${index}`}
                                   onChange={(e) => field.onChange(e.target.value === "" ? "" : parseInt(e.target.value) || "")}
                                   placeholder="Enter quantity"
+                                  onKeyDown={(e) => {
+                                    console.log('🔥 QTY KEY:', e.key, 'on row', index);
+                                    if (e.key === 'Tab') {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      e.stopImmediatePropagation();
+                                      console.log('🔥 QTY TAB BLOCKED');
+                                      handleScopeNavigation(index, 'quantity', e.shiftKey ? 'backward' : 'forward');
+                                    }
+                                  }}
                                 />
                               </FormControl>
                               <FormMessage />
@@ -1349,6 +1339,16 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                                               {...field} 
                                               data-testid={`unit-${index}`}
                                               placeholder="sq ft, each, etc."
+                                              onKeyDown={(e) => {
+                                                console.log('🔥 UNIT KEY:', e.key, 'on row', index);
+                                                if (e.key === 'Tab') {
+                                                  e.preventDefault();
+                                                  e.stopPropagation();
+                                                  e.stopImmediatePropagation();
+                                                  console.log('🔥 UNIT TAB BLOCKED');
+                                                  handleScopeNavigation(index, 'unit', e.shiftKey ? 'backward' : 'forward');
+                                                }
+                                              }}
                                             />
                                           </FormControl>
                                           <FormMessage />

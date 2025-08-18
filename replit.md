@@ -62,7 +62,9 @@ Preferred communication style: Simple, everyday language.
       • **Reverse Navigation**: Shift+Tab support for all forms
       • **Text Selection**: Automatic text selection on focus for quick editing
       • **Smart Row Creation**: Automatic new row creation when tabbing from last table row
+      • **Event Isolation**: Added preventDefault() and stopPropagation() to keep navigation strictly within intended form sections
       Eliminates double-click requirements and provides Excel-like efficiency system-wide.
+    - **Executed Leases System**: Universal lease recognition system (8/18/2025) ensuring all properties display executed leases in bay configurators. Added comprehensive sample leases across all properties (Bridge 595, Bridge Point Doral Buildings 1-6, Bridge Point Gratigny, Bridge Point Miami Station Buildings 1-2, MG Westside Building 1) with realistic tenant names, bay assignments, and parking allocations for consistent bay configurator functionality.
 
 ## External Dependencies
 - **Database**: PostgreSQL (Neon serverless).

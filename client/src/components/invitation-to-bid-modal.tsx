@@ -1296,7 +1296,16 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                                       e.preventDefault();
                                       e.stopPropagation();
                                       console.log('🔥 DESC TAB BLOCKED');
-                                      handleScopeNavigation(index, 'description', e.shiftKey ? 'backward' : 'forward');
+                                      
+                                      // Force immediate focus change - don't wait for React
+                                      const quantityInput = document.querySelector(`input[name="scopeOfWork.${index}.quantity"]`) as HTMLInputElement;
+                                      if (quantityInput && !e.shiftKey) {
+                                        quantityInput.focus();
+                                        quantityInput.select();
+                                        console.log('🔥 IMMEDIATE FOCUS TO QUANTITY');
+                                      } else {
+                                        handleScopeNavigation(index, 'description', e.shiftKey ? 'backward' : 'forward');
+                                      }
                                     }
                                   }}
                                 />
@@ -1326,7 +1335,23 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                                       e.preventDefault();
                                       e.stopPropagation();
                                       console.log('🔥 QTY TAB BLOCKED');
-                                      handleScopeNavigation(index, 'quantity', e.shiftKey ? 'backward' : 'forward');
+                                      
+                                      // Force immediate focus change
+                                      if (!e.shiftKey) {
+                                        const unitInput = document.querySelector(`input[name="scopeOfWork.${index}.unit"]`) as HTMLInputElement;
+                                        if (unitInput) {
+                                          unitInput.focus();
+                                          unitInput.select();
+                                          console.log('🔥 IMMEDIATE FOCUS TO UNIT');
+                                        }
+                                      } else {
+                                        const descInput = document.querySelector(`input[name="scopeOfWork.${index}.description"]`) as HTMLInputElement;
+                                        if (descInput) {
+                                          descInput.focus();
+                                          descInput.select();
+                                          console.log('🔥 IMMEDIATE FOCUS TO DESC');
+                                        }
+                                      }
                                     }
                                   }}
                                 />
@@ -1354,7 +1379,37 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                                                   e.preventDefault();
                                                   e.stopPropagation();
                                                   console.log('🔥 UNIT TAB BLOCKED');
-                                                  handleScopeNavigation(index, 'unit', e.shiftKey ? 'backward' : 'forward');
+                                                  
+                                                  // Force immediate focus change
+                                                  if (!e.shiftKey) {
+                                                    const nextDescInput = document.querySelector(`input[name="scopeOfWork.${index + 1}.description"]`) as HTMLInputElement;
+                                                    if (nextDescInput) {
+                                                      nextDescInput.focus();
+                                                      nextDescInput.select();
+                                                      console.log('🔥 IMMEDIATE FOCUS TO NEXT DESC');
+                                                    } else {
+                                                      // Add new row
+                                                      const addButton = Array.from(document.querySelectorAll('button')).find(btn => btn.textContent?.includes('Add Line Item'));
+                                                      if (addButton) {
+                                                        (addButton as HTMLButtonElement).click();
+                                                        setTimeout(() => {
+                                                          const newDescInput = document.querySelector(`input[name="scopeOfWork.${index + 1}.description"]`) as HTMLInputElement;
+                                                          if (newDescInput) {
+                                                            newDescInput.focus();
+                                                            newDescInput.select();
+                                                            console.log('🔥 IMMEDIATE FOCUS TO NEW DESC');
+                                                          }
+                                                        }, 50);
+                                                      }
+                                                    }
+                                                  } else {
+                                                    const quantityInput = document.querySelector(`input[name="scopeOfWork.${index}.quantity"]`) as HTMLInputElement;
+                                                    if (quantityInput) {
+                                                      quantityInput.focus();
+                                                      quantityInput.select();
+                                                      console.log('🔥 IMMEDIATE FOCUS TO QTY');
+                                                    }
+                                                  }
                                                 }
                                               }}
                                             />

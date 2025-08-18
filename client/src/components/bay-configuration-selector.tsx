@@ -371,21 +371,7 @@ export default function BayConfigurationSelector({
             </div>
           </div>
 
-          {/* Directional Labels */}
-          <div className="mb-2">
-            <div className="flex justify-between items-center text-[9px] text-gray-600">
-              <div className="flex items-center gap-1">
-                <Navigation className="w-2 h-2 rotate-180" />
-                <span className="font-medium">West</span>
-                <span className="text-gray-400">(Street)</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <span className="text-gray-400">(Docks)</span>
-                <span className="font-medium">East</span>
-                <Navigation className="w-2 h-2" />
-              </div>
-            </div>
-          </div>
+
           
           {/* Bay Grid with Position Indicators */}
           <div className="relative">

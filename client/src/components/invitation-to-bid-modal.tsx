@@ -72,25 +72,26 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
   const [isGeneratingPdfs, setIsGeneratingPdfs] = useState(false);
   const [keyDates, setKeyDates] = useState<Array<{label: string, date: string}>>([]);
   const [additionalAreas, setAdditionalAreas] = useState<Array<{id: string, description: string, squareFootage: string, notes: string}>>([]);
+  const modalRef = useRef<HTMLDivElement>(null);
 
-  // Handle scope table navigation with aggressive interception
+  // Direct modal-level tab handling
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !modalRef.current) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      console.log('Key pressed:', e.key, 'Target:', (e.target as HTMLElement)?.name);
+      console.log('🔥 MODAL: Key pressed:', e.key, 'Target name:', (e.target as HTMLElement)?.name, 'Target:', e.target);
       
       if (e.key === 'Tab') {
         const target = e.target as HTMLInputElement;
         const name = target.name;
         
-        console.log('Tab pressed on element:', name);
+        console.log('🔥 MODAL: Tab detected on:', name);
         
-        // Only handle scope of work inputs
+        // Check if this is a scope of work field
         if (name && name.includes('scopeOfWork')) {
-          console.log('Intercepting tab for scope of work field:', name);
+          console.log('🔥 MODAL: BLOCKING tab for scope field:', name);
           
-          // AGGRESSIVE prevention - stop everything
+          // COMPLETELY STOP the event
           e.preventDefault();
           e.stopPropagation();
           e.stopImmediatePropagation();
@@ -100,78 +101,61 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
             const rowIndex = parseInt(match[1]);
             const fieldType = match[2];
             
-            console.log('Field type:', fieldType, 'Row:', rowIndex);
+            console.log('🔥 MODAL: Parsed - Row:', rowIndex, 'Field:', fieldType);
             
-            setTimeout(() => {
-              if (!e.shiftKey) {
-                // Forward navigation
-                if (fieldType === 'description') {
-                  const quantityInput = document.querySelector(`input[name="scopeOfWork.${rowIndex}.quantity"]`) as HTMLInputElement;
-                  console.log('Moving to quantity input:', quantityInput);
-                  if (quantityInput) {
-                    quantityInput.focus();
-                    quantityInput.select();
-                  }
-                } else if (fieldType === 'quantity') {
-                  const unitInput = document.querySelector(`input[name="scopeOfWork.${rowIndex}.unit"]`) as HTMLInputElement;
-                  console.log('Moving to unit input:', unitInput);
-                  if (unitInput) {
-                    unitInput.focus();
-                    unitInput.select();
-                  }
-                } else if (fieldType === 'unit') {
-                  const nextDescInput = document.querySelector(`input[name="scopeOfWork.${rowIndex + 1}.description"]`) as HTMLInputElement;
-                  console.log('Moving to next row description:', nextDescInput);
-                  if (nextDescInput) {
-                    nextDescInput.focus();
-                    nextDescInput.select();
-                  } else {
-                    // Add new row
-                    const addButton = Array.from(document.querySelectorAll('button')).find(btn => btn.textContent?.includes('Add Line Item'));
-                    console.log('Adding new row, button:', addButton);
-                    if (addButton) {
-                      (addButton as HTMLButtonElement).click();
-                      setTimeout(() => {
-                        const newDescInput = document.querySelector(`input[name="scopeOfWork.${rowIndex + 1}.description"]`) as HTMLInputElement;
-                        if (newDescInput) {
-                          newDescInput.focus();
-                          newDescInput.select();
-                        }
-                      }, 100);
-                    }
-                  }
+            // Manual navigation
+            if (!e.shiftKey) {
+              if (fieldType === 'description') {
+                const nextInput = modalRef.current?.querySelector(`input[name="scopeOfWork.${rowIndex}.quantity"]`) as HTMLInputElement;
+                console.log('🔥 MODAL: Moving desc → quantity:', nextInput);
+                if (nextInput) {
+                  nextInput.focus();
+                  nextInput.select();
                 }
-              } else {
-                // Backward navigation (Shift+Tab)
-                if (fieldType === 'unit') {
-                  const quantityInput = document.querySelector(`input[name="scopeOfWork.${rowIndex}.quantity"]`) as HTMLInputElement;
-                  if (quantityInput) {
-                    quantityInput.focus();
-                    quantityInput.select();
-                  }
-                } else if (fieldType === 'quantity') {
-                  const descInput = document.querySelector(`input[name="scopeOfWork.${rowIndex}.description"]`) as HTMLInputElement;
-                  if (descInput) {
-                    descInput.focus();
-                    descInput.select();
+              } else if (fieldType === 'quantity') {
+                const nextInput = modalRef.current?.querySelector(`input[name="scopeOfWork.${rowIndex}.unit"]`) as HTMLInputElement;
+                console.log('🔥 MODAL: Moving quantity → unit:', nextInput);
+                if (nextInput) {
+                  nextInput.focus();
+                  nextInput.select();
+                }
+              } else if (fieldType === 'unit') {
+                const nextInput = modalRef.current?.querySelector(`input[name="scopeOfWork.${rowIndex + 1}.description"]`) as HTMLInputElement;
+                console.log('🔥 MODAL: Moving unit → next desc:', nextInput);
+                if (nextInput) {
+                  nextInput.focus();
+                  nextInput.select();
+                } else {
+                  // Add new row
+                  const addButton = modalRef.current?.querySelector('button[type="button"]') as HTMLButtonElement;
+                  console.log('🔥 MODAL: Adding new row with button:', addButton);
+                  if (addButton && addButton.textContent?.includes('Add Line Item')) {
+                    addButton.click();
+                    setTimeout(() => {
+                      const newInput = modalRef.current?.querySelector(`input[name="scopeOfWork.${rowIndex + 1}.description"]`) as HTMLInputElement;
+                      if (newInput) {
+                        newInput.focus();
+                        newInput.select();
+                      }
+                    }, 100);
                   }
                 }
               }
-            }, 0);
+            }
           }
           
-          return false; // Additional prevention
+          return false;
         }
       }
     };
 
-    // Try multiple event attachment strategies
-    document.addEventListener('keydown', handleKeyDown, { capture: true, passive: false });
-    window.addEventListener('keydown', handleKeyDown, { capture: true, passive: false });
+    // Attach to the modal element directly
+    modalRef.current.addEventListener('keydown', handleKeyDown, { capture: true, passive: false });
     
     return () => {
-      document.removeEventListener('keydown', handleKeyDown, true);
-      window.removeEventListener('keydown', handleKeyDown, true);
+      if (modalRef.current) {
+        modalRef.current.removeEventListener('keydown', handleKeyDown, true);
+      }
     };
   }, [isOpen]);
 
@@ -771,7 +755,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
 
   return (
     <Dialog open={isOpen} onOpenChange={() => onClose()}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent ref={modalRef} className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />

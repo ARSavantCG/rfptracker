@@ -716,6 +716,16 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
                   name="name"
                   defaultValue={editingTransformer?.transformerName || ''}
                   placeholder="e.g., Main Transformer A"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Tab' && !e.shiftKey) {
+                      e.preventDefault();
+                      const capacityInput = document.querySelector('input[name="capacity"]') as HTMLInputElement;
+                      if (capacityInput) {
+                        capacityInput.focus();
+                        capacityInput.select();
+                      }
+                    }
+                  }}
                   required
                 />
               </div>
@@ -723,6 +733,23 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
                 <Label htmlFor="capacity">Capacity (kVA) *</Label>
                 <Input
                   name="capacity"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Tab' && !e.shiftKey) {
+                      e.preventDefault();
+                      const fplInput = document.querySelector('input[name="fplDesignationNo"]') as HTMLInputElement;
+                      if (fplInput) {
+                        fplInput.focus();
+                        fplInput.select();
+                      }
+                    } else if (e.key === 'Tab' && e.shiftKey) {
+                      e.preventDefault();
+                      const nameInput = document.querySelector('input[name="name"]') as HTMLInputElement;
+                      if (nameInput) {
+                        nameInput.focus();
+                        nameInput.select();
+                      }
+                    }
+                  }}
                   type="number"
                   defaultValue={editingTransformer?.totalCapacityKva || ''}
                   placeholder="e.g., 2000"
@@ -733,8 +760,25 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
                 <Label htmlFor="location">Location *</Label>
                 <Input
                   name="location"
-                  defaultValue={editingTransformer?.location || ''}
+                  defaultValue={editingTransformer?.transformerLocation || ''}
                   placeholder="e.g., Main Electrical Room"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Tab' && !e.shiftKey) {
+                      e.preventDefault();
+                      const fplInput = document.querySelector('input[name="manufacturer"]') as HTMLInputElement;
+                      if (fplInput) {
+                        fplInput.focus();
+                        fplInput.select();
+                      }
+                    } else if (e.key === 'Tab' && e.shiftKey) {
+                      e.preventDefault();
+                      const capacityInput = document.querySelector('input[name="capacity"]') as HTMLInputElement;
+                      if (capacityInput) {
+                        capacityInput.focus();
+                        capacityInput.select();
+                      }
+                    }
+                  }}
                   required
                 />
               </div>
@@ -744,6 +788,16 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
                   name="manufacturer"
                   defaultValue={editingTransformer?.fplId || ''}
                   placeholder="e.g., FPL-TR-001"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Tab' && e.shiftKey) {
+                      e.preventDefault();
+                      const locationInput = document.querySelector('input[name="location"]') as HTMLInputElement;
+                      if (locationInput) {
+                        locationInput.focus();
+                        locationInput.select();
+                      }
+                    }
+                  }}
                 />
               </div>
             </div>

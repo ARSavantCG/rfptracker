@@ -207,6 +207,15 @@ export function ContactFormModal({ contact, trigger, onSuccess }: ContactFormMod
                 id="name"
                 value={formData.name || ""}
                 onChange={(e) => handleInputChange("name", e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Tab' && !e.shiftKey) {
+                    e.preventDefault();
+                    const typeSelect = document.querySelector('select[id="type"]') as HTMLSelectElement;
+                    if (typeSelect) {
+                      typeSelect.focus();
+                    }
+                  }
+                }}
                 placeholder="Full name"
                 required
               />
@@ -239,6 +248,22 @@ export function ContactFormModal({ contact, trigger, onSuccess }: ContactFormMod
               type="email"
               value={formData.email || ""}
               onChange={(e) => handleInputChange("email", e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Tab' && !e.shiftKey) {
+                  e.preventDefault();
+                  const phoneInput = document.querySelector('input[id="phone"]') as HTMLInputElement;
+                  if (phoneInput) {
+                    phoneInput.focus();
+                    phoneInput.select();
+                  }
+                } else if (e.key === 'Tab' && e.shiftKey) {
+                  e.preventDefault();
+                  const typeSelect = document.querySelector('select[id="type"]') as HTMLSelectElement;
+                  if (typeSelect) {
+                    typeSelect.focus();
+                  }
+                }
+              }}
               placeholder="email@company.com"
               required
             />
@@ -251,6 +276,23 @@ export function ContactFormModal({ contact, trigger, onSuccess }: ContactFormMod
                 id="phone"
                 value={formData.phone || ""}
                 onChange={(e) => handleInputChange("phone", e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Tab' && !e.shiftKey) {
+                    e.preventDefault();
+                    const companyInput = document.querySelector('input[id="company"]') as HTMLInputElement;
+                    if (companyInput) {
+                      companyInput.focus();
+                      companyInput.select();
+                    }
+                  } else if (e.key === 'Tab' && e.shiftKey) {
+                    e.preventDefault();
+                    const emailInput = document.querySelector('input[id="email"]') as HTMLInputElement;
+                    if (emailInput) {
+                      emailInput.focus();
+                      emailInput.select();
+                    }
+                  }
+                }}
                 placeholder="(555) 123-4567"
               />
             </div>
@@ -261,6 +303,23 @@ export function ContactFormModal({ contact, trigger, onSuccess }: ContactFormMod
                 id="company"
                 value={formData.company || ""}
                 onChange={(e) => handleInputChange("company", e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Tab' && !e.shiftKey) {
+                    e.preventDefault();
+                    const notesTextarea = document.querySelector('textarea[id="notes"]') as HTMLTextAreaElement;
+                    if (notesTextarea) {
+                      notesTextarea.focus();
+                      notesTextarea.select();
+                    }
+                  } else if (e.key === 'Tab' && e.shiftKey) {
+                    e.preventDefault();
+                    const phoneInput = document.querySelector('input[id="phone"]') as HTMLInputElement;
+                    if (phoneInput) {
+                      phoneInput.focus();
+                      phoneInput.select();
+                    }
+                  }
+                }}
                 placeholder="Company name"
               />
             </div>

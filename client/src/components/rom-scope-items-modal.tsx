@@ -308,6 +308,16 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                       id="source"
                       value={formData.source}
                       onChange={(e) => setFormData({...formData, source: e.target.value})}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Tab' && !e.shiftKey) {
+                          e.preventDefault();
+                          const lastUpdatedInput = document.querySelector('input[id="lastUpdated"]') as HTMLInputElement;
+                          if (lastUpdatedInput) {
+                            lastUpdatedInput.focus();
+                            lastUpdatedInput.select();
+                          }
+                        }
+                      }}
                       placeholder="e.g., ABC Construction, Internal Estimate"
                     />
                   </div>
@@ -319,6 +329,16 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                       type="date"
                       value={formData.lastUpdated}
                       onChange={(e) => setFormData({...formData, lastUpdated: e.target.value})}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Tab' && e.shiftKey) {
+                          e.preventDefault();
+                          const sourceInput = document.querySelector('input[id="source"]') as HTMLInputElement;
+                          if (sourceInput) {
+                            sourceInput.focus();
+                            sourceInput.select();
+                          }
+                        }
+                      }}
                     />
                   </div>
                 </div>

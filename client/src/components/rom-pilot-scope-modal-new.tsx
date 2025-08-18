@@ -374,6 +374,24 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
                                   const value = e.target.value.replace(/,/g, '');
                                   updateLineItem(category, index, 'quantity', value);
                                 }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Tab' && !e.shiftKey) {
+                                    e.preventDefault();
+                                    // Focus next input (notes)
+                                    const nextInput = document.querySelector(`input[class*="h-7 text-xs"]:nth-of-type(${index * 2 + 2})`) as HTMLInputElement;
+                                    if (nextInput) {
+                                      nextInput.focus();
+                                      nextInput.select();
+                                    }
+                                  } else if (e.key === 'Tab' && e.shiftKey) {
+                                    e.preventDefault();
+                                    // Focus previous select (scope item)
+                                    const prevSelect = document.querySelector(`select:nth-of-type(${index + 1})`) as HTMLSelectElement;
+                                    if (prevSelect) {
+                                      prevSelect.focus();
+                                    }
+                                  }
+                                }}
                                 className="h-7 text-xs"
                                 placeholder="0"
                               />
@@ -397,6 +415,40 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
                               <Input
                                 value={item.notes || ""}
                                 onChange={(e) => updateLineItem(category, index, 'notes', e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Tab' && !e.shiftKey) {
+                                    e.preventDefault();
+                                    // Check if this is the last item in the list
+                                    if (index === items.length - 1) {
+                                      // Add new line item and focus it
+                                      const addButton = document.querySelector(`button:contains("Add ${category === 'tenant-improvements' ? 'Tenant Improvement' : 'Design/Soft Cost'} Item")`) as HTMLButtonElement;
+                                      if (addButton) {
+                                        addButton.click();
+                                        // Focus will be set to new row after creation
+                                        setTimeout(() => {
+                                          const newSelect = document.querySelector(`select:nth-of-type(${index + 2})`) as HTMLSelectElement;
+                                          if (newSelect) {
+                                            newSelect.focus();
+                                          }
+                                        }, 50);
+                                      }
+                                    } else {
+                                      // Focus next row's select
+                                      const nextSelect = document.querySelector(`select:nth-of-type(${index + 2})`) as HTMLSelectElement;
+                                      if (nextSelect) {
+                                        nextSelect.focus();
+                                      }
+                                    }
+                                  } else if (e.key === 'Tab' && e.shiftKey) {
+                                    e.preventDefault();
+                                    // Focus previous input (quantity)
+                                    const prevInput = document.querySelector(`input[class*="h-7 text-xs"]:nth-of-type(${index * 2 + 1})`) as HTMLInputElement;
+                                    if (prevInput) {
+                                      prevInput.focus();
+                                      prevInput.select();
+                                    }
+                                  }
+                                }}
                                 className="h-7 text-xs"
                                 placeholder="Optional notes"
                               />

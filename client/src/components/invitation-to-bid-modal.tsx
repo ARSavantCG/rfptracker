@@ -1223,22 +1223,16 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                                 <Input 
                                   {...field} 
                                   placeholder="Work description"
-                                  tabIndex={-1}
                                   onKeyDown={(e) => {
                                     if (e.key === 'Tab') {
                                       e.preventDefault();
                                       e.stopPropagation();
-                                      e.nativeEvent.stopImmediatePropagation();
-                                      if (!e.shiftKey) {
-                                        // Focus next input (quantity)
-                                        const nextInput = document.querySelector(`input[name="scopeOfWork.${index}.quantity"]`) as HTMLInputElement ||
-                                                          document.querySelector(`[data-testid="quantity-${index}"]`) as HTMLInputElement;
-                                        if (nextInput) {
-                                          nextInput.focus();
-                                          nextInput.select();
-                                        }
+                                      // Simply move to the quantity field in the same row
+                                      const quantityInput = e.currentTarget.closest('.grid')?.querySelector(`input[name="scopeOfWork.${index}.quantity"]`) as HTMLInputElement;
+                                      if (quantityInput) {
+                                        quantityInput.focus();
+                                        quantityInput.select();
                                       }
-                                      return false;
                                     }
                                   }}
                                 />
@@ -1260,31 +1254,27 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                                   type="number" 
                                   {...field} 
                                   data-testid={`quantity-${index}`}
-                                  tabIndex={-1}
                                   onChange={(e) => field.onChange(e.target.value === "" ? "" : parseInt(e.target.value) || "")}
                                   placeholder="Enter quantity"
                                   onKeyDown={(e) => {
                                     if (e.key === 'Tab') {
                                       e.preventDefault();
                                       e.stopPropagation();
-                                      e.nativeEvent.stopImmediatePropagation();
                                       if (!e.shiftKey) {
-                                        // Focus next input (unit)
-                                        const nextInput = document.querySelector(`input[name="scopeOfWork.${index}.unit"]`) as HTMLInputElement ||
-                                                          document.querySelector(`[data-testid="unit-${index}"]`) as HTMLInputElement;
-                                        if (nextInput) {
-                                          nextInput.focus();
-                                          nextInput.select();
+                                        // Move to unit field in the same row
+                                        const unitInput = e.currentTarget.closest('.grid')?.querySelector(`input[name="scopeOfWork.${index}.unit"]`) as HTMLInputElement;
+                                        if (unitInput) {
+                                          unitInput.focus();
+                                          unitInput.select();
                                         }
                                       } else {
-                                        // Focus previous input (description)
-                                        const prevInput = document.querySelector(`input[name="scopeOfWork.${index}.description"]`) as HTMLInputElement;
-                                        if (prevInput) {
-                                          prevInput.focus();
-                                          prevInput.select();
+                                        // Move back to description field in the same row
+                                        const descInput = e.currentTarget.closest('.grid')?.querySelector(`input[name="scopeOfWork.${index}.description"]`) as HTMLInputElement;
+                                        if (descInput) {
+                                          descInput.focus();
+                                          descInput.select();
                                         }
                                       }
-                                      return false;
                                     }
                                   }}
                                 />
@@ -1305,44 +1295,40 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                                             <Input 
                                               {...field} 
                                               data-testid={`unit-${index}`}
-                                              tabIndex={-1}
                                               placeholder="sq ft, each, etc."
                                               onKeyDown={(e) => {
                                                 if (e.key === 'Tab') {
                                                   e.preventDefault();
                                                   e.stopPropagation();
-                                                  e.nativeEvent.stopImmediatePropagation();
                                                   if (!e.shiftKey) {
-                                                    // Focus next row's description input or add new row
+                                                    // Move to next row description or create new row
                                                     const nextRowInput = document.querySelector(`input[name="scopeOfWork.${index + 1}.description"]`) as HTMLInputElement;
                                                     if (nextRowInput) {
                                                       nextRowInput.focus();
                                                       nextRowInput.select();
                                                     } else {
-                                                      // If this is the last row, add a new row and focus it
-                                                      const addButton = document.querySelector('button[type="button"]') as HTMLButtonElement;
-                                                      if (addButton && addButton.textContent?.includes('Add Line Item')) {
+                                                      // Create new row if this is the last one
+                                                      const addButton = document.querySelector('button[type="button"]:has-text("Add Line Item")') as HTMLButtonElement ||
+                                                                        Array.from(document.querySelectorAll('button[type="button"]')).find(btn => btn.textContent?.includes('Add Line Item')) as HTMLButtonElement;
+                                                      if (addButton) {
                                                         addButton.click();
-                                                        // Focus will be set to new row's description after it's created
                                                         setTimeout(() => {
                                                           const newRowInput = document.querySelector(`input[name="scopeOfWork.${index + 1}.description"]`) as HTMLInputElement;
                                                           if (newRowInput) {
                                                             newRowInput.focus();
                                                             newRowInput.select();
                                                           }
-                                                        }, 50);
+                                                        }, 100);
                                                       }
                                                     }
                                                   } else {
-                                                    // Focus previous input (quantity)
-                                                    const prevInput = document.querySelector(`input[name="scopeOfWork.${index}.quantity"]`) as HTMLInputElement ||
-                                                                      document.querySelector(`[data-testid="quantity-${index}"]`) as HTMLInputElement;
-                                                    if (prevInput) {
-                                                      prevInput.focus();
-                                                      prevInput.select();
+                                                    // Move back to quantity field in the same row
+                                                    const quantityInput = e.currentTarget.closest('.grid')?.querySelector(`input[name="scopeOfWork.${index}.quantity"]`) as HTMLInputElement;
+                                                    if (quantityInput) {
+                                                      quantityInput.focus();
+                                                      quantityInput.select();
                                                     }
                                                   }
-                                                  return false;
                                                 }
                                               }}
                                             />

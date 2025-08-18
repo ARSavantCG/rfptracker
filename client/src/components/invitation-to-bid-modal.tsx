@@ -1288,23 +1288,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                           render={({ field }) => (
                             <FormItem>
                               <FormControl>
-                                <Input 
-                                  {...field} 
-                                  placeholder="Work description"
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Tab' && !e.shiftKey) {
-                                      e.preventDefault();
-                                      e.stopPropagation();
-                                      const quantityInput = document.querySelector(`input[name="scopeOfWork.${index}.quantity"]`) as HTMLInputElement;
-                                      if (quantityInput) {
-                                        setTimeout(() => {
-                                          quantityInput.focus();
-                                          quantityInput.select();
-                                        }, 0);
-                                      }
-                                    }
-                                  }}
-                                />
+                                <Input {...field} placeholder="Work description" />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -1325,19 +1309,6 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                                   data-testid={`quantity-${index}`}
                                   onChange={(e) => field.onChange(e.target.value === "" ? "" : parseInt(e.target.value) || "")}
                                   placeholder="Quantity"
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Tab' && !e.shiftKey) {
-                                      e.preventDefault();
-                                      e.stopPropagation();
-                                      const unitInput = document.querySelector(`input[name="scopeOfWork.${index}.unit"]`) as HTMLInputElement;
-                                      if (unitInput) {
-                                        setTimeout(() => {
-                                          unitInput.focus();
-                                          unitInput.select();
-                                        }, 0);
-                                      }
-                                    }
-                                  }}
                                 />
                               </FormControl>
                               <FormMessage />
@@ -1353,37 +1324,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                                       render={({ field }) => (
                                         <FormItem>
                                           <FormControl>
-                                            <Input 
-                                              {...field} 
-                                              data-testid={`unit-${index}`}
-                                              placeholder="sq ft, each, etc."
-                                              onKeyDown={(e) => {
-                                                if (e.key === 'Tab' && !e.shiftKey) {
-                                                  e.preventDefault();
-                                                  e.stopPropagation();
-                                                  const nextDescInput = document.querySelector(`input[name="scopeOfWork.${index + 1}.description"]`) as HTMLInputElement;
-                                                  if (nextDescInput) {
-                                                    setTimeout(() => {
-                                                      nextDescInput.focus();
-                                                      nextDescInput.select();
-                                                    }, 0);
-                                                  } else {
-                                                    // Add new row and focus it
-                                                    const addButton = Array.from(document.querySelectorAll('button')).find(btn => btn.textContent?.includes('Add Line Item'));
-                                                    if (addButton) {
-                                                      (addButton as HTMLButtonElement).click();
-                                                      setTimeout(() => {
-                                                        const newDescInput = document.querySelector(`input[name="scopeOfWork.${index + 1}.description"]`) as HTMLInputElement;
-                                                        if (newDescInput) {
-                                                          newDescInput.focus();
-                                                          newDescInput.select();
-                                                        }
-                                                      }, 100);
-                                                    }
-                                                  }
-                                                }
-                                              }}
-                                            />
+                                            <Input {...field} data-testid={`unit-${index}`} placeholder="sq ft, each, etc." />
                                           </FormControl>
                                           <FormMessage />
                                         </FormItem>

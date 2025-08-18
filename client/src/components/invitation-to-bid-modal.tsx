@@ -1291,19 +1291,37 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                                 <Input 
                                   {...field} 
                                   ref={(el) => {
-                                    if (el) scopeRefs.current[`description-${index}`] = el;
+                                    if (el) {
+                                      scopeRefs.current[`description-${index}`] = el;
+                                      // Completely remove from tab order
+                                      el.setAttribute('tabindex', '-1');
+                                    }
                                   }}
-                                  placeholder="Work description (Tab → Quantity)"
+                                  placeholder="Work description"
                                   onKeyDown={(e) => {
+                                    console.log('🎯 DESC KEYDOWN:', e.key, 'row', index);
                                     if (e.key === 'Tab') {
                                       e.preventDefault();
                                       e.stopPropagation();
-                                      navigateScope(index, 'description', e.shiftKey ? 'backward' : 'forward');
+                                      e.nativeEvent.preventDefault();
+                                      e.nativeEvent.stopPropagation();
+                                      console.log('🎯 DESC TAB BLOCKED');
+                                      
+                                      // Multiple attempts to focus with delay
+                                      const quantityRef = scopeRefs.current[`quantity-${index}`];
+                                      if (quantityRef && !e.shiftKey) {
+                                        setTimeout(() => {
+                                          quantityRef.focus();
+                                          quantityRef.select();
+                                          console.log('🎯 DELAYED FOCUS TO QUANTITY');
+                                        }, 50);
+                                      }
+                                      
+                                      return false;
                                     }
-                                    if (e.key === 'ArrowRight') {
-                                      e.preventDefault();
-                                      navigateScope(index, 'description', 'forward');
-                                    }
+                                  }}
+                                  onFocus={() => {
+                                    console.log('🎯 DESC FOCUSED:', index);
                                   }}
                                 />
                               </FormControl>
@@ -1324,25 +1342,48 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                                   type="number" 
                                   {...field} 
                                   ref={(el) => {
-                                    if (el) scopeRefs.current[`quantity-${index}`] = el;
+                                    if (el) {
+                                      scopeRefs.current[`quantity-${index}`] = el;
+                                      el.setAttribute('tabindex', '-1');
+                                    }
                                   }}
                                   data-testid={`quantity-${index}`}
                                   onChange={(e) => field.onChange(e.target.value === "" ? "" : parseInt(e.target.value) || "")}
-                                  placeholder="Quantity (Tab → Unit)"
+                                  placeholder="Quantity"
                                   onKeyDown={(e) => {
+                                    console.log('🎯 QTY KEYDOWN:', e.key, 'row', index);
                                     if (e.key === 'Tab') {
                                       e.preventDefault();
                                       e.stopPropagation();
-                                      navigateScope(index, 'quantity', e.shiftKey ? 'backward' : 'forward');
+                                      e.nativeEvent.preventDefault();
+                                      e.nativeEvent.stopPropagation();
+                                      console.log('🎯 QTY TAB BLOCKED');
+                                      
+                                      if (!e.shiftKey) {
+                                        const unitRef = scopeRefs.current[`unit-${index}`];
+                                        if (unitRef) {
+                                          setTimeout(() => {
+                                            unitRef.focus();
+                                            unitRef.select();
+                                            console.log('🎯 DELAYED FOCUS TO UNIT');
+                                          }, 50);
+                                        }
+                                      } else {
+                                        const descRef = scopeRefs.current[`description-${index}`];
+                                        if (descRef) {
+                                          setTimeout(() => {
+                                            descRef.focus();
+                                            descRef.select();
+                                            console.log('🎯 DELAYED FOCUS TO DESC');
+                                          }, 50);
+                                        }
+                                      }
+                                      
+                                      return false;
                                     }
-                                    if (e.key === 'ArrowRight') {
-                                      e.preventDefault();
-                                      navigateScope(index, 'quantity', 'forward');
-                                    }
-                                    if (e.key === 'ArrowLeft') {
-                                      e.preventDefault();
-                                      navigateScope(index, 'quantity', 'backward');
-                                    }
+                                  }}
+                                  onFocus={() => {
+                                    console.log('🎯 QTY FOCUSED:', index);
                                   }}
                                 />
                               </FormControl>
@@ -1362,24 +1403,61 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                                             <Input 
                                               {...field} 
                                               ref={(el) => {
-                                                if (el) scopeRefs.current[`unit-${index}`] = el;
+                                                if (el) {
+                                                  scopeRefs.current[`unit-${index}`] = el;
+                                                  el.setAttribute('tabindex', '-1');
+                                                }
                                               }}
                                               data-testid={`unit-${index}`}
-                                              placeholder="sq ft, each, etc. (Tab → Next Row)"
+                                              placeholder="sq ft, each, etc."
                                               onKeyDown={(e) => {
+                                                console.log('🎯 UNIT KEYDOWN:', e.key, 'row', index);
                                                 if (e.key === 'Tab') {
                                                   e.preventDefault();
                                                   e.stopPropagation();
-                                                  navigateScope(index, 'unit', e.shiftKey ? 'backward' : 'forward');
+                                                  e.nativeEvent.preventDefault();
+                                                  e.nativeEvent.stopPropagation();
+                                                  console.log('🎯 UNIT TAB BLOCKED');
+                                                  
+                                                  if (!e.shiftKey) {
+                                                    const nextDescRef = scopeRefs.current[`description-${index + 1}`];
+                                                    if (nextDescRef) {
+                                                      setTimeout(() => {
+                                                        nextDescRef.focus();
+                                                        nextDescRef.select();
+                                                        console.log('🎯 DELAYED FOCUS TO NEXT DESC');
+                                                      }, 50);
+                                                    } else {
+                                                      // Add new row
+                                                      const addButton = Array.from(document.querySelectorAll('button')).find(btn => btn.textContent?.includes('Add Line Item'));
+                                                      if (addButton) {
+                                                        (addButton as HTMLButtonElement).click();
+                                                        setTimeout(() => {
+                                                          const newDescRef = scopeRefs.current[`description-${index + 1}`];
+                                                          if (newDescRef) {
+                                                            newDescRef.focus();
+                                                            newDescRef.select();
+                                                            console.log('🎯 DELAYED FOCUS TO NEW DESC');
+                                                          }
+                                                        }, 150);
+                                                      }
+                                                    }
+                                                  } else {
+                                                    const quantityRef = scopeRefs.current[`quantity-${index}`];
+                                                    if (quantityRef) {
+                                                      setTimeout(() => {
+                                                        quantityRef.focus();
+                                                        quantityRef.select();
+                                                        console.log('🎯 DELAYED FOCUS TO QTY');
+                                                      }, 50);
+                                                    }
+                                                  }
+                                                  
+                                                  return false;
                                                 }
-                                                if (e.key === 'ArrowDown') {
-                                                  e.preventDefault();
-                                                  navigateScope(index, 'unit', 'forward');
-                                                }
-                                                if (e.key === 'ArrowLeft') {
-                                                  e.preventDefault();
-                                                  navigateScope(index, 'unit', 'backward');
-                                                }
+                                              }}
+                                              onFocus={() => {
+                                                console.log('🎯 UNIT FOCUSED:', index);
                                               }}
                                             />
                                           </FormControl>

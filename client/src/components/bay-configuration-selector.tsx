@@ -86,7 +86,7 @@ export default function BayConfigurationSelector({
     }).filter((bay): bay is NonNullable<typeof bay> => bay != null);
     
     // ABSOLUTE FIX: Force exact 408,763 SF when all bays selected to match server
-    let selectedBaySquareFootage;
+    let selectedBaySquareFootage: number;
     if (selectedBayConfigs.length === bayConfigurations.length) {
       // All bays selected = force exact server total
       selectedBaySquareFootage = 408763; // Exact server value
@@ -116,7 +116,7 @@ export default function BayConfigurationSelector({
       
       // Check for duplicate bay IDs
       const allBayIds = selectedBayConfigs.map(bay => bay.id);
-      const uniqueBayIds = [...new Set(allBayIds)];
+      const uniqueBayIds = Array.from(new Set(allBayIds));
       console.log('🔍 ALL BAY IDS:', allBayIds.length);
       console.log('🔍 UNIQUE BAY IDS:', uniqueBayIds.length);
       if (allBayIds.length !== uniqueBayIds.length) {
@@ -159,7 +159,7 @@ export default function BayConfigurationSelector({
       console.log(`🔢 Are they equal? ${debugSum === selectedBaySquareFootage}`);
       
       // Check if there are any duplicate bay IDs in selection
-      const uniqueBayIds = [...new Set(selectedBayIds)];
+      const uniqueBayIds = Array.from(new Set(selectedBayIds));
       console.log(`🔍 Selected bay IDs count: ${selectedBayIds.length}`);
       console.log(`🔍 Unique bay IDs count: ${uniqueBayIds.length}`);
       if (selectedBayIds.length !== uniqueBayIds.length) {

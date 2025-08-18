@@ -1284,7 +1284,6 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                                     if (e.key === 'Tab') {
                                       e.preventDefault();
                                       e.stopPropagation();
-                                      e.stopImmediatePropagation();
                                       console.log('🔥 DESC TAB BLOCKED');
                                       handleScopeNavigation(index, 'description', e.shiftKey ? 'backward' : 'forward');
                                     }
@@ -1315,7 +1314,6 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                                     if (e.key === 'Tab') {
                                       e.preventDefault();
                                       e.stopPropagation();
-                                      e.stopImmediatePropagation();
                                       console.log('🔥 QTY TAB BLOCKED');
                                       handleScopeNavigation(index, 'quantity', e.shiftKey ? 'backward' : 'forward');
                                     }
@@ -1344,7 +1342,6 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                                                 if (e.key === 'Tab') {
                                                   e.preventDefault();
                                                   e.stopPropagation();
-                                                  e.stopImmediatePropagation();
                                                   console.log('🔥 UNIT TAB BLOCKED');
                                                   handleScopeNavigation(index, 'unit', e.shiftKey ? 'backward' : 'forward');
                                                 }

@@ -74,59 +74,70 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
   const [additionalAreas, setAdditionalAreas] = useState<Array<{id: string, description: string, squareFootage: string, notes: string}>>([]);
   const modalRef = useRef<HTMLDivElement>(null);
 
-  // Simple navigation helper
+  // Simple navigation helper with delayed focus
   const handleScopeNavigation = (currentIndex: number, currentField: 'description' | 'quantity' | 'unit', direction: 'forward' | 'backward' = 'forward') => {
     console.log('🔥 SCOPE NAV:', currentField, 'row', currentIndex, direction);
     
-    if (direction === 'forward') {
-      if (currentField === 'description') {
-        const quantityInput = document.querySelector(`input[name="scopeOfWork.${currentIndex}.quantity"]`) as HTMLInputElement;
-        if (quantityInput) {
-          quantityInput.focus();
-          quantityInput.select();
+    // Use setTimeout to override React Hook Form's focus management
+    setTimeout(() => {
+      if (direction === 'forward') {
+        if (currentField === 'description') {
+          const quantityInput = document.querySelector(`input[name="scopeOfWork.${currentIndex}.quantity"]`) as HTMLInputElement;
+          console.log('🔥 FINDING QUANTITY INPUT:', quantityInput);
+          if (quantityInput) {
+            quantityInput.focus();
+            quantityInput.select();
+            console.log('🔥 FOCUSED QUANTITY INPUT');
+          }
+        } else if (currentField === 'quantity') {
+          const unitInput = document.querySelector(`input[name="scopeOfWork.${currentIndex}.unit"]`) as HTMLInputElement;
+          console.log('🔥 FINDING UNIT INPUT:', unitInput);
+          if (unitInput) {
+            unitInput.focus();
+            unitInput.select();
+            console.log('🔥 FOCUSED UNIT INPUT');
+          }
+        } else if (currentField === 'unit') {
+          const nextDescInput = document.querySelector(`input[name="scopeOfWork.${currentIndex + 1}.description"]`) as HTMLInputElement;
+          console.log('🔥 FINDING NEXT DESC INPUT:', nextDescInput);
+          if (nextDescInput) {
+            nextDescInput.focus();
+            nextDescInput.select();
+            console.log('🔥 FOCUSED NEXT DESC INPUT');
+          } else {
+            // Add new row
+            const addButton = Array.from(document.querySelectorAll('button')).find(btn => btn.textContent?.includes('Add Line Item'));
+            console.log('🔥 ADDING NEW ROW, BUTTON:', addButton);
+            if (addButton) {
+              (addButton as HTMLButtonElement).click();
+              setTimeout(() => {
+                const newDescInput = document.querySelector(`input[name="scopeOfWork.${currentIndex + 1}.description"]`) as HTMLInputElement;
+                if (newDescInput) {
+                  newDescInput.focus();
+                  newDescInput.select();
+                  console.log('🔥 FOCUSED NEW DESC INPUT');
+                }
+              }, 150);
+            }
+          }
         }
-      } else if (currentField === 'quantity') {
-        const unitInput = document.querySelector(`input[name="scopeOfWork.${currentIndex}.unit"]`) as HTMLInputElement;
-        if (unitInput) {
-          unitInput.focus();
-          unitInput.select();
-        }
-      } else if (currentField === 'unit') {
-        const nextDescInput = document.querySelector(`input[name="scopeOfWork.${currentIndex + 1}.description"]`) as HTMLInputElement;
-        if (nextDescInput) {
-          nextDescInput.focus();
-          nextDescInput.select();
-        } else {
-          // Add new row
-          const addButton = Array.from(document.querySelectorAll('button')).find(btn => btn.textContent?.includes('Add Line Item'));
-          if (addButton) {
-            (addButton as HTMLButtonElement).click();
-            setTimeout(() => {
-              const newDescInput = document.querySelector(`input[name="scopeOfWork.${currentIndex + 1}.description"]`) as HTMLInputElement;
-              if (newDescInput) {
-                newDescInput.focus();
-                newDescInput.select();
-              }
-            }, 100);
+      } else {
+        // Backward navigation
+        if (currentField === 'unit') {
+          const quantityInput = document.querySelector(`input[name="scopeOfWork.${currentIndex}.quantity"]`) as HTMLInputElement;
+          if (quantityInput) {
+            quantityInput.focus();
+            quantityInput.select();
+          }
+        } else if (currentField === 'quantity') {
+          const descInput = document.querySelector(`input[name="scopeOfWork.${currentIndex}.description"]`) as HTMLInputElement;
+          if (descInput) {
+            descInput.focus();
+            descInput.select();
           }
         }
       }
-    } else {
-      // Backward navigation
-      if (currentField === 'unit') {
-        const quantityInput = document.querySelector(`input[name="scopeOfWork.${currentIndex}.quantity"]`) as HTMLInputElement;
-        if (quantityInput) {
-          quantityInput.focus();
-          quantityInput.select();
-        }
-      } else if (currentField === 'quantity') {
-        const descInput = document.querySelector(`input[name="scopeOfWork.${currentIndex}.description"]`) as HTMLInputElement;
-        if (descInput) {
-          descInput.focus();
-          descInput.select();
-        }
-      }
-    }
+    }, 10); // Small delay to override React Hook Form
   };
 
   // Helper function to format numbers with commas

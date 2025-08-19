@@ -1615,48 +1615,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const optionRfpNumber = `${baseRfpNumber}.${optionLetter}`;
 
-      // Create option by duplicating original RFP data
+      // Create option as minimal draft for independent workflow
       const optionData = {
         rfpNumber: optionRfpNumber,
         parentRfpId: id,
         isOption: true,
         optionType: optionType,
-        property: originalRfp.property,
+        // Only copy essential tenant information
         tenantName: originalRfp.tenantName,
         projectName: `${originalRfp.projectName} (${optionTitle})`,
         confidential: originalRfp.confidential,
         sentBy: originalRfp.sentBy,
-        receivedOn: originalRfp.receivedOn, // Copy original received date
-        internalDueDate: originalRfp.internalDueDate, // Copy original due date
-        contractorDueDate: originalRfp.contractorDueDate,
-        architectDueDate: originalRfp.architectDueDate,
-        developmentContact: originalRfp.developmentContact,
-        projectArea: originalRfp.projectArea,
-        requestTypes: originalRfp.requestTypes,
-        status: 'in-progress', // Start as in-progress
-        workflowPhase: 'rfp-entry', // Always start options at step 1
-        notes: `RFP option (${optionTitle}) created from RFP ${originalRfp.rfpNumber}`,
-        files: [], // Start with no files
-        selectedBayConfigurations: originalRfp.selectedBayConfigurations || [],
-        // Copy validation fields
-        generalContractor: originalRfp.generalContractor,
-        architect: originalRfp.architect,
-        officeAreaExisting: originalRfp.officeAreaExisting,
-        officeAreaNew: originalRfp.officeAreaNew,
-        warehouseArea: originalRfp.warehouseArea,
-        warehouseAreaOverride: originalRfp.warehouseAreaOverride,
-        warehouseNotes: originalRfp.warehouseNotes,
-        areaBreakdown: originalRfp.areaBreakdown || [],
-        projectAddress: originalRfp.projectAddress,
-        projectSize: originalRfp.projectSize,
-        estimatedValue: originalRfp.estimatedValue,
-        timelineRequirements: originalRfp.timelineRequirements,
-        specialRequirements: originalRfp.specialRequirements,
-        contactPerson: originalRfp.contactPerson,
-        contactEmail: originalRfp.contactEmail,
-        dueDate: originalRfp.dueDate,
-        projectDescription: originalRfp.projectDescription,
-        documentsLink: originalRfp.documentsLink,
+        // Leave dates empty for independent setting
+        receivedOn: null,
+        internalDueDate: null,
+        contractorDueDate: null,
+        architectDueDate: null,
+        // Leave property/space selection empty for workflow
+        property: null,
+        projectArea: null,
+        selectedBayConfigurations: [],
+        // Start fresh for independent configuration
+        developmentContact: null,
+        requestTypes: [],
+        status: 'in-progress',
+        workflowPhase: 'rfp-entry', // Start at Step 1
+        notes: `RFP alternate (${optionTitle}) - configure independently`,
+        files: [],
+        // Clear all validation fields for fresh start
+        generalContractor: null,
+        architect: null,
+        officeAreaExisting: null,
+        officeAreaNew: null,
+        warehouseArea: null,
+        warehouseAreaOverride: null,
+        warehouseNotes: null,
+        areaBreakdown: [],
+        projectAddress: null,
+        projectSize: null,
+        estimatedValue: null,
+        timelineRequirements: null,
+        specialRequirements: null,
+        contactPerson: null,
+        contactEmail: null,
+        dueDate: null,
+        projectDescription: null,
+        documentsLink: null,
       };
 
       // Create the option RFP using storage method

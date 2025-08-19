@@ -371,14 +371,20 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
       
       // Handle new alternate creation first
       if (rfp.id === 0) {
-        const token = localStorage.getItem('auth_token');
+        const token = localStorage.getItem('auth-token');
+        const headers: HeadersInit = {
+          'Content-Type': 'application/json',
+        };
+        
+        // Add token if available for fallback auth
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+        
         const createResponse = await fetch(`/api/rfp-requests/${rfp.parentRfpId}/create-option`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-          credentials: 'include',
+          headers,
+          credentials: 'include', // Include session cookies
           body: JSON.stringify({
             optionType: "alternate",
             optionTitle: data.alternateDescription || "Alternate",
@@ -430,7 +436,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+          'Authorization': `Bearer ${localStorage.getItem('auth-token')}`,
         },
         body: JSON.stringify({ phase: "rfp-validation" }),
       });

@@ -1575,18 +1575,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Create RFP Option (alternative design/scope for same project)
   app.post("/api/rfp-requests/:id/create-option", async (req, res) => {
-    // Token-based authentication check
+    console.log("Auth check for POST /api/rfp-requests/:id/create-option");
+    
+    // Token-based authentication (sessions are disabled)
     const authHeader = req.headers.authorization;
     const token = authHeader && authHeader.split(' ')[1];
     
     if (!token) {
+      console.log("No token provided");
       return res.status(401).json({ message: "No token provided" });
     }
 
     const userId = await tokenStore.getUserFromToken(token);
     if (!userId) {
+      console.log("Invalid or expired token");
       return res.status(401).json({ message: "Invalid or expired token" });
     }
+    console.log("Token authenticated user:", userId);
     try {
       const id = parseInt(req.params.id);
       const { optionType, optionTitle, formData } = req.body;

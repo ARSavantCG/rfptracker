@@ -585,6 +585,17 @@ export class DatabaseStorage implements IStorage {
 
       console.log('Deleting RFP files (handled automatically with RFP deletion)...');
       
+      // Delete any alternates and counter offers that reference this RFP as their parent
+      console.log('Deleting alternates and counter offers...');
+      const childRfps = await db.select({ id: rfpRequests.id })
+        .from(rfpRequests)
+        .where(eq(rfpRequests.parentRfpId, id));
+      
+      for (const childRfp of childRfps) {
+        console.log(`Cascading delete for child RFP ${childRfp.id}`);
+        await this.deleteRfpRequest(childRfp.id); // Recursive delete for children
+      }
+      
       // Now delete the RFP
       console.log('Deleting RFP...');
       const result = await db.delete(rfpRequests).where(eq(rfpRequests.id, id));

@@ -700,11 +700,8 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
                         <button 
                           onClick={(e) => {
                             e.stopPropagation();
-                            // Create a temporary alternate draft and open full RFP workflow
-                            const createAlternateAndOpenWorkflow = async () => {
-                              const alternateTitle = prompt('Enter alternate title (e.g., "Full Building", "West End Cap"):');
-                              if (!alternateTitle?.trim()) return;
-                              
+                            // Create a draft alternate RFP and open workflow immediately
+                            const createDraftAlternate = async () => {
                               try {
                                 const token = localStorage.getItem('auth-token');
                                 const response = await fetch(`/api/rfp-requests/${parentRfp.id}/create-option`, {
@@ -716,7 +713,7 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
                                   credentials: 'include',
                                   body: JSON.stringify({
                                     optionType: "alternate",
-                                    optionTitle: alternateTitle,
+                                    optionTitle: "Alternate", // Default title to be changed in workflow
                                   })
                                 });
                                 
@@ -730,14 +727,9 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
                                 // Auto-expand parent to show new alternate
                                 setExpandedRfps(prev => new Set(prev).add(parentRfp.id));
                                 
-                                // Open alternate in full RFP workflow
+                                // Open alternate in full RFP workflow immediately
                                 onEditRfp(alternateRfp);
                                 
-                                toast({
-                                  title: "Success",
-                                  description: "RFP alternate created. Opening Step 1 workflow...",
-                                  duration: 4000,
-                                });
                               } catch (error: any) {
                                 toast({
                                   title: "Error",
@@ -748,7 +740,7 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
                               }
                             };
                             
-                            createAlternateAndOpenWorkflow();
+                            createDraftAlternate();
                           }}
                           className="text-purple-600 hover:text-purple-700 p-1"
                           title="Create RFP alternate"

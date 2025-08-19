@@ -129,12 +129,13 @@ export default function Dashboard() {
       ...parentRfp,
       id: 0, // Temporary ID to indicate unsaved
       rfpNumber: `${parentRfp.rfpNumber}.A`, // Template RFP number
-      projectName: `${parentRfp.projectName} (Alternate)`,
+      projectName: "", // Will be auto-generated from tenant + property + alternate description
       property: "Select property...", // Reset for selection
       receivedOn: new Date(),
       internalDueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       selectedBayConfigurations: [],
       projectArea: null,
+      files: [], // Clear files for new alternate
       isOption: true,
       parentRfpId: parentRfp.id,
       optionType: "alternate",

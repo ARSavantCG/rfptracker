@@ -22,6 +22,7 @@ const editRfpSchema = z.object({
   rfpNumber: z.string().min(1, "RFP number is required"),
   property: z.string().min(1, "Property is required"),
   tenantName: z.string().min(1, "Tenant name is required"),
+  alternateDescription: z.string().optional(),
   projectName: z.string().min(1, "Project name is required"),
   confidential: z.boolean(),
   sentBy: z.string().min(1, "Sent by is required"),
@@ -133,6 +134,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
       rfpNumber: "",
       property: "",
       tenantName: "",
+      alternateDescription: "",
       projectName: "",
       confidential: false,
       sentBy: "",
@@ -149,11 +151,24 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
 
   useEffect(() => {
     if (rfp && isOpen) {
+      // Extract alternate description from project name if it exists
+      let alternateDescription = "";
+      let cleanProjectName = rfp.projectName || "";
+      
+      if (rfp.projectName && rfp.projectName.includes("(") && rfp.projectName.includes(")")) {
+        const match = rfp.projectName.match(/\(([^)]+)\)$/);
+        if (match) {
+          alternateDescription = match[1];
+          cleanProjectName = rfp.projectName.replace(/\s*\([^)]+\)$/, "");
+        }
+      }
+
       form.reset({
         rfpNumber: rfp.rfpNumber || "",
         property: rfp.property || "",
         tenantName: rfp.tenantName || "",
-        projectName: rfp.projectName || "",
+        alternateDescription: alternateDescription,
+        projectName: cleanProjectName,
         confidential: Boolean(rfp.confidential),
         sentBy: rfp.sentBy || "",
         receivedOn: formatDateForInput(rfp.receivedOn),
@@ -203,12 +218,13 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
     }
   }, [rfp, isOpen, form, properties]);
 
-  // Auto-format project name when tenant name, property, or confidential status changes
+  // Auto-format project name when tenant name, property, alternate description, or confidential status changes
   useEffect(() => {
     const subscription = form.watch((value, { name, type }) => {
-      if (name === 'tenantName' || name === 'property' || name === 'confidential') {
+      if (name === 'tenantName' || name === 'property' || name === 'alternateDescription' || name === 'confidential') {
         const tenantName = value.tenantName || '';
         const property = value.property || '';
+        const alternateDescription = value.alternateDescription || '';
         const confidential = value.confidential || false;
 
         // Update selected property when property field changes
@@ -223,7 +239,8 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
           }
         }
         
-        if (property && properties.length > 0) {
+        // Only auto-format if we have both tenant and property, or if this is not a template alternate
+        if ((tenantName && property && property !== "Select property...") || (rfp && rfp.id !== 0)) {
           // Find the selected property by ID
           const selectedProp = properties.find(p => p.id.toString() === property);
           let propertyName = property;
@@ -241,10 +258,19 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
           let projectName = '';
           if (confidential) {
             projectName = `${propertyName} - Confidential Project`;
+            if (alternateDescription) {
+              projectName += ` (${alternateDescription})`;
+            }
           } else if (tenantName) {
             projectName = `${tenantName} @ ${propertyName}`;
+            if (alternateDescription) {
+              projectName += ` (${alternateDescription})`;
+            }
           } else {
             projectName = `@ ${propertyName}`;
+            if (alternateDescription) {
+              projectName += ` (${alternateDescription})`;
+            }
           }
           
           form.setValue('projectName', projectName, { shouldValidate: false });
@@ -253,7 +279,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
     });
     
     return () => subscription.unsubscribe();
-  }, [form, properties]);
+  }, [form, properties, rfp]);
 
   const updateMutation = useMutation({
     mutationFn: async (data: EditRfpFormData) => {
@@ -272,7 +298,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
           credentials: 'include',
           body: JSON.stringify({
             optionType: "alternate",
-            optionTitle: data.projectName.split('(')[1]?.replace(')', '') || "Alternate",
+            optionTitle: data.alternateDescription || "Alternate",
             formData: {
               ...data,
               selectedBayConfigurations: selectedBayConfigurations
@@ -468,6 +494,23 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
               )}
             />
 
+            {/* Show Alternate Description field only for alternates */}
+            {rfp?.isOption && (
+              <FormField
+                control={form.control}
+                name="alternateDescription"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Alternate Description</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., Design Option 1, Warehouse Expansion, etc." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
             <FormField
               control={form.control}
               name="projectName"
@@ -559,7 +602,8 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
               )}
             />
 
-            <div className="grid grid-cols-2 gap-4">
+            {/* Development Contact - only for non-alternates */}
+            {!rfp?.isOption && (
               <FormField
                 control={form.control}
                 name="developmentContact"
@@ -588,8 +632,9 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
                   </FormItem>
                 )}
               />
+            )}
 
-              <FormField
+            <FormField
                 control={form.control}
                 name="projectArea"
                 render={({ field }) => (
@@ -690,7 +735,6 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
                   </div>
                 </div>
               )}
-            </div>
 
             <FormField
               control={form.control}

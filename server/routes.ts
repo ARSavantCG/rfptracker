@@ -1621,14 +1621,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         parentRfpId: id,
         isOption: true,
         optionType: optionType,
-        // Only copy essential tenant information
+        // Only copy essential tenant information - keep tenant name for reference
         tenantName: originalRfp.tenantName,
         projectName: `${originalRfp.projectName} (${optionTitle})`,
         confidential: originalRfp.confidential,
         sentBy: originalRfp.sentBy,
-        // Leave dates empty for independent setting
-        receivedOn: null,
-        internalDueDate: null,
+        // Use current date as placeholder for workflow to modify
+        receivedOn: new Date(),
+        internalDueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now as placeholder
         contractorDueDate: null,
         architectDueDate: null,
         // Leave property/space selection empty for workflow - use placeholder to avoid constraint
@@ -1637,7 +1637,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         selectedBayConfigurations: [],
         // Start fresh for independent configuration
         developmentContact: null,
-        requestTypes: [],
+        requestTypes: ["pricing"], // Default request type to prevent validation issues
         status: 'in-progress',
         workflowPhase: 'rfp-entry', // Start at Step 1
         notes: `RFP alternate (${optionTitle}) - configure independently`,

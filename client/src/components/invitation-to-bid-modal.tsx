@@ -1296,7 +1296,32 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                           render={({ field }) => (
                             <FormItem>
                               <FormControl>
-                                <Input {...field} placeholder="Work description" />
+                                <Input 
+                                  {...field} 
+                                  placeholder="Work description"
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Tab' && !e.shiftKey) {
+                                      e.preventDefault();
+                                      // Focus next input (quantity) in same row
+                                      const quantityInput = document.querySelector(`input[data-testid="quantity-${index}"]`) as HTMLInputElement;
+                                      if (quantityInput) {
+                                        quantityInput.focus();
+                                        quantityInput.select();
+                                      }
+                                    } else if (e.key === 'Tab' && e.shiftKey) {
+                                      e.preventDefault();
+                                      // Focus previous row's unit input or stay on this description if first row
+                                      if (index > 0) {
+                                        const prevUnitInput = document.querySelector(`input[data-testid="unit-${index - 1}"]`) as HTMLInputElement;
+                                        if (prevUnitInput) {
+                                          prevUnitInput.focus();
+                                          prevUnitInput.select();
+                                        }
+                                      }
+                                      // If first row, let default tab behavior handle going to previous form section
+                                    }
+                                  }}
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -1312,11 +1337,30 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                             <FormItem>
                               <FormControl>
                                 <Input 
-                                  type="number" 
+                                  type="text" 
                                   {...field} 
                                   data-testid={`quantity-${index}`}
-                                  onChange={(e) => field.onChange(e.target.value === "" ? "" : parseInt(e.target.value) || "")}
+                                  onChange={(e) => field.onChange(e.target.value)}
                                   placeholder="Quantity"
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Tab' && !e.shiftKey) {
+                                      e.preventDefault();
+                                      // Focus next input (unit) in same row
+                                      const unitInput = document.querySelector(`input[data-testid="unit-${index}"]`) as HTMLInputElement;
+                                      if (unitInput) {
+                                        unitInput.focus();
+                                        unitInput.select();
+                                      }
+                                    } else if (e.key === 'Tab' && e.shiftKey) {
+                                      e.preventDefault();
+                                      // Focus previous input (description) in same row
+                                      const descInput = document.querySelector(`input[name="scopeOfWork.${index}.description"]`) as HTMLInputElement;
+                                      if (descInput) {
+                                        descInput.focus();
+                                        descInput.select();
+                                      }
+                                    }
+                                  }}
                                 />
                               </FormControl>
                               <FormMessage />
@@ -1332,7 +1376,44 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                                       render={({ field }) => (
                                         <FormItem>
                                           <FormControl>
-                                            <Input {...field} data-testid={`unit-${index}`} placeholder="sq ft, each, etc." />
+                                            <Input 
+                                              {...field} 
+                                              data-testid={`unit-${index}`} 
+                                              placeholder="sq ft, each, etc."
+                                              onKeyDown={(e) => {
+                                                if (e.key === 'Tab' && !e.shiftKey) {
+                                                  e.preventDefault();
+                                                  // Check if this is the last row
+                                                  if (index === scopeFields.length - 1) {
+                                                    // Add new row and focus it
+                                                    appendScope({ description: "", quantity: "", unit: "" });
+                                                    // Focus will be set to new row after creation
+                                                    setTimeout(() => {
+                                                      const newDescInput = document.querySelector(`input[name="scopeOfWork.${index + 1}.description"]`) as HTMLInputElement;
+                                                      if (newDescInput) {
+                                                        newDescInput.focus();
+                                                        newDescInput.select();
+                                                      }
+                                                    }, 50);
+                                                  } else {
+                                                    // Focus next row's description
+                                                    const nextDescInput = document.querySelector(`input[name="scopeOfWork.${index + 1}.description"]`) as HTMLInputElement;
+                                                    if (nextDescInput) {
+                                                      nextDescInput.focus();
+                                                      nextDescInput.select();
+                                                    }
+                                                  }
+                                                } else if (e.key === 'Tab' && e.shiftKey) {
+                                                  e.preventDefault();
+                                                  // Focus previous input (quantity) in same row
+                                                  const quantityInput = document.querySelector(`input[data-testid="quantity-${index}"]`) as HTMLInputElement;
+                                                  if (quantityInput) {
+                                                    quantityInput.focus();
+                                                    quantityInput.select();
+                                                  }
+                                                }
+                                              }}
+                                            />
                                           </FormControl>
                                           <FormMessage />
                                         </FormItem>

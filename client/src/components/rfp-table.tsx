@@ -12,15 +12,20 @@ import type { RfpRequest, Property } from "@shared/schema";
 interface RfpTableProps {
   searchQuery: string;
   statusFilter: string;
-  onEditRfp: (rfp: RfpRequest) => void;
-  onSelectRfp?: (rfp: RfpRequest | null) => void;
+  dateFrom: string;
+  dateTo: string;
+  onEditRfp?: (rfp: RfpRequest) => void;
+  onValidateRfp?: (rfp: RfpRequest) => void;
+  onSelectRfp?: (rfp: RfpRequest) => void;
+  onCreateAlternate?: (parentRfp: RfpRequest) => void;
   selectedRfpId?: number | null;
+  hideHeaders?: boolean;
 }
 
 type SortField = "id" | "rfpNumber" | "tenantName" | "property" | "status" | "receivedOn" | "internalDueDate";
 type SortDirection = "asc" | "desc";
 
-export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, selectedRfpId }: RfpTableProps) {
+export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRfp, onValidateRfp, onSelectRfp, onCreateAlternate, selectedRfpId, hideHeaders }: RfpTableProps) {
   const [sortField, setSortField] = useState<SortField>("id");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [expandedRfps, setExpandedRfps] = useState<Set<number>>(new Set());
@@ -700,52 +705,8 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
                         <button 
                           onClick={(e) => {
                             e.stopPropagation();
-                            // Create a draft alternate RFP and open workflow immediately
-                            const createDraftAlternate = async () => {
-                              try {
-                                const token = localStorage.getItem('auth-token');
-                                const response = await fetch(`/api/rfp-requests/${parentRfp.id}/create-option`, {
-                                  method: 'POST',
-                                  headers: {
-                                    'Content-Type': 'application/json',
-                                    'Authorization': `Bearer ${token}`,
-                                  },
-                                  credentials: 'include',
-                                  body: JSON.stringify({
-                                    optionType: "alternate",
-                                    optionTitle: "Alternate", // Default title to be changed in workflow
-                                  })
-                                });
-                                
-                                if (!response.ok) throw new Error('Failed to create alternate');
-                                const alternateRfp = await response.json();
-                                
-                                // Auto-expand parent to show new alternate
-                                setExpandedRfps(prev => new Set(prev).add(parentRfp.id));
-                                
-                                // Delay modal opening to ensure data is stable
-                                setTimeout(() => {
-                                  // Open alternate in full RFP workflow
-                                  onEditRfp(alternateRfp);
-                                }, 200);
-                                
-                                // Refresh data after some delay to prevent modal closing
-                                setTimeout(() => {
-                                  queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
-                                  queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
-                                }, 500);
-                                
-                              } catch (error: any) {
-                                toast({
-                                  title: "Error",
-                                  description: error.message || "Failed to create RFP alternate",
-                                  variant: "destructive",
-                                  duration: 6000,
-                                });
-                              }
-                            };
-                            
-                            createDraftAlternate();
+                            // Open workflow modal immediately for data entry - no database creation yet
+                            onCreateAlternate?.(parentRfp);
                           }}
                           className="text-purple-600 hover:text-purple-700 p-1"
                           title="Create RFP alternate"

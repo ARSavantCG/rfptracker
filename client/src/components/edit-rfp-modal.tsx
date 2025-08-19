@@ -259,6 +259,32 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
     mutationFn: async (data: EditRfpFormData) => {
       if (!rfp) throw new Error("No RFP selected");
       
+      // Check if this is a new alternate creation (id: 0)
+      if (rfp.id === 0 && rfp.parentRfpId) {
+        // Create new alternate via the create-option endpoint
+        const token = localStorage.getItem('auth-token');
+        const response = await fetch(`/api/rfp-requests/${rfp.parentRfpId}/create-option`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            optionType: "alternate",
+            optionTitle: data.projectName.split('(')[1]?.replace(')', '') || "Alternate",
+            formData: {
+              ...data,
+              selectedBayConfigurations: selectedBayConfigurations
+            }
+          })
+        });
+        
+        if (!response.ok) throw new Error('Failed to create alternate');
+        return response.json();
+      }
+      
+      // Regular update for existing RFP
       const formData = new FormData();
       
       // Append form fields

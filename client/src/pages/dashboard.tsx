@@ -118,6 +118,28 @@ export default function Dashboard() {
     setIsEditModalOpen(true);
   };
 
+  const handleCreateAlternate = (parentRfp: RfpRequest) => {
+    // Create a template alternate RFP for the modal (not saved to database yet)
+    const alternateTemplate: RfpRequest = {
+      ...parentRfp,
+      id: 0, // Temporary ID to indicate unsaved
+      rfpNumber: `${parentRfp.rfpNumber}.A`, // Template RFP number
+      projectName: `${parentRfp.projectName} (Alternate)`,
+      property: "Select property...", // Reset for selection
+      receivedOn: new Date(),
+      internalDueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      selectedBayConfigurations: [],
+      projectArea: null,
+      isOption: true,
+      parentRfpId: parentRfp.id,
+      optionType: "alternate",
+      notes: "RFP alternate - configure independently",
+    };
+    
+    setSelectedRfp(alternateTemplate);
+    setIsEditModalOpen(true);
+  };
+
   const handleSelectRfp = (rfp: RfpRequest | null) => {
     if (!rfp) {
       setSelectedRfp(null);
@@ -361,9 +383,14 @@ export default function Dashboard() {
               <RfpTable 
                 searchQuery={searchQuery}
                 statusFilter={statusFilter}
+                dateFrom={dateFrom}
+                dateTo={dateTo}
                 onEditRfp={handleEditRfp}
+                onValidateRfp={handleValidateRfp}
                 onSelectRfp={handleSelectRfp}
+                onCreateAlternate={handleCreateAlternate}
                 selectedRfpId={selectedRfp?.id}
+                hideHeaders={false}
               />
             )}
           </div>

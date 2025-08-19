@@ -1589,7 +1589,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     try {
       const id = parseInt(req.params.id);
-      const { optionType, optionTitle } = req.body;
+      const { optionType, optionTitle, formData } = req.body;
       
       if (isNaN(id)) {
         return res.status(400).json({ message: "Invalid ID" });
@@ -1616,7 +1616,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const optionRfpNumber = `${baseRfpNumber}.${optionLetter}`;
 
       // Create option as minimal draft for independent workflow
-      const optionData = {
+      let optionData = {
         rfpNumber: optionRfpNumber,
         parentRfpId: id,
         isOption: true,
@@ -1662,6 +1662,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         projectDescription: null,
         documentsLink: null,
       };
+
+      // If formData is provided, override with user's form input
+      if (formData) {
+        optionData = {
+          ...optionData,
+          tenantName: formData.tenantName || optionData.tenantName,
+          projectName: formData.projectName || optionData.projectName,
+          property: formData.property || optionData.property,
+          receivedOn: formData.receivedOn ? new Date(formData.receivedOn) : optionData.receivedOn,
+          internalDueDate: formData.internalDueDate ? new Date(formData.internalDueDate) : optionData.internalDueDate,
+          developmentContact: formData.developmentContact || optionData.developmentContact,
+          projectArea: formData.projectArea || optionData.projectArea,
+          requestTypes: formData.requestTypes || optionData.requestTypes,
+          notes: formData.notes || optionData.notes,
+          selectedBayConfigurations: formData.selectedBayConfigurations || optionData.selectedBayConfigurations,
+          confidential: formData.confidential !== undefined ? formData.confidential : optionData.confidential,
+        };
+      }
 
       // Create the option RFP using storage method
       const option = await storage.createRfpRequest({

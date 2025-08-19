@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronRight, FileText, Users, ClipboardCheck, Award, FileOutput, CheckCircle, ChevronUp, ChevronDown } from "lucide-react";
+import { ChevronRight, FileText, Users, ClipboardCheck, Award, FileOutput, CheckCircle, ChevronLeft } from "lucide-react";
 import { useState } from "react";
 import type { RfpRequest } from "@shared/schema";
 
@@ -149,7 +149,24 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValida
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3">
+    <>
+      {/* Floating show button when collapsed */}
+      {isCollapsed && (
+        <div className="fixed top-4 right-4 z-50">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsCollapsed(false)}
+            className="bg-white shadow-lg border-2 border-blue-300 hover:bg-blue-50"
+            title="Show workflow panel"
+          >
+            <ChevronLeft className="h-4 w-4 mr-1" />
+            Workflow
+          </Button>
+        </div>
+      )}
+      
+      <div className={`bg-white rounded-lg shadow-sm border border-gray-200 p-3 transition-transform duration-300 ${isCollapsed ? 'transform translate-x-full' : ''}`}>
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-base font-semibold text-gray-900">Workflow Status</h3>
         <div className="flex items-center gap-2">
@@ -161,9 +178,9 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValida
             size="sm"
             onClick={() => setIsCollapsed(!isCollapsed)}
             className="h-6 w-6 p-0 hover:bg-gray-100"
-            title={isCollapsed ? "Expand workflow" : "Minimize workflow"}
+            title={isCollapsed ? "Show workflow" : "Hide workflow"}
           >
-            {isCollapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+            <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
       </div>
@@ -359,6 +376,7 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValida
           </div>
         </>
       )}
-    </div>
+      </div>
+    </>
   );
 }

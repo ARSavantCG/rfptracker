@@ -17,6 +17,7 @@ interface WorkflowStatusProps {
   onOpenEvaluation?: (rfp: RfpRequest) => void;
   onOpenPublish?: (rfp: RfpRequest) => void;
   onViewDetails?: (rfp: RfpRequest) => void;
+  onWorkflowToggle?: (isCollapsed: boolean) => void;
 }
 
 const workflowPhases = [
@@ -64,7 +65,7 @@ const workflowPhases = [
   }
 ];
 
-export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValidateRfp, onOpenInvitationModal, onOpenBidCollection, onOpenEvaluation, onOpenPublish, onViewDetails }: WorkflowStatusProps) {
+export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValidateRfp, onOpenInvitationModal, onOpenBidCollection, onOpenEvaluation, onOpenPublish, onViewDetails, onWorkflowToggle }: WorkflowStatusProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -156,7 +157,10 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValida
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setIsCollapsed(false)}
+            onClick={() => {
+              setIsCollapsed(false);
+              onWorkflowToggle?.(false);
+            }}
             className="bg-white shadow-lg border-2 border-blue-300 hover:bg-blue-50"
             title="Show workflow panel"
           >
@@ -176,7 +180,11 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValida
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setIsCollapsed(!isCollapsed)}
+            onClick={() => {
+              const newState = !isCollapsed;
+              setIsCollapsed(newState);
+              onWorkflowToggle?.(newState);
+            }}
             className="h-6 w-6 p-0 hover:bg-gray-100"
             title={isCollapsed ? "Show workflow" : "Hide workflow"}
           >

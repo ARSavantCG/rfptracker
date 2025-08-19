@@ -332,7 +332,7 @@ export default function Dashboard() {
         {/* Main Content Layout */}
         <div className={`${selectedRfp ? 'grid grid-cols-1 lg:grid-cols-3 gap-6' : 'block'}`}>
           {/* RFP Table or Workflow Content - Full width when no RFP selected, 2/3 when selected */}
-          <div className={selectedRfp ? "lg:col-span-2 min-w-0" : "w-full"}>
+          <div className={selectedRfp ? "lg:col-span-2 min-w-0 main-content-area" : "w-full"}>
             {showBidCollection && selectedRfp ? (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
@@ -415,6 +415,19 @@ export default function Dashboard() {
                   onOpenEvaluation={handleOpenEvaluation}
                   onOpenPublish={handleOpenPublish}
                   onViewDetails={handleViewDetails}
+                  onWorkflowToggle={(isCollapsed) => {
+                    // Trigger layout adjustment when workflow is toggled
+                    const mainContent = document.querySelector('.main-content-area');
+                    if (mainContent) {
+                      if (isCollapsed) {
+                        mainContent.classList.remove('lg:col-span-2');
+                        mainContent.classList.add('lg:col-span-3');
+                      } else {
+                        mainContent.classList.remove('lg:col-span-3');
+                        mainContent.classList.add('lg:col-span-2');
+                      }
+                    }
+                  }}
                 />
               </div>
             </div>

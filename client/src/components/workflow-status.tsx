@@ -170,9 +170,9 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValida
         </div>
       )}
       
-      <div className={`bg-white rounded-lg shadow-sm border border-gray-200 p-3 transition-transform duration-300 ${isCollapsed ? 'transform translate-x-full' : ''}`}>
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-base font-semibold text-gray-900">Workflow Status</h3>
+      <div className={`bg-white rounded-lg shadow-sm border border-gray-200 p-4 transition-transform duration-300 ${isCollapsed ? 'transform translate-x-full' : ''}`}>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold text-gray-900">Workflow Status</h3>
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="text-xs">
             Phase {currentPhaseIndex + 1} of {workflowPhases.length}
@@ -196,19 +196,18 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValida
       {!isCollapsed && (
         <>
           {/* View Details Button */}
-          <div className="mb-3">
+          <div className="mb-4">
         <Button
           onClick={() => onViewDetails?.(rfp)}
           variant="outline"
-          className="w-full px-2 py-1.5 text-xs font-medium flex items-center justify-center gap-1.5"
-          size="sm"
+          className="w-full px-3 py-2 text-sm font-medium flex items-center justify-center gap-2"
         >
-          <FileText className="h-3.5 w-3.5" />
+          <FileText className="h-4 w-4" />
           View RFP Details
         </Button>
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-3">
         {workflowPhases.map((phase, index) => {
           const Icon = phase.icon;
           // For archived RFPs, no phase should be active (all completed)
@@ -223,7 +222,7 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValida
             <div
               key={phase.key}
               onClick={() => isClickable && handlePhaseClick(phase)}
-              className={`flex items-center space-x-2 p-2 rounded-lg border transition-colors ${
+              className={`flex items-center space-x-3 p-3 rounded-lg border transition-colors ${
                 isActive
                   ? "bg-blue-100 text-blue-700 border-blue-300"
                   : isCompleted
@@ -231,7 +230,7 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValida
                   : "bg-gray-50 text-gray-400 border-gray-200"
               } ${isClickable ? "cursor-pointer hover:bg-opacity-80" : ""}`}
             >
-              <Icon className={`h-4 w-4 ${
+              <Icon className={`h-5 w-5 ${
                 isActive 
                   ? "text-blue-600" 
                   : isCompleted 
@@ -239,28 +238,28 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValida
                   : "text-gray-400"
               }`} />
               <div className="flex-1">
-                <div className="flex items-center space-x-1.5">
-                  <span className={`font-medium text-xs ${isActive ? "text-gray-900" : ""}`}>
+                <div className="flex items-center space-x-2">
+                  <span className={`font-medium text-sm ${isActive ? "text-gray-900" : ""}`}>
                     {phase.label}
                   </span>
-                  {isCompleted && <FileOutput className="h-3 w-3 text-green-600" />}
+                  {isCompleted && <FileOutput className="h-4 w-4 text-green-600" />}
                   {isActive && (
-                    <Badge variant="secondary" className="text-xs px-1.5 py-0">
+                    <Badge variant="secondary" className="text-xs px-2 py-0.5">
                       Current
                     </Badge>
                   )}
                 </div>
-                <p className="text-xs opacity-75 mt-0.5">{phase.description}</p>
+                <p className="text-xs opacity-75 mt-1">{phase.description}</p>
               </div>
               {isNext && (
-                <ChevronRight className="h-3.5 w-3.5 text-gray-400" />
+                <ChevronRight className="h-4 w-4 text-gray-400" />
               )}
             </div>
           );
         })}
       </div>
 
-          <div className="mt-3 pt-3 border-t border-gray-200">
+          <div className="mt-4 pt-4 border-t border-gray-200">
             {rfp.status === "archived" ? (
               /* Archived RFPs only show view summary option */
               <div className="space-y-2">

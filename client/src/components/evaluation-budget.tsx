@@ -3473,7 +3473,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-w-0">
       <Card>
         <CardHeader>
           <CardTitle>Budget Evaluation - {rfp?.projectName || 'Project'}</CardTitle>

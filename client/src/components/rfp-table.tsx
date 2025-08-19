@@ -6,6 +6,7 @@ import { formatDateForDisplay } from "@shared/date-utils";
 import { useToast } from "@/hooks/use-toast";
 import { handleAuthError } from "@/lib/authHelper";
 import { useAuth } from "@/hooks/useAuth";
+import { CreateAlternateModal } from "./create-alternate-modal";
 import type { RfpRequest, Property } from "@shared/schema";
 
 interface RfpTableProps {
@@ -156,59 +157,9 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
     },
   });
 
-  // RFP Option mutation
-  const [isCreateOptionModalOpen, setIsCreateOptionModalOpen] = useState(false);
-  const [selectedRfpForOption, setSelectedRfpForOption] = useState<number | null>(null);
-
-  const createOptionMutation = useMutation({
-    mutationFn: async ({ rfpId, optionType, optionTitle }: { rfpId: number; optionType: string; optionTitle: string }) => {
-      const token = localStorage.getItem('auth-token');
-      const response = await fetch(`/api/rfp-requests/${rfpId}/create-option`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ optionType, optionTitle }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to create RFP alternate');
-      }
-
-      return response.json();
-    },
-    onSuccess: (option) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
-      
-      // Auto-expand the parent RFP to show the new option
-      if (selectedRfpForOption) {
-        setExpandedRfps(prev => new Set([...Array.from(prev), selectedRfpForOption]));
-      }
-      
-      setIsCreateOptionModalOpen(false);
-      setSelectedRfpForOption(null);
-      toast({
-        title: "Success",
-        description: `RFP alternate ${option.rfpNumber} created successfully`,
-        duration: 4000,
-      });
-    },
-    onError: (error: Error) => {
-      if (error.message.includes('401')) {
-        handleAuthError(error);
-        return;
-      }
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-        duration: 6000,
-      });
-    },
-  });
+  // RFP Alternate modal state
+  const [isCreateAlternateModalOpen, setIsCreateAlternateModalOpen] = useState(false);
+  const [selectedRfpForAlternate, setSelectedRfpForAlternate] = useState<RfpRequest | null>(null);
 
   const { data: rfpRequests = [], isLoading } = useQuery<RfpRequest[]>({
     queryKey: ["/api/rfp-requests", { search: searchQuery, status: statusFilter }],
@@ -750,8 +701,8 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
                         <button 
                           onClick={(e) => {
                             e.stopPropagation();
-                            setSelectedRfpForOption(parentRfp.id);
-                            setIsCreateOptionModalOpen(true);
+                            setSelectedRfpForAlternate(parentRfp);
+                            setIsCreateAlternateModalOpen(true);
                           }}
                           className="text-purple-600 hover:text-purple-700 p-1"
                           title="Create RFP alternate"
@@ -1061,139 +1012,19 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
         </div>
       )}
       
-      {/* Create RFP Option Modal */}
-      {isCreateOptionModalOpen && (
-        <CreateRfpOptionModal
-          isOpen={isCreateOptionModalOpen}
+      {/* Create RFP Alternate Modal */}
+      {isCreateAlternateModalOpen && selectedRfpForAlternate && (
+        <CreateAlternateModal
+          isOpen={isCreateAlternateModalOpen}
           onClose={() => {
-            setIsCreateOptionModalOpen(false);
-            setSelectedRfpForOption(null);
+            setIsCreateAlternateModalOpen(false);
+            setSelectedRfpForAlternate(null);
           }}
-          onSubmit={(optionType, optionTitle) => {
-            if (selectedRfpForOption) {
-              createOptionMutation.mutate({
-                rfpId: selectedRfpForOption,
-                optionType,
-                optionTitle
-              });
-            }
-          }}
-          isLoading={createOptionMutation.isPending}
+          parentRfp={selectedRfpForAlternate}
         />
       )}
     </div>
   );
 }
 
-// Create RFP Option Modal Component
-function CreateRfpOptionModal({ 
-  isOpen, 
-  onClose, 
-  onSubmit, 
-  isLoading 
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-  onSubmit: (optionType: string, optionTitle: string) => void;
-  isLoading: boolean;
-}) {
-  const [optionType, setOptionType] = useState('');
-  const [optionTitle, setOptionTitle] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (optionType && optionTitle) {
-      onSubmit(optionType, optionTitle);
-    }
-  };
-
-  const resetForm = () => {
-    setOptionType('');
-    setOptionTitle('');
-  };
-
-  const handleClose = () => {
-    resetForm();
-    onClose();
-  };
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-gray-900">Create RFP Alternate</h3>
-            <button
-              onClick={handleClose}
-              className="text-gray-400 hover:text-gray-600"
-            >
-              <i className="fas fa-times"></i>
-            </button>
-          </div>
-        </div>
-        
-        <form onSubmit={handleSubmit} className="px-6 py-4">
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="optionType" className="block text-sm font-medium text-gray-700 mb-2">
-                Type
-              </label>
-              <select
-                id="optionType"
-                value={optionType}
-                onChange={(e) => setOptionType(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              >
-                <option value="">Select type...</option>
-                <option value="alternate">Alternate</option>
-              </select>
-            </div>
-            
-            <div>
-              <label htmlFor="optionTitle" className="block text-sm font-medium text-gray-700 mb-2">
-                Alternate Title
-              </label>
-              <input
-                type="text"
-                id="optionTitle"
-                value={optionTitle}
-                onChange={(e) => setOptionTitle(e.target.value)}
-                placeholder="e.g., Full Building, Half Building, Different Bay Configuration"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-            </div>
-          </div>
-          
-          <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200">
-            <button
-              type="button"
-              onClick={handleClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
-              disabled={isLoading}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isLoading || !optionType || !optionTitle}
-              className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? (
-                <>
-                  <i className="fas fa-spinner fa-spin mr-2"></i>
-                  Creating...
-                </>
-              ) : (
-                'Create Alternate'
-              )}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}

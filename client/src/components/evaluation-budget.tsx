@@ -3020,7 +3020,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                   <TableHead className="w-16 text-center">Order</TableHead>
                   <TableHead className="w-20 text-center">Assembly</TableHead>
                   <TableHead className="w-32 text-center">Assembly Group</TableHead>
-                  <TableHead className="w-36 text-center">Rollup</TableHead>
+                  <TableHead className="w-24 text-center">Rollup</TableHead>
                   <TableHead className="w-64">Description</TableHead>
                   <TableHead className="w-36 text-center">Quantity (Unit)</TableHead>
                   <TableHead className="w-32 text-center">Unit Price</TableHead>
@@ -3116,12 +3116,12 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                               </TableCell>
 
                               {/* Rollup Select */}
-                              <TableCell className="text-center w-40">
+                              <TableCell className="text-center w-24">
                                 <div className="relative">
                                   <select
                                     value={budgetData.lineItemRollups[item.id] || 'none'}
                                     onChange={(e) => handleLineItemRollup(item.id, category, e.target.value as any)}
-                                    className="w-full min-w-32 text-xs bg-background border border-input rounded-md appearance-none pr-6 py-1 px-2 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                                    className="w-full text-xs bg-background border border-input rounded-md appearance-none pr-6 py-1 px-2 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                                   >
                                     <option value="none">None</option>
                                     <option value="tenantImprovements">TI</option>

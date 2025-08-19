@@ -153,7 +153,7 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValida
     <>
       {/* Floating show button when collapsed */}
       {isCollapsed && (
-        <div className="fixed top-4 right-4 z-50">
+        <div className="fixed top-16 right-4 z-50">
           <Button
             variant="outline"
             size="sm"

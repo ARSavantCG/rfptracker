@@ -723,14 +723,17 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
                                 // Auto-expand parent to show new alternate
                                 setExpandedRfps(prev => new Set(prev).add(parentRfp.id));
                                 
-                                // Open alternate in full RFP workflow immediately
-                                onEditRfp(alternateRfp);
+                                // Delay modal opening to ensure data is stable
+                                setTimeout(() => {
+                                  // Open alternate in full RFP workflow
+                                  onEditRfp(alternateRfp);
+                                }, 200);
                                 
-                                // Refresh data after opening modal to prevent closing
+                                // Refresh data after some delay to prevent modal closing
                                 setTimeout(() => {
                                   queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
                                   queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
-                                }, 100);
+                                }, 500);
                                 
                               } catch (error: any) {
                                 toast({

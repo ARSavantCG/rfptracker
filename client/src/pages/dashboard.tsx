@@ -19,7 +19,7 @@ import { LegalCompliancePanel } from "@/components/legal-compliance-panel";
 import Navigation from "@/components/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Users, Building2, X, Settings, Crown, ChevronDown } from "lucide-react";
+import { Plus, Search, Users, Building2, X, Settings, Crown, ChevronDown, ChevronLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { apiRequest } from "@/lib/queryClient";
@@ -337,9 +337,9 @@ export default function Dashboard() {
         </div>
 
         {/* Main Content Layout */}
-        <div className={`${selectedRfp ? 'grid grid-cols-1 lg:grid-cols-3 gap-6' : 'block'}`}>
-          {/* RFP Table or Workflow Content - Full width when no RFP selected, 2/3 when selected */}
-          <div className={selectedRfp ? "lg:col-span-2 min-w-0 main-content-area" : "w-full"}>
+        <div className={`${selectedRfp && !isWorkflowCollapsed ? 'grid grid-cols-1 lg:grid-cols-3 gap-6' : 'block'}`}>
+          {/* RFP Table or Workflow Content - Full width when no RFP selected, 2/3 when selected, full width when workflow collapsed */}
+          <div className={selectedRfp && !isWorkflowCollapsed ? "lg:col-span-2 min-w-0 main-content-area" : "w-full"}>
             {showBidCollection && selectedRfp ? (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
@@ -408,8 +408,8 @@ export default function Dashboard() {
             )}
           </div>
 
-          {/* Workflow Status Sidebar - Only show when RFP is selected */}
-          {selectedRfp && (
+          {/* Workflow Status Sidebar - Only show when RFP is selected and not collapsed */}
+          {selectedRfp && !isWorkflowCollapsed && (
             <div className="lg:col-span-1 min-w-0">
               <div className="sticky top-4">
                 <WorkflowStatus 
@@ -425,23 +425,28 @@ export default function Dashboard() {
                   isCollapsed={isWorkflowCollapsed}
                   onWorkflowToggle={(isCollapsed) => {
                     setIsWorkflowCollapsed(isCollapsed);
-                    // Trigger layout adjustment when workflow is toggled
-                    const mainContent = document.querySelector('.main-content-area');
-                    if (mainContent) {
-                      if (isCollapsed) {
-                        mainContent.classList.remove('lg:col-span-2');
-                        mainContent.classList.add('lg:col-span-3');
-                      } else {
-                        mainContent.classList.remove('lg:col-span-3');
-                        mainContent.classList.add('lg:col-span-2');
-                      }
-                    }
                   }}
                 />
               </div>
             </div>
           )}
         </div>
+        
+        {/* Floating workflow button when collapsed */}
+        {selectedRfp && isWorkflowCollapsed && (
+          <div className="fixed top-16 right-4 z-50">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsWorkflowCollapsed(false)}
+              className="bg-white shadow-lg border-2 border-blue-300 hover:bg-blue-50"
+              title="Show workflow panel"
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Workflow
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Modals */}

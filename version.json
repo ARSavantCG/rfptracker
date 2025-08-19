@@ -1,6 +1,6 @@
 {
-  "version": "1.0.1",
-  "buildDate": "2025-08-14T14:01:33.732Z",
+  "version": "1.1.0",
+  "buildDate": "2025-08-19T15:40:12.594Z",
   "gitCommit": "local-build",
   "environment": "development",
   "changes": [
@@ -12,6 +12,15 @@
     },
     {
       "description": "Historical pricing report improvements"
+    },
+    {
+      "description": "Complete alternate creation workflow overhaul"
+    },
+    {
+      "description": "Auto-advance functionality for alternates to RFP validation"
+    },
+    {
+      "description": "Streamlined UI with independent file management"
     }
   ]
 }

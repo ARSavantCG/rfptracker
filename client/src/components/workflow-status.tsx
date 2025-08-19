@@ -3,7 +3,8 @@ import { Button } from "@/components/ui/button";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronRight, FileText, Users, ClipboardCheck, Award, FileOutput, CheckCircle } from "lucide-react";
+import { ChevronRight, FileText, Users, ClipboardCheck, Award, FileOutput, CheckCircle, ChevronUp, ChevronDown } from "lucide-react";
+import { useState } from "react";
 import type { RfpRequest } from "@shared/schema";
 
 interface WorkflowStatusProps {
@@ -66,6 +67,7 @@ const workflowPhases = [
 export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValidateRfp, onOpenInvitationModal, onOpenBidCollection, onOpenEvaluation, onOpenPublish, onViewDetails }: WorkflowStatusProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   const advancePhaseMutation = useMutation({
     mutationFn: async (newPhase: string) => {
@@ -150,13 +152,26 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValida
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-base font-semibold text-gray-900">Workflow Status</h3>
-        <Badge variant="outline" className="text-xs">
-          Phase {currentPhaseIndex + 1} of {workflowPhases.length}
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="text-xs">
+            Phase {currentPhaseIndex + 1} of {workflowPhases.length}
+          </Badge>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="h-6 w-6 p-0 hover:bg-gray-100"
+            title={isCollapsed ? "Expand workflow" : "Minimize workflow"}
+          >
+            {isCollapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+          </Button>
+        </div>
       </div>
       
-      {/* View Details Button */}
-      <div className="mb-3">
+      {!isCollapsed && (
+        <>
+          {/* View Details Button */}
+          <div className="mb-3">
         <Button
           onClick={() => onViewDetails?.(rfp)}
           variant="outline"
@@ -220,21 +235,21 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValida
         })}
       </div>
 
-      <div className="mt-3 pt-3 border-t border-gray-200">
-        {rfp.status === "archived" ? (
-          /* Archived RFPs only show view summary option */
-          <div className="space-y-2">
-            <Button
-              onClick={() => onOpenPublish?.(rfp)}
-              variant="outline"
-              className="w-full px-4 py-2 text-sm"
-            >
-              View Project Summary
-            </Button>
-          </div>
-        ) : (
-          /* Active RFPs show current phase actions */
-          <div className="space-y-2">
+          <div className="mt-3 pt-3 border-t border-gray-200">
+            {rfp.status === "archived" ? (
+              /* Archived RFPs only show view summary option */
+              <div className="space-y-2">
+                <Button
+                  onClick={() => onOpenPublish?.(rfp)}
+                  variant="outline"
+                  className="w-full px-4 py-2 text-sm"
+                >
+                  View Project Summary
+                </Button>
+              </div>
+            ) : (
+              /* Active RFPs show current phase actions */
+              <div className="space-y-2">
           {actualWorkflowPhase === "rfp-entry" && (
             <div className="text-sm text-gray-500 text-center py-2">
               Use "Create RFP & Advance" to begin workflow
@@ -338,10 +353,12 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValida
                 </Button>
               )}
             </div>
+            )}
+            </div>
           )}
           </div>
-        )}
-      </div>
+        </>
+      )}
     </div>
   );
 }

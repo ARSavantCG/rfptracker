@@ -2932,79 +2932,82 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
               (Base: {formatCurrency(total)})
             </span>
           )}
-          {/* Import buttons for Tenant Improvements */}
-          {category === 'tenantImprovements' && (
+          {/* Show buttons only when workflow is collapsed */}
+          {isWorkflowCollapsed && (
             <>
+              {/* Import buttons for Tenant Improvements */}
+              {category === 'tenantImprovements' && (
+                <>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={openImportModal}
+                    className="h-8"
+                    disabled={!allBidLineItems || !Array.isArray(allBidLineItems) || allBidLineItems.length === 0}
+                  >
+                    <Upload className="h-4 w-4 mr-1" />
+                    Import Pricing
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={openScopeImportModal}
+                    className="h-8"
+                    disabled={!rfp?.scopeOfWork || !Array.isArray(rfp.scopeOfWork) || rfp.scopeOfWork.length === 0}
+                  >
+                    <FileText className="h-4 w-4 mr-1" />
+                    Import Scope
+                  </Button>
+                </>
+              )}
+              {/* Import button for Design Costs */}
+              {category === 'designSoftCosts' && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={openDesignImportModal}
+                  className="h-8"
+                  disabled={!allDesignLineItems || !Array.isArray(allDesignLineItems) || allDesignLineItems.length === 0}
+                >
+                  <Upload className="h-4 w-4 mr-1" />
+                  Import Design
+                </Button>
+              )}
+              <div className="flex gap-1 items-center">
+                <Button
+                  size="sm"
+                  onClick={() => setNewItemCategory(category)}
+                  className="h-8"
+                  variant="outline"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Line Item
+                </Button>
+                <Button 
+                  size="sm" 
+                  onClick={() => addMultipleBlankItems(category, 5)} 
+                  variant="outline" 
+                  className="h-8"
+                  title="Add 5 line items at once"
+                >
+                  +5
+                </Button>
+              </div>
               <Button
                 size="sm"
                 variant="outline"
-                onClick={openImportModal}
+                onClick={() => {
+                  setNewAssemblyCategory(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements');
+                  setShowAssemblyCreator(true);
+                }}
                 className="h-8"
-                disabled={!allBidLineItems || !Array.isArray(allBidLineItems) || allBidLineItems.length === 0}
+                disabled={selectedItems.size === 0}
               >
-                <Upload className="h-4 w-4 mr-1" />
-                Import Pricing
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={openScopeImportModal}
-                className="h-8"
-                disabled={!rfp?.scopeOfWork || !Array.isArray(rfp.scopeOfWork) || rfp.scopeOfWork.length === 0}
-              >
-                <FileText className="h-4 w-4 mr-1" />
-                Import Scope
+                <Package className="h-4 w-4 mr-1" />
+                Add Assembly
               </Button>
             </>
           )}
-          {/* Import button for Design Costs */}
-          {category === 'designSoftCosts' && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={openDesignImportModal}
-              className="h-8"
-              disabled={!allDesignLineItems || !Array.isArray(allDesignLineItems) || allDesignLineItems.length === 0}
-            >
-              <Upload className="h-4 w-4 mr-1" />
-              Import Design
-            </Button>
-          )}
-          <div className="flex gap-1 items-center">
-            <Button
-              size="sm"
-              onClick={() => setNewItemCategory(category)}
-              className="h-8"
-              variant="outline"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Line Item
-            </Button>
-            {isWorkflowCollapsed && (
-              <Button 
-                size="sm" 
-                onClick={() => addMultipleBlankItems(category, 5)} 
-                variant="outline" 
-                className="h-8"
-                title="Add 5 line items at once"
-              >
-                +5
-              </Button>
-            )}
-          </div>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => {
-              setNewAssemblyCategory(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements');
-              setShowAssemblyCreator(true);
-            }}
-            className="h-8"
-            disabled={selectedItems.size === 0}
-          >
-            <Package className="h-4 w-4 mr-1" />
-            Add Assembly
-          </Button>
         </div>
       </CardHeader>
       <CardContent>

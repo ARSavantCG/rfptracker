@@ -3019,15 +3019,15 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                 <TableRow>
                   <TableHead className="w-16 text-center">Order</TableHead>
                   <TableHead className="w-20 text-center">Assembly</TableHead>
-                  <TableHead className="w-32">Assembly Group</TableHead>
+                  <TableHead className="w-32 text-center">Assembly Group</TableHead>
                   <TableHead className="w-36 text-center">Rollup</TableHead>
-                  <TableHead className="min-w-48">Description</TableHead>
-                  <TableHead className="w-36">Quantity (Unit)</TableHead>
-                  <TableHead className="w-32 text-right">Unit Price</TableHead>
-                  {!newItemCategory && <TableHead className="w-32 text-right">Total</TableHead>}
+                  <TableHead className="w-64">Description</TableHead>
+                  <TableHead className="w-36 text-center">Quantity (Unit)</TableHead>
+                  <TableHead className="w-32 text-center">Unit Price</TableHead>
+                  {!newItemCategory && <TableHead className="w-32 text-center">Total</TableHead>}
                   <TableHead className="w-24 text-center">$/RSF</TableHead>
                   <TableHead className="w-24 text-center">Tenant %</TableHead>
-                  <TableHead className="w-28">Actions</TableHead>
+                  <TableHead className="w-28 text-center">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <Droppable droppableId={`${category}-droppable`}>
@@ -3105,7 +3105,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                               </TableCell>
 
                               {/* Assembly Group Column */}
-                              <TableCell className="text-sm text-gray-600">
+                              <TableCell className="text-sm text-gray-600 text-center">
                                 {item.assemblyId ? (
                                   // Find the assembly header name
                                   (() => {
@@ -3142,8 +3142,8 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                                       className="text-sm"
                                     />
                                   </TableCell>
-                                  <TableCell>
-                                    <div className="flex gap-1">
+                                  <TableCell className="text-center">
+                                    <div className="flex gap-1 justify-center">
                                       <FormulaInput
                                         value={item.quantity}
                                         onChange={(value, evaluatedValue) => {
@@ -3159,19 +3159,19 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                                             }
                                           }
                                         }}
-                                        className="w-16 text-sm"
+                                        className="w-16 text-sm text-center"
                                         type="quantity"
                                         decimalPlaces={0}
                                       />
                                       <Input
                                         value={item.unit}
                                         onChange={(e) => updateItem(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', item.id, { unit: e.target.value })}
-                                        className="w-16 text-sm"
+                                        className="w-16 text-sm text-center"
                                         placeholder="Unit"
                                       />
                                     </div>
                                   </TableCell>
-                                  <TableCell className="text-right">
+                                  <TableCell className="text-center">
                                     <FormulaInput
                                       value={item.unitPrice}
                                       onChange={(value, evaluatedValue) => {
@@ -3183,11 +3183,11 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                                           updateItem(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', item.id, { totalPrice: total });
                                         }
                                       }}
-                                      className="text-sm text-right"
+                                      className="text-sm text-center"
                                       type="rate"
                                     />
                                   </TableCell>
-                                  {!newItemCategory && <TableCell className="font-medium text-right">{formatCurrency(item.totalPrice)}</TableCell>}
+                                  {!newItemCategory && <TableCell className="font-medium text-center">{formatCurrency(item.totalPrice)}</TableCell>}
                                   <TableCell className="text-center">
                                     {(() => {
                                       const totalCost = parseFloat(item.totalPrice) || 0;
@@ -3244,18 +3244,18 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                                       {item.description}
                                     </span>
                                   </TableCell>
-                                  <TableCell>
+                                  <TableCell className="text-center">
                                     <span className={`${isAssembled ? 'line-through opacity-60' : ''}`}>
                                       {new Intl.NumberFormat('en-US').format(item.quantity)} {item.unit}
                                     </span>
                                   </TableCell>
-                                  <TableCell className="text-right">
+                                  <TableCell className="text-center">
                                     <span className={`${isAssembled ? 'line-through opacity-60' : ''}`}>
                                       {formatCurrency(calculateDistributedUnitPrice(item))}
                                     </span>
                                   </TableCell>
                                   {!newItemCategory && (
-                                    <TableCell className="font-medium text-right">
+                                    <TableCell className="font-medium text-center">
                                       <span className={`${isAssembled ? 'line-through opacity-60' : ''}`}>
                                         {formatCurrency(calculateDistributedCosts(item))}
                                       </span>

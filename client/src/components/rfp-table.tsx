@@ -876,13 +876,29 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
                       className="px-3 py-3 whitespace-nowrap text-xs text-gray-700 cursor-pointer"
                       onClick={() => onSelectRfp?.(option)}
                     >
-                      {option.tenantName}
+                      <div className="flex flex-col">
+                        <span>{option.tenantName}</span>
+                        <span className="text-purple-600 font-medium text-xs italic">
+                          {(() => {
+                            const match = option.projectName.match(/\(([^)]*)\)$/);
+                            return match ? match[1] : 'Alternate';
+                          })()}
+                        </span>
+                      </div>
                     </td>
                     <td 
                       className="px-3 py-3 whitespace-nowrap text-xs text-gray-700 cursor-pointer"
                       onClick={() => onSelectRfp?.(option)}
                     >
-                      {getPropertyDisplayName(option.property)}
+                      <div className="flex flex-col">
+                        <span>{getPropertyDisplayName(option.property)}</span>
+                        <span className="text-purple-600 font-medium text-xs italic">
+                          Alternate: {(() => {
+                            const match = option.projectName.match(/\(([^)]*)\)$/);
+                            return match ? match[1] : 'Alternate';
+                          })()}
+                        </span>
+                      </div>
                     </td>
                     <td 
                       className="px-3 py-3 whitespace-nowrap cursor-pointer"

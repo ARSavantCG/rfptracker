@@ -562,30 +562,56 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
                       {parentRfp.rfpNumber}
                       {parentRfp.counterOffers.length > 0 && (
                         <span className={`ml-2 px-1.5 py-0.5 text-xs rounded ${
-                          parentRfp.status === "received" 
-                            ? "bg-purple-100 text-purple-700" 
-                            : parentRfp.status === "in-progress"
-                            ? "bg-orange-100 text-orange-700"
-                            : parentRfp.status === "completed"
-                            ? "bg-green-100 text-green-700"
-                            : parentRfp.status === "archived"
-                            ? "bg-gray-100 text-gray-700"
-                            : "bg-red-100 text-red-700"
+                          // Determine badge color based on counter offer statuses, not parent status
+                          (() => {
+                            const counterStatuses = parentRfp.counterOffers.map(co => co.status);
+                            // If any counter offer is in-progress, show orange
+                            if (counterStatuses.some(status => status === "in-progress")) {
+                              return "bg-orange-100 text-orange-700";
+                            }
+                            // If any counter offer is received, show purple  
+                            if (counterStatuses.some(status => status === "received")) {
+                              return "bg-purple-100 text-purple-700";
+                            }
+                            // If all counter offers are completed, show green
+                            if (counterStatuses.every(status => status === "completed")) {
+                              return "bg-green-100 text-green-700";
+                            }
+                            // If any are archived, show gray
+                            if (counterStatuses.some(status => status === "archived")) {
+                              return "bg-gray-100 text-gray-700";
+                            }
+                            // Default fallback
+                            return "bg-red-100 text-red-700";
+                          })()
                         }`}>
                           {parentRfp.counterOffers.length} counter{parentRfp.counterOffers.length > 1 ? 's' : ''}
                         </span>
                       )}
                       {parentRfp.options.length > 0 && (
                         <span className={`ml-2 px-1.5 py-0.5 text-xs rounded ${
-                          parentRfp.status === "received" 
-                            ? "bg-purple-100 text-purple-700" 
-                            : parentRfp.status === "in-progress"
-                            ? "bg-orange-100 text-orange-700"
-                            : parentRfp.status === "completed"
-                            ? "bg-green-100 text-green-700"
-                            : parentRfp.status === "archived"
-                            ? "bg-gray-100 text-gray-700"
-                            : "bg-red-100 text-red-700"
+                          // Determine badge color based on alternate statuses, not parent status
+                          (() => {
+                            const alternateStatuses = parentRfp.options.map(opt => opt.status);
+                            // If any alternate is in-progress, show orange
+                            if (alternateStatuses.some(status => status === "in-progress")) {
+                              return "bg-orange-100 text-orange-700";
+                            }
+                            // If any alternate is received, show purple  
+                            if (alternateStatuses.some(status => status === "received")) {
+                              return "bg-purple-100 text-purple-700";
+                            }
+                            // If all alternates are completed, show green
+                            if (alternateStatuses.every(status => status === "completed")) {
+                              return "bg-green-100 text-green-700";
+                            }
+                            // If any are archived, show gray
+                            if (alternateStatuses.some(status => status === "archived")) {
+                              return "bg-gray-100 text-gray-700";
+                            }
+                            // Default fallback
+                            return "bg-red-100 text-red-700";
+                          })()
                         }`}>
                           {parentRfp.options.length} alternate{parentRfp.options.length > 1 ? 's' : ''}
                         </span>

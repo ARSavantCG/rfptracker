@@ -86,24 +86,12 @@ export function CreateAlternateModal({ isOpen, onClose, parentRfp, onAlternateCr
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <DialogTitle className="text-xl font-semibold text-gray-900">
-                Create RFP Alternate
-              </DialogTitle>
-              <DialogDescription className="text-sm text-gray-600 mt-1">
-                Creating alternate for: {parentRfp.rfpNumber} - {parentRfp.tenantName}
-              </DialogDescription>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleClose}
-              className="h-8 w-8 p-0"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
+          <DialogTitle className="text-xl font-semibold text-gray-900">
+            Create RFP Alternate
+          </DialogTitle>
+          <DialogDescription className="text-sm text-gray-600 mt-1">
+            Creating alternate for: {parentRfp.rfpNumber} - {parentRfp.tenantName}
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">

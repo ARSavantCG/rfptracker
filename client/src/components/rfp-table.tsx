@@ -6,7 +6,7 @@ import { formatDateForDisplay } from "@shared/date-utils";
 import { useToast } from "@/hooks/use-toast";
 import { handleAuthError } from "@/lib/authHelper";
 import { useAuth } from "@/hooks/useAuth";
-import { CreateAlternateModal } from "./create-alternate-modal";
+
 import type { RfpRequest, Property } from "@shared/schema";
 
 interface RfpTableProps {
@@ -158,8 +158,7 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
   });
 
   // RFP Alternate modal state
-  const [isCreateAlternateModalOpen, setIsCreateAlternateModalOpen] = useState(false);
-  const [selectedRfpForAlternate, setSelectedRfpForAlternate] = useState<RfpRequest | null>(null);
+
 
   const { data: rfpRequests = [], isLoading } = useQuery<RfpRequest[]>({
     queryKey: ["/api/rfp-requests", { search: searchQuery, status: statusFilter }],
@@ -701,8 +700,55 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
                         <button 
                           onClick={(e) => {
                             e.stopPropagation();
-                            setSelectedRfpForAlternate(parentRfp);
-                            setIsCreateAlternateModalOpen(true);
+                            // Create a temporary alternate draft and open full RFP workflow
+                            const createAlternateAndOpenWorkflow = async () => {
+                              const alternateTitle = prompt('Enter alternate title (e.g., "Full Building", "West End Cap"):');
+                              if (!alternateTitle?.trim()) return;
+                              
+                              try {
+                                const token = localStorage.getItem('auth-token');
+                                const response = await fetch(`/api/rfp-requests/${parentRfp.id}/create-option`, {
+                                  method: 'POST',
+                                  headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${token}`,
+                                  },
+                                  credentials: 'include',
+                                  body: JSON.stringify({
+                                    optionType: "alternate",
+                                    optionTitle: alternateTitle,
+                                  })
+                                });
+                                
+                                if (!response.ok) throw new Error('Failed to create alternate');
+                                const alternateRfp = await response.json();
+                                
+                                // Refresh data
+                                queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
+                                queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
+                                
+                                // Auto-expand parent to show new alternate
+                                setExpandedRfps(prev => new Set(prev).add(parentRfp.id));
+                                
+                                // Open alternate in full RFP workflow
+                                onEditRfp(alternateRfp);
+                                
+                                toast({
+                                  title: "Success",
+                                  description: "RFP alternate created. Opening Step 1 workflow...",
+                                  duration: 4000,
+                                });
+                              } catch (error: any) {
+                                toast({
+                                  title: "Error",
+                                  description: error.message || "Failed to create RFP alternate",
+                                  variant: "destructive",
+                                  duration: 6000,
+                                });
+                              }
+                            };
+                            
+                            createAlternateAndOpenWorkflow();
                           }}
                           className="text-purple-600 hover:text-purple-700 p-1"
                           title="Create RFP alternate"
@@ -1020,27 +1066,7 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
         </div>
       )}
       
-      {/* Create RFP Alternate Modal */}
-      {isCreateAlternateModalOpen && selectedRfpForAlternate && (
-        <CreateAlternateModal
-          isOpen={isCreateAlternateModalOpen}
-          onClose={() => {
-            setIsCreateAlternateModalOpen(false);
-            setSelectedRfpForAlternate(null);
-          }}
-          parentRfp={selectedRfpForAlternate}
-          onAlternateCreated={(alternateRfp) => {
-            // Auto-expand the parent RFP to show the new alternate
-            if (selectedRfpForAlternate) {
-              setExpandedRfps(prev => new Set(prev).add(selectedRfpForAlternate.id));
-            }
-            // Auto-open the alternate in Step 1
-            if (onEditRfp) {
-              onEditRfp(alternateRfp);
-            }
-          }}
-        />
-      )}
+
     </div>
   );
 }

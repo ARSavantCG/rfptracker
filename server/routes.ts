@@ -1631,8 +1631,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         internalDueDate: null,
         contractorDueDate: null,
         architectDueDate: null,
-        // Leave property/space selection empty for workflow
-        property: null,
+        // Leave property/space selection empty for workflow - use placeholder to avoid constraint
+        property: "Select property...",
         projectArea: null,
         selectedBayConfigurations: [],
         // Start fresh for independent configuration

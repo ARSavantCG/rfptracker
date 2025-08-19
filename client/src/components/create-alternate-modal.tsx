@@ -21,10 +21,12 @@ export function CreateAlternateModal({ isOpen, onClose, parentRfp }: CreateAlter
 
   const createMutation = useMutation({
     mutationFn: async () => {
+      const token = localStorage.getItem('auth-token');
       return await fetch(`/api/rfp-requests/${parentRfp.id}/create-option`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         credentials: 'include',
         body: JSON.stringify({

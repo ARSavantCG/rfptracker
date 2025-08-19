@@ -61,6 +61,7 @@ Preferred communication style: Simple, everyday language.
       • **User Impact**: Data entry impossible, breaks workflow efficiency expectations
       • **Next Steps**: Need deeper architectural solution - potentially table restructure or complete navigation system redesign
       Current implementation provides basic form navigation but falls short of Excel-like table navigation requirements.
+    - **RFP Alternate Creation Fix**: Fixed authentication issue (8/19/2025) in CreateAlternateModal where API requests were failing with "No token provided" error. Added proper Bearer token authentication to create-option endpoint requests, ensuring alternates can be successfully created from the purple branch icon in RFP table.
     - **Executed Leases System**: Universal lease recognition system (8/18/2025) ensuring all properties display executed leases in bay configurators. Added comprehensive sample leases across all properties (Bridge 595, Bridge Point Doral Buildings 1-6, Bridge Point Gratigny, Bridge Point Miami Station Buildings 1-2, MG Westside Building 1) with realistic tenant names, bay assignments, and parking allocations for consistent bay configurator functionality.
 
 ## External Dependencies

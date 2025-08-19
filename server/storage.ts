@@ -478,6 +478,7 @@ export class DatabaseStorage implements IStorage {
         rfpNumber,
         parentRfpId: request.parentRfpId || null,
         isCounterOffer: request.isCounterOffer || false,
+        isOption: request.isOption || false,
         property: request.property,
         tenantName: request.tenantName,
         projectName: request.projectName,

@@ -1029,6 +1029,16 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
             setSelectedRfpForAlternate(null);
           }}
           parentRfp={selectedRfpForAlternate}
+          onAlternateCreated={(alternateRfp) => {
+            // Auto-expand the parent RFP to show the new alternate
+            if (selectedRfpForAlternate) {
+              setExpandedRfps(prev => new Set(prev).add(selectedRfpForAlternate.id));
+            }
+            // Auto-open the alternate in Step 1
+            if (onEditRfp) {
+              onEditRfp(alternateRfp);
+            }
+          }}
         />
       )}
     </div>

@@ -12,9 +12,10 @@ interface CreateAlternateModalProps {
   isOpen: boolean;
   onClose: () => void;
   parentRfp: RfpRequest;
+  onAlternateCreated?: (alternateRfp: any) => void;
 }
 
-export function CreateAlternateModal({ isOpen, onClose, parentRfp }: CreateAlternateModalProps) {
+export function CreateAlternateModal({ isOpen, onClose, parentRfp, onAlternateCreated }: CreateAlternateModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [alternateTitle, setAlternateTitle] = useState("");
@@ -38,15 +39,20 @@ export function CreateAlternateModal({ isOpen, onClose, parentRfp }: CreateAlter
         return res.json();
       });
     },
-    onSuccess: () => {
+    onSuccess: (alternateRfp) => {
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
       toast({
         title: "Success",
-        description: "RFP alternate created successfully",
+        description: "RFP alternate created successfully. Opening Step 1...",
         duration: 4000,
       });
       handleClose();
+      
+      // Auto-redirect to Step 1 of the new alternate
+      if (onAlternateCreated) {
+        onAlternateCreated(alternateRfp);
+      }
     },
     onError: (error: any) => {
       toast({

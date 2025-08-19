@@ -3012,7 +3012,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         {items.length === 0 && !newItemCategory ? (
           <p className="text-gray-500 text-center py-4">No items added yet</p>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto max-w-full">
             <DragDropContext onDragEnd={handleDragEnd}>
               <Table>
               <TableHeader>

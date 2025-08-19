@@ -3023,8 +3023,8 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                   <TableHead className="w-36 text-center">Rollup</TableHead>
                   <TableHead className="min-w-48">Description</TableHead>
                   <TableHead className="w-36">Quantity (Unit)</TableHead>
-                  <TableHead className="w-32">Unit Price</TableHead>
-                  {!newItemCategory && <TableHead className="w-32">Total</TableHead>}
+                  <TableHead className="w-32 text-right">Unit Price</TableHead>
+                  {!newItemCategory && <TableHead className="w-32 text-right">Total</TableHead>}
                   <TableHead className="w-24 text-center">$/RSF</TableHead>
                   <TableHead className="w-24 text-center">Tenant %</TableHead>
                   <TableHead className="w-28">Actions</TableHead>
@@ -3171,7 +3171,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                                       />
                                     </div>
                                   </TableCell>
-                                  <TableCell>
+                                  <TableCell className="text-right">
                                     <FormulaInput
                                       value={item.unitPrice}
                                       onChange={(value, evaluatedValue) => {
@@ -3183,11 +3183,11 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                                           updateItem(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', item.id, { totalPrice: total });
                                         }
                                       }}
-                                      className="text-sm"
+                                      className="text-sm text-right"
                                       type="rate"
                                     />
                                   </TableCell>
-                                  {!newItemCategory && <TableCell className="font-medium">{formatCurrency(item.totalPrice)}</TableCell>}
+                                  {!newItemCategory && <TableCell className="font-medium text-right">{formatCurrency(item.totalPrice)}</TableCell>}
                                   <TableCell className="text-center">
                                     {(() => {
                                       const totalCost = parseFloat(item.totalPrice) || 0;
@@ -3214,12 +3214,14 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                                       <span className="text-xs text-gray-500">%</span>
                                     </div>
                                   </TableCell>
-                                  <TableCell>
-                                    <div className="flex gap-1">
+                                  <TableCell className="w-32">
+                                    <div className="flex gap-1 items-center justify-center">
                                       <Button
                                         variant="ghost"
                                         size="sm"
                                         onClick={() => setEditingItem(null)}
+                                        className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                        title="Save changes"
                                       >
                                         <Save className="h-3 w-3" />
                                       </Button>
@@ -3227,6 +3229,8 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                                         variant="ghost"
                                         size="sm"
                                         onClick={() => setEditingItem(null)}
+                                        className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                                        title="Cancel editing"
                                       >
                                         <X className="h-3 w-3" />
                                       </Button>
@@ -3245,13 +3249,13 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                                       {new Intl.NumberFormat('en-US').format(item.quantity)} {item.unit}
                                     </span>
                                   </TableCell>
-                                  <TableCell>
+                                  <TableCell className="text-right">
                                     <span className={`${isAssembled ? 'line-through opacity-60' : ''}`}>
                                       {formatCurrency(calculateDistributedUnitPrice(item))}
                                     </span>
                                   </TableCell>
                                   {!newItemCategory && (
-                                    <TableCell className="font-medium">
+                                    <TableCell className="font-medium text-right">
                                       <span className={`${isAssembled ? 'line-through opacity-60' : ''}`}>
                                         {formatCurrency(calculateDistributedCosts(item))}
                                       </span>
@@ -3277,12 +3281,14 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                                       {item.tenantShare || 100}%
                                     </span>
                                   </TableCell>
-                                  <TableCell>
-                                    <div className="flex gap-1">
+                                  <TableCell className="w-32">
+                                    <div className="flex gap-1 items-center justify-center">
                                       <Button
                                         variant="ghost"
                                         size="sm"
                                         onClick={() => setEditingItem(item.id)}
+                                        className="h-8 w-8 p-0"
+                                        title="Edit item"
                                       >
                                         <Edit className="h-3 w-3" />
                                       </Button>
@@ -3301,6 +3307,8 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                                             [categoryType]: [...prev[categoryType], duplicatedItem],
                                           }));
                                         }}
+                                        className="h-8 w-8 p-0"
+                                        title="Duplicate item"
                                       >
                                         <Copy className="h-3 w-3" />
                                       </Button>
@@ -3308,6 +3316,8 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
                                         variant="ghost"
                                         size="sm"
                                         onClick={() => deleteItem(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', item.id)}
+                                        className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                        title="Delete item"
                                       >
                                         <Trash2 className="h-3 w-3" />
                                       </Button>

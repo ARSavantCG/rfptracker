@@ -720,15 +720,17 @@ export function RfpTable({ searchQuery, statusFilter, onEditRfp, onSelectRfp, se
                                 if (!response.ok) throw new Error('Failed to create alternate');
                                 const alternateRfp = await response.json();
                                 
-                                // Refresh data
-                                queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
-                                queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
-                                
                                 // Auto-expand parent to show new alternate
                                 setExpandedRfps(prev => new Set(prev).add(parentRfp.id));
                                 
                                 // Open alternate in full RFP workflow immediately
                                 onEditRfp(alternateRfp);
+                                
+                                // Refresh data after opening modal to prevent closing
+                                setTimeout(() => {
+                                  queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
+                                  queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
+                                }, 100);
                                 
                               } catch (error: any) {
                                 toast({

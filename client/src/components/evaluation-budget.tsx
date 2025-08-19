@@ -3012,9 +3012,9 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         {items.length === 0 && !newItemCategory ? (
           <p className="text-gray-500 text-center py-4">No items added yet</p>
         ) : (
-          <div>
+          <div className="overflow-x-auto">
             <DragDropContext onDragEnd={handleDragEnd}>
-              <Table>
+              <Table className="min-w-full">
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-16 text-center">Order</TableHead>
@@ -3473,7 +3473,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
   }
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6 min-w-0 overflow-hidden">
       <Card>
         <CardHeader>
           <CardTitle>Budget Evaluation - {rfp?.projectName || 'Project'}</CardTitle>

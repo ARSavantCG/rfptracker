@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { PropertySelector } from "./property-selector";
+import { HierarchicalPropertySelector } from "./hierarchical-property-selector";
 import { FileUpload } from "./file-upload";
 import { BayConfigurationModal } from "./bay-configuration-modal";
 import { Edit, Save, X, Download, Trash2, Grid3x3, ChevronDown } from "lucide-react";
@@ -503,7 +503,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
                 <FormItem>
                   <FormLabel>Property</FormLabel>
                   <FormControl>
-                    <PropertySelector
+                    <HierarchicalPropertySelector
                       value={field.value}
                       onChange={field.onChange}
                     />

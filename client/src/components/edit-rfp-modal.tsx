@@ -317,12 +317,12 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
       
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
       toast({
         title: "Success",
-        description: "RFP updated successfully",
+        description: rfp?.id === 0 ? "Alternate created successfully" : "RFP updated successfully",
         duration: 4000,
       });
       onClose();

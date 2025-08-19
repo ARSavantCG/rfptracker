@@ -88,6 +88,11 @@ export default function Dashboard() {
   // Auto-refresh selected RFP when data changes
   useEffect(() => {
     if (selectedRfp && allRfps.length > 0) {
+      // Skip auto-refresh for template RFPs (id: 0 used for unsaved alternates)
+      if (selectedRfp.id === 0) {
+        return;
+      }
+      
       const updatedRfp = allRfps.find(rfp => rfp.id === selectedRfp.id);
       if (updatedRfp) {
         // Update the selected RFP if data has changed
@@ -98,8 +103,8 @@ export default function Dashboard() {
         // Clear selected RFP if it no longer exists (was deleted)
         setSelectedRfp(null);
       }
-    } else if (selectedRfp && allRfps.length === 0) {
-      // Clear selected RFP if all RFPs were deleted
+    } else if (selectedRfp && selectedRfp.id !== 0 && allRfps.length === 0) {
+      // Clear selected RFP if all RFPs were deleted (but not for templates)
       setSelectedRfp(null);
     }
   }, [allRfps, selectedRfp]);

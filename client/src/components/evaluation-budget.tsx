@@ -68,9 +68,10 @@ interface EvaluationBudgetData {
 
 interface EvaluationBudgetProps {
   rfp: RfpRequest | null;
+  isWorkflowCollapsed?: boolean;
 }
 
-export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
+export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: EvaluationBudgetProps) {
   const [editingItem, setEditingItem] = useState<string | null>(null);
   const [newItemCategory, setNewItemCategory] = useState<string>("");
   const [newItem, setNewItem] = useState<Partial<EvaluationLineItem>>({
@@ -2979,15 +2980,17 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
               <Plus className="h-4 w-4 mr-2" />
               Add Line Item
             </Button>
-            <Button 
-              size="sm" 
-              onClick={() => addMultipleBlankItems(category, 5)} 
-              variant="outline" 
-              className="h-8"
-              title="Add 5 line items at once"
-            >
-              +5
-            </Button>
+            {isWorkflowCollapsed && (
+              <Button 
+                size="sm" 
+                onClick={() => addMultipleBlankItems(category, 5)} 
+                variant="outline" 
+                className="h-8"
+                title="Add 5 line items at once"
+              >
+                +5
+              </Button>
+            )}
 
             <span className="text-xs text-gray-500 ml-2">
               Tip: Ctrl+Enter to save & add another

@@ -364,7 +364,7 @@ export default function Dashboard() {
                     ← Back to RFP List
                   </Button>
                 </div>
-                <EvaluationBudget rfp={selectedRfp} />
+                <EvaluationBudget rfp={selectedRfp} isWorkflowCollapsed={isWorkflowCollapsed} />
               </div>
             ) : showPublish && selectedRfp ? (
               <div className="space-y-4">

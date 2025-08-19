@@ -2921,9 +2921,13 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
     const totalWithRollups = calculateCategoryTotalWithRollups(category);
     
     return (
-    <Card>
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+      <div className="px-4 py-2 border-b border-gray-200">
+        <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
+      </div>
+    <Card className="border-0 shadow-none">
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-lg text-black">{title}</CardTitle>
+        <div></div>
         <div className="flex items-center gap-2">
           <span className={`text-lg font-bold ${category === 'existingImprovements' ? 'text-cyan-600 italic' : 'text-green-600'}`}>{formatCurrency(totalWithRollups)}</span>
           {totalWithRollups !== total && (
@@ -3459,6 +3463,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         )}
       </CardContent>
     </Card>
+    </div>
   );
   };
 

@@ -4,7 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { ChevronRight, FileText, Users, ClipboardCheck, Award, FileOutput, CheckCircle, ChevronLeft } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { RfpRequest } from "@shared/schema";
 
 interface WorkflowStatusProps {
@@ -17,6 +17,7 @@ interface WorkflowStatusProps {
   onOpenEvaluation?: (rfp: RfpRequest) => void;
   onOpenPublish?: (rfp: RfpRequest) => void;
   onViewDetails?: (rfp: RfpRequest) => void;
+  isCollapsed?: boolean;
   onWorkflowToggle?: (isCollapsed: boolean) => void;
 }
 
@@ -65,10 +66,22 @@ const workflowPhases = [
   }
 ];
 
-export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValidateRfp, onOpenInvitationModal, onOpenBidCollection, onOpenEvaluation, onOpenPublish, onViewDetails, onWorkflowToggle }: WorkflowStatusProps) {
+export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValidateRfp, onOpenInvitationModal, onOpenBidCollection, onOpenEvaluation, onOpenPublish, onViewDetails, isCollapsed: externalIsCollapsed, onWorkflowToggle }: WorkflowStatusProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(externalIsCollapsed || false);
+
+  // Sync external collapse state with internal state
+  useEffect(() => {
+    if (externalIsCollapsed !== undefined && externalIsCollapsed !== isCollapsed) {
+      setIsCollapsed(externalIsCollapsed);
+    }
+  }, [externalIsCollapsed]);
+
+  const handleToggleCollapse = (newCollapsedState: boolean) => {
+    setIsCollapsed(newCollapsedState);
+    onWorkflowToggle?.(newCollapsedState);
+  };
 
   const advancePhaseMutation = useMutation({
     mutationFn: async (newPhase: string) => {
@@ -157,10 +170,7 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValida
           <Button
             variant="outline"
             size="sm"
-            onClick={() => {
-              setIsCollapsed(false);
-              onWorkflowToggle?.(false);
-            }}
+            onClick={() => handleToggleCollapse(false)}
             className="bg-white shadow-lg border-2 border-blue-300 hover:bg-blue-50"
             title="Show workflow panel"
           >
@@ -180,11 +190,7 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValida
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => {
-              const newState = !isCollapsed;
-              setIsCollapsed(newState);
-              onWorkflowToggle?.(newState);
-            }}
+            onClick={() => handleToggleCollapse(!isCollapsed)}
             className="h-6 w-6 p-0 hover:bg-gray-100"
             title={isCollapsed ? "Show workflow" : "Hide workflow"}
           >

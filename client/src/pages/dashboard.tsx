@@ -48,6 +48,7 @@ export default function Dashboard() {
   const [workflowRfp, setWorkflowRfp] = useState<RfpRequest | null>(null);
   const [validationRfp, setValidationRfp] = useState<RfpRequest | null>(null);
   const [detailRfp, setDetailRfp] = useState<RfpRequest | null>(null);
+  const [isWorkflowCollapsed, setIsWorkflowCollapsed] = useState(false);
 
   // Fetch all RFPs to keep selected RFP data fresh - include archived for selection tracking
   const { data: allRfps = [] } = useQuery<RfpRequest[]>({
@@ -163,32 +164,38 @@ export default function Dashboard() {
   const handleAdvanceToInvitation = (rfp: RfpRequest) => {
     setWorkflowRfp(rfp);
     setIsInvitationModalOpen(true);
+    setIsWorkflowCollapsed(true); // Auto-minimize workflow when opening invitation modal
   };
 
   const handleOpenInvitationModal = (rfp: RfpRequest) => {
     setWorkflowRfp(rfp);
     setIsInvitationModalOpen(true);
+    setIsWorkflowCollapsed(true); // Auto-minimize workflow when opening invitation modal
   };
 
   const handleValidateRfp = (rfp: RfpRequest) => {
     setValidationRfp(rfp);
     setIsValidationModalOpen(true);
+    setIsWorkflowCollapsed(true); // Auto-minimize workflow when opening validation modal
   };
 
   const handleOpenBidCollection = (rfp: RfpRequest) => {
     setShowBidCollection(true);
+    setIsWorkflowCollapsed(true); // Auto-minimize workflow when entering bid collection
   };
 
   const handleOpenEvaluation = (rfp: RfpRequest) => {
     setShowBidCollection(false);
     setShowEvaluation(true);
     setShowPublish(false);
+    setIsWorkflowCollapsed(true); // Auto-minimize workflow when entering evaluation
   };
 
   const handleOpenPublish = (rfp: RfpRequest) => {
     setShowBidCollection(false);
     setShowEvaluation(false);
     setShowPublish(true);
+    setIsWorkflowCollapsed(true); // Auto-minimize workflow when entering publish
   };
 
   const handleViewDetails = (rfp: RfpRequest) => {
@@ -415,7 +422,9 @@ export default function Dashboard() {
                   onOpenEvaluation={handleOpenEvaluation}
                   onOpenPublish={handleOpenPublish}
                   onViewDetails={handleViewDetails}
+                  isCollapsed={isWorkflowCollapsed}
                   onWorkflowToggle={(isCollapsed) => {
+                    setIsWorkflowCollapsed(isCollapsed);
                     // Trigger layout adjustment when workflow is toggled
                     const mainContent = document.querySelector('.main-content-area');
                     if (mainContent) {

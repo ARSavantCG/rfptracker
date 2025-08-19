@@ -367,43 +367,70 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
     mutationFn: async (data: EditRfpFormData) => {
       if (!rfp) throw new Error("No RFP selected");
       
-      const formData = new FormData();
+      let rfpId = rfp.id;
       
-      // Append form fields
-      Object.entries(data).forEach(([key, value]) => {
-        if (Array.isArray(value)) {
-          formData.append(key, JSON.stringify(value));
-        } else {
-          formData.append(key, value.toString());
+      // Handle new alternate creation first
+      if (rfp.id === 0) {
+        const token = localStorage.getItem('auth_token');
+        const createResponse = await fetch(`/api/rfp-requests/${rfp.parentRfpId}/create-option`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            optionType: "alternate",
+            optionTitle: data.alternateDescription || "Alternate",
+            formData: {
+              ...data,
+              selectedBayConfigurations: selectedBayConfigurations
+            }
+          })
+        });
+        
+        if (!createResponse.ok) throw new Error('Failed to create alternate');
+        const createdRfp = await createResponse.json();
+        rfpId = createdRfp.id;
+      } else {
+        // Update existing RFP first
+        const formData = new FormData();
+        
+        // Append form fields
+        Object.entries(data).forEach(([key, value]) => {
+          if (Array.isArray(value)) {
+            formData.append(key, JSON.stringify(value));
+          } else {
+            formData.append(key, value.toString());
+          }
+        });
+        
+        // Add selected bay configurations
+        if (selectedBayConfigurations.length > 0) {
+          formData.append('selectedBayConfigurations', JSON.stringify(selectedBayConfigurations));
         }
-      });
-      
-      // Add selected bay configurations
-      if (selectedBayConfigurations.length > 0) {
-        formData.append('selectedBayConfigurations', JSON.stringify(selectedBayConfigurations));
-      }
-      
-      // Append new files
-      selectedFiles.forEach((file) => {
-        formData.append('files', file);
-      });
-      
-      // First update the RFP
-      const updateResponse = await fetch(`/api/rfp-requests/${rfp.id}/update-with-files`, {
-        method: 'PATCH',
-        body: formData,
-      });
-      
-      if (!updateResponse.ok) {
-        throw new Error('Failed to update RFP request');
+        
+        // Append new files
+        selectedFiles.forEach((file) => {
+          formData.append('files', file);
+        });
+        
+        const updateResponse = await fetch(`/api/rfp-requests/${rfp.id}/update-with-files`, {
+          method: 'PATCH',
+          body: formData,
+        });
+        
+        if (!updateResponse.ok) {
+          throw new Error('Failed to update RFP request');
+        }
       }
 
-      // Then advance the workflow phase to rfp-validation
-      const advanceResponse = await fetch(`/api/rfp-requests/${rfp.id}/workflow-phase`, {
+      // Now advance the workflow phase to rfp-validation for both new and existing RFPs
+      const advanceResponse = await fetch(`/api/rfp-requests/${rfpId}/workflow-phase`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('auth-token')}`,
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
         },
         body: JSON.stringify({ phase: "rfp-validation" }),
       });
@@ -419,7 +446,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
       toast({
         title: "Success",
-        description: "RFP updated and advanced to validation phase",
+        description: rfp?.id === 0 ? "Alternate created and advanced to validation phase" : "RFP updated and advanced to validation phase",
       });
       onClose();
     },
@@ -866,12 +893,16 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
               {rfp?.id === 0 ? (
                 // For new alternates - auto-advance with green button
                 <Button 
-                  type="submit" 
-                  disabled={updateMutation.isPending}
+                  type="button"
+                  onClick={() => {
+                    const formData = form.getValues();
+                    updateAndAdvanceMutation.mutate(formData);
+                  }}
+                  disabled={updateAndAdvanceMutation.isPending}
                   className="bg-green-600 hover:bg-green-700 text-white"
                 >
                   <Save className="h-4 w-4 mr-2" />
-                  {updateMutation.isPending ? "Creating..." : "Create RFP"}
+                  {updateAndAdvanceMutation.isPending ? "Creating & Advancing..." : "Create RFP & Advance"}
                 </Button>
               ) : (
                 <>

@@ -3014,7 +3014,7 @@ export function EvaluationBudget({ rfp }: EvaluationBudgetProps) {
         ) : (
           <div className="overflow-x-auto">
             <DragDropContext onDragEnd={handleDragEnd}>
-              <Table className="min-w-full">
+              <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-16 text-center">Order</TableHead>

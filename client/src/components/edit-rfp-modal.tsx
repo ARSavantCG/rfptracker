@@ -142,7 +142,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
       internalDueDate: "",
       developmentContact: "",
       projectArea: "",
-      requestTypes: [],
+      requestTypes: [], // Empty by default - user selects what they need
       notes: "",
       status: "received",
       workflowPhase: "rfp-entry",
@@ -175,7 +175,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
         internalDueDate: formatDateForInput(rfp.internalDueDate),
         developmentContact: rfp.developmentContact || "",
         projectArea: rfp.projectArea || "",
-        requestTypes: rfp.requestTypes || [],
+        requestTypes: rfp.id === 0 ? [] : (rfp.requestTypes || []), // Empty for new alternates
         notes: rfp.notes || "",
         status: rfp.status as "received" | "in-progress" | "completed" | "on-hold",
         workflowPhase: (rfp.workflowPhase || "rfp-entry") as "rfp-entry" | "invitation-to-bid" | "bid-collection" | "evaluation" | "award",
@@ -771,61 +771,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
               )}
             />
 
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Status</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <select
-                          {...field}
-                          className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background data-[placeholder]:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none"
-                        >
-                          <option value="">Select status</option>
-                          <option value="received">Received</option>
-                          <option value="in-progress">In Progress</option>
-                          <option value="completed">Completed</option>
-                          <option value="on-hold">On Hold</option>
-                        </select>
-                        <ChevronDown className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50" />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="workflowPhase"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Workflow Phase</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <select
-                          {...field}
-                          className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background data-[placeholder]:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none"
-                        >
-                          <option value="">Select phase</option>
-                          <option value="rfp-entry">RFP Entry</option>
-                          <option value="rfp-validation">RFP Validation</option>
-                          <option value="invitation-to-bid">Invitation to Bid</option>
-                          <option value="bid-collection">Bid Collection</option>
-                          <option value="evaluation">Evaluation</option>
-                          <option value="publish">Publish</option>
-                        </select>
-                        <ChevronDown className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50" />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            {/* Status and Workflow Phase removed - handled automatically by system */}
 
             <FormField
               control={form.control}
@@ -917,26 +863,40 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
                 <X className="h-4 w-4 mr-2" />
                 Cancel
               </Button>
-              <Button 
-                type="submit" 
-                disabled={updateMutation.isPending || updateAndAdvanceMutation.isPending}
-              >
-                <Save className="h-4 w-4 mr-2" />
-                {updateMutation.isPending ? "Updating..." : "Update RFP"}
-              </Button>
-              {rfp?.workflowPhase === "rfp-entry" && (
-                <Button
-                  type="button"
-                  onClick={() => {
-                    const formData = form.getValues();
-                    updateAndAdvanceMutation.mutate(formData);
-                  }}
-                  disabled={updateMutation.isPending || updateAndAdvanceMutation.isPending}
+              {rfp?.id === 0 ? (
+                // For new alternates - auto-advance with green button
+                <Button 
+                  type="submit" 
+                  disabled={updateMutation.isPending}
                   className="bg-green-600 hover:bg-green-700 text-white"
                 >
                   <Save className="h-4 w-4 mr-2" />
-                  {updateAndAdvanceMutation.isPending ? "Saving & Advancing..." : "Save & Advance to RFP Validation"}
+                  {updateMutation.isPending ? "Creating..." : "Create RFP"}
                 </Button>
+              ) : (
+                <>
+                  <Button 
+                    type="submit" 
+                    disabled={updateMutation.isPending || updateAndAdvanceMutation.isPending}
+                  >
+                    <Save className="h-4 w-4 mr-2" />
+                    {updateMutation.isPending ? "Updating..." : "Update RFP"}
+                  </Button>
+                  {rfp?.workflowPhase === "rfp-entry" && (
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        const formData = form.getValues();
+                        updateAndAdvanceMutation.mutate(formData);
+                      }}
+                      disabled={updateMutation.isPending || updateAndAdvanceMutation.isPending}
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      <Save className="h-4 w-4 mr-2" />
+                      {updateAndAdvanceMutation.isPending ? "Saving & Advancing..." : "Save & Advance to RFP Validation"}
+                    </Button>
+                  )}
+                </>
               )}
             </div>
           </form>

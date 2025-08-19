@@ -19,7 +19,7 @@ import { LegalCompliancePanel } from "@/components/legal-compliance-panel";
 import Navigation from "@/components/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Users, Building2, X, Settings, Crown, ChevronDown, ChevronLeft } from "lucide-react";
+import { Plus, Search, Users, Building2, X, Settings, Crown, ChevronDown, ChevronLeft, Home } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { apiRequest } from "@/lib/queryClient";
@@ -343,52 +343,104 @@ export default function Dashboard() {
             {showBidCollection && selectedRfp ? (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowBidCollection(false)}
-                    className="mb-4"
-                  >
-                    ← Back to RFP List
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowBidCollection(false)}
+                      className="mb-4"
+                    >
+                      ← Back to RFP List
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      onClick={() => {
+                        setSelectedRfp(null);
+                        setShowBidCollection(false);
+                      }}
+                      className="mb-4"
+                    >
+                      <Home className="h-4 w-4 mr-2" />
+                      Dashboard
+                    </Button>
+                  </div>
                 </div>
                 <BidCollectionTable rfp={selectedRfp} />
               </div>
             ) : showEvaluation && selectedRfp ? (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowEvaluation(false)}
-                    className="mb-4"
-                  >
-                    ← Back to RFP List
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowEvaluation(false)}
+                      className="mb-4"
+                    >
+                      ← Back to RFP List
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      onClick={() => {
+                        setSelectedRfp(null);
+                        setShowEvaluation(false);
+                      }}
+                      className="mb-4"
+                    >
+                      <Home className="h-4 w-4 mr-2" />
+                      Dashboard
+                    </Button>
+                  </div>
                 </div>
                 <EvaluationBudget rfp={selectedRfp} isWorkflowCollapsed={isWorkflowCollapsed} />
               </div>
             ) : showPublish && selectedRfp ? (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowPublish(false)}
-                    className="mb-4"
-                  >
-                    ← Back to RFP List
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowPublish(false)}
+                      className="mb-4"
+                    >
+                      ← Back to RFP List
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      onClick={() => {
+                        setSelectedRfp(null);
+                        setShowPublish(false);
+                      }}
+                      className="mb-4"
+                    >
+                      <Home className="h-4 w-4 mr-2" />
+                      Dashboard
+                    </Button>
+                  </div>
                 </div>
                 <PublishSummary rfp={selectedRfp} />
               </div>
             ) : selectedRfp && selectedRfp.workflowPhase === 'publish' && showBidCollection ? (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowBidCollection(false)}
-                    className="mb-4"
-                  >
-                    ← Back to RFP List
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowBidCollection(false)}
+                      className="mb-4"
+                    >
+                      ← Back to RFP List
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      onClick={() => {
+                        setSelectedRfp(null);
+                        setShowBidCollection(false);
+                      }}
+                      className="mb-4"
+                    >
+                      <Home className="h-4 w-4 mr-2" />
+                      Dashboard
+                    </Button>
+                  </div>
                 </div>
                 <FinancialSummary rfp={selectedRfp} />
               </div>

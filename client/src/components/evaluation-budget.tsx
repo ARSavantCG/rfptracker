@@ -2991,10 +2991,6 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
                 +5
               </Button>
             )}
-
-            <span className="text-xs text-gray-500 ml-2">
-              Tip: Ctrl+Enter to save & add another
-            </span>
           </div>
           <Button
             size="sm"

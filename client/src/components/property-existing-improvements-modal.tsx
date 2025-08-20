@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -11,6 +11,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Trash2, Plus, Edit3, Save, X, Grid, Printer, ChevronDown } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import { FormulaInput } from "@/components/formula-input";
 import { useAuth } from "@/hooks/useAuth";
 import { 
   EXISTING_IMPROVEMENT_CATEGORIES, 
@@ -53,7 +54,26 @@ export function PropertyExistingImprovementsModal({
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
+  const [allocationDropdownOpen, setAllocationDropdownOpen] = useState(false);
+  const categoryDropdownRef = useRef<HTMLDivElement>(null);
+  const allocationDropdownRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
+  
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(event.target as Node)) {
+        setCategoryDropdownOpen(false);
+      }
+      if (allocationDropdownRef.current && !allocationDropdownRef.current.contains(event.target as Node)) {
+        setAllocationDropdownOpen(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
   const { user } = useAuth();
 
   // Check if user has properties delete permissions
@@ -253,30 +273,48 @@ export function PropertyExistingImprovementsModal({
                       control={form.control}
                       name="category"
                       render={({ field }) => (
-                        <FormItem>
+                        <FormItem className="relative">
                           <FormLabel>Category</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger className="w-full">
-                                <SelectValue placeholder="Select category" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {Object.entries(EXISTING_IMPROVEMENT_CATEGORIES)
-                                .sort(([keyA, labelA], [keyB, labelB]) => {
-                                  // Put "Custom" at the end
-                                  if (keyA === 'custom') return 1;
-                                  if (keyB === 'custom') return -1;
-                                  // Sort all others alphabetically by label
-                                  return labelA.localeCompare(labelB);
-                                })
-                                .map(([key, label]) => (
-                                  <SelectItem key={key} value={key}>
-                                    {label}
-                                  </SelectItem>
-                                ))}
-                            </SelectContent>
-                          </Select>
+                          <FormControl>
+                            <div className="relative" ref={categoryDropdownRef}>
+                              <button
+                                type="button"
+                                onClick={() => setCategoryDropdownOpen(!categoryDropdownOpen)}
+                                className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                <span className={field.value ? "text-foreground" : "text-muted-foreground"}>
+                                  {field.value ? EXISTING_IMPROVEMENT_CATEGORIES[field.value as keyof typeof EXISTING_IMPROVEMENT_CATEGORIES] : "Select category"}
+                                </span>
+                                <ChevronDown className={`h-4 w-4 transition-transform ${categoryDropdownOpen ? "rotate-180" : ""}`} />
+                              </button>
+                              {categoryDropdownOpen && (
+                                <div className="absolute z-50 mt-1 w-full rounded-md border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-lg">
+                                  <div className="max-h-60 overflow-auto p-1">
+                                    {Object.entries(EXISTING_IMPROVEMENT_CATEGORIES)
+                                      .sort(([keyA, labelA], [keyB, labelB]) => {
+                                        // Put "Custom" at the end
+                                        if (keyA === 'custom') return 1;
+                                        if (keyB === 'custom') return -1;
+                                        // Sort all others alphabetically by label
+                                        return labelA.localeCompare(labelB);
+                                      })
+                                      .map(([key, label]) => (
+                                        <div
+                                          key={key}
+                                          className="flex cursor-pointer select-none items-center rounded-sm py-1.5 pl-2 pr-2 text-sm outline-none hover:bg-blue-50 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-slate-700"
+                                          onClick={() => {
+                                            field.onChange(key);
+                                            setCategoryDropdownOpen(false);
+                                          }}
+                                        >
+                                          {label}
+                                        </div>
+                                      ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -286,22 +324,40 @@ export function PropertyExistingImprovementsModal({
                       control={form.control}
                       name="allocationType"
                       render={({ field }) => (
-                        <FormItem>
+                        <FormItem className="relative">
                           <FormLabel>Allocation Type</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger className="w-full">
-                                <SelectValue placeholder="Select allocation type" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {Object.entries(ALLOCATION_TYPES).map(([key, label]) => (
-                                <SelectItem key={key} value={key}>
-                                  {label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <FormControl>
+                            <div className="relative" ref={allocationDropdownRef}>
+                              <button
+                                type="button"
+                                onClick={() => setAllocationDropdownOpen(!allocationDropdownOpen)}
+                                className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                <span className={field.value ? "text-foreground" : "text-muted-foreground"}>
+                                  {field.value ? ALLOCATION_TYPES[field.value as keyof typeof ALLOCATION_TYPES] : "Select allocation type"}
+                                </span>
+                                <ChevronDown className={`h-4 w-4 transition-transform ${allocationDropdownOpen ? "rotate-180" : ""}`} />
+                              </button>
+                              {allocationDropdownOpen && (
+                                <div className="absolute z-50 mt-1 w-full rounded-md border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-lg">
+                                  <div className="max-h-60 overflow-auto p-1">
+                                    {Object.entries(ALLOCATION_TYPES).map(([key, label]) => (
+                                      <div
+                                        key={key}
+                                        className="flex cursor-pointer select-none items-center rounded-sm py-1.5 pl-2 pr-2 text-sm outline-none hover:bg-blue-50 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-slate-700"
+                                        onClick={() => {
+                                          field.onChange(key);
+                                          setAllocationDropdownOpen(false);
+                                        }}
+                                      >
+                                        {label}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -329,15 +385,16 @@ export function PropertyExistingImprovementsModal({
                       <FormItem>
                         <FormLabel>Total Cost ($)</FormLabel>
                         <FormControl>
-                          <Input 
-                            type="text"
-                            {...field}
-                            value={field.value ? field.value.toLocaleString() : ''}
-                            onChange={(e) => {
-                              const value = e.target.value.replace(/[^0-9.]/g, '');
-                              field.onChange(parseFloat(value) || undefined);
+                          <FormulaInput
+                            value={field.value || 0}
+                            onChange={(value) => {
+                              const numValue = typeof value === 'string' ? parseFloat(value) || 0 : value;
+                              field.onChange(numValue);
                             }}
-                            placeholder="Enter cost amount" 
+                            placeholder="Enter cost amount or formula"
+                            className="w-full"
+                            decimalPlaces={2}
+                            type="rate"
                           />
                         </FormControl>
                         <FormMessage />

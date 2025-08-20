@@ -362,53 +362,53 @@ export function PropertyExistingImprovementsModal({
                         </FormItem>
                       )}
                     />
+
+                    <FormField
+                      control={form.control}
+                      name="description"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Description</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="e.g., LED warehouse lighting upgrade" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="totalCost"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Total Cost ($)</FormLabel>
+                          <FormControl>
+                            <FormulaInput
+                              value={field.value || 0}
+                              onChange={(rawValue, evaluatedValue) => {
+                                console.log('📝 FormulaInput onChange:', { rawValue, evaluatedValue });
+                                // Use evaluatedValue (the calculated result) for the form
+                                field.onChange(evaluatedValue);
+                              }}
+                              onBlur={() => {
+                                // Save the form when formula input loses focus
+                                field.onBlur();
+                              }}
+                              placeholder="Enter cost amount or formula (press Enter to save)"
+                              className="w-full"
+                              decimalPlaces={2}
+                              type="rate"
+                            />
+                          </FormControl>
+                          <div className="text-xs text-muted-foreground mt-1">
+                            💡 <strong>Formula support:</strong> Enter formulas like =123*5 or =15000/12. Press Enter or click away to save.
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   </div>
-
-                  <FormField
-                    control={form.control}
-                    name="description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Description</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="e.g., LED warehouse lighting upgrade" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="totalCost"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Total Cost ($)</FormLabel>
-                        <FormControl>
-                          <FormulaInput
-                            value={field.value || 0}
-                            onChange={(rawValue, evaluatedValue) => {
-                              console.log('📝 FormulaInput onChange:', { rawValue, evaluatedValue });
-                              // Use evaluatedValue (the calculated result) for the form
-                              field.onChange(evaluatedValue);
-                            }}
-                            onBlur={() => {
-                              // Save the form when formula input loses focus
-                              field.onBlur();
-                            }}
-                            placeholder="Enter cost amount or formula (press Enter to save)"
-                            className="w-full"
-                            decimalPlaces={2}
-                            type="rate"
-                          />
-                        </FormControl>
-                        <div className="text-xs text-muted-foreground mt-1">
-                          💡 <strong>Formula support:</strong> Enter formulas like =123*5 or =15000/12. Press Enter or click away to save.
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
 
                   {allocationType === "bay-specific" && (
                     <FormField

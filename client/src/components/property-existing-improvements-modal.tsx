@@ -118,6 +118,8 @@ export function PropertyExistingImprovementsModal({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/properties/${property.id}/existing-improvements`] });
       setEditingId(null);
+      setShowForm(false);
+      form.reset(); // Clear form after successful update
     },
   });
 
@@ -196,13 +198,19 @@ export function PropertyExistingImprovementsModal({
 
   return (
     <>
-      <Button variant="outline" size="sm" onClick={() => setOpen(true)} className="flex items-center gap-1 text-xs px-2 py-1 h-6">
+      <Button variant="outline" size="sm" onClick={() => {
+        setOpen(true);
+        // Reset form when opening modal for new entries
+        form.reset();
+        setShowForm(false);
+        setEditingId(null);
+      }} className="flex items-center gap-1 text-xs px-2 py-1 h-6">
         <Grid className="h-3 w-3" />
         Manage Costs in Place
       </Button>
       
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-6xl max-h-[95vh] overflow-y-auto">
         <DialogHeader className="flex flex-row items-center justify-between pr-12">
           <DialogTitle>
             Manage Existing Improvements - {property.propertyName}
@@ -243,7 +251,10 @@ export function PropertyExistingImprovementsModal({
           {!showForm && (
             <div className="flex justify-center">
               <Button 
-                onClick={() => setShowForm(true)} 
+                onClick={() => {
+                  setShowForm(true);
+                  form.reset(); // Clear form when adding new improvement
+                }} 
                 size="sm"
                 variant="outline"
                 className="px-3 py-1 text-sm"

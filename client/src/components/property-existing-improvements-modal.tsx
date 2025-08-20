@@ -257,9 +257,8 @@ export function PropertyExistingImprovementsModal({
                           <FormLabel>Category</FormLabel>
                           <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
-                              <SelectTrigger>
+                              <SelectTrigger className="w-full">
                                 <SelectValue placeholder="Select category" />
-                                <ChevronDown className="h-4 w-4 opacity-50" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
@@ -291,9 +290,8 @@ export function PropertyExistingImprovementsModal({
                           <FormLabel>Allocation Type</FormLabel>
                           <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
-                              <SelectTrigger>
+                              <SelectTrigger className="w-full">
                                 <SelectValue placeholder="Select allocation type" />
-                                <ChevronDown className="h-4 w-4 opacity-50" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
@@ -409,9 +407,8 @@ export function PropertyExistingImprovementsModal({
                               <FormLabel>Left Bay</FormLabel>
                               <Select onValueChange={field.onChange} value={field.value}>
                                 <FormControl>
-                                  <SelectTrigger>
+                                  <SelectTrigger className="w-full">
                                     <SelectValue placeholder="Select left bay" />
-                                    <ChevronDown className="h-4 w-4 opacity-50" />
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
@@ -435,9 +432,8 @@ export function PropertyExistingImprovementsModal({
                               <FormLabel>Right Bay</FormLabel>
                               <Select onValueChange={field.onChange} value={field.value}>
                                 <FormControl>
-                                  <SelectTrigger>
+                                  <SelectTrigger className="w-full">
                                     <SelectValue placeholder="Select right bay" />
-                                    <ChevronDown className="h-4 w-4 opacity-50" />
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>

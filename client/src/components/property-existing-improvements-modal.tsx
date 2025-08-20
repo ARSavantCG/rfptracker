@@ -268,7 +268,7 @@ export function PropertyExistingImprovementsModal({
 
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-3 gap-4">
                     <FormField
                       control={form.control}
                       name="category"
@@ -368,7 +368,7 @@ export function PropertyExistingImprovementsModal({
                     control={form.control}
                     name="description"
                     render={({ field }) => (
-                      <FormItem>
+                      <FormItem className="col-span-2">
                         <FormLabel>Description</FormLabel>
                         <FormControl>
                           <Input {...field} placeholder="e.g., LED warehouse lighting upgrade" />
@@ -387,9 +387,10 @@ export function PropertyExistingImprovementsModal({
                         <FormControl>
                           <FormulaInput
                             value={field.value || 0}
-                            onChange={(value) => {
-                              const numValue = typeof value === 'string' ? parseFloat(value) || 0 : value;
-                              field.onChange(numValue);
+                            onChange={(rawValue, evaluatedValue) => {
+                              console.log('📝 FormulaInput onChange:', { rawValue, evaluatedValue });
+                              // Use evaluatedValue (the calculated result) for the form
+                              field.onChange(evaluatedValue);
                             }}
                             onBlur={() => {
                               // Save the form when formula input loses focus

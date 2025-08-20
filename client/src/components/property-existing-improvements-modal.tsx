@@ -259,7 +259,6 @@ export function PropertyExistingImprovementsModal({
                             <FormControl>
                               <SelectTrigger>
                                 <SelectValue placeholder="Select category" />
-                                <ChevronDown className="h-4 w-4 opacity-50" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
@@ -293,7 +292,6 @@ export function PropertyExistingImprovementsModal({
                             <FormControl>
                               <SelectTrigger>
                                 <SelectValue placeholder="Select allocation type" />
-                                <ChevronDown className="h-4 w-4 opacity-50" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
@@ -411,7 +409,6 @@ export function PropertyExistingImprovementsModal({
                                 <FormControl>
                                   <SelectTrigger>
                                     <SelectValue placeholder="Select left bay" />
-                                    <ChevronDown className="h-4 w-4 opacity-50" />
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
@@ -437,7 +434,6 @@ export function PropertyExistingImprovementsModal({
                                 <FormControl>
                                   <SelectTrigger>
                                     <SelectValue placeholder="Select right bay" />
-                                    <ChevronDown className="h-4 w-4 opacity-50" />
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>

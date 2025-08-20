@@ -268,7 +268,7 @@ export function PropertyExistingImprovementsModal({
 
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-4 gap-4">
                     <FormField
                       control={form.control}
                       name="category"
@@ -368,7 +368,7 @@ export function PropertyExistingImprovementsModal({
                     control={form.control}
                     name="description"
                     render={({ field }) => (
-                      <FormItem className="col-span-2">
+                      <FormItem className="col-span-3">
                         <FormLabel>Description</FormLabel>
                         <FormControl>
                           <Input {...field} placeholder="e.g., LED warehouse lighting upgrade" />
@@ -382,7 +382,7 @@ export function PropertyExistingImprovementsModal({
                     control={form.control}
                     name="totalCost"
                     render={({ field }) => (
-                      <FormItem>
+                      <FormItem className="col-span-1">
                         <FormLabel>Total Cost ($)</FormLabel>
                         <FormControl>
                           <FormulaInput

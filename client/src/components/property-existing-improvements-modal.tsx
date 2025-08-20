@@ -368,7 +368,7 @@ export function PropertyExistingImprovementsModal({
                     control={form.control}
                     name="description"
                     render={({ field }) => (
-                      <FormItem className="col-span-3">
+                      <FormItem>
                         <FormLabel>Description</FormLabel>
                         <FormControl>
                           <Input {...field} placeholder="e.g., LED warehouse lighting upgrade" />
@@ -382,7 +382,7 @@ export function PropertyExistingImprovementsModal({
                     control={form.control}
                     name="totalCost"
                     render={({ field }) => (
-                      <FormItem className="col-span-1">
+                      <FormItem>
                         <FormLabel>Total Cost ($)</FormLabel>
                         <FormControl>
                           <FormulaInput

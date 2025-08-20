@@ -391,12 +391,19 @@ export function PropertyExistingImprovementsModal({
                               const numValue = typeof value === 'string' ? parseFloat(value) || 0 : value;
                               field.onChange(numValue);
                             }}
-                            placeholder="Enter cost amount or formula"
+                            onBlur={() => {
+                              // Save the form when formula input loses focus
+                              field.onBlur();
+                            }}
+                            placeholder="Enter cost amount or formula (press Enter to save)"
                             className="w-full"
                             decimalPlaces={2}
                             type="rate"
                           />
                         </FormControl>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          💡 <strong>Formula support:</strong> Enter formulas like =123*5 or =15000/12. Press Enter or click away to save.
+                        </div>
                         <FormMessage />
                       </FormItem>
                     )}

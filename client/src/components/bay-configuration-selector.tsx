@@ -465,7 +465,7 @@ export default function BayConfigurationSelector({
                 }
                 
                 return (
-                  <div key={`pos-${bay.id}`} className="w-12 flex-shrink-0">
+                  <div key={`pos-${bay.id}`} className="w-16 flex-shrink-0">
                     <div className="text-[8px] text-center text-gray-500 py-1 leading-tight">
                       {position}
                     </div>

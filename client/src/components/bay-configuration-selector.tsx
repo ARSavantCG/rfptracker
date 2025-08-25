@@ -603,10 +603,10 @@ export default function BayConfigurationSelector({
             </div>
           </div>
           
-          {/* Fixed height container to prevent layout shift */}
-          <div className="min-h-[420px] border border-dashed border-gray-200 rounded-lg">
+          {/* Container that expands downward only - no upward movement */}
+          <div className="border border-dashed border-gray-200 rounded-lg overflow-hidden">
             {selectedBayIds.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-center">
+              <div className="h-[120px] flex flex-col items-center justify-center text-center">
                 <div className="mb-3">
                   <Grid3x3 className="h-8 w-8 mx-auto text-gray-400 mb-2" />
                 </div>
@@ -614,7 +614,7 @@ export default function BayConfigurationSelector({
                 <p className="text-xs text-gray-400 mt-1">Click bays above to see calculations and parking allocation</p>
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="p-3 space-y-2">
                 <div className="flex flex-wrap gap-1">
                 {selectedBays.map((bay) => (
                   <span

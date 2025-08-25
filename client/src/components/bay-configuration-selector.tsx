@@ -30,6 +30,10 @@ export default function BayConfigurationSelector({
   const [vehicularParkingOverride, setVehicularParkingOverride] = useState<string>("");
   const [trailerParkingOverride, setTrailerParkingOverride] = useState<string>("");
   const [isParkingOverrideMode, setIsParkingOverrideMode] = useState<boolean>(false);
+  
+  // Saved parking override values
+  const [savedVehicularParking, setSavedVehicularParking] = useState<number | null>(null);
+  const [savedTrailerParking, setSavedTrailerParking] = useState<number | null>(null);
 
   // Fetch executed leases for this property to exclude leased bays
   const { data: executedLeases = [], isLoading: isLoadingLeases } = useQuery<ExecutedLease[]>({
@@ -307,11 +311,13 @@ export default function BayConfigurationSelector({
 
   const parkingAllocations = calculateParkingAllocations();
   
-  // Final parking values considering overrides
+  // Final parking values considering overrides and saved values
   const finalVehicularParking = isParkingOverrideMode && vehicularParkingOverride ? 
-    parseInt(vehicularParkingOverride) || 0 : parkingAllocations.vehicular;
+    parseInt(vehicularParkingOverride) || 0 : 
+    (savedVehicularParking !== null ? savedVehicularParking : parkingAllocations.vehicular);
   const finalTrailerParking = isParkingOverrideMode && trailerParkingOverride ? 
-    parseInt(trailerParkingOverride) || 0 : parkingAllocations.trailer;
+    parseInt(trailerParkingOverride) || 0 : 
+    (savedTrailerParking !== null ? savedTrailerParking : parkingAllocations.trailer);
 
   // Update parent component when selection or override changes
   useEffect(() => {
@@ -671,13 +677,22 @@ export default function BayConfigurationSelector({
                           variant="outline"
                           size="sm"
                           onClick={() => {
-                            // TODO: Save parking override changes to database
-                            console.log('Saving parking overrides:', {
-                              vehicular: finalVehicularParking,
-                              trailer: finalTrailerParking
+                            // Save the override values
+                            const vehicularValue = parseInt(vehicularParkingOverride) || 0;
+                            const trailerValue = parseInt(trailerParkingOverride) || 0;
+                            
+                            setSavedVehicularParking(vehicularValue);
+                            setSavedTrailerParking(trailerValue);
+                            
+                            console.log('Saved parking overrides:', {
+                              vehicular: vehicularValue,
+                              trailer: trailerValue
                             });
-                            // For now, just show success message
+                            
+                            // Exit override mode
                             setIsParkingOverrideMode(false);
+                            setVehicularParkingOverride("");
+                            setTrailerParkingOverride("");
                           }}
                           className="text-green-600 border-green-600 hover:bg-green-50"
                         >
@@ -725,7 +740,8 @@ export default function BayConfigurationSelector({
                       </div>
                     )}
                     <p className="text-xs text-green-600">
-                      {!isParkingOverrideMode && `Calculated from ${finalArea.toLocaleString()} SF lease area`}
+                      {!isParkingOverrideMode && savedVehicularParking !== null ? 'Custom override saved' : 
+                       !isParkingOverrideMode ? `Calculated from ${finalArea.toLocaleString()} SF lease area` : ''}
                     </p>
                   </div>
 
@@ -750,7 +766,8 @@ export default function BayConfigurationSelector({
                       </div>
                     )}
                     <p className="text-xs text-green-600">
-                      {!isParkingOverrideMode && `Based on proportional allocation`}
+                      {!isParkingOverrideMode && savedTrailerParking !== null ? 'Custom override saved' : 
+                       !isParkingOverrideMode ? `Based on proportional allocation` : ''}
                     </p>
                   </div>
                 </div>

@@ -603,10 +603,10 @@ export default function BayConfigurationSelector({
             </div>
           </div>
           
-          {/* Reserve space to prevent layout shift when content appears */}
-          <div className="min-h-[420px]">
+          {/* Dynamic content area - expands as needed */}
+          <div className={selectedBayIds.length === 0 ? "min-h-[80px]" : "min-h-[420px]"}>
             {selectedBayIds.length === 0 ? (
-              <div className="py-8 text-center">
+              <div className="py-6 text-center">
                 <p className="text-sm text-gray-500">No bays selected</p>
                 <p className="text-xs text-gray-400 mt-1">Click bays above to see calculations and parking allocation</p>
               </div>

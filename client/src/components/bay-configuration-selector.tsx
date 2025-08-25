@@ -425,7 +425,7 @@ export default function BayConfigurationSelector({
             </div>
             
             {/* Position indicators below bays */}
-            <div className="flex gap-0.5 justify-start overflow-x-auto mt-1">
+            <div className="flex flex-row-reverse gap-0.5 justify-start overflow-x-auto mt-1">
               {individualBays.map((bay, index) => {
                 const totalBays = individualBays.length;
                 let position = "";

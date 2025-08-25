@@ -312,16 +312,6 @@ export default function BayConfigurationSelector({
       <CardContent className="space-y-4">
         {/* Building-like Bay Layout */}
         <div className="bg-gray-50 p-2 rounded-lg relative">
-          {/* Scrolling hint for wide buildings */}
-          {individualBays.length > 15 && (
-            <div className="mb-2 text-center">
-              <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 border border-blue-200 rounded text-[10px] text-blue-700">
-                <span>👈</span> 
-                <span>Scroll horizontally to view all {individualBays.length} bays</span>
-                <span>👉</span>
-              </div>
-            </div>
-          )}
           <div className="mb-2">
             <Label className="text-[11px] font-medium text-gray-700">Building Layout</Label>
             <p className="text-[9px] text-gray-500">Click bays to select for rentable area calculation. Red bays are already leased.</p>

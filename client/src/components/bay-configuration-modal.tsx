@@ -47,9 +47,8 @@ export function BayConfigurationModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-fit min-w-[600px] max-w-[90vw] max-h-[90vh] p-0 flex flex-col">
-        {/* Sticky Header */}
-        <DialogHeader className="sticky top-0 z-50 bg-white border-b px-6 py-4">
+      <DialogContent className="w-fit min-w-[600px] max-w-[90vw] max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Grid3x3 className="h-5 w-5 text-orange-600" />
             Bay Configuration Selection
@@ -59,8 +58,8 @@ export function BayConfigurationModal({
           </DialogDescription>
         </DialogHeader>
         
-        {/* Scrollable Content Area */}
-        <div className="flex-1 overflow-y-auto px-6 py-4">
+        {/* Scrollable Content Area - allows both vertical and horizontal scrolling */}
+        <div className="flex-1 overflow-auto">
           <BayConfigurationSelector
             property={property}
             onRentableAreaChange={handleAreaChange}
@@ -69,8 +68,8 @@ export function BayConfigurationModal({
           />
         </div>
 
-        {/* Sticky Footer */}
-        <DialogFooter className="sticky bottom-0 z-50 bg-white border-t px-6 py-4">
+        {/* Fixed Footer - always visible at bottom */}
+        <DialogFooter className="border-t pt-4">
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>

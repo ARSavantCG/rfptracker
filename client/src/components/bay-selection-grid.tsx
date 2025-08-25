@@ -13,7 +13,19 @@ interface BaySelectionGridProps {
 export function BaySelectionGrid({ property, onSelectionChange }: BaySelectionGridProps) {
   const [selectedBayIds, setSelectedBayIds] = useState<Set<string>>(new Set());
 
-  const bays = property.bayConfigurations || [];
+  // Sort bay configurations by their actual bay names to ensure proper order
+  const sortedBayConfigs = [...(property.bayConfigurations || [])].sort((a, b) => {
+    const aMatch = a.bayName.match(/Bay (\d+)-(\d+)/);
+    const bMatch = b.bayName.match(/Bay (\d+)-(\d+)/);
+    if (!aMatch || !bMatch) return 0;
+    const aStart = parseInt(aMatch[1]);
+    const bStart = parseInt(bMatch[1]);
+    return aStart - bStart;
+  });
+
+  // REVERSE the order so Bay 1 is easternmost (rightmost) and increases westward (leftward)
+  const bays = sortedBayConfigs.reverse();
+  
   // Create a simple grid layout based on number of bays
   const bayCount = bays.length;
   const calculatedColumns = Math.ceil(Math.sqrt(bayCount));
@@ -142,12 +154,18 @@ export function BaySelectionGrid({ property, onSelectionChange }: BaySelectionGr
                       <div className="text-center">
                         <div className="font-bold truncate w-full">{bay.bayName}</div>
                         <div className="text-xs mt-1">{bay.squareFootage.toLocaleString()} sq ft</div>
-                        <div className="flex justify-center mt-1 gap-1 text-xs">
+                        <div className="flex justify-center mt-1 gap-1 text-xs min-h-[1.5rem]">
                           {bay.hasStorefrontEntry && (
                             <span className="text-orange-600 text-lg" title="Storefront Entry">🚪</span>
                           )}
                           {bay.hasSpeculativeOffice && (
                             <span className="text-blue-600 text-lg" title="Speculative Office">🏢</span>
+                          )}
+                          {/* Debug: Show what data we have for Bay 1-2 */}
+                          {bay.bayName === 'Bay 1-2' && (
+                            <div className="text-xs text-red-500 absolute -bottom-1">
+                              S:{bay.hasStorefrontEntry ? '✓' : '✗'} O:{bay.hasSpeculativeOffice ? '✓' : '✗'}
+                            </div>
                           )}
                         </div>
                       </div>

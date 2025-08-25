@@ -386,6 +386,17 @@ export default function BayConfigurationSelector({
               // Get original bay config to check for storefront/office features
               const originalBayConfig = bayConfigurations.find(b => b.id === bay.id);
               
+              // Debug: Log data for Bay 1
+              if (bay.bayName === 'Bay 1') {
+                console.log('🔍 DEBUG Bay 1 Data:', {
+                  bayId: bay.id,
+                  bayName: bay.bayName,
+                  originalConfig: originalBayConfig,
+                  hasStorefrontEntry: originalBayConfig?.hasStorefrontEntry,
+                  hasSpeculativeOffice: originalBayConfig?.hasSpeculativeOffice
+                });
+              }
+              
               return (
                 <Button
                   key={bay.id}
@@ -412,10 +423,16 @@ export default function BayConfigurationSelector({
                   {/* Add storefront and speculative office symbols */}
                   <div className="flex gap-0.5 mt-0.5">
                     {originalBayConfig?.hasStorefrontEntry && (
-                      <span className="text-orange-600 text-[10px]" title="Storefront Entry">🚪</span>
+                      <span className="text-orange-600 text-[12px]" title="Storefront Entry">🚪</span>
                     )}
                     {originalBayConfig?.hasSpeculativeOffice && (
-                      <span className="text-blue-600 text-[10px]" title="Speculative Office">🏢</span>
+                      <span className="text-blue-600 text-[12px]" title="Speculative Office">🏢</span>
+                    )}
+                    {/* Temporary debug - show for all bays what we have */}
+                    {originalBayConfig && (bay.bayName === 'Bay 1' || bay.bayName === 'Bay 2') && (
+                      <div className="text-[8px] text-red-500 absolute -bottom-1">
+                        S:{originalBayConfig.hasStorefrontEntry ? '✓' : '✗'} O:{originalBayConfig.hasSpeculativeOffice ? '✓' : '✗'}
+                      </div>
                     )}
                   </div>
                 </Button>

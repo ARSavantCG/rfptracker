@@ -377,17 +377,21 @@ export default function BayConfigurationSelector({
           
           {/* Bay Grid with Position Indicators */}
           <div className="relative">
-            {/* Single row layout representing building */}
-            <div className="flex gap-0.5 justify-start overflow-x-auto pb-1">
+            {/* Single row layout representing building - REVERSE for east-to-west orientation */}
+            <div className="flex gap-0.5 justify-start overflow-x-auto pb-1 flex-row-reverse">
             {individualBays.map((bay) => {
               const isSelected = selectedBayIds.includes(bay.id);
               const isLeased = leasedBayIds.includes(bay.id);
+              
+              // Get original bay config to check for storefront/office features
+              const originalBayConfig = bayConfigurations.find(b => b.id === bay.id);
+              
               return (
                 <Button
                   key={bay.id}
                   variant={isSelected ? "default" : "outline"}
                   disabled={isLeased}
-                  className={`h-18 w-12 flex flex-col items-center justify-center text-xs p-1 flex-shrink-0 ${
+                  className={`h-20 w-14 flex flex-col items-center justify-center text-xs p-1 flex-shrink-0 ${
                     isLeased
                       ? "bg-red-800 border-red-900 text-white cursor-not-allowed opacity-95"
                       : isSelected 
@@ -405,6 +409,15 @@ export default function BayConfigurationSelector({
                       {bay.standardDockDoors + bay.oversizedDockDoors} drs.
                     </div>
                   )}
+                  {/* Add storefront and speculative office symbols */}
+                  <div className="flex gap-0.5 mt-0.5">
+                    {originalBayConfig?.hasStorefrontEntry && (
+                      <span className="text-orange-600 text-[10px]" title="Storefront Entry">🚪</span>
+                    )}
+                    {originalBayConfig?.hasSpeculativeOffice && (
+                      <span className="text-blue-600 text-[10px]" title="Speculative Office">🏢</span>
+                    )}
+                  </div>
                 </Button>
               );
             })}

@@ -161,12 +161,6 @@ export function BaySelectionGrid({ property, onSelectionChange }: BaySelectionGr
                           {bay.hasSpeculativeOffice && (
                             <span className="text-blue-600 text-lg" title="Speculative Office">🏢</span>
                           )}
-                          {/* Debug: Show what data we have for Bay 1-2 */}
-                          {bay.bayName === 'Bay 1-2' && (
-                            <div className="text-xs text-red-500 absolute -bottom-1">
-                              S:{bay.hasStorefrontEntry ? '✓' : '✗'} O:{bay.hasSpeculativeOffice ? '✓' : '✗'}
-                            </div>
-                          )}
                         </div>
                       </div>
                     </button>

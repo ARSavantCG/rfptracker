@@ -32,7 +32,14 @@ export default function BayConfigurationSelector({
     enabled: !!property.id
   });
 
-  const bayConfigurations = property.bayConfigurations || [];
+  // Fetch fresh property data to ensure bay configurations are up-to-date
+  const { data: freshProperty } = useQuery<Property>({
+    queryKey: [`/api/properties/${property.id}`],
+    enabled: !!property.id
+  });
+
+  // Use fresh bay configurations if available, fallback to prop data
+  const bayConfigurations = freshProperty?.bayConfigurations || property.bayConfigurations || [];
   
 
 

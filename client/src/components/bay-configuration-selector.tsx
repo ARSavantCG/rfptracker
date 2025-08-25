@@ -398,21 +398,9 @@ export default function BayConfigurationSelector({
           {/* Bay Grid with Position Indicators */}
           <div className="relative">
             {/* Single scrolling container for both bays and position indicators */}
-            <div 
-              className="bay-scroll pb-4" 
-              style={{ 
-                width: '100%',
-                maxWidth: '100%'
-              }}
-            >
+            <div className="bay-scroll pb-4">
               {/* Single row layout representing building - REVERSE for east-to-west orientation */}
-              <div 
-                className="flex gap-0.5 justify-start flex-row-reverse flex-nowrap" 
-                style={{ 
-                  minWidth: `${individualBays.length * 68}px`, // Force width based on bay count (64px bay + 4px gap)
-                  width: `${individualBays.length * 68}px`
-                }}
-              >
+              <div className="flex gap-0.5 justify-start flex-row-reverse" style={{ minWidth: 'max-content' }}>
               {individualBays.map((bay) => {
                 const isSelected = selectedBayIds.includes(bay.id);
                 const isLeased = leasedBayIds.includes(bay.id);
@@ -467,13 +455,7 @@ export default function BayConfigurationSelector({
               </div>
               
               {/* Position indicators below bays */}
-              <div 
-                className="flex flex-row-reverse gap-0.5 justify-start mt-1 flex-nowrap" 
-                style={{ 
-                  minWidth: `${individualBays.length * 68}px`, // Match bay container width
-                  width: `${individualBays.length * 68}px`
-                }}
-              >
+              <div className="flex flex-row-reverse gap-0.5 justify-start mt-1" style={{ minWidth: 'max-content' }}>
               {individualBays.map((bay, index) => {
                 const totalBays = individualBays.length;
                 let position = "";

@@ -432,8 +432,10 @@ export default function BayConfigurationSelector({
           <div className="relative">
             {/* Single scrolling container for both bays and position indicators */}
             <div className="bay-scroll pb-4">
-              {/* Single row layout representing building - Use normal order for proper west-to-east progression */}
-              <div className="flex gap-0.5 justify-start" style={{ minWidth: 'max-content' }}>
+              {/* Single row layout representing building - Dynamic order based on bay progression direction */}
+              <div className={`flex gap-0.5 justify-start ${
+                property.bayProgressionDirection === 'west' ? 'flex-row-reverse' : ''
+              }`} style={{ minWidth: 'max-content' }}>
               {individualBays.map((bay) => {
                 const isSelected = selectedBayIds.includes(bay.id);
                 const isLeased = leasedBayIds.includes(bay.id);
@@ -487,8 +489,10 @@ export default function BayConfigurationSelector({
               })}
               </div>
               
-              {/* Position indicators below bays */}
-              <div className="flex gap-0.5 justify-start mt-1" style={{ minWidth: 'max-content' }}>
+              {/* Position indicators below bays - Match bay layout direction */}
+              <div className={`flex gap-0.5 justify-start mt-1 ${
+                property.bayProgressionDirection === 'west' ? 'flex-row-reverse' : ''
+              }`} style={{ minWidth: 'max-content' }}>
               {individualBays.map((bay, index) => {
                 const totalBays = individualBays.length;
                 let position = "";

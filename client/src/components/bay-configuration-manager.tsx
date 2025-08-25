@@ -5,12 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Trash2, Edit, Settings, Copy, ChevronDown, ChevronRight, Compass, Navigation, Printer, DoorOpen, Building2 } from "lucide-react";
+import { Plus, Trash2, Edit, Settings, Copy, ChevronDown, ChevronRight, Compass, Navigation, Printer, DoorOpen, Building2, GripVertical } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
+import { useMemo } from "react";
 import type { Property, BayConfiguration } from "@shared/schema";
 
 interface BayConfigurationManagerProps {
@@ -34,6 +35,16 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
   const [newBay, setNewBay] = useState({ startBay: "", endBay: "", squareFootage: "", standardDockDoors: "", oversizedDockDoors: "", hasStorefrontEntry: false, hasSpeculativeOffice: false });
   const [editingBay, setEditingBay] = useState<BayConfiguration | null>(null);
   const [showBayDetails, setShowBayDetails] = useState(false);
+
+  // Sort bay configurations numerically by start bay number
+  const sortedBayConfigurations = useMemo(() => {
+    return [...bayConfigurations].sort((a, b) => {
+      const matchA = a.bayName.match(/Bay (\d+)-(\d+)/);
+      const matchB = b.bayName.match(/Bay (\d+)-(\d+)/);
+      if (!matchA || !matchB) return 0;
+      return parseInt(matchA[1]) - parseInt(matchB[1]);
+    });
+  }, [bayConfigurations]);
   const [isEditingMechRoom, setIsEditingMechRoom] = useState(false);
   const [tempMechRoomSF, setTempMechRoomSF] = useState("");
   const [showAddBayForm, setShowAddBayForm] = useState(false);
@@ -139,22 +150,55 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
   });
 
   // Calculate the next starting bay number
+
+  const renumberBaysSequentially = async () => {
+    // Renumber all bays to be sequential (1-2, 2-3, 3-4, etc.)
+    const renumberedBays = sortedBayConfigurations.map((bay, index) => {
+      const startBay = index + 1;
+      const endBay = startBay + 1;
+      return {
+        ...bay,
+        bayName: `Bay ${startBay}-${endBay}`
+      };
+    });
+
+    const mechanicalSF = parseFloat(mechanicalRoomSF) || 0;
+    const updatedBays = calculateBayAllocations(renumberedBays, mechanicalSF);
+    
+    updatePropertyMutation.mutate({
+      bayConfigurations: updatedBays,
+      mechanicalRoomSquareFootage: mechanicalSF,
+      firstBayDirection: firstBayDirection || undefined,
+      bayProgressionDirection: bayProgressionDirection || undefined
+    });
+    
+    toast({
+      title: "Success",
+      description: "Bays have been renumbered sequentially",
+      duration: 4000,
+    });
+  };
+
   const getNextStartingBay = (): number => {
     if (bayConfigurations.length === 0) return 1;
     
-    // Find the highest ending bay number from existing configurations
-    // The next start bay should be the same as the highest end bay (overlapping)
-    let highestEndBay = 0;
-    bayConfigurations.forEach(bay => {
-      // Extract end number from "Bay X-Y" format
-      const match = bay.bayName.match(/Bay (\d+)-(\d+)/);
-      if (match) {
-        const endBay = parseInt(match[2]);
-        highestEndBay = Math.max(highestEndBay, endBay);
-      }
+    // Sort bay configurations numerically by start bay number
+    const sortedBays = [...bayConfigurations].sort((a, b) => {
+      const matchA = a.bayName.match(/Bay (\d+)-(\d+)/);
+      const matchB = b.bayName.match(/Bay (\d+)-(\d+)/);
+      if (!matchA || !matchB) return 0;
+      return parseInt(matchA[1]) - parseInt(matchB[1]);
     });
     
-    return highestEndBay; // Start at the end bay, not +1
+    // Find the last bay in sequence and calculate next starting bay
+    const lastBay = sortedBays[sortedBays.length - 1];
+    const match = lastBay.bayName.match(/Bay (\d+)-(\d+)/);
+    if (match) {
+      const endBay = parseInt(match[2]);
+      return endBay; // Next bay starts at the end of the last bay
+    }
+    
+    return 1;
   };
 
   const saveBayConfigurations = () => {
@@ -727,17 +771,30 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                 <div className="space-y-4">
                   {/* Clickable Count Summary */}
                   <div className="flex items-center justify-between">
-                    <button
-                      onClick={() => setShowBayDetails(!showBayDetails)}
-                      className="flex items-center gap-2 text-blue-600 hover:text-blue-700 transition-colors"
-                    >
-                      {showBayDetails ? (
-                        <ChevronDown className="h-4 w-4" />
-                      ) : (
-                        <ChevronRight className="h-4 w-4" />
+                    <div className="flex items-center gap-4">
+                      <button
+                        onClick={() => setShowBayDetails(!showBayDetails)}
+                        className="flex items-center gap-2 text-blue-600 hover:text-blue-700 transition-colors"
+                      >
+                        {showBayDetails ? (
+                          <ChevronDown className="h-4 w-4" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4" />
+                        )}
+                        <span className="font-medium">{bayConfigurations.length} configured</span>
+                      </button>
+                      {bayConfigurations.length > 1 && (
+                        <Button
+                          onClick={renumberBaysSequentially}
+                          variant="outline"
+                          size="sm"
+                          className="text-blue-600 hover:text-blue-700"
+                        >
+                          <Navigation className="h-4 w-4 mr-1" />
+                          Renumber Sequentially
+                        </Button>
                       )}
-                      <span className="font-medium">{bayConfigurations.length} configured</span>
-                    </button>
+                    </div>
                     <div className="text-sm text-gray-600 space-y-1">
                       <div>Total: {totalSquareFootage.toLocaleString()} SF</div>
                       <div className="flex gap-4">
@@ -761,9 +818,9 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                         <div className="text-center">Dock Doors</div>
                         <div className="text-center">Actions</div>
                       </div>
-                      
+
                       {/* Bay Rows */}
-                      {bayConfigurations.map((bay) => {
+                      {sortedBayConfigurations.map((bay) => {
                         const match = bay.bayName.match(/Bay (\d+)-(\d+)/);
                         const startBay = match ? match[1] : '';
                         const endBay = match ? match[2] : '';

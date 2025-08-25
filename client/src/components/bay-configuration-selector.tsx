@@ -35,11 +35,23 @@ export default function BayConfigurationSelector({
   // Fetch fresh property data to ensure bay configurations are up-to-date
   const { data: freshProperty } = useQuery<Property>({
     queryKey: [`/api/properties/${property.id}`],
-    enabled: !!property.id
+    enabled: !!property.id,
+    staleTime: 0, // Always fetch fresh data
+    refetchOnMount: true, // Refetch when component mounts
   });
 
   // Use fresh bay configurations if available, fallback to prop data
   const bayConfigurations = freshProperty?.bayConfigurations || property.bayConfigurations || [];
+
+  // Debug logging to see what data we're getting
+  console.log('🔍 Bay Configuration Selector Debug:', {
+    propertyId: property.id,
+    propBayCount: property.bayConfigurations?.length || 0,
+    freshBayCount: freshProperty?.bayConfigurations?.length || 0,
+    usingFreshData: !!freshProperty,
+    bay1PropData: property.bayConfigurations?.find(b => b.bayName.includes('Bay 1')),
+    bay1FreshData: freshProperty?.bayConfigurations?.find(b => b.bayName.includes('Bay 1'))
+  });
   
 
 

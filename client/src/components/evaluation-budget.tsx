@@ -620,6 +620,22 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
     return { vehicular: allocatedVehicular, trailer: allocatedTrailer };
   };
 
+  // Update budgetData door and parking counts when RFP data changes
+  useEffect(() => {
+    if (rfp) {
+      const doorCounts = calculateDoorCounts();
+      const parkingCounts = calculateParkingCounts();
+      
+      setBudgetData(prev => ({
+        ...prev,
+        oversizedDoors: doorCounts.oversized,
+        regularDoors: doorCounts.regular,
+        vehicularParking: parkingCounts.vehicular,
+        trailerParking: parkingCounts.trailer
+      }));
+    }
+  }, [rfp?.selectedBayConfigurations, propertyData]);
+
   // Function to auto-populate existing improvements based on selected bays
   const populateExistingImprovements = () => {
     if (!propertyImprovements || !rfp?.selectedBayConfigurations) {

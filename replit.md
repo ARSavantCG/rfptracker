@@ -57,6 +57,9 @@ Preferred communication style: Simple, everyday language.
     - **Workflow Panel Enhancement**: Comprehensive hide/show functionality with sliding animation, floating restore button, auto-minimization, and UI cleanup.
     - **Property Improvements Modal Fix**: Fixes for Select component errors and dropdown indicators.
     - **Excel-like Tab Navigation**: Ongoing issue with tab navigation in Invitation to Bid modal due to conflicts between React Hook Form and desired Excel-like flow.
+    - **Bay Configuration Real-time Updates**: Enhanced data synchronization ensuring bay configuration totals and individual bay data update immediately across all components without requiring page refresh.
+    - **Separate Door Count Display**: Independent display of standard and oversized dock doors ("X std", "Y ovr") instead of combined totals, with optimized space-efficient layout.
+    - **Adaptive Bay Box Layout**: Bay configuration boxes grow vertically to accommodate content while maintaining consistent width, with optimized font sizing for clear visibility.
 
 ## External Dependencies
 - **Database**: PostgreSQL (Neon serverless).

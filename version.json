@@ -1,6 +1,6 @@
 {
-  "version": "1.1.0",
-  "buildDate": "2025-08-19T15:40:12.594Z",
+  "version": "1.1.1",
+  "buildDate": "2025-08-25T17:33:08.468Z",
   "gitCommit": "local-build",
   "environment": "development",
   "changes": [
@@ -21,6 +21,18 @@
     },
     {
       "description": "Streamlined UI with independent file management"
+    },
+    {
+      "description": "Enhanced bay configuration with layout shift prevention"
+    },
+    {
+      "description": "Professional parking allocation management with override functionality"
+    },
+    {
+      "description": "Improved font sizing and user experience for parking displays"
+    },
+    {
+      "description": "Dynamic container expansion with stable bay grid positioning"
     }
   ]
 }

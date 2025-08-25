@@ -487,6 +487,20 @@ export default function BayConfigurationSelector({
                   <span>Speculative Office</span>
                 </div>
               </div>
+              
+              {/* Spec Office Cost Warning */}
+              {(() => {
+                const baysWithSpecOffice = bayConfigurations.filter(bay => bay.hasSpeculativeOffice);
+                if (baysWithSpecOffice.length > 0) {
+                  return (
+                    <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-[9px] text-yellow-700">
+                      <div className="font-medium">💡 Reminder:</div>
+                      <div>Ensure spec office costs are entered in "Manage Costs in Place" for bays: {baysWithSpecOffice.map(b => b.bayName).join(', ')}</div>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
             </div>
           </div>
         </div>

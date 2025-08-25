@@ -100,6 +100,19 @@ export function PropertyExistingImprovementsModal({
     enabled: open,
   });
 
+  // Check for spec office mismatch
+  const getSpecOfficeMismatch = () => {
+    const baysWithSpecOffice = property.bayConfigurations?.filter(bay => bay.hasSpeculativeOffice) || [];
+    const specOfficeImprovements = improvements.filter(imp => imp.category === 'spec-office');
+    
+    return {
+      baysWithSpecOffice: baysWithSpecOffice.length,
+      specOfficeImprovements: specOfficeImprovements.length,
+      hasMismatch: baysWithSpecOffice.length > 0 && specOfficeImprovements.length === 0,
+      bayNames: baysWithSpecOffice.map(bay => bay.bayName)
+    };
+  };
+
   const createMutation = useMutation({
     mutationFn: async (data: FormData) => {
       return await apiRequest(`/api/properties/${property.id}/existing-improvements`, "POST", data);
@@ -204,9 +217,22 @@ export function PropertyExistingImprovementsModal({
         form.reset();
         setShowForm(false);
         setEditingId(null);
-      }} className="flex items-center gap-1 text-xs px-2 py-1 h-6">
+      }} className={`flex items-center gap-1 text-xs px-2 py-1 h-6 ${
+        // Add visual indicator if there's a mismatch
+        (() => {
+          const baysWithSpecOffice = property.bayConfigurations?.filter(bay => bay.hasSpeculativeOffice) || [];
+          const hasSpecOfficeBays = baysWithSpecOffice.length > 0;
+          return hasSpecOfficeBays ? 'border-yellow-300 bg-yellow-50 text-yellow-800 hover:bg-yellow-100' : '';
+        })()
+      }`}>
         <Grid className="h-3 w-3" />
         Manage Costs in Place
+        {(() => {
+          const baysWithSpecOffice = property.bayConfigurations?.filter(bay => bay.hasSpeculativeOffice) || [];
+          return baysWithSpecOffice.length > 0 ? (
+            <span className="text-yellow-600 text-[10px] ml-1">⚠️</span>
+          ) : null;
+        })()}
       </Button>
       
       <Dialog open={open} onOpenChange={setOpen}>
@@ -227,6 +253,46 @@ export function PropertyExistingImprovementsModal({
         </DialogHeader>
 
         <div className="space-y-6">
+          {/* Spec Office Mismatch Warning */}
+          {(() => {
+            const mismatch = getSpecOfficeMismatch();
+            return mismatch.hasMismatch ? (
+              <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <div className="text-yellow-600 dark:text-yellow-400 mt-0.5">
+                    ⚠️
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-medium text-yellow-800 dark:text-yellow-200 mb-1">
+                      Spec Office Cost Missing
+                    </h3>
+                    <p className="text-sm text-yellow-700 dark:text-yellow-300 mb-3">
+                      You have {mismatch.baysWithSpecOffice} bay{mismatch.baysWithSpecOffice !== 1 ? 's' : ''} marked with spec offices ({mismatch.bayNames.join(', ')}) but no spec office costs entered.
+                    </p>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-yellow-300 text-yellow-800 hover:bg-yellow-100 dark:border-yellow-600 dark:text-yellow-200 dark:hover:bg-yellow-800/20"
+                      onClick={() => {
+                        setShowForm(true);
+                        form.reset({
+                          category: "spec-office",
+                          description: `Spec Office Costs for ${mismatch.bayNames.join(', ')}`,
+                          totalCost: 0,
+                          allocationType: "bay-specific",
+                          applicableBays: property.bayConfigurations?.filter(bay => bay.hasSpeculativeOffice).map(bay => bay.id) || [],
+                          notes: "Auto-suggested based on bay configuration",
+                        });
+                      }}
+                    >
+                      + Add Spec Office Costs
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ) : null;
+          })()}
+
           {/* Summary Statistics */}
           <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-lg">
             <div className="grid grid-cols-3 gap-4 text-sm">

@@ -603,11 +603,14 @@ export default function BayConfigurationSelector({
             </div>
           </div>
           
-          {/* Dynamic content area - expands as needed */}
-          <div className={selectedBayIds.length === 0 ? "min-h-[80px]" : "min-h-[420px]"}>
+          {/* Fixed height container to prevent layout shift */}
+          <div className="min-h-[420px] border border-dashed border-gray-200 rounded-lg">
             {selectedBayIds.length === 0 ? (
-              <div className="py-6 text-center">
-                <p className="text-sm text-gray-500">No bays selected</p>
+              <div className="h-full flex flex-col items-center justify-center text-center">
+                <div className="mb-3">
+                  <Grid3x3 className="h-8 w-8 mx-auto text-gray-400 mb-2" />
+                </div>
+                <p className="text-sm text-gray-500 font-medium">No bays selected</p>
                 <p className="text-xs text-gray-400 mt-1">Click bays above to see calculations and parking allocation</p>
               </div>
             ) : (

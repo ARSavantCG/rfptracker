@@ -217,22 +217,9 @@ export function PropertyExistingImprovementsModal({
         form.reset();
         setShowForm(false);
         setEditingId(null);
-      }} className={`flex items-center gap-1 text-xs px-2 py-1 h-6 ${
-        // Add visual indicator if there's a mismatch
-        (() => {
-          const baysWithSpecOffice = property.bayConfigurations?.filter(bay => bay.hasSpeculativeOffice) || [];
-          const hasSpecOfficeBays = baysWithSpecOffice.length > 0;
-          return hasSpecOfficeBays ? 'border-yellow-300 bg-yellow-50 text-yellow-800 hover:bg-yellow-100' : '';
-        })()
-      }`}>
+      }} className="flex items-center gap-1 text-xs px-2 py-1 h-6">
         <Grid className="h-3 w-3" />
         Manage Costs in Place
-        {(() => {
-          const baysWithSpecOffice = property.bayConfigurations?.filter(bay => bay.hasSpeculativeOffice) || [];
-          return baysWithSpecOffice.length > 0 ? (
-            <span className="text-yellow-600 text-[10px] ml-1">⚠️</span>
-          ) : null;
-        })()}
       </Button>
       
       <Dialog open={open} onOpenChange={setOpen}>

@@ -111,7 +111,7 @@ export function PropertyExistingImprovementsModal({
     // Determine mismatch types
     const hasNoCosts = baysCount > 0 && costsCount === 0;
     const hasFewerCosts = baysCount > costsCount && costsCount > 0;
-    const hasMoreCosts = costsCount > baysCount && baysCount > 0;
+    const hasMoreCosts = costsCount > baysCount && costsCount > 0;  // Fixed: only need costsCount > 0
     const hasMismatch = hasNoCosts || hasFewerCosts || hasMoreCosts;
     
     // Generate appropriate warning message
@@ -240,9 +240,29 @@ export function PropertyExistingImprovementsModal({
         form.reset();
         setShowForm(false);
         setEditingId(null);
-      }} className="flex items-center gap-1 text-xs px-2 py-1 h-6">
+      }} className={`flex items-center gap-1 text-xs px-2 py-1 h-6 ${
+        // Add visual indicator if there's a mismatch
+        (() => {
+          const baysWithSpecOffice = property.bayConfigurations?.filter(bay => bay.hasSpeculativeOffice) || [];
+          const specOfficeImprovements = (improvements || []).filter(imp => imp.category === 'spec-office');
+          const baysCount = baysWithSpecOffice.length;
+          const costsCount = specOfficeImprovements.length;
+          const hasMismatch = (baysCount > 0 && costsCount === 0) || (baysCount > costsCount && costsCount > 0) || (costsCount > baysCount && costsCount > 0);
+          return hasMismatch ? 'border-yellow-300 bg-yellow-50 text-yellow-800 hover:bg-yellow-100' : '';
+        })()
+      }`}>
         <Grid className="h-3 w-3" />
         Manage Costs in Place
+        {(() => {
+          const baysWithSpecOffice = property.bayConfigurations?.filter(bay => bay.hasSpeculativeOffice) || [];
+          const specOfficeImprovements = (improvements || []).filter(imp => imp.category === 'spec-office');
+          const baysCount = baysWithSpecOffice.length;
+          const costsCount = specOfficeImprovements.length;
+          const hasMismatch = (baysCount > 0 && costsCount === 0) || (baysCount > costsCount && costsCount > 0) || (costsCount > baysCount && costsCount > 0);
+          return hasMismatch ? (
+            <span className="text-yellow-600 text-[10px] ml-1">⚠️</span>
+          ) : null;
+        })()}
       </Button>
       
       <Dialog open={open} onOpenChange={setOpen}>

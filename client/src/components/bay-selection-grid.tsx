@@ -124,7 +124,7 @@ export function BaySelectionGrid({ property, onSelectionChange }: BaySelectionGr
           >
             {grid.map((row, rowIndex) =>
               row.map((bay, colIndex) => (
-                <div key={`${rowIndex}-${colIndex}`} className="aspect-square">
+                <div key={`${rowIndex}-${colIndex}`} className="h-32 w-24">
                   {bay ? (
                     <button
                       onClick={() => toggleBaySelection(bay.id)}
@@ -144,10 +144,10 @@ export function BaySelectionGrid({ property, onSelectionChange }: BaySelectionGr
                         <div className="text-xs mt-1">{bay.squareFootage.toLocaleString()} sq ft</div>
                         <div className="flex justify-center mt-1 gap-1 text-xs">
                           {bay.hasStorefrontEntry && (
-                            <span className="text-orange-600 text-sm" title="Storefront Entry">🚪</span>
+                            <span className="text-orange-600 text-lg" title="Storefront Entry">🚪</span>
                           )}
                           {bay.hasSpeculativeOffice && (
-                            <span className="text-blue-600 text-sm" title="Speculative Office">🏢</span>
+                            <span className="text-blue-600 text-lg" title="Speculative Office">🏢</span>
                           )}
                         </div>
                       </div>

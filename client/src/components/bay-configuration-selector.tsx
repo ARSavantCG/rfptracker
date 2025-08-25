@@ -72,7 +72,9 @@ export default function BayConfigurationSelector({
       originalBayName: bayConfig.bayName, // Keep original for debugging
       squareFootage: bayConfig.squareFootage, // Full rentable area for this bay
       standardDockDoors: bayConfig.standardDockDoors || 0,
-      oversizedDockDoors: bayConfig.oversizedDockDoors || 0
+      oversizedDockDoors: bayConfig.oversizedDockDoors || 0,
+      hasStorefrontEntry: bayConfig.hasStorefrontEntry || false,
+      hasSpeculativeOffice: bayConfig.hasSpeculativeOffice || false
     };
   }).filter((bay): bay is NonNullable<typeof bay> => bay !== null);
 

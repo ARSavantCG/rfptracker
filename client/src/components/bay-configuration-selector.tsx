@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Calculator, Grid3x3, Compass, Navigation, Edit3, RotateCcw, Car, Truck } from "lucide-react";
+import { Calculator, Grid3x3, Compass, Navigation, Edit3, RotateCcw, Car, Truck, Check } from "lucide-react";
 import type { Property, BayConfiguration, ExecutedLease } from "@shared/schema";
 
 interface BayConfigurationSelectorProps {
@@ -624,7 +624,7 @@ export default function BayConfigurationSelector({
                 <Calculator className="h-4 w-4 text-orange-600" />
                 <div className="flex flex-col flex-1">
                   <span className="font-medium text-orange-900" key="fixed-total-area">
-                    {isOverrideMode ? "Override" : "Calculated"} Rentable Area: {Math.round(finalArea).toLocaleString()} SF
+                    Calculated Rentable Area: {Math.round(finalArea).toLocaleString()} SF
                   </span>
                   {!isOverrideMode && (
                     <>
@@ -637,68 +637,9 @@ export default function BayConfigurationSelector({
                       </span>
                     </>
                   )}
-                  {isOverrideMode && (
-                    <span className="text-xs text-blue-600">
-                      Original calculated area: {Math.round(calculatedArea).toLocaleString()} SF
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  {!isOverrideMode ? (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setIsOverrideMode(true);
-                        setOverrideArea(Math.round(calculatedArea).toString());
-                      }}
-                      className="text-blue-600 border-blue-600 hover:bg-blue-50"
-                    >
-                      <Edit3 className="h-3 w-3 mr-1" />
-                      Override
-                    </Button>
-                  ) : (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setIsOverrideMode(false);
-                        setOverrideArea("");
-                      }}
-                      className="text-gray-600 border-gray-300 hover:bg-gray-50"
-                    >
-                      <RotateCcw className="h-3 w-3 mr-1" />
-                      Reset
-                    </Button>
-                  )}
                 </div>
               </div>
               
-              {/* Override Area Input */}
-              {isOverrideMode && (
-                <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <Label htmlFor="override-area" className="text-sm font-medium text-blue-900 mb-2 block">
-                    Manual Rentable Area Override
-                  </Label>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      id="override-area"
-                      type="number"
-                      value={overrideArea}
-                      onChange={(e) => setOverrideArea(e.target.value)}
-                      placeholder="Enter square footage"
-                      className="flex-1 border-blue-300 focus:border-blue-500 focus:ring-blue-500"
-                    />
-                    <span className="text-sm text-blue-700 font-medium">SF</span>
-                  </div>
-                  <p className="text-xs text-blue-600 mt-2">
-                    Use this to enter the actual lease area when it differs from the bay configuration calculations. 
-                    Bay configurations will remain accurate for future leases.
-                  </p>
-                </div>
-              )}
 
               {/* Parking Allocation Section */}
               <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
@@ -724,20 +665,40 @@ export default function BayConfigurationSelector({
                         Override
                       </Button>
                     ) : (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setIsParkingOverrideMode(false);
-                          setVehicularParkingOverride("");
-                          setTrailerParkingOverride("");
-                        }}
-                        className="text-gray-600 border-gray-300 hover:bg-gray-50"
-                      >
-                        <RotateCcw className="h-3 w-3 mr-1" />
-                        Reset
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            // TODO: Save parking override changes to database
+                            console.log('Saving parking overrides:', {
+                              vehicular: finalVehicularParking,
+                              trailer: finalTrailerParking
+                            });
+                            // For now, just show success message
+                            setIsParkingOverrideMode(false);
+                          }}
+                          className="text-green-600 border-green-600 hover:bg-green-50"
+                        >
+                          <Check className="h-3 w-3 mr-1" />
+                          Save
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setIsParkingOverrideMode(false);
+                            setVehicularParkingOverride("");
+                            setTrailerParkingOverride("");
+                          }}
+                          className="text-gray-600 border-gray-300 hover:bg-gray-50"
+                        >
+                          <RotateCcw className="h-3 w-3 mr-1" />
+                          Cancel
+                        </Button>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -759,7 +720,7 @@ export default function BayConfigurationSelector({
                         className="border-green-300 focus:border-green-500 focus:ring-green-500"
                       />
                     ) : (
-                      <div className="text-lg font-semibold text-green-600">
+                      <div className="text-sm font-semibold text-green-600">
                         {finalVehicularParking} spaces
                       </div>
                     )}
@@ -784,7 +745,7 @@ export default function BayConfigurationSelector({
                         className="border-green-300 focus:border-green-500 focus:ring-green-500"
                       />
                     ) : (
-                      <div className="text-lg font-semibold text-green-600">
+                      <div className="text-sm font-semibold text-green-600">
                         {finalTrailerParking} spaces
                       </div>
                     )}

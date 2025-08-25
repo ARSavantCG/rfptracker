@@ -621,10 +621,14 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
   };
 
   // Update budgetData door and parking counts when RFP data changes
+  // This must run AFTER initial load to override any saved door counts with current calculation
   useEffect(() => {
-    if (rfp) {
+    if (rfp && rfp.selectedBayConfigurations) {
+      console.log('🔄 Updating door counts from current bay selection...');
       const doorCounts = calculateDoorCounts();
       const parkingCounts = calculateParkingCounts();
+      
+      console.log('🚪 Door counts calculated:', { oversized: doorCounts.oversized, regular: doorCounts.regular });
       
       setBudgetData(prev => ({
         ...prev,
@@ -634,7 +638,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
         trailerParking: parkingCounts.trailer
       }));
     }
-  }, [rfp?.selectedBayConfigurations, propertyData]);
+  }, [rfp?.selectedBayConfigurations, propertyData, existingBudget]);
 
   // Function to auto-populate existing improvements based on selected bays
   const populateExistingImprovements = () => {
@@ -3846,22 +3850,40 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
             </div>
             <div className="flex gap-2">
               {premisesEditMode && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    const newParkingCounts = calculateParkingCounts();
-                    setBudgetData(prev => ({
-                      ...prev,
-                      vehicularParking: newParkingCounts.vehicular,
-                      trailerParking: newParkingCounts.trailer,
-                    }));
-                  }}
-                  title="Reset parking to calculated values based on tenant area allocation"
-                  className="h-8"
-                >
-                  Reset Parking
-                </Button>
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const newDoorCounts = calculateDoorCounts();
+                      setBudgetData(prev => ({
+                        ...prev,
+                        oversizedDoors: newDoorCounts.oversized,
+                        regularDoors: newDoorCounts.regular,
+                      }));
+                    }}
+                    title="Reset door counts to calculated values from current bay selection"
+                    className="h-8"
+                  >
+                    Reset Doors
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const newParkingCounts = calculateParkingCounts();
+                      setBudgetData(prev => ({
+                        ...prev,
+                        vehicularParking: newParkingCounts.vehicular,
+                        trailerParking: newParkingCounts.trailer,
+                      }));
+                    }}
+                    title="Reset parking to calculated values based on tenant area allocation"
+                    className="h-8"
+                  >
+                    Reset Parking
+                  </Button>
+                </>
               )}
               <Button
                 variant={premisesEditMode ? "default" : "outline"}

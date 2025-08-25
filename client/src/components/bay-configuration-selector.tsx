@@ -386,23 +386,13 @@ export default function BayConfigurationSelector({
               // Get original bay config to check for storefront/office features
               const originalBayConfig = bayConfigurations.find(b => b.id === bay.id);
               
-              // Debug: Log data for Bay 1
-              if (bay.bayName === 'Bay 1') {
-                console.log('🔍 DEBUG Bay 1 Data:', {
-                  bayId: bay.id,
-                  bayName: bay.bayName,
-                  originalConfig: originalBayConfig,
-                  hasStorefrontEntry: originalBayConfig?.hasStorefrontEntry,
-                  hasSpeculativeOffice: originalBayConfig?.hasSpeculativeOffice
-                });
-              }
               
               return (
                 <Button
                   key={bay.id}
                   variant={isSelected ? "default" : "outline"}
                   disabled={isLeased}
-                  className={`h-20 w-14 flex flex-col items-center justify-center text-xs p-1 flex-shrink-0 ${
+                  className={`h-24 w-16 flex flex-col items-center justify-start text-xs p-1 flex-shrink-0 ${
                     isLeased
                       ? "bg-red-800 border-red-900 text-white cursor-not-allowed opacity-95"
                       : isSelected 
@@ -411,28 +401,22 @@ export default function BayConfigurationSelector({
                   }`}
                   onClick={() => toggleBaySelection(bay.id)}
                 >
-                  <div className="font-bold text-[10px] mb-1 leading-none truncate w-full text-center">{bay.bayName}</div>
-                  <div className="text-[9px] opacity-75 leading-none">
+                  <div className="font-bold text-[11px] mb-1 leading-none truncate w-full text-center">{bay.bayName}</div>
+                  <div className="text-[9px] opacity-75 leading-none mb-1">
                     {isLeased ? "LEA" : `${(bay.squareFootage / 1000).toFixed(0)}K`}
                   </div>
                   {(bay.standardDockDoors > 0 || bay.oversizedDockDoors > 0) && (
-                    <div className="text-[8px] opacity-60 leading-none mt-1">
+                    <div className="text-[8px] opacity-60 leading-none mb-1">
                       {bay.standardDockDoors + bay.oversizedDockDoors} drs.
                     </div>
                   )}
                   {/* Add storefront and speculative office symbols */}
-                  <div className="flex gap-0.5 mt-0.5">
+                  <div className="flex gap-1 mt-auto mb-1">
                     {originalBayConfig?.hasStorefrontEntry && (
-                      <span className="text-orange-600 text-[12px]" title="Storefront Entry">🚪</span>
+                      <span className="text-orange-600 text-[14px]" title="Storefront Entry">🚪</span>
                     )}
                     {originalBayConfig?.hasSpeculativeOffice && (
-                      <span className="text-blue-600 text-[12px]" title="Speculative Office">🏢</span>
-                    )}
-                    {/* Temporary debug - show for all bays what we have */}
-                    {originalBayConfig && (bay.bayName === 'Bay 1' || bay.bayName === 'Bay 2') && (
-                      <div className="text-[8px] text-red-500 absolute -bottom-1">
-                        S:{originalBayConfig.hasStorefrontEntry ? '✓' : '✗'} O:{originalBayConfig.hasSpeculativeOffice ? '✓' : '✗'}
-                      </div>
+                      <span className="text-blue-600 text-[14px]" title="Speculative Office">🏢</span>
                     )}
                   </div>
                 </Button>
@@ -488,6 +472,21 @@ export default function BayConfigurationSelector({
                   </div>
                 );
               })}
+            </div>
+            
+            {/* Symbol Legend */}
+            <div className="mt-3 pt-2 border-t border-gray-200">
+              <div className="text-[10px] font-medium text-gray-700 mb-2">Bay Features:</div>
+              <div className="flex gap-4 text-[9px] text-gray-600">
+                <div className="flex items-center gap-1">
+                  <span className="text-orange-600 text-[12px]">🚪</span>
+                  <span>Storefront Entry</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="text-blue-600 text-[12px]">🏢</span>
+                  <span>Speculative Office</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>

@@ -128,7 +128,7 @@ export function BaySelectionGrid({ property, onSelectionChange }: BaySelectionGr
         {/* Grid Layout with Horizontal Scrolling */}
         <div className="space-y-2">
           {/* Add horizontal scroll container for wide bay configurations */}
-          <div className="overflow-x-auto pb-4">
+          <div className="overflow-x-scroll pb-4 bay-scroll">
             <div 
               className="grid gap-2"
               style={{ 

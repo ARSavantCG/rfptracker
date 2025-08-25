@@ -388,7 +388,7 @@ export default function BayConfigurationSelector({
           {/* Bay Grid with Position Indicators */}
           <div className="relative">
             {/* Single row layout representing building - REVERSE for east-to-west orientation */}
-            <div className="flex gap-0.5 justify-start overflow-x-auto pb-2 flex-row-reverse scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100" 
+            <div className="flex gap-0.5 justify-start overflow-x-scroll pb-2 flex-row-reverse bay-scroll" 
                  style={{ minWidth: 'max-content' }}>
             {individualBays.map((bay) => {
               const isSelected = selectedBayIds.includes(bay.id);
@@ -444,7 +444,7 @@ export default function BayConfigurationSelector({
             </div>
             
             {/* Position indicators below bays */}
-            <div className="flex flex-row-reverse gap-0.5 justify-start overflow-x-auto mt-1 scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100" 
+            <div className="flex flex-row-reverse gap-0.5 justify-start overflow-x-scroll mt-1 bay-scroll" 
                  style={{ minWidth: 'max-content' }}>
               {individualBays.map((bay, index) => {
                 const totalBays = individualBays.length;

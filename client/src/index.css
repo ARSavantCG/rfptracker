@@ -2,6 +2,33 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Bay Configuration Scrollbars - Always Visible */
+.bay-scroll::-webkit-scrollbar {
+  height: 12px;
+  width: 12px;
+}
+
+.bay-scroll::-webkit-scrollbar-track {
+  background: #f3f4f6;
+  border-radius: 6px;
+}
+
+.bay-scroll::-webkit-scrollbar-thumb {
+  background: #9ca3af;
+  border-radius: 6px;
+  border: 2px solid #f3f4f6;
+}
+
+.bay-scroll::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+
+/* Firefox scrollbars */
+.bay-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #9ca3af #f3f4f6;
+}
+
 /* TARGETED TOAST NOTIFICATIONS FIX */
 [data-radix-toast-viewport]:not([data-radix-dialog-content]) {
   position: fixed !important;

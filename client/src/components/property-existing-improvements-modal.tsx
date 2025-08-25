@@ -100,15 +100,38 @@ export function PropertyExistingImprovementsModal({
     enabled: open,
   });
 
-  // Check for spec office mismatch
+  // Check for spec office mismatch - more sophisticated logic
   const getSpecOfficeMismatch = () => {
     const baysWithSpecOffice = property.bayConfigurations?.filter(bay => bay.hasSpeculativeOffice) || [];
     const specOfficeImprovements = improvements.filter(imp => imp.category === 'spec-office');
     
+    const baysCount = baysWithSpecOffice.length;
+    const costsCount = specOfficeImprovements.length;
+    
+    // Determine mismatch types
+    const hasNoCosts = baysCount > 0 && costsCount === 0;
+    const hasFewerCosts = baysCount > costsCount && costsCount > 0;
+    const hasMoreCosts = costsCount > baysCount && baysCount > 0;
+    const hasMismatch = hasNoCosts || hasFewerCosts || hasMoreCosts;
+    
+    // Generate appropriate warning message
+    let warningMessage = '';
+    if (hasNoCosts) {
+      warningMessage = `You have ${baysCount} bay${baysCount !== 1 ? 's' : ''} marked with spec offices but no spec office costs entered.`;
+    } else if (hasFewerCosts) {
+      warningMessage = `You have ${baysCount} bay${baysCount !== 1 ? 's' : ''} with spec offices but only ${costsCount} cost entr${costsCount !== 1 ? 'ies' : 'y'}. Consider if additional cost entries are needed.`;
+    } else if (hasMoreCosts) {
+      warningMessage = `You have ${costsCount} spec office cost entr${costsCount !== 1 ? 'ies' : 'y'} but only ${baysCount} bay${baysCount !== 1 ? 's' : ''} marked with spec offices.`;
+    }
+    
     return {
-      baysWithSpecOffice: baysWithSpecOffice.length,
-      specOfficeImprovements: specOfficeImprovements.length,
-      hasMismatch: baysWithSpecOffice.length > 0 && specOfficeImprovements.length === 0,
+      baysWithSpecOffice: baysCount,
+      specOfficeImprovements: costsCount,
+      hasMismatch,
+      hasNoCosts,
+      hasFewerCosts,
+      hasMoreCosts,
+      warningMessage,
       bayNames: baysWithSpecOffice.map(bay => bay.bayName)
     };
   };
@@ -251,29 +274,36 @@ export function PropertyExistingImprovementsModal({
                   </div>
                   <div className="flex-1">
                     <h3 className="font-medium text-yellow-800 dark:text-yellow-200 mb-1">
-                      Spec Office Cost Missing
+                      {mismatch.hasNoCosts ? "Spec Office Cost Missing" : 
+                       mismatch.hasFewerCosts ? "Possible Missing Spec Office Costs" :
+                       "Spec Office Count Mismatch"}
                     </h3>
                     <p className="text-sm text-yellow-700 dark:text-yellow-300 mb-3">
-                      You have {mismatch.baysWithSpecOffice} bay{mismatch.baysWithSpecOffice !== 1 ? 's' : ''} marked with spec offices ({mismatch.bayNames.join(', ')}) but no spec office costs entered.
+                      {mismatch.warningMessage}
+                      {mismatch.bayNames.length > 0 && (
+                        <span> Bay{mismatch.bayNames.length !== 1 ? 's' : ''}: {mismatch.bayNames.join(', ')}</span>
+                      )}
                     </p>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="border-yellow-300 text-yellow-800 hover:bg-yellow-100 dark:border-yellow-600 dark:text-yellow-200 dark:hover:bg-yellow-800/20"
-                      onClick={() => {
-                        setShowForm(true);
-                        form.reset({
-                          category: "spec-office",
-                          description: `Spec Office Costs for ${mismatch.bayNames.join(', ')}`,
-                          totalCost: 0,
-                          allocationType: "bay-specific",
-                          applicableBays: property.bayConfigurations?.filter(bay => bay.hasSpeculativeOffice).map(bay => bay.id) || [],
-                          notes: "Auto-suggested based on bay configuration",
-                        });
-                      }}
-                    >
-                      + Add Spec Office Costs
-                    </Button>
+                    {(mismatch.hasNoCosts || mismatch.hasFewerCosts) && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-yellow-300 text-yellow-800 hover:bg-yellow-100 dark:border-yellow-600 dark:text-yellow-200 dark:hover:bg-yellow-800/20"
+                        onClick={() => {
+                          setShowForm(true);
+                          form.reset({
+                            category: "spec-office",
+                            description: `Spec Office Costs for ${mismatch.bayNames.join(', ')}`,
+                            totalCost: 0,
+                            allocationType: "bay-specific",
+                            applicableBays: property.bayConfigurations?.filter(bay => bay.hasSpeculativeOffice).map(bay => bay.id) || [],
+                            notes: "Auto-suggested based on bay configuration",
+                          });
+                        }}
+                      >
+                        + Add Spec Office Costs
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>

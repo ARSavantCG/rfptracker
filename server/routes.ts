@@ -4779,7 +4779,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/reports/property-summary", async (req, res) => {
     try {
       const { generatePropertySummaryReport } = await import("./property-summary-report");
-      const html = await generatePropertySummaryReport();
+      
+      // Support RFP-specific mode with tenant allocation calculations
+      const rfpId = req.query.rfpId as string;
+      const propertyId = req.query.propertyId as string;
+      const options = rfpId ? { rfpId: parseInt(rfpId), propertyId: propertyId ? parseInt(propertyId) : undefined } : undefined;
+      
+      const html = await generatePropertySummaryReport(options);
       
       res.setHeader('Content-Type', 'text/html');
       res.setHeader('Content-Disposition', 'inline; filename="property-summary-report.html"');

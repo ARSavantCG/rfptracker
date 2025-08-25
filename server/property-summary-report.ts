@@ -1,11 +1,21 @@
 import { db } from './db';
-import { properties, executedLeases, propertyExistingImprovements } from '../shared/schema';
+import { properties, executedLeases, propertyExistingImprovements, rfpRequests } from '../shared/schema';
 import { eq, sql } from 'drizzle-orm';
 import { formatDateForDisplay } from '../shared/date-utils';
 
 interface PropertySummaryData {
   properties: PropertyDetails[];
   generatedAt: string;
+  rfpContext?: {
+    rfpNumber: string;
+    projectName: string;
+    tenantName: string;
+  };
+}
+
+interface RfpOptions {
+  rfpId: number;
+  propertyId?: number;
 }
 
 interface PropertyDetails {
@@ -23,6 +33,8 @@ interface PropertyDetails {
   parkingSpaces: number;
   trailerParkingSpaces?: number;
   mechanicalRoomSquareFootage?: number;
+  doorCounts?: { standard: number; oversized: number; total: number } | null;
+  selectedBayCount?: number;
   bayConfigurations: BayConfig[];
   electricalCapacity: ElectricalConfig[];
   executedLeases: LeaseInfo[];
@@ -90,13 +102,81 @@ function formatNumber(num: number): string {
   return new Intl.NumberFormat('en-US').format(num);
 }
 
-async function getPropertySummaryData(): Promise<PropertySummaryData> {
-  const allProperties = await db
-    .select()
-    .from(properties)
-    .orderBy(properties.propertyName);
+async function getPropertySummaryData(options?: RfpOptions): Promise<PropertySummaryData> {
+  let rfpContext;
+  let targetPropertyId;
+  let selectedBayConfigurations;
+  
+  // Fetch RFP data if in RFP mode
+  if (options?.rfpId) {
+    const rfp = await db
+      .select()
+      .from(rfpRequests)
+      .where(eq(rfpRequests.id, options.rfpId))
+      .limit(1);
+      
+    if (rfp.length > 0) {
+      rfpContext = {
+        rfpNumber: rfp[0].rfpNumber,
+        projectName: rfp[0].projectName,
+        tenantName: rfp[0].tenantName
+      };
+      selectedBayConfigurations = rfp[0].selectedBayConfigurations || [];
+      targetPropertyId = options.propertyId || parseInt(rfp[0].property);
+    }
+  }
+  
+  // Filter properties based on RFP context or get all
+  const allProperties = targetPropertyId
+    ? await db
+        .select()
+        .from(properties)
+        .where(eq(properties.id, targetPropertyId))
+    : await db
+        .select()
+        .from(properties)
+        .orderBy(properties.propertyName);
 
   const propertyDetails: PropertyDetails[] = [];
+  
+  // Calculate door counts from selected bay configurations (RFP mode only)
+  const calculateDoorCounts = (selectedBays: any[]) => {
+    if (!selectedBays || selectedBays.length === 0) return { standard: 0, oversized: 0, total: 0 };
+    
+    const standard = selectedBays.reduce((sum, bay) => sum + (bay.standardDockDoors || 0), 0);
+    const oversized = selectedBays.reduce((sum, bay) => sum + (bay.oversizedDockDoors || 0), 0);
+    
+    return { standard, oversized, total: standard + oversized };
+  };
+  
+  // Calculate parking allocation from selected bay configurations (RFP mode only)
+  const calculateParkingAllocation = (property: any, selectedBays: any[]) => {
+    if (!selectedBays || selectedBays.length === 0) {
+      return { vehicular: 0, trailer: 0 };
+    }
+    
+    // Calculate tenant's rentable area
+    const tenantArea = selectedBays.reduce((sum, bay) => sum + (bay.rentableSquareFootage || bay.squareFootage || 0), 0);
+    
+    // Get total property area
+    const totalPropertyArea = parseFloat(property.rentableSquareFootage || '0');
+    
+    if (totalPropertyArea === 0 || tenantArea === 0) {
+      return { vehicular: 0, trailer: 0 };
+    }
+    
+    // Calculate tenant's percentage of the property
+    const tenantPercentage = tenantArea / totalPropertyArea;
+    
+    // Calculate proportional parking allocation
+    const totalVehicular = (property.standardParking || 0) + (property.accessibleParking || 0) + (property.evParking || 0);
+    const totalTrailer = property.trailerParking || 0;
+    
+    return {
+      vehicular: Math.round(totalVehicular * tenantPercentage),
+      trailer: Math.round(totalTrailer * tenantPercentage)
+    };
+  };
 
   for (const property of allProperties) {
     // Get executed leases
@@ -112,9 +192,14 @@ async function getPropertySummaryData(): Promise<PropertySummaryData> {
       .from(propertyExistingImprovements)
       .where(eq(propertyExistingImprovements.propertyId, property.id));
 
-    // Calculate totals from bay configurations stored in JSON
+    // Calculate totals - use selected bays in RFP mode, all bays otherwise
     const bayConfigs = property.bayConfigurations || [];
-    const totalRentableArea = bayConfigs.reduce((sum: number, bay: any) => sum + (bay.rentableSquareFootage || bay.squareFootage || 0), 0);
+    const relevantBays = selectedBayConfigurations && selectedBayConfigurations.length > 0 ? selectedBayConfigurations : bayConfigs;
+    const totalRentableArea = relevantBays.reduce((sum: number, bay: any) => sum + (bay.rentableSquareFootage || bay.squareFootage || 0), 0);
+    
+    // Calculate door counts and parking allocation for RFP mode
+    const doorCounts = selectedBayConfigurations ? calculateDoorCounts(selectedBayConfigurations) : null;
+    const parkingAllocation = selectedBayConfigurations ? calculateParkingAllocation(property, selectedBayConfigurations) : null;
     
     // Calculate cost breakdown from actual data
     const costBreakdown = {
@@ -175,10 +260,12 @@ async function getPropertySummaryData(): Promise<PropertySummaryData> {
       totalWarehouseArea: totalRentableArea.toString(),
       totalOfficeArea: '0', // Not tracked in current schema
       totalRentableArea,
-      parkingSpaces: (property.standardParking || 0) + (property.accessibleParking || 0) + (property.evParking || 0) + (property.trailerParking || 0),
-      trailerParkingSpaces: property.trailerParking || 0,
+      parkingSpaces: parkingAllocation ? parkingAllocation.vehicular : ((property.standardParking || 0) + (property.accessibleParking || 0) + (property.evParking || 0)),
+      trailerParkingSpaces: parkingAllocation ? parkingAllocation.trailer : (property.trailerParking || 0),
+      doorCounts: doorCounts,
+      selectedBayCount: selectedBayConfigurations ? selectedBayConfigurations.length : bayConfigs.length,
       mechanicalRoomSquareFootage: 0, // Not tracked in current schema
-      bayConfigurations: bayConfigs.map((bay: any) => ({
+      bayConfigurations: relevantBays.map((bay: any) => ({
         bayNumber: bay.bayName || bay.id || '',
         rentableSquareFootage: bay.rentableSquareFootage || bay.squareFootage || 0,
         clearHeight: property.clearHeight || '',
@@ -232,7 +319,8 @@ async function getPropertySummaryData(): Promise<PropertySummaryData> {
 
   return {
     properties: propertyDetails,
-    generatedAt: formatDateForDisplay(new Date())
+    generatedAt: formatDateForDisplay(new Date()),
+    rfpContext
   };
 }
 
@@ -395,8 +483,8 @@ function generatePropertySummaryHTML(data: PropertySummaryData): string {
 </head>
 <body>
     <div class="header">
-        <h1>Property Portfolio Summary Report</h1>
-        <div class="subtitle">Comprehensive Property Information & Analysis</div>
+        <h1>${data.rfpContext ? `RFP Property Summary - ${data.rfpContext.rfpNumber}` : 'Property Portfolio Summary Report'}</h1>
+        <div class="subtitle">${data.rfpContext ? `${data.rfpContext.projectName} | Tenant: ${data.rfpContext.tenantName}` : 'Comprehensive Property Information & Analysis'}</div>
         <div class="subtitle">Generated: ${data.generatedAt}</div>
     </div>
 `;
@@ -421,15 +509,19 @@ function generatePropertySummaryHTML(data: PropertySummaryData): string {
                     <h4>Building Information</h4>
                     <p><strong>Total Buildings:</strong> ${property.totalBuildings}</p>
                     <p><strong>Warehouse Area:</strong> ${formatNumber(parseInt(property.totalWarehouseArea))} SF</p>
-
                     <p><strong>Mechanical Room:</strong> ${formatNumber(property.mechanicalRoomSquareFootage || 0)} SF</p>
-                    <p><strong>Vehicular Parking:</strong> ${formatNumber(property.parkingSpaces)}</p>
-                    <p><strong>Trailer Parking:</strong> ${formatNumber(property.trailerParkingSpaces || 0)}</p>
+                    ${property.doorCounts ? `
+                    <p><strong>Standard Dock Doors:</strong> ${property.doorCounts.standard}</p>
+                    <p><strong>Oversized Dock Doors:</strong> ${property.doorCounts.oversized}</p>
+                    <p><strong>Total Dock Doors:</strong> ${property.doorCounts.total}</p>
+                    ` : ''}
+                    <p><strong>Vehicular Parking:</strong> ${formatNumber(property.parkingSpaces)}${property.doorCounts ? ' (tenant allocation)' : ''}</p>
+                    <p><strong>Trailer Parking:</strong> ${formatNumber(property.trailerParkingSpaces || 0)}${property.doorCounts ? ' (tenant allocation)' : ''}</p>
                 </div>
                 <div class="info-card">
                     <h4>Area Summary</h4>
-                    <p><strong>Total Rentable SF:</strong> <span class="metric-value">${formatNumber(property.totalRentableArea)}</span></p>
-                    <p><strong>Total Bays:</strong> ${property.bayConfigurations.length}</p>
+                    <p><strong>${property.doorCounts ? 'Tenant' : 'Total'} Rentable SF:</strong> <span class="metric-value">${formatNumber(property.totalRentableArea)}</span></p>
+                    <p><strong>${property.doorCounts ? 'Selected' : 'Total'} Bays:</strong> ${property.selectedBayCount || property.bayConfigurations.length}</p>
                     <p><strong>Active Leases:</strong> ${property.executedLeases.length}</p>
                 </div>
                 <div class="info-card">
@@ -608,10 +700,10 @@ function generatePropertySummaryHTML(data: PropertySummaryData): string {
   return html;
 }
 
-export async function generatePropertySummaryReport(): Promise<string> {
-  console.log('Starting property summary report generation...');
+export async function generatePropertySummaryReport(options?: RfpOptions): Promise<string> {
+  console.log('Starting property summary report generation...', options ? 'in RFP mode' : 'for all properties');
   
-  const data = await getPropertySummaryData();
+  const data = await getPropertySummaryData(options);
   console.log(`Property summary data retrieved: ${data.properties.length} properties`);
   
   const html = generatePropertySummaryHTML(data);

@@ -125,15 +125,17 @@ export function BaySelectionGrid({ property, onSelectionChange }: BaySelectionGr
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Grid Layout */}
+        {/* Grid Layout with Horizontal Scrolling */}
         <div className="space-y-2">
-          <div 
-            className="grid gap-2 mx-auto"
-            style={{ 
-              gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
-              maxWidth: `${columns * 120 + (columns - 1) * 8}px`
-            }}
-          >
+          {/* Add horizontal scroll container for wide bay configurations */}
+          <div className="overflow-x-auto pb-4">
+            <div 
+              className="grid gap-2"
+              style={{ 
+                gridTemplateColumns: `repeat(${columns}, 96px)`, // Fixed 96px width per column for consistent sizing
+                minWidth: `${columns * 96 + (columns - 1) * 8}px` // Minimum width to ensure all bays fit
+              }}
+            >
             {grid.map((row, rowIndex) =>
               row.map((bay, colIndex) => (
                 <div key={`${rowIndex}-${colIndex}`} className="h-32 w-24">
@@ -170,6 +172,7 @@ export function BaySelectionGrid({ property, onSelectionChange }: BaySelectionGr
                 </div>
               ))
             )}
+            </div>
           </div>
         </div>
 

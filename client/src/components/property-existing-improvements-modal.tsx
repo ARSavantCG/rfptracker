@@ -97,7 +97,7 @@ export function PropertyExistingImprovementsModal({
 
   const { data: improvements = [], isLoading } = useQuery<PropertyExistingImprovement[]>({
     queryKey: [`/api/properties/${property.id}/existing-improvements`],
-    enabled: open,
+    enabled: !!property.id, // Always load data, not just when modal is open
   });
 
   // Check for spec office mismatch - more sophisticated logic
@@ -241,8 +241,9 @@ export function PropertyExistingImprovementsModal({
         setShowForm(false);
         setEditingId(null);
       }} className={`flex items-center gap-1 text-xs px-2 py-1 h-6 ${
-        // Add visual indicator if there's a mismatch
+        // Add visual indicator if there's a mismatch (only when data is loaded)
         (() => {
+          if (isLoading) return ''; // Don't show warning while loading
           const baysWithSpecOffice = property.bayConfigurations?.filter(bay => bay.hasSpeculativeOffice) || [];
           const specOfficeImprovements = (improvements || []).filter(imp => imp.category === 'spec-office');
           const baysCount = baysWithSpecOffice.length;
@@ -254,6 +255,7 @@ export function PropertyExistingImprovementsModal({
         <Grid className="h-3 w-3" />
         Manage Costs in Place
         {(() => {
+          if (isLoading) return null; // Don't show warning icon while loading
           const baysWithSpecOffice = property.bayConfigurations?.filter(bay => bay.hasSpeculativeOffice) || [];
           const specOfficeImprovements = (improvements || []).filter(imp => imp.category === 'spec-office');
           const baysCount = baysWithSpecOffice.length;

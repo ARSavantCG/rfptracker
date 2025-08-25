@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Trash2, Edit, Settings, Copy, ChevronDown, ChevronRight, Compass, Navigation, Printer } from "lucide-react";
+import { Plus, Trash2, Edit, Settings, Copy, ChevronDown, ChevronRight, Compass, Navigation, Printer, DoorOpen, Building2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
@@ -30,7 +31,7 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
   const [mechanicalRoomSF, setMechanicalRoomSF] = useState<string>(
     property.mechanicalRoomSquareFootage?.toString() || "0"
   );
-  const [newBay, setNewBay] = useState({ startBay: "", endBay: "", squareFootage: "", standardDockDoors: "", oversizedDockDoors: "" });
+  const [newBay, setNewBay] = useState({ startBay: "", endBay: "", squareFootage: "", standardDockDoors: "", oversizedDockDoors: "", hasStorefrontEntry: false, hasSpeculativeOffice: false });
   const [editingBay, setEditingBay] = useState<BayConfiguration | null>(null);
   const [showBayDetails, setShowBayDetails] = useState(false);
   const [isEditingMechRoom, setIsEditingMechRoom] = useState(false);
@@ -196,7 +197,9 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
       bayName: `Bay ${startBayNum}-${endBayNum}`,
       squareFootage: parseInt(newBay.squareFootage),
       standardDockDoors: parseInt(newBay.standardDockDoors) || 0,
-      oversizedDockDoors: parseInt(newBay.oversizedDockDoors) || 0
+      oversizedDockDoors: parseInt(newBay.oversizedDockDoors) || 0,
+      hasStorefrontEntry: newBay.hasStorefrontEntry,
+      hasSpeculativeOffice: newBay.hasSpeculativeOffice
     };
 
     setBayConfigurations([...bayConfigurations, newBayConfig]);
@@ -208,7 +211,9 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
       endBay: (nextStart + 1).toString(), 
       squareFootage: "",
       standardDockDoors: "",
-      oversizedDockDoors: ""
+      oversizedDockDoors: "",
+      hasStorefrontEntry: false,
+      hasSpeculativeOffice: false
     });
   };
 
@@ -247,7 +252,9 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
       endBay: (newNextStart + 1).toString(),
       squareFootage: "",
       standardDockDoors: "",
-      oversizedDockDoors: ""
+      oversizedDockDoors: "",
+      hasStorefrontEntry: false,
+      hasSpeculativeOffice: false
     });
 
     toast({
@@ -267,7 +274,9 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
       endBay,
       squareFootage: bay.squareFootage.toString(),
       standardDockDoors: bay.standardDockDoors?.toString() || "0",
-      oversizedDockDoors: bay.oversizedDockDoors?.toString() || "0"
+      oversizedDockDoors: bay.oversizedDockDoors?.toString() || "0",
+      hasStorefrontEntry: bay.hasStorefrontEntry || false,
+      hasSpeculativeOffice: bay.hasSpeculativeOffice || false
     });
   };
 
@@ -298,7 +307,9 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
       bayName: `Bay ${startBayNum}-${endBayNum}`,
       squareFootage: parseInt(newBay.squareFootage),
       standardDockDoors: parseInt(newBay.standardDockDoors) || 0,
-      oversizedDockDoors: parseInt(newBay.oversizedDockDoors) || 0
+      oversizedDockDoors: parseInt(newBay.oversizedDockDoors) || 0,
+      hasStorefrontEntry: newBay.hasStorefrontEntry,
+      hasSpeculativeOffice: newBay.hasSpeculativeOffice
     };
 
     setBayConfigurations(bayConfigurations.map(bay => 
@@ -313,7 +324,9 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
       endBay: "", 
       squareFootage: "",
       standardDockDoors: "",
-      oversizedDockDoors: ""
+      oversizedDockDoors: "",
+      hasStorefrontEntry: false,
+      hasSpeculativeOffice: false
     });
 
     toast({
@@ -330,7 +343,9 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
       endBay: "", 
       squareFootage: "",
       standardDockDoors: "",
-      oversizedDockDoors: ""
+      oversizedDockDoors: "",
+      hasStorefrontEntry: false,
+      hasSpeculativeOffice: false
     });
   };
 
@@ -662,6 +677,30 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                     />
                   </div>
                 </div>
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="hasStorefrontEntry"
+                      checked={newBay.hasStorefrontEntry}
+                      onCheckedChange={(checked) => setNewBay({ ...newBay, hasStorefrontEntry: checked as boolean })}
+                    />
+                    <Label htmlFor="hasStorefrontEntry" className="text-sm font-medium flex items-center gap-1">
+                      <DoorOpen className="h-4 w-4" />
+                      Storefront Entry
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="hasSpeculativeOffice"
+                      checked={newBay.hasSpeculativeOffice}
+                      onCheckedChange={(checked) => setNewBay({ ...newBay, hasSpeculativeOffice: checked as boolean })}
+                    />
+                    <Label htmlFor="hasSpeculativeOffice" className="text-sm font-medium flex items-center gap-1">
+                      <Building2 className="h-4 w-4" />
+                      Speculative Office
+                    </Label>
+                  </div>
+                </div>
                 <div className="flex gap-2">
                   <Button onClick={addBayConfiguration} className="w-full">
                     <Plus className="h-4 w-4 mr-2" />
@@ -796,6 +835,30 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                                     onChange={(e) => setNewBay({ ...newBay, oversizedDockDoors: e.target.value })}
                                     className="[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                   />
+                                </div>
+                              </div>
+                              <div className="space-y-3 mt-4">
+                                <div className="flex items-center space-x-2">
+                                  <Checkbox 
+                                    id="editHasStorefrontEntry"
+                                    checked={newBay.hasStorefrontEntry}
+                                    onCheckedChange={(checked) => setNewBay({ ...newBay, hasStorefrontEntry: checked as boolean })}
+                                  />
+                                  <Label htmlFor="editHasStorefrontEntry" className="text-sm font-medium flex items-center gap-1">
+                                    <DoorOpen className="h-4 w-4" />
+                                    Storefront Entry
+                                  </Label>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <Checkbox 
+                                    id="editHasSpeculativeOffice"
+                                    checked={newBay.hasSpeculativeOffice}
+                                    onCheckedChange={(checked) => setNewBay({ ...newBay, hasSpeculativeOffice: checked as boolean })}
+                                  />
+                                  <Label htmlFor="editHasSpeculativeOffice" className="text-sm font-medium flex items-center gap-1">
+                                    <Building2 className="h-4 w-4" />
+                                    Speculative Office
+                                  </Label>
                                 </div>
                               </div>
                               <div className="flex gap-2">

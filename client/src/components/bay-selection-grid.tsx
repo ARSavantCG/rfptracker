@@ -3,23 +3,26 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Grid, Calculator, RotateCcw } from "lucide-react";
-import type { Property, PropertyBay } from "@shared/schema";
+import type { Property, BayConfiguration } from "@shared/schema";
 
 interface BaySelectionGridProps {
   property: Property;
-  onSelectionChange?: (selectedBays: PropertyBay[], totalSquareFootage: number) => void;
+  onSelectionChange?: (selectedBays: BayConfiguration[], totalSquareFootage: number) => void;
 }
 
 export function BaySelectionGrid({ property, onSelectionChange }: BaySelectionGridProps) {
   const [selectedBayIds, setSelectedBayIds] = useState<Set<string>>(new Set());
 
-  const bays = property.bays || [];
-  const gridLayout = property.gridLayout || { rows: 1, columns: 1 };
-  const { rows, columns } = gridLayout;
+  const bays = property.bayConfigurations || [];
+  // Create a simple grid layout based on number of bays
+  const bayCount = bays.length;
+  const calculatedColumns = Math.ceil(Math.sqrt(bayCount));
+  const calculatedRows = Math.ceil(bayCount / calculatedColumns);
+  const { rows, columns } = { rows: calculatedRows, columns: calculatedColumns };
 
   // Create a grid array with bay assignments
   const createGrid = () => {
-    const grid: (PropertyBay | null)[][] = [];
+    const grid: (BayConfiguration | null)[][] = [];
     let bayIndex = 0;
     
     for (let row = 0; row < rows; row++) {
@@ -61,14 +64,8 @@ export function BaySelectionGrid({ property, onSelectionChange }: BaySelectionGr
     onSelectionChange?.([], 0);
   };
 
-  const getBayTypeColor = (type: string) => {
-    switch (type) {
-      case 'office': return 'bg-blue-100 border-blue-300 text-blue-800';
-      case 'warehouse': return 'bg-gray-100 border-gray-300 text-gray-800';
-      case 'retail': return 'bg-green-100 border-green-300 text-green-800';
-      case 'mixed': return 'bg-purple-100 border-purple-300 text-purple-800';
-      default: return 'bg-gray-100 border-gray-300 text-gray-800';
-    }
+  const getBayColor = () => {
+    return 'bg-gray-100 border-gray-300 text-gray-800';
   };
 
   const selectedBays = bays.filter(bay => selectedBayIds.has(bay.id));
@@ -139,13 +136,20 @@ export function BaySelectionGrid({ property, onSelectionChange }: BaySelectionGr
                           ? 'ring-2 ring-blue-500 shadow-lg scale-105' 
                           : 'hover:scale-102'
                         }
-                        ${getBayTypeColor(bay.type)}
+                        ${getBayColor()}
                       `}
                     >
                       <div className="text-center">
-                        <div className="font-bold truncate w-full">{bay.bayNumber}</div>
+                        <div className="font-bold truncate w-full">{bay.bayName}</div>
                         <div className="text-xs mt-1">{bay.squareFootage.toLocaleString()} sq ft</div>
-                        <div className="text-xs opacity-75 capitalize">{bay.type}</div>
+                        <div className="flex justify-center mt-1 gap-1">
+                          {bay.hasStorefrontEntry && (
+                            <span className="text-orange-600" title="Storefront Entry">🚪</span>
+                          )}
+                          {bay.hasSpeculativeOffice && (
+                            <span className="text-blue-600" title="Speculative Office">🏢</span>
+                          )}
+                        </div>
                       </div>
                     </button>
                   ) : (
@@ -195,9 +199,9 @@ export function BaySelectionGrid({ property, onSelectionChange }: BaySelectionGr
                   <Badge 
                     key={bay.id} 
                     variant="outline"
-                    className={getBayTypeColor(bay.type)}
+                    className={getBayColor()}
                   >
-                    {bay.bayNumber} ({bay.squareFootage.toLocaleString()} sq ft)
+                    {bay.bayName} ({bay.squareFootage.toLocaleString()} sq ft)
                   </Badge>
                 ))}
               </div>

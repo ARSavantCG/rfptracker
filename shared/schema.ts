@@ -395,6 +395,8 @@ export type BayConfiguration = {
   oversizedDockDoors: number; // Count of oversized dock doors
   mechanicalRoomAllocation?: number; // Calculated mechanical room square footage allocation for this bay
   rentableSquareFootage?: number; // Calculated rentable area (squareFootage + mechanicalRoomAllocation)
+  hasStorefrontEntry?: boolean; // Whether this bay has storefront entry door(s)
+  hasSpeculativeOffice?: boolean; // Whether this bay has speculative office space
 };
 
 // Properties table

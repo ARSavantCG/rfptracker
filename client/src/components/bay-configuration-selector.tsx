@@ -43,15 +43,6 @@ export default function BayConfigurationSelector({
   // Use fresh bay configurations if available, fallback to prop data
   const bayConfigurations = freshProperty?.bayConfigurations || property.bayConfigurations || [];
 
-  // Debug logging to see what data we're getting
-  console.log('🔍 Bay Configuration Selector Debug:', {
-    propertyId: property.id,
-    propBayCount: property.bayConfigurations?.length || 0,
-    freshBayCount: freshProperty?.bayConfigurations?.length || 0,
-    usingFreshData: !!freshProperty,
-    bay1PropData: property.bayConfigurations?.find(b => b.bayName.includes('Bay 1')),
-    bay1FreshData: freshProperty?.bayConfigurations?.find(b => b.bayName.includes('Bay 1'))
-  });
   
 
 

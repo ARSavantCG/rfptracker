@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import React, { useState, useEffect, useMemo } from "react";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
-import { useMemo } from "react";
 import type { Property, BayConfiguration } from "@shared/schema";
 
 interface BayConfigurationManagerProps {
@@ -26,15 +25,31 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
   // Check if user has properties delete permissions
   const canDeleteBays = user?.permissions?.includes('properties.delete') || false;
   const [isOpen, setIsOpen] = useState(false);
+  // Fetch fresh property data to ensure bay configurations are up-to-date
+  const { data: freshProperty } = useQuery<Property>({
+    queryKey: [`/api/properties/${property.id}`],
+    enabled: !!property.id,
+    staleTime: 0,
+    refetchOnMount: true,
+  });
+
   const [bayConfigurations, setBayConfigurations] = useState<BayConfiguration[]>(
-    property.bayConfigurations || []
+    freshProperty?.bayConfigurations || property.bayConfigurations || []
   );
+
+  // Update bay configurations when fresh data arrives
+  useEffect(() => {
+    if (freshProperty?.bayConfigurations) {
+      setBayConfigurations(freshProperty.bayConfigurations);
+    }
+  }, [freshProperty?.bayConfigurations]);
   const [mechanicalRoomSF, setMechanicalRoomSF] = useState<string>(
     property.mechanicalRoomSquareFootage?.toString() || "0"
   );
   const [newBay, setNewBay] = useState({ startBay: "", endBay: "", squareFootage: "", standardDockDoors: "", oversizedDockDoors: "", hasStorefrontEntry: false, hasSpeculativeOffice: false });
   const [editingBay, setEditingBay] = useState<BayConfiguration | null>(null);
   const [showBayDetails, setShowBayDetails] = useState(false);
+
 
   // Sort bay configurations numerically by start bay number
   const sortedBayConfigurations = useMemo(() => {

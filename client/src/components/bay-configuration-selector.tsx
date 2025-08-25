@@ -656,20 +656,38 @@ export default function BayConfigurationSelector({
                   </div>
                   <div className="flex items-center gap-2">
                     {!isParkingOverrideMode ? (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setIsParkingOverrideMode(true);
-                          setVehicularParkingOverride(parkingAllocations.vehicular.toString());
-                          setTrailerParkingOverride(parkingAllocations.trailer.toString());
-                        }}
-                        className="text-green-600 border-green-600 hover:bg-green-50"
-                      >
-                        <Edit3 className="h-3 w-3 mr-1" />
-                        Override
-                      </Button>
+                      <>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setIsParkingOverrideMode(true);
+                            setVehicularParkingOverride(parkingAllocations.vehicular.toString());
+                            setTrailerParkingOverride(parkingAllocations.trailer.toString());
+                          }}
+                          className="text-green-600 border-green-600 hover:bg-green-50"
+                        >
+                          <Edit3 className="h-3 w-3 mr-1" />
+                          Override
+                        </Button>
+                        {(savedVehicularParking !== null || savedTrailerParking !== null) && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSavedVehicularParking(null);
+                              setSavedTrailerParking(null);
+                              console.log('Reset parking overrides to calculated values');
+                            }}
+                            className="text-gray-600 border-gray-300 hover:bg-gray-50"
+                          >
+                            <RotateCcw className="h-3 w-3 mr-1" />
+                            Reset
+                          </Button>
+                        )}
+                      </>
                     ) : (
                       <div className="flex gap-2">
                         <Button

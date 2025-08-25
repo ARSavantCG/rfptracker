@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Calculator, Grid3x3, Compass, Navigation, Edit3, RotateCcw } from "lucide-react";
+import { Calculator, Grid3x3, Compass, Navigation, Edit3, RotateCcw, Car, Truck } from "lucide-react";
 import type { Property, BayConfiguration, ExecutedLease } from "@shared/schema";
 
 interface BayConfigurationSelectorProps {
@@ -25,6 +25,11 @@ export default function BayConfigurationSelector({
   );
   const [isOverrideMode, setIsOverrideMode] = useState<boolean>(initialOverrideArea !== undefined);
   const [overrideArea, setOverrideArea] = useState<string>(initialOverrideArea?.toString() || "");
+  
+  // Parking tracking states
+  const [vehicularParkingOverride, setVehicularParkingOverride] = useState<string>("");
+  const [trailerParkingOverride, setTrailerParkingOverride] = useState<string>("");
+  const [isParkingOverrideMode, setIsParkingOverrideMode] = useState<boolean>(false);
 
   // Fetch executed leases for this property to exclude leased bays
   const { data: executedLeases = [], isLoading: isLoadingLeases } = useQuery<ExecutedLease[]>({
@@ -275,6 +280,38 @@ export default function BayConfigurationSelector({
   const calculatedArea = calculateTotalArea();
   const finalArea = isOverrideMode && overrideArea ? parseFloat(overrideArea) : calculatedArea;
   const overrideValue = isOverrideMode && overrideArea ? parseFloat(overrideArea) : undefined;
+
+  // Calculate parking allocations based on selected area and property parking ratios
+  const calculateParkingAllocations = () => {
+    if (!finalArea || finalArea === 0) return { vehicular: 0, trailer: 0 };
+    
+    const totalPropertyArea = property.totalSquareFootage || 
+      (bayConfigurations.reduce((sum, bay) => sum + bay.squareFootage, 0) + (property.mechanicalRoomSquareFootage || 0));
+    
+    if (totalPropertyArea === 0) return { vehicular: 0, trailer: 0 };
+    
+    const areaRatio = finalArea / totalPropertyArea;
+    
+    // Calculate vehicular parking (standard + accessible + EV)
+    const totalVehicularParking = (property.standardParking || 0) + (property.accessibleParking || 0) + (property.evParking || 0);
+    const allocatedVehicularParking = Math.round(totalVehicularParking * areaRatio);
+    
+    // Calculate trailer parking allocation
+    const allocatedTrailerParking = Math.round((property.trailerParking || 0) * areaRatio);
+    
+    return {
+      vehicular: allocatedVehicularParking,
+      trailer: allocatedTrailerParking
+    };
+  };
+
+  const parkingAllocations = calculateParkingAllocations();
+  
+  // Final parking values considering overrides
+  const finalVehicularParking = isParkingOverrideMode && vehicularParkingOverride ? 
+    parseInt(vehicularParkingOverride) || 0 : parkingAllocations.vehicular;
+  const finalTrailerParking = isParkingOverrideMode && trailerParkingOverride ? 
+    parseInt(trailerParkingOverride) || 0 : parkingAllocations.trailer;
 
   // Update parent component when selection or override changes
   useEffect(() => {
@@ -657,6 +694,112 @@ export default function BayConfigurationSelector({
                   </p>
                 </div>
               )}
+
+              {/* Parking Allocation Section */}
+              <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Car className="h-4 w-4 text-green-600" />
+                    <span className="font-medium text-green-900">Parking Allocation</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {!isParkingOverrideMode ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setIsParkingOverrideMode(true);
+                          setVehicularParkingOverride(parkingAllocations.vehicular.toString());
+                          setTrailerParkingOverride(parkingAllocations.trailer.toString());
+                        }}
+                        className="text-green-600 border-green-600 hover:bg-green-50"
+                      >
+                        <Edit3 className="h-3 w-3 mr-1" />
+                        Override
+                      </Button>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setIsParkingOverrideMode(false);
+                          setVehicularParkingOverride("");
+                          setTrailerParkingOverride("");
+                        }}
+                        className="text-gray-600 border-gray-300 hover:bg-gray-50"
+                      >
+                        <RotateCcw className="h-3 w-3 mr-1" />
+                        Reset
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Vehicular Parking */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Car className="h-3 w-3 text-green-600" />
+                      <span className="text-sm font-medium text-green-900">Vehicular Parking</span>
+                    </div>
+                    {isParkingOverrideMode ? (
+                      <Input
+                        type="number"
+                        min="0"
+                        value={vehicularParkingOverride}
+                        onChange={(e) => setVehicularParkingOverride(e.target.value)}
+                        placeholder="0"
+                        className="border-green-300 focus:border-green-500 focus:ring-green-500"
+                      />
+                    ) : (
+                      <div className="text-lg font-semibold text-green-600">
+                        {finalVehicularParking} spaces
+                      </div>
+                    )}
+                    <p className="text-xs text-green-600">
+                      {!isParkingOverrideMode && `Calculated from ${finalArea.toLocaleString()} SF lease area`}
+                    </p>
+                  </div>
+
+                  {/* Trailer Parking */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Truck className="h-3 w-3 text-green-600" />
+                      <span className="text-sm font-medium text-green-900">Trailer Parking</span>
+                    </div>
+                    {isParkingOverrideMode ? (
+                      <Input
+                        type="number"
+                        min="0"
+                        value={trailerParkingOverride}
+                        onChange={(e) => setTrailerParkingOverride(e.target.value)}
+                        placeholder="0"
+                        className="border-green-300 focus:border-green-500 focus:ring-green-500"
+                      />
+                    ) : (
+                      <div className="text-lg font-semibold text-green-600">
+                        {finalTrailerParking} spaces
+                      </div>
+                    )}
+                    <p className="text-xs text-green-600">
+                      {!isParkingOverrideMode && `Based on proportional allocation`}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Parking Ratio Display */}
+                <div className="mt-3 pt-3 border-t border-green-200 text-xs text-green-700">
+                  <div className="flex justify-between">
+                    <span>Property Total Vehicular: {((property.standardParking || 0) + (property.accessibleParking || 0) + (property.evParking || 0))} spaces</span>
+                    <span>Property Total Trailer: {(property.trailerParking || 0)} spaces</span>
+                  </div>
+                  <div className="mt-1 text-green-600">
+                    Parking Ratio: {finalArea > 0 ? ((finalVehicularParking / finalArea) * 1000).toFixed(2) : '0.00'} vehicular spaces per 1,000 SF
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </div>

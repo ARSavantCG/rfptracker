@@ -402,7 +402,7 @@ export default function BayConfigurationSelector({
                   key={bay.id}
                   variant={isSelected ? "default" : "outline"}
                   disabled={isLeased}
-                  className={`h-24 w-16 flex flex-col items-center justify-start text-xs p-1 flex-shrink-0 ${
+                  className={`min-h-24 w-16 flex flex-col items-center justify-start text-xs p-1 flex-shrink-0 ${
                     isLeased
                       ? "bg-red-800 border-red-900 text-white cursor-not-allowed opacity-95"
                       : isSelected 
@@ -416,8 +416,13 @@ export default function BayConfigurationSelector({
                     {isLeased ? "LEA" : `${(bay.squareFootage / 1000).toFixed(0)}K`}
                   </div>
                   {(bay.standardDockDoors > 0 || bay.oversizedDockDoors > 0) && (
-                    <div className="text-[8px] opacity-60 leading-none mb-1">
-                      {bay.standardDockDoors + bay.oversizedDockDoors} drs.
+                    <div className="text-[8px] opacity-60 leading-none mb-1 flex flex-col items-center">
+                      {bay.standardDockDoors > 0 && (
+                        <div className="leading-none">{bay.standardDockDoors} std</div>
+                      )}
+                      {bay.oversizedDockDoors > 0 && (
+                        <div className="leading-none">{bay.oversizedDockDoors} ovr</div>
+                      )}
                     </div>
                   )}
                   {/* Add storefront and speculative office symbols */}
@@ -498,11 +503,14 @@ export default function BayConfigurationSelector({
                 </div>
               </div>
               
-              {/* Spec Office Cost Warning */}
+              {/* Spec Office Cost Warning - Only show if costs are missing */}
               {(() => {
                 const baysWithSpecOffice = bayConfigurations.filter(bay => bay.hasSpeculativeOffice);
-                const hasChanges = baysWithSpecOffice.length > 0;
-                if (hasChanges) {
+                // TODO: Add logic to check if spec office costs are actually missing
+                // For now, don't show the reminder as the user indicated costs are already entered
+                const hasMissingCosts = false; // Disable for now since costs are entered
+                
+                if (baysWithSpecOffice.length > 0 && hasMissingCosts) {
                   return (
                     <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-[9px] text-blue-700">
                       <div className="font-medium">💡 Reminder:</div>

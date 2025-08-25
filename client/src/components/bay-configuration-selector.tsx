@@ -285,7 +285,7 @@ export default function BayConfigurationSelector({
   const calculateParkingAllocations = () => {
     if (!finalArea || finalArea === 0) return { vehicular: 0, trailer: 0 };
     
-    const totalPropertyArea = property.totalSquareFootage || 
+    const totalPropertyArea = 
       (bayConfigurations.reduce((sum, bay) => sum + bay.squareFootage, 0) + (property.mechanicalRoomSquareFootage || 0));
     
     if (totalPropertyArea === 0) return { vehicular: 0, trailer: 0 };
@@ -571,7 +571,7 @@ export default function BayConfigurationSelector({
           </div>
         </div>
 
-        {/* Selection Summary */}
+        {/* Selection Summary - Fixed Height Container to Prevent Layout Shift */}
         <div className="border-t pt-4">
           <div className="flex items-center justify-between mb-2">
             <Label className="font-medium">Selected Bays:</Label>
@@ -597,11 +597,16 @@ export default function BayConfigurationSelector({
             </div>
           </div>
           
-          {selectedBayIds.length === 0 ? (
-            <p className="text-sm text-gray-500">No bays selected</p>
-          ) : (
-            <div className="space-y-2">
-              <div className="flex flex-wrap gap-1">
+          {/* Reserve space to prevent layout shift when content appears */}
+          <div className="min-h-[420px]">
+            {selectedBayIds.length === 0 ? (
+              <div className="py-8 text-center">
+                <p className="text-sm text-gray-500">No bays selected</p>
+                <p className="text-xs text-gray-400 mt-1">Click bays above to see calculations and parking allocation</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex flex-wrap gap-1">
                 {selectedBays.map((bay) => (
                   <span
                     key={bay.id}
@@ -613,9 +618,9 @@ export default function BayConfigurationSelector({
                     </span>
                   </span>
                 ))}
-              </div>
-              
-              <div className="flex items-center gap-2 p-3 bg-orange-50 rounded-lg">
+                </div>
+                
+                <div className="flex items-center gap-2 p-3 bg-orange-50 rounded-lg">
                 <Calculator className="h-4 w-4 text-orange-600" />
                 <div className="flex flex-col flex-1">
                   <span className="font-medium text-orange-900" key="fixed-total-area">
@@ -799,9 +804,10 @@ export default function BayConfigurationSelector({
                     Parking Ratio: {finalArea > 0 ? ((finalVehicularParking / finalArea) * 1000).toFixed(2) : '0.00'} vehicular spaces per 1,000 SF
                   </div>
                 </div>
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>

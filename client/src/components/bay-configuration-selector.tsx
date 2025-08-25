@@ -425,13 +425,16 @@ export default function BayConfigurationSelector({
                       )}
                     </div>
                   )}
-                  {/* Add storefront and speculative office symbols */}
+                  {/* Add storefront, speculative office, and restroom symbols */}
                   <div className="flex gap-1 mt-auto mb-1">
                     {originalBayConfig?.hasStorefrontEntry && (
                       <span className="text-orange-600 text-[14px]" title="Storefront Entry">🚪</span>
                     )}
                     {originalBayConfig?.hasSpeculativeOffice && (
                       <span className="text-blue-600 text-[14px]" title="Speculative Office">🏢</span>
+                    )}
+                    {originalBayConfig?.hasRestroom && (
+                      <span className="text-purple-600 text-[14px]" title="Restroom">🚻</span>
                     )}
                   </div>
                 </Button>
@@ -500,6 +503,10 @@ export default function BayConfigurationSelector({
                 <div className="flex items-center gap-1">
                   <span className="text-blue-600 text-[12px]">🏢</span>
                   <span>Speculative Office</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="text-purple-600 text-[12px]">🚻</span>
+                  <span>Restroom</span>
                 </div>
               </div>
               

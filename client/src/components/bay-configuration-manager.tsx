@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Trash2, Edit, Settings, Copy, ChevronDown, ChevronRight, Compass, Navigation, Printer, DoorOpen, Building2, GripVertical } from "lucide-react";
+import { Plus, Trash2, Edit, Settings, Copy, ChevronDown, ChevronRight, Compass, Navigation, Printer, DoorOpen, Building2, GripVertical, Users } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
@@ -46,7 +46,7 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
   const [mechanicalRoomSF, setMechanicalRoomSF] = useState<string>(
     property.mechanicalRoomSquareFootage?.toString() || "0"
   );
-  const [newBay, setNewBay] = useState({ startBay: "", endBay: "", squareFootage: "", standardDockDoors: "", oversizedDockDoors: "", hasStorefrontEntry: false, hasSpeculativeOffice: false });
+  const [newBay, setNewBay] = useState({ startBay: "", endBay: "", squareFootage: "", standardDockDoors: "", oversizedDockDoors: "", hasStorefrontEntry: false, hasSpeculativeOffice: false, hasRestroom: false });
   const [editingBay, setEditingBay] = useState<BayConfiguration | null>(null);
   const [showBayDetails, setShowBayDetails] = useState(false);
 
@@ -258,7 +258,8 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
       standardDockDoors: parseInt(newBay.standardDockDoors) || 0,
       oversizedDockDoors: parseInt(newBay.oversizedDockDoors) || 0,
       hasStorefrontEntry: newBay.hasStorefrontEntry,
-      hasSpeculativeOffice: newBay.hasSpeculativeOffice
+      hasSpeculativeOffice: newBay.hasSpeculativeOffice,
+      hasRestroom: newBay.hasRestroom
     };
 
     setBayConfigurations([...bayConfigurations, newBayConfig]);
@@ -272,7 +273,8 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
       standardDockDoors: "",
       oversizedDockDoors: "",
       hasStorefrontEntry: false,
-      hasSpeculativeOffice: false
+      hasSpeculativeOffice: false,
+      hasRestroom: false
     });
   };
 
@@ -313,7 +315,8 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
       standardDockDoors: "",
       oversizedDockDoors: "",
       hasStorefrontEntry: false,
-      hasSpeculativeOffice: false
+      hasSpeculativeOffice: false,
+      hasRestroom: false
     });
 
     toast({
@@ -335,7 +338,8 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
       standardDockDoors: bay.standardDockDoors?.toString() || "0",
       oversizedDockDoors: bay.oversizedDockDoors?.toString() || "0",
       hasStorefrontEntry: bay.hasStorefrontEntry || false,
-      hasSpeculativeOffice: bay.hasSpeculativeOffice || false
+      hasSpeculativeOffice: bay.hasSpeculativeOffice || false,
+      hasRestroom: bay.hasRestroom || false
     });
   };
 
@@ -368,7 +372,8 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
       standardDockDoors: parseInt(newBay.standardDockDoors) || 0,
       oversizedDockDoors: parseInt(newBay.oversizedDockDoors) || 0,
       hasStorefrontEntry: newBay.hasStorefrontEntry,
-      hasSpeculativeOffice: newBay.hasSpeculativeOffice
+      hasSpeculativeOffice: newBay.hasSpeculativeOffice,
+      hasRestroom: newBay.hasRestroom
     };
 
     setBayConfigurations(bayConfigurations.map(bay => 
@@ -385,7 +390,8 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
       standardDockDoors: "",
       oversizedDockDoors: "",
       hasStorefrontEntry: false,
-      hasSpeculativeOffice: false
+      hasSpeculativeOffice: false,
+      hasRestroom: false
     });
 
     toast({
@@ -404,7 +410,8 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
       standardDockDoors: "",
       oversizedDockDoors: "",
       hasStorefrontEntry: false,
-      hasSpeculativeOffice: false
+      hasSpeculativeOffice: false,
+      hasRestroom: false
     });
   };
 
@@ -759,6 +766,17 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                       Speculative Office
                     </Label>
                   </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="hasRestroom"
+                      checked={newBay.hasRestroom}
+                      onCheckedChange={(checked) => setNewBay({ ...newBay, hasRestroom: checked as boolean })}
+                    />
+                    <Label htmlFor="hasRestroom" className="text-sm font-medium flex items-center gap-1">
+                      <Users className="h-4 w-4" />
+                      Restroom
+                    </Label>
+                  </div>
                 </div>
                 <div className="flex gap-2">
                   <Button onClick={addBayConfiguration} className="w-full">
@@ -930,6 +948,17 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                                   <Label htmlFor="editHasSpeculativeOffice" className="text-sm font-medium flex items-center gap-1">
                                     <Building2 className="h-4 w-4" />
                                     Speculative Office
+                                  </Label>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <Checkbox 
+                                    id="editHasRestroom"
+                                    checked={newBay.hasRestroom}
+                                    onCheckedChange={(checked) => setNewBay({ ...newBay, hasRestroom: checked as boolean })}
+                                  />
+                                  <Label htmlFor="editHasRestroom" className="text-sm font-medium flex items-center gap-1">
+                                    <Users className="h-4 w-4" />
+                                    Restroom
                                   </Label>
                                 </div>
                               </div>

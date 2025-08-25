@@ -397,6 +397,7 @@ export type BayConfiguration = {
   rentableSquareFootage?: number; // Calculated rentable area (squareFootage + mechanicalRoomAllocation)
   hasStorefrontEntry?: boolean; // Whether this bay has storefront entry door(s)
   hasSpeculativeOffice?: boolean; // Whether this bay has speculative office space
+  hasRestroom?: boolean; // Whether this bay has restroom facilities
 };
 
 // Properties table

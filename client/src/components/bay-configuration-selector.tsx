@@ -387,65 +387,65 @@ export default function BayConfigurationSelector({
           
           {/* Bay Grid with Position Indicators */}
           <div className="relative">
-            {/* Single row layout representing building - REVERSE for east-to-west orientation */}
-            <div className="flex gap-0.5 justify-start overflow-x-scroll pb-2 flex-row-reverse bay-scroll" 
-                 style={{ minWidth: 'max-content' }}>
-            {individualBays.map((bay) => {
-              const isSelected = selectedBayIds.includes(bay.id);
-              const isLeased = leasedBayIds.includes(bay.id);
-              
-              // Get original bay config to check for storefront/office features
-              const originalBayConfig = bayConfigurations.find(b => b.id === bay.id);
-              
-              
-              return (
-                <Button
-                  key={bay.id}
-                  variant={isSelected ? "default" : "outline"}
-                  disabled={isLeased}
-                  className={`min-h-28 w-16 flex flex-col items-center justify-start text-xs p-1 flex-shrink-0 ${
-                    isLeased
-                      ? "bg-red-800 border-red-900 text-white cursor-not-allowed opacity-95"
-                      : isSelected 
-                        ? "bg-orange-600 hover:bg-orange-700 text-white border-orange-700" 
-                        : "hover:bg-orange-50 border-orange-200 bg-white text-gray-900"
-                  }`}
-                  onClick={() => toggleBaySelection(bay.id)}
-                >
-                  <div className="font-bold text-[10px] mb-1 leading-none truncate w-full text-center">{bay.bayName}</div>
-                  <div className="text-[9px] opacity-75 leading-none mb-1">
-                    {isLeased ? "LEA" : `${(bay.squareFootage / 1000).toFixed(0)}K`}
-                  </div>
-                  {(bay.standardDockDoors > 0 || bay.oversizedDockDoors > 0) && (
-                    <div className="text-[7px] opacity-60 leading-none mb-1 flex flex-col items-center">
-                      {bay.standardDockDoors > 0 && (
-                        <div className="leading-none">{bay.standardDockDoors} std</div>
+            {/* Single scrolling container for both bays and position indicators */}
+            <div className="overflow-x-scroll bay-scroll pb-3" style={{ minWidth: 'max-content' }}>
+              {/* Single row layout representing building - REVERSE for east-to-west orientation */}
+              <div className="flex gap-0.5 justify-start flex-row-reverse" style={{ minWidth: 'max-content' }}>
+              {individualBays.map((bay) => {
+                const isSelected = selectedBayIds.includes(bay.id);
+                const isLeased = leasedBayIds.includes(bay.id);
+                
+                // Get original bay config to check for storefront/office features
+                const originalBayConfig = bayConfigurations.find(b => b.id === bay.id);
+                
+                
+                return (
+                  <Button
+                    key={bay.id}
+                    variant={isSelected ? "default" : "outline"}
+                    disabled={isLeased}
+                    className={`min-h-28 w-16 flex flex-col items-center justify-start text-xs p-1 flex-shrink-0 ${
+                      isLeased
+                        ? "bg-red-800 border-red-900 text-white cursor-not-allowed opacity-95"
+                        : isSelected 
+                          ? "bg-orange-600 hover:bg-orange-700 text-white border-orange-700" 
+                          : "hover:bg-orange-50 border-orange-200 bg-white text-gray-900"
+                    }`}
+                    onClick={() => toggleBaySelection(bay.id)}
+                  >
+                    <div className="font-bold text-[10px] mb-1 leading-none truncate w-full text-center">{bay.bayName}</div>
+                    <div className="text-[9px] opacity-75 leading-none mb-1">
+                      {isLeased ? "LEA" : `${(bay.squareFootage / 1000).toFixed(0)}K`}
+                    </div>
+                    {(bay.standardDockDoors > 0 || bay.oversizedDockDoors > 0) && (
+                      <div className="text-[7px] opacity-60 leading-none mb-1 flex flex-col items-center">
+                        {bay.standardDockDoors > 0 && (
+                          <div className="leading-none">{bay.standardDockDoors} std</div>
+                        )}
+                        {bay.oversizedDockDoors > 0 && (
+                          <div className="leading-none">{bay.oversizedDockDoors} ovr</div>
+                        )}
+                      </div>
+                    )}
+                    {/* Add storefront, speculative office, and restroom symbols */}
+                    <div className="flex gap-1 mt-auto mb-1">
+                      {originalBayConfig?.hasStorefrontEntry && (
+                        <span className="text-orange-600 text-[14px]" title="Storefront Entry">🚪</span>
                       )}
-                      {bay.oversizedDockDoors > 0 && (
-                        <div className="leading-none">{bay.oversizedDockDoors} ovr</div>
+                      {originalBayConfig?.hasSpeculativeOffice && (
+                        <span className="text-blue-600 text-[14px]" title="Speculative Office">🏢</span>
+                      )}
+                      {originalBayConfig?.hasRestroom && (
+                        <span className="text-purple-600 text-[14px]" title="Restroom">🚻</span>
                       )}
                     </div>
-                  )}
-                  {/* Add storefront, speculative office, and restroom symbols */}
-                  <div className="flex gap-1 mt-auto mb-1">
-                    {originalBayConfig?.hasStorefrontEntry && (
-                      <span className="text-orange-600 text-[14px]" title="Storefront Entry">🚪</span>
-                    )}
-                    {originalBayConfig?.hasSpeculativeOffice && (
-                      <span className="text-blue-600 text-[14px]" title="Speculative Office">🏢</span>
-                    )}
-                    {originalBayConfig?.hasRestroom && (
-                      <span className="text-purple-600 text-[14px]" title="Restroom">🚻</span>
-                    )}
-                  </div>
-                </Button>
-              );
-            })}
-            </div>
-            
-            {/* Position indicators below bays */}
-            <div className="flex flex-row-reverse gap-0.5 justify-start overflow-x-scroll mt-1 bay-scroll" 
-                 style={{ minWidth: 'max-content' }}>
+                  </Button>
+                );
+              })}
+              </div>
+              
+              {/* Position indicators below bays */}
+              <div className="flex flex-row-reverse gap-0.5 justify-start mt-1" style={{ minWidth: 'max-content' }}>
               {individualBays.map((bay, index) => {
                 const totalBays = individualBays.length;
                 let position = "";
@@ -492,6 +492,7 @@ export default function BayConfigurationSelector({
                   </div>
                 );
               })}
+              </div>
             </div>
             
             {/* Symbol Legend */}

@@ -142,12 +142,12 @@ export function BaySelectionGrid({ property, onSelectionChange }: BaySelectionGr
                       <div className="text-center">
                         <div className="font-bold truncate w-full">{bay.bayName}</div>
                         <div className="text-xs mt-1">{bay.squareFootage.toLocaleString()} sq ft</div>
-                        <div className="flex justify-center mt-1 gap-1">
+                        <div className="flex justify-center mt-1 gap-1 text-xs">
                           {bay.hasStorefrontEntry && (
-                            <span className="text-orange-600" title="Storefront Entry">🚪</span>
+                            <span className="text-orange-600 text-sm" title="Storefront Entry">🚪</span>
                           )}
                           {bay.hasSpeculativeOffice && (
-                            <span className="text-blue-600" title="Speculative Office">🏢</span>
+                            <span className="text-blue-600 text-sm" title="Speculative Office">🏢</span>
                           )}
                         </div>
                       </div>
@@ -202,6 +202,8 @@ export function BaySelectionGrid({ property, onSelectionChange }: BaySelectionGr
                     className={getBayColor()}
                   >
                     {bay.bayName} ({bay.squareFootage.toLocaleString()} sq ft)
+                    {bay.hasStorefrontEntry && <span className="text-orange-600 ml-1" title="Storefront Entry">🚪</span>}
+                    {bay.hasSpeculativeOffice && <span className="text-blue-600 ml-1" title="Speculative Office">🏢</span>}
                   </Badge>
                 ))}
               </div>

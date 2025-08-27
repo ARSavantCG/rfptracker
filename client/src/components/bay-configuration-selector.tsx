@@ -128,6 +128,10 @@ export default function BayConfigurationSelector({
     // Use sequential numbering based on sorted array index
     const bayNumber = index + 1;
     
+    // Debug: Check for canBeSplit property
+    if (bayNumber <= 5) {
+      console.log(`🔍 Bay ${bayNumber} (${bayConfig.bayName}): canBeSplit = ${bayConfig.canBeSplit}`);
+    }
     
     const baseOptions = [];
     
@@ -146,7 +150,8 @@ export default function BayConfigurationSelector({
     });
     
     // Add split options only if this bay is marked as splittable
-    if (bayConfig.canBeSplit) {  
+    if (bayConfig.canBeSplit) {
+      console.log(`✅ Adding split options for Bay ${bayNumber}`);
       baseOptions.push(
         // North half
         {
@@ -185,6 +190,8 @@ export default function BayConfigurationSelector({
     return baseOptions;
   });
 
+  // Debug: Show total individual bays generated
+  console.log(`🏗️ Total individual bays generated: ${individualBays.length}`);
 
   // Calculate total rentable area from selected individual bays with proportional mechanical allocation
   const calculateTotalArea = () => {

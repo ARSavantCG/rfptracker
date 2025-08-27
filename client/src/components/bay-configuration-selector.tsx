@@ -553,6 +553,11 @@ export default function BayConfigurationSelector({
                 const isSelected = selectedBayIds.includes(bay.id);
                 const isLeased = leasedBayIds.includes(bay.id);
                 
+                // Debug log each bay being rendered
+                if (bay.bayNumber <= 5) {
+                  console.log(`🎨 Rendering bay: ${bay.bayName}, split: ${bay.isSplitBay}, side: ${bay.splitSide}`);
+                }
+                
                 // Get original bay config to check for storefront/office features
                 const originalBayConfig = bayConfigurations.find(b => b.id === bay.id);
                 

@@ -89,6 +89,11 @@ export default function BayConfigurationSelector({
   // Use fresh bay configurations if available, fallback to prop data
   const bayConfigurations = freshProperty?.bayConfigurations || property.bayConfigurations || [];
   
+  // Debug: Check which property we're actually working with
+  console.log('🏢 Property being displayed:', property.propertyName);
+  console.log('🏢 Property ID:', property.id);
+  console.log('🏢 Bay configurations count:', bayConfigurations.length);
+  
 
   
 

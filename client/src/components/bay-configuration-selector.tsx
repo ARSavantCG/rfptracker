@@ -89,8 +89,6 @@ export default function BayConfigurationSelector({
   // Use fresh bay configurations if available, fallback to prop data
   const bayConfigurations = freshProperty?.bayConfigurations || property.bayConfigurations || [];
   
-  // Debug log to see what we actually receive
-  console.log('🔍 Frontend bay configurations received:', bayConfigurations?.slice(0, 3));
 
   
 
@@ -125,8 +123,6 @@ export default function BayConfigurationSelector({
     // Use sequential numbering based on sorted array index
     const bayNumber = index + 1;
     
-    // Debug logging
-    console.log(`🔍 Bay ${bayNumber} (${bayConfig.bayName}): canBeSplit = ${bayConfig.canBeSplit}`);
     
     const baseOptions = [];
     
@@ -145,8 +141,7 @@ export default function BayConfigurationSelector({
     });
     
     // Add split options only if this bay is marked as splittable
-    if (bayConfig.canBeSplit) {
-      console.log(`✅ Adding split options for Bay ${bayNumber}`);  
+    if (bayConfig.canBeSplit) {  
       baseOptions.push(
         // North half
         {
@@ -181,14 +176,10 @@ export default function BayConfigurationSelector({
       );
     }
     
-    console.log(`🏗️ Bay ${bayNumber} generated ${baseOptions.length} options:`, baseOptions.map(b => b.bayName));
     
     return baseOptions;
   });
 
-  // Debug logs after individualBays is computed
-  console.log('🔍 Total individual bays generated:', individualBays.length);
-  console.log('🔍 Individual bays list:', individualBays.map(b => ({ name: b.bayName, split: b.isSplitBay, side: b.splitSide })));
 
   // Calculate total rentable area from selected individual bays with proportional mechanical allocation
   const calculateTotalArea = () => {
@@ -553,10 +544,6 @@ export default function BayConfigurationSelector({
                 const isSelected = selectedBayIds.includes(bay.id);
                 const isLeased = leasedBayIds.includes(bay.id);
                 
-                // Debug log each bay being rendered
-                if (bay.bayNumber <= 5) {
-                  console.log(`🎨 Rendering bay: ${bay.bayName}, split: ${bay.isSplitBay}, side: ${bay.splitSide}`);
-                }
                 
                 // Get original bay config to check for storefront/office features
                 const originalBayConfig = bayConfigurations.find(b => b.id === bay.id);

@@ -3058,17 +3058,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.setHeader('Expires', '0');
       res.setHeader('ETag', `"${Date.now()}"`);
       
-      // Debug MG Westside specifically to see canBeSplit data
-      const mgWestside = properties.find(p => p.propertyName === 'MG Westside');
-      if (mgWestside) {
-        console.log('🔍 MG Westside property data:');
-        console.log('Bay configurations:', JSON.stringify(mgWestside.bayConfigurations?.slice(0, 5), null, 2));
-        
-        // Check specific bays for canBeSplit
-        mgWestside.bayConfigurations?.slice(0, 5).forEach((bay: any, index: number) => {
-          console.log(`🔍 Bay ${index + 1} - canBeSplit: ${bay.canBeSplit}, splitNorthDockDoors: ${bay.splitNorthDockDoors}`);
-        });
-      }
       
       // Debug log the total warehouse area for property 1
       const property1 = properties.find(p => p.id === 1);

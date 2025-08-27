@@ -181,6 +181,8 @@ export default function BayConfigurationSelector({
       );
     }
     
+    console.log(`🏗️ Bay ${bayNumber} generated ${baseOptions.length} options:`, baseOptions.map(b => b.bayName));
+    
     return baseOptions;
   });
 

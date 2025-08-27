@@ -389,7 +389,7 @@ export type UpdateBidAlternate = z.infer<typeof updateBidAlternateSchema>;
 // Simple bay configuration type
 export type BayConfiguration = {
   id: string;
-  bayName: string; // e.g., "Bay 1-2", "Bay 2-3", etc.
+  bayName: string; // e.g., "Bay 1-2", "Bay 2-3", etc. For split bays: "Bay 1-2 North", "Bay 1-2 South"
   squareFootage: number;
   standardDockDoors: number; // Count of standard overhead dock doors
   oversizedDockDoors: number; // Count of oversized dock doors
@@ -398,6 +398,11 @@ export type BayConfiguration = {
   hasStorefrontEntry?: boolean; // Whether this bay has storefront entry door(s)
   hasSpeculativeOffice?: boolean; // Whether this bay has speculative office space
   hasRestroom?: boolean; // Whether this bay has restroom facilities
+  
+  // Cross-dock building support
+  isSplitBay?: boolean; // Whether this represents a split portion of a cross-dock bay
+  splitSide?: "north" | "south"; // Which side of the split bay (north dock side vs south dock side)
+  parentBayId?: string; // Original bay ID this split came from (for tracking)
 };
 
 // Properties table
@@ -406,6 +411,7 @@ export const properties = pgTable("properties", {
   propertyName: text("property_name").notNull(),
   building: text("building").notNull(), // A, B, 1, 2, etc.
   isSingleBuilding: boolean("is_single_building").default(false),
+  buildingType: text("building_type").notNull().default("rear-loaded"), // "rear-loaded" or "cross-dock"
   streetAddress: text("street_address").notNull(),
   city: text("city").notNull(),
   state: text("state").notNull(),

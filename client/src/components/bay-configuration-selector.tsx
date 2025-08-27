@@ -91,8 +91,6 @@ export default function BayConfigurationSelector({
   
   // Debug log to see what we actually receive
   console.log('🔍 Frontend bay configurations received:', bayConfigurations?.slice(0, 3));
-  console.log('🔍 Total individual bays generated:', individualBays.length);
-  console.log('🔍 Individual bays list:', individualBays.map(b => ({ name: b.bayName, split: b.isSplitBay, side: b.splitSide })));
 
   
 
@@ -187,6 +185,10 @@ export default function BayConfigurationSelector({
     
     return baseOptions;
   });
+
+  // Debug logs after individualBays is computed
+  console.log('🔍 Total individual bays generated:', individualBays.length);
+  console.log('🔍 Individual bays list:', individualBays.map(b => ({ name: b.bayName, split: b.isSplitBay, side: b.splitSide })));
 
   // Calculate total rentable area from selected individual bays with proportional mechanical allocation
   const calculateTotalArea = () => {

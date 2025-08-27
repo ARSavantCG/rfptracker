@@ -120,6 +120,9 @@ export default function BayConfigurationSelector({
     // Use sequential numbering based on sorted array index
     const bayNumber = index + 1;
     
+    // Debug logging
+    console.log(`🔍 Bay ${bayNumber} (${bayConfig.bayName}): canBeSplit = ${bayConfig.canBeSplit}`);
+    
     const baseOptions = [];
     
     // Always include the full bay option
@@ -138,6 +141,7 @@ export default function BayConfigurationSelector({
     
     // Add split options only if this bay is marked as splittable
     if (bayConfig.canBeSplit) {
+      console.log(`✅ Adding split options for Bay ${bayNumber}`);  
       baseOptions.push(
         // North half
         {

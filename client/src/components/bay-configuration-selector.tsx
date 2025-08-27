@@ -82,10 +82,15 @@ export default function BayConfigurationSelector({
     enabled: !!property.id,
     staleTime: 0, // Always fetch fresh data
     refetchOnMount: true, // Refetch when component mounts
+    refetchOnWindowFocus: false, // Don't refetch on window focus
+    cacheTime: 0, // Don't cache the result
   });
 
   // Use fresh bay configurations if available, fallback to prop data
   const bayConfigurations = freshProperty?.bayConfigurations || property.bayConfigurations || [];
+  
+  // Debug log to see what we actually receive
+  console.log('🔍 Frontend bay configurations received:', bayConfigurations?.slice(0, 3));
 
   
 

@@ -344,6 +344,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
       return response.json();
     },
     onSuccess: (data) => {
+      console.log('✅ Update successful:', data);
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
       toast({
@@ -354,8 +355,9 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
       onClose();
     },
     onError: (error) => {
+      console.error('❌ Update failed:', error);
       toast({
-        title: "Error",
+        title: "Error", 
         description: error instanceof Error ? error.message : "Failed to update RFP",
         variant: "destructive",
         duration: 6000,
@@ -481,7 +483,11 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit((data) => updateMutation.mutate(data))} className="space-y-4">
+          <form onSubmit={form.handleSubmit((data) => {
+            console.log('🔄 Form submission attempt:', data);
+            console.log('🔍 Form errors:', form.formState.errors);
+            updateMutation.mutate(data);
+          })} className="space-y-4">
             <FormField
               control={form.control}
               name="rfpNumber"

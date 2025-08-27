@@ -919,7 +919,21 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
               ) : (
                 <>
                   <Button 
-                    type="submit" 
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      console.log('🔘 Update RFP button clicked');
+                      console.log('🔍 Form state valid:', form.formState.isValid);
+                      console.log('🔍 Form errors:', form.formState.errors);
+                      const data = form.getValues();
+                      console.log('🔄 Form data:', data);
+                      
+                      // Trigger form validation and submission
+                      form.handleSubmit((validData) => {
+                        console.log('✅ Form validation passed, submitting:', validData);
+                        updateMutation.mutate(validData);
+                      })();
+                    }}
                     disabled={updateMutation.isPending || updateAndAdvanceMutation.isPending}
                   >
                     <Save className="h-4 w-4 mr-2" />

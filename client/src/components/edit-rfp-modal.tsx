@@ -33,7 +33,7 @@ const editRfpSchema = z.object({
   requestTypes: z.array(z.string()).min(1, "At least one request type is required"),
   notes: z.string(),
   status: z.enum(["received", "in-progress", "completed", "on-hold"]),
-  workflowPhase: z.enum(["rfp-entry", "invitation-to-bid", "bid-collection", "evaluation", "award", "publish"]),
+  workflowPhase: z.enum(["rfp-entry", "rfp-validation", "invitation-to-bid", "bid-collection", "evaluation", "award", "publish"]),
 });
 
 type EditRfpFormData = z.infer<typeof editRfpSchema>;
@@ -178,7 +178,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
         requestTypes: rfp.id === 0 ? [] : (rfp.requestTypes || []), // Empty for new alternates
         notes: rfp.notes || "",
         status: rfp.status as "received" | "in-progress" | "completed" | "on-hold",
-        workflowPhase: (rfp.workflowPhase || "rfp-entry") as "rfp-entry" | "invitation-to-bid" | "bid-collection" | "evaluation" | "award",
+        workflowPhase: (rfp.workflowPhase || "rfp-entry") as "rfp-entry" | "rfp-validation" | "invitation-to-bid" | "bid-collection" | "evaluation" | "award" | "publish",
       });
 
       // Set selected property for bay configuration

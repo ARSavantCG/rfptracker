@@ -24,48 +24,38 @@ export default function BayConfigurationSelector({
     initialSelectedBays.map(bay => bay.id)
   );
 
-  // Handle bay selection with conflict prevention for cross-dock buildings
+  // Handle bay selection with conflict prevention for splittable bays
   const handleBaySelection = (bayId: string, isSelected: boolean) => {
-    if (property.buildingType === 'cross-dock') {
-      // Find the bay that was clicked
-      const clickedBay = individualBays.find(bay => bay.id === bayId);
+    const clickedBay = individualBays.find(bay => bay.id === bayId);
+    
+    if (clickedBay) {
+      let newSelection = [...selectedBayIds];
       
-      if (clickedBay) {
-        let newSelection = [...selectedBayIds];
-        
-        if (isSelected) {
-          // Adding a bay - remove conflicting bays first
-          if (clickedBay.isSplitBay) {
-            // Removing a split bay, also remove the full bay and other half
-            newSelection = newSelection.filter(id => 
-              id !== clickedBay.parentBayId && 
-              id !== `${clickedBay.parentBayId}_north` && 
-              id !== `${clickedBay.parentBayId}_south`
-            );
-          } else {
-            // Removing a full bay, also remove split bays
-            newSelection = newSelection.filter(id => 
-              id !== `${clickedBay.id}_north` && 
-              id !== `${clickedBay.id}_south`
-            );
-          }
-          
-          // Add the selected bay
-          newSelection.push(bayId);
+      if (isSelected) {
+        // Adding a bay - remove conflicting bays first
+        if (clickedBay.isSplitBay) {
+          // Selecting a split bay, remove the full bay and other half
+          newSelection = newSelection.filter(id => 
+            id !== clickedBay.parentBayId && 
+            id !== `${clickedBay.parentBayId}_north` && 
+            id !== `${clickedBay.parentBayId}_south`
+          );
         } else {
-          // Removing a bay - just remove it
-          newSelection = newSelection.filter(id => id !== bayId);
+          // Selecting a full bay, remove any split bays for this bay
+          newSelection = newSelection.filter(id => 
+            id !== `${clickedBay.id}_north` && 
+            id !== `${clickedBay.id}_south`
+          );
         }
         
-        setSelectedBayIds(newSelection);
-      }
-    } else {
-      // Regular rear-loaded building behavior
-      if (isSelected) {
-        setSelectedBayIds([...selectedBayIds, bayId]);
+        // Add the selected bay
+        newSelection.push(bayId);
       } else {
-        setSelectedBayIds(selectedBayIds.filter(id => id !== bayId));
+        // Removing a bay - just remove it
+        newSelection = newSelection.filter(id => id !== bayId);
       }
+      
+      setSelectedBayIds(newSelection);
     }
   };
   const [isOverrideMode, setIsOverrideMode] = useState<boolean>(initialOverrideArea !== undefined);
@@ -116,7 +106,7 @@ export default function BayConfigurationSelector({
     return aStart - bStart;
   });
 
-  // Generate individual bays - for cross-dock buildings, create split bay options
+  // Generate individual bays - create split options only for bays marked as splittable
   const individualBays = sortedBayConfigs.flatMap((bayConfig, index) => {
     if (!bayConfig || !bayConfig.bayName || !bayConfig.squareFootage || bayConfig.squareFootage === 0) {
       return [];
@@ -130,22 +120,25 @@ export default function BayConfigurationSelector({
     // Use sequential numbering based on sorted array index
     const bayNumber = index + 1;
     
-    // For cross-dock buildings, offer both full bay and split bay options
-    if (property.buildingType === 'cross-dock') {
-      return [
-        // Full bay option
-        {
-          id: bayConfig.id,
-          bayNumber: bayNumber,
-          bayName: `Bay ${bayNumber}`,
-          originalBayName: bayConfig.bayName,
-          squareFootage: bayConfig.squareFootage,
-          standardDockDoors: bayConfig.standardDockDoors || 0,
-          oversizedDockDoors: bayConfig.oversizedDockDoors || 0,
-          hasStorefrontEntry: bayConfig.hasStorefrontEntry || false,
-          hasSpeculativeOffice: bayConfig.hasSpeculativeOffice || false,
-          isSplitBay: false
-        },
+    const baseOptions = [];
+    
+    // Always include the full bay option
+    baseOptions.push({
+      id: bayConfig.id,
+      bayNumber: bayNumber,
+      bayName: `Bay ${bayNumber}`,
+      originalBayName: bayConfig.bayName,
+      squareFootage: bayConfig.squareFootage,
+      standardDockDoors: bayConfig.standardDockDoors || 0,
+      oversizedDockDoors: bayConfig.oversizedDockDoors || 0,
+      hasStorefrontEntry: bayConfig.hasStorefrontEntry || false,
+      hasSpeculativeOffice: bayConfig.hasSpeculativeOffice || false,
+      isSplitBay: false
+    });
+    
+    // Add split options only if this bay is marked as splittable
+    if (bayConfig.canBeSplit) {
+      baseOptions.push(
         // North half
         {
           id: `${bayConfig.id}_north`,
@@ -153,8 +146,8 @@ export default function BayConfigurationSelector({
           bayName: `Bay ${bayNumber} North`,
           originalBayName: `${bayConfig.bayName} North`,
           squareFootage: Math.floor(bayConfig.squareFootage / 2),
-          standardDockDoors: Math.floor((bayConfig.standardDockDoors || 0) / 2),
-          oversizedDockDoors: Math.floor((bayConfig.oversizedDockDoors || 0) / 2),
+          standardDockDoors: bayConfig.splitNorthDockDoors || Math.floor((bayConfig.standardDockDoors || 0) / 2),
+          oversizedDockDoors: bayConfig.splitNorthOversizedDoors || Math.floor((bayConfig.oversizedDockDoors || 0) / 2),
           hasStorefrontEntry: bayConfig.hasStorefrontEntry || false,
           hasSpeculativeOffice: bayConfig.hasSpeculativeOffice || false,
           isSplitBay: true,
@@ -168,30 +161,18 @@ export default function BayConfigurationSelector({
           bayName: `Bay ${bayNumber} South`,
           originalBayName: `${bayConfig.bayName} South`,
           squareFootage: Math.ceil(bayConfig.squareFootage / 2), // Ceil to handle odd numbers
-          standardDockDoors: Math.ceil((bayConfig.standardDockDoors || 0) / 2),
-          oversizedDockDoors: Math.ceil((bayConfig.oversizedDockDoors || 0) / 2),
+          standardDockDoors: bayConfig.splitSouthDockDoors || Math.ceil((bayConfig.standardDockDoors || 0) / 2),
+          oversizedDockDoors: bayConfig.splitSouthOversizedDoors || Math.ceil((bayConfig.oversizedDockDoors || 0) / 2),
           hasStorefrontEntry: false, // Typically storefront is on one side only
           hasSpeculativeOffice: false, // Office typically on one side only
           isSplitBay: true,
           splitSide: 'south' as const,
           parentBayId: bayConfig.id
         }
-      ];
-    } else {
-      // Regular rear-loaded building - full bays only
-      return [{
-        id: bayConfig.id,
-        bayNumber: bayNumber,
-        bayName: `Bay ${bayNumber}`,
-        originalBayName: bayConfig.bayName,
-        squareFootage: bayConfig.squareFootage,
-        standardDockDoors: bayConfig.standardDockDoors || 0,
-        oversizedDockDoors: bayConfig.oversizedDockDoors || 0,
-        hasStorefrontEntry: bayConfig.hasStorefrontEntry || false,
-        hasSpeculativeOffice: bayConfig.hasSpeculativeOffice || false,
-        isSplitBay: false
-      }];
+      );
     }
+    
+    return baseOptions;
   });
 
   // Calculate total rentable area from selected individual bays with proportional mechanical allocation
@@ -465,11 +446,6 @@ export default function BayConfigurationSelector({
         <CardTitle className="flex items-center gap-2">
           <Grid3x3 className="h-5 w-5 text-orange-600" />
           Bay Configuration Selection
-          {property.buildingType === 'cross-dock' && (
-            <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-medium">
-              Cross-Dock Building
-            </span>
-          )}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -478,10 +454,7 @@ export default function BayConfigurationSelector({
           <div className="mb-2">
             <Label className="text-[11px] font-medium text-gray-700">Building Layout</Label>
             <p className="text-[9px] text-gray-500">
-              {property.buildingType === 'cross-dock' 
-                ? "Cross-dock building: Select full bays OR north/south halves (split options). Selecting one option automatically deselects conflicting options."
-                : "Click bays to select for rentable area calculation."
-              } Red bays are already leased.
+              Click bays to select for rentable area calculation. Some bays can be split into north/south halves - selecting one option automatically deselects conflicting options. Red bays are already leased.
             </p>
           </div>
 

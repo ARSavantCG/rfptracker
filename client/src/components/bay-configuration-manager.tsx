@@ -46,7 +46,23 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
   const [mechanicalRoomSF, setMechanicalRoomSF] = useState<string>(
     property.mechanicalRoomSquareFootage?.toString() || "0"
   );
-  const [newBay, setNewBay] = useState({ startBay: "", endBay: "", squareFootage: "", standardDockDoors: "", oversizedDockDoors: "", hasStorefrontEntry: false, hasSpeculativeOffice: false, hasRestroom: false });
+  const [newBay, setNewBay] = useState({ 
+    startBay: "", 
+    endBay: "", 
+    squareFootage: "", 
+    standardDockDoors: "", 
+    oversizedDockDoors: "", 
+    hasStorefrontEntry: false, 
+    hasSpeculativeOffice: false, 
+    hasRestroom: false,
+    canBeSplit: false,
+    splitNorthSquareFootage: "",
+    splitSouthSquareFootage: "",
+    splitNorthDockDoors: "",
+    splitSouthDockDoors: "",
+    splitNorthOversizedDoors: "",
+    splitSouthOversizedDoors: ""
+  });
   const [editingBay, setEditingBay] = useState<BayConfiguration | null>(null);
   const [showBayDetails, setShowBayDetails] = useState(false);
 
@@ -259,7 +275,12 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
       oversizedDockDoors: parseInt(newBay.oversizedDockDoors) || 0,
       hasStorefrontEntry: newBay.hasStorefrontEntry,
       hasSpeculativeOffice: newBay.hasSpeculativeOffice,
-      hasRestroom: newBay.hasRestroom
+      hasRestroom: newBay.hasRestroom,
+      canBeSplit: newBay.canBeSplit,
+      splitNorthDockDoors: newBay.canBeSplit ? (parseInt(newBay.splitNorthDockDoors) || 0) : undefined,
+      splitSouthDockDoors: newBay.canBeSplit ? (parseInt(newBay.splitSouthDockDoors) || 0) : undefined,
+      splitNorthOversizedDoors: newBay.canBeSplit ? (parseInt(newBay.splitNorthOversizedDoors) || 0) : undefined,
+      splitSouthOversizedDoors: newBay.canBeSplit ? (parseInt(newBay.splitSouthOversizedDoors) || 0) : undefined
     };
 
     setBayConfigurations([...bayConfigurations, newBayConfig]);
@@ -274,7 +295,14 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
       oversizedDockDoors: "",
       hasStorefrontEntry: false,
       hasSpeculativeOffice: false,
-      hasRestroom: false
+      hasRestroom: false,
+      canBeSplit: false,
+      splitNorthSquareFootage: "",
+      splitSouthSquareFootage: "",
+      splitNorthDockDoors: "",
+      splitSouthDockDoors: "",
+      splitNorthOversizedDoors: "",
+      splitSouthOversizedDoors: ""
     });
   };
 
@@ -316,7 +344,14 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
       oversizedDockDoors: "",
       hasStorefrontEntry: false,
       hasSpeculativeOffice: false,
-      hasRestroom: false
+      hasRestroom: false,
+      canBeSplit: false,
+      splitNorthSquareFootage: "",
+      splitSouthSquareFootage: "",
+      splitNorthDockDoors: "",
+      splitSouthDockDoors: "",
+      splitNorthOversizedDoors: "",
+      splitSouthOversizedDoors: ""
     });
 
     toast({
@@ -339,7 +374,14 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
       oversizedDockDoors: bay.oversizedDockDoors?.toString() || "0",
       hasStorefrontEntry: bay.hasStorefrontEntry || false,
       hasSpeculativeOffice: bay.hasSpeculativeOffice || false,
-      hasRestroom: bay.hasRestroom || false
+      hasRestroom: bay.hasRestroom || false,
+      canBeSplit: bay.canBeSplit || false,
+      splitNorthSquareFootage: bay.canBeSplit ? Math.floor(bay.squareFootage / 2).toString() : "",
+      splitSouthSquareFootage: bay.canBeSplit ? Math.ceil(bay.squareFootage / 2).toString() : "",
+      splitNorthDockDoors: bay.splitNorthDockDoors?.toString() || "",
+      splitSouthDockDoors: bay.splitSouthDockDoors?.toString() || "",
+      splitNorthOversizedDoors: bay.splitNorthOversizedDoors?.toString() || "",
+      splitSouthOversizedDoors: bay.splitSouthOversizedDoors?.toString() || ""
     });
   };
 
@@ -373,7 +415,12 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
       oversizedDockDoors: parseInt(newBay.oversizedDockDoors) || 0,
       hasStorefrontEntry: newBay.hasStorefrontEntry,
       hasSpeculativeOffice: newBay.hasSpeculativeOffice,
-      hasRestroom: newBay.hasRestroom
+      hasRestroom: newBay.hasRestroom,
+      canBeSplit: newBay.canBeSplit,
+      splitNorthDockDoors: newBay.canBeSplit ? (parseInt(newBay.splitNorthDockDoors) || 0) : undefined,
+      splitSouthDockDoors: newBay.canBeSplit ? (parseInt(newBay.splitSouthDockDoors) || 0) : undefined,
+      splitNorthOversizedDoors: newBay.canBeSplit ? (parseInt(newBay.splitNorthOversizedDoors) || 0) : undefined,
+      splitSouthOversizedDoors: newBay.canBeSplit ? (parseInt(newBay.splitSouthOversizedDoors) || 0) : undefined
     };
 
     setBayConfigurations(bayConfigurations.map(bay => 
@@ -391,7 +438,14 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
       oversizedDockDoors: "",
       hasStorefrontEntry: false,
       hasSpeculativeOffice: false,
-      hasRestroom: false
+      hasRestroom: false,
+      canBeSplit: false,
+      splitNorthSquareFootage: "",
+      splitSouthSquareFootage: "",
+      splitNorthDockDoors: "",
+      splitSouthDockDoors: "",
+      splitNorthOversizedDoors: "",
+      splitSouthOversizedDoors: ""
     });
 
     toast({
@@ -411,7 +465,14 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
       oversizedDockDoors: "",
       hasStorefrontEntry: false,
       hasSpeculativeOffice: false,
-      hasRestroom: false
+      hasRestroom: false,
+      canBeSplit: false,
+      splitNorthSquareFootage: "",
+      splitSouthSquareFootage: "",
+      splitNorthDockDoors: "",
+      splitSouthDockDoors: "",
+      splitNorthOversizedDoors: "",
+      splitSouthOversizedDoors: ""
     });
   };
 
@@ -777,7 +838,95 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                       Restroom
                     </Label>
                   </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="canBeSplit"
+                      checked={newBay.canBeSplit}
+                      onCheckedChange={(checked) => setNewBay({ ...newBay, canBeSplit: checked as boolean })}
+                    />
+                    <Label htmlFor="canBeSplit" className="text-sm font-medium flex items-center gap-1">
+                      <GripVertical className="h-4 w-4" />
+                      Can be split into North/South halves
+                    </Label>
+                  </div>
                 </div>
+
+                {/* Split Bay Configuration - only show when canBeSplit is checked */}
+                {newBay.canBeSplit && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-4">
+                    <h4 className="font-medium text-blue-900 text-sm flex items-center gap-2">
+                      <GripVertical className="h-4 w-4" />
+                      Split Bay Configuration
+                    </h4>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-3">
+                        <h5 className="font-medium text-sm text-blue-800">North Half</h5>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="space-y-1">
+                            <Label className="text-xs">Standard Doors</Label>
+                            <Input
+                              type="text"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
+                              value={newBay.splitNorthDockDoors}
+                              onChange={(e) => setNewBay({ ...newBay, splitNorthDockDoors: e.target.value })}
+                              className="text-sm"
+                              placeholder="0"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Oversized Doors</Label>
+                            <Input
+                              type="text"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
+                              value={newBay.splitNorthOversizedDoors}
+                              onChange={(e) => setNewBay({ ...newBay, splitNorthOversizedDoors: e.target.value })}
+                              className="text-sm"
+                              placeholder="0"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-3">
+                        <h5 className="font-medium text-sm text-green-800">South Half</h5>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="space-y-1">
+                            <Label className="text-xs">Standard Doors</Label>
+                            <Input
+                              type="text"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
+                              value={newBay.splitSouthDockDoors}
+                              onChange={(e) => setNewBay({ ...newBay, splitSouthDockDoors: e.target.value })}
+                              className="text-sm"
+                              placeholder="0"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Oversized Doors</Label>
+                            <Input
+                              type="text"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
+                              value={newBay.splitSouthOversizedDoors}
+                              onChange={(e) => setNewBay({ ...newBay, splitSouthOversizedDoors: e.target.value })}
+                              className="text-sm"
+                              placeholder="0"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="text-xs text-blue-600 bg-blue-100 p-2 rounded">
+                      💡 When this bay is split, each half will have the specified dock doors. Square footage will be divided equally (North: {Math.floor((parseInt(newBay.squareFootage) || 0) / 2).toLocaleString()} SF, South: {Math.ceil((parseInt(newBay.squareFootage) || 0) / 2).toLocaleString()} SF)
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex gap-2">
                   <Button onClick={addBayConfiguration} className="w-full">
                     <Plus className="h-4 w-4 mr-2" />
@@ -961,7 +1110,95 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                                     Restroom
                                   </Label>
                                 </div>
+                                <div className="flex items-center space-x-2">
+                                  <Checkbox 
+                                    id="editCanBeSplit"
+                                    checked={newBay.canBeSplit}
+                                    onCheckedChange={(checked) => setNewBay({ ...newBay, canBeSplit: checked as boolean })}
+                                  />
+                                  <Label htmlFor="editCanBeSplit" className="text-sm font-medium flex items-center gap-1">
+                                    <GripVertical className="h-4 w-4" />
+                                    Can be split into North/South halves
+                                  </Label>
+                                </div>
                               </div>
+
+                              {/* Split Bay Configuration for Edit - only show when canBeSplit is checked */}
+                              {newBay.canBeSplit && (
+                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-3">
+                                  <h4 className="font-medium text-blue-900 text-sm flex items-center gap-2">
+                                    <GripVertical className="h-4 w-4" />
+                                    Split Bay Configuration
+                                  </h4>
+                                  
+                                  <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-2">
+                                      <h5 className="font-medium text-xs text-blue-800">North Half</h5>
+                                      <div className="grid grid-cols-2 gap-2">
+                                        <div className="space-y-1">
+                                          <Label className="text-xs">Standard Doors</Label>
+                                          <Input
+                                            type="text"
+                                            inputMode="numeric"
+                                            pattern="[0-9]*"
+                                            value={newBay.splitNorthDockDoors}
+                                            onChange={(e) => setNewBay({ ...newBay, splitNorthDockDoors: e.target.value })}
+                                            className="text-xs h-8"
+                                            placeholder="0"
+                                          />
+                                        </div>
+                                        <div className="space-y-1">
+                                          <Label className="text-xs">Oversized Doors</Label>
+                                          <Input
+                                            type="text"
+                                            inputMode="numeric"
+                                            pattern="[0-9]*"
+                                            value={newBay.splitNorthOversizedDoors}
+                                            onChange={(e) => setNewBay({ ...newBay, splitNorthOversizedDoors: e.target.value })}
+                                            className="text-xs h-8"
+                                            placeholder="0"
+                                          />
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                      <h5 className="font-medium text-xs text-green-800">South Half</h5>
+                                      <div className="grid grid-cols-2 gap-2">
+                                        <div className="space-y-1">
+                                          <Label className="text-xs">Standard Doors</Label>
+                                          <Input
+                                            type="text"
+                                            inputMode="numeric"
+                                            pattern="[0-9]*"
+                                            value={newBay.splitSouthDockDoors}
+                                            onChange={(e) => setNewBay({ ...newBay, splitSouthDockDoors: e.target.value })}
+                                            className="text-xs h-8"
+                                            placeholder="0"
+                                          />
+                                        </div>
+                                        <div className="space-y-1">
+                                          <Label className="text-xs">Oversized Doors</Label>
+                                          <Input
+                                            type="text"
+                                            inputMode="numeric"
+                                            pattern="[0-9]*"
+                                            value={newBay.splitSouthOversizedDoors}
+                                            onChange={(e) => setNewBay({ ...newBay, splitSouthOversizedDoors: e.target.value })}
+                                            className="text-xs h-8"
+                                            placeholder="0"
+                                          />
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  
+                                  <div className="text-xs text-blue-600 bg-blue-100 p-2 rounded">
+                                    💡 When split: North {Math.floor((parseInt(newBay.squareFootage) || 0) / 2).toLocaleString()} SF, South {Math.ceil((parseInt(newBay.squareFootage) || 0) / 2).toLocaleString()} SF
+                                  </div>
+                                </div>
+                              )}
+
                               <div className="flex gap-2">
                                 <Button onClick={saveEditedBay} className="flex-1">
                                   <Edit className="h-4 w-4 mr-2" />

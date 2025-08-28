@@ -161,9 +161,9 @@ export default function BayConfigurationSelector({
           squareFootage: bayConfig.splitNorthSquareFootage || Math.floor(squareFootage / 2),
           standardDockDoors: bayConfig.splitNorthDockDoors || Math.floor((bayConfig.standardDockDoors || 0) / 2),
           oversizedDockDoors: bayConfig.splitNorthOversizedDoors || Math.floor((bayConfig.oversizedDockDoors || 0) / 2),
-          hasStorefrontEntry: bayConfig.splitNorthStorefront || false,
-          hasSpeculativeOffice: bayConfig.splitNorthOffice || false,
-          hasRestroom: bayConfig.splitNorthRestroom || false,
+          hasStorefrontEntry: bayConfig.splitNorthStorefront === true,
+          hasSpeculativeOffice: bayConfig.splitNorthOffice === true,
+          hasRestroom: bayConfig.splitNorthRestroom === true,
           isSplitBay: true,
           splitSide: 'north' as const,
           parentBayId: bayConfig.id
@@ -177,9 +177,9 @@ export default function BayConfigurationSelector({
           squareFootage: bayConfig.splitSouthSquareFootage || Math.ceil(squareFootage / 2), // Use custom or fallback to ceil
           standardDockDoors: bayConfig.splitSouthDockDoors || Math.ceil((bayConfig.standardDockDoors || 0) / 2),
           oversizedDockDoors: bayConfig.splitSouthOversizedDoors || Math.ceil((bayConfig.oversizedDockDoors || 0) / 2),
-          hasStorefrontEntry: bayConfig.splitSouthStorefront || false,
-          hasSpeculativeOffice: bayConfig.splitSouthOffice || false,
-          hasRestroom: bayConfig.splitSouthRestroom || false,
+          hasStorefrontEntry: bayConfig.splitSouthStorefront === true,
+          hasSpeculativeOffice: bayConfig.splitSouthOffice === true,
+          hasRestroom: bayConfig.splitSouthRestroom === true,
           isSplitBay: true,
           splitSide: 'south' as const,
           parentBayId: bayConfig.id

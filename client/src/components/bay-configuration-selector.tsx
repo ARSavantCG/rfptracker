@@ -63,6 +63,15 @@ export default function BayConfigurationSelector({
   // Use bay configurations from the property prop (parent component fetches fresh data)
   const bayConfigurations = property.bayConfigurations || [];
   
+  // Debug log to see what we're receiving
+  console.log('🔍 BayConfigurationSelector receiving:', {
+    propertyId: property.id,
+    propertyName: property.propertyName,
+    bayConfigurations: bayConfigurations.length,
+    firstBayConfig: bayConfigurations[0],
+    property: property
+  });
+  
   
   
 

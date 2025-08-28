@@ -613,7 +613,7 @@ export default function BayConfigurationSelector({
                               key={bay.id}
                               variant={isSelected ? "default" : "outline"}
                               disabled={isLeased}
-                              className={`${isSplitBay ? 'h-20' : 'h-[145px]'} w-16 flex flex-col items-center justify-start text-xs p-1 flex-shrink-0 overflow-hidden ${splitSideClass} ${
+                              className={`${isSplitBay ? 'h-20' : 'h-[143px]'} w-16 flex flex-col items-center justify-start text-xs p-1 flex-shrink-0 overflow-hidden ${splitSideClass} ${
                                 isLeased
                                   ? "bg-red-800 border-red-900 text-white cursor-not-allowed opacity-95"
                                   : isSelected 

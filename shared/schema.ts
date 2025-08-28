@@ -405,6 +405,16 @@ export type BayConfiguration = {
   splitSouthDockDoors?: number; // How many dock doors would be on south side if split
   splitNorthOversizedDoors?: number; // How many oversized doors on north side if split
   splitSouthOversizedDoors?: number; // How many oversized doors on south side if split
+  splitNorthSquareFootage?: string; // Square footage for north half (can be formula)
+  splitSouthSquareFootage?: string; // Square footage for south half (can be formula)
+  
+  // Split bay amenities
+  splitNorthStorefront?: boolean; // Whether north half has storefront entry
+  splitSouthStorefront?: boolean; // Whether south half has storefront entry
+  splitNorthOffice?: boolean; // Whether north half has speculative office
+  splitSouthOffice?: boolean; // Whether south half has speculative office
+  splitNorthRestroom?: boolean; // Whether north half has restroom
+  splitSouthRestroom?: boolean; // Whether south half has restroom
 };
 
 // Properties table

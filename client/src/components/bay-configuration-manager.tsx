@@ -1263,6 +1263,40 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                                             />
                                           </div>
                                         </div>
+                                        
+                                        {/* North Half Amenities */}
+                                        <div className="grid grid-cols-3 gap-1">
+                                          <div className="flex items-center space-x-1">
+                                            <Checkbox 
+                                              id="splitNorthStorefront"
+                                              checked={newBay.splitNorthStorefront}
+                                              onCheckedChange={(checked) => setNewBay({ ...newBay, splitNorthStorefront: checked as boolean })}
+                                            />
+                                            <Label htmlFor="splitNorthStorefront" className="text-xs flex items-center gap-1">
+                                              🚪 SF
+                                            </Label>
+                                          </div>
+                                          <div className="flex items-center space-x-1">
+                                            <Checkbox 
+                                              id="splitNorthOffice"
+                                              checked={newBay.splitNorthOffice}
+                                              onCheckedChange={(checked) => setNewBay({ ...newBay, splitNorthOffice: checked as boolean })}
+                                            />
+                                            <Label htmlFor="splitNorthOffice" className="text-xs flex items-center gap-1">
+                                              🏢 Off
+                                            </Label>
+                                          </div>
+                                          <div className="flex items-center space-x-1">
+                                            <Checkbox 
+                                              id="splitNorthRestroom"
+                                              checked={newBay.splitNorthRestroom}
+                                              onCheckedChange={(checked) => setNewBay({ ...newBay, splitNorthRestroom: checked as boolean })}
+                                            />
+                                            <Label htmlFor="splitNorthRestroom" className="text-xs flex items-center gap-1">
+                                              🚻 RR
+                                            </Label>
+                                          </div>
+                                        </div>
                                       </div>
                                     </div>
 
@@ -1316,6 +1350,40 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                                               className="text-xs h-8"
                                               placeholder="0"
                                             />
+                                          </div>
+                                        </div>
+                                        
+                                        {/* South Half Amenities */}
+                                        <div className="grid grid-cols-3 gap-1">
+                                          <div className="flex items-center space-x-1">
+                                            <Checkbox 
+                                              id="splitSouthStorefront"
+                                              checked={newBay.splitSouthStorefront}
+                                              onCheckedChange={(checked) => setNewBay({ ...newBay, splitSouthStorefront: checked as boolean })}
+                                            />
+                                            <Label htmlFor="splitSouthStorefront" className="text-xs flex items-center gap-1">
+                                              🚪 SF
+                                            </Label>
+                                          </div>
+                                          <div className="flex items-center space-x-1">
+                                            <Checkbox 
+                                              id="splitSouthOffice"
+                                              checked={newBay.splitSouthOffice}
+                                              onCheckedChange={(checked) => setNewBay({ ...newBay, splitSouthOffice: checked as boolean })}
+                                            />
+                                            <Label htmlFor="splitSouthOffice" className="text-xs flex items-center gap-1">
+                                              🏢 Off
+                                            </Label>
+                                          </div>
+                                          <div className="flex items-center space-x-1">
+                                            <Checkbox 
+                                              id="splitSouthRestroom"
+                                              checked={newBay.splitSouthRestroom}
+                                              onCheckedChange={(checked) => setNewBay({ ...newBay, splitSouthRestroom: checked as boolean })}
+                                            />
+                                            <Label htmlFor="splitSouthRestroom" className="text-xs flex items-center gap-1">
+                                              🚻 RR
+                                            </Label>
                                           </div>
                                         </div>
                                       </div>

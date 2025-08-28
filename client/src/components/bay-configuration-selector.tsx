@@ -117,16 +117,23 @@ export default function BayConfigurationSelector({
       hasSquare_footage: !!bayConfig?.square_footage
     });
     
-    if (!bayConfig || !bayConfig.bayName || !bayConfig.squareFootage || bayConfig.squareFootage === 0) {
+    // Convert string square footage to number for proper validation
+    const squareFootage = typeof bayConfig.squareFootage === 'string' 
+      ? parseInt(bayConfig.squareFootage) || 0 
+      : bayConfig.squareFootage || 0;
+    
+    if (!bayConfig || !bayConfig.bayName || !squareFootage || squareFootage === 0) {
       console.log('🚫 Filtering out bay config:', {
         bayConfig,
         noBayConfig: !bayConfig,
         noBayName: !bayConfig?.bayName,
-        noSquareFootage: !bayConfig?.squareFootage,
-        isZeroSquareFootage: bayConfig?.squareFootage === 0,
+        noSquareFootage: !squareFootage,
+        isZeroSquareFootage: squareFootage === 0,
         bayName: bayConfig?.bayName,
-        squareFootage: bayConfig?.squareFootage,
-        typeOfSquareFootage: typeof bayConfig?.squareFootage
+        squareFootage: squareFootage,
+        typeOfSquareFootage: typeof squareFootage,
+        originalSquareFootage: bayConfig?.squareFootage,
+        originalTypeOfSquareFootage: typeof bayConfig?.squareFootage
       });
       return [];
     }
@@ -151,7 +158,7 @@ export default function BayConfigurationSelector({
           bayNumber: bayNumber,
           bayName: `Bay ${bayNumber} North`,
           originalBayName: `${bayConfig.bayName} North`,
-          squareFootage: bayConfig.splitNorthSquareFootage || Math.floor(bayConfig.squareFootage / 2),
+          squareFootage: bayConfig.splitNorthSquareFootage || Math.floor(squareFootage / 2),
           standardDockDoors: bayConfig.splitNorthDockDoors || Math.floor((bayConfig.standardDockDoors || 0) / 2),
           oversizedDockDoors: bayConfig.splitNorthOversizedDoors || Math.floor((bayConfig.oversizedDockDoors || 0) / 2),
           hasStorefrontEntry: bayConfig.hasStorefrontEntry || false,
@@ -166,7 +173,7 @@ export default function BayConfigurationSelector({
           bayNumber: bayNumber,
           bayName: `Bay ${bayNumber} South`,
           originalBayName: `${bayConfig.bayName} South`,
-          squareFootage: bayConfig.splitSouthSquareFootage || Math.ceil(bayConfig.squareFootage / 2), // Use custom or fallback to ceil
+          squareFootage: bayConfig.splitSouthSquareFootage || Math.ceil(squareFootage / 2), // Use custom or fallback to ceil
           standardDockDoors: bayConfig.splitSouthDockDoors || Math.ceil((bayConfig.standardDockDoors || 0) / 2),
           oversizedDockDoors: bayConfig.splitSouthOversizedDoors || Math.ceil((bayConfig.oversizedDockDoors || 0) / 2),
           hasStorefrontEntry: false, // Typically storefront is on one side only
@@ -183,7 +190,7 @@ export default function BayConfigurationSelector({
         bayNumber: bayNumber,
         bayName: `Bay ${bayNumber}`,
         originalBayName: bayConfig.bayName,
-        squareFootage: bayConfig.squareFootage,
+        squareFootage: squareFootage,
         standardDockDoors: bayConfig.standardDockDoors || 0,
         oversizedDockDoors: bayConfig.oversizedDockDoors || 0,
         hasStorefrontEntry: bayConfig.hasStorefrontEntry || false,

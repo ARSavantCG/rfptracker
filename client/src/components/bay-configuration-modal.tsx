@@ -33,6 +33,16 @@ export function BayConfigurationModal({
   const [currentBays, setCurrentBays] = useState<BayConfiguration[]>([]);
   const [currentOverride, setCurrentOverride] = useState<number | undefined>(initialOverrideArea);
 
+  // Debug logging when modal opens
+  if (isOpen) {
+    console.log('🔍 BayConfigurationModal Debug:', {
+      propertyId: property.id,
+      propertyName: property.propertyName,
+      bayConfigurations: property.bayConfigurations?.length || 0,
+      sampleBayConfig: property.bayConfigurations?.[0]
+    });
+  }
+
   // Handle area changes from the bay configuration selector
   const handleAreaChange = (area: number, selectedBays: BayConfiguration[], overrideArea?: number) => {
     setCurrentArea(area);

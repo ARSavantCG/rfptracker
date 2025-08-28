@@ -73,6 +73,16 @@ export default function BayConfigurationSelector({
   // Use fresh bay configurations if available, fallback to prop data
   const bayConfigurations = freshProperty?.bayConfigurations || property.bayConfigurations || [];
   
+  // Debug logging to understand what's happening
+  console.log('🔍 BayConfigurationSelector Debug:', {
+    propertyId: property.id,
+    propertyName: property.propertyName,
+    originalBayConfigs: property.bayConfigurations?.length || 0,
+    freshBayConfigs: freshProperty?.bayConfigurations?.length || 0,
+    finalBayConfigs: bayConfigurations.length,
+    sampleBayConfig: bayConfigurations[0]
+  });
+  
   
 
   

@@ -150,7 +150,7 @@ export default function BayConfigurationSelector({
           bayNumber: bayNumber,
           bayName: `Bay ${bayNumber} North`,
           originalBayName: `${bayConfig.bayName} North`,
-          squareFootage: Math.floor(bayConfig.squareFootage / 2),
+          squareFootage: bayConfig.splitNorthSquareFootage || Math.floor(bayConfig.squareFootage / 2),
           standardDockDoors: bayConfig.splitNorthDockDoors || Math.floor((bayConfig.standardDockDoors || 0) / 2),
           oversizedDockDoors: bayConfig.splitNorthOversizedDoors || Math.floor((bayConfig.oversizedDockDoors || 0) / 2),
           hasStorefrontEntry: bayConfig.hasStorefrontEntry || false,
@@ -165,7 +165,7 @@ export default function BayConfigurationSelector({
           bayNumber: bayNumber,
           bayName: `Bay ${bayNumber} South`,
           originalBayName: `${bayConfig.bayName} South`,
-          squareFootage: Math.ceil(bayConfig.squareFootage / 2), // Ceil to handle odd numbers
+          squareFootage: bayConfig.splitSouthSquareFootage || Math.ceil(bayConfig.squareFootage / 2), // Use custom or fallback to ceil
           standardDockDoors: bayConfig.splitSouthDockDoors || Math.ceil((bayConfig.standardDockDoors || 0) / 2),
           oversizedDockDoors: bayConfig.splitSouthOversizedDoors || Math.ceil((bayConfig.oversizedDockDoors || 0) / 2),
           hasStorefrontEntry: false, // Typically storefront is on one side only

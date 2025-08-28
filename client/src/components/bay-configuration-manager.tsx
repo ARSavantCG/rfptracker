@@ -862,67 +862,98 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-3">
                         <h5 className="font-medium text-sm text-blue-800">North Half</h5>
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-2">
                           <div className="space-y-1">
-                            <Label className="text-xs">Standard Doors</Label>
+                            <Label className="text-xs font-medium">Square Footage</Label>
                             <Input
                               type="text"
                               inputMode="numeric"
                               pattern="[0-9]*"
-                              value={newBay.splitNorthDockDoors}
-                              onChange={(e) => setNewBay({ ...newBay, splitNorthDockDoors: e.target.value })}
+                              value={newBay.splitNorthSquareFootage}
+                              onChange={(e) => setNewBay({ ...newBay, splitNorthSquareFootage: e.target.value })}
                               className="text-sm"
                               placeholder="0"
                             />
                           </div>
-                          <div className="space-y-1">
-                            <Label className="text-xs">Oversized Doors</Label>
-                            <Input
-                              type="text"
-                              inputMode="numeric"
-                              pattern="[0-9]*"
-                              value={newBay.splitNorthOversizedDoors}
-                              onChange={(e) => setNewBay({ ...newBay, splitNorthOversizedDoors: e.target.value })}
-                              className="text-sm"
-                              placeholder="0"
-                            />
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="space-y-1">
+                              <Label className="text-xs">Standard Doors</Label>
+                              <Input
+                                type="text"
+                                inputMode="numeric"
+                                pattern="[0-9]*"
+                                value={newBay.splitNorthDockDoors}
+                                onChange={(e) => setNewBay({ ...newBay, splitNorthDockDoors: e.target.value })}
+                                className="text-sm"
+                                placeholder="0"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">Oversized Doors</Label>
+                              <Input
+                                type="text"
+                                inputMode="numeric"
+                                pattern="[0-9]*"
+                                value={newBay.splitNorthOversizedDoors}
+                                onChange={(e) => setNewBay({ ...newBay, splitNorthOversizedDoors: e.target.value })}
+                                className="text-sm"
+                                placeholder="0"
+                              />
+                            </div>
                           </div>
                         </div>
                       </div>
 
                       <div className="space-y-3">
                         <h5 className="font-medium text-sm text-green-800">South Half</h5>
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-2">
                           <div className="space-y-1">
-                            <Label className="text-xs">Standard Doors</Label>
+                            <Label className="text-xs font-medium">Square Footage</Label>
                             <Input
                               type="text"
                               inputMode="numeric"
                               pattern="[0-9]*"
-                              value={newBay.splitSouthDockDoors}
-                              onChange={(e) => setNewBay({ ...newBay, splitSouthDockDoors: e.target.value })}
+                              value={newBay.splitSouthSquareFootage}
+                              onChange={(e) => setNewBay({ ...newBay, splitSouthSquareFootage: e.target.value })}
                               className="text-sm"
                               placeholder="0"
                             />
                           </div>
-                          <div className="space-y-1">
-                            <Label className="text-xs">Oversized Doors</Label>
-                            <Input
-                              type="text"
-                              inputMode="numeric"
-                              pattern="[0-9]*"
-                              value={newBay.splitSouthOversizedDoors}
-                              onChange={(e) => setNewBay({ ...newBay, splitSouthOversizedDoors: e.target.value })}
-                              className="text-sm"
-                              placeholder="0"
-                            />
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="space-y-1">
+                              <Label className="text-xs">Standard Doors</Label>
+                              <Input
+                                type="text"
+                                inputMode="numeric"
+                                pattern="[0-9]*"
+                                value={newBay.splitSouthDockDoors}
+                                onChange={(e) => setNewBay({ ...newBay, splitSouthDockDoors: e.target.value })}
+                                className="text-sm"
+                                placeholder="0"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">Oversized Doors</Label>
+                              <Input
+                                type="text"
+                                inputMode="numeric"
+                                pattern="[0-9]*"
+                                value={newBay.splitSouthOversizedDoors}
+                                onChange={(e) => setNewBay({ ...newBay, splitSouthOversizedDoors: e.target.value })}
+                                className="text-sm"
+                                placeholder="0"
+                              />
+                            </div>
                           </div>
                         </div>
                       </div>
                     </div>
                     
                     <div className="text-xs text-blue-600 bg-blue-100 p-2 rounded">
-                      💡 When this bay is split, each half will have the specified dock doors. Square footage will be divided equally (North: {Math.floor((parseInt(newBay.squareFootage) || 0) / 2).toLocaleString()} SF, South: {Math.ceil((parseInt(newBay.squareFootage) || 0) / 2).toLocaleString()} SF)
+                      💡 When split: North {(parseInt(newBay.splitNorthSquareFootage) || 0).toLocaleString()} SF, South {(parseInt(newBay.splitSouthSquareFootage) || 0).toLocaleString()} SF
+                      {(parseInt(newBay.splitNorthSquareFootage) || 0) + (parseInt(newBay.splitSouthSquareFootage) || 0) !== (parseInt(newBay.squareFootage) || 0) && 
+                        <div className="text-orange-600 mt-1">⚠️ Total split area doesn't match bay total</div>
+                      }
                     </div>
                   </div>
                 )}
@@ -1134,67 +1165,98 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                                   <div className="grid grid-cols-2 gap-3">
                                     <div className="space-y-2">
                                       <h5 className="font-medium text-xs text-blue-800">North Half</h5>
-                                      <div className="grid grid-cols-2 gap-2">
+                                      <div className="space-y-1">
                                         <div className="space-y-1">
-                                          <Label className="text-xs">Standard Doors</Label>
+                                          <Label className="text-xs font-medium">Square Footage</Label>
                                           <Input
                                             type="text"
                                             inputMode="numeric"
                                             pattern="[0-9]*"
-                                            value={newBay.splitNorthDockDoors}
-                                            onChange={(e) => setNewBay({ ...newBay, splitNorthDockDoors: e.target.value })}
+                                            value={newBay.splitNorthSquareFootage}
+                                            onChange={(e) => setNewBay({ ...newBay, splitNorthSquareFootage: e.target.value })}
                                             className="text-xs h-8"
                                             placeholder="0"
                                           />
                                         </div>
-                                        <div className="space-y-1">
-                                          <Label className="text-xs">Oversized Doors</Label>
-                                          <Input
-                                            type="text"
-                                            inputMode="numeric"
-                                            pattern="[0-9]*"
-                                            value={newBay.splitNorthOversizedDoors}
-                                            onChange={(e) => setNewBay({ ...newBay, splitNorthOversizedDoors: e.target.value })}
-                                            className="text-xs h-8"
-                                            placeholder="0"
-                                          />
+                                        <div className="grid grid-cols-2 gap-1">
+                                          <div className="space-y-1">
+                                            <Label className="text-xs">Standard Doors</Label>
+                                            <Input
+                                              type="text"
+                                              inputMode="numeric"
+                                              pattern="[0-9]*"
+                                              value={newBay.splitNorthDockDoors}
+                                              onChange={(e) => setNewBay({ ...newBay, splitNorthDockDoors: e.target.value })}
+                                              className="text-xs h-8"
+                                              placeholder="0"
+                                            />
+                                          </div>
+                                          <div className="space-y-1">
+                                            <Label className="text-xs">Oversized Doors</Label>
+                                            <Input
+                                              type="text"
+                                              inputMode="numeric"
+                                              pattern="[0-9]*"
+                                              value={newBay.splitNorthOversizedDoors}
+                                              onChange={(e) => setNewBay({ ...newBay, splitNorthOversizedDoors: e.target.value })}
+                                              className="text-xs h-8"
+                                              placeholder="0"
+                                            />
+                                          </div>
                                         </div>
                                       </div>
                                     </div>
 
                                     <div className="space-y-2">
                                       <h5 className="font-medium text-xs text-green-800">South Half</h5>
-                                      <div className="grid grid-cols-2 gap-2">
+                                      <div className="space-y-1">
                                         <div className="space-y-1">
-                                          <Label className="text-xs">Standard Doors</Label>
+                                          <Label className="text-xs font-medium">Square Footage</Label>
                                           <Input
                                             type="text"
                                             inputMode="numeric"
                                             pattern="[0-9]*"
-                                            value={newBay.splitSouthDockDoors}
-                                            onChange={(e) => setNewBay({ ...newBay, splitSouthDockDoors: e.target.value })}
+                                            value={newBay.splitSouthSquareFootage}
+                                            onChange={(e) => setNewBay({ ...newBay, splitSouthSquareFootage: e.target.value })}
                                             className="text-xs h-8"
                                             placeholder="0"
                                           />
                                         </div>
-                                        <div className="space-y-1">
-                                          <Label className="text-xs">Oversized Doors</Label>
-                                          <Input
-                                            type="text"
-                                            inputMode="numeric"
-                                            pattern="[0-9]*"
-                                            value={newBay.splitSouthOversizedDoors}
-                                            onChange={(e) => setNewBay({ ...newBay, splitSouthOversizedDoors: e.target.value })}
-                                            className="text-xs h-8"
-                                            placeholder="0"
-                                          />
+                                        <div className="grid grid-cols-2 gap-1">
+                                          <div className="space-y-1">
+                                            <Label className="text-xs">Standard Doors</Label>
+                                            <Input
+                                              type="text"
+                                              inputMode="numeric"
+                                              pattern="[0-9]*"
+                                              value={newBay.splitSouthDockDoors}
+                                              onChange={(e) => setNewBay({ ...newBay, splitSouthDockDoors: e.target.value })}
+                                              className="text-xs h-8"
+                                              placeholder="0"
+                                            />
+                                          </div>
+                                          <div className="space-y-1">
+                                            <Label className="text-xs">Oversized Doors</Label>
+                                            <Input
+                                              type="text"
+                                              inputMode="numeric"
+                                              pattern="[0-9]*"
+                                              value={newBay.splitSouthOversizedDoors}
+                                              onChange={(e) => setNewBay({ ...newBay, splitSouthOversizedDoors: e.target.value })}
+                                              className="text-xs h-8"
+                                              placeholder="0"
+                                            />
+                                          </div>
                                         </div>
                                       </div>
                                     </div>
                                   </div>
                                   
                                   <div className="text-xs text-blue-600 bg-blue-100 p-2 rounded">
-                                    💡 When split: North {Math.floor((parseInt(newBay.squareFootage) || 0) / 2).toLocaleString()} SF, South {Math.ceil((parseInt(newBay.squareFootage) || 0) / 2).toLocaleString()} SF
+                                    💡 When split: North {(parseInt(newBay.splitNorthSquareFootage) || 0).toLocaleString()} SF, South {(parseInt(newBay.splitSouthSquareFootage) || 0).toLocaleString()} SF
+                                    {(parseInt(newBay.splitNorthSquareFootage) || 0) + (parseInt(newBay.splitSouthSquareFootage) || 0) !== (parseInt(newBay.squareFootage) || 0) && 
+                                      <div className="text-orange-600 mt-1">⚠️ Total split area doesn't match bay total</div>
+                                    }
                                   </div>
                                 </div>
                               )}

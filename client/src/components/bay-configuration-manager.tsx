@@ -846,7 +846,7 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                     />
                     <Label htmlFor="canBeSplit" className="text-sm font-medium flex items-center gap-1">
                       <GripVertical className="h-4 w-4" />
-                      Can be split into North/South halves
+                      Can be split into North/South
                     </Label>
                   </div>
                 </div>
@@ -1226,7 +1226,7 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                                   />
                                   <Label htmlFor="editCanBeSplit" className="text-sm font-medium flex items-center gap-1">
                                     <GripVertical className="h-4 w-4" />
-                                    Can be split into North/South halves
+                                    Can be split into North/South
                                   </Label>
                                 </div>
                               </div>

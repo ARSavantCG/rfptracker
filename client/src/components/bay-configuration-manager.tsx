@@ -867,12 +867,38 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                             <Label className="text-xs font-medium">Square Footage</Label>
                             <Input
                               type="text"
-                              inputMode="numeric"
-                              pattern="[0-9]*"
                               value={newBay.splitNorthSquareFootage}
-                              onChange={(e) => setNewBay({ ...newBay, splitNorthSquareFootage: e.target.value })}
+                              onChange={(e) => {
+                                const northValue = e.target.value;
+                                const totalBayArea = parseInt(newBay.squareFootage) || 0;
+                                
+                                // Try to evaluate if it's a formula (starts with =)
+                                let evaluatedNorth = northValue;
+                                if (northValue.startsWith('=')) {
+                                  try {
+                                    // Simple formula evaluation - replace = with empty and evaluate basic math
+                                    const formula = northValue.slice(1);
+                                    const result = Function('"use strict"; return (' + formula + ')')();
+                                    if (!isNaN(result)) {
+                                      evaluatedNorth = Math.round(result).toString();
+                                    }
+                                  } catch (e) {
+                                    // If formula fails, keep original value
+                                  }
+                                }
+                                
+                                // Auto-calculate South bay as remainder
+                                const northNum = parseInt(evaluatedNorth) || 0;
+                                const southNum = totalBayArea - northNum;
+                                
+                                setNewBay({ 
+                                  ...newBay, 
+                                  splitNorthSquareFootage: northValue,
+                                  splitSouthSquareFootage: southNum > 0 ? southNum.toString() : ""
+                                });
+                              }}
                               className="text-sm"
-                              placeholder="0"
+                              placeholder="e.g. 20000 or =35247*0.6"
                             />
                           </div>
                           <div className="grid grid-cols-2 gap-2">
@@ -911,12 +937,38 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                             <Label className="text-xs font-medium">Square Footage</Label>
                             <Input
                               type="text"
-                              inputMode="numeric"
-                              pattern="[0-9]*"
                               value={newBay.splitSouthSquareFootage}
-                              onChange={(e) => setNewBay({ ...newBay, splitSouthSquareFootage: e.target.value })}
+                              onChange={(e) => {
+                                const southValue = e.target.value;
+                                const totalBayArea = parseInt(newBay.squareFootage) || 0;
+                                
+                                // Try to evaluate if it's a formula (starts with =)
+                                let evaluatedSouth = southValue;
+                                if (southValue.startsWith('=')) {
+                                  try {
+                                    // Simple formula evaluation - replace = with empty and evaluate basic math
+                                    const formula = southValue.slice(1);
+                                    const result = Function('"use strict"; return (' + formula + ')')();
+                                    if (!isNaN(result)) {
+                                      evaluatedSouth = Math.round(result).toString();
+                                    }
+                                  } catch (e) {
+                                    // If formula fails, keep original value
+                                  }
+                                }
+                                
+                                // Auto-calculate North bay as remainder
+                                const southNum = parseInt(evaluatedSouth) || 0;
+                                const northNum = totalBayArea - southNum;
+                                
+                                setNewBay({ 
+                                  ...newBay, 
+                                  splitSouthSquareFootage: southValue,
+                                  splitNorthSquareFootage: northNum > 0 ? northNum.toString() : ""
+                                });
+                              }}
                               className="text-sm"
-                              placeholder="0"
+                              placeholder="e.g. 15247 or =35247*0.4"
                             />
                           </div>
                           <div className="grid grid-cols-2 gap-2">
@@ -950,10 +1002,35 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                     </div>
                     
                     <div className="text-xs text-blue-600 bg-blue-100 p-2 rounded">
-                      💡 When split: North {(parseInt(newBay.splitNorthSquareFootage) || 0).toLocaleString()} SF, South {(parseInt(newBay.splitSouthSquareFootage) || 0).toLocaleString()} SF
-                      {(parseInt(newBay.splitNorthSquareFootage) || 0) + (parseInt(newBay.splitSouthSquareFootage) || 0) !== (parseInt(newBay.squareFootage) || 0) && 
-                        <div className="text-orange-600 mt-1">⚠️ Total split area doesn't match bay total</div>
-                      }
+                      {(() => {
+                        // Helper function to evaluate formulas
+                        const evaluateValue = (value: string) => {
+                          if (!value) return 0;
+                          if (value.startsWith('=')) {
+                            try {
+                              const formula = value.slice(1);
+                              const result = Function('"use strict"; return (' + formula + ')')();
+                              return !isNaN(result) ? Math.round(result) : parseInt(value) || 0;
+                            } catch (e) {
+                              return parseInt(value) || 0;
+                            }
+                          }
+                          return parseInt(value) || 0;
+                        };
+
+                        const northValue = evaluateValue(newBay.splitNorthSquareFootage);
+                        const southValue = evaluateValue(newBay.splitSouthSquareFootage);
+                        const totalBayArea = parseInt(newBay.squareFootage) || 0;
+
+                        return (
+                          <>
+                            💡 When split: North {northValue.toLocaleString()} SF, South {southValue.toLocaleString()} SF
+                            {northValue + southValue !== totalBayArea && 
+                              <div className="text-orange-600 mt-1">⚠️ Total split area ({(northValue + southValue).toLocaleString()} SF) doesn't match bay total ({totalBayArea.toLocaleString()} SF)</div>
+                            }
+                          </>
+                        );
+                      })()}
                     </div>
                   </div>
                 )}
@@ -1170,12 +1247,37 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                                           <Label className="text-xs font-medium">Square Footage</Label>
                                           <Input
                                             type="text"
-                                            inputMode="numeric"
-                                            pattern="[0-9]*"
                                             value={newBay.splitNorthSquareFootage}
-                                            onChange={(e) => setNewBay({ ...newBay, splitNorthSquareFootage: e.target.value })}
+                                            onChange={(e) => {
+                                              const northValue = e.target.value;
+                                              const totalBayArea = parseInt(newBay.squareFootage) || 0;
+                                              
+                                              // Try to evaluate if it's a formula (starts with =)
+                                              let evaluatedNorth = northValue;
+                                              if (northValue.startsWith('=')) {
+                                                try {
+                                                  const formula = northValue.slice(1);
+                                                  const result = Function('"use strict"; return (' + formula + ')')();
+                                                  if (!isNaN(result)) {
+                                                    evaluatedNorth = Math.round(result).toString();
+                                                  }
+                                                } catch (e) {
+                                                  // If formula fails, keep original value
+                                                }
+                                              }
+                                              
+                                              // Auto-calculate South bay as remainder
+                                              const northNum = parseInt(evaluatedNorth) || 0;
+                                              const southNum = totalBayArea - northNum;
+                                              
+                                              setNewBay({ 
+                                                ...newBay, 
+                                                splitNorthSquareFootage: northValue,
+                                                splitSouthSquareFootage: southNum > 0 ? southNum.toString() : ""
+                                              });
+                                            }}
                                             className="text-xs h-8"
-                                            placeholder="0"
+                                            placeholder="=35247*0.6"
                                           />
                                         </div>
                                         <div className="grid grid-cols-2 gap-1">
@@ -1214,12 +1316,37 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                                           <Label className="text-xs font-medium">Square Footage</Label>
                                           <Input
                                             type="text"
-                                            inputMode="numeric"
-                                            pattern="[0-9]*"
                                             value={newBay.splitSouthSquareFootage}
-                                            onChange={(e) => setNewBay({ ...newBay, splitSouthSquareFootage: e.target.value })}
+                                            onChange={(e) => {
+                                              const southValue = e.target.value;
+                                              const totalBayArea = parseInt(newBay.squareFootage) || 0;
+                                              
+                                              // Try to evaluate if it's a formula (starts with =)
+                                              let evaluatedSouth = southValue;
+                                              if (southValue.startsWith('=')) {
+                                                try {
+                                                  const formula = southValue.slice(1);
+                                                  const result = Function('"use strict"; return (' + formula + ')')();
+                                                  if (!isNaN(result)) {
+                                                    evaluatedSouth = Math.round(result).toString();
+                                                  }
+                                                } catch (e) {
+                                                  // If formula fails, keep original value
+                                                }
+                                              }
+                                              
+                                              // Auto-calculate North bay as remainder
+                                              const southNum = parseInt(evaluatedSouth) || 0;
+                                              const northNum = totalBayArea - southNum;
+                                              
+                                              setNewBay({ 
+                                                ...newBay, 
+                                                splitSouthSquareFootage: southValue,
+                                                splitNorthSquareFootage: northNum > 0 ? northNum.toString() : ""
+                                              });
+                                            }}
                                             className="text-xs h-8"
-                                            placeholder="0"
+                                            placeholder="=35247*0.4"
                                           />
                                         </div>
                                         <div className="grid grid-cols-2 gap-1">
@@ -1253,10 +1380,35 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                                   </div>
                                   
                                   <div className="text-xs text-blue-600 bg-blue-100 p-2 rounded">
-                                    💡 When split: North {(parseInt(newBay.splitNorthSquareFootage) || 0).toLocaleString()} SF, South {(parseInt(newBay.splitSouthSquareFootage) || 0).toLocaleString()} SF
-                                    {(parseInt(newBay.splitNorthSquareFootage) || 0) + (parseInt(newBay.splitSouthSquareFootage) || 0) !== (parseInt(newBay.squareFootage) || 0) && 
-                                      <div className="text-orange-600 mt-1">⚠️ Total split area doesn't match bay total</div>
-                                    }
+                                    {(() => {
+                                      // Helper function to evaluate formulas
+                                      const evaluateValue = (value: string) => {
+                                        if (!value) return 0;
+                                        if (value.startsWith('=')) {
+                                          try {
+                                            const formula = value.slice(1);
+                                            const result = Function('"use strict"; return (' + formula + ')')();
+                                            return !isNaN(result) ? Math.round(result) : parseInt(value) || 0;
+                                          } catch (e) {
+                                            return parseInt(value) || 0;
+                                          }
+                                        }
+                                        return parseInt(value) || 0;
+                                      };
+
+                                      const northValue = evaluateValue(newBay.splitNorthSquareFootage);
+                                      const southValue = evaluateValue(newBay.splitSouthSquareFootage);
+                                      const totalBayArea = parseInt(newBay.squareFootage) || 0;
+
+                                      return (
+                                        <>
+                                          💡 When split: North {northValue.toLocaleString()} SF, South {southValue.toLocaleString()} SF
+                                          {northValue + southValue !== totalBayArea && 
+                                            <div className="text-orange-600 mt-1">⚠️ Total split area ({(northValue + southValue).toLocaleString()} SF) doesn't match bay total ({totalBayArea.toLocaleString()} SF)</div>
+                                          }
+                                        </>
+                                      );
+                                    })()}
                                   </div>
                                 </div>
                               )}

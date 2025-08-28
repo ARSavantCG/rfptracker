@@ -118,7 +118,16 @@ export default function BayConfigurationSelector({
     });
     
     if (!bayConfig || !bayConfig.bayName || !bayConfig.squareFootage || bayConfig.squareFootage === 0) {
-      console.log('🚫 Filtering out bay config:', bayConfig);
+      console.log('🚫 Filtering out bay config:', {
+        bayConfig,
+        noBayConfig: !bayConfig,
+        noBayName: !bayConfig?.bayName,
+        noSquareFootage: !bayConfig?.squareFootage,
+        isZeroSquareFootage: bayConfig?.squareFootage === 0,
+        bayName: bayConfig?.bayName,
+        squareFootage: bayConfig?.squareFootage,
+        typeOfSquareFootage: typeof bayConfig?.squareFootage
+      });
       return [];
     }
     

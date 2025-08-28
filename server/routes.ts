@@ -3201,6 +3201,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.setHeader('Expires', '0');
       res.setHeader('ETag', `"${Date.now()}"`);
 
+      // Debug single property bay configurations to match list endpoint behavior
+      console.log(`🔍 DEBUG Single Property API - Property ${id} bay configurations:`, {
+        propertyId: property.id,
+        hasBayConfigurations: !!property.bayConfigurations,
+        bayConfigurationsType: typeof property.bayConfigurations,
+        bayConfigurationsLength: Array.isArray(property.bayConfigurations) ? property.bayConfigurations.length : 'not array',
+        bayConfigurations: property.bayConfigurations
+      });
+
       res.json(property);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch property" });

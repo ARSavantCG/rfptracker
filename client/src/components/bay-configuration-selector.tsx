@@ -613,7 +613,7 @@ export default function BayConfigurationSelector({
                               key={bay.id}
                               variant={isSelected ? "default" : "outline"}
                               disabled={isLeased}
-                              className={`${isSplitBay ? 'h-20' : 'min-h-32'} w-16 flex flex-col items-center justify-start text-xs p-1 flex-shrink-0 overflow-hidden ${splitSideClass} ${
+                              className={`${isSplitBay ? 'h-20' : 'h-[168px]'} w-16 flex flex-col items-center justify-start text-xs p-1 flex-shrink-0 overflow-hidden ${splitSideClass} ${
                                 isLeased
                                   ? "bg-red-800 border-red-900 text-white cursor-not-allowed opacity-95"
                                   : isSelected 
@@ -658,7 +658,7 @@ export default function BayConfigurationSelector({
                                 </div>
                               )}
                               {/* Add storefront, speculative office, and restroom symbols */}
-                              <div className={`flex ${isSplitBay ? 'flex-row gap-0.5 justify-center items-center flex-wrap' : 'gap-1 justify-center'} mt-auto mb-0.5 min-h-[10px] max-h-[12px] overflow-hidden`}>
+                              <div className={`flex ${isSplitBay ? 'flex-row gap-0.5 justify-center items-center flex-wrap' : 'gap-1 justify-center flex-wrap'} mt-auto mb-0.5 ${isSplitBay ? 'min-h-[10px] max-h-[14px]' : 'min-h-[16px]'} overflow-hidden`}>
                                 {bay.hasStorefrontEntry && (
                                   <span className={`${isSplitBay ? 'text-[6px] text-orange-600 leading-none' : 'text-[10px] text-orange-600'} flex items-center justify-center`} title="Storefront Entry">
                                     🚪

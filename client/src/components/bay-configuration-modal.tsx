@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -33,15 +34,17 @@ export function BayConfigurationModal({
   const [currentBays, setCurrentBays] = useState<BayConfiguration[]>([]);
   const [currentOverride, setCurrentOverride] = useState<number | undefined>(initialOverrideArea);
 
-  // Debug logging when modal opens
-  if (isOpen) {
-    console.log('🔍 BayConfigurationModal Debug:', {
-      propertyId: property.id,
-      propertyName: property.propertyName,
-      bayConfigurations: property.bayConfigurations?.length || 0,
-      sampleBayConfig: property.bayConfigurations?.[0]
-    });
-  }
+  // Fetch full property data with bay configurations when modal is open
+  const { data: fullProperty } = useQuery<Property>({
+    queryKey: [`/api/properties/${property?.id}`],
+    enabled: isOpen && !!property?.id,
+    staleTime: 0,
+    refetchOnMount: true,
+  });
+
+  // Use full property data if available, otherwise fallback to prop
+  const propertyWithBayConfigs = fullProperty || property;
+
 
   // Handle area changes from the bay configuration selector
   const handleAreaChange = (area: number, selectedBays: BayConfiguration[], overrideArea?: number) => {
@@ -71,7 +74,7 @@ export function BayConfigurationModal({
         {/* Scrollable Content Area - allows both vertical and horizontal scrolling */}
         <div className="flex-1 overflow-auto">
           <BayConfigurationSelector
-            property={property}
+            property={propertyWithBayConfigs}
             onRentableAreaChange={handleAreaChange}
             initialSelectedBays={initialSelectedBays}
             initialOverrideArea={initialOverrideArea}

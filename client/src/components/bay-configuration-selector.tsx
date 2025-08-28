@@ -105,7 +105,16 @@ export default function BayConfigurationSelector({
 
   // Generate individual bays - create split options only for bays marked as splittable
   const individualBays = sortedBayConfigs.flatMap((bayConfig, index) => {
+    console.log('🔍 Processing bay config:', {
+      index,
+      bayConfig,
+      hasBayName: !!bayConfig?.bayName,
+      hasSquareFootage: !!bayConfig?.squareFootage,
+      squareFootage: bayConfig?.squareFootage
+    });
+    
     if (!bayConfig || !bayConfig.bayName || !bayConfig.squareFootage || bayConfig.squareFootage === 0) {
+      console.log('🚫 Filtering out bay config:', bayConfig);
       return [];
     }
     

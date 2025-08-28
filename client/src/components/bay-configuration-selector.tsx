@@ -127,21 +127,7 @@ export default function BayConfigurationSelector({
     
     const baseOptions = [];
     
-    // Always include the full bay option
-    baseOptions.push({
-      id: bayConfig.id,
-      bayNumber: bayNumber,
-      bayName: `Bay ${bayNumber}`,
-      originalBayName: bayConfig.bayName,
-      squareFootage: bayConfig.squareFootage,
-      standardDockDoors: bayConfig.standardDockDoors || 0,
-      oversizedDockDoors: bayConfig.oversizedDockDoors || 0,
-      hasStorefrontEntry: bayConfig.hasStorefrontEntry || false,
-      hasSpeculativeOffice: bayConfig.hasSpeculativeOffice || false,
-      isSplitBay: false
-    });
-    
-    // Add split options only if this bay is marked as splittable
+    // If this bay is splittable, only include the split options (no full bay)
     if (bayConfig.canBeSplit) {
       baseOptions.push(
         // North half
@@ -175,6 +161,20 @@ export default function BayConfigurationSelector({
           parentBayId: bayConfig.id
         }
       );
+    } else {
+      // For non-splittable bays, include the full bay option
+      baseOptions.push({
+        id: bayConfig.id,
+        bayNumber: bayNumber,
+        bayName: `Bay ${bayNumber}`,
+        originalBayName: bayConfig.bayName,
+        squareFootage: bayConfig.squareFootage,
+        standardDockDoors: bayConfig.standardDockDoors || 0,
+        oversizedDockDoors: bayConfig.oversizedDockDoors || 0,
+        hasStorefrontEntry: bayConfig.hasStorefrontEntry || false,
+        hasSpeculativeOffice: bayConfig.hasSpeculativeOffice || false,
+        isSplitBay: false
+      });
     }
     
     
@@ -537,133 +537,184 @@ export default function BayConfigurationSelector({
           <div className="relative">
             {/* Single scrolling container for both bays and position indicators */}
             <div className="bay-scroll pb-4">
-              {/* Single row layout representing building - Dynamic order based on bay progression direction */}
+              {/* Group bays by their bay number for stacking split bays */}
               <div className={`flex gap-0.5 justify-start ${
                 property.bayProgressionDirection === 'west' ? 'flex-row-reverse' : ''
               }`} style={{ minWidth: 'max-content' }}>
-              {individualBays.map((bay) => {
-                const isSelected = selectedBayIds.includes(bay.id);
-                const isLeased = leasedBayIds.includes(bay.id);
-                
-                
-                // Get original bay config to check for storefront/office features
-                const originalBayConfig = bayConfigurations.find(b => b.id === bay.id);
-                
-                
-                // Add visual distinction for split bays
-                const isSplitBay = bay.isSplitBay;
-                const splitSideClass = isSplitBay 
-                  ? bay.splitSide === 'north' 
-                    ? "border-t-2 border-t-blue-400" 
-                    : "border-b-2 border-b-green-400"
-                  : "";
+              {(() => {
+                // Group bays by bay number to stack split bays
+                const bayGroups = new Map<number, typeof individualBays>();
+                individualBays.forEach(bay => {
+                  if (!bayGroups.has(bay.bayNumber)) {
+                    bayGroups.set(bay.bayNumber, []);
+                  }
+                  bayGroups.get(bay.bayNumber)!.push(bay);
+                });
 
-                return (
-                  <Button
-                    key={bay.id}
-                    variant={isSelected ? "default" : "outline"}
-                    disabled={isLeased}
-                    className={`min-h-28 w-16 flex flex-col items-center justify-start text-xs p-1 flex-shrink-0 ${splitSideClass} ${
-                      isLeased
-                        ? "bg-red-800 border-red-900 text-white cursor-not-allowed opacity-95"
-                        : isSelected 
-                          ? "bg-orange-600 hover:bg-orange-700 text-white border-orange-700" 
-                          : isSplitBay
-                            ? "hover:bg-blue-50 border-blue-200 bg-blue-50/30 text-gray-900"
-                            : "hover:bg-orange-50 border-orange-200 bg-white text-gray-900"
-                    }`}
-                    onClick={() => toggleBaySelection(bay.id)}
-                  >
-                    <div className="font-bold text-[10px] mb-1 leading-none truncate w-full text-center">
-                      {bay.bayName}
-                      {isSplitBay && (
-                        <div className={`text-[8px] font-normal ${
-                          bay.splitSide === 'north' ? 'text-blue-600' : 'text-green-600'
-                        }`}>
-                          {bay.splitSide === 'north' ? '(N)' : '(S)'}
-                        </div>
-                      )}
-                    </div>
-                    <div className="text-[9px] opacity-75 leading-none mb-1">
-                      {isLeased ? "LEA" : `${(bay.squareFootage / 1000).toFixed(0)}K`}
-                    </div>
-                    {(bay.standardDockDoors > 0 || bay.oversizedDockDoors > 0) && (
-                      <div className="text-[7px] opacity-60 leading-none mb-1 flex flex-col items-center">
-                        {bay.standardDockDoors > 0 && (
-                          <div className="leading-none">{bay.standardDockDoors} std</div>
-                        )}
-                        {bay.oversizedDockDoors > 0 && (
-                          <div className="leading-none">{bay.oversizedDockDoors} ovr</div>
-                        )}
+                // Sort groups by bay number and render each group
+                return Array.from(bayGroups.entries())
+                  .sort(([a], [b]) => a - b)
+                  .map(([bayNumber, baysInGroup]) => {
+                    // Sort bays within group: North first, then South, then full bay
+                    const sortedBays = baysInGroup.sort((a, b) => {
+                      if (a.isSplitBay && b.isSplitBay) {
+                        return a.splitSide === 'north' ? -1 : 1;
+                      }
+                      if (a.isSplitBay && !b.isSplitBay) return -1;
+                      if (!a.isSplitBay && b.isSplitBay) return 1;
+                      return 0;
+                    });
+
+                    return (
+                      <div key={bayNumber} className="flex flex-col gap-0.5">
+                        {sortedBays.map((bay) => {
+                          const isSelected = selectedBayIds.includes(bay.id);
+                          const isLeased = leasedBayIds.includes(bay.id);
+                          
+                          // Get original bay config to check for storefront/office features
+                          const originalBayConfig = bayConfigurations.find(b => 
+                            b.id === bay.id || b.id === bay.parentBayId
+                          );
+                          
+                          // Add visual distinction for split bays
+                          const isSplitBay = bay.isSplitBay;
+                          const splitSideClass = isSplitBay 
+                            ? bay.splitSide === 'north' 
+                              ? "border-t-2 border-t-blue-400" 
+                              : "border-b-2 border-b-green-400"
+                            : "";
+
+                          return (
+                            <Button
+                              key={bay.id}
+                              variant={isSelected ? "default" : "outline"}
+                              disabled={isLeased}
+                              className={`${isSplitBay ? 'min-h-14' : 'min-h-28'} w-16 flex flex-col items-center justify-start text-xs p-1 flex-shrink-0 ${splitSideClass} ${
+                                isLeased
+                                  ? "bg-red-800 border-red-900 text-white cursor-not-allowed opacity-95"
+                                  : isSelected 
+                                    ? "bg-orange-600 hover:bg-orange-700 text-white border-orange-700" 
+                                    : isSplitBay
+                                      ? "hover:bg-blue-50 border-blue-200 bg-blue-50/30 text-gray-900"
+                                      : "hover:bg-orange-50 border-orange-200 bg-white text-gray-900"
+                              }`}
+                              onClick={() => toggleBaySelection(bay.id)}
+                            >
+                              <div className="font-bold text-[10px] mb-1 leading-none truncate w-full text-center">
+                                {isSplitBay ? `Bay ${bay.bayNumber}` : bay.bayName}
+                                {isSplitBay && (
+                                  <div className={`text-[8px] font-normal ${
+                                    bay.splitSide === 'north' ? 'text-blue-600' : 'text-green-600'
+                                  }`}>
+                                    {bay.splitSide === 'north' ? '(N)' : '(S)'}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="text-[9px] opacity-75 leading-none mb-1">
+                                {isLeased ? "LEA" : `${(bay.squareFootage / 1000).toFixed(0)}K`}
+                              </div>
+                              {!isSplitBay && (bay.standardDockDoors > 0 || bay.oversizedDockDoors > 0) && (
+                                <div className="text-[7px] opacity-60 leading-none mb-1 flex flex-col items-center">
+                                  {bay.standardDockDoors > 0 && (
+                                    <div className="leading-none">{bay.standardDockDoors} std</div>
+                                  )}
+                                  {bay.oversizedDockDoors > 0 && (
+                                    <div className="leading-none">{bay.oversizedDockDoors} ovr</div>
+                                  )}
+                                </div>
+                              )}
+                              {isSplitBay && (bay.standardDockDoors > 0 || bay.oversizedDockDoors > 0) && (
+                                <div className="text-[7px] opacity-60 leading-none mb-1 flex gap-1 justify-center">
+                                  {bay.standardDockDoors > 0 && <span>{bay.standardDockDoors}s</span>}
+                                  {bay.oversizedDockDoors > 0 && <span>{bay.oversizedDockDoors}o</span>}
+                                </div>
+                              )}
+                              {/* Add storefront, speculative office, and restroom symbols - only show on full bays */}
+                              {!isSplitBay && (
+                                <div className="flex gap-1 mt-auto mb-1">
+                                  {originalBayConfig?.hasStorefrontEntry && (
+                                    <span className="text-orange-600 text-[14px]" title="Storefront Entry">🚪</span>
+                                  )}
+                                  {originalBayConfig?.hasSpeculativeOffice && (
+                                    <span className="text-blue-600 text-[14px]" title="Speculative Office">🏢</span>
+                                  )}
+                                  {originalBayConfig?.hasRestroom && (
+                                    <span className="text-purple-600 text-[14px]" title="Restroom">🚻</span>
+                                  )}
+                                </div>
+                              )}
+                            </Button>
+                          );
+                        })}
                       </div>
-                    )}
-                    {/* Add storefront, speculative office, and restroom symbols */}
-                    <div className="flex gap-1 mt-auto mb-1">
-                      {originalBayConfig?.hasStorefrontEntry && (
-                        <span className="text-orange-600 text-[14px]" title="Storefront Entry">🚪</span>
-                      )}
-                      {originalBayConfig?.hasSpeculativeOffice && (
-                        <span className="text-blue-600 text-[14px]" title="Speculative Office">🏢</span>
-                      )}
-                      {originalBayConfig?.hasRestroom && (
-                        <span className="text-purple-600 text-[14px]" title="Restroom">🚻</span>
-                      )}
-                    </div>
-                  </Button>
-                );
-              })}
+                    );
+                  });
+              })()}
               </div>
               
-              {/* Position indicators below bays - Match bay layout direction */}
+              {/* Position indicators below grouped bays - Match bay layout direction */}
               <div className={`flex gap-0.5 justify-start mt-1 ${
                 property.bayProgressionDirection === 'west' ? 'flex-row-reverse' : ''
               }`} style={{ minWidth: 'max-content' }}>
-              {individualBays.map((bay, index) => {
-                const totalBays = individualBays.length;
-                let position = "";
-                
-                // Calculate position labels based on actual bay progression direction
-                const progressionDirection = property.bayProgressionDirection || 'east';
-                
-                // For progression directions, the "start" and "end" are relative to direction
-                if (progressionDirection === 'south') {
-                  // North to South progression
-                  if (index === 0) position = "North End";
-                  else if (index === totalBays - 1) position = "South End";
-                  else if (index < totalBays / 3) position = "North";
-                  else if (index > (totalBays * 2) / 3) position = "South";
-                  else position = "Center";
-                } else if (progressionDirection === 'north') {
-                  // South to North progression
-                  if (index === 0) position = "South End";
-                  else if (index === totalBays - 1) position = "North End";
-                  else if (index < totalBays / 3) position = "South";
-                  else if (index > (totalBays * 2) / 3) position = "North";
-                  else position = "Center";
-                } else if (progressionDirection === 'west') {
-                  // East to West progression
-                  if (index === 0) position = "East End";
-                  else if (index === totalBays - 1) position = "West End";
-                  else if (index < totalBays / 3) position = "East";
-                  else if (index > (totalBays * 2) / 3) position = "West";
-                  else position = "Center";
-                } else {
-                  // Default: East progression (West to East)
-                  if (index === 0) position = "West End";
-                  else if (index === totalBays - 1) position = "East End";
-                  else if (index < totalBays / 3) position = "West";
-                  else if (index > (totalBays * 2) / 3) position = "East";
-                  else position = "Center";
-                }
-                
-                return (
-                  <div key={`pos-${bay.id}`} className="w-16 flex-shrink-0">
-                    <div className="text-[8px] text-center text-gray-500 py-1 leading-tight">
-                      {position}
+              {(() => {
+                // Use the same bay grouping logic for position indicators
+                const bayGroups = new Map<number, typeof individualBays>();
+                individualBays.forEach(bay => {
+                  if (!bayGroups.has(bay.bayNumber)) {
+                    bayGroups.set(bay.bayNumber, []);
+                  }
+                  bayGroups.get(bay.bayNumber)!.push(bay);
+                });
+
+                const sortedGroups = Array.from(bayGroups.entries()).sort(([a], [b]) => a - b);
+                const totalGroups = sortedGroups.length;
+
+                return sortedGroups.map(([bayNumber, baysInGroup], groupIndex) => {
+                  let position = "";
+                  
+                  // Calculate position labels based on actual bay progression direction
+                  const progressionDirection = property.bayProgressionDirection || 'east';
+                  
+                  // For progression directions, the "start" and "end" are relative to direction
+                  if (progressionDirection === 'south') {
+                    // North to South progression
+                    if (groupIndex === 0) position = "North End";
+                    else if (groupIndex === totalGroups - 1) position = "South End";
+                    else if (groupIndex < totalGroups / 3) position = "North";
+                    else if (groupIndex > (totalGroups * 2) / 3) position = "South";
+                    else position = "Center";
+                  } else if (progressionDirection === 'north') {
+                    // South to North progression
+                    if (groupIndex === 0) position = "South End";
+                    else if (groupIndex === totalGroups - 1) position = "North End";
+                    else if (groupIndex < totalGroups / 3) position = "South";
+                    else if (groupIndex > (totalGroups * 2) / 3) position = "North";
+                    else position = "Center";
+                  } else if (progressionDirection === 'west') {
+                    // East to West progression
+                    if (groupIndex === 0) position = "East End";
+                    else if (groupIndex === totalGroups - 1) position = "West End";
+                    else if (groupIndex < totalGroups / 3) position = "East";
+                    else if (groupIndex > (totalGroups * 2) / 3) position = "West";
+                    else position = "Center";
+                  } else {
+                    // Default: East progression (West to East)
+                    if (groupIndex === 0) position = "West End";
+                    else if (groupIndex === totalGroups - 1) position = "East End";
+                    else if (groupIndex < totalGroups / 3) position = "West";
+                    else if (groupIndex > (totalGroups * 2) / 3) position = "East";
+                    else position = "Center";
+                  }
+                  
+                  return (
+                    <div key={`pos-${bayNumber}`} className="w-16 flex-shrink-0">
+                      <div className="text-[8px] text-center text-gray-500 py-1 leading-tight">
+                        {position}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                });
+              })()}
               </div>
             </div>
             

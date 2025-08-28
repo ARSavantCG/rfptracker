@@ -613,7 +613,7 @@ export default function BayConfigurationSelector({
                               key={bay.id}
                               variant={isSelected ? "default" : "outline"}
                               disabled={isLeased}
-                              className={`${isSplitBay ? 'h-14' : 'min-h-28'} w-16 flex flex-col items-center justify-start text-xs p-1 flex-shrink-0 ${splitSideClass} ${
+                              className={`${isSplitBay ? 'h-16' : 'min-h-32'} w-16 flex flex-col items-center justify-start text-xs p-1 flex-shrink-0 ${splitSideClass} ${
                                 isLeased
                                   ? "bg-red-800 border-red-900 text-white cursor-not-allowed opacity-95"
                                   : isSelected 
@@ -658,15 +658,21 @@ export default function BayConfigurationSelector({
                                 </div>
                               )}
                               {/* Add storefront, speculative office, and restroom symbols */}
-                              <div className={`flex ${isSplitBay ? 'gap-0.5' : 'gap-1'} mt-auto mb-1 justify-center`}>
-                                {originalBayConfig?.hasStorefrontEntry && (
-                                  <span className={`text-orange-600 ${isSplitBay ? 'text-[10px]' : 'text-[14px]'}`} title="Storefront Entry">🚪</span>
+                              <div className={`flex ${isSplitBay ? 'flex-col gap-0 items-center' : 'gap-1 justify-center'} mt-auto mb-1`}>
+                                {bay.hasStorefrontEntry && (
+                                  <span className={`${isSplitBay ? 'text-[8px] text-orange-600' : 'text-[11px] text-orange-600'} flex items-center whitespace-nowrap`} title="Storefront Entry">
+                                    🚪{isSplitBay ? ' SF' : ''}
+                                  </span>
                                 )}
-                                {originalBayConfig?.hasSpeculativeOffice && (
-                                  <span className={`text-blue-600 ${isSplitBay ? 'text-[10px]' : 'text-[14px]'}`} title="Speculative Office">🏢</span>
+                                {bay.hasSpeculativeOffice && (
+                                  <span className={`${isSplitBay ? 'text-[8px] text-blue-600' : 'text-[11px] text-blue-600'} flex items-center whitespace-nowrap`} title="Speculative Office">
+                                    🏢{isSplitBay ? ' Off' : ''}
+                                  </span>
                                 )}
-                                {originalBayConfig?.hasRestroom && (
-                                  <span className={`text-purple-600 ${isSplitBay ? 'text-[10px]' : 'text-[14px]'}`} title="Restroom">🚻</span>
+                                {bay.hasRestroom && (
+                                  <span className={`${isSplitBay ? 'text-[8px] text-purple-600' : 'text-[11px] text-purple-600'} flex items-center whitespace-nowrap`} title="Restroom">
+                                    🚻{isSplitBay ? ' RR' : ''}
+                                  </span>
                                 )}
                               </div>
                             </Button>

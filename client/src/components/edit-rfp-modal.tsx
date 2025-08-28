@@ -28,6 +28,7 @@ const editRfpSchema = z.object({
   sentBy: z.string().min(1, "Sent by is required"),
   receivedOn: z.string().min(1, "Received on date is required"),
   internalDueDate: z.string().min(1, "Internal due date is required"),
+  responseToBrokerDue: z.string().optional(),
   developmentContact: z.string(),
   projectArea: z.string(),
   requestTypes: z.array(z.string()).min(1, "At least one request type is required"),
@@ -140,6 +141,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
       sentBy: "",
       receivedOn: "",
       internalDueDate: "",
+      responseToBrokerDue: "",
       developmentContact: "",
       projectArea: "",
       requestTypes: [], // Empty by default - user selects what they need
@@ -173,6 +175,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
         sentBy: rfp.sentBy || "",
         receivedOn: formatDateForInput(rfp.receivedOn),
         internalDueDate: formatDateForInput(rfp.internalDueDate),
+        responseToBrokerDue: formatDateForInput(rfp.responseToBrokerDue),
         developmentContact: rfp.developmentContact || "",
         projectArea: rfp.projectArea || "",
         requestTypes: rfp.id === 0 ? [] : (rfp.requestTypes || []), // Empty for new alternates
@@ -627,6 +630,20 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Internal Due Date *</FormLabel>
+                  <FormControl>
+                    <Input type="date" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="responseToBrokerDue"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Response to Broker Due</FormLabel>
                   <FormControl>
                     <Input type="date" {...field} />
                   </FormControl>

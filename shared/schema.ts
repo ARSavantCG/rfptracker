@@ -31,6 +31,7 @@ export const rfpRequests = pgTable("rfp_requests", {
   sentBy: text("sent_by").notNull(),
   receivedOn: timestamp("received_on").notNull(),
   internalDueDate: timestamp("internal_due_date").notNull(),
+  responseToBrokerDue: timestamp("response_to_broker_due"),
   contractorDueDate: timestamp("contractor_due_date"),
   architectDueDate: timestamp("architect_due_date"),
   anticipatedLeaseExecutionDate: timestamp("anticipated_lease_execution_date"),
@@ -97,6 +98,7 @@ export const insertRfpRequestSchema = createInsertSchema(rfpRequests).omit({
     if (!val) return new Date();
     return parseLocalDate(val);
   }),
+  responseToBrokerDue: z.string().optional().transform((val) => val ? parseLocalDate(val) : null),
   contractorDueDate: z.string().optional().transform((val) => val ? parseLocalDate(val) : null),
   architectDueDate: z.string().optional().transform((val) => val ? parseLocalDate(val) : null),
   anticipatedLeaseExecutionDate: z.string().optional().transform((val) => val ? parseLocalDate(val) : null),

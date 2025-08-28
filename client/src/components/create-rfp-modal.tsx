@@ -28,7 +28,7 @@ const createRfpSchema = z.object({
   sentBy: z.string().min(1, "RFP request is required"),
   receivedOn: z.string().min(1, "Received on date is required"),
   internalDueDate: z.string().min(1, "Internal due date is required"),
-
+  responseToBrokerDue: z.string().optional(),
   developmentContact: z.string().optional(),
   projectArea: z.string().optional(),
   confidential: z.boolean().default(false),
@@ -70,6 +70,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
       sentBy: "",
       receivedOn: getCurrentDateString(),
       internalDueDate: "",
+      responseToBrokerDue: "",
       developmentContact: "",
       projectArea: "",
       confidential: false,
@@ -427,6 +428,30 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                     </FormItem>
                   )}
                 />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="responseToBrokerDue"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Response to Broker Due</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="date"
+                          {...field}
+                        />
+                      </FormControl>
+                      <p className="text-sm text-muted-foreground">
+                        Deadline to respond to broker
+                      </p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div></div> {/* Empty space for layout */}
               </div>
 
 

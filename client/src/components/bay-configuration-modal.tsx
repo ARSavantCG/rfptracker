@@ -35,7 +35,7 @@ export function BayConfigurationModal({
   const [currentOverride, setCurrentOverride] = useState<number | undefined>(initialOverrideArea);
 
   // Fetch full property data with bay configurations when modal is open
-  const { data: fullProperty } = useQuery<Property>({
+  const { data: fullProperty, isLoading, error } = useQuery<Property>({
     queryKey: [`/api/properties/${property?.id}`],
     enabled: isOpen && !!property?.id,
     staleTime: 0,
@@ -44,6 +44,20 @@ export function BayConfigurationModal({
 
   // Use full property data if available, otherwise fallback to prop
   const propertyWithBayConfigs = fullProperty || property;
+
+  // Debug logging when modal opens
+  if (isOpen) {
+    console.log('🔍 BayConfigurationModal Debug:', {
+      propertyId: property?.id,
+      queryKey: `/api/properties/${property?.id}`,
+      isLoading,
+      error,
+      fullPropertyData: fullProperty,
+      fullPropertyBayConfigs: fullProperty?.bayConfigurations?.length || 0,
+      originalBayConfigs: property?.bayConfigurations?.length || 0,
+      finalBayConfigs: propertyWithBayConfigs?.bayConfigurations?.length || 0
+    });
+  }
 
 
   // Handle area changes from the bay configuration selector

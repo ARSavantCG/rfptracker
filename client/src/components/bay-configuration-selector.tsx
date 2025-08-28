@@ -108,9 +108,13 @@ export default function BayConfigurationSelector({
     console.log('🔍 Processing bay config:', {
       index,
       bayConfig,
+      bayConfigKeys: bayConfig ? Object.keys(bayConfig) : [],
       hasBayName: !!bayConfig?.bayName,
       hasSquareFootage: !!bayConfig?.squareFootage,
-      squareFootage: bayConfig?.squareFootage
+      squareFootage: bayConfig?.squareFootage,
+      // Check alternative property names
+      hasBay_name: !!bayConfig?.bay_name,
+      hasSquare_footage: !!bayConfig?.square_footage
     });
     
     if (!bayConfig || !bayConfig.bayName || !bayConfig.squareFootage || bayConfig.squareFootage === 0) {

@@ -99,7 +99,7 @@ export function HierarchicalPropertySelector({ value, onChange, className }: Hie
       {/* Dropdown menu */}
       {isOpen && (
         <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-lg">
-          <div className="max-h-60 overflow-auto p-1">
+          <div className="max-h-96 overflow-auto p-1">
             {isLoading ? (
               <div className="px-3 py-2 text-sm text-muted-foreground">Loading properties...</div>
             ) : propertyGroups.length === 0 ? (

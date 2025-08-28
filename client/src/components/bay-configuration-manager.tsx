@@ -303,7 +303,13 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
       splitNorthDockDoors: "",
       splitSouthDockDoors: "",
       splitNorthOversizedDoors: "",
-      splitSouthOversizedDoors: ""
+      splitSouthOversizedDoors: "",
+      splitNorthStorefront: false,
+      splitSouthStorefront: false,
+      splitNorthOffice: false,
+      splitSouthOffice: false,
+      splitNorthRestroom: false,
+      splitSouthRestroom: false
     });
   };
 
@@ -352,7 +358,13 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
       splitNorthDockDoors: "",
       splitSouthDockDoors: "",
       splitNorthOversizedDoors: "",
-      splitSouthOversizedDoors: ""
+      splitSouthOversizedDoors: "",
+      splitNorthStorefront: false,
+      splitSouthStorefront: false,
+      splitNorthOffice: false,
+      splitSouthOffice: false,
+      splitNorthRestroom: false,
+      splitSouthRestroom: false
     });
 
     toast({
@@ -382,7 +394,13 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
       splitNorthDockDoors: bay.splitNorthDockDoors?.toString() || "",
       splitSouthDockDoors: bay.splitSouthDockDoors?.toString() || "",
       splitNorthOversizedDoors: bay.splitNorthOversizedDoors?.toString() || "",
-      splitSouthOversizedDoors: bay.splitSouthOversizedDoors?.toString() || ""
+      splitSouthOversizedDoors: bay.splitSouthOversizedDoors?.toString() || "",
+      splitNorthStorefront: bay.splitNorthStorefront || false,
+      splitSouthStorefront: bay.splitSouthStorefront || false,
+      splitNorthOffice: bay.splitNorthOffice || false,
+      splitSouthOffice: bay.splitSouthOffice || false,
+      splitNorthRestroom: bay.splitNorthRestroom || false,
+      splitSouthRestroom: bay.splitSouthRestroom || false
     });
   };
 
@@ -421,7 +439,13 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
       splitNorthDockDoors: newBay.canBeSplit ? (parseInt(newBay.splitNorthDockDoors) || 0) : undefined,
       splitSouthDockDoors: newBay.canBeSplit ? (parseInt(newBay.splitSouthDockDoors) || 0) : undefined,
       splitNorthOversizedDoors: newBay.canBeSplit ? (parseInt(newBay.splitNorthOversizedDoors) || 0) : undefined,
-      splitSouthOversizedDoors: newBay.canBeSplit ? (parseInt(newBay.splitSouthOversizedDoors) || 0) : undefined
+      splitSouthOversizedDoors: newBay.canBeSplit ? (parseInt(newBay.splitSouthOversizedDoors) || 0) : undefined,
+      splitNorthStorefront: newBay.canBeSplit ? newBay.splitNorthStorefront : undefined,
+      splitSouthStorefront: newBay.canBeSplit ? newBay.splitSouthStorefront : undefined,
+      splitNorthOffice: newBay.canBeSplit ? newBay.splitNorthOffice : undefined,
+      splitSouthOffice: newBay.canBeSplit ? newBay.splitSouthOffice : undefined,
+      splitNorthRestroom: newBay.canBeSplit ? newBay.splitNorthRestroom : undefined,
+      splitSouthRestroom: newBay.canBeSplit ? newBay.splitSouthRestroom : undefined
     };
 
     setBayConfigurations(bayConfigurations.map(bay => 
@@ -446,7 +470,13 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
       splitNorthDockDoors: "",
       splitSouthDockDoors: "",
       splitNorthOversizedDoors: "",
-      splitSouthOversizedDoors: ""
+      splitSouthOversizedDoors: "",
+      splitNorthStorefront: false,
+      splitSouthStorefront: false,
+      splitNorthOffice: false,
+      splitSouthOffice: false,
+      splitNorthRestroom: false,
+      splitSouthRestroom: false
     });
 
     toast({
@@ -473,7 +503,13 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
       splitNorthDockDoors: "",
       splitSouthDockDoors: "",
       splitNorthOversizedDoors: "",
-      splitSouthOversizedDoors: ""
+      splitSouthOversizedDoors: "",
+      splitNorthStorefront: false,
+      splitSouthStorefront: false,
+      splitNorthOffice: false,
+      splitSouthOffice: false,
+      splitNorthRestroom: false,
+      splitSouthRestroom: false
     });
   };
 

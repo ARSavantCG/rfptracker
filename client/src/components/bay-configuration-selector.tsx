@@ -66,6 +66,19 @@ export default function BayConfigurationSelector({
   const bayConfigurations = (Array.isArray(rawBayConfigs) 
     ? rawBayConfigs 
     : Object.values(rawBayConfigs || {})) as BayConfiguration[];
+
+  // Temporary debug to see what we're getting
+  console.log('🔍 FINAL DEBUG - BayConfigurationSelector:', {
+    propertyId: property.id,
+    rawBayConfigsType: typeof rawBayConfigs,
+    rawBayConfigsIsArray: Array.isArray(rawBayConfigs),
+    rawBayConfigsLength: rawBayConfigs?.length,
+    finalBayConfigsLength: bayConfigurations.length,
+    firstBayConfig: bayConfigurations[0],
+    propertyKeys: Object.keys(property),
+    hasProperty: !!property,
+    propertyBayConfigsDirect: property.bayConfigurations
+  });
   
   
   

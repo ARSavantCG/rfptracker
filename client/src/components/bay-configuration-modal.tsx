@@ -42,6 +42,17 @@ export function BayConfigurationModal({
     refetchOnMount: true,
   });
 
+  // Debug query status
+  console.log('🔍 BayConfigurationModal Query Debug:', {
+    isOpen,
+    propertyId: property?.id,
+    isLoading,
+    hasError: !!error,
+    hasFullProperty: !!fullProperty,
+    fullPropertyBayConfigs: fullProperty?.bayConfigurations?.length,
+    propBayConfigs: property?.bayConfigurations?.length
+  });
+
   // Use full property data if available, otherwise fallback to prop
   const propertyWithBayConfigs = fullProperty || property;
 

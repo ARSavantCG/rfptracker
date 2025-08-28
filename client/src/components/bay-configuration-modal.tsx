@@ -55,7 +55,14 @@ export function BayConfigurationModal({
       fullPropertyData: fullProperty,
       fullPropertyBayConfigs: fullProperty?.bayConfigurations?.length || 0,
       originalBayConfigs: property?.bayConfigurations?.length || 0,
-      finalBayConfigs: propertyWithBayConfigs?.bayConfigurations?.length || 0
+      finalBayConfigs: propertyWithBayConfigs?.bayConfigurations?.length || 0,
+      sampleBayConfig: propertyWithBayConfigs?.bayConfigurations?.[0]
+    });
+    
+    console.log('🔍 Full Property Structure:', {
+      keys: fullProperty ? Object.keys(fullProperty) : 'no fullProperty',
+      bayConfigsArray: fullProperty?.bayConfigurations,
+      firstBay: fullProperty?.bayConfigurations?.[0]
     });
   }
 

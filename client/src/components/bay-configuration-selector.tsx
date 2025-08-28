@@ -658,20 +658,20 @@ export default function BayConfigurationSelector({
                                 </div>
                               )}
                               {/* Add storefront, speculative office, and restroom symbols */}
-                              <div className={`flex ${isSplitBay ? 'flex-col gap-0 items-center' : 'gap-1 justify-center'} mt-auto mb-1`}>
+                              <div className={`flex ${isSplitBay ? 'flex-row gap-0.5 justify-center items-center flex-wrap' : 'gap-1 justify-center'} mt-auto mb-1 min-h-[12px]`}>
                                 {bay.hasStorefrontEntry && (
-                                  <span className={`${isSplitBay ? 'text-[8px] text-orange-600' : 'text-[11px] text-orange-600'} flex items-center whitespace-nowrap`} title="Storefront Entry">
-                                    🚪{isSplitBay ? ' SF' : ''}
+                                  <span className={`${isSplitBay ? 'text-[7px] text-orange-600' : 'text-[11px] text-orange-600'} flex items-center justify-center`} title="Storefront Entry">
+                                    {isSplitBay ? '🚪' : '🚪'}
                                   </span>
                                 )}
                                 {bay.hasSpeculativeOffice && (
-                                  <span className={`${isSplitBay ? 'text-[8px] text-blue-600' : 'text-[11px] text-blue-600'} flex items-center whitespace-nowrap`} title="Speculative Office">
-                                    🏢{isSplitBay ? ' Off' : ''}
+                                  <span className={`${isSplitBay ? 'text-[7px] text-blue-600' : 'text-[11px] text-blue-600'} flex items-center justify-center`} title="Speculative Office">
+                                    {isSplitBay ? '🏢' : '🏢'}
                                   </span>
                                 )}
                                 {bay.hasRestroom && (
-                                  <span className={`${isSplitBay ? 'text-[8px] text-purple-600' : 'text-[11px] text-purple-600'} flex items-center whitespace-nowrap`} title="Restroom">
-                                    🚻{isSplitBay ? ' RR' : ''}
+                                  <span className={`${isSplitBay ? 'text-[7px] text-purple-600' : 'text-[11px] text-purple-600'} flex items-center justify-center`} title="Restroom">
+                                    {isSplitBay ? '🚻' : '🚻'}
                                   </span>
                                 )}
                               </div>

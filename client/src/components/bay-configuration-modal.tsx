@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
@@ -49,17 +49,12 @@ export function BayConfigurationModal({
 
 
   // Handle area changes from the bay configuration selector
-  const handleAreaChange = (area: number, selectedBays: BayConfiguration[], overrideArea?: number) => {
-    console.log('🔧 Bay Configuration Modal - handleAreaChange called:', {
-      area,
-      selectedBaysCount: selectedBays.length,
-      selectedBays,
-      overrideArea
-    });
+  const handleAreaChange = useCallback((area: number, selectedBays: BayConfiguration[], overrideArea?: number) => {
+    console.log('Modal receiving bay selection:', { area, selectedBaysCount: selectedBays.length });
     setCurrentArea(area);
     setCurrentBays(selectedBays);
     setCurrentOverride(overrideArea);
-  };
+  }, []);
 
   const handleConfirm = () => {
     onConfirm(currentArea, currentBays, currentOverride);
@@ -95,19 +90,11 @@ export function BayConfigurationModal({
             Cancel
           </Button>
           <Button 
-            onClick={() => {
-              console.log('🔧 Confirm Selection clicked - current state:', {
-                currentBaysLength: currentBays.length,
-                currentBays,
-                currentArea,
-                disabled: currentBays.length === 0
-              });
-              handleConfirm();
-            }}
+            onClick={handleConfirm}
             className="bg-orange-600 hover:bg-orange-700 text-white"
             disabled={currentBays.length === 0}
           >
-            Confirm Selection
+            Confirm Selection ({currentBays.length} bays)
           </Button>
         </DialogFooter>
       </DialogContent>

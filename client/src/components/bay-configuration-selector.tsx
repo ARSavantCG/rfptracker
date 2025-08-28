@@ -24,7 +24,7 @@ export default function BayConfigurationSelector({
     initialSelectedBays.map(bay => bay.id)
   );
 
-  // Handle bay selection with conflict prevention for splittable bays
+  // Handle bay selection - allow multiple selections including both halves of split bays
   const handleBaySelection = (bayId: string, isSelected: boolean) => {
     const clickedBay = individualBays.find(bay => bay.id === bayId);
     
@@ -32,23 +32,7 @@ export default function BayConfigurationSelector({
       let newSelection = [...selectedBayIds];
       
       if (isSelected) {
-        // Adding a bay - remove conflicting bays first
-        if (clickedBay.isSplitBay) {
-          // Selecting a split bay, remove the full bay and other half
-          newSelection = newSelection.filter(id => 
-            id !== clickedBay.parentBayId && 
-            id !== `${clickedBay.parentBayId}_north` && 
-            id !== `${clickedBay.parentBayId}_south`
-          );
-        } else {
-          // Selecting a full bay, remove any split bays for this bay
-          newSelection = newSelection.filter(id => 
-            id !== `${clickedBay.id}_north` && 
-            id !== `${clickedBay.id}_south`
-          );
-        }
-        
-        // Add the selected bay
+        // Simply add the selected bay - no conflict prevention
         newSelection.push(bayId);
       } else {
         // Removing a bay - just remove it
@@ -82,8 +66,8 @@ export default function BayConfigurationSelector({
     enabled: !!property.id,
     staleTime: 0, // Always fetch fresh data
     refetchOnMount: true, // Refetch when component mounts
-    refetchOnWindowFocus: false, // Don't refetch on window focus
-    cacheTime: 0, // Don't cache the result
+    refetchOnWindowFocus: true, // Refetch on window focus to catch changes
+    refetchInterval: 3000, // Refetch every 3 seconds to catch property updates
   });
 
   // Use fresh bay configurations if available, fallback to prop data
@@ -461,7 +445,7 @@ export default function BayConfigurationSelector({
           <div className="mb-2">
             <Label className="text-[11px] font-medium text-gray-700">Building Layout</Label>
             <p className="text-[9px] text-gray-500">
-              Click bays to select for rentable area calculation. Some bays can be split into north/south halves - selecting one option automatically deselects conflicting options. Red bays are already leased.
+              Click bays to select for rentable area calculation. Some bays can be split into north/south halves - you can select either half individually or both halves together. Red bays are already leased.
             </p>
           </div>
 

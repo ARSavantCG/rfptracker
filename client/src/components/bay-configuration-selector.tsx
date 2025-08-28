@@ -622,18 +622,14 @@ export default function BayConfigurationSelector({
                               }`}
                               onClick={() => toggleBaySelection(bay.id)}
                             >
-                              <div className="font-bold text-[9px] mb-1 leading-tight w-full text-center">
-                                {isSplitBay ? (
-                                  <>
-                                    <div className="truncate">{bay.originalBayName}</div>
-                                    <div className={`text-[8px] font-normal ${
-                                      bay.splitSide === 'north' ? 'text-blue-600' : 'text-green-600'
-                                    }`}>
-                                      {bay.splitSide === 'north' ? 'North' : 'South'}
-                                    </div>
-                                  </>
-                                ) : (
-                                  <div className="truncate">{bay.bayName}</div>
+                              <div className="font-bold text-[10px] mb-1 leading-none truncate w-full text-center">
+                                {isSplitBay ? `Bay ${bay.bayNumber}` : bay.bayName}
+                                {isSplitBay && (
+                                  <div className={`text-[8px] font-normal ${
+                                    bay.splitSide === 'north' ? 'text-blue-600' : 'text-green-600'
+                                  }`}>
+                                    {bay.splitSide === 'north' ? '(N)' : '(S)'}
+                                  </div>
                                 )}
                               </div>
                               <div className="text-[9px] opacity-75 leading-none mb-1">

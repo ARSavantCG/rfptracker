@@ -11,6 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
+import { FormulaInput } from './formula-input';
 import type { Property, BayConfiguration } from "@shared/schema";
 
 interface BayConfigurationManagerProps {
@@ -865,43 +866,25 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                         <div className="space-y-2">
                           <div className="space-y-1">
                             <Label className="text-xs font-medium">Square Footage</Label>
-                            <Input
-                              type="text"
+                            <FormulaInput
                               value={newBay.splitNorthSquareFootage}
-                              onChange={(e) => {
-                                const northValue = e.target.value;
+                              onChange={(value, evaluatedValue) => {
                                 const totalBayArea = parseInt(newBay.squareFootage) || 0;
                                 
-                                // Try to evaluate if it's a formula (starts with =)
-                                let evaluatedNorth = northValue;
-                                let displayNorth = northValue;
-                                
-                                if (northValue.startsWith('=')) {
-                                  try {
-                                    // Simple formula evaluation - replace = with empty and evaluate basic math
-                                    const formula = northValue.slice(1);
-                                    const result = Function('"use strict"; return (' + formula + ')')();
-                                    if (!isNaN(result)) {
-                                      evaluatedNorth = Math.round(result).toString();
-                                      displayNorth = evaluatedNorth; // Show the calculated result instead of the formula
-                                    }
-                                  } catch (e) {
-                                    // If formula fails, keep original value
-                                  }
-                                }
-                                
-                                // Auto-calculate South bay as remainder
-                                const northNum = parseInt(evaluatedNorth) || 0;
+                                // Use evaluated value if available, otherwise parse the raw value
+                                const northNum = evaluatedValue !== undefined ? evaluatedValue : (parseInt(String(value)) || 0);
                                 const southNum = totalBayArea - northNum;
                                 
                                 setNewBay({ 
                                   ...newBay, 
-                                  splitNorthSquareFootage: displayNorth,
+                                  splitNorthSquareFootage: String(value),
                                   splitSouthSquareFootage: southNum > 0 ? southNum.toString() : ""
                                 });
                               }}
                               className="text-sm"
                               placeholder="e.g. 20000 or =35247*0.6"
+                              type="quantity"
+                              decimalPlaces={0}
                             />
                           </div>
                           <div className="grid grid-cols-2 gap-2">
@@ -938,43 +921,25 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                         <div className="space-y-2">
                           <div className="space-y-1">
                             <Label className="text-xs font-medium">Square Footage</Label>
-                            <Input
-                              type="text"
+                            <FormulaInput
                               value={newBay.splitSouthSquareFootage}
-                              onChange={(e) => {
-                                const southValue = e.target.value;
+                              onChange={(value, evaluatedValue) => {
                                 const totalBayArea = parseInt(newBay.squareFootage) || 0;
                                 
-                                // Try to evaluate if it's a formula (starts with =)
-                                let evaluatedSouth = southValue;
-                                let displaySouth = southValue;
-                                
-                                if (southValue.startsWith('=')) {
-                                  try {
-                                    // Simple formula evaluation - replace = with empty and evaluate basic math
-                                    const formula = southValue.slice(1);
-                                    const result = Function('"use strict"; return (' + formula + ')')();
-                                    if (!isNaN(result)) {
-                                      evaluatedSouth = Math.round(result).toString();
-                                      displaySouth = evaluatedSouth; // Show the calculated result instead of the formula
-                                    }
-                                  } catch (e) {
-                                    // If formula fails, keep original value
-                                  }
-                                }
-                                
-                                // Auto-calculate North bay as remainder
-                                const southNum = parseInt(evaluatedSouth) || 0;
+                                // Use evaluated value if available, otherwise parse the raw value
+                                const southNum = evaluatedValue !== undefined ? evaluatedValue : (parseInt(String(value)) || 0);
                                 const northNum = totalBayArea - southNum;
                                 
                                 setNewBay({ 
                                   ...newBay, 
-                                  splitSouthSquareFootage: displaySouth,
+                                  splitSouthSquareFootage: String(value),
                                   splitNorthSquareFootage: northNum > 0 ? northNum.toString() : ""
                                 });
                               }}
                               className="text-sm"
                               placeholder="e.g. 15247 or =35247*0.4"
+                              type="quantity"
+                              decimalPlaces={0}
                             />
                           </div>
                           <div className="grid grid-cols-2 gap-2">
@@ -1251,42 +1216,25 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                                       <div className="space-y-1">
                                         <div className="space-y-1">
                                           <Label className="text-xs font-medium">Square Footage</Label>
-                                          <Input
-                                            type="text"
+                                          <FormulaInput
                                             value={newBay.splitNorthSquareFootage}
-                                            onChange={(e) => {
-                                              const northValue = e.target.value;
+                                            onChange={(value, evaluatedValue) => {
                                               const totalBayArea = parseInt(newBay.squareFootage) || 0;
                                               
-                                              // Try to evaluate if it's a formula (starts with =)
-                                              let evaluatedNorth = northValue;
-                                              let displayNorth = northValue;
-                                              
-                                              if (northValue.startsWith('=')) {
-                                                try {
-                                                  const formula = northValue.slice(1);
-                                                  const result = Function('"use strict"; return (' + formula + ')')();
-                                                  if (!isNaN(result)) {
-                                                    evaluatedNorth = Math.round(result).toString();
-                                                    displayNorth = evaluatedNorth; // Show the calculated result instead of the formula
-                                                  }
-                                                } catch (e) {
-                                                  // If formula fails, keep original value
-                                                }
-                                              }
-                                              
-                                              // Auto-calculate South bay as remainder
-                                              const northNum = parseInt(evaluatedNorth) || 0;
+                                              // Use evaluated value if available, otherwise parse the raw value
+                                              const northNum = evaluatedValue !== undefined ? evaluatedValue : (parseInt(String(value)) || 0);
                                               const southNum = totalBayArea - northNum;
                                               
                                               setNewBay({ 
                                                 ...newBay, 
-                                                splitNorthSquareFootage: displayNorth,
+                                                splitNorthSquareFootage: String(value),
                                                 splitSouthSquareFootage: southNum > 0 ? southNum.toString() : ""
                                               });
                                             }}
                                             className="text-xs h-8"
                                             placeholder="=35247*0.6"
+                                            type="quantity"
+                                            decimalPlaces={0}
                                           />
                                         </div>
                                         <div className="grid grid-cols-2 gap-1">
@@ -1323,42 +1271,25 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                                       <div className="space-y-1">
                                         <div className="space-y-1">
                                           <Label className="text-xs font-medium">Square Footage</Label>
-                                          <Input
-                                            type="text"
+                                          <FormulaInput
                                             value={newBay.splitSouthSquareFootage}
-                                            onChange={(e) => {
-                                              const southValue = e.target.value;
+                                            onChange={(value, evaluatedValue) => {
                                               const totalBayArea = parseInt(newBay.squareFootage) || 0;
                                               
-                                              // Try to evaluate if it's a formula (starts with =)
-                                              let evaluatedSouth = southValue;
-                                              let displaySouth = southValue;
-                                              
-                                              if (southValue.startsWith('=')) {
-                                                try {
-                                                  const formula = southValue.slice(1);
-                                                  const result = Function('"use strict"; return (' + formula + ')')();
-                                                  if (!isNaN(result)) {
-                                                    evaluatedSouth = Math.round(result).toString();
-                                                    displaySouth = evaluatedSouth; // Show the calculated result instead of the formula
-                                                  }
-                                                } catch (e) {
-                                                  // If formula fails, keep original value
-                                                }
-                                              }
-                                              
-                                              // Auto-calculate North bay as remainder
-                                              const southNum = parseInt(evaluatedSouth) || 0;
+                                              // Use evaluated value if available, otherwise parse the raw value
+                                              const southNum = evaluatedValue !== undefined ? evaluatedValue : (parseInt(String(value)) || 0);
                                               const northNum = totalBayArea - southNum;
                                               
                                               setNewBay({ 
                                                 ...newBay, 
-                                                splitSouthSquareFootage: displaySouth,
+                                                splitSouthSquareFootage: String(value),
                                                 splitNorthSquareFootage: northNum > 0 ? northNum.toString() : ""
                                               });
                                             }}
                                             className="text-xs h-8"
                                             placeholder="=35247*0.4"
+                                            type="quantity"
+                                            decimalPlaces={0}
                                           />
                                         </div>
                                         <div className="grid grid-cols-2 gap-1">

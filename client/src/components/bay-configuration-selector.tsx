@@ -613,7 +613,7 @@ export default function BayConfigurationSelector({
                               key={bay.id}
                               variant={isSelected ? "default" : "outline"}
                               disabled={isLeased}
-                              className={`${isSplitBay ? 'min-h-16' : 'min-h-28'} w-16 flex flex-col items-center justify-start text-xs p-1 flex-shrink-0 ${splitSideClass} ${
+                              className={`${isSplitBay ? 'h-14' : 'min-h-28'} w-16 flex flex-col items-center justify-start text-xs p-1 flex-shrink-0 ${splitSideClass} ${
                                 isLeased
                                   ? "bg-red-800 border-red-900 text-white cursor-not-allowed opacity-95"
                                   : isSelected 
@@ -624,14 +624,18 @@ export default function BayConfigurationSelector({
                               }`}
                               onClick={() => toggleBaySelection(bay.id)}
                             >
-                              <div className="font-bold text-[10px] mb-1 leading-none truncate w-full text-center">
-                                {isSplitBay ? `Bay ${bay.bayNumber}` : bay.bayName}
-                                {isSplitBay && (
-                                  <div className={`text-[8px] font-normal ${
-                                    bay.splitSide === 'north' ? 'text-blue-600' : 'text-green-600'
-                                  }`}>
-                                    {bay.splitSide === 'north' ? '(N)' : '(S)'}
-                                  </div>
+                              <div className={`font-bold ${isSplitBay ? 'text-[9px]' : 'text-[10px]'} mb-1 leading-tight w-full text-center`}>
+                                {isSplitBay ? (
+                                  <>
+                                    <div className="truncate">Bay {bay.bayNumber}</div>
+                                    <div className={`text-[8px] font-normal ${
+                                      bay.splitSide === 'north' ? 'text-blue-600' : 'text-green-600'
+                                    }`}>
+                                      {bay.splitSide === 'north' ? '(N)' : '(S)'}
+                                    </div>
+                                  </>
+                                ) : (
+                                  <div className="truncate">{bay.bayName}</div>
                                 )}
                               </div>
                               <div className="text-[9px] opacity-75 leading-none mb-1">

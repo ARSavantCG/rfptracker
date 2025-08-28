@@ -45,26 +45,6 @@ export function BayConfigurationModal({
   // Use full property data if available, otherwise fallback to prop
   const propertyWithBayConfigs = fullProperty || property;
 
-  // Debug logging when modal opens
-  if (isOpen) {
-    console.log('🔍 BayConfigurationModal Debug:', {
-      propertyId: property?.id,
-      queryKey: `/api/properties/${property?.id}`,
-      isLoading,
-      error,
-      fullPropertyData: fullProperty,
-      fullPropertyBayConfigs: fullProperty?.bayConfigurations?.length || 0,
-      originalBayConfigs: property?.bayConfigurations?.length || 0,
-      finalBayConfigs: propertyWithBayConfigs?.bayConfigurations?.length || 0,
-      sampleBayConfig: propertyWithBayConfigs?.bayConfigurations?.[0]
-    });
-    
-    console.log('🔍 Full Property Structure:', {
-      keys: fullProperty ? Object.keys(fullProperty) : 'no fullProperty',
-      bayConfigsArray: fullProperty?.bayConfigurations,
-      firstBay: fullProperty?.bayConfigurations?.[0]
-    });
-  }
 
 
   // Handle area changes from the bay configuration selector

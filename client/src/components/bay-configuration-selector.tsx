@@ -60,18 +60,8 @@ export default function BayConfigurationSelector({
     enabled: !!property.id
   });
 
-  // Fetch fresh property data to ensure bay configurations are up-to-date
-  const { data: freshProperty } = useQuery<Property>({
-    queryKey: [`/api/properties/${property.id}`],
-    enabled: !!property.id,
-    staleTime: 0, // Always fetch fresh data
-    refetchOnMount: true, // Refetch when component mounts
-    refetchOnWindowFocus: true, // Refetch on window focus to catch changes
-    refetchInterval: 1000, // Refetch every 1 second to catch property updates
-  });
-
-  // Use fresh bay configurations if available, fallback to prop data
-  const bayConfigurations = freshProperty?.bayConfigurations || property.bayConfigurations || [];
+  // Use bay configurations from the property prop (parent component fetches fresh data)
+  const bayConfigurations = property.bayConfigurations || [];
   
   
   

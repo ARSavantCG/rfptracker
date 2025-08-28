@@ -61,19 +61,12 @@ export default function BayConfigurationSelector({
   });
 
   // Use bay configurations from the property prop (parent component fetches fresh data)
-  const bayConfigurations = property.bayConfigurations || [];
+  // Convert to array if it's an object (due to serialization issues)
+  const rawBayConfigs = property.bayConfigurations || [];
+  const bayConfigurations = Array.isArray(rawBayConfigs) 
+    ? rawBayConfigs 
+    : Object.values(rawBayConfigs || {});
   
-  // Debug log to see what we're receiving
-  console.log('🔍 BayConfigurationSelector receiving:', {
-    propertyId: property.id,
-    propertyName: property.propertyName,
-    bayConfigurations: bayConfigurations.length,
-    firstBayConfig: bayConfigurations[0],
-    propertyBayConfigsRaw: property.bayConfigurations,
-    propertyBayConfigsType: typeof property.bayConfigurations,
-    propertyBayConfigsLength: property.bayConfigurations?.length,
-    propertyKeys: Object.keys(property)
-  });
   
   
   

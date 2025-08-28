@@ -67,7 +67,7 @@ export default function BayConfigurationSelector({
     staleTime: 0, // Always fetch fresh data
     refetchOnMount: true, // Refetch when component mounts
     refetchOnWindowFocus: true, // Refetch on window focus to catch changes
-    refetchInterval: 3000, // Refetch every 3 seconds to catch property updates
+    refetchInterval: 1000, // Refetch every 1 second to catch property updates
   });
 
   // Use fresh bay configurations if available, fallback to prop data

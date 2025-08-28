@@ -579,36 +579,36 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
               )}
             />
 
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="sentBy"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Sent By</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <select
-                          {...field}
-                          className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background data-[placeholder]:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none"
-                        >
-                          <option value="">Select property owner</option>
-                          {(contacts as Contact[])
-                            .filter((contact: Contact) => contact.type === "owner")
-                            .map((contact: Contact) => (
-                              <option key={contact.id} value={`${contact.name} - ${contact.company}`}>
-                                {contact.name} - {contact.company}
-                              </option>
-                            ))}
-                        </select>
-                        <ChevronDown className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50" />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            <FormField
+              control={form.control}
+              name="sentBy"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Sent By</FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <select
+                        {...field}
+                        className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background data-[placeholder]:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none"
+                      >
+                        <option value="">Select property owner</option>
+                        {(contacts as Contact[])
+                          .filter((contact: Contact) => contact.type === "owner")
+                          .map((contact: Contact) => (
+                            <option key={contact.id} value={`${contact.name} - ${contact.company}`}>
+                              {contact.name} - {contact.company}
+                            </option>
+                          ))}
+                      </select>
+                      <ChevronDown className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50" />
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <FormField
                 control={form.control}
                 name="receivedOn"
@@ -622,35 +622,35 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
                   </FormItem>
                 )}
               />
+
+              <FormField
+                control={form.control}
+                name="internalDueDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Internal Due Date *</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="responseToBrokerDue"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Response to Broker Due</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
-
-            <FormField
-              control={form.control}
-              name="internalDueDate"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Internal Due Date *</FormLabel>
-                  <FormControl>
-                    <Input type="date" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="responseToBrokerDue"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Response to Broker Due</FormLabel>
-                  <FormControl>
-                    <Input type="date" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
 
             {/* Development Contact - only for non-alternates */}
             {!rfp?.isOption && (

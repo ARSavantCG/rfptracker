@@ -388,7 +388,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                 )}
               />
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <FormField
                   control={form.control}
                   name="receivedOn"
@@ -428,9 +428,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                     </FormItem>
                   )}
                 />
-              </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="responseToBrokerDue"
@@ -450,8 +448,6 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                     </FormItem>
                   )}
                 />
-
-                <div></div> {/* Empty space for layout */}
               </div>
 
 

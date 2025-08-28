@@ -622,14 +622,18 @@ export default function BayConfigurationSelector({
                               }`}
                               onClick={() => toggleBaySelection(bay.id)}
                             >
-                              <div className="font-bold text-[10px] mb-1 leading-none truncate w-full text-center">
-                                {isSplitBay ? `Bay ${bay.bayNumber}` : bay.bayName}
-                                {isSplitBay && (
-                                  <div className={`text-[8px] font-normal ${
-                                    bay.splitSide === 'north' ? 'text-blue-600' : 'text-green-600'
-                                  }`}>
-                                    {bay.splitSide === 'north' ? '(N)' : '(S)'}
-                                  </div>
+                              <div className="font-bold text-[9px] mb-1 leading-tight w-full text-center">
+                                {isSplitBay ? (
+                                  <>
+                                    <div className="truncate">{bay.originalBayName}</div>
+                                    <div className={`text-[8px] font-normal ${
+                                      bay.splitSide === 'north' ? 'text-blue-600' : 'text-green-600'
+                                    }`}>
+                                      {bay.splitSide === 'north' ? 'North' : 'South'}
+                                    </div>
+                                  </>
+                                ) : (
+                                  <div className="truncate">{bay.bayName}</div>
                                 )}
                               </div>
                               <div className="text-[9px] opacity-75 leading-none mb-1">
@@ -651,20 +655,18 @@ export default function BayConfigurationSelector({
                                   {bay.oversizedDockDoors > 0 && <span>{bay.oversizedDockDoors}o</span>}
                                 </div>
                               )}
-                              {/* Add storefront, speculative office, and restroom symbols - only show on full bays */}
-                              {!isSplitBay && (
-                                <div className="flex gap-1 mt-auto mb-1">
-                                  {originalBayConfig?.hasStorefrontEntry && (
-                                    <span className="text-orange-600 text-[14px]" title="Storefront Entry">🚪</span>
-                                  )}
-                                  {originalBayConfig?.hasSpeculativeOffice && (
-                                    <span className="text-blue-600 text-[14px]" title="Speculative Office">🏢</span>
-                                  )}
-                                  {originalBayConfig?.hasRestroom && (
-                                    <span className="text-purple-600 text-[14px]" title="Restroom">🚻</span>
-                                  )}
-                                </div>
-                              )}
+                              {/* Add storefront, speculative office, and restroom symbols */}
+                              <div className={`flex ${isSplitBay ? 'gap-0.5' : 'gap-1'} mt-auto mb-1 justify-center`}>
+                                {originalBayConfig?.hasStorefrontEntry && (
+                                  <span className={`text-orange-600 ${isSplitBay ? 'text-[10px]' : 'text-[14px]'}`} title="Storefront Entry">🚪</span>
+                                )}
+                                {originalBayConfig?.hasSpeculativeOffice && (
+                                  <span className={`text-blue-600 ${isSplitBay ? 'text-[10px]' : 'text-[14px]'}`} title="Speculative Office">🏢</span>
+                                )}
+                                {originalBayConfig?.hasRestroom && (
+                                  <span className={`text-purple-600 ${isSplitBay ? 'text-[10px]' : 'text-[14px]'}`} title="Restroom">🚻</span>
+                                )}
+                              </div>
                             </Button>
                           );
                         })}

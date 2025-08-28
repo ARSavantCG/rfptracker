@@ -391,21 +391,23 @@ export default function BayConfigurationSelector({
     (selectedBayIds.length / bayConfigurations.length) * property.mechanicalRoomSquareFootage : 0);
   
   // Get selected bay configurations with proportional mechanical room allocation
-  const selectedBays = selectedBayIds.map(bayId => {
-    const originalBayConfig = bayConfigurations.find(bay => bay.id === bayId);
-    if (!originalBayConfig) return null;
-    
-    // Calculate proportional mechanical room allocation for this bay
-    const totalPropertyBaysSF = bayConfigurations.reduce((sum, bay) => sum + (bay.squareFootage || 0), 0);
-    const mechanicalRoomSF = property.mechanicalRoomSquareFootage || 0;
-    const bayProportion = totalPropertyBaysSF > 0 ? (originalBayConfig.squareFootage || 0) / totalPropertyBaysSF : 0;
-    const mechanicalRoomAllocation = mechanicalRoomSF * bayProportion;
-    
-    return {
-      ...originalBayConfig,
-      mechanicalRoomAllocation: mechanicalRoomAllocation
-    };
-  }).filter((bay): bay is NonNullable<typeof bay> => bay != null);
+  const selectedBays = useMemo(() => {
+    return selectedBayIds.map(bayId => {
+      const originalBayConfig = bayConfigurations.find(bay => bay.id === bayId);
+      if (!originalBayConfig) return null;
+      
+      // Calculate proportional mechanical room allocation for this bay
+      const totalPropertyBaysSF = bayConfigurations.reduce((sum, bay) => sum + (bay.squareFootage || 0), 0);
+      const mechanicalRoomSF = property.mechanicalRoomSquareFootage || 0;
+      const bayProportion = totalPropertyBaysSF > 0 ? (originalBayConfig.squareFootage || 0) / totalPropertyBaysSF : 0;
+      const mechanicalRoomAllocation = mechanicalRoomSF * bayProportion;
+      
+      return {
+        ...originalBayConfig,
+        mechanicalRoomAllocation: mechanicalRoomAllocation
+      };
+    }).filter((bay): bay is NonNullable<typeof bay> => bay != null);
+  }, [selectedBayIds, bayConfigurations, property.mechanicalRoomSquareFootage]);
 
   // Calculate final area considering override
   const calculatedArea = calculateTotalArea();
@@ -449,7 +451,7 @@ export default function BayConfigurationSelector({
   // Update parent component when selection or override changes
   useEffect(() => {
     onRentableAreaChange(finalArea, selectedBays, overrideValue);
-  }, [selectedBayIds, finalArea, overrideValue, selectedBays]);
+  }, [selectedBayIds, finalArea, overrideValue, onRentableAreaChange]);
 
   if (!individualBays.length) {
     return (

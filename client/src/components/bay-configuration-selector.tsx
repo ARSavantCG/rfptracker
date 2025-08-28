@@ -69,7 +69,10 @@ export default function BayConfigurationSelector({
     propertyName: property.propertyName,
     bayConfigurations: bayConfigurations.length,
     firstBayConfig: bayConfigurations[0],
-    property: property
+    propertyBayConfigsRaw: property.bayConfigurations,
+    propertyBayConfigsType: typeof property.bayConfigurations,
+    propertyBayConfigsLength: property.bayConfigurations?.length,
+    propertyKeys: Object.keys(property)
   });
   
   

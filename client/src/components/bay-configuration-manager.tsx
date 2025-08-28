@@ -874,6 +874,8 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                                 
                                 // Try to evaluate if it's a formula (starts with =)
                                 let evaluatedNorth = northValue;
+                                let displayNorth = northValue;
+                                
                                 if (northValue.startsWith('=')) {
                                   try {
                                     // Simple formula evaluation - replace = with empty and evaluate basic math
@@ -881,6 +883,7 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                                     const result = Function('"use strict"; return (' + formula + ')')();
                                     if (!isNaN(result)) {
                                       evaluatedNorth = Math.round(result).toString();
+                                      displayNorth = evaluatedNorth; // Show the calculated result instead of the formula
                                     }
                                   } catch (e) {
                                     // If formula fails, keep original value
@@ -893,7 +896,7 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                                 
                                 setNewBay({ 
                                   ...newBay, 
-                                  splitNorthSquareFootage: northValue,
+                                  splitNorthSquareFootage: displayNorth,
                                   splitSouthSquareFootage: southNum > 0 ? southNum.toString() : ""
                                 });
                               }}
@@ -944,6 +947,8 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                                 
                                 // Try to evaluate if it's a formula (starts with =)
                                 let evaluatedSouth = southValue;
+                                let displaySouth = southValue;
+                                
                                 if (southValue.startsWith('=')) {
                                   try {
                                     // Simple formula evaluation - replace = with empty and evaluate basic math
@@ -951,6 +956,7 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                                     const result = Function('"use strict"; return (' + formula + ')')();
                                     if (!isNaN(result)) {
                                       evaluatedSouth = Math.round(result).toString();
+                                      displaySouth = evaluatedSouth; // Show the calculated result instead of the formula
                                     }
                                   } catch (e) {
                                     // If formula fails, keep original value
@@ -963,7 +969,7 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                                 
                                 setNewBay({ 
                                   ...newBay, 
-                                  splitSouthSquareFootage: southValue,
+                                  splitSouthSquareFootage: displaySouth,
                                   splitNorthSquareFootage: northNum > 0 ? northNum.toString() : ""
                                 });
                               }}
@@ -1254,12 +1260,15 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                                               
                                               // Try to evaluate if it's a formula (starts with =)
                                               let evaluatedNorth = northValue;
+                                              let displayNorth = northValue;
+                                              
                                               if (northValue.startsWith('=')) {
                                                 try {
                                                   const formula = northValue.slice(1);
                                                   const result = Function('"use strict"; return (' + formula + ')')();
                                                   if (!isNaN(result)) {
                                                     evaluatedNorth = Math.round(result).toString();
+                                                    displayNorth = evaluatedNorth; // Show the calculated result instead of the formula
                                                   }
                                                 } catch (e) {
                                                   // If formula fails, keep original value
@@ -1272,7 +1281,7 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                                               
                                               setNewBay({ 
                                                 ...newBay, 
-                                                splitNorthSquareFootage: northValue,
+                                                splitNorthSquareFootage: displayNorth,
                                                 splitSouthSquareFootage: southNum > 0 ? southNum.toString() : ""
                                               });
                                             }}
@@ -1323,12 +1332,15 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                                               
                                               // Try to evaluate if it's a formula (starts with =)
                                               let evaluatedSouth = southValue;
+                                              let displaySouth = southValue;
+                                              
                                               if (southValue.startsWith('=')) {
                                                 try {
                                                   const formula = southValue.slice(1);
                                                   const result = Function('"use strict"; return (' + formula + ')')();
                                                   if (!isNaN(result)) {
                                                     evaluatedSouth = Math.round(result).toString();
+                                                    displaySouth = evaluatedSouth; // Show the calculated result instead of the formula
                                                   }
                                                 } catch (e) {
                                                   // If formula fails, keep original value
@@ -1341,7 +1353,7 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                                               
                                               setNewBay({ 
                                                 ...newBay, 
-                                                splitSouthSquareFootage: southValue,
+                                                splitSouthSquareFootage: displaySouth,
                                                 splitNorthSquareFootage: northNum > 0 ? northNum.toString() : ""
                                               });
                                             }}

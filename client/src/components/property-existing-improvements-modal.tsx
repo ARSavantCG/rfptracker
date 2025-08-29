@@ -221,6 +221,73 @@ export function PropertyExistingImprovementsModal({
 
   const allocationType = form.watch("allocationType");
 
+  // Generate all available bay options including split configurations
+  const getAllAvailableBays = () => {
+    const sortedBayConfigs = [...(property.bayConfigurations || [])].sort((a, b) => {
+      const aMatch = a.bayName.match(/Bay (\d+)-(\d+)/);
+      const bMatch = b.bayName.match(/Bay (\d+)-(\d+)/);
+      if (!aMatch || !bMatch) return 0;
+      const aStart = parseInt(aMatch[1]);
+      const bStart = parseInt(bMatch[1]);
+      return aStart - bStart;
+    });
+
+    return sortedBayConfigs.flatMap((bayConfig, index) => {
+      const squareFootage = typeof bayConfig.squareFootage === 'string' 
+        ? parseInt(bayConfig.squareFootage) || 0 
+        : bayConfig.squareFootage || 0;
+      
+      if (!bayConfig || !bayConfig.bayName || !squareFootage || squareFootage === 0) {
+        return [];
+      }
+      
+      const match = bayConfig.bayName.match(/Bay (\d+)-(\d+)/);
+      if (!match) {
+        return [];
+      }
+      
+      const bayNumber = index + 1;
+      const baseOptions = [];
+      
+      // If this bay is splittable, include split options
+      if (bayConfig.canBeSplit) {
+        baseOptions.push(
+          {
+            id: `${bayConfig.id}_north`,
+            bayName: `${bayConfig.bayName} North`,
+            squareFootage: bayConfig.splitNorthSquareFootage || Math.floor(squareFootage / 2),
+            hasSpeculativeOffice: bayConfig.splitNorthOffice === true,
+            isSplitBay: true,
+            splitSide: 'north' as const,
+            parentBayId: bayConfig.id
+          },
+          {
+            id: `${bayConfig.id}_south`,
+            bayName: `${bayConfig.bayName} South`,
+            squareFootage: bayConfig.splitSouthSquareFootage || Math.ceil(squareFootage / 2),
+            hasSpeculativeOffice: bayConfig.splitSouthOffice === true,
+            isSplitBay: true,
+            splitSide: 'south' as const,
+            parentBayId: bayConfig.id
+          }
+        );
+      } else {
+        // For non-splittable bays, include the full bay option
+        baseOptions.push({
+          id: bayConfig.id,
+          bayName: bayConfig.bayName,
+          squareFootage: squareFootage,
+          hasSpeculativeOffice: bayConfig.hasSpeculativeOffice || false,
+          isSplitBay: false
+        });
+      }
+      
+      return baseOptions;
+    });
+  };
+
+  const availableBays = getAllAvailableBays();
+
   const formatCurrency = (cents: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -534,7 +601,7 @@ export function PropertyExistingImprovementsModal({
                         <FormItem>
                           <FormLabel>Applicable Bays</FormLabel>
                           <div className="grid grid-cols-3 gap-2 max-h-32 overflow-y-auto border rounded p-2">
-                            {property.bayConfigurations?.map((bay: BayConfiguration) => (
+                            {availableBays.map((bay) => (
                               <div key={bay.id} className="flex items-center space-x-2">
                                 <Checkbox
                                   id={bay.id}
@@ -543,15 +610,21 @@ export function PropertyExistingImprovementsModal({
                                     if (checked) {
                                       field.onChange([...(field.value || []), bay.id]);
                                     } else {
-                                      field.onChange(field.value?.filter(id => id !== bay.id));
+                                      field.onChange(field.value?.filter((id: string) => id !== bay.id) || []);
                                     }
                                   }}
                                 />
-                                <label htmlFor={bay.id} className="text-sm">
+                                <label htmlFor={bay.id} className="text-sm text-left">
                                   {bay.bayName}
+                                  {bay.hasSpeculativeOffice && (
+                                    <span className="text-blue-600 ml-1" title="Has Speculative Office">🏢</span>
+                                  )}
                                 </label>
                               </div>
                             ))}
+                          </div>
+                          <div className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+                            💡 <strong>Split bays:</strong> For bays with North/South configurations, select individual halves to track costs separately.
                           </div>
                           <FormMessage />
                         </FormItem>
@@ -593,7 +666,7 @@ export function PropertyExistingImprovementsModal({
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  {property.bayConfigurations?.map((bay: BayConfiguration) => (
+                                  {availableBays.map((bay) => (
                                     <SelectItem key={bay.id} value={bay.id}>
                                       {bay.bayName}
                                     </SelectItem>
@@ -618,7 +691,7 @@ export function PropertyExistingImprovementsModal({
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  {property.bayConfigurations?.map((bay: BayConfiguration) => (
+                                  {availableBays.map((bay) => (
                                     <SelectItem key={bay.id} value={bay.id}>
                                       {bay.bayName}
                                     </SelectItem>
@@ -786,10 +859,24 @@ export function PropertyExistingImprovementsModal({
                             </span>
                             <div className="flex flex-wrap gap-1 mt-1">
                               {improvement.applicableBays.map(bayId => {
+                                // First check if it's a regular bay configuration
                                 const bay = property.bayConfigurations?.find(b => b.id === bayId);
-                                return bay ? (
+                                if (bay) {
+                                  return (
+                                    <span key={bayId} className="px-2 py-1 bg-slate-200 dark:bg-slate-600 rounded text-xs">
+                                      {bay.bayName}
+                                    </span>
+                                  );
+                                }
+                                
+                                // If not found, check if it's a split bay in our available bays list
+                                const splitBay = availableBays.find(b => b.id === bayId);
+                                return splitBay ? (
                                   <span key={bayId} className="px-2 py-1 bg-slate-200 dark:bg-slate-600 rounded text-xs">
-                                    {bay.bayName}
+                                    {splitBay.bayName}
+                                    {splitBay.hasSpeculativeOffice && (
+                                      <span className="text-blue-600 ml-1" title="Has Speculative Office">🏢</span>
+                                    )}
                                   </span>
                                 ) : null;
                               })}

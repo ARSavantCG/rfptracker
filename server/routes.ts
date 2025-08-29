@@ -2074,7 +2074,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Parse form data properly
       const formData = { ...req.body };
-      console.log('🔍 RAW FORM DATA RECEIVED:', req.body);
       
       // Parse requestTypes JSON array
       if (formData.requestTypes && typeof formData.requestTypes === 'string') {
@@ -2165,13 +2164,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      console.log('Updating RFP with files - processed data:', {
-        ...formData,
-        receivedOn: formData.receivedOn ? { type: typeof formData.receivedOn, value: formData.receivedOn, isDate: formData.receivedOn instanceof Date } : null,
-        internalDueDate: formData.internalDueDate ? { type: typeof formData.internalDueDate, value: formData.internalDueDate, isDate: formData.internalDueDate instanceof Date } : null,
-        contractorDueDate: formData.contractorDueDate ? { type: typeof formData.contractorDueDate, value: formData.contractorDueDate, isDate: formData.contractorDueDate instanceof Date } : null,
-        architectDueDate: formData.architectDueDate ? { type: typeof formData.architectDueDate, value: formData.architectDueDate, isDate: formData.architectDueDate instanceof Date } : null
-      });
 
       // Update the RFP request first
       try {

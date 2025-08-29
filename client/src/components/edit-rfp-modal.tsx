@@ -409,8 +409,13 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
         Object.entries(data).forEach(([key, value]) => {
           if (Array.isArray(value)) {
             formData.append(key, JSON.stringify(value));
-          } else {
-            formData.append(key, value.toString());
+          } else if (value !== null && value !== undefined) {
+            // Handle date fields specially to ensure proper format
+            if (typeof value === 'string' && value.match(/^\d{4}-\d{2}-\d{2}$/)) {
+              formData.append(key, value); // Already in YYYY-MM-DD format
+            } else {
+              formData.append(key, value.toString());
+            }
           }
         });
         

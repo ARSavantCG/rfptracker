@@ -2074,6 +2074,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Parse form data properly
       const formData = { ...req.body };
+      console.log('🔍 RAW FORM DATA RECEIVED:', req.body);
       
       // Parse requestTypes JSON array
       if (formData.requestTypes && typeof formData.requestTypes === 'string') {

@@ -2094,17 +2094,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Convert date strings to Date objects for database using centralized utility
-      if (formData.receivedOn && typeof formData.receivedOn === 'string') {
-        formData.receivedOn = convertFormDateToDbDate(formData.receivedOn);
+      if (formData.receivedOn && typeof formData.receivedOn === 'string' && formData.receivedOn.trim() !== '') {
+        try {
+          formData.receivedOn = convertFormDateToDbDate(formData.receivedOn);
+        } catch (error) {
+          console.error('Error converting receivedOn date:', error);
+          delete formData.receivedOn; // Remove invalid date
+        }
+      } else if (formData.receivedOn === '' || formData.receivedOn === null) {
+        formData.receivedOn = null;
       }
-      if (formData.internalDueDate && typeof formData.internalDueDate === 'string') {
-        formData.internalDueDate = convertFormDateToDbDate(formData.internalDueDate);
+      
+      if (formData.internalDueDate && typeof formData.internalDueDate === 'string' && formData.internalDueDate.trim() !== '') {
+        try {
+          formData.internalDueDate = convertFormDateToDbDate(formData.internalDueDate);
+        } catch (error) {
+          console.error('Error converting internalDueDate date:', error);
+          delete formData.internalDueDate;
+        }
+      } else if (formData.internalDueDate === '' || formData.internalDueDate === null) {
+        formData.internalDueDate = null;
       }
-      if (formData.contractorDueDate && typeof formData.contractorDueDate === 'string') {
-        formData.contractorDueDate = convertFormDateToDbDate(formData.contractorDueDate);
+      
+      if (formData.contractorDueDate && typeof formData.contractorDueDate === 'string' && formData.contractorDueDate.trim() !== '') {
+        try {
+          formData.contractorDueDate = convertFormDateToDbDate(formData.contractorDueDate);
+        } catch (error) {
+          console.error('Error converting contractorDueDate date:', error);
+          delete formData.contractorDueDate;
+        }
+      } else if (formData.contractorDueDate === '' || formData.contractorDueDate === null) {
+        formData.contractorDueDate = null;
       }
-      if (formData.architectDueDate && typeof formData.architectDueDate === 'string') {
-        formData.architectDueDate = convertFormDateToDbDate(formData.architectDueDate);
+      
+      if (formData.architectDueDate && typeof formData.architectDueDate === 'string' && formData.architectDueDate.trim() !== '') {
+        try {
+          formData.architectDueDate = convertFormDateToDbDate(formData.architectDueDate);
+        } catch (error) {
+          console.error('Error converting architectDueDate date:', error);
+          delete formData.architectDueDate;
+        }
+      } else if (formData.architectDueDate === '' || formData.architectDueDate === null) {
+        formData.architectDueDate = null;
       }
 
       // Handle selected bay configurations
@@ -2117,12 +2148,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      console.log('Updating RFP with files - processed data:', formData);
+      console.log('Updating RFP with files - processed data:', {
+        ...formData,
+        receivedOn: formData.receivedOn ? { type: typeof formData.receivedOn, value: formData.receivedOn, isDate: formData.receivedOn instanceof Date } : null,
+        internalDueDate: formData.internalDueDate ? { type: typeof formData.internalDueDate, value: formData.internalDueDate, isDate: formData.internalDueDate instanceof Date } : null,
+        contractorDueDate: formData.contractorDueDate ? { type: typeof formData.contractorDueDate, value: formData.contractorDueDate, isDate: formData.contractorDueDate instanceof Date } : null,
+        architectDueDate: formData.architectDueDate ? { type: typeof formData.architectDueDate, value: formData.architectDueDate, isDate: formData.architectDueDate instanceof Date } : null
+      });
 
       // Update the RFP request first
-      const updatedRequest = await storage.updateRfpRequest(id, formData);
-      if (!updatedRequest) {
-        return res.status(404).json({ message: "RFP request not found" });
+      try {
+        const updatedRequest = await storage.updateRfpRequest(id, formData);
+        if (!updatedRequest) {
+          return res.status(404).json({ message: "RFP request not found" });
+        }
+      } catch (error) {
+        console.error('Update RFP with files error:', error);
+        return res.status(400).json({ message: `Update failed: ${error.message}` });
       }
 
       // Handle file uploads if any

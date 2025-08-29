@@ -226,10 +226,13 @@ export function PropertyExistingImprovementsModal({
     const sortedBayConfigs = [...(property.bayConfigurations || [])].sort((a, b) => {
       const aMatch = a.bayName.match(/Bay (\d+)-(\d+)/);
       const bMatch = b.bayName.match(/Bay (\d+)-(\d+)/);
-      if (!aMatch || !bMatch) return 0;
+      if (!aMatch || !bMatch) return a.bayName.localeCompare(b.bayName);
       const aStart = parseInt(aMatch[1]);
       const bStart = parseInt(bMatch[1]);
-      return aStart - bStart;
+      const aEnd = parseInt(aMatch[2]);
+      const bEnd = parseInt(bMatch[2]);
+      // Sort by starting bay number first, then by ending bay number
+      return aStart !== bStart ? aStart - bStart : aEnd - bEnd;
     });
 
     // First, get all regular bays (non-splittable)
@@ -860,7 +863,21 @@ export function PropertyExistingImprovementsModal({
                             </span>
                             <div className="flex flex-wrap gap-1 mt-1">
                               {improvement.applicableBays.map(bayId => {
-                                // First check if it's a regular bay configuration
+                                // First check if it's a split bay in our available bays list
+                                const splitBay = availableBays.find(b => b.id === bayId);
+                                if (splitBay) {
+                                  return (
+                                    <span key={bayId} className="px-2 py-1 bg-slate-200 dark:bg-slate-600 rounded text-xs">
+                                      {splitBay.bayName}
+                                      {splitBay.hasSpeculativeOffice && (
+                                        <span className="text-blue-600 ml-1" title="Has Speculative Office">🏢</span>
+                                      )}
+                                    </span>
+                                  );
+                                }
+                                
+                                // If not found in available bays, check if it's an original bay configuration
+                                // (this handles legacy improvements that might reference original bay IDs)
                                 const bay = property.bayConfigurations?.find(b => b.id === bayId);
                                 if (bay) {
                                   return (
@@ -870,16 +887,7 @@ export function PropertyExistingImprovementsModal({
                                   );
                                 }
                                 
-                                // If not found, check if it's a split bay in our available bays list
-                                const splitBay = availableBays.find(b => b.id === bayId);
-                                return splitBay ? (
-                                  <span key={bayId} className="px-2 py-1 bg-slate-200 dark:bg-slate-600 rounded text-xs">
-                                    {splitBay.bayName}
-                                    {splitBay.hasSpeculativeOffice && (
-                                      <span className="text-blue-600 ml-1" title="Has Speculative Office">🏢</span>
-                                    )}
-                                  </span>
-                                ) : null;
+                                return null;
                               })}
                             </div>
                           </div>

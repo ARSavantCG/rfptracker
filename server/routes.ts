@@ -2095,47 +2095,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Convert date strings to Date objects for database using centralized utility
+      // Handle receivedOn date
       if (formData.receivedOn && typeof formData.receivedOn === 'string' && formData.receivedOn.trim() !== '') {
         try {
           formData.receivedOn = convertFormDateToDbDate(formData.receivedOn);
         } catch (error) {
           console.error('Error converting receivedOn date:', error);
-          delete formData.receivedOn; // Remove invalid date
+          formData.receivedOn = null;
         }
-      } else if (formData.receivedOn === '' || formData.receivedOn === null) {
+      } else {
         formData.receivedOn = null;
       }
       
+      // Handle internalDueDate date
       if (formData.internalDueDate && typeof formData.internalDueDate === 'string' && formData.internalDueDate.trim() !== '') {
         try {
           formData.internalDueDate = convertFormDateToDbDate(formData.internalDueDate);
         } catch (error) {
           console.error('Error converting internalDueDate date:', error);
-          delete formData.internalDueDate;
+          formData.internalDueDate = null;
         }
-      } else if (formData.internalDueDate === '' || formData.internalDueDate === null) {
+      } else {
         formData.internalDueDate = null;
       }
       
+      // Handle responseToBrokerDue date
+      if (formData.responseToBrokerDue && typeof formData.responseToBrokerDue === 'string' && formData.responseToBrokerDue.trim() !== '') {
+        try {
+          formData.responseToBrokerDue = convertFormDateToDbDate(formData.responseToBrokerDue);
+        } catch (error) {
+          console.error('Error converting responseToBrokerDue date:', error);
+          formData.responseToBrokerDue = null;
+        }
+      } else {
+        formData.responseToBrokerDue = null;
+      }
+      
+      // Handle contractorDueDate date
       if (formData.contractorDueDate && typeof formData.contractorDueDate === 'string' && formData.contractorDueDate.trim() !== '') {
         try {
           formData.contractorDueDate = convertFormDateToDbDate(formData.contractorDueDate);
         } catch (error) {
           console.error('Error converting contractorDueDate date:', error);
-          delete formData.contractorDueDate;
+          formData.contractorDueDate = null;
         }
-      } else if (formData.contractorDueDate === '' || formData.contractorDueDate === null) {
+      } else {
         formData.contractorDueDate = null;
       }
       
+      // Handle architectDueDate date
       if (formData.architectDueDate && typeof formData.architectDueDate === 'string' && formData.architectDueDate.trim() !== '') {
         try {
           formData.architectDueDate = convertFormDateToDbDate(formData.architectDueDate);
         } catch (error) {
           console.error('Error converting architectDueDate date:', error);
-          delete formData.architectDueDate;
+          formData.architectDueDate = null;
         }
-      } else if (formData.architectDueDate === '' || formData.architectDueDate === null) {
+      } else {
         formData.architectDueDate = null;
       }
 

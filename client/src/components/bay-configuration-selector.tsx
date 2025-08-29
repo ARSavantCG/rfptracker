@@ -48,18 +48,6 @@ export default function BayConfigurationSelector({
     ? rawBayConfigs 
     : Object.values(rawBayConfigs || {})) as BayConfiguration[];
 
-  // Temporary debug to see what we're getting
-  console.log('🔍 FINAL DEBUG - BayConfigurationSelector:', {
-    propertyId: property.id,
-    rawBayConfigsType: typeof rawBayConfigs,
-    rawBayConfigsIsArray: Array.isArray(rawBayConfigs),
-    rawBayConfigsLength: rawBayConfigs?.length,
-    finalBayConfigsLength: bayConfigurations.length,
-    firstBayConfig: bayConfigurations[0],
-    propertyKeys: Object.keys(property),
-    hasProperty: !!property,
-    propertyBayConfigsDirect: property.bayConfigurations
-  });
   
   
   
@@ -86,17 +74,6 @@ export default function BayConfigurationSelector({
 
   // Generate individual bays - create split options only for bays marked as splittable
   const individualBays = sortedBayConfigs.flatMap((bayConfig, index) => {
-    console.log('🔍 Processing bay config:', {
-      index,
-      bayConfig,
-      bayConfigKeys: bayConfig ? Object.keys(bayConfig) : [],
-      hasBayName: !!bayConfig?.bayName,
-      hasSquareFootage: !!bayConfig?.squareFootage,
-      squareFootage: bayConfig?.squareFootage,
-      // Check alternative property names
-      hasBay_name: !!bayConfig?.bay_name,
-      hasSquare_footage: !!bayConfig?.square_footage
-    });
     
     // Convert string square footage to number for proper validation
     const squareFootage = typeof bayConfig.squareFootage === 'string' 
@@ -104,18 +81,6 @@ export default function BayConfigurationSelector({
       : bayConfig.squareFootage || 0;
     
     if (!bayConfig || !bayConfig.bayName || !squareFootage || squareFootage === 0) {
-      console.log('🚫 Filtering out bay config:', {
-        bayConfig,
-        noBayConfig: !bayConfig,
-        noBayName: !bayConfig?.bayName,
-        noSquareFootage: !squareFootage,
-        isZeroSquareFootage: squareFootage === 0,
-        bayName: bayConfig?.bayName,
-        squareFootage: squareFootage,
-        typeOfSquareFootage: typeof squareFootage,
-        originalSquareFootage: bayConfig?.squareFootage,
-        originalTypeOfSquareFootage: typeof bayConfig?.squareFootage
-      });
       return [];
     }
     

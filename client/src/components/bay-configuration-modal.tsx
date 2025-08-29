@@ -50,7 +50,6 @@ export function BayConfigurationModal({
 
   // Handle area changes from the bay configuration selector
   const handleAreaChange = useCallback((area: number, selectedBays: BayConfiguration[], overrideArea?: number) => {
-    console.log('Modal receiving bay selection:', { area, selectedBaysCount: selectedBays.length });
     setCurrentArea(area);
     setCurrentBays(selectedBays);
     setCurrentOverride(overrideArea);
@@ -94,7 +93,7 @@ export function BayConfigurationModal({
             className="bg-orange-600 hover:bg-orange-700 text-white"
             disabled={currentBays.length === 0}
           >
-            Confirm Selection ({currentBays.length} bays)
+            Confirm Selection
           </Button>
         </DialogFooter>
       </DialogContent>

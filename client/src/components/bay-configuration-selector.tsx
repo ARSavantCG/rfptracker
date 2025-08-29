@@ -205,7 +205,27 @@ export default function BayConfigurationSelector({
       
       // Calculate and call callback immediately with new selection
       const newSelectedBays = newSelection.map(id => {
-        const bayConfig = bayConfigurations.find(bay => bay.id === id);
+        // First try to find in original bay configurations
+        let bayConfig = bayConfigurations.find(bay => bay.id === id);
+        
+        // If not found, it might be a split bay - find the corresponding individual bay
+        if (!bayConfig) {
+          const individualBay = individualBays.find(bay => bay.id === id);
+          if (individualBay) {
+            // Create a BayConfiguration-like object for this split bay
+            bayConfig = {
+              id: individualBay.id,
+              bayName: individualBay.originalBayName || individualBay.bayName,
+              squareFootage: individualBay.squareFootage,
+              standardDockDoors: individualBay.standardDockDoors,
+              oversizedDockDoors: individualBay.oversizedDockDoors,
+              hasStorefrontEntry: individualBay.hasStorefrontEntry,
+              hasSpeculativeOffice: individualBay.hasSpeculativeOffice,
+              rentableSquareFootage: individualBay.squareFootage
+            };
+          }
+        }
+        
         if (!bayConfig) return null;
         
         const totalPropertyBaysSF = bayConfigurations.reduce((sum, bay) => sum + (bay.squareFootage || 0), 0);

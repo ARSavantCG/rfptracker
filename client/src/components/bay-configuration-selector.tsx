@@ -40,6 +40,31 @@ export default function BayConfigurationSelector({
       }
       
       setSelectedBayIds(newSelection);
+      
+      // Calculate and call callback immediately with new selection
+      const newSelectedBays = newSelection.map(id => {
+        const bayConfig = bayConfigurations.find(bay => bay.id === id);
+        if (!bayConfig) return null;
+        
+        const totalPropertyBaysSF = bayConfigurations.reduce((sum, bay) => sum + (bay.squareFootage || 0), 0);
+        const mechanicalRoomSF = property.mechanicalRoomSquareFootage || 0;
+        const bayProportion = totalPropertyBaysSF > 0 ? (bayConfig.squareFootage || 0) / totalPropertyBaysSF : 0;
+        const mechanicalRoomAllocation = mechanicalRoomSF * bayProportion;
+        
+        return {
+          ...bayConfig,
+          mechanicalRoomAllocation: mechanicalRoomAllocation
+        };
+      }).filter((bay): bay is NonNullable<typeof bay> => bay != null);
+      
+      // Calculate new area
+      const newArea = newSelectedBays.reduce((sum, bay) => {
+        return sum + (bay.rentableSquareFootage || bay.squareFootage);
+      }, 0) + (property.mechanicalRoomSquareFootage ? 
+        (newSelection.length / bayConfigurations.length) * property.mechanicalRoomSquareFootage : 0);
+      
+      // Call parent callback immediately
+      onRentableAreaChange(newArea, newSelectedBays, overrideValue);
     }
   };
   const [isOverrideMode, setIsOverrideMode] = useState<boolean>(initialOverrideArea !== undefined);
@@ -392,6 +417,8 @@ export default function BayConfigurationSelector({
   
   // Get selected bay configurations with proportional mechanical room allocation
   const selectedBays = useMemo(() => {
+    if (selectedBayIds.length === 0) return [];
+    
     return selectedBayIds.map(bayId => {
       const originalBayConfig = bayConfigurations.find(bay => bay.id === bayId);
       if (!originalBayConfig) return null;
@@ -407,7 +434,7 @@ export default function BayConfigurationSelector({
         mechanicalRoomAllocation: mechanicalRoomAllocation
       };
     }).filter((bay): bay is NonNullable<typeof bay> => bay != null);
-  }, [selectedBayIds, bayConfigurations, property.mechanicalRoomSquareFootage]);
+  }, [selectedBayIds.length, property.id, property.mechanicalRoomSquareFootage]);
 
   // Calculate final area considering override
   const calculatedArea = calculateTotalArea();
@@ -448,10 +475,33 @@ export default function BayConfigurationSelector({
     parseInt(trailerParkingOverride) || 0 : 
     (savedTrailerParking !== null ? savedTrailerParking : parkingAllocations.trailer);
 
-  // Update parent component when selection or override changes
+  // Initial call on mount if there are initial selections
   useEffect(() => {
-    onRentableAreaChange(finalArea, selectedBays, overrideValue);
-  }, [selectedBays, finalArea, overrideValue, onRentableAreaChange]);
+    if (selectedBayIds.length > 0) {
+      // Trigger callback for initial selection
+      const initialBays = selectedBayIds.map(id => {
+        const bayConfig = bayConfigurations.find(bay => bay.id === id);
+        if (!bayConfig) return null;
+        
+        const totalPropertyBaysSF = bayConfigurations.reduce((sum, bay) => sum + (bay.squareFootage || 0), 0);
+        const mechanicalRoomSF = property.mechanicalRoomSquareFootage || 0;
+        const bayProportion = totalPropertyBaysSF > 0 ? (bayConfig.squareFootage || 0) / totalPropertyBaysSF : 0;
+        const mechanicalRoomAllocation = mechanicalRoomSF * bayProportion;
+        
+        return {
+          ...bayConfig,
+          mechanicalRoomAllocation: mechanicalRoomAllocation
+        };
+      }).filter((bay): bay is NonNullable<typeof bay> => bay != null);
+      
+      const initialArea = initialBays.reduce((sum, bay) => {
+        return sum + (bay.rentableSquareFootage || bay.squareFootage);
+      }, 0) + (property.mechanicalRoomSquareFootage ? 
+        (selectedBayIds.length / bayConfigurations.length) * property.mechanicalRoomSquareFootage : 0);
+      
+      onRentableAreaChange(initialArea, initialBays, initialOverrideArea);
+    }
+  }, []); // Only run on mount
 
   if (!individualBays.length) {
     return (

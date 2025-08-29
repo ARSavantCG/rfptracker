@@ -232,26 +232,36 @@ export function PropertyExistingImprovementsModal({
       return aStart - bStart;
     });
 
-    return sortedBayConfigs.flatMap((bayConfig, index) => {
-      const squareFootage = typeof bayConfig.squareFootage === 'string' 
-        ? parseInt(bayConfig.squareFootage) || 0 
-        : bayConfig.squareFootage || 0;
-      
-      if (!bayConfig || !bayConfig.bayName || !squareFootage || squareFootage === 0) {
-        return [];
-      }
-      
-      const match = bayConfig.bayName.match(/Bay (\d+)-(\d+)/);
-      if (!match) {
-        return [];
-      }
-      
-      const bayNumber = index + 1;
-      const baseOptions = [];
-      
-      // If this bay is splittable, include split options
-      if (bayConfig.canBeSplit) {
-        baseOptions.push(
+    // First, get all regular bays (non-splittable)
+    const regularBays = sortedBayConfigs
+      .filter(bayConfig => !bayConfig.canBeSplit)
+      .map(bayConfig => {
+        const squareFootage = typeof bayConfig.squareFootage === 'string' 
+          ? parseInt(bayConfig.squareFootage) || 0 
+          : bayConfig.squareFootage || 0;
+        
+        return {
+          id: bayConfig.id,
+          bayName: bayConfig.bayName,
+          squareFootage: squareFootage,
+          hasSpeculativeOffice: bayConfig.hasSpeculativeOffice || false,
+          isSplitBay: false
+        };
+      });
+
+    // Then, get split bay options for splittable bays (no original bay)
+    const splitBays = sortedBayConfigs
+      .filter(bayConfig => bayConfig.canBeSplit)
+      .flatMap(bayConfig => {
+        const squareFootage = typeof bayConfig.squareFootage === 'string' 
+          ? parseInt(bayConfig.squareFootage) || 0 
+          : bayConfig.squareFootage || 0;
+        
+        if (!bayConfig || !bayConfig.bayName || !squareFootage || squareFootage === 0) {
+          return [];
+        }
+        
+        return [
           {
             id: `${bayConfig.id}_north`,
             bayName: `${bayConfig.bayName} North`,
@@ -270,20 +280,11 @@ export function PropertyExistingImprovementsModal({
             splitSide: 'south' as const,
             parentBayId: bayConfig.id
           }
-        );
-      } else {
-        // For non-splittable bays, include the full bay option
-        baseOptions.push({
-          id: bayConfig.id,
-          bayName: bayConfig.bayName,
-          squareFootage: squareFootage,
-          hasSpeculativeOffice: bayConfig.hasSpeculativeOffice || false,
-          isSplitBay: false
-        });
-      }
-      
-      return baseOptions;
-    });
+        ];
+      });
+
+    // Combine regular and split bays
+    return [...regularBays, ...splitBays];
   };
 
   const availableBays = getAllAvailableBays();
@@ -385,7 +386,7 @@ export function PropertyExistingImprovementsModal({
                             description: `Spec Office Costs for ${mismatch.bayNames.join(', ')}`,
                             totalCost: 0,
                             allocationType: "bay-specific",
-                            applicableBays: property.bayConfigurations?.filter(bay => bay.hasSpeculativeOffice).map(bay => bay.id) || [],
+                            applicableBays: availableBays.filter(bay => bay.hasSpeculativeOffice).map(bay => bay.id) || [],
                             notes: "Auto-suggested based on bay configuration",
                           });
                         }}

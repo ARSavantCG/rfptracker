@@ -23,50 +23,6 @@ export default function BayConfigurationSelector({
   const [selectedBayIds, setSelectedBayIds] = useState<string[]>(
     initialSelectedBays.map(bay => bay.id)
   );
-
-  // Handle bay selection - allow multiple selections including both halves of split bays
-  const handleBaySelection = (bayId: string, isSelected: boolean) => {
-    const clickedBay = individualBays.find(bay => bay.id === bayId);
-    
-    if (clickedBay) {
-      let newSelection = [...selectedBayIds];
-      
-      if (isSelected) {
-        // Simply add the selected bay - no conflict prevention
-        newSelection.push(bayId);
-      } else {
-        // Removing a bay - just remove it
-        newSelection = newSelection.filter(id => id !== bayId);
-      }
-      
-      setSelectedBayIds(newSelection);
-      
-      // Calculate and call callback immediately with new selection
-      const newSelectedBays = newSelection.map(id => {
-        const bayConfig = bayConfigurations.find(bay => bay.id === id);
-        if (!bayConfig) return null;
-        
-        const totalPropertyBaysSF = bayConfigurations.reduce((sum, bay) => sum + (bay.squareFootage || 0), 0);
-        const mechanicalRoomSF = property.mechanicalRoomSquareFootage || 0;
-        const bayProportion = totalPropertyBaysSF > 0 ? (bayConfig.squareFootage || 0) / totalPropertyBaysSF : 0;
-        const mechanicalRoomAllocation = mechanicalRoomSF * bayProportion;
-        
-        return {
-          ...bayConfig,
-          mechanicalRoomAllocation: mechanicalRoomAllocation
-        };
-      }).filter((bay): bay is NonNullable<typeof bay> => bay != null);
-      
-      // Calculate new area
-      const newArea = newSelectedBays.reduce((sum, bay) => {
-        return sum + (bay.rentableSquareFootage || bay.squareFootage);
-      }, 0) + (property.mechanicalRoomSquareFootage ? 
-        (newSelection.length / bayConfigurations.length) * property.mechanicalRoomSquareFootage : 0);
-      
-      // Call parent callback immediately
-      onRentableAreaChange(newArea, newSelectedBays, overrideValue);
-    }
-  };
   const [isOverrideMode, setIsOverrideMode] = useState<boolean>(initialOverrideArea !== undefined);
   const [overrideArea, setOverrideArea] = useState<string>(initialOverrideArea?.toString() || "");
   
@@ -230,6 +186,50 @@ export default function BayConfigurationSelector({
     return baseOptions;
   });
 
+  // Handle bay selection - allow multiple selections including both halves of split bays
+  const handleBaySelection = (bayId: string, isSelected: boolean) => {
+    const clickedBay = individualBays.find(bay => bay.id === bayId);
+    
+    if (clickedBay) {
+      let newSelection = [...selectedBayIds];
+      
+      if (isSelected) {
+        // Simply add the selected bay - no conflict prevention
+        newSelection.push(bayId);
+      } else {
+        // Removing a bay - just remove it
+        newSelection = newSelection.filter(id => id !== bayId);
+      }
+      
+      setSelectedBayIds(newSelection);
+      
+      // Calculate and call callback immediately with new selection
+      const newSelectedBays = newSelection.map(id => {
+        const bayConfig = bayConfigurations.find(bay => bay.id === id);
+        if (!bayConfig) return null;
+        
+        const totalPropertyBaysSF = bayConfigurations.reduce((sum, bay) => sum + (bay.squareFootage || 0), 0);
+        const mechanicalRoomSF = property.mechanicalRoomSquareFootage || 0;
+        const bayProportion = totalPropertyBaysSF > 0 ? (bayConfig.squareFootage || 0) / totalPropertyBaysSF : 0;
+        const mechanicalRoomAllocation = mechanicalRoomSF * bayProportion;
+        
+        return {
+          ...bayConfig,
+          mechanicalRoomAllocation: mechanicalRoomAllocation
+        };
+      }).filter((bay): bay is NonNullable<typeof bay> => bay != null);
+      
+      // Calculate new area
+      const newArea = newSelectedBays.reduce((sum, bay) => {
+        return sum + (bay.rentableSquareFootage || bay.squareFootage);
+      }, 0) + (property.mechanicalRoomSquareFootage ? 
+        (newSelection.length / bayConfigurations.length) * property.mechanicalRoomSquareFootage : 0);
+      
+      // Call parent callback immediately  
+      const currentOverride = isOverrideMode && overrideArea ? parseFloat(overrideArea) : undefined;
+      onRentableAreaChange(newArea, newSelectedBays, currentOverride);
+    }
+  };
 
   // Calculate total rentable area from selected individual bays with proportional mechanical allocation
   const calculateTotalArea = () => {

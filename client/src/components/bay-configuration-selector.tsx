@@ -451,7 +451,7 @@ export default function BayConfigurationSelector({
   // Update parent component when selection or override changes
   useEffect(() => {
     onRentableAreaChange(finalArea, selectedBays, overrideValue);
-  }, [selectedBayIds, finalArea, overrideValue, onRentableAreaChange]);
+  }, [selectedBays, finalArea, overrideValue, onRentableAreaChange]);
 
   if (!individualBays.length) {
     return (

@@ -429,13 +429,20 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
           formData.append('files', file);
         });
         
+        console.log('🚀 Sending update request for RFP ID:', rfp.id);
+        console.log('📝 Form data being sent:', Object.fromEntries(formData.entries()));
+        
         const updateResponse = await fetch(`/api/rfp-requests/${rfp.id}/update-with-files`, {
           method: 'PATCH',
           body: formData,
         });
         
+        console.log('📡 Update response status:', updateResponse.status);
+        
         if (!updateResponse.ok) {
-          throw new Error('Failed to update RFP request');
+          const errorText = await updateResponse.text();
+          console.error('❌ Update failed with error:', errorText);
+          throw new Error(`Failed to update RFP request: ${errorText}`);
         }
       }
 

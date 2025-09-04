@@ -60,6 +60,19 @@ function calculateWeightedCostPerSF(improvements: any[], relevantBays: any[], to
   return totalWeight > 0 ? weightedSum / totalWeight : 0;
 }
 
+// Helper function to format bay numbers with count in parentheses and italics
+function formatBayNumbersWithCount(bayNumbers: string): string {
+  if (!bayNumbers) return '';
+  
+  // Count the number of bays mentioned by counting numbers
+  const bayMatches = bayNumbers.match(/\d+/g);
+  const bayCount = bayMatches ? bayMatches.length : 0;
+  
+  if (bayCount === 0) return bayNumbers;
+  
+  return `${bayNumbers} <em>(${bayCount} bay${bayCount !== 1 ? 's' : ''})</em>`;
+}
+
 interface PropertySummaryData {
   properties: PropertyDetails[];
   generatedAt: string;

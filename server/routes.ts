@@ -53,7 +53,9 @@ import {
   enforceAllPropertiesLegalCompliance, 
   enforcePropertyLegalCompliance,
   autoEnforceLegalComplianceMiddleware,
-  LEGAL_PROPERTY_TOTALS 
+  LEGAL_PROPERTY_TOTALS,
+  fixBIALeaseTotal,
+  applySymmetricalLegalCompliance
 } from "./property-legal-compliance";
 import archiver from "archiver";
 import fs, { readFileSync } from "fs";
@@ -3096,6 +3098,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error enforcing legal compliance:", error);
       res.status(500).json({ message: "Failed to enforce legal compliance" });
+    }
+  });
+
+  // Fix BIA lease total endpoint
+  app.post("/api/properties/fix-bia-lease", requireAuth, async (req, res) => {
+    try {
+      console.log('🏗️ Fixing BIA lease total to 397,167 SF...');
+      const result = await fixBIALeaseTotal();
+      
+      res.json(result);
+    } catch (error) {
+      console.error("Error fixing BIA lease total:", error);
+      res.status(500).json({ message: "Failed to fix BIA lease total" });
+    }
+  });
+
+  // Symmetrical legal compliance endpoint
+  app.post("/api/properties/:id/symmetrical-compliance", requireAuth, async (req, res) => {
+    try {
+      const propertyId = parseInt(req.params.id);
+      const { targetBays, targetTotal } = req.body;
+      
+      if (!targetBays || !targetTotal) {
+        return res.status(400).json({ message: "targetBays and targetTotal are required" });
+      }
+      
+      console.log(`🏗️ Applying symmetrical legal compliance to property ${propertyId}...`);
+      const result = await applySymmetricalLegalCompliance(propertyId, targetBays, targetTotal);
+      
+      res.json(result);
+    } catch (error) {
+      console.error("Error applying symmetrical legal compliance:", error);
+      res.status(500).json({ message: "Failed to apply symmetrical legal compliance" });
     }
   });
 

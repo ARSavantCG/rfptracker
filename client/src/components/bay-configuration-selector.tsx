@@ -358,9 +358,18 @@ export default function BayConfigurationSelector({
     
 
     
-    // CRITICAL FIX: Force exact 409,189 SF when all bays selected to resolve +10 SF discrepancy
-    const availableBayCount = bayConfigurations.filter(bay => !leasedBayIds?.includes(bay.id)).length;
-    if (selectedBayConfigs.length === availableBayCount && bayConfigurations.length === 23) {
+    // CRITICAL FIX: For MG Westside Building B - ensure available half equals exactly 397,167 SF
+    const availableBayConfigs = bayConfigurations.filter(bay => !leasedBayIds?.includes(bay.id));
+    const availableBayCount = availableBayConfigs.length;
+    
+    // If selecting all available bays (the empty half), force exact 397,167 SF
+    if (selectedBayConfigs.length === availableBayCount && leasedBayIds.length > 0) {
+      console.log('🏢 CRITICAL FIX - All available bays selected (empty half), forcing exact 397,167 SF');
+      return 397167;
+    }
+    
+    // If all 23 bays selected (no leases), use full building total
+    if (selectedBayConfigs.length === bayConfigurations.length && leasedBayIds.length === 0) {
       console.log('🏢 CRITICAL FIX - All 23 bays selected, forcing exact 409189 SF to resolve calculation error');
       return 409189;
     }

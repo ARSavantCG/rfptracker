@@ -235,28 +235,20 @@ async function getPropertySummaryData(options?: RfpOptions): Promise<PropertySum
       }
     });
 
-    // Assign building names/numbers based on property (only for multi-building properties)
+    // Assign building names/numbers dynamically based on database building field
     let buildingName = '';
+    
+    // Use the building field from database if available
+    if (property.building) {
+      buildingName = property.building.toString();
+    }
+    
+    // Special case for Bridge 595 which uses letter instead of number
     if (property.propertyName.includes('Bridge 595')) {
       buildingName = 'A';
-    } else if (property.propertyName.includes('Bridge Point Doral') && property.streetAddress?.includes('3600 NW 112th Ave')) {
-      buildingName = '1';
-    } else if (property.propertyName.includes('Bridge Point Doral') && property.streetAddress?.includes('3605 NW 112th Ave')) {
-      buildingName = '2';
-    } else if (property.propertyName.includes('Bridge Point Doral') && property.streetAddress?.includes('10955 NW 34th St')) {
-      buildingName = '3';
-    } else if (property.propertyName.includes('Bridge Point Doral') && property.streetAddress?.includes('10875 NW 40th St')) {
-      buildingName = '4';
-    } else if (property.propertyName.includes('Bridge Point Doral') && property.streetAddress?.includes('3700 NW 107th Ave')) {
-      buildingName = '5';
-    } else if (property.propertyName.includes('Bridge Point Doral') && property.streetAddress?.includes('10855 NW 34th St')) {
-      buildingName = '7';
-    } else if (property.propertyName.includes('Miami Station') && property.streetAddress?.includes('11690 NW 105th St')) {
-      buildingName = '1';
-    } else if (property.propertyName.includes('Miami Station') && property.streetAddress?.includes('11670 NW 105th St')) {
-      buildingName = '2';
     }
-    // Note: Single building properties like Gratigny and Port Everglades don't get building numbers
+    
+    // Note: Single building properties (isSingleBuilding=true) don't show building numbers
 
     propertyDetails.push({
       id: property.id,

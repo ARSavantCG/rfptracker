@@ -234,7 +234,7 @@ async function getPropertySummaryData(options?: RfpOptions): Promise<PropertySum
     : await db
         .select()
         .from(properties)
-        .orderBy(properties.propertyName);
+        .orderBy(properties.displayOrder);
 
   const propertyDetails: PropertyDetails[] = [];
 

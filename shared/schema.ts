@@ -452,6 +452,9 @@ export const properties = pgTable("properties", {
   firePumpInfo: text("fire_pump_info"), // e.g., "1500 GPM @ 100 PSI"
   fireSprinklerInfo: text("fire_sprinkler_info"), // e.g., "Standard ESFR system"
   
+  // Display ordering for alphabetical organization
+  displayOrder: integer("display_order"),
+  
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

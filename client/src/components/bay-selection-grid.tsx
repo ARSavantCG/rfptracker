@@ -64,9 +64,9 @@ export function BaySelectionGrid({ property, onSelectionChange }: BaySelectionGr
     
     setSelectedBayIds(newSelectedBayIds);
     
-    // Calculate selected bays and total square footage
+    // Calculate selected bays and total rentable square footage (includes mechanical room allocation)
     const selectedBays = bays.filter(bay => newSelectedBayIds.has(bay.id));
-    const totalSquareFootage = selectedBays.reduce((total, bay) => total + bay.squareFootage, 0);
+    const totalSquareFootage = selectedBays.reduce((total, bay) => total + (bay.rentableSquareFootage || bay.squareFootage), 0);
     
     onSelectionChange?.(selectedBays, totalSquareFootage);
   };
@@ -81,7 +81,7 @@ export function BaySelectionGrid({ property, onSelectionChange }: BaySelectionGr
   };
 
   const selectedBays = bays.filter(bay => selectedBayIds.has(bay.id));
-  const totalSquareFootage = selectedBays.reduce((total, bay) => total + bay.squareFootage, 0);
+  const totalSquareFootage = selectedBays.reduce((total, bay) => total + (bay.rentableSquareFootage || bay.squareFootage), 0);
 
   if (bays.length === 0) {
     return (
@@ -155,7 +155,7 @@ export function BaySelectionGrid({ property, onSelectionChange }: BaySelectionGr
                     >
                       <div className="text-center">
                         <div className="font-bold truncate w-full">{bay.bayName}</div>
-                        <div className="text-xs mt-1">{bay.squareFootage.toLocaleString()} sq ft</div>
+                        <div className="text-xs mt-1">{(bay.rentableSquareFootage || bay.squareFootage).toLocaleString()} sq ft</div>
                         <div className="flex justify-center mt-1 gap-1 text-xs min-h-[1.5rem]">
                           {bay.hasStorefrontEntry && (
                             <span className="text-orange-600 text-lg" title="Storefront Entry">🚪</span>
@@ -216,7 +216,7 @@ export function BaySelectionGrid({ property, onSelectionChange }: BaySelectionGr
                     variant="outline"
                     className={getBayColor()}
                   >
-                    {bay.bayName} ({bay.squareFootage.toLocaleString()} sq ft)
+                    {bay.bayName} ({(bay.rentableSquareFootage || bay.squareFootage).toLocaleString()} sq ft)
                     {bay.hasStorefrontEntry && <span className="text-orange-600 ml-1" title="Storefront Entry">🚪</span>}
                     {bay.hasSpeculativeOffice && <span className="text-blue-600 ml-1" title="Speculative Office">🏢</span>}
                   </Badge>

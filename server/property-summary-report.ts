@@ -3,6 +3,30 @@ import { properties, executedLeases, propertyExistingImprovements, rfpRequests }
 import { eq, sql } from 'drizzle-orm';
 import { formatDateForDisplay } from '../shared/date-utils';
 
+// Helper function to calculate per-bay cost for spec office (bay-specific items)
+function getSpecOfficePerBayCost(improvements: any[], relevantBays: any[], totalSpecOfficeCost: number): number {
+  if (totalSpecOfficeCost === 0) return 0;
+  
+  // Find spec office improvements that are bay-specific
+  const specOfficeImprovements = improvements.filter(
+    improvement => improvement.category === 'spec-office' && 
+    improvement.allocationType === 'bay-specific'
+  );
+  
+  if (specOfficeImprovements.length === 0) {
+    // If no bay-specific spec office, fall back to total bays (prorated)
+    return totalSpecOfficeCost / Math.max(relevantBays.length, 1);
+  }
+  
+  // Count total applicable bays for all bay-specific spec office improvements
+  const totalApplicableBays = specOfficeImprovements.reduce((count, improvement) => {
+    return count + (improvement.applicableBays ? improvement.applicableBays.length : 0);
+  }, 0);
+  
+  // Return cost per applicable bay
+  return totalApplicableBays > 0 ? totalSpecOfficeCost / totalApplicableBays : totalSpecOfficeCost;
+}
+
 // Helper function to calculate cost per SF based on allocation types
 function calculateWeightedCostPerSF(improvements: any[], relevantBays: any[], totalRentableArea: number): number {
   if (totalRentableArea === 0 || improvements.length === 0) return 0;
@@ -85,6 +109,7 @@ interface PropertyDetails {
     security?: number;
     hvac?: number;
     other?: number;
+    specOfficePerBay?: number;
   };
 }
 
@@ -364,7 +389,8 @@ async function getPropertySummaryData(options?: RfpOptions): Promise<PropertySum
         ventilation: costBreakdown.ventilation,
         plumbing: costBreakdown.plumbing,
         lighting: costBreakdown.lighting,
-        other: costBreakdown.other
+        other: costBreakdown.other,
+        specOfficePerBay: getSpecOfficePerBayCost(improvements, relevantBays, costBreakdown.other)
       }
     });
   }
@@ -603,7 +629,7 @@ function generatePropertySummaryHTML(data: PropertySummaryData): string {
                     <div class="info-card">
                         <h4>Speculative Office</h4>
                         <p class="metric-value">${formatCurrency(property.costInPlace.other || 0)}</p>
-                        <p><strong>Per Bay:</strong> ${formatCurrency((property.costInPlace.other || 0) / Math.max(property.bayConfigurations.length, 1))}</p>
+                        <p><strong>Per Bay:</strong> ${formatCurrency(property.costInPlace.specOfficePerBay || 0)}</p>
                     </div>
                 </div>
             </div>

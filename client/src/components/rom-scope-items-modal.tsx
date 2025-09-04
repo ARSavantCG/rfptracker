@@ -14,6 +14,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
+import { FormulaInput } from "@/components/formula-input";
+import { evaluateFormula } from "@shared/formula-utils";
 import { Plus, Edit2, Trash2, Package, DollarSign, ChevronDown } from "lucide-react";
 
 interface RomScopeItem {
@@ -164,9 +166,10 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
       return;
     }
 
+    // For formula inputs, we store the raw value (which could be a formula or a number)
     const submitData = {
       ...formData,
-      unitPrice: parseFloat(formData.unitPrice).toFixed(2),
+      unitPrice: formData.unitPrice, // Keep the raw value (formula or number)
       lastUpdated: new Date(), // Always set to current date when saving
     };
 
@@ -286,16 +289,16 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                   <div className="space-y-2">
                     <Label htmlFor="unitPrice">Unit Price *</Label>
                     <div className="relative">
-                      <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      <Input
-                        id="unitPrice"
-                        type="number"
-                        step="0.01"
-                        min="0"
+                      <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 z-10" />
+                      <FormulaInput
                         value={formData.unitPrice}
-                        onChange={(e) => setFormData({...formData, unitPrice: e.target.value})}
-                        placeholder="0.00"
+                        onChange={(rawValue, evaluatedValue) => {
+                          setFormData({...formData, unitPrice: rawValue});
+                        }}
+                        placeholder="0.00 or =15000*1.15"
                         className="pl-10"
+                        decimalPlaces={2}
+                        type="currency"
                       />
                     </div>
                   </div>
@@ -403,7 +406,14 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                           <div className="flex items-center space-x-3">
                             <h5 className="font-medium text-gray-900">{item.name}</h5>
                             <span className="text-sm text-gray-500">
-                              ${parseFloat(item.unitPrice).toFixed(2)} per {item.unit}
+                              ${(() => {
+                                const result = evaluateFormula(item.unitPrice);
+                                const displayValue = result.value !== null ? result.value.toFixed(2) : parseFloat(item.unitPrice || "0").toFixed(2);
+                                return displayValue;
+                              })()} per {item.unit}
+                              {item.unitPrice.startsWith('=') && (
+                                <span className="ml-1 text-xs text-blue-600">📊</span>
+                              )}
                             </span>
                           </div>
                           {item.description && (

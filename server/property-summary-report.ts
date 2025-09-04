@@ -64,20 +64,42 @@ function calculateWeightedCostPerSF(improvements: any[], relevantBays: any[], to
 function formatBayNumbersWithCount(bayNumbers: string): string {
   if (!bayNumbers) return '';
   
-  // Extract just the numbers from the bay numbers string
-  const bayMatches = bayNumbers.match(/\d+/g);
-  if (!bayMatches || bayMatches.length === 0) return bayNumbers;
+  // Extract bay numbers by looking for patterns like "Bay 14-15" or "Bay 1" 
+  // and taking only the first number (the starting column line)
+  const bayMatches = bayNumbers.match(/Bay\s+(\d+)(?:-\d+)?/g);
+  if (!bayMatches || bayMatches.length === 0) {
+    // Fallback: extract just the first number from each "Bay X" or "X" pattern
+    const simpleMatches = bayNumbers.match(/\b(\d+)\b/g);
+    if (!simpleMatches) return bayNumbers;
+    
+    const numbers = simpleMatches.map(Number).sort((a, b) => a - b);
+    const uniqueNumbers = [...new Set(numbers)]; // Remove duplicates
+    
+    if (uniqueNumbers.length === 1) {
+      return `Bay ${uniqueNumbers[0]} <em>(1 bay)</em>`;
+    } else if (uniqueNumbers.length === 2) {
+      return `Bays ${uniqueNumbers[0]}, ${uniqueNumbers[1]} <em>(2 bays)</em>`;
+    } else {
+      return `Bays ${uniqueNumbers[0]}-${uniqueNumbers[uniqueNumbers.length - 1]} <em>(${uniqueNumbers.length} bays)</em>`;
+    }
+  }
   
-  const numbers = bayMatches.map(Number).sort((a, b) => a - b);
-  const bayCount = numbers.length;
+  // Extract the starting bay number from each "Bay X-Y" pattern
+  const startingNumbers = bayMatches.map(match => {
+    const numberMatch = match.match(/Bay\s+(\d+)/);
+    return numberMatch ? parseInt(numberMatch[1]) : null;
+  }).filter(num => num !== null).sort((a, b) => a - b);
+  
+  const uniqueNumbers = [...new Set(startingNumbers)]; // Remove duplicates
+  const bayCount = uniqueNumbers.length;
   
   if (bayCount === 1) {
-    return `Bay ${numbers[0]} <em>(1 bay)</em>`;
+    return `Bay ${uniqueNumbers[0]} <em>(1 bay)</em>`;
   } else if (bayCount === 2) {
-    return `Bays ${numbers[0]}, ${numbers[1]} <em>(2 bays)</em>`;
+    return `Bays ${uniqueNumbers[0]}, ${uniqueNumbers[1]} <em>(2 bays)</em>`;
   } else {
-    // For 3 or more bays, show first through last
-    return `Bays ${numbers[0]}-${numbers[numbers.length - 1]} <em>(${bayCount} bays)</em>`;
+    // For 3 or more bays, show first through last starting numbers
+    return `Bays ${uniqueNumbers[0]}-${uniqueNumbers[uniqueNumbers.length - 1]} <em>(${bayCount} bays)</em>`;
   }
 }
 

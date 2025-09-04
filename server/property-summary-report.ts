@@ -3,6 +3,39 @@ import { properties, executedLeases, propertyExistingImprovements, rfpRequests }
 import { eq, sql } from 'drizzle-orm';
 import { formatDateForDisplay } from '../shared/date-utils';
 
+// Helper function to calculate cost per SF based on allocation types
+function calculateWeightedCostPerSF(improvements: any[], relevantBays: any[], totalRentableArea: number): number {
+  if (totalRentableArea === 0 || improvements.length === 0) return 0;
+  
+  // Calculate weighted cost based on each improvement's allocation method
+  let weightedSum = 0;
+  let totalWeight = 0;
+  
+  improvements.forEach(improvement => {
+    const costInDollars = improvement.totalCost / 100; // Convert from cents
+    let applicableArea = 0;
+    
+    if (improvement.allocationType === 'bay-specific' && improvement.applicableBays && improvement.applicableBays.length > 0) {
+      // For bay-specific improvements, use only the applicable bay area
+      applicableArea = relevantBays
+        .filter(bay => improvement.applicableBays.includes(bay.id))
+        .reduce((sum, bay) => sum + (bay.rentableSquareFootage || bay.squareFootage || 0), 0);
+    } else {
+      // For prorated/whole-property improvements, use total area
+      applicableArea = totalRentableArea;
+    }
+    
+    if (applicableArea > 0) {
+      const costPerSF = costInDollars / applicableArea;
+      weightedSum += costPerSF * applicableArea;
+      totalWeight += applicableArea;
+    }
+  });
+  
+  // Return weighted average cost per SF
+  return totalWeight > 0 ? weightedSum / totalWeight : 0;
+}
+
 interface PropertySummaryData {
   properties: PropertyDetails[];
   generatedAt: string;
@@ -217,10 +250,24 @@ async function getPropertySummaryData(options?: RfpOptions): Promise<PropertySum
     };
 
     let totalImprovementCost = 0;
+    let baySpecificCostTotal = 0; // Track bay-specific costs separately
+    let baySpecificAreaTotal = 0; // Track area for bay-specific improvements
     
     improvements.forEach(improvement => {
       const costInDollars = improvement.totalCost / 100; // Convert from cents
       totalImprovementCost += costInDollars;
+      
+      // If it's bay-specific, calculate area for only applicable bays
+      if (improvement.allocationType === 'bay-specific' && improvement.applicableBays && improvement.applicableBays.length > 0) {
+        baySpecificCostTotal += costInDollars;
+        
+        // Calculate area for only the applicable bays
+        const applicableBayArea = relevantBays
+          .filter(bay => improvement.applicableBays.includes(bay.id))
+          .reduce((sum, bay) => sum + (bay.rentableSquareFootage || bay.squareFootage || 0), 0);
+        
+        baySpecificAreaTotal += applicableBayArea;
+      }
       
       switch (improvement.category) {
         case 'fire-alarm':
@@ -311,7 +358,7 @@ async function getPropertySummaryData(options?: RfpOptions): Promise<PropertySum
       },
       costInPlace: {
         totalCost: totalImprovementCost,
-        costPerSF: totalRentableArea > 0 ? totalImprovementCost / totalRentableArea : 0,
+        costPerSF: calculateWeightedCostPerSF(improvements, relevantBays, totalRentableArea),
         lastUpdated: improvements.length > 0 ? formatDateForDisplay(Math.max(...improvements.map(i => new Date(i.updatedAt).getTime()))) : 'No data',
         fireAlarm: costBreakdown.fireAlarm,
         ventilation: costBreakdown.ventilation,

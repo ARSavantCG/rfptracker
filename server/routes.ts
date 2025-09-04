@@ -4464,8 +4464,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid ID" });
       }
 
-      console.log("Updating ROM scope item ID:", id);
-      console.log("Update data:", req.body);
+      console.log("🔥 ROM UPDATE ATTEMPT - ID:", id);
+      console.log("🔥 ROM UPDATE DATA:", JSON.stringify(req.body, null, 2));
 
       // Handle date conversion for lastUpdated field
       const updateData = { ...req.body };
@@ -4483,7 +4483,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Successfully updated ROM scope item:", scopeItem);
       res.json(scopeItem);
     } catch (error) {
-      console.error("ROM scope item update error:", error);
+      console.error("🚨 ROM SCOPE ITEM UPDATE ERROR:", error);
+      console.error("🚨 ERROR STACK:", error.stack);
       res.status(500).json({ message: "Failed to update scope item", error: error.message });
     }
   });

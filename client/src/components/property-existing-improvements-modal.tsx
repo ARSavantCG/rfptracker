@@ -138,7 +138,7 @@ export function PropertyExistingImprovementsModal({
 
   const createMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      return await apiRequest("POST", `/api/properties/${property.id}/existing-improvements`, data);
+      return await apiRequest(`/api/properties/${property.id}/existing-improvements`, "POST", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/properties/${property.id}/existing-improvements`] });
@@ -149,7 +149,7 @@ export function PropertyExistingImprovementsModal({
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Partial<FormData> }) => {
-      return await apiRequest("PATCH", `/api/properties/${property.id}/existing-improvements/${id}`, data);
+      return await apiRequest(`/api/properties/${property.id}/existing-improvements/${id}`, "PATCH", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/properties/${property.id}/existing-improvements`] });
@@ -161,7 +161,7 @@ export function PropertyExistingImprovementsModal({
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      return await apiRequest("DELETE", `/api/properties/${property.id}/existing-improvements/${id}`);
+      return await apiRequest(`/api/properties/${property.id}/existing-improvements/${id}`, "DELETE");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/properties/${property.id}/existing-improvements`] });

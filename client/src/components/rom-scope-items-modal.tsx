@@ -76,7 +76,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
 
   // Create/Update mutations
   const createMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/rom-scope-items", data),
+    mutationFn: (data: any) => apiRequest("/api/rom-scope-items", "POST", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rom-scope-items"] });
       resetForm();
@@ -97,7 +97,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, ...data }: any) => apiRequest("PUT", `/api/rom-scope-items/${id}`, data),
+    mutationFn: ({ id, ...data }: any) => apiRequest(`/api/rom-scope-items/${id}`, "PUT", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rom-scope-items"] });
       resetForm();
@@ -118,7 +118,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: number) => apiRequest("DELETE", `/api/rom-scope-items/${id}`),
+    mutationFn: (id: number) => apiRequest(`/api/rom-scope-items/${id}`, "DELETE"),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rom-scope-items"] });
       toast({

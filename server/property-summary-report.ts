@@ -243,8 +243,8 @@ async function getPropertySummaryData(options?: RfpOptions): Promise<PropertySum
       buildingName = property.building.toString();
     }
     
-    // Special case for Bridge 595 which uses letter instead of number
-    if (property.propertyName.includes('Bridge 595')) {
+    // Special case for Bridge 595 Building A (only override if it's Bridge 595 specifically)
+    if (property.propertyName === 'Bridge 595') {
       buildingName = 'A';
     }
     

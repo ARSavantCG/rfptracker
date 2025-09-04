@@ -78,6 +78,16 @@ export default function BayConfigurationSelector({
   console.log('🚨 SAMPLE LEASED IDs:', leasedBayIds.slice(0, 3));
   console.log('🚨 ID MISMATCH ISSUE: Leased IDs don\'t match bay config IDs!');
   
+  // DIRECT COMPARISON TEST
+  const firstLeasedId = leasedBayIds[0];
+  const firstBayId = bayConfigurations[0]?.id;
+  const doesFirstMatch = leasedBayIds.includes(firstBayId || '');
+  console.log('🔬 DIRECT TEST:');
+  console.log('🔬 First leased ID:', firstLeasedId);
+  console.log('🔬 First bay config ID:', firstBayId);
+  console.log('🔬 Do they match?', doesFirstMatch);
+  console.log('🔬 Are any leased IDs found in bay configs?', bayConfigurations.some(bay => leasedBayIds.includes(bay.id)));
+  
 
 
   // Convert bay configurations to proper bay representation

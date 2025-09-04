@@ -88,6 +88,14 @@ export default function BayConfigurationSelector({
   console.log('🔬 Do they match?', doesFirstMatch);
   console.log('🔬 Are any leased IDs found in bay configs?', bayConfigurations.some(bay => leasedBayIds.includes(bay.id)));
   
+  // FINAL DIAGNOSIS: Check if we have missing bay configs
+  console.log('🏗️ BUILDING TOTAL ANALYSIS:');
+  console.log('🏗️ Full building should be: 794,334 SF (26 bays)');
+  console.log('🏗️ Current bay configs loaded:', bayConfigurations.length);
+  console.log('🏗️ Sum of all bay configs:', bayConfigurations.reduce((sum, bay) => sum + (bay.rentableSquareFootage || bay.squareFootage || 0), 0));
+  console.log('🏗️ BIA lease has 26 assigned bays, but only', bayConfigurations.length, 'bay configs exist');
+  console.log('🏗️ Missing bay configs:', 26 - bayConfigurations.length);
+  
 
 
   // Convert bay configurations to proper bay representation

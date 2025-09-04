@@ -728,6 +728,7 @@ export const executedLeases = pgTable("executed_leases", {
   // Essential lease information for space management only (no financial data)
   leaseStartDate: timestamp("lease_start_date"),
   leaseEndDate: timestamp("lease_end_date"),
+  rentableSquareFootage: integer("rentable_square_footage"), // Actual leased square footage for space management
   bayNumbers: text("bay_numbers"), // Human readable bay numbers (e.g., "Bay 1-2, Bay 3-4")
   
   // Override and parking allocation

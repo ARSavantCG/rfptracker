@@ -78,6 +78,7 @@ interface LeaseInfo {
   tenantName: string;
   leaseStartDate: string;
   leaseEndDate: string;
+  rentableSquareFootage: number;
   bayNumbers: string;
 }
 
@@ -287,6 +288,7 @@ async function getPropertySummaryData(options?: RfpOptions): Promise<PropertySum
         tenantName: lease.tenantName,
         leaseStartDate: formatDateForDisplay(lease.leaseStartDate),
         leaseEndDate: formatDateForDisplay(lease.leaseEndDate),
+        rentableSquareFootage: lease.rentableSquareFootage || 0,
         bayNumbers: lease.bayNumbers || ''
       })),
       buildingSpecs: {
@@ -620,6 +622,7 @@ function generatePropertySummaryHTML(data: PropertySummaryData): string {
                                 <th>Tenant</th>
                                 <th>Lease Start</th>
                                 <th>Lease End</th>
+                                <th>Rentable SF</th>
                                 <th>Bay Numbers</th>
                             </tr>
                         </thead>
@@ -629,6 +632,7 @@ function generatePropertySummaryHTML(data: PropertySummaryData): string {
                                 <td><strong>${lease.tenantName}</strong></td>
                                 <td>${lease.leaseStartDate}</td>
                                 <td>${lease.leaseEndDate}</td>
+                                <td class="metric-value">${formatNumber(lease.rentableSquareFootage)}</td>
                                 <td>${lease.bayNumbers}</td>
                             </tr>
                             `).join('')}

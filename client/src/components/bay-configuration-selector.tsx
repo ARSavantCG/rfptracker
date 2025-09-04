@@ -366,6 +366,14 @@ export default function BayConfigurationSelector({
     }
     
     // Total rentable area = selected bay SF (already includes mechanical allocation)
+    // DEBUG: Show what bays are actually selected
+    console.log('🔍 SELECTED BAYS DEBUG:');
+    console.log('🔍 Selected bay IDs:', selectedBayIds);
+    console.log('🔍 Selected bay configs count:', selectedBayConfigs.length);
+    console.log('🔍 Selected bay names:', selectedBayConfigs.map(bay => bay.bayName));
+    console.log('🔍 Leased bay IDs (should be excluded):', leasedBayIds);
+    console.log('🔍 Total bay square footage:', selectedBaySquareFootage);
+    
     return Math.round(selectedBaySquareFootage);
   };
 
@@ -390,7 +398,7 @@ export default function BayConfigurationSelector({
     setSelectedBayIds(availableBayIds);
   };
 
-  // UNIVERSAL CALCULATION: Use rentable square footage when available
+  // UNIVERSAL CALCULATION: Use rentable square footage when available (no double-counting)
   const totalArea = selectedBayIds.length === 0 ? 0 : selectedBayIds.reduce((sum, bayId) => {
     const bay = bayConfigurations.find(b => b.id === bayId);
     return bay ? sum + (bay.rentableSquareFootage || bay.squareFootage || 0) : sum;

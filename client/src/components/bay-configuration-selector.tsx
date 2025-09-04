@@ -96,6 +96,14 @@ export default function BayConfigurationSelector({
   console.log('🏗️ BIA lease has 26 assigned bays, but only', bayConfigurations.length, 'bay configs exist');
   console.log('🏗️ Missing bay configs:', 26 - bayConfigurations.length);
   
+  // IDENTIFY MISSING BAYS
+  const existingBayIds = bayConfigurations.map(bay => bay.id);
+  const missingLeasedBayIds = leasedBayIds.filter(id => !existingBayIds.includes(id));
+  console.log('🔍 MISSING BAY ANALYSIS:');
+  console.log('🔍 Missing leased bay IDs:', missingLeasedBayIds.length, missingLeasedBayIds);
+  console.log('🔍 These are the BIA bays that exist in the lease but not in bay configs');
+  console.log('🔍 This explains why filtering appears broken - missing bays cant be filtered!');
+  
 
 
   // Convert bay configurations to proper bay representation

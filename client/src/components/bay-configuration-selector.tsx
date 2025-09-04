@@ -67,42 +67,7 @@ export default function BayConfigurationSelector({
   // Get list of all bay IDs that are already leased
   const leasedBayIds = executedLeases.flatMap(lease => lease.assignedBays || []);
   
-  // CRITICAL DEBUG: Verify leased bay filtering
-  console.log('🚨 LEASE FILTERING DEBUG:');
-  console.log('🚨 Executed leases:', executedLeases.length);
-  console.log('🚨 BIA assigned bays:', executedLeases[0]?.assignedBays?.length || 0);
-  console.log('🚨 Leased bay IDs:', leasedBayIds.length, leasedBayIds.slice(0, 5), '...');
-  console.log('🚨 Total bay configs:', bayConfigurations.length);
-  console.log('🚨 Available (non-leased) bays:', bayConfigurations.filter(bay => !leasedBayIds.includes(bay.id)).length);
-  console.log('🚨 SAMPLE BAY CONFIG IDs:', bayConfigurations.slice(0, 3).map(bay => ({ name: bay.bayName, id: bay.id })));
-  console.log('🚨 SAMPLE LEASED IDs:', leasedBayIds.slice(0, 3));
-  console.log('🚨 ID MISMATCH ISSUE: Leased IDs don\'t match bay config IDs!');
-  
-  // DIRECT COMPARISON TEST
-  const firstLeasedId = leasedBayIds[0];
-  const firstBayId = bayConfigurations[0]?.id;
-  const doesFirstMatch = leasedBayIds.includes(firstBayId || '');
-  console.log('🔬 DIRECT TEST:');
-  console.log('🔬 First leased ID:', firstLeasedId);
-  console.log('🔬 First bay config ID:', firstBayId);
-  console.log('🔬 Do they match?', doesFirstMatch);
-  console.log('🔬 Are any leased IDs found in bay configs?', bayConfigurations.some(bay => leasedBayIds.includes(bay.id)));
-  
-  // FINAL DIAGNOSIS: Check if we have missing bay configs
-  console.log('🏗️ BUILDING TOTAL ANALYSIS:');
-  console.log('🏗️ Full building should be: 794,334 SF (26 bays)');
-  console.log('🏗️ Current bay configs loaded:', bayConfigurations.length);
-  console.log('🏗️ Sum of all bay configs:', bayConfigurations.reduce((sum, bay) => sum + (bay.rentableSquareFootage || bay.squareFootage || 0), 0));
-  console.log('🏗️ BIA lease has 26 assigned bays, but only', bayConfigurations.length, 'bay configs exist');
-  console.log('🏗️ Missing bay configs:', 26 - bayConfigurations.length);
-  
-  // IDENTIFY MISSING BAYS
-  const existingBayIds = bayConfigurations.map(bay => bay.id);
-  const missingLeasedBayIds = leasedBayIds.filter(id => !existingBayIds.includes(id));
-  console.log('🔍 MISSING BAY ANALYSIS:');
-  console.log('🔍 Missing leased bay IDs:', missingLeasedBayIds.length, missingLeasedBayIds);
-  console.log('🔍 These are the BIA bays that exist in the lease but not in bay configs');
-  console.log('🔍 This explains why filtering appears broken - missing bays cant be filtered!');
+  // Get list of all bay IDs that are already leased (BIA's 13 full-size bays)
   
 
 
@@ -426,22 +391,6 @@ export default function BayConfigurationSelector({
     }
     
     // Total rentable area = selected bay SF (already includes mechanical allocation)
-    // DEBUG: Show what bays are actually selected
-    console.log('🔍 MANUAL SELECTION DEBUG:');
-    console.log('🔍 PROPERTY ID:', property.id, '| PROPERTY NAME:', property.propertyName);
-    console.log('🔍 Selected bay IDs:', selectedBayIds);
-    console.log('🔍 Selected bay configs count:', selectedBayConfigs.length);
-    console.log('🔍 Selected bay names:', selectedBayConfigs.map(bay => bay.bayName));
-    console.log('🔍 Leased bay IDs (should be excluded):', leasedBayIds);
-    console.log('🔍 Total bay square footage:', selectedBaySquareFootage);
-    console.log('🔍 BAY CONFIGS SOURCE:', bayConfigurations.length, 'total bays');
-    console.log('🔍 FIRST BAY CONFIG:', bayConfigurations[0]?.bayName, bayConfigurations[0]?.squareFootage);
-    console.log('🚨 WHERE IS 409,189 COMING FROM?');
-    console.log('🚨 Individual bay calculations:');
-    selectedBayConfigs.forEach((bay, i) => {
-      console.log(`🚨 Bay ${i+1}: ${bay.bayName} = ${bay.rentableSquareFootage || bay.squareFootage} SF`);
-    });
-    console.log('🚨 Manual sum check:', selectedBayConfigs.reduce((sum, bay) => sum + (bay.rentableSquareFootage || bay.squareFootage || 0), 0));
     
     return Math.round(selectedBaySquareFootage);
   };
@@ -464,29 +413,20 @@ export default function BayConfigurationSelector({
       .filter(bay => bay && !leasedBayIds.includes(bay.id))
       .map(bay => bay.id);
     
-    console.log('🔥 SELECT ALL - BEFORE:', selectedBayIds.length, 'selected');
     setSelectedBayIds(availableBayIds);
-    console.log('🔥 SELECT ALL - SETTING:', availableBayIds.length, 'bay IDs');
     
-    // FORCE IMMEDIATE CALLBACK - to ensure calculation consistency
+    // Calculate available bay configurations (26 half-size bays = 397,167 SF)
     const availableBayConfigs = availableBayIds.map(bayId => {
       return bayConfigurations.find(bay => bay.id === bayId);
     }).filter((bay): bay is NonNullable<typeof bay> => bay != null);
     
-    // Calculate exact area for available bays
+    // Calculate exact area for available half-size bays
     const totalAvailableArea = availableBayConfigs.reduce((sum, bay) => {
       return sum + (bay.rentableSquareFootage || bay.squareFootage || 0);
     }, 0);
     
-    console.log('🔥 SELECT ALL DEBUG:');
-    console.log('🔥 Available bay IDs:', availableBayIds);
-    console.log('🔥 Available bay configs:', availableBayConfigs.length);
-    console.log('🔥 Total available area:', totalAvailableArea);
-    console.log('🔥 Property ID:', property.id);
-    console.log('🔥 Property name:', property.propertyName);
-    
-    // Force callback with exact calculation
-    onRentableAreaChange(397167, availableBayConfigs, undefined);
+    // Use calculated area, should be 397,167 SF for MG Westside available half
+    onRentableAreaChange(totalAvailableArea, availableBayConfigs, undefined);
   };
 
   // UNIVERSAL CALCULATION: Use rentable square footage when available (no double-counting)

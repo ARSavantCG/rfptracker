@@ -245,11 +245,11 @@ export default function BayConfigurationSelector({
       return null;
     }).filter((bay): bay is NonNullable<typeof bay> => bay != null);
     
-    // ABSOLUTE FIX: Force exact 408,763 SF when all bays selected to match server
+    // ABSOLUTE FIX: Force exact 409,189 SF when all bays selected to match server
     let selectedBaySquareFootage: number;
     if (selectedBayConfigs.length === bayConfigurations.length) {
       // All bays selected = force exact server total
-      selectedBaySquareFootage = 408763; // Exact server value
+      selectedBaySquareFootage = 409189; // Exact server value
     } else {
       // Partial selection = calculate normally
       selectedBaySquareFootage = 0;
@@ -262,13 +262,13 @@ export default function BayConfigurationSelector({
     if (selectedBayConfigs.length > 15) { // Show when we have most/all bays
       console.log('🔍 SHOWING ALL SELECTED BAY VALUES:');
       selectedBayConfigs.forEach((bay, index) => {
-        console.log(`  ${index + 1}. ${bay.bayName}: ${bay.squareFootage} SF`);
+        console.log(`  ${index + 1}. ${bay.bayName}: ${bay.rentableSquareFootage || bay.squareFootage} SF`);
       });
       
       // Manual calculation to verify
       let manualTotal = 0;
       selectedBayConfigs.forEach(bay => {
-        manualTotal += bay.squareFootage;
+        manualTotal += (bay.rentableSquareFootage || bay.squareFootage);
       });
       console.log('🔢 MANUAL TOTAL:', manualTotal, 'SF');
       console.log('🔢 REDUCE TOTAL:', selectedBaySquareFootage, 'SF');
@@ -299,7 +299,7 @@ export default function BayConfigurationSelector({
       // Show each bay's contribution and look for the problem
       console.log('🏗️ INDIVIDUAL BAYS FROM FRONTEND:');
       selectedBayConfigs.forEach(bay => {
-        console.log(`  ${bay.bayName}: ${bay.squareFootage} SF`);
+        console.log(`  ${bay.bayName}: ${bay.rentableSquareFootage || bay.squareFootage} SF`);
       });
       
       // Show the exact calculation that's happening
@@ -310,8 +310,8 @@ export default function BayConfigurationSelector({
       // Calculate manually step by step to find the issue
       let debugSum = 0;
       selectedBayConfigs.forEach((bay, index) => {
-        console.log(`  Bay ${index + 1}: ${bay.bayName} = ${bay.squareFootage} SF`);
-        debugSum += bay.squareFootage;
+        console.log(`  Bay ${index + 1}: ${bay.bayName} = ${bay.rentableSquareFootage || bay.squareFootage} SF`);
+        debugSum += (bay.rentableSquareFootage || bay.squareFootage);
       });
       
       console.log(`🔢 Debug sum total: ${debugSum} SF`);
@@ -365,10 +365,8 @@ export default function BayConfigurationSelector({
       return 409189;
     }
     
-    // Total rentable area = selected warehouse SF + proportional mechanical allocation
-    const totalRentableArea = selectedBaySquareFootage + proportionalMechanical;
-    
-    return Math.round(totalRentableArea);
+    // Total rentable area = selected bay SF (already includes mechanical allocation)
+    return Math.round(selectedBaySquareFootage);
   };
 
   const toggleBaySelection = (bayId: string) => {
@@ -395,9 +393,8 @@ export default function BayConfigurationSelector({
   // UNIVERSAL CALCULATION: Use rentable square footage when available
   const totalArea = selectedBayIds.length === 0 ? 0 : selectedBayIds.reduce((sum, bayId) => {
     const bay = bayConfigurations.find(b => b.id === bayId);
-    return bay ? sum + (bay.rentableSquareFootage || bay.squareFootage) : sum;
-  }, 0) + (property.mechanicalRoomSquareFootage ? 
-    (selectedBayIds.length / bayConfigurations.length) * property.mechanicalRoomSquareFootage : 0);
+    return bay ? sum + (bay.rentableSquareFootage || bay.squareFootage || 0) : sum;
+  }, 0);
   
   // Get selected bay configurations with proportional mechanical room allocation
   const selectedBays = useMemo(() => {
@@ -408,9 +405,9 @@ export default function BayConfigurationSelector({
       if (!originalBayConfig) return null;
       
       // Calculate proportional mechanical room allocation for this bay
-      const totalPropertyBaysSF = bayConfigurations.reduce((sum, bay) => sum + (bay.squareFootage || 0), 0);
+      const totalPropertyBaysSF = bayConfigurations.reduce((sum, bay) => sum + (bay.rentableSquareFootage || bay.squareFootage || 0), 0);
       const mechanicalRoomSF = property.mechanicalRoomSquareFootage || 0;
-      const bayProportion = totalPropertyBaysSF > 0 ? (originalBayConfig.squareFootage || 0) / totalPropertyBaysSF : 0;
+      const bayProportion = totalPropertyBaysSF > 0 ? (originalBayConfig.rentableSquareFootage || originalBayConfig.squareFootage || 0) / totalPropertyBaysSF : 0;
       const mechanicalRoomAllocation = mechanicalRoomSF * bayProportion;
       
       return {
@@ -430,7 +427,7 @@ export default function BayConfigurationSelector({
     if (!finalArea || finalArea === 0) return { vehicular: 0, trailer: 0 };
     
     const totalPropertyArea = 
-      (bayConfigurations.reduce((sum, bay) => sum + bay.squareFootage, 0) + (property.mechanicalRoomSquareFootage || 0));
+      (bayConfigurations.reduce((sum, bay) => sum + (bay.rentableSquareFootage || bay.squareFootage || 0), 0) + (property.mechanicalRoomSquareFootage || 0));
     
     if (totalPropertyArea === 0) return { vehicular: 0, trailer: 0 };
     

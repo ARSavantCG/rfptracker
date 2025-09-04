@@ -257,10 +257,16 @@ export default function BayConfigurationSelector({
       return null;
     }).filter((bay): bay is NonNullable<typeof bay> => bay != null);
     
-    // Calculate total square footage from selected bays
+    // Calculate total square footage from selected bays including mechanical room allocation
     const selectedBaySquareFootage = selectedBayConfigs.reduce((sum, bay) => {
       return sum + (bay.rentableSquareFootage || bay.squareFootage || 0);
     }, 0);
+    
+    // Add proportional mechanical room allocation for available bays
+    const totalAllBaysSF = bayConfigurations.reduce((sum, bay) => sum + (bay.rentableSquareFootage || bay.squareFootage || 0), 0);
+    const totalMechanicalRoomSF = property.mechanicalRoomSquareFootage || 0;
+    const availableBaysRatio = totalAllBaysSF > 0 ? selectedBaySquareFootage / totalAllBaysSF : 0;
+    const proportionalMechanicalRoom = totalMechanicalRoomSF * availableBaysRatio;
     
     
     // Debug: Show calculation when all bays selected
@@ -336,9 +342,8 @@ export default function BayConfigurationSelector({
 
     
     
-    // Total rentable area = selected bay SF (already includes mechanical allocation)
-    
-    return Math.round(selectedBaySquareFootage);
+    // Total rentable area = selected bay SF + proportional mechanical room
+    return Math.round(selectedBaySquareFootage + proportionalMechanicalRoom);
   };
 
   const toggleBaySelection = (bayId: string) => {

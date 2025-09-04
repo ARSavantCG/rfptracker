@@ -268,13 +268,13 @@ async function getPropertySummaryData(options?: RfpOptions): Promise<PropertySum
       zipCode: property.zip || '',
       totalBuildings: buildingCounts[property.propertyName] || 1,
       totalWarehouseArea: totalRentableArea.toString(),
-      totalOfficeArea: '0', // Not tracked in current schema
+      totalOfficeArea: (property.mechanicalRoomSquareFootage || 0).toString(), // Use mechanical room as office proxy if available
       totalRentableArea,
       parkingSpaces: parkingAllocation ? parkingAllocation.vehicular : ((property.standardParking || 0) + (property.accessibleParking || 0) + (property.evParking || 0)),
       trailerParkingSpaces: parkingAllocation ? parkingAllocation.trailer : (property.trailerParking || 0),
       doorCounts: doorCounts,
       selectedBayCount: selectedBayConfigurations ? selectedBayConfigurations.length : bayConfigs.length,
-      mechanicalRoomSquareFootage: 0, // Not tracked in current schema
+      mechanicalRoomSquareFootage: property.mechanicalRoomSquareFootage || 0,
       bayConfigurations: relevantBays.map((bay: any) => ({
         bayNumber: bay.bayName || bay.id || '',
         rentableSquareFootage: bay.rentableSquareFootage || bay.squareFootage || 0,
@@ -282,10 +282,10 @@ async function getPropertySummaryData(options?: RfpOptions): Promise<PropertySum
         dockDoors: (bay.standardDockDoors || 0) + (bay.oversizedDockDoors || 0),
         gradeLevel: 0, // Not tracked in current schema
         sprinkler: property.fireSprinklerInfo || '',
-        office: '',
-        notes: ''
+        office: property.mechanicalRoomSquareFootage ? 'Office space available' : 'Warehouse only',
+        notes: bay.notes || ''
       })),
-      electricalCapacity: [], // Not implemented in current schema
+      electricalCapacity: [], // Dynamic electrical capacity data would be retrieved from electrical_capacity table if implemented
       executedLeases: leases.map((lease: any) => ({
         tenantName: lease.tenantName,
         leaseStartDate: formatDateForDisplay(lease.leaseStartDate),

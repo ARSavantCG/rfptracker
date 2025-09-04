@@ -167,7 +167,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
     const submitData = {
       ...formData,
       unitPrice: parseFloat(formData.unitPrice).toFixed(2),
-      lastUpdated: formData.lastUpdated ? new Date(formData.lastUpdated) : null,
+      lastUpdated: new Date(), // Always set to current date when saving
     };
 
     if (editingItem) {
@@ -327,8 +327,9 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                     <Input
                       id="lastUpdated"
                       type="date"
-                      value={formData.lastUpdated}
-                      onChange={(e) => setFormData({...formData, lastUpdated: e.target.value})}
+                      value={new Date().toISOString().split('T')[0]}
+                      readOnly
+                      className="bg-gray-100 cursor-not-allowed"
                       onKeyDown={(e) => {
                         if (e.key === 'Tab' && e.shiftKey) {
                           e.preventDefault();

@@ -399,6 +399,12 @@ export default function BayConfigurationSelector({
     console.log('🔍 Total bay square footage:', selectedBaySquareFootage);
     console.log('🔍 BAY CONFIGS SOURCE:', bayConfigurations.length, 'total bays');
     console.log('🔍 FIRST BAY CONFIG:', bayConfigurations[0]?.bayName, bayConfigurations[0]?.squareFootage);
+    console.log('🚨 WHERE IS 409,189 COMING FROM?');
+    console.log('🚨 Individual bay calculations:');
+    selectedBayConfigs.forEach((bay, i) => {
+      console.log(`🚨 Bay ${i+1}: ${bay.bayName} = ${bay.rentableSquareFootage || bay.squareFootage} SF`);
+    });
+    console.log('🚨 Manual sum check:', selectedBayConfigs.reduce((sum, bay) => sum + (bay.rentableSquareFootage || bay.squareFootage || 0), 0));
     
     return Math.round(selectedBaySquareFootage);
   };

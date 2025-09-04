@@ -354,16 +354,25 @@ export default function BayConfigurationSelector({
   };
 
   const selectAllBays = () => {
-    // Use exact same bay IDs that the server sends
-    const availableBayIds = bayConfigurations
+    // Use exact same bay IDs that are displayed in the UI (individualBays)
+    const availableBayIds = individualBays
       .filter(bay => bay && !leasedBayIds.includes(bay.id))
       .map(bay => bay.id);
     
     setSelectedBayIds(availableBayIds);
     
-    // Calculate available bay configurations (26 half-size bays = 397,167 SF)
+    // Calculate available bay configurations using individualBays for consistency
     const availableBayConfigs = availableBayIds.map(bayId => {
-      return bayConfigurations.find(bay => bay.id === bayId);
+      const individualBay = individualBays.find(bay => bay.id === bayId);
+      if (individualBay) {
+        return {
+          id: individualBay.id,
+          bayName: individualBay.bayName,
+          squareFootage: individualBay.squareFootage,
+          rentableSquareFootage: individualBay.squareFootage
+        };
+      }
+      return null;
     }).filter((bay): bay is NonNullable<typeof bay> => bay != null);
     
     // Calculate exact area for available half-size bays

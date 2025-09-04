@@ -67,6 +67,14 @@ export default function BayConfigurationSelector({
   // Get list of all bay IDs that are already leased
   const leasedBayIds = executedLeases.flatMap(lease => lease.assignedBays || []);
   
+  // CRITICAL DEBUG: Verify leased bay filtering
+  console.log('🚨 LEASE FILTERING DEBUG:');
+  console.log('🚨 Executed leases:', executedLeases.length);
+  console.log('🚨 BIA assigned bays:', executedLeases[0]?.assignedBays?.length || 0);
+  console.log('🚨 Leased bay IDs:', leasedBayIds.length, leasedBayIds.slice(0, 5), '...');
+  console.log('🚨 Total bay configs:', bayConfigurations.length);
+  console.log('🚨 Available (non-leased) bays:', bayConfigurations.filter(bay => !leasedBayIds.includes(bay.id)).length);
+  
 
 
   // Convert bay configurations to proper bay representation

@@ -5,36 +5,6 @@
   "environment": "development",
   "changes": [
     {
-      "description": "Version tracking system implementation"
-    },
-    {
-      "description": "Copyright footer styling"
-    },
-    {
-      "description": "Historical pricing report improvements"
-    },
-    {
-      "description": "Complete alternate creation workflow overhaul"
-    },
-    {
-      "description": "Auto-advance functionality for alternates to RFP validation"
-    },
-    {
-      "description": "Streamlined UI with independent file management"
-    },
-    {
-      "description": "Enhanced bay configuration with layout shift prevention"
-    },
-    {
-      "description": "Professional parking allocation management with override functionality"
-    },
-    {
-      "description": "Improved font sizing and user experience for parking displays"
-    },
-    {
-      "description": "Dynamic container expansion with stable bay grid positioning"
-    },
-    {
       "description": "General Bug Fixes"
     }
   ]

@@ -138,6 +138,14 @@ async function getPropertySummaryData(options?: RfpOptions): Promise<PropertySum
         .orderBy(properties.propertyName);
 
   const propertyDetails: PropertyDetails[] = [];
+
+  // Calculate actual building counts per property name
+  const buildingCounts: { [propertyName: string]: number } = {};
+  allProperties.forEach(property => {
+    const name = property.propertyName;
+    buildingCounts[name] = (buildingCounts[name] || 0) + 1;
+  });
+  
   
   // Calculate door counts from selected bay configurations (RFP mode only)
   const calculateDoorCounts = (selectedBays: any[]) => {
@@ -258,7 +266,7 @@ async function getPropertySummaryData(options?: RfpOptions): Promise<PropertySum
       city: property.city || '',
       state: property.state || '',
       zipCode: property.zip || '',
-      totalBuildings: property.isSingleBuilding ? 1 : 2,
+      totalBuildings: buildingCounts[property.propertyName] || 1,
       totalWarehouseArea: totalRentableArea.toString(),
       totalOfficeArea: '0', // Not tracked in current schema
       totalRentableArea,

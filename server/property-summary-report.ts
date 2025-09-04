@@ -64,13 +64,21 @@ function calculateWeightedCostPerSF(improvements: any[], relevantBays: any[], to
 function formatBayNumbersWithCount(bayNumbers: string): string {
   if (!bayNumbers) return '';
   
-  // Count the number of bays mentioned by counting numbers
+  // Extract just the numbers from the bay numbers string
   const bayMatches = bayNumbers.match(/\d+/g);
-  const bayCount = bayMatches ? bayMatches.length : 0;
+  if (!bayMatches || bayMatches.length === 0) return bayNumbers;
   
-  if (bayCount === 0) return bayNumbers;
+  const numbers = bayMatches.map(Number).sort((a, b) => a - b);
+  const bayCount = numbers.length;
   
-  return `${bayNumbers} <em>(${bayCount} bay${bayCount !== 1 ? 's' : ''})</em>`;
+  if (bayCount === 1) {
+    return `Bay ${numbers[0]} <em>(1 bay)</em>`;
+  } else if (bayCount === 2) {
+    return `Bays ${numbers[0]}, ${numbers[1]} <em>(2 bays)</em>`;
+  } else {
+    // For 3 or more bays, show first through last
+    return `Bays ${numbers[0]}-${numbers[numbers.length - 1]} <em>(${bayCount} bays)</em>`;
+  }
 }
 
 interface PropertySummaryData {
@@ -719,7 +727,7 @@ function generatePropertySummaryHTML(data: PropertySummaryData): string {
                                 <td>${lease.leaseStartDate}</td>
                                 <td>${lease.leaseEndDate}</td>
                                 <td class="metric-value">${formatNumber(lease.rentableSquareFootage)}</td>
-                                <td>${lease.bayNumbers}</td>
+                                <td>${formatBayNumbersWithCount(lease.bayNumbers)}</td>
                             </tr>
                             `).join('')}
                         </tbody>

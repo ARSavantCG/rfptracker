@@ -276,10 +276,15 @@ export async function autoEnforceLegalComplianceMiddleware(
 }
 
 /**
- * Fixes BIA lease bay total for MG Westside Building B
- * Ensures Bays 14-26 total exactly 397,167 SF by applying legal increase
+ * Applies symmetrical legal compliance adjustments for ALL buildings
+ * Ensures mirrored buildings maintain consistent tenant allocations
+ * Uses center bay distribution to preserve building symmetry
  */
-export async function fixBIALeaseTotal(): Promise<{
+export async function applySymmetricalLegalCompliance(
+  propertyId: number,
+  targetBays: string[],
+  targetTotal: number
+): Promise<{
   success: boolean;
   message: string;
   originalTotal: number;
@@ -287,47 +292,40 @@ export async function fixBIALeaseTotal(): Promise<{
   adjustedBays: string[];
 }> {
   try {
-    const property = await storage.getProperty(3); // MG Westside Building B
+    const property = await storage.getProperty(propertyId);
     if (!property || !property.bayConfigurations) {
       return {
         success: false,
-        message: 'MG Westside Building B not found or has no bay configurations',
+        message: `Property ${propertyId} not found or has no bay configurations`,
         originalTotal: 0,
         finalTotal: 0,
         adjustedBays: []
       };
     }
 
-    // Define BIA lease bays (14-26)
-    const biaBayNames = [
-      'Bay 14-15', 'Bay 15-16', 'Bay 16-17', 'Bay 17-18', 'Bay 18-19', 'Bay 19-20',
-      'Bay 20-21', 'Bay 21-22', 'Bay 22-23', 'Bay 23-24', 'Bay 24-25', 'Bay 25-26', 'Bay 26-27'
-    ];
-
-    // Extract BIA lease bays
-    const biaBays = property.bayConfigurations.filter((bay: any) => 
-      biaBayNames.includes(bay.bayName)
+    // Extract specified tenant bays
+    const tenantBays = property.bayConfigurations.filter((bay: any) => 
+      targetBays.includes(bay.bayName)
     );
 
-    // Calculate current BIA lease total
-    const originalBIATotal = biaBays.reduce((sum: number, bay: any) => 
+    // Calculate current tenant total
+    const originalTotal = tenantBays.reduce((sum: number, bay: any) => 
       sum + (bay.rentableSquareFootage || 0), 0
     );
 
-    const targetBIATotal = 397167; // Exact BIA lease requirement
-    const shortage = targetBIATotal - originalBIATotal;
+    const shortage = targetTotal - originalTotal;
 
-    console.log(`🏗️ BIA LEASE COMPLIANCE CHECK:`);
-    console.log(`   Current BIA lease total: ${originalBIATotal} SF`);
-    console.log(`   Required BIA lease total: ${targetBIATotal} SF`);
-    console.log(`   Shortage: ${shortage} SF`);
+    console.log(`🏗️ SYMMETRICAL LEGAL COMPLIANCE CHECK (Property ${propertyId}):`);
+    console.log(`   Current tenant total: ${originalTotal} SF`);
+    console.log(`   Required tenant total: ${targetTotal} SF`);
+    console.log(`   Adjustment needed: ${shortage} SF`);
 
     if (shortage === 0) {
       return {
         success: true,
-        message: `✅ BIA lease already compliant at ${originalBIATotal} SF`,
-        originalTotal: originalBIATotal,
-        finalTotal: originalBIATotal,
+        message: `✅ Tenant allocation already compliant at ${originalTotal} SF`,
+        originalTotal,
+        finalTotal: originalTotal,
         adjustedBays: []
       };
     }
@@ -335,54 +333,62 @@ export async function fixBIALeaseTotal(): Promise<{
     if (shortage < 0) {
       return {
         success: false,
-        message: `❌ BIA lease exceeds requirement by ${Math.abs(shortage)} SF - manual adjustment needed`,
-        originalTotal: originalBIATotal,
-        finalTotal: originalBIATotal,
+        message: `❌ Tenant allocation exceeds requirement by ${Math.abs(shortage)} SF - manual adjustment needed`,
+        originalTotal,
+        finalTotal: originalTotal,
         adjustedBays: []
       };
     }
 
-    // Apply symmetrical adjustment to mirror the building layout
-    // For mirrored buildings, we need to ensure tenants taking similar space get identical areas
-    const biaBayConfigs = biaBays.map((bay: any) => ({
+    // Apply symmetrical legal compliance to tenant bays
+    const tenantBayConfigs = tenantBays.map((bay: any) => ({
       bayNumber: bay.bayName || bay.bayNumber || 'Unknown',
       rentableSquareFootage: bay.rentableSquareFootage || 0,
       ...bay
     }));
 
-    // Custom symmetrical distribution for mirrored building layout
-    // Distribute the shortage across center bays to maintain symmetry for mirrored tenants
-    // This ensures tenants like BIA and Iberia get identical allocations
-    const updatedBayConfigs = [...biaBayConfigs];
+    // Symmetrical distribution for ALL mirrored building layouts
+    // Ensures consistent tenant allocations across mirror buildings
+    const updatedBayConfigs = [...tenantBayConfigs];
     let result: any;
 
-    if (shortage === 4) {
-      // For 4 SF shortage, add 1 SF to the 4 center bays to maintain symmetry
-      // Focus on center bays for balanced distribution across mirror building layout
-      const centerBays = ['Bay 20-21', 'Bay 21-22', 'Bay 22-23', 'Bay 23-24'];
+    // For small adjustments (1-10 SF), use symmetrical center distribution
+    if (shortage > 0 && shortage <= 10) {
+      // Find center bays for symmetrical distribution
+      const totalBays = tenantBayConfigs.length;
+      const centerStart = Math.floor(totalBays / 3);
+      const centerEnd = Math.floor((2 * totalBays) / 3);
+      
+      // Select center bays for adjustment to maintain building symmetry
+      const centerBays = tenantBayConfigs.slice(centerStart, centerEnd + 1);
       const adjustedBays: string[] = [];
       
-      centerBays.forEach(bayName => {
-        const bayIndex = updatedBayConfigs.findIndex(bay => bay.bayNumber === bayName);
+      // Distribute shortage evenly across center bays
+      const sfPerBay = Math.floor(shortage / centerBays.length);
+      const remainderSF = shortage % centerBays.length;
+      
+      centerBays.forEach((bay, index) => {
+        const bayIndex = updatedBayConfigs.findIndex(config => config.bayNumber === bay.bayNumber);
         if (bayIndex !== -1) {
+          const adjustment = sfPerBay + (index < remainderSF ? 1 : 0);
           updatedBayConfigs[bayIndex] = {
             ...updatedBayConfigs[bayIndex],
-            rentableSquareFootage: updatedBayConfigs[bayIndex].rentableSquareFootage + 1
+            rentableSquareFootage: updatedBayConfigs[bayIndex].rentableSquareFootage + adjustment
           };
-          adjustedBays.push(bayName);
+          adjustedBays.push(bay.bayNumber);
         }
       });
 
       result = {
         success: true,
-        originalTotal: originalBIATotal,
-        finalTotal: targetBIATotal,
+        originalTotal,
+        finalTotal: targetTotal,
         adjustedBays,
-        message: `Symmetrically distributed ${shortage} SF across center bays to maintain mirror building balance`
+        message: `Symmetrically distributed ${shortage} SF across ${centerBays.length} center bays to maintain mirror building balance`
       };
     } else {
-      // For other shortage amounts, use the standard legal increase system
-      const { updatedBayConfigs: standardConfigs, result: standardResult } = applyLegalIncrease(biaBayConfigs, targetBIATotal);
+      // For larger adjustments, use the standard legal increase system
+      const { updatedBayConfigs: standardConfigs, result: standardResult } = applyLegalIncrease(tenantBayConfigs, targetTotal);
       updatedBayConfigs.splice(0, updatedBayConfigs.length, ...standardConfigs);
       result = standardResult;
     }
@@ -390,14 +396,14 @@ export async function fixBIALeaseTotal(): Promise<{
     if (!result.success) {
       return {
         success: false,
-        message: `❌ Failed to adjust BIA lease total: ${result.message}`,
-        originalTotal: originalBIATotal,
-        finalTotal: originalBIATotal,
+        message: `❌ Failed to adjust tenant allocation: ${result.message}`,
+        originalTotal,
+        finalTotal: originalTotal,
         adjustedBays: []
       };
     }
 
-    // Update the property with adjusted BIA bays
+    // Update the property with adjusted tenant bays
     const updatedBayConfigurations = property.bayConfigurations.map((bay: any) => {
       const updatedBay = updatedBayConfigs.find((updated: any) => updated.bayNumber === bay.bayName);
       if (updatedBay) {
@@ -410,36 +416,55 @@ export async function fixBIALeaseTotal(): Promise<{
     });
 
     // Update property in database
-    await storage.updateProperty(3, {
+    await storage.updateProperty(propertyId, {
       ...property,
       bayConfigurations: updatedBayConfigurations
     });
 
-    const finalBIATotal = updatedBayConfigs.reduce((sum: number, bay: any) => 
+    const finalTotal = updatedBayConfigs.reduce((sum: number, bay: any) => 
       sum + bay.rentableSquareFootage, 0
     );
 
-    console.log(`✅ BIA LEASE LEGAL COMPLIANCE FIXED:`);
-    console.log(`   Original total: ${originalBIATotal} SF`);
-    console.log(`   Final total: ${finalBIATotal} SF`);
+    console.log(`✅ SYMMETRICAL LEGAL COMPLIANCE APPLIED (Property ${propertyId}):`);
+    console.log(`   Original total: ${originalTotal} SF`);
+    console.log(`   Final total: ${finalTotal} SF`);
     console.log(`   Adjusted bays: ${result.adjustedBays.join(', ')}`);
 
     return {
       success: true,
-      message: `✅ BIA lease total fixed: ${originalBIATotal} → ${finalBIATotal} SF. Adjusted ${result.adjustedBays.length} bays.`,
-      originalTotal: originalBIATotal,
-      finalTotal: finalBIATotal,
+      message: `✅ Tenant allocation adjusted: ${originalTotal} → ${finalTotal} SF. Applied symmetrical distribution to ${result.adjustedBays.length} bays.`,
+      originalTotal,
+      finalTotal,
       adjustedBays: result.adjustedBays
     };
 
   } catch (error) {
-    console.error('❌ Error fixing BIA lease total:', error);
+    console.error(`❌ Error applying symmetrical legal compliance to property ${propertyId}:`, error);
     return {
       success: false,
-      message: `Error fixing BIA lease total: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      message: `Error applying symmetrical legal compliance: ${error instanceof Error ? error.message : 'Unknown error'}`,
       originalTotal: 0,
       finalTotal: 0,
       adjustedBays: []
     };
   }
+
+}
+
+/**
+ * Convenience function for BIA lease specifically
+ */
+export async function fixBIALeaseTotal(): Promise<{
+  success: boolean;
+  message: string;
+  originalTotal: number;
+  finalTotal: number;
+  adjustedBays: string[];
+}> {
+  const biaBayNames = [
+    'Bay 14-15', 'Bay 15-16', 'Bay 16-17', 'Bay 17-18', 'Bay 18-19', 'Bay 19-20',
+    'Bay 20-21', 'Bay 21-22', 'Bay 22-23', 'Bay 23-24', 'Bay 24-25', 'Bay 25-26', 'Bay 26-27'
+  ];
+  
+  return applySymmetricalLegalCompliance(3, biaBayNames, 397167);
 }

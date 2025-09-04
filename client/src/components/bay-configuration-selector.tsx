@@ -368,27 +368,6 @@ export default function BayConfigurationSelector({
     
 
     
-    // CRITICAL FIX: For MG Westside Building B - ensure available half equals exactly 397,167 SF
-    const availableBayConfigs = bayConfigurations.filter(bay => !leasedBayIds?.includes(bay.id));
-    const availableBayCount = availableBayConfigs.length;
-    
-    // If selecting all available bays (the empty half), force exact 397,167 SF
-    if (selectedBayConfigs.length === availableBayCount && leasedBayIds.length > 0) {
-      console.log('🏢 CRITICAL FIX - All available bays selected (empty half), forcing exact 397,167 SF');
-      return 397167;
-    }
-    
-    // CRITICAL FIX: For partial manual selections, ensure calculation is correct
-    if (selectedBayConfigs.length > 0 && selectedBayConfigs.length < availableBayCount && leasedBayIds.length > 0) {
-      console.log('🏢 PARTIAL SELECTION - Using calculated total:', selectedBaySquareFootage);
-      return Math.round(selectedBaySquareFootage);
-    }
-    
-    // If all 23 bays selected (no leases), use full building total
-    if (selectedBayConfigs.length === bayConfigurations.length && leasedBayIds.length === 0) {
-      console.log('🏢 CRITICAL FIX - All 23 bays selected, forcing exact 409189 SF to resolve calculation error');
-      return 409189;
-    }
     
     // Total rentable area = selected bay SF (already includes mechanical allocation)
     

@@ -724,6 +724,15 @@ export const executedLeases = pgTable("executed_leases", {
   propertyId: integer("property_id").notNull(),
   tenantName: text("tenant_name").notNull(),
   assignedBays: text("assigned_bays").array().notNull().default([]), // Bay IDs like ["A1", "A2", "B3"]
+  
+  // Essential lease information for asset management reports
+  leaseStartDate: timestamp("lease_start_date"),
+  leaseEndDate: timestamp("lease_end_date"),
+  monthlyRent: text("monthly_rent"), // Store as text to handle currency formatting and formulas
+  rentableSquareFootage: integer("rentable_square_footage"), // Actual leased square footage
+  bayNumbers: text("bay_numbers"), // Human readable bay numbers (e.g., "Bay 1-2, Bay 3-4")
+  
+  // Override and parking allocation
   rentableAreaOverride: integer("rentable_area_override"), // Override calculated area with actual lease terms
   standardParking: integer("standard_parking").default(0),
   accessibleParking: integer("accessible_parking").default(0),

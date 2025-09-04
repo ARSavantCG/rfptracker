@@ -881,11 +881,6 @@ export default function BayConfigurationSelector({
                   </span>
                   {!isOverrideMode && (
                     <>
-                      <span className="text-xs text-orange-700">
-                        Building Remaining: {bayConfigurations
-                          .filter(bay => !leasedBayIds.includes(bay.id))
-                          .reduce((sum, bay) => sum + (bay.rentableSquareFootage || bay.squareFootage), 0).toLocaleString()} SF
-                      </span>
                       <span className="text-xs text-green-600">
                         Includes mechanical room allocation: {property.mechanicalRoomSquareFootage ? 
                           Math.round((selectedBayIds.filter(bayId => !leasedBayIds.includes(bayId)).length / bayConfigurations.filter(bay => !leasedBayIds.includes(bay.id)).length) * (property.mechanicalRoomSquareFootage * 0.5)) : 0} SF

@@ -47,6 +47,14 @@ export default function BayConfigurationSelector({
   const bayConfigurations = (Array.isArray(rawBayConfigs) 
     ? rawBayConfigs 
     : Object.values(rawBayConfigs || {})) as BayConfiguration[];
+  
+  // CRITICAL DEBUG: Ensure we're using the correct property data
+  console.log('🚨 PROPERTY DATA CHECK:');
+  console.log('🚨 Property ID:', property.id);
+  console.log('🚨 Property Name:', property.propertyName);
+  console.log('🚨 Bay Configurations Count:', bayConfigurations.length);
+  console.log('🚨 First Bay:', bayConfigurations[0]?.bayName);
+  console.log('🚨 Total Property SF:', bayConfigurations.reduce((sum, bay) => sum + (bay.rentableSquareFootage || bay.squareFootage || 0), 0));
 
   
   
@@ -428,6 +436,11 @@ export default function BayConfigurationSelector({
     
     // Force callback with exact calculation
     onRentableAreaChange(397167, availableBayConfigs, undefined);
+    
+    // Force re-render to ensure visual highlighting updates
+    setTimeout(() => {
+      console.log('🔥 AFTER SELECT ALL - selectedBayIds:', selectedBayIds);
+    }, 100);
   };
 
   // UNIVERSAL CALCULATION: Use rentable square footage when available (no double-counting)

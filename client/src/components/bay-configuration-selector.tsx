@@ -882,7 +882,9 @@ export default function BayConfigurationSelector({
                   {!isOverrideMode && (
                     <>
                       <span className="text-xs text-orange-700">
-                        Building Total Available: {bayConfigurations.reduce((sum, bay) => sum + bay.squareFootage, 0).toLocaleString()} SF
+                        Building Total Available: {bayConfigurations
+                          .filter(bay => !leasedBayIds.includes(bay.id))
+                          .reduce((sum, bay) => sum + (bay.rentableSquareFootage || bay.squareFootage), 0).toLocaleString()} SF
                       </span>
                       <span className="text-xs text-green-600">
                         Includes mechanical room allocation: {property.mechanicalRoomSquareFootage ? 

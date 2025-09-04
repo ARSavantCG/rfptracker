@@ -274,3 +274,136 @@ export async function autoEnforceLegalComplianceMiddleware(
 
   return updatedProperty;
 }
+
+/**
+ * Fixes BIA lease bay total for MG Westside Building B
+ * Ensures Bays 14-26 total exactly 397,167 SF by applying legal increase
+ */
+export async function fixBIALeaseTotal(): Promise<{
+  success: boolean;
+  message: string;
+  originalTotal: number;
+  finalTotal: number;
+  adjustedBays: string[];
+}> {
+  try {
+    const property = await storage.getProperty(3); // MG Westside Building B
+    if (!property || !property.bayConfigurations) {
+      return {
+        success: false,
+        message: 'MG Westside Building B not found or has no bay configurations',
+        originalTotal: 0,
+        finalTotal: 0,
+        adjustedBays: []
+      };
+    }
+
+    // Define BIA lease bays (14-26)
+    const biaBayNames = [
+      'Bay 14-15', 'Bay 15-16', 'Bay 16-17', 'Bay 17-18', 'Bay 18-19', 'Bay 19-20',
+      'Bay 20-21', 'Bay 21-22', 'Bay 22-23', 'Bay 23-24', 'Bay 24-25', 'Bay 25-26', 'Bay 26-27'
+    ];
+
+    // Extract BIA lease bays
+    const biaBays = property.bayConfigurations.filter((bay: any) => 
+      biaBayNames.includes(bay.bayName)
+    );
+
+    // Calculate current BIA lease total
+    const originalBIATotal = biaBays.reduce((sum: number, bay: any) => 
+      sum + (bay.rentableSquareFootage || 0), 0
+    );
+
+    const targetBIATotal = 397167; // Exact BIA lease requirement
+    const shortage = targetBIATotal - originalBIATotal;
+
+    console.log(`🏗️ BIA LEASE COMPLIANCE CHECK:`);
+    console.log(`   Current BIA lease total: ${originalBIATotal} SF`);
+    console.log(`   Required BIA lease total: ${targetBIATotal} SF`);
+    console.log(`   Shortage: ${shortage} SF`);
+
+    if (shortage === 0) {
+      return {
+        success: true,
+        message: `✅ BIA lease already compliant at ${originalBIATotal} SF`,
+        originalTotal: originalBIATotal,
+        finalTotal: originalBIATotal,
+        adjustedBays: []
+      };
+    }
+
+    if (shortage < 0) {
+      return {
+        success: false,
+        message: `❌ BIA lease exceeds requirement by ${Math.abs(shortage)} SF - manual adjustment needed`,
+        originalTotal: originalBIATotal,
+        finalTotal: originalBIATotal,
+        adjustedBays: []
+      };
+    }
+
+    // Apply legal increase to BIA bays only
+    const biaBayConfigs = biaBays.map((bay: any) => ({
+      bayNumber: bay.bayName || bay.bayNumber || 'Unknown',
+      rentableSquareFootage: bay.rentableSquareFootage || 0,
+      ...bay
+    }));
+
+    const { updatedBayConfigs, result } = applyLegalIncrease(biaBayConfigs, targetBIATotal);
+
+    if (!result.success) {
+      return {
+        success: false,
+        message: `❌ Failed to adjust BIA lease total: ${result.message}`,
+        originalTotal: originalBIATotal,
+        finalTotal: originalBIATotal,
+        adjustedBays: []
+      };
+    }
+
+    // Update the property with adjusted BIA bays
+    const updatedBayConfigurations = property.bayConfigurations.map((bay: any) => {
+      const updatedBay = updatedBayConfigs.find((updated: any) => updated.bayNumber === bay.bayName);
+      if (updatedBay) {
+        return {
+          ...bay,
+          rentableSquareFootage: updatedBay.rentableSquareFootage
+        };
+      }
+      return bay;
+    });
+
+    // Update property in database
+    await storage.updateProperty(3, {
+      ...property,
+      bayConfigurations: updatedBayConfigurations
+    });
+
+    const finalBIATotal = updatedBayConfigs.reduce((sum: number, bay: any) => 
+      sum + bay.rentableSquareFootage, 0
+    );
+
+    console.log(`✅ BIA LEASE LEGAL COMPLIANCE FIXED:`);
+    console.log(`   Original total: ${originalBIATotal} SF`);
+    console.log(`   Final total: ${finalBIATotal} SF`);
+    console.log(`   Adjusted bays: ${result.adjustedBays.join(', ')}`);
+
+    return {
+      success: true,
+      message: `✅ BIA lease total fixed: ${originalBIATotal} → ${finalBIATotal} SF. Adjusted ${result.adjustedBays.length} bays.`,
+      originalTotal: originalBIATotal,
+      finalTotal: finalBIATotal,
+      adjustedBays: result.adjustedBays
+    };
+
+  } catch (error) {
+    console.error('❌ Error fixing BIA lease total:', error);
+    return {
+      success: false,
+      message: `Error fixing BIA lease total: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      originalTotal: 0,
+      finalTotal: 0,
+      adjustedBays: []
+    };
+  }
+}

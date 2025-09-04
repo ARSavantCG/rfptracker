@@ -376,6 +376,12 @@ export default function BayConfigurationSelector({
       return 397167;
     }
     
+    // CRITICAL FIX: For partial manual selections, ensure calculation is correct
+    if (selectedBayConfigs.length > 0 && selectedBayConfigs.length < availableBayCount && leasedBayIds.length > 0) {
+      console.log('🏢 PARTIAL SELECTION - Using calculated total:', selectedBaySquareFootage);
+      return Math.round(selectedBaySquareFootage);
+    }
+    
     // If all 23 bays selected (no leases), use full building total
     if (selectedBayConfigs.length === bayConfigurations.length && leasedBayIds.length === 0) {
       console.log('🏢 CRITICAL FIX - All 23 bays selected, forcing exact 409189 SF to resolve calculation error');
@@ -415,7 +421,9 @@ export default function BayConfigurationSelector({
       .filter(bay => bay && !leasedBayIds.includes(bay.id))
       .map(bay => bay.id);
     
+    console.log('🔥 SELECT ALL - BEFORE:', selectedBayIds.length, 'selected');
     setSelectedBayIds(availableBayIds);
+    console.log('🔥 SELECT ALL - SETTING:', availableBayIds.length, 'bay IDs');
     
     // FORCE IMMEDIATE CALLBACK - to ensure calculation consistency
     const availableBayConfigs = availableBayIds.map(bayId => {
@@ -436,11 +444,6 @@ export default function BayConfigurationSelector({
     
     // Force callback with exact calculation
     onRentableAreaChange(397167, availableBayConfigs, undefined);
-    
-    // Force re-render to ensure visual highlighting updates
-    setTimeout(() => {
-      console.log('🔥 AFTER SELECT ALL - selectedBayIds:', selectedBayIds);
-    }, 100);
   };
 
   // UNIVERSAL CALCULATION: Use rentable square footage when available (no double-counting)

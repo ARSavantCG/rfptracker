@@ -229,8 +229,10 @@ export default function BayConfigurationSelector({
   const calculateTotalArea = () => {
     if (selectedBayIds.length === 0) return 0;
     
-    // Get selected bay configurations - handle both full bays and split bays
-    const selectedBayConfigs = selectedBayIds.map(bayId => {
+    // Get selected bay configurations - handle both full bays and split bays (excluding leased bays)
+    const selectedBayConfigs = selectedBayIds
+      .filter(bayId => !leasedBayIds.includes(bayId)) // Exclude leased bays from calculation
+      .map(bayId => {
       // First try to find in original bay configurations
       let bayConfig = bayConfigurations.find(bay => bay.id === bayId);
       if (bayConfig) return bayConfig;
@@ -255,46 +257,11 @@ export default function BayConfigurationSelector({
       return null;
     }).filter((bay): bay is NonNullable<typeof bay> => bay != null);
     
-    // ABSOLUTE FIX: Force exact 409,189 SF when all bays selected to match server
-    let selectedBaySquareFootage: number;
-    if (selectedBayConfigs.length === bayConfigurations.length) {
-      // All bays selected = force exact server total
-      selectedBaySquareFootage = 409189; // Exact server value
-    } else {
-      // Partial selection = calculate normally
-      selectedBaySquareFootage = 0;
-      selectedBayConfigs.forEach(bay => {
-        selectedBaySquareFootage += (bay.rentableSquareFootage || bay.squareFootage || 0);
-      });
-    }
+    // Calculate total square footage from selected bays
+    const selectedBaySquareFootage = selectedBayConfigs.reduce((sum, bay) => {
+      return sum + (bay.rentableSquareFootage || bay.squareFootage || 0);
+    }, 0);
     
-    // URGENT: Show individual bay values to find the duplicated bay
-    if (selectedBayConfigs.length > 15) { // Show when we have most/all bays
-      console.log('🔍 SHOWING ALL SELECTED BAY VALUES:');
-      selectedBayConfigs.forEach((bay, index) => {
-        console.log(`  ${index + 1}. ${bay.bayName}: ${bay.rentableSquareFootage || bay.squareFootage} SF`);
-      });
-      
-      // Manual calculation to verify
-      let manualTotal = 0;
-      selectedBayConfigs.forEach(bay => {
-        manualTotal += (bay.rentableSquareFootage || bay.squareFootage);
-      });
-      console.log('🔢 MANUAL TOTAL:', manualTotal, 'SF');
-      console.log('🔢 REDUCE TOTAL:', selectedBaySquareFootage, 'SF');
-      console.log('🔢 MATCH:', manualTotal === selectedBaySquareFootage);
-      
-      // Check for duplicate bay IDs
-      const allBayIds = selectedBayConfigs.map(bay => bay.id);
-      const uniqueBayIds = Array.from(new Set(allBayIds));
-      console.log('🔍 ALL BAY IDS:', allBayIds.length);
-      console.log('🔍 UNIQUE BAY IDS:', uniqueBayIds.length);
-      if (allBayIds.length !== uniqueBayIds.length) {
-        console.log('❌ FOUND DUPLICATE BAY IDS!');
-        console.log('❌ All IDs:', allBayIds);
-        console.log('❌ Unique IDs:', uniqueBayIds);
-      }
-    }
     
     // Debug: Show calculation when all bays selected
     if (selectedBayConfigs.length === bayConfigurations.length) {

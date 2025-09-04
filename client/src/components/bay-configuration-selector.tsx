@@ -74,6 +74,9 @@ export default function BayConfigurationSelector({
   console.log('🚨 Leased bay IDs:', leasedBayIds.length, leasedBayIds.slice(0, 5), '...');
   console.log('🚨 Total bay configs:', bayConfigurations.length);
   console.log('🚨 Available (non-leased) bays:', bayConfigurations.filter(bay => !leasedBayIds.includes(bay.id)).length);
+  console.log('🚨 SAMPLE BAY CONFIG IDs:', bayConfigurations.slice(0, 3).map(bay => ({ name: bay.bayName, id: bay.id })));
+  console.log('🚨 SAMPLE LEASED IDs:', leasedBayIds.slice(0, 3));
+  console.log('🚨 ID MISMATCH ISSUE: Leased IDs don\'t match bay config IDs!');
   
 
 

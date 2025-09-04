@@ -239,12 +239,22 @@ async function getPropertySummaryData(options?: RfpOptions): Promise<PropertySum
     let buildingName = '';
     if (property.propertyName.includes('Bridge 595')) {
       buildingName = 'A';
-    } else if (property.propertyName.includes('Bridge Point Doral') && property.streetAddress?.includes('10855')) {
+    } else if (property.propertyName.includes('Bridge Point Doral') && property.streetAddress?.includes('3600 NW 112th Ave')) {
       buildingName = '1';
-    } else if (property.propertyName.includes('Bridge Point Doral') && property.streetAddress?.includes('3700')) {
+    } else if (property.propertyName.includes('Bridge Point Doral') && property.streetAddress?.includes('3605 NW 112th Ave')) {
       buildingName = '2';
-    } else if (property.propertyName.includes('Bridge Point Doral') && property.streetAddress?.includes('3605')) {
+    } else if (property.propertyName.includes('Bridge Point Doral') && property.streetAddress?.includes('10955 NW 34th St')) {
       buildingName = '3';
+    } else if (property.propertyName.includes('Bridge Point Doral') && property.streetAddress?.includes('10875 NW 40th St')) {
+      buildingName = '4';
+    } else if (property.propertyName.includes('Bridge Point Doral') && property.streetAddress?.includes('3700 NW 107th Ave')) {
+      buildingName = '5';
+    } else if (property.propertyName.includes('Bridge Point Doral') && property.streetAddress?.includes('10855 NW 34th St')) {
+      buildingName = '7';
+    } else if (property.propertyName.includes('Miami Station') && property.streetAddress?.includes('11690 NW 105th St')) {
+      buildingName = '1';
+    } else if (property.propertyName.includes('Miami Station') && property.streetAddress?.includes('11670 NW 105th St')) {
+      buildingName = '2';
     }
     // Note: Single building properties like Gratigny and Port Everglades don't get building numbers
 
@@ -536,16 +546,6 @@ function generatePropertySummaryHTML(data: PropertySummaryData): string {
             <div class="subsection">
                 <h3>Cost Breakdown Details</h3>
                 <div class="info-grid" style="grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));">
-                    <div class="info-card">
-                        <h4>Fire Alarm</h4>
-                        <p class="metric-value">${formatCurrency(property.costInPlace.fireAlarm || 0)}</p>
-                        <p><strong>Per SF:</strong> ${formatCurrency((property.costInPlace.fireAlarm || 0) / (property.totalRentableArea || 1))}</p>
-                    </div>
-                    <div class="info-card">
-                        <h4>Ventilation</h4>
-                        <p class="metric-value">${formatCurrency(property.costInPlace.ventilation || 0)}</p>
-                        <p><strong>Per Bay:</strong> ${formatCurrency((property.costInPlace.ventilation || 0) / Math.max(property.bayConfigurations.length, 1))}</p>
-                    </div>
                     <div class="info-card">
                         <h4>Restrooms</h4>
                         <p class="metric-value">${formatCurrency(property.costInPlace.plumbing || 0)}</p>

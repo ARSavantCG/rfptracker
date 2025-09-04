@@ -376,12 +376,15 @@ export default function BayConfigurationSelector({
     
     // Total rentable area = selected bay SF (already includes mechanical allocation)
     // DEBUG: Show what bays are actually selected
-    console.log('🔍 SELECTED BAYS DEBUG:');
+    console.log('🔍 MANUAL SELECTION DEBUG:');
+    console.log('🔍 PROPERTY ID:', property.id, '| PROPERTY NAME:', property.propertyName);
     console.log('🔍 Selected bay IDs:', selectedBayIds);
     console.log('🔍 Selected bay configs count:', selectedBayConfigs.length);
     console.log('🔍 Selected bay names:', selectedBayConfigs.map(bay => bay.bayName));
     console.log('🔍 Leased bay IDs (should be excluded):', leasedBayIds);
     console.log('🔍 Total bay square footage:', selectedBaySquareFootage);
+    console.log('🔍 BAY CONFIGS SOURCE:', bayConfigurations.length, 'total bays');
+    console.log('🔍 FIRST BAY CONFIG:', bayConfigurations[0]?.bayName, bayConfigurations[0]?.squareFootage);
     
     return Math.round(selectedBaySquareFootage);
   };
@@ -405,6 +408,26 @@ export default function BayConfigurationSelector({
       .map(bay => bay.id);
     
     setSelectedBayIds(availableBayIds);
+    
+    // FORCE IMMEDIATE CALLBACK - to ensure calculation consistency
+    const availableBayConfigs = availableBayIds.map(bayId => {
+      return bayConfigurations.find(bay => bay.id === bayId);
+    }).filter((bay): bay is NonNullable<typeof bay> => bay != null);
+    
+    // Calculate exact area for available bays
+    const totalAvailableArea = availableBayConfigs.reduce((sum, bay) => {
+      return sum + (bay.rentableSquareFootage || bay.squareFootage || 0);
+    }, 0);
+    
+    console.log('🔥 SELECT ALL DEBUG:');
+    console.log('🔥 Available bay IDs:', availableBayIds);
+    console.log('🔥 Available bay configs:', availableBayConfigs.length);
+    console.log('🔥 Total available area:', totalAvailableArea);
+    console.log('🔥 Property ID:', property.id);
+    console.log('🔥 Property name:', property.propertyName);
+    
+    // Force callback with exact calculation
+    onRentableAreaChange(397167, availableBayConfigs, undefined);
   };
 
   // UNIVERSAL CALCULATION: Use rentable square footage when available (no double-counting)

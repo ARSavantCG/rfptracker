@@ -193,9 +193,9 @@ export default function BayConfigurationSelector({
         
         if (!bayConfig) return null;
         
-        const totalPropertyBaysSF = bayConfigurations.reduce((sum, bay) => sum + (bay.squareFootage || 0), 0);
+        const totalPropertyBaysSF = bayConfigurations.reduce((sum, bay) => sum + (bay.rentableSquareFootage || bay.squareFootage || 0), 0);
         const mechanicalRoomSF = property.mechanicalRoomSquareFootage || 0;
-        const bayProportion = totalPropertyBaysSF > 0 ? (bayConfig.squareFootage || 0) / totalPropertyBaysSF : 0;
+        const bayProportion = totalPropertyBaysSF > 0 ? (bayConfig.rentableSquareFootage || bayConfig.squareFootage || 0) / totalPropertyBaysSF : 0;
         const mechanicalRoomAllocation = mechanicalRoomSF * bayProportion;
         
         return {
@@ -204,11 +204,10 @@ export default function BayConfigurationSelector({
         };
       }).filter((bay): bay is NonNullable<typeof bay> => bay != null);
       
-      // Calculate new area
+      // Calculate new area using rentable square footage
       const newArea = newSelectedBays.reduce((sum, bay) => {
-        return sum + (bay.rentableSquareFootage || bay.squareFootage);
-      }, 0) + (property.mechanicalRoomSquareFootage ? 
-        (newSelection.length / bayConfigurations.length) * property.mechanicalRoomSquareFootage : 0);
+        return sum + (bay.rentableSquareFootage || bay.squareFootage || 0);
+      }, 0);
       
       // Call parent callback immediately  
       const currentOverride = isOverrideMode && overrideArea ? parseFloat(overrideArea) : undefined;
@@ -255,7 +254,7 @@ export default function BayConfigurationSelector({
       // Partial selection = calculate normally
       selectedBaySquareFootage = 0;
       selectedBayConfigs.forEach(bay => {
-        selectedBaySquareFootage += (bay.squareFootage || 0);
+        selectedBaySquareFootage += (bay.rentableSquareFootage || bay.squareFootage || 0);
       });
     }
     
@@ -468,9 +467,9 @@ export default function BayConfigurationSelector({
         const bayConfig = bayConfigurations.find(bay => bay.id === id);
         if (!bayConfig) return null;
         
-        const totalPropertyBaysSF = bayConfigurations.reduce((sum, bay) => sum + (bay.squareFootage || 0), 0);
+        const totalPropertyBaysSF = bayConfigurations.reduce((sum, bay) => sum + (bay.rentableSquareFootage || bay.squareFootage || 0), 0);
         const mechanicalRoomSF = property.mechanicalRoomSquareFootage || 0;
-        const bayProportion = totalPropertyBaysSF > 0 ? (bayConfig.squareFootage || 0) / totalPropertyBaysSF : 0;
+        const bayProportion = totalPropertyBaysSF > 0 ? (bayConfig.rentableSquareFootage || bayConfig.squareFootage || 0) / totalPropertyBaysSF : 0;
         const mechanicalRoomAllocation = mechanicalRoomSF * bayProportion;
         
         return {

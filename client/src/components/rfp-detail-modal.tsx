@@ -79,8 +79,8 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
         updateData.publishedDate = dates.publishedDate ? new Date(dates.publishedDate) : null;
       }
 
-      const response = await apiRequest(`/api/rfp-requests/${rfp.id}`, "PATCH", updateData);
-      return response;
+      const response = await apiRequest("PATCH", `/api/rfp-requests/${rfp.id}`, updateData);
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });

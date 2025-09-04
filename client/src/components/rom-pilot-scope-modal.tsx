@@ -169,7 +169,7 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
   const saveLineItems = useMutation({
     mutationFn: async () => {
       const allLineItems = [...tenantImprovements, ...designSoftCosts];
-      return await apiRequest(`/api/rom-pilots/${romPilotId}/line-items`, "POST", { lineItems: allLineItems });
+      return await apiRequest("POST", `/api/rom-pilots/${romPilotId}/line-items`, { lineItems: allLineItems });
     },
     onSuccess: () => {
       toast({ title: "Success", description: "ROM scope items saved successfully", duration: 4000 });

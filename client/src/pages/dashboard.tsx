@@ -67,7 +67,7 @@ export default function Dashboard() {
   });
 
   const makeAdminMutation = useMutation({
-    mutationFn: () => apiRequest("/api/dev/make-admin", "POST", { userId: (currentUser as any)?.id }),
+    mutationFn: () => apiRequest("POST", "/api/dev/make-admin", { userId: (currentUser as any)?.id }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       toast({

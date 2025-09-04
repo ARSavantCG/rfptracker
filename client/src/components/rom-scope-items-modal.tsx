@@ -76,7 +76,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
 
   // Create/Update mutations
   const createMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("/api/rom-scope-items", "POST", data),
+    mutationFn: (data: any) => apiRequest("POST", "/api/rom-scope-items", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rom-scope-items"] });
       resetForm();
@@ -97,7 +97,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, ...data }: any) => apiRequest(`/api/rom-scope-items/${id}`, "PUT", data),
+    mutationFn: ({ id, ...data }: any) => apiRequest("PUT", `/api/rom-scope-items/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rom-scope-items"] });
       resetForm();
@@ -118,7 +118,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: number) => apiRequest(`/api/rom-scope-items/${id}`, "DELETE"),
+    mutationFn: (id: number) => apiRequest("DELETE", `/api/rom-scope-items/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rom-scope-items"] });
       toast({
@@ -350,6 +350,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                   <Button 
                     type="submit" 
                     disabled={createMutation.isPending || updateMutation.isPending}
+                    className="bg-green-600 hover:bg-green-700 text-white"
                   >
                     {editingItem ? "Update Item" : "Add Item"}
                   </Button>

@@ -453,20 +453,31 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
                               <FormulaInput
                                 value={item.quantity || ""}
                                 onChange={(value, evaluatedValue) => {
-                                  // Use evaluatedValue for calculations, but store the raw value
-                                  const quantityValue = evaluatedValue || parseFloat(String(value)) || 0;
+                                  // Store the raw value as entered by user
                                   updateLineItem(category, index, 'quantity', String(value));
                                   
+                                  // Use evaluatedValue for calculations if it's a formula, otherwise use the parsed value
+                                  const calculationValue = evaluatedValue !== undefined ? evaluatedValue : (parseFloat(String(value)) || 0);
+                                  
                                   // Auto-calculate total if unit price exists
-                                  if (evaluatedValue && item.unitPrice) {
+                                  if (item.unitPrice && calculationValue !== null) {
                                     const unitPrice = parseFloat(item.unitPrice);
                                     if (!isNaN(unitPrice)) {
                                       const tenantShare = item.tenantShare || 100;
-                                      const baseTotal = evaluatedValue * unitPrice;
+                                      const baseTotal = calculationValue * unitPrice;
                                       const tenantPortion = baseTotal * (tenantShare / 100);
                                       updateLineItem(category, index, 'totalPrice', tenantPortion.toString());
                                     }
                                   }
+                                  
+                                  // Auto-save individual line item for immediate persistence
+                                  setTimeout(() => {
+                                    saveIndividualLineItem.mutate({
+                                      ...item,
+                                      quantity: String(value),
+                                      totalPrice: item.totalPrice
+                                    });
+                                  }, 500);
                                 }}
                                 className="h-7 text-xs"
                                 type="quantity"
@@ -478,7 +489,7 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
                               <Input
                                 type="text"
                                 value={formatCurrency(parseFloat(item.unitPrice) || 0)}
-                                className="h-7 text-xs bg-gray-100"
+                                className="h-7 text-xs bg-gray-100 text-right"
                                 readOnly
                               />
                             </td>

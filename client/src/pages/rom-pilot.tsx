@@ -224,6 +224,7 @@ export default function RomPilotPage() {
 
         {/* ROM Pilots Table */}
         <div className="bg-white rounded-lg shadow overflow-hidden">
+          <div className="overflow-x-auto">
           {isLoading ? (
             <div className="flex justify-center items-center py-12">
               <div className="text-center">
@@ -248,7 +249,7 @@ export default function RomPilotPage() {
               </Button>
             </div>
           ) : (
-            <table className="w-full divide-y divide-gray-200">
+            <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ROM #</th>
@@ -270,7 +271,11 @@ export default function RomPilotPage() {
                       <div className="text-sm font-medium text-gray-900">{pilot.projectName}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">{pilot.propertyName && pilot.propertyName !== 'undefined' ? pilot.propertyName : pilot.property}</div>
+                      <div className="text-sm text-gray-500">
+                        {pilot.propertyName && pilot.propertyName !== 'undefined' 
+                          ? pilot.propertyName.replace(/\s*-\s*undefined\s*$/i, '').trim()
+                          : pilot.property}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-green-600">{formatCurrency(pilot.totalEstimate)}</div>
@@ -288,7 +293,7 @@ export default function RomPilotPage() {
                       {format(new Date(pilot.createdAt), "MMM d, yyyy")}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex items-center justify-end space-x-2">
+                      <div className="flex items-center justify-end space-x-1 min-w-max">
                         <Button
                           size="sm"
                           variant="outline"
@@ -358,6 +363,7 @@ export default function RomPilotPage() {
               </tbody>
             </table>
           )}
+          </div>
         </div>
       </div>
 

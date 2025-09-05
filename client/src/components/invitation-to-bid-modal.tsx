@@ -721,6 +721,38 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
     },
   });
 
+  const skipToBudgetMutation = useMutation({
+    mutationFn: async () => {
+      if (!rfp) throw new Error("No RFP selected");
+      
+      // Save current form data first
+      const formData = form.getValues();
+      await saveInvitationMutation.mutateAsync(formData);
+      
+      // Advance workflow directly to evaluation phase (budget phase)
+      const advanceResponse = await apiRequest(`/api/rfp-requests/${rfp.id}/workflow-phase`, "PATCH", { 
+        phase: "evaluation" 
+      });
+      
+      return advanceResponse;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
+      toast({
+        title: "Success",
+        description: "Skipped to Budget phase - ready for in-house budget work",
+      });
+      onClose();
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to skip to budget phase",
+        variant: "destructive",
+      });
+    },
+  });
+
   const onSubmit = (data: InvitationFormData) => {
     // Check if at least one option is selected
     const hasSelection = data.generateArchitectRfp || data.generateContractorRfp || 
@@ -1789,11 +1821,20 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                       generateAndAdvanceMutation.mutate(formData);
                     }
                   }}
-                  disabled={!hasSelectedRfpType || createInvitationMutation.isPending || isGeneratingPdfs || saveInvitationMutation.isPending || generateAndAdvanceMutation.isPending}
+                  disabled={!hasSelectedRfpType || createInvitationMutation.isPending || isGeneratingPdfs || saveInvitationMutation.isPending || generateAndAdvanceMutation.isPending || skipToBudgetMutation.isPending}
                   className="bg-green-600 hover:bg-green-700 text-white disabled:opacity-50"
                 >
                   <FileText className="h-4 w-4 mr-2" />
                   {generateAndAdvanceMutation.isPending || isGeneratingPdfs ? "Generating & Advancing..." : "Generate RFPs & Advance"}
+                </Button>
+                
+                <Button 
+                  type="button"
+                  onClick={() => skipToBudgetMutation.mutate()}
+                  disabled={createInvitationMutation.isPending || isGeneratingPdfs || saveInvitationMutation.isPending || generateAndAdvanceMutation.isPending || skipToBudgetMutation.isPending}
+                  className="bg-green-600 hover:bg-green-700 text-white disabled:opacity-50"
+                >
+                  {skipToBudgetMutation.isPending ? "Skipping..." : "Skip to Budget"}
                 </Button>
               </div>
             </div>

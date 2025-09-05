@@ -62,7 +62,8 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess, editingRomPilo
   const displayProperties = properties;
 
   // Find selected property and its bay configurations
-  const selectedProperty = displayProperties.find(p => p.displayName === property);
+  // HierarchicalPropertySelector returns property ID, so match by ID
+  const selectedProperty = displayProperties.find(p => p.id?.toString() === property);
   const propertyBayConfigs = selectedProperty?.bayConfigurations || [];
 
   // Load existing ROM pilot data when editing
@@ -214,12 +215,7 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess, editingRomPilo
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => {
-                    console.log("Configure Bays clicked - Property:", property);
-                    console.log("Selected Property:", selectedProperty);
-                    console.log("Property Bay Configs:", propertyBayConfigs);
-                    setShowBayConfig(true);
-                  }}
+                  onClick={() => setShowBayConfig(true)}
                   disabled={!property}
                 >
                   <Building2 className="w-4 h-4 mr-1" />
@@ -514,13 +510,9 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess, editingRomPilo
         {selectedProperty && (
           <BayConfigurationModal
             isOpen={showBayConfig}
-            onClose={() => {
-              console.log("Bay Configuration Modal closing");
-              setShowBayConfig(false);
-            }}
+            onClose={() => setShowBayConfig(false)}
             property={selectedProperty}
             onConfirm={(area, bays) => {
-              console.log("Bay Configuration confirmed:", area, bays);
               setRentableArea(area);
               setSelectedBays(bays);
               setSquareFootage(area.toString());
@@ -528,17 +520,6 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess, editingRomPilo
             }}
             initialSelectedBays={selectedBays}
           />
-        )}
-        
-        {/* Debug info */}
-        {showBayConfig && !selectedProperty && (
-          <div className="fixed inset-0 bg-red-500 bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white p-4 rounded-lg">
-              <p>Debug: showBayConfig is true but no selectedProperty!</p>
-              <p>Property value: {property}</p>
-              <p>Properties count: {properties.length}</p>
-            </div>
-          </div>
         )}
       </DialogContent>
     </Dialog>

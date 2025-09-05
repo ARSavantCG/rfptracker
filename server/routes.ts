@@ -4776,9 +4776,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           vehicularParking = propertyDetails.vehicularParking || 'N/A';
           trailerParking = propertyDetails.trailerParking || 'N/A';
           
-          // Get existing improvements from property
+          // Get existing improvements from property and calculate proportional costs
           try {
-            existingCosts = await storage.getPropertyExistingImprovements(parseInt(romPilot.property));
+            const allExistingCosts = await storage.getPropertyExistingImprovements(parseInt(romPilot.property));
+            
+            // Calculate proportional costs based on ROM area vs total property area
+            const propertyTotalSF = propertyDetails.totalSquareFootage || 1;
+            const romAreaPortion = totalSquareFootage / propertyTotalSF;
+            
+            existingCosts = allExistingCosts.map(cost => {
+              const originalCost = parseFloat(cost.costEstimate) || 0;
+              const proportionalCost = originalCost * romAreaPortion;
+              return {
+                ...cost,
+                costEstimate: proportionalCost.toString(),
+                originalCostEstimate: originalCost.toString() // Keep original for reference
+              };
+            });
           } catch (error) {
             console.error('Error fetching existing improvements:', error);
           }
@@ -4788,9 +4802,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     }
     
-    // Categorize line items
-    const tenantImprovements = lineItems.filter(item => item.category === 'tenant-improvements');
-    const designSoftCosts = lineItems.filter(item => item.category === 'design-soft-costs');
+    // Calculate formulas and update line items with actual quantities
+    const processedLineItems = lineItems.map(item => {
+      let actualQuantity = parseFloat(item.quantity) || 0;
+      
+      // Handle formula-based quantities
+      if (item.quantity && item.quantity.toString().startsWith('=')) {
+        const formula = item.quantity.toString().substring(1);
+        const scopeItem = scopeItems.find(si => si.id === item.scopeItemId);
+        
+        try {
+          // Handle demising wall calculation specifically
+          if (formula.includes('demising') || scopeItem?.name?.toLowerCase().includes('demising')) {
+            actualQuantity = bayCount > 1 ? (bayCount - 1) * 40 : 0; // 40 LF per demising wall between bays
+          } else {
+            // Replace variables and evaluate
+            const processedFormula = formula
+              .replace(/totalSquareFootage/g, totalSquareFootage.toString())
+              .replace(/bayCount/g, bayCount.toString());
+            actualQuantity = eval(processedFormula);
+          }
+        } catch (error) {
+          console.error('Formula evaluation error:', error);
+          actualQuantity = 0;
+        }
+      }
+      
+      // Recalculate total price with actual quantity
+      const unitPrice = parseFloat(item.unitPrice) || 0;
+      const newTotalPrice = actualQuantity * unitPrice;
+      
+      return {
+        ...item,
+        actualQuantity,
+        totalPrice: newTotalPrice.toString()
+      };
+    });
+    
+    // Categorize processed line items
+    const tenantImprovements = processedLineItems.filter(item => item.category === 'tenant-improvements');
+    const designSoftCosts = processedLineItems.filter(item => item.category === 'design-soft-costs');
     
     // Calculate totals
     const calculateCategoryTotal = (items: any[]) => {
@@ -4867,7 +4918,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 return `
                   <tr>
                     <td style="border: 1px solid #e5e7eb; padding: 6px;">${scopeItem?.name || 'Custom Item'}</td>
-                    <td style="border: 1px solid #e5e7eb; padding: 6px; text-align: center;">${new Intl.NumberFormat('en-US').format(parseInt(item.quantity) || 0)}</td>
+                    <td style="border: 1px solid #e5e7eb; padding: 6px; text-align: center;">${new Intl.NumberFormat('en-US').format(item.actualQuantity || parseFloat(item.quantity) || 0)}</td>
                     <td style="border: 1px solid #e5e7eb; padding: 6px; text-align: center;">${scopeItem?.unit || 'ea'}</td>
                     <td style="border: 1px solid #e5e7eb; padding: 6px; text-align: center;">${formatCurrency(parseFloat(item.unitPrice) || 0)}</td>
                     <td style="border: 1px solid #e5e7eb; padding: 6px; text-align: center;">${formatCurrency(itemTotal)}</td>
@@ -4998,7 +5049,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             font-size: 72px;
             font-weight: bold;
             color: rgba(59, 88, 152, 0.1);
-            z-index: -1;
+            z-index: 9999;
             pointer-events: none;
             white-space: nowrap;
             user-select: none;
@@ -5006,6 +5057,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           @media print {
             .watermark {
               color: rgba(59, 88, 152, 0.15) !important;
+              z-index: 9999 !important;
               -webkit-print-color-adjust: exact !important;
               print-color-adjust: exact !important;
             }

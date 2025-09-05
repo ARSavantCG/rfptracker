@@ -130,7 +130,6 @@ export function FormulaInput({
     
     if (formulaResult) {
       if (formulaResult.error) {
-        console.log('🚨 Formula error for', displayValue, ':', formulaResult.error);
         return displayValue; // Return original value instead of error message
       }
       
@@ -145,33 +144,25 @@ export function FormulaInput({
               minimumFractionDigits: decimalPlaces,
               maximumFractionDigits: decimalPlaces
             });
-        console.log('💰 Formatted formula result:', displayValue, '=>', formattedValue);
         return formattedValue;
       } else {
-        console.log('⚠️ Invalid formula result, returning original:', displayValue, formulaResult);
         return displayValue; // Return original value instead of '0.00'
       }
     }
     
-    // For non-formula values when NOT editing, format numbers properly
+    // For non-formula values when NOT editing, only format if it's truly necessary 
+    // Don't auto-format simple decimal values like "1.50" as it can cause rounding issues
     if (displayValue && !displayValue.startsWith('=') && !isEditing) {
       const numValue = parseFloat(displayValue);
-      console.log('🔢 Number formatting:', { displayValue, numValue, isNaN: isNaN(numValue), isFinite: isFinite(numValue), isEditing });
-      if (!isNaN(numValue) && isFinite(numValue)) {
-        const formatted = type === 'quantity' 
-          ? numValue.toLocaleString('en-US', {
-              minimumFractionDigits: 0,
-              maximumFractionDigits: 0  // No decimals for quantities
-            })
-          : numValue.toLocaleString('en-US', {
-              minimumFractionDigits: decimalPlaces,
-              maximumFractionDigits: decimalPlaces
-            });
-        console.log('✅ Formatted result:', formatted);
+      // Only format for quantity types (whole numbers) or if the value needs comma separation
+      if (!isNaN(numValue) && isFinite(numValue) && type === 'quantity') {
+        const formatted = numValue.toLocaleString('en-US', {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0  // No decimals for quantities
+        });
         return formatted;
-      } else {
-        console.log('❌ Failed to format, returning original:', displayValue);
       }
+      // For other types (like currency), return original to preserve exact decimal representation
     }
     
     return displayValue;

@@ -296,6 +296,17 @@ export default function RomPilotPage() {
                       <div className="flex items-center justify-end space-x-0.5 flex-nowrap" style={{width: '320px'}}>
                         <Button
                           size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setEditingRomPilot(pilot);
+                            setCreateModalOpen(true);
+                          }}
+                          className="text-xs px-1 py-0.5 h-6"
+                        >
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          size="sm"
                           variant="outline"
                           onClick={() => {
                             setSelectedRomPilot(pilot);
@@ -333,17 +344,6 @@ export default function RomPilotPage() {
                             <Archive className="h-3 w-3" />
                           </Button>
                         )}
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => {
-                            setEditingRomPilot(pilot);
-                            setCreateModalOpen(true);
-                          }}
-                          className="text-xs px-1 py-0.5 h-6"
-                        >
-                          <Edit className="h-3 w-3" />
-                        </Button>
                         <Button
                           size="sm"
                           variant="ghost"

@@ -783,6 +783,7 @@ export type UpdateEvaluationBudget = z.infer<typeof updateEvaluationBudgetSchema
 // ROM Pilot Tables
 export const romPilots = pgTable("rom_pilots", {
   id: serial("id").primaryKey(),
+  romNumber: text("rom_number").unique(),
   projectName: text("project_name").notNull(),
   property: text("property").notNull(),
   selectedBayConfigurations: json("selected_bay_configurations").$type<BayConfiguration[]>().default([]),

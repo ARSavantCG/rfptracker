@@ -94,9 +94,31 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
         setTenantImprovements(tenantItems);
         setDesignSoftCosts(designItems);
       } else {
-        // Start with completely empty sections - no default items
-        setTenantImprovements([]);
-        setDesignSoftCosts([]);
+        // Auto-populate with default scope items marked as includeByDefault
+        const defaultTenantItems: LineItem[] = [];
+        const defaultDesignItems: LineItem[] = [];
+        
+        scopeItems.filter(item => (item as any).includeByDefault).forEach(scopeItem => {
+          const lineItem: LineItem = {
+            scopeItemId: scopeItem.id,
+            quantity: "1", // Default quantity
+            unitPrice: scopeItem.unitPrice,
+            totalPrice: scopeItem.unitPrice,
+            tenantShare: 100,
+            notes: "",
+            category: scopeItem.category === 'Design / Soft Costs / Other Fees' ? 'design-soft-costs' : 'tenant-improvements',
+            scopeItem: scopeItem,
+          };
+          
+          if (lineItem.category === 'tenant-improvements') {
+            defaultTenantItems.push(lineItem);
+          } else if (lineItem.category === 'design-soft-costs') {
+            defaultDesignItems.push(lineItem);
+          }
+        });
+        
+        setTenantImprovements(defaultTenantItems);
+        setDesignSoftCosts(defaultDesignItems);
       }
       setIsInitialized(true);
     } else if (!isOpen) {

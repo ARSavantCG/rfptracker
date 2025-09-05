@@ -12,6 +12,7 @@ import { format } from "date-fns";
 
 interface RomPilot {
   id: number;
+  romNumber?: string;
   projectName: string;
   property: string;
   propertyName?: string;
@@ -250,6 +251,7 @@ export default function RomPilotPage() {
             <table className="w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ROM #</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Project</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Property</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Estimate</th>
@@ -262,10 +264,13 @@ export default function RomPilotPage() {
                 {romPilots.map((pilot) => (
                   <tr key={pilot.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-blue-600">{pilot.romNumber || 'ROM-' + pilot.id}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">{pilot.projectName}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">{pilot.propertyName || pilot.property}</div>
+                      <div className="text-sm text-gray-500">{pilot.propertyName && pilot.propertyName !== 'undefined' ? pilot.propertyName : pilot.property}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-green-600">{formatCurrency(pilot.totalEstimate)}</div>

@@ -4442,7 +4442,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/rom-pilots", async (req, res) => {
     try {
-      const pilot = await storage.createRomPilot(req.body);
+      // Generate ROM number
+      const currentYear = new Date().getFullYear();
+      const existingRoms = await storage.getAllRomPilots();
+      const currentYearRoms = existingRoms.filter(rom => 
+        rom.createdAt && new Date(rom.createdAt).getFullYear() === currentYear
+      );
+      const romCount = currentYearRoms.length + 1;
+      const romNumber = `ROM-${currentYear}-${romCount.toString().padStart(3, '0')}`;
+      
+      const pilot = await storage.createRomPilot({
+        ...req.body,
+        romNumber
+      });
       res.status(201).json(pilot);
     } catch (error) {
       res.status(400).json({ message: "Invalid ROM pilot data" });

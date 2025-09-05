@@ -453,11 +453,14 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
                               <FormulaInput
                                 value={item.quantity || ""}
                                 onChange={(value, evaluatedValue) => {
-                                  // Store the raw value as entered by user
-                                  updateLineItem(category, index, 'quantity', String(value));
+                                  console.log('🔧 ROM Quantity onChange:', { value, evaluatedValue, itemId: item.id });
+                                  
+                                  // Store the raw value as entered by user - this is the key fix
+                                  const rawValue = String(value);
+                                  updateLineItem(category, index, 'quantity', rawValue);
                                   
                                   // Use evaluatedValue for calculations if it's a formula, otherwise use the parsed value
-                                  const calculationValue = evaluatedValue !== undefined ? evaluatedValue : (parseFloat(String(value)) || 0);
+                                  const calculationValue = evaluatedValue !== undefined ? evaluatedValue : (parseFloat(rawValue) || 0);
                                   
                                   // Auto-calculate total if unit price exists
                                   if (item.unitPrice && calculationValue !== null) {
@@ -470,6 +473,16 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
                                     }
                                   }
                                   
+                                  // Immediate save for manual entries (non-formulas)
+                                  if (!rawValue.startsWith('=')) {
+                                    setTimeout(() => {
+                                      saveIndividualLineItem.mutate({
+                                        ...item,
+                                        quantity: rawValue,
+                                        totalPrice: ((calculationValue || 0) * (parseFloat(item.unitPrice) || 0) * ((item.tenantShare || 100) / 100)).toString()
+                                      });
+                                    }, 1000);
+                                  }
                                 }}
                                 className="h-7 text-xs"
                                 type="quantity"

@@ -16,7 +16,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
 import { FormulaInput } from "@/components/formula-input";
 import { evaluateFormula } from "@shared/formula-utils";
-import { Plus, Edit2, Trash2, Package, DollarSign, ChevronDown, Upload, FileText, X } from "lucide-react";
+import { Plus, Edit2, Trash2, Package, DollarSign, ChevronDown, Upload, FileText, X, Edit3, Check } from "lucide-react";
 
 interface RomScopeItem {
   id: number;
@@ -73,6 +73,8 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
 
   const [fileUploadInputs, setFileUploadInputs] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const [editingFileId, setEditingFileId] = useState<string | null>(null);
+  const [editingFileName, setEditingFileName] = useState("");
 
   // Fetch scope items
   const { data: scopeItems = [], isLoading } = useQuery<RomScopeItem[]>({
@@ -132,6 +134,28 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
       ...prev,
       attachments: prev.attachments.filter(file => file.id !== fileId)
     }));
+  };
+
+  // File renaming helpers
+  const startEditingFile = (fileId: string, currentName: string) => {
+    setEditingFileId(fileId);
+    setEditingFileName(currentName);
+  };
+
+  const saveFileRename = () => {
+    if (editingFileId && editingFileName.trim()) {
+      const updatedAttachments = formData.attachments.map(att =>
+        att.id === editingFileId ? { ...att, fileName: editingFileName.trim() } : att
+      );
+      setFormData({ ...formData, attachments: updatedAttachments });
+    }
+    setEditingFileId(null);
+    setEditingFileName("");
+  };
+
+  const cancelFileRename = () => {
+    setEditingFileId(null);
+    setEditingFileName("");
   };
 
   // Download existing file
@@ -562,41 +586,86 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                         <div key={file.id} className="flex items-center justify-between bg-gray-50 p-2 rounded">
                           <div className="flex items-center space-x-2 flex-1">
                             <FileText className="h-4 w-4 text-gray-600" />
-                            <input
-                              type="text"
-                              value={file.fileName}
-                              onChange={(e) => {
-                                const updatedAttachments = formData.attachments.map(att =>
-                                  att.id === file.id ? { ...att, fileName: e.target.value } : att
-                                );
-                                setFormData({ ...formData, attachments: updatedAttachments });
-                              }}
-                              className="text-sm bg-transparent border-none outline-none flex-1"
-                              placeholder="Enter file name"
-                            />
-                            <span className="text-xs text-gray-500">
-                              (uploaded {new Date(file.uploadedAt).toLocaleDateString()})
-                            </span>
+                            
+                            {editingFileId === file.id ? (
+                              // Edit mode
+                              <div className="flex items-center space-x-2 flex-1">
+                                <input
+                                  type="text"
+                                  value={editingFileName}
+                                  onChange={(e) => setEditingFileName(e.target.value)}
+                                  className="text-sm bg-white border border-blue-300 rounded px-2 py-1 flex-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  placeholder="Enter file name"
+                                  autoFocus
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') saveFileRename();
+                                    if (e.key === 'Escape') cancelFileRename();
+                                  }}
+                                />
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={saveFileRename}
+                                  className="text-green-600 hover:text-green-700"
+                                  title="Save"
+                                >
+                                  <Check className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={cancelFileRename}
+                                  className="text-gray-500 hover:text-gray-700"
+                                  title="Cancel"
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ) : (
+                              // View mode
+                              <div className="flex items-center space-x-2 flex-1">
+                                <span className="text-sm flex-1">{file.fileName}</span>
+                                <span className="text-xs text-gray-500">
+                                  (uploaded {new Date(file.uploadedAt).toLocaleDateString()})
+                                </span>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => startEditingFile(file.id, file.fileName)}
+                                  className="text-blue-600 hover:text-blue-700"
+                                  title="Rename file"
+                                >
+                                  <Edit3 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            )}
                           </div>
-                          <div className="flex items-center space-x-1">
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDownloadFile(file.fileName, file.filePath)}
-                              title="Download file"
-                            >
-                              <i className="fas fa-download h-3 w-3"></i>
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => removeExistingFile(file.id)}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>
+                          
+                          {editingFileId !== file.id && (
+                            <div className="flex items-center space-x-1">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDownloadFile(file.fileName, file.filePath)}
+                                title="Download file"
+                              >
+                                <i className="fas fa-download h-3 w-3"></i>
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeExistingFile(file.id)}
+                                title="Delete file"
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>

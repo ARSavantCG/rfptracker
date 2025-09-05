@@ -97,7 +97,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
 
   // Units for pricing
   const units = [
-    "SF", "LF", "Each", "Hour", "Fixture", "Outlet", "Lot", "%", "$"
+    "sf.", "lf.", "ls.", "ea.", "$", "%"
   ];
 
   // File handling functions

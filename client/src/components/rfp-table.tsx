@@ -492,12 +492,17 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
                   className={`hover:bg-gray-50 transition-colors cursor-pointer ${
                     selectedRfpId === parentRfp.id ? 'bg-blue-50 border-l-4 border-blue-500' : 'border-l-4 border-transparent'
                   }`}
+                  data-rfp-id={parentRfp.id}
+                  data-selected={selectedRfpId === parentRfp.id}
                   style={{
                     height: '48px',
                     minHeight: '48px',
                     maxHeight: '48px'
                   }}
-                  onClick={() => onSelectRfp?.(parentRfp)}
+                  onClick={() => {
+                    console.log('Row clicked:', parentRfp.rfpNumber, 'Current selected:', selectedRfpId);
+                    onSelectRfp && onSelectRfp(parentRfp);
+                  }}
                 >
                   <td 
                     className="px-3 py-3 whitespace-nowrap text-xs font-medium text-gray-900"

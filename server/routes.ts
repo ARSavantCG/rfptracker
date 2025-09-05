@@ -10,7 +10,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
-import fs from "fs";
+import fs, { readFileSync } from "fs";
 import path from "path";
 import { storage } from "./storage";
 import { db } from "./db";
@@ -4729,8 +4729,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Helper function to generate ROM report HTML
+  // Get Bridge Industrial logo as base64
+  function getBridgeLogo(): string {
+    try {
+      const logoBase64 = readFileSync('./bridge_logo_new_base64.txt', 'utf8').trim();
+      return `data:image/png;base64,${logoBase64}`;
+    } catch (error) {
+      console.error('Error reading Bridge logo:', error);
+      return '';
+    }
+  }
+
   function generateRomReportHtml(romPilot: any, lineItems: any[], scopeItems: any[], generatedBy: string = 'Unknown User'): string {
-    const currentDate = new Date().toLocaleDateString();
+    const currentDate = new Date().toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
     
     // Categorize line items
     const tenantImprovements = lineItems.filter(item => item.category === 'tenant-improvements');
@@ -4779,30 +4794,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('Calculated SF from bays:', calculatedSF);
     }
     
-    const renderCategorySection = (title: string, items: any[], categoryTotal: number, bgColor: string) => {
+    const renderCategorySection = (title: string, items: any[], categoryTotal: number) => {
       if (items.length === 0) return '';
       
       const categoryPerSF = totalSquareFootage > 0 ? categoryTotal / totalSquareFootage : 0;
       
       return `
         <div style="margin-bottom: 30px;">
-          <div style="background: ${bgColor}; padding: 15px; margin-bottom: 10px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
-            <h2 style="margin: 0; font-size: 18px; font-weight: 600; color: #1f2937;">${title}</h2>
-            <div style="color: #065f46; display: flex; align-items: baseline; gap: 4px;">
-              <span style="font-size: 20px; font-weight: bold;">${formatCurrency(categoryTotal)}</span>
-              <span style="font-size: 8px; font-style: italic; font-weight: normal; color: #999;">(${formatCurrency(categoryPerSF)} / sf)</span>
-            </div>
-          </div>
+          <h3 style="margin: 0 0 15px 0; font-size: 16px; font-weight: 600; color: #333; display: flex; justify-content: space-between; align-items: center;">
+            <span>${title}</span>
+            <span style="color: #065f46; font-size: 16px;">${formatCurrency(categoryTotal)} <span style="font-size: 11px; color: #999;">(${formatPerSF(categoryTotal, totalSquareFootage)}/sf)</span></span>
+          </h3>
           
-          <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px;">
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 11px;">
             <thead>
               <tr style="background: #f9fafb;">
-                <th style="border: 1px solid #e5e7eb; padding: 12px; text-align: left; font-weight: 600; width: 40%;">DESCRIPTION</th>
-                <th style="border: 1px solid #e5e7eb; padding: 12px; text-align: center; font-weight: 600; width: 12%;">QUANTITY</th>
-                <th style="border: 1px solid #e5e7eb; padding: 12px; text-align: center; font-weight: 600; width: 12%;">UNIT</th>
-                <th style="border: 1px solid #e5e7eb; padding: 12px; text-align: center; font-weight: 600; width: 15%;">UNIT PRICE</th>
-                <th style="border: 1px solid #e5e7eb; padding: 12px; text-align: center; font-weight: 600; width: 15%;">TOTAL PRICE</th>
-                <th style="border: 1px solid #e5e7eb; padding: 12px; text-align: center; font-weight: 600; width: 6%;">$ / SF</th>
+                <th style="border: 1px solid #e5e7eb; padding: 8px; text-align: left; font-weight: 600;">DESCRIPTION</th>
+                <th style="border: 1px solid #e5e7eb; padding: 8px; text-align: center; font-weight: 600;">QUANTITY</th>
+                <th style="border: 1px solid #e5e7eb; padding: 8px; text-align: center; font-weight: 600;">UNIT</th>
+                <th style="border: 1px solid #e5e7eb; padding: 8px; text-align: center; font-weight: 600;">UNIT PRICE</th>
+                <th style="border: 1px solid #e5e7eb; padding: 8px; text-align: center; font-weight: 600;">TOTAL PRICE</th>
+                <th style="border: 1px solid #e5e7eb; padding: 8px; text-align: center; font-weight: 600;">$/RSF</th>
               </tr>
             </thead>
             <tbody>
@@ -4813,12 +4825,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 
                 return `
                   <tr>
-                    <td style="border: 1px solid #e5e7eb; padding: 8px;">${scopeItem?.name || 'Custom Item'}</td>
-                    <td style="border: 1px solid #e5e7eb; padding: 8px; text-align: center;">${new Intl.NumberFormat('en-US').format(parseInt(item.quantity) || 0)}</td>
-                    <td style="border: 1px solid #e5e7eb; padding: 8px; text-align: center;">${scopeItem?.unit || 'ea'}</td>
-                    <td style="border: 1px solid #e5e7eb; padding: 8px; text-align: center;">${formatCurrency(parseFloat(item.unitPrice) || 0)}</td>
-                    <td style="border: 1px solid #e5e7eb; padding: 8px; text-align: center;">${formatCurrency(itemTotal)}</td>
-                    <td style="border: 1px solid #e5e7eb; padding: 8px; text-align: center;">${formatPerSF(itemTotal, totalSquareFootage)}</td>
+                    <td style="border: 1px solid #e5e7eb; padding: 6px;">${scopeItem?.name || 'Custom Item'}</td>
+                    <td style="border: 1px solid #e5e7eb; padding: 6px; text-align: center;">${new Intl.NumberFormat('en-US').format(parseInt(item.quantity) || 0)}</td>
+                    <td style="border: 1px solid #e5e7eb; padding: 6px; text-align: center;">${scopeItem?.unit || 'ea'}</td>
+                    <td style="border: 1px solid #e5e7eb; padding: 6px; text-align: center;">${formatCurrency(parseFloat(item.unitPrice) || 0)}</td>
+                    <td style="border: 1px solid #e5e7eb; padding: 6px; text-align: center;">${formatCurrency(itemTotal)}</td>
+                    <td style="border: 1px solid #e5e7eb; padding: 6px; text-align: center;">${formatPerSF(itemTotal, totalSquareFootage)}</td>
                   </tr>
                 `;
               }).join('')}
@@ -4856,32 +4868,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
             border-radius: 8px; 
             font-weight: 600;
           }
-          .header { 
-            text-align: center; 
-            margin-bottom: 30px; 
-            border-bottom: 2px solid #e5e7eb; 
-            padding-bottom: 20px; 
+          .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
           }
-          .header h1 { 
-            font-size: 28px; 
-            margin: 0 0 15px 0; 
-            color: #1f2937; 
-            font-weight: 700;
+          .logo {
+            max-width: 120px;
+            height: auto;
           }
-          .header-info { 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: flex-start; 
-            margin-top: 15px;
+          .generated-info {
+            text-align: right;
+            font-size: 11px;
+            color: #666;
           }
-          .header-left { text-align: left; }
-          .header-right { text-align: right; }
-          .header p { 
-            margin: 3px 0; 
-            font-size: 14px; 
-            color: #4b5563; 
+          .document-title {
+            background: rgb(59, 88, 152);
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-size: 20px;
+            font-weight: bold;
+            margin: 20px 0;
+            border-radius: 5px;
           }
-          .header strong { color: #1f2937; }
+          .project-info {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 10px;
+            border-bottom: 2px solid #e5e7eb;
+          }
+          .project-info h2 {
+            margin: 5px 0;
+            font-size: 16px;
+            color: #333;
+          }
+          .project-info .rfp-number {
+            font-size: 14px;
+            color: #666;
+            margin: 5px 0;
+          }
+          .property-summary {
+            background: #f8f9fa;
+            padding: 15px;
+            margin-bottom: 25px;
+            border-radius: 5px;
+            border-left: 4px solid rgb(59, 88, 152);
+          }
+          .property-summary h3 {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+          }
+          .property-details {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+          }
+          .property-left, .property-right {
+            flex: 1;
+          }
+          .property-left {
+            margin-right: 20px;
+          }
           .grand-total {
             margin-top: 30px;
             text-align: center;
@@ -4899,22 +4951,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
         </div>
         
         <div class="header">
-          <h1>ROM Budget Report</h1>
-          <div class="header-info">
-            <div class="header-left">
-              <p><strong>Project:</strong> ${romPilot.projectName}</p>
-              <p><strong>Property:</strong> ${romPilot.property}</p>
-              <p><strong>Generated:</strong> ${currentDate}</p>
-              <p><strong>Generated by:</strong> ${generatedBy}</p>
+          <img src="${getBridgeLogo()}" alt="Bridge Industrial" class="logo" />
+          <div class="generated-info">
+            Generated: ${currentDate}
+          </div>
+        </div>
+        
+        <div class="document-title">ROM Budget Report</div>
+        
+        <div class="project-info">
+          <h2>Project: ${romPilot.projectName}</h2>
+          <div class="rfp-number">ROM Number: ${romPilot.romNumber || 'ROM-2025-001'}</div>
+        </div>
+        
+        <div class="property-summary">
+          <h3>Property Summary</h3>
+          <div class="property-details">
+            <div class="property-left">
+              <div><strong>Rentable Area:</strong> ${totalSquareFootage > 0 ? new Intl.NumberFormat('en-US').format(totalSquareFootage) + ' sf' : 'N/A'}</div>
+              <div><strong>Bay Count:</strong> ${romPilot.selectedBayConfigurations ? romPilot.selectedBayConfigurations.length : 0} bays</div>
             </div>
-            <div class="header-right">
-              <p><strong>Rentable Area:</strong> ${totalSquareFootage > 0 ? new Intl.NumberFormat('en-US').format(totalSquareFootage) + ' sf' : 'N/A'}</p>
+            <div class="property-right">
+              <div><strong>Property:</strong> ${romPilot.property}</div>
+              <div><strong>Generated by:</strong> ${generatedBy}</div>
             </div>
           </div>
         </div>
 
-        ${renderCategorySection("Tenant Improvements", tenantImprovements, tenantImprovementsTotal, "#f0fdf4")}
-        ${renderCategorySection("Design / Soft Costs / Other Fees", designSoftCosts, designSoftCostsTotal, "#fef3f2")}
+        ${renderCategorySection("Tenant Improvements", tenantImprovements, tenantImprovementsTotal)}
+        ${renderCategorySection("Design / Soft Costs / Other Fees", designSoftCosts, designSoftCostsTotal)}
 
         <div class="grand-total" style="display: flex; align-items: baseline; justify-content: center; gap: 4px;">
           <span style="font-size: 24px; font-weight: bold; color: #065f46;">Grand Total: ${formatCurrency(grandTotal)}</span>

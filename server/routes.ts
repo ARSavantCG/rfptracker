@@ -5082,7 +5082,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         <div class="project-info">
           <h2>Project: ${romPilot.projectName} @ ${propertyDisplayName}</h2>
-          <div class="rfp-number">ROM Number: ${romPilot.romNumber || 'ROM-2025-001'}</div>
+          <div class="rfp-number">${romPilot.romNumber || 'ROM-2025-001'}</div>
         </div>
         
         <div class="property-summary">

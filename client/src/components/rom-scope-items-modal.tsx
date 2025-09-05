@@ -650,6 +650,9 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                         <div className="flex-1">
                           <div className="flex items-center space-x-3">
                             <h5 className="font-medium text-gray-900">{item.name}</h5>
+                            {item.attachments && item.attachments.length > 0 && (
+                              <FileText className="h-4 w-4 text-blue-600" title={`${item.attachments.length} file${item.attachments.length !== 1 ? 's' : ''} attached`} />
+                            )}
                             <span className="text-sm text-gray-500">
                               ${(() => {
                                 const result = evaluateFormula(item.unitPrice);

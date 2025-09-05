@@ -170,7 +170,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
     setCollapsedCategories(newCollapsed);
   };
 
-  // Print function
+  // Print function - opens in new tab like other reports
   const handlePrint = () => {
     const printContent = generateScopeItemsPrintHtml(scopeItems);
     const printWindow = window.open('', '_blank');
@@ -178,8 +178,6 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
       printWindow.document.write(printContent);
       printWindow.document.close();
       printWindow.focus();
-      printWindow.print();
-      printWindow.close();
     }
   };
 

@@ -10,6 +10,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Calculator, User, Building2, ChevronDown } from "lucide-react";
 import type { Property } from "@shared/schema";
 import { HierarchicalPropertySelector } from "./hierarchical-property-selector";
+import { BayConfigurationModal } from "./bay-configuration-modal";
+import type { BayConfiguration } from "@shared/schema";
 
 interface RomPilot {
   id: number;
@@ -38,11 +40,8 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess, editingRomPilo
   const [createdBy, setCreatedBy] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showBayConfig, setShowBayConfig] = useState(false);
-  const [bayConfigs, setBayConfigs] = useState<Array<{
-    id: string;
-    bayName: string;
-    squareFootage: number;
-  }>>([]);
+  const [selectedBays, setSelectedBays] = useState<BayConfiguration[]>([]);
+  const [rentableArea, setRentableArea] = useState<number>(0);
 
   // Fetch properties for selection
   const { data: properties = [] } = useQuery<Property[]>({
@@ -51,7 +50,7 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess, editingRomPilo
   });
 
   // Fetch contacts and filter for owner type only
-  const { data: allContacts = [] } = useQuery({
+  const { data: allContacts = [] } = useQuery<any[]>({
     queryKey: ["/api/contacts"],
     enabled: isOpen,
   });
@@ -80,7 +79,8 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess, editingRomPilo
       setSquareFootage("");
       setNotes("");
       setCreatedBy("");
-      setBayConfigs([]);
+      setSelectedBays([]);
+      setRentableArea(0);
       setShowBayConfig(false);
     }
   }, [isOpen, editingRomPilot]);
@@ -114,7 +114,7 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess, editingRomPilo
       const romPilotData = {
         projectName: projectName.trim(),
         property,
-        selectedBayConfigurations: bayConfigs,
+        selectedBayConfigurations: selectedBays,
         totalEstimate: "0", // No pricing at creation - will be calculated in scope management
         notes: notes.trim() || null,
         createdBy: createdBy.trim() || null,
@@ -199,12 +199,12 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess, editingRomPilo
                   <div className="text-sm font-medium text-gray-700">
                     Total Square Footage: {squareFootage ? `${parseInt(squareFootage).toLocaleString()} SF` : "Not configured"}
                   </div>
-                  {bayConfigs.length > 0 && (
+                  {selectedBays.length > 0 && (
                     <div className="text-xs text-blue-600">
-                      {bayConfigs.length} bay{bayConfigs.length !== 1 ? 's' : ''} selected
+                      {selectedBays.length} bay{selectedBays.length !== 1 ? 's' : ''} selected
                     </div>
                   )}
-                  {propertyBayConfigs.length > 0 && bayConfigs.length === 0 && (
+                  {propertyBayConfigs.length > 0 && selectedBays.length === 0 && (
                     <div className="text-xs text-gray-600">
                       {propertyBayConfigs.length} bay{propertyBayConfigs.length !== 1 ? 's' : ''} available for this property
                     </div>
@@ -228,8 +228,8 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess, editingRomPilo
             </div>
           </div>
 
-          {/* Bay Configuration Modal */}
-          {showBayConfig && (
+          {/* Old bay configuration modal removed - using standard component now */}
+          {false && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
               <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
                 <h3 className="text-lg font-semibold mb-4">
@@ -359,7 +359,7 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess, editingRomPilo
                       <div className="relative">
                         <div className="flex gap-0.5 justify-start overflow-x-auto pb-1">
                           {propertyBayConfigs.map((bay, index) => {
-                            const isSelected = bayConfigs.some(b => b.id === bay.id);
+                            const isSelected = selectedBays.some(b => b.id === bay.id);
                             // Convert to individual bay numbering like RFP configurator
                             const bayNumber = index + 1;
                             const displayBayName = `Bay ${bayNumber}`;
@@ -375,7 +375,7 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess, editingRomPilo
                                 onClick={() => {
                                   if (isSelected) {
                                     // Remove bay
-                                    const newBays = bayConfigs.filter(b => b.id !== bay.id);
+                                    const newBays = selectedBays.filter(b => b.id !== bay.id);
                                     setBayConfigs(newBays);
                                     const totalSF = newBays.reduce((sum, b) => sum + b.squareFootage, 0);
                                     setSquareFootage(totalSF.toString());
@@ -386,7 +386,7 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess, editingRomPilo
                                       bayName: displayBayName,
                                       squareFootage: bay.squareFootage
                                     };
-                                    const newBays = [...bayConfigs, newBay];
+                                    const newBays = [...selectedBays, newBay];
                                     setBayConfigs(newBays);
                                     const totalSF = newBays.reduce((sum, b) => sum + b.squareFootage, 0);
                                     setSquareFootage(totalSF.toString());
@@ -428,10 +428,10 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess, editingRomPilo
 
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
                       <div className="text-sm">
-                        <span className="font-medium text-blue-900">Selected: {bayConfigs.length} bays</span>
+                        <span className="font-medium text-blue-900">Selected: {selectedBays.length} bays</span>
                       </div>
                       <div className="text-sm text-blue-700">
-                        Total Area: {bayConfigs.reduce((sum, b) => sum + b.squareFootage, 0).toLocaleString()} SF
+                        Total Area: {selectedBays.reduce((sum, b) => sum + b.squareFootage, 0).toLocaleString()} SF
                       </div>
                     </div>
                   </div>
@@ -504,6 +504,22 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess, editingRomPilo
             </Button>
           </div>
         </form>
+
+        {/* Bay Configuration Modal */}
+        {selectedProperty && (
+          <BayConfigurationModal
+            isOpen={showBayConfig}
+            onClose={() => setShowBayConfig(false)}
+            property={selectedProperty}
+            onConfirm={(area, bays) => {
+              setRentableArea(area);
+              setSelectedBays(bays);
+              setSquareFootage(area.toString());
+              setShowBayConfig(false);
+            }}
+            initialSelectedBays={selectedBays}
+          />
+        )}
       </DialogContent>
     </Dialog>
   );

@@ -98,7 +98,12 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
         const defaultTenantItems: LineItem[] = [];
         const defaultDesignItems: LineItem[] = [];
         
-        scopeItems.filter(item => (item as any).includeByDefault).forEach(scopeItem => {
+        const defaultItems = scopeItems.filter(item => (item as any).includeByDefault);
+        console.log('Default scope items:', defaultItems);
+        
+        defaultItems.forEach(scopeItem => {
+          console.log('Processing default item:', scopeItem.name, 'Category:', scopeItem.category);
+          
           const lineItem: LineItem = {
             scopeItemId: scopeItem.id,
             quantity: "1", // Default quantity
@@ -106,9 +111,11 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
             totalPrice: scopeItem.unitPrice,
             tenantShare: 100,
             notes: "",
-            category: scopeItem.category === 'Design / Soft Costs / Other Fees' ? 'design-soft-costs' : 'tenant-improvements',
+            category: scopeItem.category.includes('Design') || scopeItem.category.includes('Soft Costs') ? 'design-soft-costs' : 'tenant-improvements',
             scopeItem: scopeItem,
           };
+          
+          console.log('Assigned to category:', lineItem.category);
           
           if (lineItem.category === 'tenant-improvements') {
             defaultTenantItems.push(lineItem);

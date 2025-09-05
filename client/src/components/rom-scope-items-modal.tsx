@@ -650,17 +650,25 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                         <div className="flex-1">
                           <div className="flex items-center space-x-3">
                             <h5 className="font-medium text-gray-900">{item.name}</h5>
-                            {item.attachments && item.attachments.length > 0 && (
-                              <FileText className="h-4 w-4 text-blue-600" title={`${item.attachments.length} file${item.attachments.length !== 1 ? 's' : ''} attached`} />
-                            )}
-                            <span className="text-sm text-gray-500">
-                              ${(() => {
-                                const result = evaluateFormula(item.unitPrice);
-                                const displayValue = result.value !== null ? result.value.toFixed(2) : parseFloat(item.unitPrice || "0").toFixed(2);
-                                return parseFloat(displayValue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                              })()} per {item.unit}
-                              {item.unitPrice.startsWith('=') && (
-                                <span className="ml-1 text-xs text-blue-600">📊</span>
+                            <span className="text-sm text-gray-500 flex items-center space-x-1">
+                              <span>
+                                ${(() => {
+                                  const result = evaluateFormula(item.unitPrice);
+                                  const displayValue = result.value !== null ? result.value.toFixed(2) : parseFloat(item.unitPrice || "0").toFixed(2);
+                                  return parseFloat(displayValue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                                })()} per {item.unit}
+                                {item.unitPrice.startsWith('=') && (
+                                  <span className="ml-1 text-xs text-blue-600">📊</span>
+                                )}
+                              </span>
+                              {item.attachments && item.attachments.length > 0 && (
+                                <button
+                                  onClick={() => handleDownloadFile(item.attachments[0].fileName, item.attachments[0].filePath)}
+                                  className="text-blue-600 hover:text-blue-800 transition-colors"
+                                  title={`Download ${item.attachments[0].fileName}`}
+                                >
+                                  <FileText className="h-4 w-4" />
+                                </button>
                               )}
                             </span>
                           </div>

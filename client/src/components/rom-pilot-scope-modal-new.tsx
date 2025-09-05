@@ -276,7 +276,7 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
     mutationFn: async () => {
       const allItems = [...tenantImprovements, ...designSoftCosts];
       console.log("Saving ROM line items:", { romPilotId, allItems });
-      return await apiRequest("POST", `/api/rom-pilots/${romPilotId}/line-items`, { lineItems: allItems });
+      return await apiRequest(`/api/rom-pilots/${romPilotId}/line-items`, "POST", { lineItems: allItems });
     },
     onSuccess: () => {
       toast({

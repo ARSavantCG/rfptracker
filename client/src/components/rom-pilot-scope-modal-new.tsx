@@ -450,43 +450,29 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
                               </div>
                             </td>
                             <td className="py-2 px-3">
-                              <FormulaInput
+                              <Input
+                                type="text"
                                 value={item.quantity || ""}
-                                onChange={(value, evaluatedValue) => {
-                                  console.log('🔧 ROM Quantity onChange:', { value, evaluatedValue, itemId: item.id });
+                                onChange={(e) => {
+                                  const newQuantity = e.target.value;
+                                  console.log('✏️ Simple quantity change:', { newQuantity, itemId: item.id });
                                   
-                                  // Store the raw value as entered by user - this is the key fix
-                                  const rawValue = String(value);
-                                  updateLineItem(category, index, 'quantity', rawValue);
+                                  // Update quantity immediately
+                                  updateLineItem(category, index, 'quantity', newQuantity);
                                   
-                                  // Use evaluatedValue for calculations if it's a formula, otherwise use the parsed value
-                                  const calculationValue = evaluatedValue !== undefined ? evaluatedValue : (parseFloat(rawValue) || 0);
-                                  
-                                  // Auto-calculate total if unit price exists
-                                  if (item.unitPrice && calculationValue !== null) {
-                                    const unitPrice = parseFloat(item.unitPrice);
-                                    if (!isNaN(unitPrice)) {
-                                      const tenantShare = item.tenantShare || 100;
-                                      const baseTotal = calculationValue * unitPrice;
-                                      const tenantPortion = baseTotal * (tenantShare / 100);
-                                      updateLineItem(category, index, 'totalPrice', tenantPortion.toString());
-                                    }
-                                  }
-                                  
-                                  // Immediate save for manual entries (non-formulas)
-                                  if (!rawValue.startsWith('=')) {
-                                    setTimeout(() => {
-                                      saveIndividualLineItem.mutate({
-                                        ...item,
-                                        quantity: rawValue,
-                                        totalPrice: ((calculationValue || 0) * (parseFloat(item.unitPrice) || 0) * ((item.tenantShare || 100) / 100)).toString()
-                                      });
-                                    }, 1000);
-                                  }
+                                  // Calculate total
+                                  const quantityNum = parseFloat(newQuantity) || 0;
+                                  const unitPrice = parseFloat(item.unitPrice) || 0;
+                                  const tenantShare = item.tenantShare || 100;
+                                  const total = (quantityNum * unitPrice * (tenantShare / 100)).toString();
+                                  updateLineItem(category, index, 'totalPrice', total);
                                 }}
-                                className="h-7 text-xs"
-                                type="quantity"
-                                decimalPlaces={0}
+                                onBlur={() => {
+                                  // Save when user finishes editing
+                                  console.log('💾 Saving quantity on blur:', item.quantity);
+                                  saveIndividualLineItem.mutate(item);
+                                }}
+                                className="h-7 text-xs text-center"
                                 placeholder="0"
                               />
                             </td>

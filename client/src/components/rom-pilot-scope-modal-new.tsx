@@ -64,7 +64,7 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
 
   // Load existing line items when modal opens
   useEffect(() => {
-    if (isOpen && !isInitialized) {
+    if (isOpen && scopeItems.length > 0 && !isInitialized) {
       if (Array.isArray(existingLineItems) && existingLineItems.length > 0) {
         const tenantItems: LineItem[] = [];
         const designItems: LineItem[] = [];
@@ -98,16 +98,9 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
         const defaultTenantItems: LineItem[] = [];
         const defaultDesignItems: LineItem[] = [];
         
-        console.log('First scope item structure:', JSON.stringify(scopeItems[0], null, 2));
-        const defaultItems = scopeItems.filter(item => {
-          console.log(`Checking item: ${item.name}, includeByDefault: ${(item as any).includeByDefault}, type: ${typeof (item as any).includeByDefault}`);
-          return (item as any).includeByDefault === true;
-        });
-        console.log('Found', defaultItems.length, 'default scope items:', defaultItems.map(item => item.name));
+        const defaultItems = scopeItems.filter(item => (item as any).includeByDefault === true);
         
         defaultItems.forEach(scopeItem => {
-          console.log('Processing default item:', scopeItem.name, 'Category:', scopeItem.category);
-          
           const lineItem: LineItem = {
             scopeItemId: scopeItem.id,
             quantity: "1", // Default quantity
@@ -118,8 +111,6 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
             category: scopeItem.category.includes('Design') || scopeItem.category.includes('Soft Costs') ? 'design-soft-costs' : 'tenant-improvements',
             scopeItem: scopeItem,
           };
-          
-          console.log('Assigned to category:', lineItem.category);
           
           if (lineItem.category === 'tenant-improvements') {
             defaultTenantItems.push(lineItem);
@@ -139,6 +130,7 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
       setIsInitialized(false);
     }
   }, [isOpen, existingLineItems, scopeItems, isInitialized]);
+
 
   const addLineItem = (category: 'tenant-improvements' | 'design-soft-costs') => {
     const newItem: LineItem = {

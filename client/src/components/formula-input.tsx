@@ -82,7 +82,6 @@ export function FormulaInput({
     }
     
     // Always call onChange with the displayValue to preserve manual entries
-    console.log('📝 FormulaInput calling onChange with:', { displayValue, evaluatedValue });
     onChange(displayValue, evaluatedValue || undefined);
     onBlur?.();
   };
@@ -128,7 +127,8 @@ export function FormulaInput({
       return displayValue;
     }
     
-    if (formulaResult) {
+    // Only format formula results if it's actually a formula (starts with =)
+    if (formulaResult && displayValue.startsWith('=')) {
       if (formulaResult.error) {
         return displayValue; // Return original value instead of error message
       }

@@ -33,7 +33,7 @@ interface LineItem {
   quantity: string;
   unitPrice: string;
   totalPrice: string;
-  tenantShare: number; // Percentage of cost attributed to tenant (0-100)
+  tenantShare: number; // Tenant percentage (0-100%)
   notes?: string;
   category: 'tenant-improvements' | 'design-soft-costs';
   scopeItem?: ScopeItem;
@@ -380,7 +380,7 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
                                   <option value="0">Custom Item</option>
                                   {(category === 'tenant-improvements' ? tenantImprovementItems : designSoftCostItems).map((scopeItem) => (
                                     <option key={scopeItem.id} value={scopeItem.id.toString()}>
-                                      {scopeItem.name} ({scopeItem.unit} @ {formatPrice(scopeItem.unitPrice)})
+                                      {scopeItem.name} ({scopeItem.unit} @ {formatCurrency(parseFloat(scopeItem.unitPrice))})
                                     </option>
                                   ))}
                                 </select>

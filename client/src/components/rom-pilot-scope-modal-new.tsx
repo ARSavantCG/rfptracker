@@ -10,6 +10,27 @@ import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautif
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
+// Utility function to format currency with commas
+const formatCurrency = (amount: number | string): string => {
+  const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+  if (isNaN(num)) return '$0.00';
+  
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(num);
+};
+
+// Utility function to format numbers with commas
+const formatNumber = (amount: number | string): string => {
+  const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+  if (isNaN(num)) return '0';
+  
+  return new Intl.NumberFormat('en-US').format(num);
+};
+
 interface RomPilotScopeModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -419,7 +440,7 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
                                   <option value="0">Custom Item</option>
                                   {(category === 'tenant-improvements' ? tenantImprovementItems : designSoftCostItems).map((scopeItem) => (
                                     <option key={scopeItem.id} value={scopeItem.id.toString()}>
-                                      {scopeItem.name} ({scopeItem.unit} @ {formatCurrency(parseFloat(scopeItem.unitPrice))})
+                                      {scopeItem.name}
                                     </option>
                                   ))}
                                 </select>
@@ -454,7 +475,7 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
                             <td className="py-2 px-3">
                               <Input
                                 type="text"
-                                value={item.unitPrice ? `$${parseFloat(item.unitPrice).toFixed(2)}` : "$0.00"}
+                                value={formatCurrency(parseFloat(item.unitPrice) || 0)}
                                 className="h-7 text-xs bg-gray-100"
                                 readOnly
                               />

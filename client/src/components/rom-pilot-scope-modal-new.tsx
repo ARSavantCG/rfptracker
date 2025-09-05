@@ -472,10 +472,19 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
                                   const total = (quantityNum * unitPrice * (tenantShare / 100)).toString();
                                   updateLineItem(category, index, 'totalPrice', total);
                                 }}
-                                onBlur={() => {
-                                  // Save when user finishes editing
-                                  console.log('💾 Saving quantity on blur:', item.quantity);
-                                  saveIndividualLineItem.mutate(item);
+                                onBlur={(e) => {
+                                  // Get the current value from the input field, not from state
+                                  const currentQuantity = e.target.value;
+                                  console.log('💾 Saving quantity on blur:', { stateQuantity: item.quantity, inputQuantity: currentQuantity });
+                                  
+                                  // Create updated item with current input value
+                                  const updatedItem = {
+                                    ...item,
+                                    quantity: currentQuantity,
+                                    totalPrice: ((parseFloat(currentQuantity) || 0) * (parseFloat(item.unitPrice) || 0) * ((item.tenantShare || 100) / 100)).toString()
+                                  };
+                                  
+                                  saveIndividualLineItem.mutate(updatedItem);
                                 }}
                                 className="h-7 text-xs text-center"
                                 placeholder="0"

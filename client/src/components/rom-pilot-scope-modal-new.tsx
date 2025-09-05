@@ -437,7 +437,11 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
                               <div className="relative">
                                 <select
                                   value={item.scopeItemId ? item.scopeItemId.toString() : "0"}
-                                  onChange={(e) => updateLineItem(category, index, 'scopeItemId', parseInt(e.target.value))}
+                                  onChange={(e) => {
+                                    const newScopeItemId = parseInt(e.target.value);
+                                    console.log('🔄 Scope item change:', { newScopeItemId, category, index });
+                                    updateLineItem(category, index, 'scopeItemId', newScopeItemId);
+                                  }}
                                   className="w-full h-7 px-2 py-1 text-xs bg-background border border-input rounded-md appearance-none pr-6 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                                 >
                                   <option value="0">Custom Item</option>
@@ -480,7 +484,12 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
                             <td className="py-2 px-3">
                               <Input
                                 type="text"
-                                value={formatCurrency(parseFloat(item.unitPrice) || 0)}
+                                value={(() => {
+                                  // Get unit price from scope item if available, otherwise use stored value
+                                  const price = item.scopeItem?.unitPrice || item.unitPrice || "0";
+                                  console.log('💰 Unit price display:', { itemId: item.id, scopeItemPrice: item.scopeItem?.unitPrice, itemPrice: item.unitPrice, finalPrice: price });
+                                  return formatCurrency(parseFloat(price));
+                                })()}
                                 className="h-7 text-xs bg-gray-100 text-right"
                                 readOnly
                               />

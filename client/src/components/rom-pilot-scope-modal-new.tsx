@@ -106,7 +106,14 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
             scopeItem: scopeItem,
           };
           
-          console.log('📥 Loading line item:', { id: item.id, quantity: item.quantity, quantityString: String(item.quantity), name: scopeItem?.name });
+          console.log('📥 Loading line item:', { 
+            id: item.id, 
+            quantity: item.quantity, 
+            quantityString: String(item.quantity), 
+            name: scopeItem?.name,
+            unitPrice: item.unitPrice,
+            scopeItemUnitPrice: scopeItem?.unitPrice
+          });
           
           if (lineItem.category === 'tenant-improvements') {
             tenantItems.push(lineItem);
@@ -135,6 +142,8 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
             category: scopeItem.category.includes('Design') || scopeItem.category.includes('Soft Costs') ? 'design-soft-costs' : 'tenant-improvements',
             scopeItem: scopeItem,
           };
+          
+          console.log('🔧 Creating default item:', { name: scopeItem.name, unitPrice: scopeItem.unitPrice, category: lineItem.category });
           
           if (lineItem.category === 'tenant-improvements') {
             defaultTenantItems.push(lineItem);

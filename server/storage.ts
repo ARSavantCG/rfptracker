@@ -1530,7 +1530,24 @@ const memoryRomPilotStorage = new MemoryRomPilotStorage();
 // Extended DatabaseStorage class with ROM Pilot methods
 class ExtendedDatabaseStorage extends DatabaseStorage {
   async getAllRomPilots() {
-    return memoryRomPilotStorage.getAllRomPilots();
+    const pilots = await memoryRomPilotStorage.getAllRomPilots();
+    // Enhance with property names
+    const enhancedPilots = await Promise.all(pilots.map(async (pilot) => {
+      if (pilot.property) {
+        try {
+          const property = await this.getProperty(parseInt(pilot.property));
+          return {
+            ...pilot,
+            propertyName: property ? `${property.propertyName} - ${property.buildingName}` : pilot.property
+          };
+        } catch (error) {
+          console.error('Error fetching property for ROM pilot:', error);
+          return pilot;
+        }
+      }
+      return pilot;
+    }));
+    return enhancedPilots;
   }
 
   async getRomPilot(id: number) {

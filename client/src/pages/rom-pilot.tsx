@@ -14,6 +14,7 @@ interface RomPilot {
   id: number;
   projectName: string;
   property: string;
+  propertyName?: string;
   totalEstimate: string;
   notes?: string;
   createdBy?: string;
@@ -180,7 +181,7 @@ export default function RomPilotPage() {
                       <CardTitle className="text-xs font-semibold truncate leading-tight">
                         {pilot.projectName}
                       </CardTitle>
-                      <p className="text-xs text-gray-500 truncate">{pilot.property}</p>
+                      <p className="text-xs text-gray-500 truncate">{pilot.propertyName || pilot.property}</p>
                     </div>
                     <div className="flex space-x-0.5 ml-1">
                       <Button

@@ -1530,7 +1530,7 @@ const memoryRomPilotStorage = new MemoryRomPilotStorage();
 // Extended DatabaseStorage class with ROM Pilot methods
 class ExtendedDatabaseStorage extends DatabaseStorage {
   async getAllRomPilots() {
-    const pilots = await memoryRomPilotStorage.getAllRomPilots();
+    const pilots = await db.select().from(romPilots).orderBy(romPilots.createdAt);
     // Enhance with property names
     const enhancedPilots = await Promise.all(pilots.map(async (pilot) => {
       if (pilot.property) {
@@ -1550,20 +1550,40 @@ class ExtendedDatabaseStorage extends DatabaseStorage {
     return enhancedPilots;
   }
 
-  async getRomPilot(id: number) {
-    return memoryRomPilotStorage.getRomPilot(id);
+  async getRomPilot(id: number): Promise<RomPilot | undefined> {
+    const [pilot] = await db.select().from(romPilots).where(eq(romPilots.id, id));
+    return pilot || undefined;
   }
 
-  async createRomPilot(data: any) {
-    return memoryRomPilotStorage.createRomPilot(data);
+  async createRomPilot(romPilot: InsertRomPilot): Promise<RomPilot> {
+    const [created] = await db
+      .insert(romPilots)
+      .values({
+        ...romPilot,
+        updatedAt: new Date(),
+      })
+      .returning();
+    return created;
   }
 
-  async updateRomPilot(id: number, updates: any) {
-    return memoryRomPilotStorage.updateRomPilot(id, updates);
+  async updateRomPilot(id: number, updates: Partial<UpdateRomPilot>): Promise<RomPilot | undefined> {
+    const [updated] = await db
+      .update(romPilots)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(romPilots.id, id))
+      .returning();
+    return updated || undefined;
   }
 
-  async deleteRomPilot(id: number) {
-    return memoryRomPilotStorage.deleteRomPilot(id);
+  async deleteRomPilot(id: number): Promise<boolean> {
+    // Delete related line items first
+    await db.delete(romPilotLineItems).where(eq(romPilotLineItems.romPilotId, id));
+    
+    const result = await db.delete(romPilots).where(eq(romPilots.id, id));
+    return (result.rowCount || 0) > 0;
   }
 
   async getContactsByType(type: string): Promise<Contact[]> {

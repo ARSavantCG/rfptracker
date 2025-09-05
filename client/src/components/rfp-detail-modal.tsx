@@ -643,12 +643,6 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
                       <i className="fas fa-envelope"></i>
                       Send Invitations
                     </button>
-                    <button
-                      onClick={startEditingStatus}
-                      className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
-                    >
-                      Update Status
-                    </button>
                   </>
                 )}
               </div>

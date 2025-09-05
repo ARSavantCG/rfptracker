@@ -4569,14 +4569,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { fileName } = req.params;
       const { path: filePath } = req.query;
       
+      console.log("ROM download request:", { fileName, filePath });
+      
       if (!fileName || !filePath) {
+        console.log("Missing fileName or filePath");
         return res.status(400).json({ message: "File name and path are required" });
       }
 
-      const fullPath = path.join(process.cwd(), filePath as string);
+      // Construct the full path - files are stored in uploads directory
+      const fullPath = path.join(process.cwd(), 'uploads', filePath as string);
+      
+      console.log("Looking for file at:", fullPath);
       
       // Check if file exists
       if (!fs.existsSync(fullPath)) {
+        console.log("File not found at:", fullPath);
         return res.status(404).json({ message: "File not found" });
       }
 
@@ -4586,6 +4593,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Stream the file
       const fileStream = fs.createReadStream(fullPath);
+      fileStream.on('error', (error) => {
+        console.error("File stream error:", error);
+        if (!res.headersSent) {
+          res.status(500).json({ message: "Error streaming file" });
+        }
+      });
       fileStream.pipe(res);
       
     } catch (error) {

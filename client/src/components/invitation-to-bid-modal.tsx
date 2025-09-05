@@ -1834,7 +1834,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
                   disabled={createInvitationMutation.isPending || isGeneratingPdfs || saveInvitationMutation.isPending || generateAndAdvanceMutation.isPending || skipToBudgetMutation.isPending}
                   className="bg-green-600 hover:bg-green-700 text-white disabled:opacity-50"
                 >
-                  {skipToBudgetMutation.isPending ? "Skipping..." : "Skip to Budget"}
+                  {skipToBudgetMutation.isPending ? "Skipping..." : "Skip to Evaluation"}
                 </Button>
               </div>
             </div>

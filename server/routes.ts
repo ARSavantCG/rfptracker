@@ -4781,7 +4781,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const allExistingCosts = await storage.getPropertyExistingImprovements(parseInt(romPilot.property));
             
             // Calculate proportional costs based on ROM area vs total property area
-            const propertyTotalSF = propertyDetails.totalSquareFootage || 1;
+            const propertyTotalSF = propertyDetails.totalSquareFootage || totalSquareFootage || 1;
             const romAreaPortion = totalSquareFootage / propertyTotalSF;
             
             existingCosts = allExistingCosts.map(cost => {
@@ -4849,11 +4849,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     };
     
     const formatCurrency = (amount: number) => {
+      // Show more precision for values under $1
+      const fractionDigits = amount < 1 ? 3 : 2;
       return new Intl.NumberFormat('en-US', {
         style: 'currency',
         currency: 'USD',
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
+        minimumFractionDigits: fractionDigits,
+        maximumFractionDigits: fractionDigits,
       }).format(amount);
     };
     
@@ -4871,7 +4873,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const designSoftCostsTotal = calculateCategoryTotal(designSoftCosts);
     const grandTotal = tenantImprovementsTotal + designSoftCostsTotal;
     
-    // Calculate total square footage from selected bay configurations
+    // Calculate total square footage from selected bay configurations FIRST
     let totalSquareFootage = 51094;
     console.log('ROM Pilot data:', JSON.stringify(romPilot, null, 2));
     console.log('Total square footage:', totalSquareFootage);

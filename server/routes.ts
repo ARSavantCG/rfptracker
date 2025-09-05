@@ -4753,11 +4753,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     let doorConfig = 'N/A';
     let vehicularParking = 'N/A';
     let trailerParking = 'N/A';
+    let existingCosts = [];
+    let propertyDisplayName = romPilot.property;
     
     if (romPilot.property && !isNaN(parseInt(romPilot.property))) {
       try {
         propertyDetails = await storage.getProperty(parseInt(romPilot.property));
         if (propertyDetails) {
+          // Create property display name with building info
+          const buildingInfo = propertyDetails.buildingName ? ` - ${propertyDetails.buildingName}` : '';
+          propertyDisplayName = `${propertyDetails.propertyName}${buildingInfo}`;
+          
           // Calculate door configuration from selected bays
           if (romPilot.selectedBayConfigurations && Array.isArray(romPilot.selectedBayConfigurations)) {
             bayCount = romPilot.selectedBayConfigurations.length;
@@ -4769,6 +4775,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Get parking info
           vehicularParking = propertyDetails.vehicularParking || 'N/A';
           trailerParking = propertyDetails.trailerParking || 'N/A';
+          
+          // Get existing improvements from property
+          try {
+            existingCosts = await storage.getPropertyExistingImprovements(parseInt(romPilot.property));
+          } catch (error) {
+            console.error('Error fetching existing improvements:', error);
+          }
         }
       } catch (error) {
         console.error('Error fetching property details:', error);
@@ -5015,7 +5028,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         <div class="document-title">ROM Budget Report</div>
         
         <div class="project-info">
-          <h2>Project: ${romPilot.projectName}</h2>
+          <h2>Project: ${romPilot.projectName} @ ${propertyDisplayName}</h2>
           <div class="rfp-number">ROM Number: ${romPilot.romNumber || 'ROM-2025-001'}</div>
         </div>
         
@@ -5042,17 +5055,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
           <h3 style="margin: 0 0 10px 0; font-size: 14px; color: #666;">* Existing improvements tracked separately for financial modeling</h3>
         </div>
         
-        <div style="margin-top: 20px; padding: 15px; background: #fef9f3; border-radius: 5px; border-left: 4px solid #f59e0b;">
-          <h3 style="margin: 0 0 10px 0; font-size: 16px; font-weight: 600; color: #333;">Line Item Rollup Summary (${formatCurrency(designSoftCostsTotal)})</h3>
-          <div style="font-size: 12px; color: #666; margin-bottom: 10px;">The following items are being redistributed to different categories:</div>
-          ${designSoftCosts.map(item => {
-            const scopeItem = scopeItems.find(si => si.id === item.scopeItemId);
-            return `<div style="margin: 5px 0; padding: 8px; background: white; border-radius: 3px; display: flex; justify-content: space-between;">
-              <span style="font-weight: 500;">${scopeItem?.name || 'Custom Item'} (${formatCurrency(parseFloat(item.totalPrice) || 0)})</span>
-              <span style="color: #3b82f6; font-size: 11px;">→ Rolling to Tenant Improvements</span>
-            </div>`;
-          }).join('')}
+        ${existingCosts.length > 0 ? `
+        <div style="margin-top: 20px;">
+          <h3 style="margin: 0 0 15px 0; font-size: 16px; font-weight: 600; color: #333; display: flex; justify-content: space-between; align-items: center;">
+            <span>Existing Costs</span>
+            <span style="color: #065f46; font-size: 16px;">${formatCurrency(existingCosts.reduce((sum, cost) => sum + (parseFloat(cost.costEstimate) || 0), 0))} <span style="font-size: 11px; color: #999;">(${formatPerSF(existingCosts.reduce((sum, cost) => sum + (parseFloat(cost.costEstimate) || 0), 0), totalSquareFootage)}/sf)</span></span>
+          </h3>
+          
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 11px;">
+            <thead>
+              <tr style="background: #f9fafb;">
+                <th style="border: 1px solid #e5e7eb; padding: 8px; text-align: left; font-weight: 600;">DESCRIPTION</th>
+                <th style="border: 1px solid #e5e7eb; padding: 8px; text-align: center; font-weight: 600;">TYPE</th>
+                <th style="border: 1px solid #e5e7eb; padding: 8px; text-align: center; font-weight: 600;">STATUS</th>
+                <th style="border: 1px solid #e5e7eb; padding: 8px; text-align: center; font-weight: 600;">COST ESTIMATE</th>
+                <th style="border: 1px solid #e5e7eb; padding: 8px; text-align: center; font-weight: 600;">$/RSF</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${existingCosts.map(cost => {
+                const costAmount = parseFloat(cost.costEstimate) || 0;
+                return `
+                  <tr>
+                    <td style="border: 1px solid #e5e7eb; padding: 6px;">${cost.description || 'N/A'}</td>
+                    <td style="border: 1px solid #e5e7eb; padding: 6px; text-align: center;">${cost.improvementType || 'N/A'}</td>
+                    <td style="border: 1px solid #e5e7eb; padding: 6px; text-align: center;">${cost.status || 'N/A'}</td>
+                    <td style="border: 1px solid #e5e7eb; padding: 6px; text-align: center;">${formatCurrency(costAmount)}</td>
+                    <td style="border: 1px solid #e5e7eb; padding: 6px; text-align: center;">${formatPerSF(costAmount, totalSquareFootage)}</td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
         </div>
+        ` : ''}
 
         <div class="grand-total" style="display: flex; align-items: baseline; justify-content: center; gap: 4px;">
           <span style="font-size: 24px; font-weight: bold; color: #065f46;">Grand Total: ${formatCurrency(grandTotal)}</span>

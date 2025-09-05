@@ -44,8 +44,7 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
   const updateStatusMutation = useMutation({
     mutationFn: async (updates: { status?: string; workflowPhase?: string }) => {
       if (!rfp) return;
-      const response = await apiRequest("PATCH", `/api/rfp-requests/${rfp.id}`, updates);
-      return response.json();
+      return await apiRequest(`/api/rfp-requests/${rfp.id}`, "PATCH", updates);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
@@ -78,8 +77,7 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
         updateData.publishedDate = dates.publishedDate ? new Date(dates.publishedDate) : null;
       }
 
-      const response = await apiRequest("PATCH", `/api/rfp-requests/${rfp.id}`, updateData);
-      return response.json();
+      return await apiRequest(`/api/rfp-requests/${rfp.id}`, "PATCH", updateData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });

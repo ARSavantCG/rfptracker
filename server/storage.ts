@@ -419,9 +419,11 @@ export class DatabaseStorage implements IStorage {
     }
 
     // Format property name with building (like in the property selector)
-    const propertyDisplay = property.building && property.building.trim() !== '' 
-      ? `${property.propertyName} - Bldg. ${property.building}`
-      : property.propertyName;
+    const propertyDisplay = property.isSingleBuilding 
+      ? property.propertyName
+      : property.building && property.building.trim() !== '' 
+        ? `${property.propertyName} - Bldg. ${property.building}`
+        : property.propertyName;
     
     if (confidential) {
       return `Confidential @ ${propertyDisplay}`;
@@ -1538,7 +1540,13 @@ class ExtendedDatabaseStorage extends DatabaseStorage {
           const property = await this.getProperty(parseInt(pilot.property));
           return {
             ...pilot,
-            propertyName: property ? `${property.propertyName} - Bldg. ${property.building}` : pilot.property
+            propertyName: property ? (
+              property.isSingleBuilding 
+                ? property.propertyName
+                : property.building && property.building.trim() !== '' 
+                  ? `${property.propertyName} - Bldg. ${property.building}`
+                  : property.propertyName
+            ) : pilot.property
           };
         } catch (error) {
           console.error('Error fetching property for ROM pilot:', error);

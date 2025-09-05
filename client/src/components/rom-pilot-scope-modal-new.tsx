@@ -98,8 +98,10 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
         const defaultTenantItems: LineItem[] = [];
         const defaultDesignItems: LineItem[] = [];
         
+        console.log('All scope items:', scopeItems);
         const defaultItems = scopeItems.filter(item => (item as any).includeByDefault);
-        console.log('Default scope items:', defaultItems);
+        console.log('Filtered default items:', defaultItems);
+        console.log('Sample item structure:', scopeItems[0]);
         
         defaultItems.forEach(scopeItem => {
           console.log('Processing default item:', scopeItem.name, 'Category:', scopeItem.category);

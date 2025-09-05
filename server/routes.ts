@@ -4758,14 +4758,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         propertyDetails = await storage.getProperty(parseInt(romPilot.property));
         if (propertyDetails) {
-          // Get bay configurations for door count
-          const bayConfigs = await storage.getBayConfigurationsForProperty(parseInt(romPilot.property));
-          bayCount = bayConfigs.length;
-          
-          // Calculate door configuration
-          const totalStandardDoors = bayConfigs.reduce((sum, bay) => sum + (bay.standardDockDoors || 0), 0);
-          const totalOversizedDoors = bayConfigs.reduce((sum, bay) => sum + (bay.oversizedDockDoors || 0), 0);
-          doorConfig = `${totalStandardDoors + totalOversizedDoors} doors total (${totalOversizedDoors} oversized, ${totalStandardDoors} regular)`;
+          // Calculate door configuration from selected bays
+          if (romPilot.selectedBayConfigurations && Array.isArray(romPilot.selectedBayConfigurations)) {
+            bayCount = romPilot.selectedBayConfigurations.length;
+            const totalStandardDoors = romPilot.selectedBayConfigurations.reduce((sum, bay) => sum + (bay.standardDockDoors || 0), 0);
+            const totalOversizedDoors = romPilot.selectedBayConfigurations.reduce((sum, bay) => sum + (bay.oversizedDockDoors || 0), 0);
+            doorConfig = `${totalStandardDoors + totalOversizedDoors} doors total (${totalOversizedDoors} oversized, ${totalStandardDoors} regular)`;
+          }
           
           // Get parking info
           vehicularParking = propertyDetails.vehicularParking || 'N/A';
@@ -4880,6 +4879,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           @media print { 
             .no-print { display: none !important; }
             body { font-size: 11px; }
+            .document-title {
+              background: rgb(59, 88, 152) !important;
+              color: white !important;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
           }
           body { 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
@@ -5017,7 +5022,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         </div>
         
         <div style="margin-top: 20px; padding: 15px; background: #fef9f3; border-radius: 5px; border-left: 4px solid #f59e0b;">
-          <h3 style="margin: 0 0 10px 0; font-size: 16px; font-weight: 600; color: #333;">Line Item Rollup Summary</h3>
+          <h3 style="margin: 0 0 10px 0; font-size: 16px; font-weight: 600; color: #333;">Line Item Rollup Summary (${formatCurrency(designSoftCostsTotal)})</h3>
           <div style="font-size: 12px; color: #666; margin-bottom: 10px;">The following items are being redistributed to different categories:</div>
           ${designSoftCosts.map(item => {
             const scopeItem = scopeItems.find(si => si.id === item.scopeItemId);

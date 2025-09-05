@@ -815,6 +815,7 @@ export const romPilotLineItems = pgTable("rom_pilot_line_items", {
   quantity: text("quantity").default("0"),
   unitPrice: text("unit_price").notNull(),
   totalPrice: text("total_price").default("0"),
+  tenantShare: integer("tenant_share").default(100), // Percentage of cost attributed to tenant (0-100)
   notes: text("notes"),
   category: text("category").default("tenant-improvements"),
   createdAt: timestamp("created_at").defaultNow().notNull(),

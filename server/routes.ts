@@ -4640,6 +4640,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         quantity: item.quantity,
         unitPrice: item.unitPrice,
         totalPrice: item.totalPrice,
+        tenantShare: item.tenantShare,
         category: item.category
       })));
       
@@ -4653,6 +4654,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("ROM line items save error:", error);
       res.status(500).json({ message: "Failed to save line items" });
+    }
+  });
+
+  // Individual line item save endpoint
+  app.post("/api/rom-pilots/:id/line-items/individual", async (req, res) => {
+    try {
+      const romPilotId = parseInt(req.params.id);
+      if (isNaN(romPilotId)) {
+        return res.status(400).json({ message: "Invalid ROM Pilot ID" });
+      }
+
+      const { lineItem } = req.body;
+      console.log("Saving individual ROM line item:", { romPilotId, lineItem });
+      
+      // Get existing line items
+      const existingLineItems = await storage.getRomPilotLineItems(romPilotId);
+      
+      // Update or add the specific line item
+      let updatedLineItems;
+      if (lineItem.id) {
+        // Update existing item
+        updatedLineItems = existingLineItems.map(item => 
+          item.id === lineItem.id ? { ...item, ...lineItem } : item
+        );
+      } else {
+        // Add new item
+        updatedLineItems = [...existingLineItems, lineItem];
+      }
+      
+      const savedLineItems = await storage.saveRomPilotLineItems(romPilotId, updatedLineItems);
+      
+      // Calculate and update total estimate
+      const total = updatedLineItems.reduce((sum: number, item: any) => sum + (parseFloat(item.totalPrice) || 0), 0);
+      await storage.updateRomPilot(romPilotId, { totalEstimate: total.toString() });
+      
+      res.json({ success: true, lineItem: savedLineItems.find(item => 
+        item.scopeItemId === lineItem.scopeItemId && 
+        item.category === lineItem.category
+      )});
+    } catch (error) {
+      console.error("Individual ROM line item save error:", error);
+      res.status(500).json({ message: "Failed to save line item" });
     }
   });
 

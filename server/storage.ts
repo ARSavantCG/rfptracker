@@ -1178,6 +1178,7 @@ export class DatabaseStorage implements IStorage {
             quantity: item.quantity || "0",
             unitPrice: item.unitPrice || "0",
             totalPrice: item.totalPrice || "0",
+            tenantShare: item.tenantShare || 100, // Default to 100% tenant responsibility
             notes: item.notes || null,
             category: item.category || 'tenant-improvements',
             updatedAt: new Date(),

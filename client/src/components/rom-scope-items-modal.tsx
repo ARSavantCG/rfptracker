@@ -560,9 +560,20 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                       <p className="text-sm font-medium">Current attachments:</p>
                       {formData.attachments.map((file) => (
                         <div key={file.id} className="flex items-center justify-between bg-gray-50 p-2 rounded">
-                          <div className="flex items-center space-x-2">
+                          <div className="flex items-center space-x-2 flex-1">
                             <FileText className="h-4 w-4 text-gray-600" />
-                            <span className="text-sm">{file.fileName}</span>
+                            <input
+                              type="text"
+                              value={file.fileName}
+                              onChange={(e) => {
+                                const updatedAttachments = formData.attachments.map(att =>
+                                  att.id === file.id ? { ...att, fileName: e.target.value } : att
+                                );
+                                setFormData({ ...formData, attachments: updatedAttachments });
+                              }}
+                              className="text-sm bg-transparent border-none outline-none flex-1"
+                              placeholder="Enter file name"
+                            />
                             <span className="text-xs text-gray-500">
                               (uploaded {new Date(file.uploadedAt).toLocaleDateString()})
                             </span>

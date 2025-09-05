@@ -788,6 +788,7 @@ export const romPilots = pgTable("rom_pilots", {
   selectedBayConfigurations: json("selected_bay_configurations").$type<BayConfiguration[]>().default([]),
   totalEstimate: text("total_estimate").default("0"),
   notes: text("notes"),
+  status: text("status").default("draft"), // draft, active, archived
   createdBy: text("created_by"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Calculator, Edit, Trash2, FileText, ListChecks, Download } from "lucide-react";
+import { Plus, Calculator, Edit, Trash2, FileText, ListChecks, Download, Save, Archive } from "lucide-react";
 import Navigation from "@/components/navigation";
 import { CreateRomPilotModal } from "@/components/create-rom-pilot-modal";
 import { RomPilotScopeModal } from "@/components/rom-pilot-scope-modal-new";
@@ -17,6 +17,7 @@ interface RomPilot {
   propertyName?: string;
   totalEstimate: string;
   notes?: string;
+  status?: string;
   createdBy?: string;
   createdAt: string;
   updatedAt: string;
@@ -38,8 +39,13 @@ export default function RomPilotPage() {
     if (!confirm("Are you sure you want to delete this ROM Pilot?")) return;
 
     try {
+      const token = localStorage.getItem('auth-token');
       const response = await fetch(`/api/rom-pilots/${id}`, {
         method: "DELETE",
+        headers: {
+          ...(token && { "Authorization": `Bearer ${token}` })
+        },
+        credentials: "include",
       });
 
       if (!response.ok) {
@@ -57,6 +63,74 @@ export default function RomPilotPage() {
       toast({
         title: "Error",
         description: "Failed to delete ROM Pilot",
+        variant: "destructive",
+        duration: 6000,
+      });
+    }
+  };
+
+  const saveRomPilot = async (id: number) => {
+    try {
+      const token = localStorage.getItem('auth-token');
+      const response = await fetch(`/api/rom-pilots/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token && { "Authorization": `Bearer ${token}` })
+        },
+        credentials: "include",
+        body: JSON.stringify({ status: "active" }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to save ROM Pilot");
+      }
+
+      toast({
+        title: "Success",
+        description: "ROM Pilot saved successfully",
+        duration: 4000,
+      });
+
+      refetch();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save ROM Pilot",
+        variant: "destructive",
+        duration: 6000,
+      });
+    }
+  };
+
+  const archiveRomPilot = async (id: number) => {
+    try {
+      const token = localStorage.getItem('auth-token');
+      const response = await fetch(`/api/rom-pilots/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token && { "Authorization": `Bearer ${token}` })
+        },
+        credentials: "include",
+        body: JSON.stringify({ status: "archived" }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to archive ROM Pilot");
+      }
+
+      toast({
+        title: "Success",
+        description: "ROM Pilot archived successfully",
+        duration: 4000,
+      });
+
+      refetch();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to archive ROM Pilot",
         variant: "destructive",
         duration: 6000,
       });
@@ -147,17 +221,17 @@ export default function RomPilotPage() {
           </div>
         </div>
 
-        {/* ROM Pilots Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+        {/* ROM Pilots Table */}
+        <div className="bg-white rounded-lg shadow overflow-hidden">
           {isLoading ? (
-            <div className="col-span-full flex justify-center items-center py-12">
+            <div className="flex justify-center items-center py-12">
               <div className="text-center">
                 <Calculator className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                 <p className="text-gray-500">Loading ROM Pilots...</p>
               </div>
             </div>
           ) : romPilots.length === 0 ? (
-            <div className="col-span-full flex flex-col items-center justify-center py-12">
+            <div className="flex flex-col items-center justify-center py-12">
               <Calculator className="h-16 w-16 text-gray-400 mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No ROMs</h3>
               <p className="text-gray-500 text-center mb-6 max-w-md">
@@ -173,78 +247,111 @@ export default function RomPilotPage() {
               </Button>
             </div>
           ) : (
-            romPilots.map((pilot) => (
-              <Card key={pilot.id} className="hover:shadow-md transition-shadow">
-                <CardHeader className="p-3 pb-2">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1 min-w-0">
-                      <CardTitle className="text-xs font-semibold truncate leading-tight">
-                        {pilot.projectName}
-                      </CardTitle>
-                      <p className="text-xs text-gray-500 truncate">{pilot.propertyName || pilot.property}</p>
-                    </div>
-                    <div className="flex space-x-0.5 ml-1">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => {
-                          setEditingRomPilot(pilot);
-                          setCreateModalOpen(true);
-                        }}
-                        className="h-5 w-5 p-0"
-                      >
-                        <Edit className="h-2.5 w-2.5" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => deleteRomPilot(pilot.id)}
-                        className="text-red-600 hover:text-red-700 h-5 w-5 p-0"
-                      >
-                        <Trash2 className="h-2.5 w-2.5" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
-                
-                <CardContent className="p-3 pt-0 space-y-2">
-                  <div className="bg-green-50 p-1.5 rounded">
-                    <p className="text-xs text-green-600 font-medium">Total</p>
-                    <p className="text-sm font-bold text-green-800">
-                      {formatCurrency(pilot.totalEstimate)}
-                    </p>
-                  </div>
-                  
-                  <div className="text-xs text-gray-500 border-t pt-1">
-                    <span>{format(new Date(pilot.createdAt), "MMM d")}</span>
-                  </div>
-                  
-                  <div className="space-y-1">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => {
-                        setSelectedRomPilot(pilot);
-                        setScopeModalOpen(true);
-                      }}
-                      className="w-full h-5 text-xs px-1"
-                    >
-                      <ListChecks className="h-2.5 w-2.5 mr-1" />
-                      Scope
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => generateRomReport(pilot)}
-                      className="w-full h-5 text-xs px-1"
-                    >
-                      <Download className="h-2.5 w-2.5 mr-1" />
-                      Report
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
+            <table className="w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Project</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Property</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Estimate</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {romPilots.map((pilot) => (
+                  <tr key={pilot.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{pilot.projectName}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-500">{pilot.propertyName || pilot.property}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-green-600">{formatCurrency(pilot.totalEstimate)}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        pilot.status === 'active' ? 'bg-green-100 text-green-800' :
+                        pilot.status === 'archived' ? 'bg-gray-100 text-gray-800' :
+                        'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {pilot.status || 'draft'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {format(new Date(pilot.createdAt), "MMM d, yyyy")}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <div className="flex items-center justify-end space-x-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setSelectedRomPilot(pilot);
+                            setScopeModalOpen(true);
+                          }}
+                          className="text-xs"
+                        >
+                          <ListChecks className="h-3 w-3 mr-1" />
+                          Scope
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => generateRomReport(pilot)}
+                          className="text-xs"
+                        >
+                          <Download className="h-3 w-3 mr-1" />
+                          Report
+                        </Button>
+                        {pilot.status === 'draft' && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => saveRomPilot(pilot.id)}
+                            className="text-xs text-blue-600 hover:text-blue-700"
+                          >
+                            <Save className="h-3 w-3 mr-1" />
+                            Save
+                          </Button>
+                        )}
+                        {pilot.status === 'active' && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => archiveRomPilot(pilot.id)}
+                            className="text-xs text-orange-600 hover:text-orange-700"
+                          >
+                            <Archive className="h-3 w-3 mr-1" />
+                            Archive
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setEditingRomPilot(pilot);
+                            setCreateModalOpen(true);
+                          }}
+                          className="text-xs"
+                        >
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => deleteRomPilot(pilot.id)}
+                          className="text-xs text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           )}
         </div>
       </div>

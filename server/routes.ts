@@ -4759,7 +4759,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         propertyDetails = await storage.getProperty(parseInt(romPilot.property));
         if (propertyDetails) {
           // Get bay configurations for door count
-          const bayConfigs = await storage.getBayConfigurations(parseInt(romPilot.property));
+          const bayConfigs = await storage.getBayConfigurationsForProperty(parseInt(romPilot.property));
           bayCount = bayConfigs.length;
           
           // Calculate door configuration
@@ -5011,6 +5011,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         ${renderCategorySection("Tenant Improvements", tenantImprovements, tenantImprovementsTotal)}
         ${renderCategorySection("Design / Soft Costs / Other Fees", designSoftCosts, designSoftCostsTotal)}
+        
+        <div style="margin-top: 30px; padding: 15px; background: #f8f9fa; border-radius: 5px; border-left: 4px solid #6b7280;">
+          <h3 style="margin: 0 0 10px 0; font-size: 14px; color: #666;">* Existing improvements tracked separately for financial modeling</h3>
+        </div>
+        
+        <div style="margin-top: 20px; padding: 15px; background: #fef9f3; border-radius: 5px; border-left: 4px solid #f59e0b;">
+          <h3 style="margin: 0 0 10px 0; font-size: 16px; font-weight: 600; color: #333;">Line Item Rollup Summary</h3>
+          <div style="font-size: 12px; color: #666; margin-bottom: 10px;">The following items are being redistributed to different categories:</div>
+          ${designSoftCosts.map(item => {
+            const scopeItem = scopeItems.find(si => si.id === item.scopeItemId);
+            return `<div style="margin: 5px 0; padding: 8px; background: white; border-radius: 3px; display: flex; justify-content: space-between;">
+              <span style="font-weight: 500;">${scopeItem?.name || 'Custom Item'} (${formatCurrency(parseFloat(item.totalPrice) || 0)})</span>
+              <span style="color: #3b82f6; font-size: 11px;">→ Rolling to Tenant Improvements</span>
+            </div>`;
+          }).join('')}
+        </div>
 
         <div class="grand-total" style="display: flex; align-items: baseline; justify-content: center; gap: 4px;">
           <span style="font-size: 24px; font-weight: bold; color: #065f46;">Grand Total: ${formatCurrency(grandTotal)}</span>

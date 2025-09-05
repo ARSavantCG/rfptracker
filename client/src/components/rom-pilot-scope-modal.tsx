@@ -321,7 +321,7 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
                 <th className="text-left py-2 px-3 text-xs font-medium text-gray-700 w-24">Quantity</th>
                 <th className="text-left py-2 px-3 text-xs font-medium text-gray-700 w-28">Unit Price</th>
                 <th className="text-left py-2 px-3 text-xs font-medium text-gray-700 w-28">Total</th>
-                <th className="text-left py-2 px-3 text-xs font-medium text-gray-700 w-24">Tenant %</th>
+                <th className="text-left py-2 px-3 text-xs font-medium text-gray-700 w-24 bg-green-100">Tenant %</th>
                 <th className="text-left py-2 px-3 text-xs font-medium text-gray-700 w-40">Notes</th>
                 <th className="text-center py-2 px-3 text-xs font-medium text-gray-700 w-20">Actions</th>
               </tr>
@@ -489,7 +489,7 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
             <Calculator className="h-5 w-5 text-blue-600" />
-            <span>Manage ROM Scope - {romPilotName}</span>
+            <span>Manage ROM Scope - {romPilotName} [Updated]</span>
           </DialogTitle>
         </DialogHeader>
 

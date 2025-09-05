@@ -4501,6 +4501,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/rom-scope-items", async (req, res) => {
     try {
       const scopeItems = await storage.getAllRomScopeItems();
+      console.log('API returning scope items:', scopeItems.map(item => ({ 
+        id: item.id, 
+        name: item.name, 
+        includeByDefault: item.includeByDefault 
+      })));
       res.json(scopeItems);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch scope items" });

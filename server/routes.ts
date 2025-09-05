@@ -1261,6 +1261,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ body: req.body, files: req.files });
   });
 
+  // Generic upload endpoint for single files
+  app.post("/api/upload", upload.single("file"), (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      res.json({
+        message: "File uploaded successfully",
+        filePath: req.file.filename,
+        originalName: req.file.originalname,
+        size: req.file.size
+      });
+    } catch (error) {
+      console.error("Upload error:", error);
+      res.status(500).json({ message: "Failed to upload file" });
+    }
+  });
+
   // Get RFP statistics (must come before /:id route)
   app.get("/api/rfp-requests/stats", async (req, res) => {
     try {

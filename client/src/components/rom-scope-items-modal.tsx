@@ -16,7 +16,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
 import { FormulaInput } from "@/components/formula-input";
 import { evaluateFormula } from "@shared/formula-utils";
-import { Plus, Edit2, Trash2, Package, DollarSign, ChevronDown } from "lucide-react";
+import { Plus, Edit2, Trash2, Package, DollarSign, ChevronDown, Upload, FileText, X } from "lucide-react";
 
 interface RomScopeItem {
   id: number;
@@ -28,6 +28,12 @@ interface RomScopeItem {
   source: string | null;
   lastUpdated: string | null;
   isActive: boolean;
+  attachments: Array<{
+    id: string;
+    fileName: string;
+    filePath: string;
+    uploadedAt: string;
+  }>;
   createdAt: string;
   updatedAt: string;
 }
@@ -57,7 +63,15 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
     unitPrice: "",
     source: "",
     lastUpdated: "",
+    attachments: [] as Array<{
+      id: string;
+      fileName: string;
+      filePath: string;
+      uploadedAt: string;
+    }>,
   });
+
+  const [fileUploadInputs, setFileUploadInputs] = useState<File[]>([]);
 
   // Fetch scope items
   const { data: scopeItems = [], isLoading } = useQuery<RomScopeItem[]>({
@@ -76,9 +90,58 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
     "SF", "LF", "Each", "Hour", "Fixture", "Outlet", "Lot", "%", "$"
   ];
 
+  // File handling functions
+  const handleFileSelect = (files: FileList | null) => {
+    if (files) {
+      const newFiles = Array.from(files);
+      setFileUploadInputs(prev => [...prev, ...newFiles]);
+    }
+  };
+
+  const removeFileInput = (index: number) => {
+    setFileUploadInputs(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const removeExistingFile = (fileId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      attachments: prev.attachments.filter(file => file.id !== fileId)
+    }));
+  };
+
   // Create/Update mutations
   const createMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("/api/rom-scope-items", "POST", data),
+    mutationFn: async (data: any) => {
+      // Handle file uploads first if any
+      const uploadedFiles = [];
+      for (const file of fileUploadInputs) {
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const uploadResponse = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+        
+        if (uploadResponse.ok) {
+          const fileData = await uploadResponse.json();
+          uploadedFiles.push({
+            id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+            fileName: file.name,
+            filePath: fileData.filePath,
+            uploadedAt: new Date().toISOString(),
+          });
+        }
+      }
+      
+      // Include uploaded files in the data
+      const dataWithFiles = {
+        ...data,
+        attachments: [...(data.attachments || []), ...uploadedFiles]
+      };
+      
+      return apiRequest("/api/rom-scope-items", "POST", dataWithFiles);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rom-scope-items"] });
       resetForm();
@@ -99,7 +162,37 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, ...data }: any) => apiRequest(`/api/rom-scope-items/${id}`, "PUT", data),
+    mutationFn: async ({ id, ...data }: any) => {
+      // Handle file uploads first if any
+      const uploadedFiles = [];
+      for (const file of fileUploadInputs) {
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const uploadResponse = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+        
+        if (uploadResponse.ok) {
+          const fileData = await uploadResponse.json();
+          uploadedFiles.push({
+            id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+            fileName: file.name,
+            filePath: fileData.filePath,
+            uploadedAt: new Date().toISOString(),
+          });
+        }
+      }
+      
+      // Include uploaded files in the data
+      const dataWithFiles = {
+        ...data,
+        attachments: [...(data.attachments || []), ...uploadedFiles]
+      };
+      
+      return apiRequest(`/api/rom-scope-items/${id}`, "PUT", dataWithFiles);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rom-scope-items"] });
       resetForm();
@@ -148,7 +241,9 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
       unitPrice: "",
       source: "",
       lastUpdated: "",
+      attachments: [],
     });
+    setFileUploadInputs([]);
     setShowAddForm(false);
     setEditingItem(null);
   };
@@ -189,7 +284,9 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
       unitPrice: item.unitPrice,
       source: item.source || "",
       lastUpdated: item.lastUpdated ? new Date(item.lastUpdated).toISOString().split('T')[0] : "",
+      attachments: item.attachments || [],
     });
+    setFileUploadInputs([]);
     setEditingItem(item);
     setShowAddForm(true);
   };
@@ -347,6 +444,87 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                   </div>
                 </div>
 
+                {/* File Attachments Section */}
+                <div className="space-y-4 pt-4 border-t">
+                  <div className="space-y-2">
+                    <Label htmlFor="attachments">Attachments</Label>
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+                      <div className="text-center">
+                        <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                        <input
+                          type="file"
+                          multiple
+                          onChange={(e) => handleFileSelect(e.target.files)}
+                          className="hidden"
+                          id="file-upload"
+                          accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.jpg,.jpeg,.png"
+                        />
+                        <Label 
+                          htmlFor="file-upload" 
+                          className="cursor-pointer text-sm text-blue-600 hover:text-blue-700"
+                        >
+                          Choose files or drag and drop
+                        </Label>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Specifications, drawings, or related documents
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* New file uploads */}
+                  {fileUploadInputs.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">Files to upload:</p>
+                      {fileUploadInputs.map((file, index) => (
+                        <div key={index} className="flex items-center justify-between bg-blue-50 p-2 rounded">
+                          <div className="flex items-center space-x-2">
+                            <FileText className="h-4 w-4 text-blue-600" />
+                            <span className="text-sm">{file.name}</span>
+                            <span className="text-xs text-gray-500">
+                              ({(file.size / 1024).toFixed(1)} KB)
+                            </span>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeFileInput(index)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Existing attachments */}
+                  {formData.attachments.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">Current attachments:</p>
+                      {formData.attachments.map((file) => (
+                        <div key={file.id} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                          <div className="flex items-center space-x-2">
+                            <FileText className="h-4 w-4 text-gray-600" />
+                            <span className="text-sm">{file.fileName}</span>
+                            <span className="text-xs text-gray-500">
+                              (uploaded {new Date(file.uploadedAt).toLocaleDateString()})
+                            </span>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeExistingFile(file.id)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 <div className="flex justify-end space-x-3 pt-4 border-t">
                   <Button type="button" variant="outline" onClick={resetForm}>
                     Cancel
@@ -409,7 +587,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                               ${(() => {
                                 const result = evaluateFormula(item.unitPrice);
                                 const displayValue = result.value !== null ? result.value.toFixed(2) : parseFloat(item.unitPrice || "0").toFixed(2);
-                                return displayValue;
+                                return parseFloat(displayValue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                               })()} per {item.unit}
                               {item.unitPrice.startsWith('=') && (
                                 <span className="ml-1 text-xs text-blue-600">📊</span>

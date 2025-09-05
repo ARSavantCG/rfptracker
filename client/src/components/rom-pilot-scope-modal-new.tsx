@@ -470,14 +470,6 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
                                     }
                                   }
                                   
-                                  // Auto-save individual line item for immediate persistence
-                                  setTimeout(() => {
-                                    saveIndividualLineItem.mutate({
-                                      ...item,
-                                      quantity: String(value),
-                                      totalPrice: item.totalPrice
-                                    });
-                                  }, 500);
                                 }}
                                 className="h-7 text-xs"
                                 type="quantity"

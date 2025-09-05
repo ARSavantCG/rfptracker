@@ -81,12 +81,9 @@ export function FormulaInput({
       }
     }
     
-    // Don't call onChange if we have invalid values
-    if (evaluatedValue !== null && !isNaN(evaluatedValue)) {
-      onChange(displayValue, evaluatedValue);
-    } else {
-      console.log('⚠️ Skipping onChange due to invalid value:', displayValue, evaluatedValue);
-    }
+    // Always call onChange with the displayValue to preserve manual entries
+    console.log('📝 FormulaInput calling onChange with:', { displayValue, evaluatedValue });
+    onChange(displayValue, evaluatedValue);
     onBlur?.();
   };
 

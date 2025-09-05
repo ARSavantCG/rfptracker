@@ -249,51 +249,51 @@ export default function RomPilotPage() {
               </Button>
             </div>
           ) : (
-            <table className="w-full divide-y divide-gray-200" style={{minWidth: '1200px'}}>
+            <table className="w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ROM #</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Project</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-48">Property</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Estimate</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider" style={{minWidth: '350px', width: '350px'}}>Actions</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{width: '120px'}}>ROM #</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{width: '160px'}}>Project</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{width: '200px'}}>Property</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{width: '120px'}}>Total Est.</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{width: '80px'}}>Status</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{width: '100px'}}>Created</th>
+                  <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider" style={{width: '320px'}}>Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {romPilots.map((pilot) => (
                   <tr key={pilot.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-blue-600">{pilot.romNumber || 'ROM-' + pilot.id}</div>
+                    <td className="px-3 py-3 whitespace-nowrap" style={{width: '120px'}}>
+                      <div className="text-xs font-medium text-blue-600 truncate">{pilot.romNumber || 'ROM-' + pilot.id}</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{pilot.projectName}</div>
+                    <td className="px-3 py-3 whitespace-nowrap" style={{width: '160px'}}>
+                      <div className="text-xs font-medium text-gray-900 truncate" title={pilot.projectName}>{pilot.projectName}</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">
+                    <td className="px-3 py-3 whitespace-nowrap" style={{width: '200px'}}>
+                      <div className="text-xs text-gray-500 truncate" title={pilot.propertyName && pilot.propertyName !== 'undefined' ? pilot.propertyName.replace(/\s*-\s*undefined\s*$/i, '').trim() : pilot.property}>
                         {pilot.propertyName && pilot.propertyName !== 'undefined' 
                           ? pilot.propertyName.replace(/\s*-\s*undefined\s*$/i, '').trim()
                           : pilot.property}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-green-600">{formatCurrency(pilot.totalEstimate)}</div>
+                    <td className="px-3 py-3 whitespace-nowrap" style={{width: '120px'}}>
+                      <div className="text-xs font-medium text-green-600">{formatCurrency(pilot.totalEstimate)}</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                    <td className="px-3 py-3 whitespace-nowrap" style={{width: '80px'}}>
+                      <span className={`inline-flex px-1 py-1 text-xs font-semibold rounded-full ${
                         pilot.status === 'active' ? 'bg-green-100 text-green-800' :
                         pilot.status === 'archived' ? 'bg-gray-100 text-gray-800' :
                         'bg-yellow-100 text-yellow-800'
                       }`}>
-                        {pilot.status || 'draft'}
+                        {(pilot.status || 'draft').substring(0, 6)}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {format(new Date(pilot.createdAt), "MMM d, yyyy")}
+                    <td className="px-3 py-3 whitespace-nowrap text-xs text-gray-500" style={{width: '100px'}}>
+                      {format(new Date(pilot.createdAt), "MMM d")}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium" style={{minWidth: '350px', width: '350px'}}>
-                      <div className="flex items-center justify-end space-x-1 flex-nowrap" style={{minWidth: '320px'}}>
+                    <td className="px-3 py-3 whitespace-nowrap text-right text-xs font-medium" style={{width: '320px'}}>
+                      <div className="flex items-center justify-end space-x-0.5 flex-nowrap" style={{width: '320px'}}>
                         <Button
                           size="sm"
                           variant="outline"
@@ -301,29 +301,26 @@ export default function RomPilotPage() {
                             setSelectedRomPilot(pilot);
                             setScopeModalOpen(true);
                           }}
-                          className="text-xs px-2 py-1"
+                          className="text-xs px-1.5 py-0.5 h-6"
                         >
-                          <ListChecks className="h-3 w-3 mr-1" />
-                          Scope
+                          <ListChecks className="h-3 w-3" />
                         </Button>
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={() => generateRomReport(pilot)}
-                          className="text-xs px-2 py-1"
+                          className="text-xs px-1.5 py-0.5 h-6"
                         >
-                          <Download className="h-3 w-3 mr-1" />
-                          Report
+                          <Download className="h-3 w-3" />
                         </Button>
                         {pilot.status === 'draft' && (
                           <Button
                             size="sm"
                             variant="outline"
                             onClick={() => saveRomPilot(pilot.id)}
-                            className="text-xs text-blue-600 hover:text-blue-700 px-2 py-1"
+                            className="text-xs text-blue-600 hover:text-blue-700 px-1.5 py-0.5 h-6"
                           >
-                            <Save className="h-3 w-3 mr-1" />
-                            Save
+                            <Save className="h-3 w-3" />
                           </Button>
                         )}
                         {pilot.status === 'active' && (
@@ -331,10 +328,9 @@ export default function RomPilotPage() {
                             size="sm"
                             variant="outline"
                             onClick={() => archiveRomPilot(pilot.id)}
-                            className="text-xs text-orange-600 hover:text-orange-700 px-2 py-1"
+                            className="text-xs text-orange-600 hover:text-orange-700 px-1.5 py-0.5 h-6"
                           >
-                            <Archive className="h-3 w-3 mr-1" />
-                            Archive
+                            <Archive className="h-3 w-3" />
                           </Button>
                         )}
                         <Button
@@ -344,7 +340,7 @@ export default function RomPilotPage() {
                             setEditingRomPilot(pilot);
                             setCreateModalOpen(true);
                           }}
-                          className="text-xs px-1 py-1"
+                          className="text-xs px-1 py-0.5 h-6"
                         >
                           <Edit className="h-3 w-3" />
                         </Button>
@@ -352,7 +348,7 @@ export default function RomPilotPage() {
                           size="sm"
                           variant="ghost"
                           onClick={() => deleteRomPilot(pilot.id)}
-                          className="text-xs text-red-600 hover:text-red-700 px-1 py-1"
+                          className="text-xs text-red-600 hover:text-red-700 px-1 py-0.5 h-6"
                         >
                           <Trash2 className="h-3 w-3" />
                         </Button>

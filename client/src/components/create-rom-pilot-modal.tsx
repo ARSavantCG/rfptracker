@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Calculator, User, Building2, ChevronDown } from "lucide-react";
 import type { Property } from "@shared/schema";
+import { HierarchicalPropertySelector } from "./hierarchical-property-selector";
 
 interface RomPilot {
   id: number;
@@ -171,21 +172,10 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess, editingRomPilo
           {/* Property Selection */}
           <div className="space-y-2">
             <Label htmlFor="property">Property *</Label>
-            <div className="relative">
-              <select
-                value={property}
-                onChange={(e) => setProperty(e.target.value)}
-                className="w-full h-10 px-3 py-2 text-sm bg-background border border-input rounded-md appearance-none pr-8 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-              >
-                <option value="">Select a property</option>
-                {displayProperties.map((prop) => (
-                  <option key={prop.id} value={prop.displayName}>
-                    {prop.displayName}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-            </div>
+            <HierarchicalPropertySelector
+              value={property}
+              onChange={(value) => setProperty(value)}
+            />
           </div>
 
           {/* Project Name */}

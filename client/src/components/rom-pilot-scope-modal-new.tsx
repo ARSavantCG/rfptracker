@@ -31,6 +31,7 @@ interface LineItem {
   quantity: string;
   unitPrice: string;
   totalPrice: string;
+  tenantShare: number; // Tenant percentage (0-100%)
   notes?: string;
   category: 'tenant-improvements' | 'design-soft-costs';
   scopeItem?: ScopeItem;
@@ -76,6 +77,7 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
             quantity: item.quantity?.toString() || "",
             unitPrice: item.unitPrice || "",
             totalPrice: item.totalPrice || "",
+            tenantShare: item.tenantShare || 100, // Default to 100% tenant responsibility
             notes: item.notes || "",
             category: item.category || 'tenant-improvements',
             scopeItem: scopeItem,
@@ -110,6 +112,7 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
       quantity: "",
       unitPrice: "0",
       totalPrice: "0",
+      tenantShare: 100, // Default to 100% tenant responsibility
       notes: "",
       category,
     };
@@ -301,8 +304,9 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
                 <th className="text-left py-2 px-3 text-xs font-medium text-gray-700 w-24">Quantity</th>
                 <th className="text-left py-2 px-3 text-xs font-medium text-gray-700 w-28">Unit Price</th>
                 <th className="text-left py-2 px-3 text-xs font-medium text-gray-700 w-28">Total</th>
+                <th className="text-left py-2 px-3 text-xs font-medium text-gray-700 w-24 bg-green-100">Tenant %</th>
                 <th className="text-left py-2 px-3 text-xs font-medium text-gray-700 w-40">Notes</th>
-                <th className="text-center py-2 px-3 text-xs font-medium text-gray-700 w-16">Actions</th>
+                <th className="text-center py-2 px-3 text-xs font-medium text-gray-700 w-20">Actions</th>
               </tr>
             </thead>
             <DragDropContext onDragEnd={category === 'tenant-improvements' ? handleTenantImprovementsDragEnd : handleDesignSoftCostsDragEnd}>
@@ -359,7 +363,7 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
                                   <option value="0">Custom Item</option>
                                   {(category === 'tenant-improvements' ? tenantImprovementItems : designSoftCostItems).map((scopeItem) => (
                                     <option key={scopeItem.id} value={scopeItem.id.toString()}>
-                                      {scopeItem.name} ({scopeItem.unit} @ ${scopeItem.unitPrice})
+                                      {scopeItem.name} ({scopeItem.unit} @ {formatCurrency(parseFloat(scopeItem.unitPrice))})
                                     </option>
                                   ))}
                                 </select>
@@ -413,6 +417,17 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
                             </td>
                             <td className="py-2 px-3">
                               <Input
+                                type="number"
+                                value={item.tenantShare || 100}
+                                onChange={(e) => updateLineItem(category, index, 'tenantShare', parseInt(e.target.value) || 100)}
+                                className="h-7 text-xs"
+                                min="0"
+                                max="100"
+                                placeholder="100"
+                              />
+                            </td>
+                            <td className="py-2 px-3">
+                              <Input
                                 value={item.notes || ""}
                                 onChange={(e) => updateLineItem(category, index, 'notes', e.target.value)}
                                 onKeyDown={(e) => {
@@ -454,15 +469,27 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
                               />
                             </td>
                             <td className="py-2 px-3 text-center">
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => removeLineItem(category, index)}
-                                className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
+                              <div className="flex items-center justify-center gap-1">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {/* Individual save logic will be added */}}
+                                  className="h-6 w-6 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                  title="Save this line item"
+                                >
+                                  <Save className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => removeLineItem(category, index)}
+                                  className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
                             </td>
                           </tr>
                         )}
@@ -495,7 +522,7 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
             <Calculator className="h-5 w-5 text-blue-600" />
-            <span>Manage ROM Scope - {romPilotName}</span>
+            <span>Manage ROM Scope - {romPilotName} ✅ [Fixed]</span>
           </DialogTitle>
         </DialogHeader>
 

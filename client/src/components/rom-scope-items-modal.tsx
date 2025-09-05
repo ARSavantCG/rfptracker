@@ -665,7 +665,6 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                       id="name"
                       value={formData.name}
                       onChange={(e) => setFormData({...formData, name: e.target.value})}
-                      placeholder="e.g., Drywall Installation"
                     />
                   </div>
                 </div>
@@ -676,7 +675,6 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                     id="description"
                     value={formData.description}
                     onChange={(e) => setFormData({...formData, description: e.target.value})}
-                    placeholder="Detailed description of the work item..."
                     rows={2}
                   />
                 </div>
@@ -708,7 +706,6 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                         onChange={(rawValue, evaluatedValue) => {
                           setFormData({...formData, unitPrice: rawValue.toString()});
                         }}
-                        placeholder="0.00 or =15000*1.15"
                         className="pl-10"
                         decimalPlaces={2}
                       />
@@ -741,7 +738,6 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                           onChange={(rawValue, evaluatedValue) => {
                             setFormData({...formData, minimumCost: rawValue.toString()});
                           }}
-                          placeholder="15000.00"
                           className="pl-10"
                           decimalPlaces={2}
                         />
@@ -770,7 +766,6 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                           }
                         }
                       }}
-                      placeholder="e.g., ABC Construction, Internal Estimate"
                     />
                   </div>
 

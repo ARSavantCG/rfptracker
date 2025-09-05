@@ -44,7 +44,7 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
   const updateStatusMutation = useMutation({
     mutationFn: async (updates: { status?: string; workflowPhase?: string }) => {
       if (!rfp) return;
-      const response = await apiRequest(`/api/rfp-requests/${rfp.id}`, "PATCH", updates);
+      const response = await apiRequest("PATCH", `/api/rfp-requests/${rfp.id}`, updates);
       return response.json();
     },
     onSuccess: () => {

@@ -79,9 +79,6 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
     enabled: isOpen,
   });
 
-  // Debug logging
-  console.log('ROM Scope Items Modal - isOpen:', isOpen, 'scopeItems:', scopeItems, 'isLoading:', isLoading);
-
   // Categories for organization
   const categories = [
     "Tenant Improvements",

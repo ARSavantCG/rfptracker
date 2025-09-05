@@ -116,6 +116,7 @@ export default function Dashboard() {
       setShowBidCollection(false);
       setShowEvaluation(false);
       setShowPublish(false);
+      setIsWorkflowCollapsed(false); // Reset workflow to expanded state when switching RFPs
     }
   }, [selectedRfp]);
 
@@ -337,9 +338,9 @@ export default function Dashboard() {
         </div>
 
         {/* Main Content Layout */}
-        <div className={`${selectedRfp && !isWorkflowCollapsed ? 'grid grid-cols-1 lg:grid-cols-3 gap-6' : 'block'}`}>
-          {/* RFP Table or Workflow Content - Full width when no RFP selected, 2/3 when selected, full width when workflow collapsed */}
-          <div className={selectedRfp && !isWorkflowCollapsed ? "lg:col-span-2 min-w-0 main-content-area" : "w-full"}>
+        <div className={`${selectedRfp && !isWorkflowCollapsed ? 'grid grid-cols-1 lg:grid-cols-7 gap-6' : 'block'}`}>
+          {/* RFP Table or Workflow Content - Full width when no RFP selected, 5/7 when selected, full width when workflow collapsed */}
+          <div className={selectedRfp && !isWorkflowCollapsed ? "lg:col-span-5 min-w-0 main-content-area" : "w-full"}>
             {showBidCollection && selectedRfp ? (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
@@ -410,7 +411,7 @@ export default function Dashboard() {
 
           {/* Workflow Status Sidebar - Only show when RFP is selected and not collapsed */}
           {selectedRfp && !isWorkflowCollapsed && (
-            <div className="lg:col-span-1 min-w-0">
+            <div className="lg:col-span-2 min-w-0">
               <div className="sticky top-4">
                 <WorkflowStatus 
                   rfp={selectedRfp}

@@ -464,15 +464,8 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
                                   const newQuantity = e.target.value;
                                   console.log('✏️ Simple quantity change:', { newQuantity, itemId: item.id });
                                   
-                                  // Update quantity immediately
+                                  // Update quantity immediately - this is the key fix
                                   updateLineItem(category, index, 'quantity', newQuantity);
-                                  
-                                  // Calculate total
-                                  const quantityNum = parseFloat(newQuantity) || 0;
-                                  const unitPrice = parseFloat(item.unitPrice) || 0;
-                                  const tenantShare = item.tenantShare || 100;
-                                  const total = (quantityNum * unitPrice * (tenantShare / 100)).toString();
-                                  updateLineItem(category, index, 'totalPrice', total);
                                 }}
                                 onBlur={(e) => {
                                   // Get the current value from the input field, not from state

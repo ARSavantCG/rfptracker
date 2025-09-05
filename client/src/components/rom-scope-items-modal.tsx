@@ -589,6 +589,14 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
   };
 
   const handleEdit = (item: RomScopeItem) => {
+    console.log('🔧 Editing item:', { 
+      name: item.name, 
+      unitPrice: item.unitPrice, 
+      unitPriceType: typeof item.unitPrice,
+      minimumCost: item.minimumCost,
+      hasMinimumCost: item.hasMinimumCost 
+    });
+    
     setFormData({
       category: item.category,
       name: item.name,

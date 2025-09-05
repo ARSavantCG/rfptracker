@@ -83,7 +83,7 @@ export function FormulaInput({
     
     // Always call onChange with the displayValue to preserve manual entries
     console.log('📝 FormulaInput calling onChange with:', { displayValue, evaluatedValue });
-    onChange(displayValue, evaluatedValue);
+    onChange(displayValue, evaluatedValue || undefined);
     onBlur?.();
   };
 

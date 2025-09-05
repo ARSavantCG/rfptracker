@@ -730,18 +730,18 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
                 ...(expandedRfps.has(parentRfp.id) ? parentRfp.counterOffers.map((counterOffer) => (
                   <tr 
                     key={counterOffer.id} 
-                    className={`bg-gray-50 hover:bg-gray-100 transition-colors ${
-                      selectedRfpId === counterOffer.id ? 'bg-blue-50 border-l-4 border-blue-500' : 'border-l-4 border-transparent'
-                    }`}
+                    className="hover:bg-gray-100 transition-colors cursor-pointer"
                     style={{
                       height: '48px',
                       minHeight: '48px',
-                      maxHeight: '48px'
+                      maxHeight: '48px',
+                      backgroundColor: selectedRfpId === counterOffer.id ? '#eff6ff' : '#f9fafb',
+                      borderLeft: selectedRfpId === counterOffer.id ? '4px solid #3b82f6' : '4px solid transparent'
                     }}
+                    onClick={() => onSelectRfp && onSelectRfp(counterOffer)}
                   >
                     <td 
-                      className="px-3 py-3 whitespace-nowrap text-xs font-medium text-gray-700 cursor-pointer"
-                      onClick={() => onSelectRfp?.(counterOffer)}
+                      className="px-3 py-3 whitespace-nowrap text-xs font-medium text-gray-700"
                     >
                       <div className="flex items-center pl-6">
                         <i className="fas fa-reply mr-2 text-gray-400 text-xs"></i>
@@ -749,20 +749,17 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
                       </div>
                     </td>
                     <td 
-                      className="px-3 py-3 whitespace-nowrap text-xs text-gray-700 cursor-pointer"
-                      onClick={() => onSelectRfp?.(counterOffer)}
+                      className="px-3 py-3 whitespace-nowrap text-xs text-gray-700"
                     >
                       {counterOffer.tenantName}
                     </td>
                     <td 
-                      className="px-3 py-3 whitespace-nowrap text-xs text-gray-700 cursor-pointer"
-                      onClick={() => onSelectRfp?.(counterOffer)}
+                      className="px-3 py-3 whitespace-nowrap text-xs text-gray-700"
                     >
                       {getPropertyDisplayName(counterOffer.property)}
                     </td>
                     <td 
-                      className="px-3 py-3 whitespace-nowrap cursor-pointer"
-                      onClick={() => onSelectRfp?.(counterOffer)}
+                      className="px-3 py-3 whitespace-nowrap"
                     >
                       <span
                         className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
@@ -797,20 +794,17 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
                       </span>
                     </td>
                     <td 
-                      className="px-3 py-3 whitespace-nowrap text-xs text-gray-500 cursor-pointer"
-                      onClick={() => onSelectRfp?.(counterOffer)}
+                      className="px-3 py-3 whitespace-nowrap text-xs text-gray-500"
                     >
                       {formatDateForDisplay(counterOffer.receivedOn)}
                     </td>
                     <td 
-                      className="px-3 py-3 whitespace-nowrap text-xs text-gray-500 cursor-pointer"
-                      onClick={() => onSelectRfp?.(counterOffer)}
+                      className="px-3 py-3 whitespace-nowrap text-xs text-gray-500"
                     >
                       {counterOffer.internalDueDate ? formatDateForDisplay(counterOffer.internalDueDate) : '—'}
                     </td>
                     <td 
-                      className="px-3 py-3 whitespace-nowrap text-xs text-gray-500 cursor-pointer"
-                      onClick={() => onSelectRfp?.(counterOffer)}
+                      className="px-3 py-3 whitespace-nowrap text-xs text-gray-500"
                     >
                       <div className="flex items-center space-x-1">
                         <i className="fas fa-paperclip text-gray-400 text-xs"></i>
@@ -852,18 +846,18 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
                 ...(expandedRfps.has(parentRfp.id) ? parentRfp.options.map((option) => (
                   <tr 
                     key={option.id} 
-                    className={`bg-purple-50 hover:bg-purple-100 transition-colors ${
-                      selectedRfpId === option.id ? 'bg-blue-50 border-l-4 border-blue-500' : 'border-l-4 border-transparent'
-                    }`}
+                    className="hover:bg-purple-100 transition-colors cursor-pointer"
                     style={{
                       height: '48px',
                       minHeight: '48px',
-                      maxHeight: '48px'
+                      maxHeight: '48px',
+                      backgroundColor: selectedRfpId === option.id ? '#eff6ff' : '#faf5ff',
+                      borderLeft: selectedRfpId === option.id ? '4px solid #3b82f6' : '4px solid transparent'
                     }}
+                    onClick={() => onSelectRfp && onSelectRfp(option)}
                   >
                     <td 
-                      className="px-3 py-3 whitespace-nowrap text-xs font-medium text-gray-700 cursor-pointer"
-                      onClick={() => onSelectRfp?.(option)}
+                      className="px-3 py-3 whitespace-nowrap text-xs font-medium text-gray-700"
                     >
                       <div className="flex items-center pl-6">
                         <i className="fas fa-code-branch mr-2 text-purple-400 text-xs"></i>
@@ -871,8 +865,7 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
                       </div>
                     </td>
                     <td 
-                      className="px-3 py-3 whitespace-nowrap text-xs text-gray-700 cursor-pointer"
-                      onClick={() => onSelectRfp?.(option)}
+                      className="px-3 py-3 whitespace-nowrap text-xs text-gray-700"
                     >
                       <div className="flex flex-col">
                         <span>{option.tenantName}</span>
@@ -885,14 +878,12 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
                       </div>
                     </td>
                     <td 
-                      className="px-3 py-3 whitespace-nowrap text-xs text-gray-700 cursor-pointer"
-                      onClick={() => onSelectRfp?.(option)}
+                      className="px-3 py-3 whitespace-nowrap text-xs text-gray-700"
                     >
                       {getPropertyDisplayName(option.property)}
                     </td>
                     <td 
-                      className="px-3 py-3 whitespace-nowrap cursor-pointer"
-                      onClick={() => onSelectRfp?.(option)}
+                      className="px-3 py-3 whitespace-nowrap"
                     >
                       <span
                         className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
@@ -927,20 +918,17 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
                       </span>
                     </td>
                     <td 
-                      className="px-3 py-3 whitespace-nowrap text-xs text-gray-500 cursor-pointer"
-                      onClick={() => onSelectRfp?.(option)}
+                      className="px-3 py-3 whitespace-nowrap text-xs text-gray-500"
                     >
                       {formatDateForDisplay(option.receivedOn)}
                     </td>
                     <td 
-                      className="px-3 py-3 whitespace-nowrap text-xs text-gray-500 cursor-pointer"
-                      onClick={() => onSelectRfp?.(option)}
+                      className="px-3 py-3 whitespace-nowrap text-xs text-gray-500"
                     >
                       {option.internalDueDate ? formatDateForDisplay(option.internalDueDate) : '—'}
                     </td>
                     <td 
-                      className="px-3 py-3 whitespace-nowrap text-xs text-gray-500 cursor-pointer"
-                      onClick={() => onSelectRfp?.(option)}
+                      className="px-3 py-3 whitespace-nowrap text-xs text-gray-500"
                     >
                       <div className="flex items-center space-x-1">
                         <i className="fas fa-paperclip text-gray-400 text-xs"></i>

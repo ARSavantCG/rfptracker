@@ -203,6 +203,7 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
       if (scopeItem) {
         updatedItems[index].unitPrice = scopeItem.unitPrice;
         updatedItems[index].scopeItem = scopeItem;
+        console.log('🔄 Updated scope item data:', { scopeItemName: scopeItem.name, unitPrice: scopeItem.unitPrice });
       }
     }
 
@@ -507,8 +508,8 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
                               <Input
                                 type="text"
 value={(() => {
-                                  // Get the correct unit price - check the actual stored value first
-                                  let price = item.unitPrice || item.scopeItem?.unitPrice || "0";
+                                  // Get the correct unit price - prioritize scope item price for accuracy
+                                  let price = item.scopeItem?.unitPrice || item.unitPrice || "0";
                                   
                                   console.log('💰 Unit price display:', { 
                                     itemId: item.id, 

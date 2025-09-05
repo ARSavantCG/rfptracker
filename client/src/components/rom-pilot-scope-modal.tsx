@@ -250,6 +250,23 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
     }).format(amount);
   };
 
+  const formatNumber = (value: string | number) => {
+    const num = typeof value === 'string' ? parseFloat(value) : value;
+    if (isNaN(num)) return '0';
+    return new Intl.NumberFormat('en-US').format(num);
+  };
+
+  const formatPrice = (amount: string | number) => {
+    const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+    if (isNaN(num)) return '$0.00';
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(num);
+  };
+
   const renderLineItemsSection = (
     title: string,
     items: LineItem[],
@@ -344,7 +361,7 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
                                   <option value="0">Custom Item</option>
                                   {(category === 'tenant-improvements' ? tenantImprovementItems : designSoftCostItems).map((scopeItem) => (
                                     <option key={scopeItem.id} value={scopeItem.id.toString()}>
-                                      {scopeItem.name} ({scopeItem.unit} @ ${scopeItem.unitPrice})
+                                      {scopeItem.name} ({scopeItem.unit} @ {formatPrice(scopeItem.unitPrice)})
                                     </option>
                                   ))}
                                 </select>
@@ -353,9 +370,13 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
                             </td>
                             <td className="py-2 px-3">
                               <Input
-                                type="number"
-                                value={item.quantity || ""}
-                                onChange={(e) => updateLineItem(category, index, 'quantity', e.target.value)}
+                                type="text"
+                                value={item.quantity ? formatNumber(item.quantity) : ""}
+                                onChange={(e) => {
+                                  // Remove commas for storage
+                                  const cleanValue = e.target.value.replace(/,/g, '');
+                                  updateLineItem(category, index, 'quantity', cleanValue);
+                                }}
                                 className="h-7 text-xs"
                                 placeholder="0"
                               />
@@ -363,7 +384,7 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
                             <td className="py-2 px-3">
                               <Input
                                 type="text"
-                                value={item.unitPrice ? `$${parseFloat(item.unitPrice).toFixed(2)}` : "$0.00"}
+                                value={item.unitPrice ? formatPrice(item.unitPrice) : "$0.00"}
                                 className="h-7 text-xs bg-gray-100"
                                 readOnly
                               />

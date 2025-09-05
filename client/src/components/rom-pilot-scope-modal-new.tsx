@@ -461,22 +461,23 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
                             <td className="py-2 px-3">
                               <Input
                                 type="text"
-                                value={item.quantity || ""}
+                                value={formatQuantity(item.quantity || "")}
                                 onChange={(e) => {
-                                  const newQuantity = e.target.value;
-                                  console.log('✏️ Simple quantity change:', { newQuantity, itemId: item.id });
+                                  // Remove commas when saving the value
+                                  const cleanValue = e.target.value.replace(/,/g, '');
+                                  console.log('✏️ Simple quantity change:', { newQuantity: cleanValue, itemId: item.id });
                                   
                                   // Update quantity immediately - this is the key fix
-                                  updateLineItem(category, index, 'quantity', newQuantity);
+                                  updateLineItem(category, index, 'quantity', cleanValue);
                                 }}
                                 onBlur={(e) => {
-                                  // Get the current value from the input field, not from state
-                                  const currentQuantity = e.target.value;
+                                  // Get the current value from the input field, remove commas
+                                  const currentQuantity = e.target.value.replace(/,/g, '');
                                   console.log('💾 Saving quantity on blur:', { stateQuantity: item.quantity, inputQuantity: currentQuantity, item });
                                   
                                   // Only save if there's actually a value
                                   if (currentQuantity.trim() !== '') {
-                                    // Update state first with the input value
+                                    // Update state first with the clean value
                                     updateLineItem(category, index, 'quantity', currentQuantity);
                                     
                                     // Create updated item with current input value
@@ -492,7 +493,7 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
                                     console.log('⚠️ Skipping save for empty quantity');
                                   }
                                 }}
-                                className="h-7 text-xs text-center"
+                                className="h-7 text-xs text-center w-20"
                                 placeholder="0"
                               />
                             </td>
@@ -503,31 +504,16 @@ value={(() => {
                                   // Get the correct unit price - prioritize scope item price for accuracy
                                   let price = item.scopeItem?.unitPrice || item.unitPrice || "0";
                                   
-                                  console.log('💰 Unit price display:', { 
-                                    itemId: item.id, 
-                                    scopeItemName: item.scopeItem?.name,
-                                    storedUnitPrice: item.unitPrice,
-                                    scopeItemPrice: item.scopeItem?.unitPrice, 
-                                    finalPrice: price,
-                                    parsedPrice: parseFloat(price),
-                                    formatted: formatCurrency(parseFloat(price))
-                                  });
-                                  
-                                  // Debug the currency formatting
-                                  const parsed = parseFloat(price);
-                                  const formatted = formatCurrency(parsed);
-                                  console.log('🔍 Currency formatting debug:', { price, parsed, formatted });
-                                  
-                                  return formatted;
+                                  return formatCurrency(parseFloat(price));
                                 })()}
-                                className="h-7 text-xs bg-gray-100 text-right"
+                                className="h-7 text-xs bg-gray-100 text-right w-24"
                                 readOnly
                               />
                             </td>
                             <td className="py-2 px-3">
                               <Input
                                 value={formatCurrency(parseFloat(item.totalPrice) || 0)}
-                                className="h-7 text-xs bg-gray-100"
+                                className="h-7 text-xs bg-gray-100 text-right w-28"
                                 readOnly
                               />
                             </td>

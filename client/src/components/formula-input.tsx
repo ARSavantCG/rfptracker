@@ -150,20 +150,9 @@ export function FormulaInput({
       }
     }
     
-    // For non-formula values when NOT editing, only format if it's truly necessary 
-    // Don't auto-format simple decimal values like "1.50" as it can cause rounding issues
-    if (displayValue && !displayValue.startsWith('=') && !isEditing) {
-      const numValue = parseFloat(displayValue);
-      // Only format for quantity types (whole numbers) or if the value needs comma separation
-      if (!isNaN(numValue) && isFinite(numValue) && type === 'quantity') {
-        const formatted = numValue.toLocaleString('en-US', {
-          minimumFractionDigits: 0,
-          maximumFractionDigits: 0  // No decimals for quantities
-        });
-        return formatted;
-      }
-      // For other types (like currency), return original to preserve exact decimal representation
-    }
+    // For non-formula values when NOT editing, don't apply any formatting
+    // Always return the original value to preserve exact decimal representation
+    // This prevents "1.50" from being rounded to "2"
     
     return displayValue;
   };

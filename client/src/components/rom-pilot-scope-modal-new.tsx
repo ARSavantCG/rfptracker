@@ -74,7 +74,8 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
   const { data: scopeItems = [] } = useQuery<ScopeItem[]>({
     queryKey: ["/api/rom-scope-items"],
     enabled: isOpen,
-    staleTime: 1000, // Refresh quickly to get latest updates
+    staleTime: 0, // Always fetch fresh data
+    cacheTime: 0, // Don't cache
   });
 
   // Filter scope items by category
@@ -170,6 +171,8 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
   // Force refresh scope items data when modal opens to get latest updates
   useEffect(() => {
     if (isOpen) {
+      // Force fresh data fetch
+      queryClient.removeQueries({ queryKey: ["/api/rom-scope-items"] });
       queryClient.invalidateQueries({ queryKey: ["/api/rom-scope-items"] });
     }
   }, [isOpen, queryClient]);
@@ -232,12 +235,26 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
       
       // Check for minimum cost if scope item has it enabled
       const scopeItem = updatedItems[index].scopeItem;
+      console.log('🔍 Checking minimum cost for:', {
+        scopeItemName: scopeItem?.name,
+        hasMinimumCost: scopeItem?.hasMinimumCost,
+        minimumCost: scopeItem?.minimumCost,
+        baseTotal,
+        quantity,
+        unitPrice
+      });
+      
       if (scopeItem?.hasMinimumCost && scopeItem.minimumCost) {
         const minimumCost = parseFloat(scopeItem.minimumCost) || 0;
+        console.log(`🔍 Minimum cost check: baseTotal=${baseTotal} vs minimumCost=${minimumCost}`);
         if (baseTotal < minimumCost) {
           baseTotal = minimumCost;
           console.log(`💰 Applied minimum cost: $${minimumCost} (calculated: $${quantity * unitPrice})`);
+        } else {
+          console.log(`💰 Minimum cost not needed: $${baseTotal} >= $${minimumCost}`);
         }
+      } else {
+        console.log(`❌ No minimum cost enabled for this item`);
       }
       
       const tenantPortion = baseTotal * (tenantShare / 100);

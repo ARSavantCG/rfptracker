@@ -603,7 +603,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
     });
     setFileUploadInputs([]);
     setEditingItem(item);
-    setShowAddForm(true);
+    setShowAddForm(false); // Disable top form when using inline editing
   };
 
   const handleDelete = (id: number) => {
@@ -1063,56 +1063,233 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                     {!isCollapsed && (
                       <div className="divide-y">
                     {items.map((item) => (
-                      <div key={item.id} className="p-3 flex justify-between items-center">
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-3">
-                            <h5 className="font-medium text-gray-900">{item.name}</h5>
-                            <span className="text-sm text-gray-500 flex items-center space-x-1">
-                              <span>
-                                ${(() => {
-                                  const result = evaluateFormula(item.unitPrice);
-                                  const displayValue = result.value !== null ? result.value.toFixed(2) : parseFloat(item.unitPrice || "0").toFixed(2);
-                                  return parseFloat(displayValue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                                })()} per {item.unit}
-                                {item.unitPrice.startsWith('=') && (
-                                  <span className="ml-1 text-xs text-blue-600">📊</span>
+                      <div key={item.id}>
+                        {/* Item Display Row */}
+                        <div className="p-3 flex justify-between items-center">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-3">
+                              <h5 className="font-medium text-gray-900">{item.name}</h5>
+                              <span className="text-sm text-gray-500 flex items-center space-x-1">
+                                <span>
+                                  ${(() => {
+                                    const result = evaluateFormula(item.unitPrice);
+                                    const displayValue = result.value !== null ? result.value.toFixed(2) : parseFloat(item.unitPrice || "0").toFixed(2);
+                                    return parseFloat(displayValue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                                  })()} per {item.unit}
+                                  {item.unitPrice.startsWith('=') && (
+                                    <span className="ml-1 text-xs text-blue-600">📊</span>
+                                  )}
+                                </span>
+                                {item.hasMinimumCost && item.minimumCost && (
+                                  <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                                    Min: ${parseFloat(item.minimumCost).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  </span>
+                                )}
+                                {item.attachments && item.attachments.length > 0 && (
+                                  <button
+                                    onClick={() => handleDownloadFile(item.attachments[0].fileName, item.attachments[0].filePath)}
+                                    className="text-blue-600 hover:text-blue-800 transition-colors"
+                                    title={`Download ${item.attachments[0].fileName}`}
+                                  >
+                                    <FileText className="h-4 w-4" />
+                                  </button>
                                 )}
                               </span>
-                              {item.attachments && item.attachments.length > 0 && (
-                                <button
-                                  onClick={() => handleDownloadFile(item.attachments[0].fileName, item.attachments[0].filePath)}
-                                  className="text-blue-600 hover:text-blue-800 transition-colors"
-                                  title={`Download ${item.attachments[0].fileName}`}
-                                >
-                                  <FileText className="h-4 w-4" />
-                                </button>
-                              )}
-                            </span>
+                            </div>
+                            {item.description && (
+                              <p className="text-sm text-gray-600 mt-1">{item.description}</p>
+                            )}
                           </div>
-                          {item.description && (
-                            <p className="text-sm text-gray-600 mt-1">{item.description}</p>
-                          )}
-                        </div>
-                        
-                        <div className="flex space-x-2 ml-4">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEdit(item)}
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                          {canDeleteRomScope && (
+                          
+                          <div className="flex space-x-2 ml-4">
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => handleDelete(item.id)}
-                              className="text-red-600 hover:text-red-700"
+                              onClick={() => {
+                                if (editingItem?.id === item.id) {
+                                  // Cancel editing
+                                  setEditingItem(null);
+                                  setShowAddForm(false);
+                                } else {
+                                  // Start editing this item
+                                  handleEdit(item);
+                                }
+                              }}
                             >
-                              <Trash2 className="h-4 w-4" />
+                              {editingItem?.id === item.id ? (
+                                <X className="h-4 w-4" />
+                              ) : (
+                                <Edit2 className="h-4 w-4" />
+                              )}
                             </Button>
-                          )}
+                            {canDeleteRomScope && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDelete(item.id)}
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
                         </div>
+
+                        {/* Inline Edit Form - appears right below the item when editing */}
+                        {editingItem?.id === item.id && (
+                          <div className="border-t border-l-4 border-l-blue-500 bg-blue-50 p-4 m-3 rounded-md">
+                            <form onSubmit={handleSubmit} className="space-y-4">
+                              <div className="flex items-center justify-between mb-3">
+                                <h4 className="text-lg font-semibold text-gray-900">Edit: {item.name}</h4>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    setEditingItem(null);
+                                    setShowAddForm(false);
+                                    resetForm();
+                                  }}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                  <Label htmlFor="category">Category *</Label>
+                                  <div className="relative">
+                                    <select
+                                      value={formData.category}
+                                      onChange={(e) => setFormData({...formData, category: e.target.value})}
+                                      className="w-full h-10 px-3 py-2 text-sm bg-background border border-input rounded-md appearance-none pr-8 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                                    >
+                                      <option value="">Select category</option>
+                                      {categories.map((cat) => (
+                                        <option key={cat} value={cat}>{cat}</option>
+                                      ))}
+                                    </select>
+                                    <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                                  </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                  <Label htmlFor="name">Name *</Label>
+                                  <Input
+                                    id="name"
+                                    value={formData.name}
+                                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                                    placeholder="Enter scope item name"
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="space-y-2">
+                                <Label htmlFor="description">Description</Label>
+                                <Textarea
+                                  id="description"
+                                  value={formData.description}
+                                  onChange={(e) => setFormData({...formData, description: e.target.value})}
+                                  placeholder="Enter description"
+                                  rows={2}
+                                />
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                  <Label htmlFor="unit">Unit *</Label>
+                                  <div className="relative">
+                                    <select
+                                      value={formData.unit}
+                                      onChange={(e) => setFormData({...formData, unit: e.target.value})}
+                                      className="w-full h-10 px-3 py-2 text-sm bg-background border border-input rounded-md appearance-none pr-8 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                                    >
+                                      <option value="">Select unit</option>
+                                      {units.map((unit) => (
+                                        <option key={unit} value={unit}>{unit}</option>
+                                      ))}
+                                    </select>
+                                    <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                                  </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                  <Label htmlFor="unitPrice">Unit Price *</Label>
+                                  <div className="relative">
+                                    <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 z-10" />
+                                    <FormulaInput
+                                      value={formData.unitPrice}
+                                      onChange={(rawValue, evaluatedValue) => {
+                                        setFormData({...formData, unitPrice: rawValue.toString()});
+                                      }}
+                                      placeholder="0.00 or =15000*1.15"
+                                      className="pl-10"
+                                      decimalPlaces={2}
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Minimum Cost Section */}
+                              <div className="space-y-4">
+                                <div className="flex items-center space-x-2">
+                                  <input
+                                    type="checkbox"
+                                    id="hasMinimumCost"
+                                    checked={formData.hasMinimumCost}
+                                    onChange={(e) => setFormData({...formData, hasMinimumCost: e.target.checked})}
+                                    className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                  />
+                                  <Label htmlFor="hasMinimumCost" className="text-sm font-medium text-gray-700">
+                                    Enable minimum cost (e.g., architectural services minimum $15,000)
+                                  </Label>
+                                </div>
+                                
+                                {formData.hasMinimumCost && (
+                                  <div className="space-y-2">
+                                    <Label htmlFor="minimumCost">Minimum Cost *</Label>
+                                    <div className="relative">
+                                      <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 z-10" />
+                                      <FormulaInput
+                                        value={formData.minimumCost}
+                                        onChange={(rawValue, evaluatedValue) => {
+                                          setFormData({...formData, minimumCost: rawValue.toString()});
+                                        }}
+                                        placeholder="15000.00"
+                                        className="pl-10"
+                                        decimalPlaces={2}
+                                      />
+                                    </div>
+                                    <p className="text-xs text-gray-500">
+                                      Total cost will never be less than this amount, regardless of quantity × unit price
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="flex justify-end space-x-2 pt-4 border-t">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  onClick={() => {
+                                    setEditingItem(null);
+                                    setShowAddForm(false);
+                                    resetForm();
+                                  }}
+                                >
+                                  Cancel
+                                </Button>
+                                <Button
+                                  type="submit"
+                                  disabled={updateMutation.isPending}
+                                  className="bg-blue-600 hover:bg-blue-700"
+                                >
+                                  {updateMutation.isPending ? "Saving..." : "Save Changes"}
+                                </Button>
+                              </div>
+                            </form>
+                          </div>
+                        )}
                       </div>
                     ))}
                       </div>

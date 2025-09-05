@@ -901,6 +901,7 @@ export type Permission =
   | 'contacts.create' | 'contacts.edit' | 'contacts.delete' | 'contacts.view'
   | 'reports.view' | 'reports.generate'
   | 'users.create' | 'users.edit' | 'users.delete' | 'users.view'
+  | 'rom.create' | 'rom.edit' | 'rom.delete' | 'rom.view'
   | 'admin.access';
 
 export type UserRole = 'admin' | 'manager' | 'user';
@@ -912,19 +913,22 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'contacts.create', 'contacts.edit', 'contacts.delete', 'contacts.view',
     'reports.view', 'reports.generate',
     'users.create', 'users.edit', 'users.delete', 'users.view',
+    'rom.create', 'rom.edit', 'rom.delete', 'rom.view',
     'admin.access'
   ],
   manager: [
     'rfp.create', 'rfp.edit', 'rfp.view',
     'properties.create', 'properties.edit', 'properties.view',
     'contacts.create', 'contacts.edit', 'contacts.view',
-    'reports.view', 'reports.generate'
+    'reports.view', 'reports.generate',
+    'rom.create', 'rom.edit', 'rom.delete', 'rom.view'
   ],
   user: [
     'rfp.view',
     'properties.view',
     'contacts.view',
-    'reports.view'
+    'reports.view',
+    'rom.view'
   ]
 };
 

@@ -10,6 +10,8 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
+import fs from "fs";
+import path from "path";
 import { storage } from "./storage";
 import { db } from "./db";
 import jwt from "jsonwebtoken";
@@ -4558,6 +4560,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ message: "Failed to delete scope item" });
+    }
+  });
+
+  // ROM Scope Items file download endpoint
+  app.get("/api/rom-scope-items/download/:fileName", async (req, res) => {
+    try {
+      const { fileName } = req.params;
+      const { path: filePath } = req.query;
+      
+      if (!fileName || !filePath) {
+        return res.status(400).json({ message: "File name and path are required" });
+      }
+
+      const fullPath = path.join(process.cwd(), filePath as string);
+      
+      // Check if file exists
+      if (!fs.existsSync(fullPath)) {
+        return res.status(404).json({ message: "File not found" });
+      }
+
+      // Set appropriate headers for download
+      res.setHeader('Content-Disposition', `attachment; filename="${decodeURIComponent(fileName)}"`);
+      res.setHeader('Content-Type', 'application/octet-stream');
+      
+      // Stream the file
+      const fileStream = fs.createReadStream(fullPath);
+      fileStream.pipe(res);
+      
+    } catch (error) {
+      console.error("ROM scope items file download error:", error);
+      res.status(500).json({ message: "Failed to download file" });
     }
   });
 

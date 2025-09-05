@@ -72,6 +72,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
   });
 
   const [fileUploadInputs, setFileUploadInputs] = useState<File[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
 
   // Fetch scope items
   const { data: scopeItems = [], isLoading } = useQuery<RomScopeItem[]>({
@@ -98,6 +99,30 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
     }
   };
 
+  // Drag and drop handlers
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    
+    const files = e.dataTransfer.files;
+    if (files) {
+      handleFileSelect(files);
+    }
+  };
+
   const removeFileInput = (index: number) => {
     setFileUploadInputs(prev => prev.filter((_, i) => i !== index));
   };
@@ -107,6 +132,16 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
       ...prev,
       attachments: prev.attachments.filter(file => file.id !== fileId)
     }));
+  };
+
+  // Download existing file
+  const handleDownloadFile = (fileName: string, filePath: string) => {
+    const link = document.createElement('a');
+    link.href = `/api/rom-scope-items/download/${encodeURIComponent(fileName)}?path=${encodeURIComponent(filePath)}`;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   // Create/Update mutations
@@ -448,9 +483,18 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                 <div className="space-y-4 pt-4 border-t">
                   <div className="space-y-2">
                     <Label htmlFor="attachments">Attachments</Label>
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+                    <div 
+                      className={`border-2 border-dashed rounded-lg p-4 transition-colors ${
+                        isDragging 
+                          ? 'border-blue-500 bg-blue-50' 
+                          : 'border-gray-300 hover:border-gray-400'
+                      }`}
+                      onDragOver={handleDragOver}
+                      onDragLeave={handleDragLeave}
+                      onDrop={handleDrop}
+                    >
                       <div className="text-center">
-                        <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                        <Upload className={`h-8 w-8 mx-auto mb-2 ${isDragging ? 'text-blue-500' : 'text-gray-400'}`} />
                         <input
                           type="file"
                           multiple
@@ -478,9 +522,21 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                       <p className="text-sm font-medium">Files to upload:</p>
                       {fileUploadInputs.map((file, index) => (
                         <div key={index} className="flex items-center justify-between bg-blue-50 p-2 rounded">
-                          <div className="flex items-center space-x-2">
+                          <div className="flex items-center space-x-2 flex-1">
                             <FileText className="h-4 w-4 text-blue-600" />
-                            <span className="text-sm">{file.name}</span>
+                            <input
+                              type="text"
+                              value={file.name}
+                              onChange={(e) => {
+                                const newFiles = [...fileUploadInputs];
+                                // Create a new file with the new name
+                                const newFile = new File([file], e.target.value, { type: file.type });
+                                newFiles[index] = newFile;
+                                setFileUploadInputs(newFiles);
+                              }}
+                              className="text-sm bg-transparent border-none outline-none flex-1"
+                              placeholder="Enter file name"
+                            />
                             <span className="text-xs text-gray-500">
                               ({(file.size / 1024).toFixed(1)} KB)
                             </span>
@@ -511,14 +567,25 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                               (uploaded {new Date(file.uploadedAt).toLocaleDateString()})
                             </span>
                           </div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeExistingFile(file.id)}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
+                          <div className="flex items-center space-x-1">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDownloadFile(file.fileName, file.filePath)}
+                              title="Download file"
+                            >
+                              <i className="fas fa-download h-3 w-3"></i>
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeExistingFile(file.id)}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
                       ))}
                     </div>

@@ -803,6 +803,7 @@ export const romScopeItems = pgTable("rom_scope_items", {
   source: text("source"), // Who provided the price
   lastUpdated: timestamp("last_updated"), // When the price was last updated
   isActive: boolean("is_active").default(true),
+  includeByDefault: boolean("include_by_default").default(false), // Auto-include in new ROMs
   attachments: json("attachments").$type<RfpFile[]>().default([]),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

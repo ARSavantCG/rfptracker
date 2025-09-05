@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 // Removed Select import - using native HTML selects for consistency
 import { Trash2, Plus, Calculator, Save, ChevronUp, ChevronDown, GripVertical } from "lucide-react";
+import { FormulaInput } from "@/components/formula-input";
 import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -401,32 +402,27 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
                               </div>
                             </td>
                             <td className="py-2 px-3">
-                              <Input
-                                type="text"
-                                value={item.quantity ? formatQuantity(item.quantity) : ""}
-                                onChange={(e) => {
-                                  const value = e.target.value.replace(/,/g, '');
-                                  updateLineItem(category, index, 'quantity', value);
-                                }}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Tab' && !e.shiftKey) {
-                                    e.preventDefault();
-                                    // Focus next input (notes)
-                                    const nextInput = document.querySelector(`input[class*="h-7 text-xs"]:nth-of-type(${index * 2 + 2})`) as HTMLInputElement;
-                                    if (nextInput) {
-                                      nextInput.focus();
-                                      nextInput.select();
-                                    }
-                                  } else if (e.key === 'Tab' && e.shiftKey) {
-                                    e.preventDefault();
-                                    // Focus previous select (scope item)
-                                    const prevSelect = document.querySelector(`select:nth-of-type(${index + 1})`) as HTMLSelectElement;
-                                    if (prevSelect) {
-                                      prevSelect.focus();
+                              <FormulaInput
+                                value={item.quantity || ""}
+                                onChange={(value, evaluatedValue) => {
+                                  // Use evaluatedValue for calculations, but store the raw value
+                                  const quantityValue = evaluatedValue || parseFloat(String(value)) || 0;
+                                  updateLineItem(category, index, 'quantity', String(value));
+                                  
+                                  // Auto-calculate total if unit price exists
+                                  if (evaluatedValue && item.unitPrice) {
+                                    const unitPrice = parseFloat(item.unitPrice);
+                                    if (!isNaN(unitPrice)) {
+                                      const tenantShare = item.tenantShare || 100;
+                                      const baseTotal = evaluatedValue * unitPrice;
+                                      const tenantPortion = baseTotal * (tenantShare / 100);
+                                      updateLineItem(category, index, 'totalPrice', tenantPortion.toString());
                                     }
                                   }
                                 }}
                                 className="h-7 text-xs"
+                                type="quantity"
+                                decimalPlaces={0}
                                 placeholder="0"
                               />
                             </td>
@@ -555,7 +551,7 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
             <Calculator className="h-5 w-5 text-blue-600" />
-            <span>Manage ROM Scope - {romPilotName} ✅ [Fixed]</span>
+            <span>Manage ROM Scope - {romPilotName}</span>
           </DialogTitle>
         </DialogHeader>
 

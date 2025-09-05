@@ -153,15 +153,15 @@ export function FormulaInput({
       }
     }
     
-    // For non-formula values, format numbers properly
-    if (displayValue && !displayValue.startsWith('=')) {
+    // For non-formula values when NOT editing, format numbers properly
+    if (displayValue && !displayValue.startsWith('=') && !isEditing) {
       const numValue = parseFloat(displayValue);
-      console.log('🔢 Number formatting:', { displayValue, numValue, isNaN: isNaN(numValue), isFinite: isFinite(numValue) });
+      console.log('🔢 Number formatting:', { displayValue, numValue, isNaN: isNaN(numValue), isFinite: isFinite(numValue), isEditing });
       if (!isNaN(numValue) && isFinite(numValue)) {
         const formatted = type === 'quantity' 
           ? numValue.toLocaleString('en-US', {
               minimumFractionDigits: 0,
-              maximumFractionDigits: 2
+              maximumFractionDigits: 0  // No decimals for quantities
             })
           : numValue.toLocaleString('en-US', {
               minimumFractionDigits: decimalPlaces,

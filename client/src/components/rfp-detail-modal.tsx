@@ -20,6 +20,7 @@ interface RfpDetailModalProps {
 export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editStatus, setEditStatus] = useState("");
+  const [editWorkflowPhase, setEditWorkflowPhase] = useState("");
   const [showInvitationModal, setShowInvitationModal] = useState(false);
   const [isEditingDates, setIsEditingDates] = useState(false);
   const [editCompletedDate, setEditCompletedDate] = useState("");
@@ -41,11 +42,9 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
   });
 
   const updateStatusMutation = useMutation({
-    mutationFn: async (newStatus: string) => {
+    mutationFn: async (updates: { status?: string; workflowPhase?: string }) => {
       if (!rfp) return;
-      const response = await apiRequest("PATCH", `/api/rfp-requests/${rfp.id}`, {
-        status: newStatus,
-      });
+      const response = await apiRequest(`/api/rfp-requests/${rfp.id}`, "PATCH", updates);
       return response.json();
     },
     onSuccess: () => {
@@ -219,16 +218,45 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
     }
   };
 
+  // Define available workflow phases
+  const workflowPhases = [
+    { key: "rfp-entry", label: "RFP Entry" },
+    { key: "rfp-validation", label: "RFP Validation" },
+    { key: "invitation-to-bid", label: "Invitation to Bid" },
+    { key: "bid-collection", label: "Bid Collection" },
+    { key: "evaluation", label: "Evaluation" },
+    { key: "publish", label: "Publish" },
+  ];
+
+  const statusOptions = [
+    "received",
+    "in-progress", 
+    "completed",
+    "on-hold",
+    "archived"
+  ];
+
   const handleStatusUpdate = () => {
-    if (editStatus && editStatus !== rfp.status) {
-      updateStatusMutation.mutate(editStatus);
+    const updates: { status?: string; workflowPhase?: string } = {};
+    
+    if (editStatus && editStatus !== rfp?.status) {
+      updates.status = editStatus;
+    }
+    
+    if (editWorkflowPhase && editWorkflowPhase !== rfp?.workflowPhase) {
+      updates.workflowPhase = editWorkflowPhase;
+    }
+    
+    if (Object.keys(updates).length > 0) {
+      updateStatusMutation.mutate(updates);
     } else {
       setIsEditing(false);
     }
   };
 
   const startEditingStatus = () => {
-    setEditStatus(rfp.status);
+    setEditStatus(rfp?.status || "");
+    setEditWorkflowPhase(rfp?.workflowPhase || "");
     setIsEditing(true);
   };
 
@@ -358,6 +386,53 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
                         <span className="text-blue-700 font-medium">Timeline:</span>
                         <span className="ml-2 text-blue-900">{rfp.timelineRequirements}</span>
                       </div>
+                    )}
+                    
+                    {/* Status and Workflow Phase Fields - Admin Only */}
+                    {isAdmin && (
+                      <>
+                        <div className="flex items-center gap-2">
+                          <span className="text-blue-700 font-medium">Status:</span>
+                          {isEditing ? (
+                            <select
+                              value={editStatus}
+                              onChange={(e) => setEditStatus(e.target.value)}
+                              className="px-2 py-1 text-xs border border-gray-300 rounded"
+                            >
+                              {statusOptions.map(status => (
+                                <option key={status} value={status}>
+                                  {status.charAt(0).toUpperCase() + status.slice(1).replace('-', ' ')}
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <span className="text-blue-900">
+                              {rfp.status?.charAt(0).toUpperCase() + rfp.status?.slice(1).replace('-', ' ')}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <span className="text-blue-700 font-medium">Workflow Phase:</span>
+                          {isEditing ? (
+                            <select
+                              value={editWorkflowPhase}
+                              onChange={(e) => setEditWorkflowPhase(e.target.value)}
+                              className="px-2 py-1 text-xs border border-gray-300 rounded"
+                            >
+                              {workflowPhases.map(phase => (
+                                <option key={phase.key} value={phase.key}>
+                                  {phase.label}
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <span className="text-blue-900">
+                              {workflowPhases.find(p => p.key === rfp.workflowPhase)?.label || rfp.workflowPhase}
+                            </span>
+                          )}
+                        </div>
+                      </>
                     )}
                     
                     {/* Always show completion dates for admin users */}
@@ -547,6 +622,14 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
                   </>
                 ) : (
                   <>
+                    {isAdmin && (
+                      <button
+                        onClick={startEditingStatus}
+                        className="px-4 py-2 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-300 rounded-lg hover:bg-blue-100"
+                      >
+                        Update Status
+                      </button>
+                    )}
                     <button
                       onClick={() => handleDownloadAllFiles(rfp.id, rfp.rfpNumber)}
                       className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 flex items-center gap-2"

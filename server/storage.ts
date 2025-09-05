@@ -1538,7 +1538,7 @@ class ExtendedDatabaseStorage extends DatabaseStorage {
           const property = await this.getProperty(parseInt(pilot.property));
           return {
             ...pilot,
-            propertyName: property ? `${property.propertyName} - ${property.buildingName}` : pilot.property
+            propertyName: property ? `${property.propertyName} - Building ${property.building}` : pilot.property
           };
         } catch (error) {
           console.error('Error fetching property for ROM pilot:', error);

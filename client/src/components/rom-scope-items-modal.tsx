@@ -331,7 +331,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
       </head>
       <body>
         <div class="header">
-          <div class="document-title">ROM SCOPE ITEMS LIBRARY</div>
+          <div class="document-title">ROM PILOT SCOPE ITEMS LIBRARY</div>
           <div class="project-title">Bridge Industrial - Construction Cost Management</div>
           <div class="project-title">Generated on ${currentDate}</div>
         </div>
@@ -344,11 +344,12 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
             <table class="category-table">
               <thead>
                 <tr>
-                  <th style="width: 35%;">Item Name</th>
-                  <th style="width: 20%;">Cost per Unit</th>
-                  <th style="width: 15%;">Last Updated</th>
-                  <th style="width: 15%;">Files</th>
-                  <th style="width: 15%;">Source</th>
+                  <th style="width: 30%; text-align: left;">Item Name</th>
+                  <th style="width: 15%; text-align: center;">Cost per Unit</th>
+                  <th style="width: 12%; text-align: center;">Last Updated</th>
+                  <th style="width: 8%; text-align: center;">File(s)</th>
+                  <th style="width: 15%; text-align: center;">Source</th>
+                  <th style="width: 20%; text-align: center;">Notes</th>
                 </tr>
               </thead>
               <tbody>
@@ -356,18 +357,24 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                   const result = evaluateFormula(item.unitPrice);
                   const displayValue = result.value !== null ? result.value.toFixed(2) : parseFloat(item.unitPrice || "0").toFixed(2);
                   const formattedPrice = parseFloat(displayValue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                  const lastUpdated = item.lastUpdated ? new Date(item.lastUpdated).toLocaleDateString() : 'Never';
+                  
+                  // Use created date if no lastUpdated, otherwise use lastUpdated
+                  const lastUpdated = item.lastUpdated ? 
+                    new Date(item.lastUpdated).toLocaleDateString() : 
+                    new Date(item.createdAt).toLocaleDateString();
+                  
                   const hasFiles = item.attachments && item.attachments.length > 0;
                   
                   return `
                     <tr>
                       <td class="item-name">${item.name}</td>
-                      <td class="item-price">$${formattedPrice} per ${item.unit}</td>
-                      <td class="item-date">${lastUpdated}</td>
-                      <td class="${hasFiles ? 'has-file' : 'no-file'}">
-                        ${hasFiles ? `✓ (${item.attachments.length})` : '—'}
+                      <td class="item-price" style="text-align: center;">$${formattedPrice} per ${item.unit}</td>
+                      <td class="item-date" style="text-align: center;">${lastUpdated}</td>
+                      <td class="${hasFiles ? 'has-file' : 'no-file'}" style="text-align: center;">
+                        ${hasFiles ? 'Yes' : 'No'}
                       </td>
-                      <td>${item.source || '—'}</td>
+                      <td style="text-align: center;">${item.source || '—'}</td>
+                      <td style="text-align: center;">${item.description || '—'}</td>
                     </tr>
                   `;
                 }).join('')}

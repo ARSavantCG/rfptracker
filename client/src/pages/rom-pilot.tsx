@@ -258,7 +258,7 @@ export default function RomPilotPage() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Estimate</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-60">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -292,8 +292,8 @@ export default function RomPilotPage() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {format(new Date(pilot.createdAt), "MMM d, yyyy")}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex items-center justify-end space-x-1 min-w-max">
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium min-w-60">
+                      <div className="flex items-center justify-end space-x-1 flex-nowrap">
                         <Button
                           size="sm"
                           variant="outline"
@@ -301,7 +301,7 @@ export default function RomPilotPage() {
                             setSelectedRomPilot(pilot);
                             setScopeModalOpen(true);
                           }}
-                          className="text-xs"
+                          className="text-xs px-2 py-1"
                         >
                           <ListChecks className="h-3 w-3 mr-1" />
                           Scope
@@ -310,7 +310,7 @@ export default function RomPilotPage() {
                           size="sm"
                           variant="outline"
                           onClick={() => generateRomReport(pilot)}
-                          className="text-xs"
+                          className="text-xs px-2 py-1"
                         >
                           <Download className="h-3 w-3 mr-1" />
                           Report
@@ -320,7 +320,7 @@ export default function RomPilotPage() {
                             size="sm"
                             variant="outline"
                             onClick={() => saveRomPilot(pilot.id)}
-                            className="text-xs text-blue-600 hover:text-blue-700"
+                            className="text-xs text-blue-600 hover:text-blue-700 px-2 py-1"
                           >
                             <Save className="h-3 w-3 mr-1" />
                             Save
@@ -331,7 +331,7 @@ export default function RomPilotPage() {
                             size="sm"
                             variant="outline"
                             onClick={() => archiveRomPilot(pilot.id)}
-                            className="text-xs text-orange-600 hover:text-orange-700"
+                            className="text-xs text-orange-600 hover:text-orange-700 px-2 py-1"
                           >
                             <Archive className="h-3 w-3 mr-1" />
                             Archive
@@ -344,7 +344,7 @@ export default function RomPilotPage() {
                             setEditingRomPilot(pilot);
                             setCreateModalOpen(true);
                           }}
-                          className="text-xs"
+                          className="text-xs px-1 py-1"
                         >
                           <Edit className="h-3 w-3" />
                         </Button>
@@ -352,7 +352,7 @@ export default function RomPilotPage() {
                           size="sm"
                           variant="ghost"
                           onClick={() => deleteRomPilot(pilot.id)}
-                          className="text-xs text-red-600 hover:text-red-700"
+                          className="text-xs text-red-600 hover:text-red-700 px-1 py-1"
                         >
                           <Trash2 className="h-3 w-3" />
                         </Button>

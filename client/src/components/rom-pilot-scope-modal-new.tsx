@@ -98,7 +98,7 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
             id: item.id,
             scopeItemId: item.scopeItemId,
             quantity: String(item.quantity || ""), // Ensure string conversion
-            unitPrice: item.unitPrice || "",
+            unitPrice: item.unitPrice || scopeItem?.unitPrice || "", // Use scope item price if stored price is empty
             totalPrice: item.totalPrice || "",
             tenantShare: item.tenantShare || 100, // Default to 100% tenant responsibility
             notes: item.notes || "",
@@ -507,19 +507,14 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
                               <Input
                                 type="text"
 value={(() => {
-                                  // Priority: scopeItem.unitPrice > item.unitPrice > "0"
-                                  let price = "0";
-                                  if (item.scopeItem?.unitPrice) {
-                                    price = item.scopeItem.unitPrice;
-                                  } else if (item.unitPrice) {
-                                    price = item.unitPrice;
-                                  }
+                                  // Get the correct unit price - check the actual stored value first
+                                  let price = item.unitPrice || item.scopeItem?.unitPrice || "0";
                                   
                                   console.log('💰 Unit price display:', { 
                                     itemId: item.id, 
                                     scopeItemName: item.scopeItem?.name,
+                                    storedUnitPrice: item.unitPrice,
                                     scopeItemPrice: item.scopeItem?.unitPrice, 
-                                    itemPrice: item.unitPrice, 
                                     finalPrice: price,
                                     formatted: formatCurrency(parseFloat(price))
                                   });

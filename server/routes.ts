@@ -4977,9 +4977,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
             border-top: 3px solid #e5e7eb;
             padding-top: 20px;
           }
+          .watermark {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-45deg);
+            font-size: 72px;
+            font-weight: bold;
+            color: rgba(59, 88, 152, 0.1);
+            z-index: -1;
+            pointer-events: none;
+            white-space: nowrap;
+            user-select: none;
+          }
+          @media print {
+            .watermark {
+              color: rgba(59, 88, 152, 0.15) !important;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+          }
         </style>
       </head>
       <body>
+        <div class="watermark">ROM PILOT</div>
         <div class="no-print">
           <p>ROM Budget Report - Use your browser's print function to save as PDF or print this report</p>
         </div>

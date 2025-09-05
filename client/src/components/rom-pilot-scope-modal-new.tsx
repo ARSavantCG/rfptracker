@@ -270,14 +270,6 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
     return calculateCategoryTotal(tenantImprovements) + calculateCategoryTotal(designSoftCosts);
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
 
   const formatQuantity = (quantity: string) => {
     const num = parseFloat(quantity);
@@ -517,9 +509,16 @@ value={(() => {
                                     storedUnitPrice: item.unitPrice,
                                     scopeItemPrice: item.scopeItem?.unitPrice, 
                                     finalPrice: price,
+                                    parsedPrice: parseFloat(price),
                                     formatted: formatCurrency(parseFloat(price))
                                   });
-                                  return formatCurrency(parseFloat(price));
+                                  
+                                  // Debug the currency formatting
+                                  const parsed = parseFloat(price);
+                                  const formatted = formatCurrency(parsed);
+                                  console.log('🔍 Currency formatting debug:', { price, parsed, formatted });
+                                  
+                                  return formatted;
                                 })()}
                                 className="h-7 text-xs bg-gray-100 text-right"
                                 readOnly

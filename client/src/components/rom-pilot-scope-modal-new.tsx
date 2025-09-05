@@ -74,6 +74,7 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
   const { data: scopeItems = [] } = useQuery<ScopeItem[]>({
     queryKey: ["/api/rom-scope-items"],
     enabled: isOpen,
+    staleTime: 1000, // Refresh quickly to get latest updates
   });
 
   // Filter scope items by category
@@ -166,6 +167,12 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
     }
   }, [isOpen, existingLineItems, scopeItems, isInitialized]);
 
+  // Force refresh scope items data when modal opens to get latest updates
+  useEffect(() => {
+    if (isOpen) {
+      queryClient.invalidateQueries({ queryKey: ["/api/rom-scope-items"] });
+    }
+  }, [isOpen, queryClient]);
 
   const addLineItem = (category: 'tenant-improvements' | 'design-soft-costs') => {
     const newItem: LineItem = {
@@ -205,7 +212,12 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
       if (scopeItem) {
         updatedItems[index].unitPrice = scopeItem.unitPrice;
         updatedItems[index].scopeItem = scopeItem;
-        console.log('🔄 Updated scope item data:', { scopeItemName: scopeItem.name, unitPrice: scopeItem.unitPrice });
+        console.log('🔄 Updated scope item data:', { 
+          scopeItemName: scopeItem.name, 
+          unitPrice: scopeItem.unitPrice,
+          hasMinimumCost: scopeItem.hasMinimumCost,
+          minimumCost: scopeItem.minimumCost 
+        });
       }
     }
 

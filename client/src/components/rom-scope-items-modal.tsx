@@ -86,6 +86,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
   const { data: scopeItems = [], isLoading } = useQuery<RomScopeItem[]>({
     queryKey: ["/api/rom-scope-items"],
     enabled: isOpen,
+    staleTime: 1000, // Quick refresh for latest data
   });
 
   // Categories for organization

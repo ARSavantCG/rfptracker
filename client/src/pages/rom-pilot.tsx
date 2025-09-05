@@ -316,14 +316,6 @@ export default function RomPilotPage() {
                         >
                           <ListChecks className="h-3 w-3" />
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => generateRomReport(pilot)}
-                          className="text-xs px-1.5 py-0.5 h-6"
-                        >
-                          <Download className="h-3 w-3" />
-                        </Button>
                         {pilot.status === 'draft' && (
                           <Button
                             size="sm"
@@ -344,6 +336,14 @@ export default function RomPilotPage() {
                             <Archive className="h-3 w-3" />
                           </Button>
                         )}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => generateRomReport(pilot)}
+                          className="text-xs px-1.5 py-0.5 h-6"
+                        >
+                          <Download className="h-3 w-3" />
+                        </Button>
                         <Button
                           size="sm"
                           variant="ghost"

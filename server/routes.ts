@@ -4849,13 +4849,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     };
     
     const formatCurrency = (amount: number) => {
-      // Show more precision for values under $1
-      const fractionDigits = amount < 1 ? 3 : 2;
+      // Use standard 2 decimal places for all currency amounts
       return new Intl.NumberFormat('en-US', {
         style: 'currency',
         currency: 'USD',
-        minimumFractionDigits: fractionDigits,
-        maximumFractionDigits: fractionDigits,
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
       }).format(amount);
     };
     

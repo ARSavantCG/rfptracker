@@ -98,7 +98,7 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
           const lineItem: LineItem = {
             id: item.id,
             scopeItemId: item.scopeItemId,
-            quantity: item.quantity?.toString() || "",
+            quantity: String(item.quantity || ""), // Ensure string conversion
             unitPrice: item.unitPrice || "",
             totalPrice: item.totalPrice || "",
             tenantShare: item.tenantShare || 100, // Default to 100% tenant responsibility
@@ -106,6 +106,8 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
             category: item.category || 'tenant-improvements',
             scopeItem: scopeItem,
           };
+          
+          console.log('📥 Loading line item:', { id: item.id, quantity: item.quantity, quantityString: String(item.quantity), name: scopeItem?.name });
           
           if (lineItem.category === 'tenant-improvements') {
             tenantItems.push(lineItem);

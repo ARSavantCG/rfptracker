@@ -63,6 +63,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
     unitPrice: "",
     source: "",
     lastUpdated: "",
+    includeByDefault: false,
     attachments: [] as Array<{
       id: string;
       fileName: string;
@@ -533,6 +534,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
       unitPrice: "",
       source: "",
       lastUpdated: "",
+      includeByDefault: false,
       attachments: [],
     });
     setFileUploadInputs([]);
@@ -576,6 +578,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
       unitPrice: item.unitPrice,
       source: item.source || "",
       lastUpdated: item.lastUpdated ? new Date(item.lastUpdated).toISOString().split('T')[0] : "",
+      includeByDefault: (item as any).includeByDefault || false,
       attachments: item.attachments || [],
     });
     setFileUploadInputs([]);
@@ -712,6 +715,24 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                       }}
                       placeholder="e.g., ABC Construction, Internal Estimate"
                     />
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="includeByDefault"
+                        checked={formData.includeByDefault}
+                        onChange={(e) => setFormData({...formData, includeByDefault: e.target.checked})}
+                        className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <Label htmlFor="includeByDefault" className="text-sm font-medium text-gray-700">
+                        Include by default in ROMs and RFP Evaluations
+                      </Label>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      When checked, this item will automatically be added to new ROM pilots and RFP evaluations
+                    </p>
                   </div>
 
                   <div className="space-y-2">

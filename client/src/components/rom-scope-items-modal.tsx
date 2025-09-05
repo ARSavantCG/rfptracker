@@ -25,6 +25,8 @@ interface RomScopeItem {
   description: string | null;
   unit: string;
   unitPrice: string;
+  minimumCost?: string | null;
+  hasMinimumCost?: boolean | null;
   source: string | null;
   lastUpdated: string | null;
   isActive: boolean;
@@ -61,6 +63,8 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
     description: "",
     unit: "",
     unitPrice: "",
+    minimumCost: "",
+    hasMinimumCost: false,
     source: "",
     lastUpdated: "",
     includeByDefault: false,
@@ -532,6 +536,8 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
       description: "",
       unit: "",
       unitPrice: "",
+      minimumCost: "",
+      hasMinimumCost: false,
       source: "",
       lastUpdated: "",
       includeByDefault: false,
@@ -555,10 +561,22 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
       return;
     }
 
+    // Validate minimum cost if enabled
+    if (formData.hasMinimumCost && !formData.minimumCost) {
+      toast({
+        title: "Error",
+        description: "Please enter a minimum cost or disable the minimum cost option",
+        variant: "destructive",
+        duration: 6000,
+      });
+      return;
+    }
+
     // For formula inputs, we store the raw value (which could be a formula or a number)
     const submitData = {
       ...formData,
       unitPrice: formData.unitPrice, // Keep the raw value (formula or number)
+      minimumCost: formData.hasMinimumCost ? formData.minimumCost : null,
       lastUpdated: new Date(), // Always set to current date when saving
     };
 
@@ -576,6 +594,8 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
       description: item.description || "",
       unit: item.unit,
       unitPrice: item.unitPrice,
+      minimumCost: item.minimumCost || "",
+      hasMinimumCost: item.hasMinimumCost || false,
       source: item.source || "",
       lastUpdated: item.lastUpdated ? new Date(item.lastUpdated).toISOString().split('T')[0] : "",
       includeByDefault: (item as any).includeByDefault || false,
@@ -685,15 +705,51 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                       <FormulaInput
                         value={formData.unitPrice}
                         onChange={(rawValue, evaluatedValue) => {
-                          setFormData({...formData, unitPrice: rawValue});
+                          setFormData({...formData, unitPrice: rawValue.toString()});
                         }}
                         placeholder="0.00 or =15000*1.15"
                         className="pl-10"
                         decimalPlaces={2}
-                        type="currency"
                       />
                     </div>
                   </div>
+                </div>
+
+                {/* Minimum Cost Section */}
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="hasMinimumCost"
+                      checked={formData.hasMinimumCost}
+                      onChange={(e) => setFormData({...formData, hasMinimumCost: e.target.checked})}
+                      className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <Label htmlFor="hasMinimumCost" className="text-sm font-medium text-gray-700">
+                      Enable minimum cost (e.g., architectural services minimum $15,000)
+                    </Label>
+                  </div>
+                  
+                  {formData.hasMinimumCost && (
+                    <div className="space-y-2">
+                      <Label htmlFor="minimumCost">Minimum Cost *</Label>
+                      <div className="relative">
+                        <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 z-10" />
+                        <FormulaInput
+                          value={formData.minimumCost}
+                          onChange={(rawValue, evaluatedValue) => {
+                            setFormData({...formData, minimumCost: rawValue.toString()});
+                          }}
+                          placeholder="15000.00"
+                          className="pl-10"
+                          decimalPlaces={2}
+                        />
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        Total cost will never be less than this amount, regardless of quantity × unit price
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">

@@ -801,6 +801,8 @@ export const romScopeItems = pgTable("rom_scope_items", {
   description: text("description"),
   unit: text("unit").notNull(), // "sf", "lf", "ea", etc.
   unitPrice: text("unit_price").notNull(),
+  minimumCost: text("minimum_cost"), // Minimum total cost regardless of quantity
+  hasMinimumCost: boolean("has_minimum_cost").default(false), // Enable/disable minimum cost logic
   category: text("category").notNull(), // "office", "warehouse", "general", etc.
   source: text("source"), // Who provided the price
   lastUpdated: timestamp("last_updated"), // When the price was last updated

@@ -45,6 +45,8 @@ interface ScopeItem {
   description: string;
   unit: string;
   unitPrice: string;
+  minimumCost?: string;
+  hasMinimumCost?: boolean;
   category: string;
 }
 
@@ -212,7 +214,20 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
       const quantity = parseFloat(field === 'quantity' ? value.toString() : updatedItems[index].quantity) || 0;
       const unitPrice = parseFloat(field === 'unitPrice' ? value.toString() : updatedItems[index].unitPrice) || 0;
       const tenantShare = parseFloat(field === 'tenantShare' ? value.toString() : updatedItems[index].tenantShare.toString()) || 100;
-      const baseTotal = quantity * unitPrice;
+      
+      // Calculate base total
+      let baseTotal = quantity * unitPrice;
+      
+      // Check for minimum cost if scope item has it enabled
+      const scopeItem = updatedItems[index].scopeItem;
+      if (scopeItem?.hasMinimumCost && scopeItem.minimumCost) {
+        const minimumCost = parseFloat(scopeItem.minimumCost) || 0;
+        if (baseTotal < minimumCost) {
+          baseTotal = minimumCost;
+          console.log(`💰 Applied minimum cost: $${minimumCost} (calculated: $${quantity * unitPrice})`);
+        }
+      }
+      
       const tenantPortion = baseTotal * (tenantShare / 100);
       updatedItems[index].totalPrice = tenantPortion.toString();
     }

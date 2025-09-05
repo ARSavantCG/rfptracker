@@ -489,7 +489,7 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
                 // Render parent RFP
                 <tr 
                   key={parentRfp.id} 
-                  className={`hover:bg-gray-50 transition-colors ${
+                  className={`hover:bg-gray-50 transition-colors cursor-pointer ${
                     selectedRfpId === parentRfp.id ? 'bg-blue-50 border-l-4 border-blue-500' : 'border-l-4 border-transparent'
                   }`}
                   style={{
@@ -497,10 +497,10 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
                     minHeight: '48px',
                     maxHeight: '48px'
                   }}
+                  onClick={() => onSelectRfp?.(parentRfp)}
                 >
                   <td 
-                    className="px-3 py-3 whitespace-nowrap text-xs font-medium text-gray-900 cursor-pointer"
-                    onClick={() => onSelectRfp?.(parentRfp)}
+                    className="px-3 py-3 whitespace-nowrap text-xs font-medium text-gray-900"
                   >
                     <div className="flex items-center">
                       {(parentRfp.counterOffers.length > 0 || parentRfp.options.length > 0) && (
@@ -574,20 +574,17 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
                     </div>
                   </td>
                   <td 
-                    className="px-3 py-3 whitespace-nowrap text-xs text-gray-900 cursor-pointer"
-                    onClick={() => onSelectRfp?.(parentRfp)}
+                    className="px-3 py-3 whitespace-nowrap text-xs text-gray-900"
                   >
                     {parentRfp.tenantName}
                   </td>
                   <td 
-                    className="px-3 py-3 whitespace-nowrap text-xs text-gray-900 cursor-pointer"
-                    onClick={() => onSelectRfp?.(parentRfp)}
+                    className="px-3 py-3 whitespace-nowrap text-xs text-gray-900"
                   >
                     {getPropertyDisplayName(parentRfp.property)}
                   </td>
                   <td 
-                    className="px-3 py-3 whitespace-nowrap cursor-pointer"
-                    onClick={() => onSelectRfp?.(parentRfp)}
+                    className="px-3 py-3 whitespace-nowrap"
                   >
                     <span
                       className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
@@ -622,20 +619,17 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
                     </span>
                   </td>
                   <td 
-                    className="px-3 py-3 whitespace-nowrap text-xs text-gray-500 cursor-pointer"
-                    onClick={() => onSelectRfp?.(parentRfp)}
+                    className="px-3 py-3 whitespace-nowrap text-xs text-gray-500"
                   >
                     {formatDateForDisplay(parentRfp.receivedOn)}
                   </td>
                   <td 
-                    className="px-3 py-3 whitespace-nowrap text-xs text-gray-500 cursor-pointer"
-                    onClick={() => onSelectRfp?.(parentRfp)}
+                    className="px-3 py-3 whitespace-nowrap text-xs text-gray-500"
                   >
                     {parentRfp.internalDueDate ? formatDateForDisplay(parentRfp.internalDueDate) : '—'}
                   </td>
                   <td 
-                    className="px-3 py-3 whitespace-nowrap text-xs text-gray-500 cursor-pointer"
-                    onClick={() => onSelectRfp?.(parentRfp)}
+                    className="px-3 py-3 whitespace-nowrap text-xs text-gray-500"
                   >
                     <div className="flex items-center space-x-1">
                       <i className="fas fa-paperclip text-gray-400 text-xs"></i>

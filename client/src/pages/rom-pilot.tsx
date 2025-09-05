@@ -224,7 +224,7 @@ export default function RomPilotPage() {
 
         {/* ROM Pilots Table */}
         <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto min-w-full">
           {isLoading ? (
             <div className="flex justify-center items-center py-12">
               <div className="text-center">
@@ -258,7 +258,7 @@ export default function RomPilotPage() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Estimate</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-60">Actions</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-80">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -292,7 +292,7 @@ export default function RomPilotPage() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {format(new Date(pilot.createdAt), "MMM d, yyyy")}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium min-w-60">
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium min-w-80">
                       <div className="flex items-center justify-end space-x-1 flex-nowrap">
                         <Button
                           size="sm"

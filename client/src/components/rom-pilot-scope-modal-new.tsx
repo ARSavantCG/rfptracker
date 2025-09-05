@@ -145,11 +145,14 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
       }
     }
 
-    // Recalculate total when quantity or unit price changes
-    if (field === 'quantity' || field === 'unitPrice') {
+    // Recalculate total when quantity, unit price, or tenant share changes
+    if (field === 'quantity' || field === 'unitPrice' || field === 'tenantShare') {
       const quantity = parseFloat(field === 'quantity' ? value.toString() : updatedItems[index].quantity) || 0;
       const unitPrice = parseFloat(field === 'unitPrice' ? value.toString() : updatedItems[index].unitPrice) || 0;
-      updatedItems[index].totalPrice = (quantity * unitPrice).toString();
+      const tenantShare = parseFloat(field === 'tenantShare' ? value.toString() : updatedItems[index].tenantShare.toString()) || 100;
+      const baseTotal = quantity * unitPrice;
+      const tenantPortion = baseTotal * (tenantShare / 100);
+      updatedItems[index].totalPrice = tenantPortion.toString();
     }
 
     setItems(updatedItems);
@@ -196,6 +199,7 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
 
   const calculateCategoryTotal = (items: LineItem[]) => {
     return items.reduce((sum, item) => {
+      // Total price already includes tenant share calculation
       return sum + (parseFloat(item.totalPrice) || 0);
     }, 0);
   };
@@ -240,7 +244,33 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
     setDesignSoftCosts(reorderedItems);
   };
 
-  // Save line items mutation
+  // Individual line item save mutation
+  const saveIndividualLineItem = useMutation({
+    mutationFn: async (lineItem: LineItem) => {
+      console.log("Saving individual ROM line item:", { romPilotId, lineItem });
+      return await apiRequest("/api/rom-pilots/" + romPilotId + "/line-items/individual", "POST", { lineItem });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success", 
+        description: "Line item saved successfully",
+        duration: 3000,
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/rom-pilots/${romPilotId}/line-items`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/rom-pilots"] });
+    },
+    onError: (error) => {
+      console.error("Failed to save individual line item:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save line item",
+        variant: "destructive",
+        duration: 4000,
+      });
+    },
+  });
+
+  // Save line items mutation  
   const saveLineItems = useMutation({
     mutationFn: async () => {
       const allItems = [...tenantImprovements, ...designSoftCosts];
@@ -474,7 +504,10 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
                                   type="button"
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => {/* Individual save logic will be added */}}
+                                  onClick={() => {
+                                    const lineItem = item;
+                                    saveIndividualLineItem.mutate(lineItem);
+                                  }}
                                   className="h-6 w-6 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
                                   title="Save this line item"
                                 >

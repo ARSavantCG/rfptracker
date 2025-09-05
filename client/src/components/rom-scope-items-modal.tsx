@@ -16,7 +16,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
 import { FormulaInput } from "@/components/formula-input";
 import { evaluateFormula } from "@shared/formula-utils";
-import { Plus, Edit2, Trash2, Package, DollarSign, ChevronDown, Upload, FileText, X, Edit3, Check } from "lucide-react";
+import { Plus, Edit2, Trash2, Package, DollarSign, ChevronDown, ChevronRight, Upload, FileText, X, Edit3, Check, Printer } from "lucide-react";
 
 interface RomScopeItem {
   id: number;
@@ -75,6 +75,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
   const [isDragging, setIsDragging] = useState(false);
   const [editingFileId, setEditingFileId] = useState<string | null>(null);
   const [editingFileName, setEditingFileName] = useState("");
+  const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
 
   // Fetch scope items
   const { data: scopeItems = [], isLoading } = useQuery<RomScopeItem[]>({
@@ -156,6 +157,233 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
   const cancelFileRename = () => {
     setEditingFileId(null);
     setEditingFileName("");
+  };
+
+  // Category collapse helpers
+  const toggleCategory = (category: string) => {
+    const newCollapsed = new Set(collapsedCategories);
+    if (newCollapsed.has(category)) {
+      newCollapsed.delete(category);
+    } else {
+      newCollapsed.add(category);
+    }
+    setCollapsedCategories(newCollapsed);
+  };
+
+  // Print function
+  const handlePrint = () => {
+    const printContent = generateScopeItemsPrintHtml(scopeItems);
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(printContent);
+      printWindow.document.close();
+      printWindow.focus();
+      printWindow.print();
+      printWindow.close();
+    }
+  };
+
+  // Generate print HTML with Bridge Industrial styling
+  const generateScopeItemsPrintHtml = (items: RomScopeItem[]) => {
+    const itemsByCategory = items.reduce((acc, item) => {
+      if (!acc[item.category]) acc[item.category] = [];
+      acc[item.category].push(item);
+      return acc;
+    }, {} as Record<string, RomScopeItem[]>);
+
+    const currentDate = new Date().toLocaleDateString('en-US', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric'
+    });
+
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>ROM Scope Items Library</title>
+        <style>
+          @page {
+            size: A4;
+            margin: 0.5in;
+          }
+          
+          @media print {
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          }
+          
+          body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 10px;
+            line-height: 1.4;
+            color: #1f2937;
+            margin: 0;
+            padding: 0;
+          }
+          
+          .header {
+            border-bottom: 3px solid rgb(0,50,130);
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+          }
+          
+          .document-title {
+            font-size: 24px;
+            font-weight: bold;
+            background: rgb(0,50,130);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+            margin-bottom: 10px;
+          }
+          
+          .project-title {
+            font-size: 14px;
+            color: #666;
+            text-align: center;
+            margin-bottom: 20px;
+          }
+          
+          .category-section {
+            margin-bottom: 25px;
+            break-inside: avoid;
+          }
+          
+          .category-header {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            padding: 8px 12px;
+            font-weight: bold;
+            color: #374151;
+            border-radius: 5px 5px 0 0;
+            font-size: 11px;
+          }
+          
+          .category-table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid #e5e7eb;
+            border-top: none;
+            margin-bottom: 20px;
+          }
+          
+          .category-table th {
+            background: #f3f4f6;
+            font-weight: bold;
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #d1d5db;
+            font-size: 9px;
+            color: #374151;
+          }
+          
+          .category-table td {
+            padding: 6px 8px;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 9px;
+            vertical-align: top;
+          }
+          
+          .category-table tr:nth-child(even) {
+            background: #f9fafb;
+          }
+          
+          .item-name {
+            font-weight: 500;
+            color: #1f2937;
+          }
+          
+          .item-price {
+            font-weight: 500;
+            color: #059669;
+            text-align: right;
+          }
+          
+          .item-date {
+            color: #6b7280;
+            font-size: 8px;
+          }
+          
+          .has-file {
+            color: #2563eb;
+            font-weight: bold;
+            text-align: center;
+          }
+          
+          .no-file {
+            color: #9ca3af;
+            text-align: center;
+          }
+          
+          .footer {
+            position: fixed;
+            bottom: 0.5in;
+            left: 0.5in;
+            right: 0.5in;
+            text-align: center;
+            font-size: 8px;
+            color: #6b7280;
+            border-top: 1px solid #e5e7eb;
+            padding-top: 10px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="document-title">ROM SCOPE ITEMS LIBRARY</div>
+          <div class="project-title">Bridge Industrial - Construction Cost Management</div>
+          <div class="project-title">Generated on ${currentDate}</div>
+        </div>
+        
+        ${Object.entries(itemsByCategory).map(([category, categoryItems]) => `
+          <div class="category-section">
+            <div class="category-header">
+              ${category} (${categoryItems.length} item${categoryItems.length !== 1 ? 's' : ''})
+            </div>
+            <table class="category-table">
+              <thead>
+                <tr>
+                  <th style="width: 35%;">Item Name</th>
+                  <th style="width: 20%;">Cost per Unit</th>
+                  <th style="width: 15%;">Last Updated</th>
+                  <th style="width: 15%;">Files</th>
+                  <th style="width: 15%;">Source</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${categoryItems.map(item => {
+                  const result = evaluateFormula(item.unitPrice);
+                  const displayValue = result.value !== null ? result.value.toFixed(2) : parseFloat(item.unitPrice || "0").toFixed(2);
+                  const formattedPrice = parseFloat(displayValue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                  const lastUpdated = item.lastUpdated ? new Date(item.lastUpdated).toLocaleDateString() : 'Never';
+                  const hasFiles = item.attachments && item.attachments.length > 0;
+                  
+                  return `
+                    <tr>
+                      <td class="item-name">${item.name}</td>
+                      <td class="item-price">$${formattedPrice} per ${item.unit}</td>
+                      <td class="item-date">${lastUpdated}</td>
+                      <td class="${hasFiles ? 'has-file' : 'no-file'}">
+                        ${hasFiles ? `✓ (${item.attachments.length})` : '—'}
+                      </td>
+                      <td>${item.source || '—'}</td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        `).join('')}
+        
+        <div class="footer">
+          © ${new Date().getFullYear()} Bridge Industrial - ROM Scope Items Library
+        </div>
+      </body>
+      </html>
+    `;
   };
 
   // Download existing file
@@ -696,13 +924,23 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                 Manage predefined scope items for ROM estimates
               </p>
             </div>
-            <Button 
-              onClick={() => setShowAddForm(true)}
-              className="flex items-center space-x-2"
-            >
-              <Plus className="h-4 w-4" />
-              <span>Add Item</span>
-            </Button>
+            <div className="flex items-center space-x-2">
+              <Button 
+                onClick={handlePrint}
+                variant="outline"
+                className="flex items-center space-x-2"
+              >
+                <Printer className="h-4 w-4" />
+                <span>Print Library</span>
+              </Button>
+              <Button 
+                onClick={() => setShowAddForm(true)}
+                className="flex items-center space-x-2"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Add Item</span>
+              </Button>
+            </div>
           </div>
 
           {/* Items List */}
@@ -717,14 +955,31 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
             </div>
           ) : (
             <div className="space-y-6">
-              {Object.entries(itemsByCategory).map(([category, items]) => (
-                <div key={category} className="border rounded-lg">
-                  <div className="bg-gray-50 px-4 py-3 border-b">
-                    <h4 className="font-medium text-gray-900">{category}</h4>
-                    <p className="text-sm text-gray-500">{items.length} item{items.length !== 1 ? 's' : ''}</p>
-                  </div>
-                  
-                  <div className="divide-y">
+              {Object.entries(itemsByCategory).map(([category, items]) => {
+                const isCollapsed = collapsedCategories.has(category);
+                return (
+                  <div key={category} className="border rounded-lg">
+                    <div 
+                      className="bg-gray-50 px-4 py-3 border-b cursor-pointer hover:bg-gray-100 transition-colors"
+                      onClick={() => toggleCategory(category)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="font-medium text-gray-900">{category}</h4>
+                          <p className="text-sm text-gray-500">{items.length} item{items.length !== 1 ? 's' : ''}</p>
+                        </div>
+                        <div className="flex items-center">
+                          {isCollapsed ? (
+                            <ChevronRight className="h-5 w-5 text-gray-500" />
+                          ) : (
+                            <ChevronDown className="h-5 w-5 text-gray-500" />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {!isCollapsed && (
+                      <div className="divide-y">
                     {items.map((item) => (
                       <div key={item.id} className="p-3 flex justify-between items-center">
                         <div className="flex-1">
@@ -778,9 +1033,11 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                         </div>
                       </div>
                     ))}
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

@@ -99,9 +99,12 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
         const defaultDesignItems: LineItem[] = [];
         
         console.log('All scope items:', scopeItems);
-        const defaultItems = scopeItems.filter(item => (item as any).includeByDefault);
-        console.log('Filtered default items:', defaultItems);
         console.log('Sample item structure:', scopeItems[0]);
+        const defaultItems = scopeItems.filter(item => {
+          console.log(`Item ${item.name}: includeByDefault = ${(item as any).includeByDefault}`);
+          return (item as any).includeByDefault === true;
+        });
+        console.log('Filtered default items:', defaultItems);
         
         defaultItems.forEach(scopeItem => {
           console.log('Processing default item:', scopeItem.name, 'Category:', scopeItem.category);

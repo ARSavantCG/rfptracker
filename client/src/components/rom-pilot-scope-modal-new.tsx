@@ -180,11 +180,13 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
     field: keyof LineItem,
     value: string | number
   ) => {
+    console.log('🔄 updateLineItem called:', { category, index, field, value });
     const items = category === 'tenant-improvements' ? tenantImprovements : designSoftCosts;
     const setItems = category === 'tenant-improvements' ? setTenantImprovements : setDesignSoftCosts;
     
     const updatedItems = [...items];
     updatedItems[index] = { ...updatedItems[index], [field]: value };
+    console.log('📝 Updated item after field change:', updatedItems[index]);
 
     // Auto-populate data when scope item changes
     if (field === 'scopeItemId' && typeof value === 'number' && value > 0) {
@@ -475,16 +477,25 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
                                 onBlur={(e) => {
                                   // Get the current value from the input field, not from state
                                   const currentQuantity = e.target.value;
-                                  console.log('💾 Saving quantity on blur:', { stateQuantity: item.quantity, inputQuantity: currentQuantity });
+                                  console.log('💾 Saving quantity on blur:', { stateQuantity: item.quantity, inputQuantity: currentQuantity, item });
                                   
-                                  // Create updated item with current input value
-                                  const updatedItem = {
-                                    ...item,
-                                    quantity: currentQuantity,
-                                    totalPrice: ((parseFloat(currentQuantity) || 0) * (parseFloat(item.unitPrice) || 0) * ((item.tenantShare || 100) / 100)).toString()
-                                  };
-                                  
-                                  saveIndividualLineItem.mutate(updatedItem);
+                                  // Only save if there's actually a value
+                                  if (currentQuantity.trim() !== '') {
+                                    // Update state first with the input value
+                                    updateLineItem(category, index, 'quantity', currentQuantity);
+                                    
+                                    // Create updated item with current input value
+                                    const updatedItem = {
+                                      ...item,
+                                      quantity: currentQuantity,
+                                      totalPrice: ((parseFloat(currentQuantity) || 0) * (parseFloat(item.unitPrice) || 0) * ((item.tenantShare || 100) / 100)).toString()
+                                    };
+                                    
+                                    console.log('🚀 About to save:', updatedItem);
+                                    saveIndividualLineItem.mutate(updatedItem);
+                                  } else {
+                                    console.log('⚠️ Skipping save for empty quantity');
+                                  }
                                 }}
                                 className="h-7 text-xs text-center"
                                 placeholder="0"
@@ -493,10 +504,23 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
                             <td className="py-2 px-3">
                               <Input
                                 type="text"
-                                value={(() => {
-                                  // Get unit price from scope item if available, otherwise use stored value
-                                  const price = item.scopeItem?.unitPrice || item.unitPrice || "0";
-                                  console.log('💰 Unit price display:', { itemId: item.id, scopeItemPrice: item.scopeItem?.unitPrice, itemPrice: item.unitPrice, finalPrice: price });
+value={(() => {
+                                  // Priority: scopeItem.unitPrice > item.unitPrice > "0"
+                                  let price = "0";
+                                  if (item.scopeItem?.unitPrice) {
+                                    price = item.scopeItem.unitPrice;
+                                  } else if (item.unitPrice) {
+                                    price = item.unitPrice;
+                                  }
+                                  
+                                  console.log('💰 Unit price display:', { 
+                                    itemId: item.id, 
+                                    scopeItemName: item.scopeItem?.name,
+                                    scopeItemPrice: item.scopeItem?.unitPrice, 
+                                    itemPrice: item.unitPrice, 
+                                    finalPrice: price,
+                                    formatted: formatCurrency(parseFloat(price))
+                                  });
                                   return formatCurrency(parseFloat(price));
                                 })()}
                                 className="h-7 text-xs bg-gray-100 text-right"

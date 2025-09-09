@@ -5,7 +5,6 @@ import { formatFileSize, getFileIcon, getStatusColor } from "@/lib/utils";
 import { formatDateForInput, formatDateForDisplay } from "@shared/date-utils";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { InvitationWorkflowModal } from "./invitation-workflow-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CalendarIcon, Edit, Check, X } from "lucide-react";
@@ -21,7 +20,6 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editStatus, setEditStatus] = useState("");
   const [editWorkflowPhase, setEditWorkflowPhase] = useState("");
-  const [showInvitationModal, setShowInvitationModal] = useState(false);
   const [isEditingDates, setIsEditingDates] = useState(false);
   const [editCompletedDate, setEditCompletedDate] = useState("");
   const [editPublishedDate, setEditPublishedDate] = useState("");
@@ -82,6 +80,8 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
+      // Refresh the specific RFP data to ensure modal shows updated dates
+      queryClient.invalidateQueries({ queryKey: [`/api/rfp-requests/${rfp.id}`] });
       toast({
         title: "Success",
         description: "Project completion dates updated successfully",
@@ -636,13 +636,6 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
                       <i className="fas fa-download"></i>
                       Download All Files
                     </button>
-                    <button
-                      onClick={() => setShowInvitationModal(true)}
-                      className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 flex items-center gap-2"
-                    >
-                      <i className="fas fa-envelope"></i>
-                      Send Invitations
-                    </button>
                   </>
                 )}
               </div>
@@ -651,11 +644,6 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
         </div>
       </div>
       
-      <InvitationWorkflowModal
-        isOpen={showInvitationModal}
-        onClose={() => setShowInvitationModal(false)}
-        rfp={rfp}
-      />
     </div>
   );
 }

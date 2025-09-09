@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { X } from "lucide-react";
 
@@ -60,6 +61,11 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
   const [calculatedFloorArea, setCalculatedFloorArea] = useState<number>(0);
   const [selectedBayConfigurations, setSelectedBayConfigurations] = useState<BayConfiguration[]>([]);
   const [bayConfigModalOpen, setBayConfigModalOpen] = useState(false);
+  
+  // Multi-building state
+  const [multiBuildingMode, setMultiBuildingMode] = useState(false);
+  const [selectedBaysPerBuilding, setSelectedBaysPerBuilding] = useState<Record<string, string[]>>({});
+  const [costsPerBuilding, setCostsPerBuilding] = useState<Record<string, number>>({});
 
   const form = useForm<CreateRfpFormData>({
     resolver: zodResolver(createRfpSchema),
@@ -116,6 +122,13 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
       // Append selected bay configurations
       if (selectedBayConfigurations.length > 0) {
         formData.append('selectedBayConfigurations', JSON.stringify(selectedBayConfigurations));
+      }
+      
+      // Append multi-building data
+      formData.append('isMultiBuilding', multiBuildingMode.toString());
+      if (multiBuildingMode) {
+        formData.append('selectedBaysPerBuilding', JSON.stringify(selectedBaysPerBuilding));
+        formData.append('costsPerBuilding', JSON.stringify(costsPerBuilding));
       }
       
       // Append files
@@ -191,6 +204,9 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
     setSelectedProperty(null);
     setCalculatedFloorArea(0);
     setSelectedBayConfigurations([]);
+    setMultiBuildingMode(false);
+    setSelectedBaysPerBuilding({});
+    setCostsPerBuilding({});
     onClose();
   };
 
@@ -239,6 +255,15 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
       form.setValue("projectArea", areaText);
     } else {
       form.setValue("projectArea", "");
+    }
+  };
+
+  const handleMultiBuildingToggle = (checked: boolean) => {
+    setMultiBuildingMode(checked);
+    // Reset multi-building specific states when toggling
+    if (!checked) {
+      setSelectedBaysPerBuilding({});
+      setCostsPerBuilding({});
     }
   };
 
@@ -454,12 +479,35 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
 
 
 
+              {/* Multi-Building Toggle */}
+              {selectedProperty && (
+                <div className="space-y-4 border rounded-lg p-4 bg-blue-50">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="multi-building-toggle" className="text-sm font-medium">
+                        Multi-Building RFP
+                      </Label>
+                      <p className="text-xs text-gray-600 mt-1">
+                        Enable for RFPs spanning multiple buildings in the same property
+                      </p>
+                    </div>
+                    <Switch
+                      id="multi-building-toggle"
+                      checked={multiBuildingMode}
+                      onCheckedChange={handleMultiBuildingToggle}
+                    />
+                  </div>
+                </div>
+              )}
+
               {/* Bay Configuration Button for Automatic Floor Area Calculation */}
               {selectedProperty ? (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between p-4 border rounded-lg bg-gray-50">
                     <div>
-                      <Label className="text-sm font-medium text-gray-700">Bay Configuration</Label>
+                      <Label className="text-sm font-medium text-gray-700">
+                        Bay Configuration {multiBuildingMode && <span className="text-blue-600">(Multi-Building Mode)</span>}
+                      </Label>
                       <p className="text-xs text-gray-500 mt-1">
                         {selectedBayConfigurations.length > 0 
                           ? `${selectedBayConfigurations.length} bay${selectedBayConfigurations.length !== 1 ? 's' : ''} selected (${calculatedFloorArea.toLocaleString()} SF)`
@@ -745,6 +793,11 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
           property={selectedProperty}
           onConfirm={handleFloorAreaChange}
           initialSelectedBays={selectedBayConfigurations}
+          isMultiBuilding={multiBuildingMode}
+          selectedBaysPerBuilding={selectedBaysPerBuilding}
+          onBaysPerBuildingChange={setSelectedBaysPerBuilding}
+          costsPerBuilding={costsPerBuilding}
+          onCostsPerBuildingChange={setCostsPerBuilding}
         />
       )}
     </Dialog>

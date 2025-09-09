@@ -78,10 +78,11 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
       return await apiRequest(`/api/rfp-requests/${rfp.id}`, "PATCH", updateData);
     },
     onSuccess: () => {
+      // Invalidate all RFP-related queries to ensure fresh data
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
-      // Refresh the specific RFP data to ensure modal shows updated dates
-      queryClient.invalidateQueries({ queryKey: [`/api/rfp-requests/${rfp.id}`] });
+      // Force reload of the entire RFP list to update the modal prop
+      queryClient.refetchQueries({ queryKey: ["/api/rfp-requests"] });
       toast({
         title: "Success",
         description: "Project completion dates updated successfully",

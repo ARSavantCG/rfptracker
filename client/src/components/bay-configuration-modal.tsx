@@ -68,7 +68,11 @@ export function BayConfigurationModal({
 
   // Use appropriate data based on mode
   const propertyWithBayConfigs = fullProperty || property;
-  const propertiesWithBayConfigs = isMultiBuilding ? allProperties : (propertyWithBayConfigs ? [propertyWithBayConfigs] : []);
+  
+  // For multi-building mode, filter to only buildings within the same property
+  const propertiesWithBayConfigs = isMultiBuilding && property ? 
+    allProperties.filter(p => p.propertyName === property.propertyName) : 
+    (propertyWithBayConfigs ? [propertyWithBayConfigs] : []);
   const isLoading = isMultiBuilding ? isPropertiesLoading : isSinglePropertyLoading;
 
 

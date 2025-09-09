@@ -242,10 +242,24 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
   };
 
   // Handle bay configuration selection and use pre-calculated area from bay selector
-  const handleFloorAreaChange = (area: number, bayConfigs: BayConfiguration[], overrideArea?: number) => {
+  const handleFloorAreaChange = (
+    area: number, 
+    bayConfigs: BayConfiguration[], 
+    overrideArea?: number, 
+    selectedBaysPerBuilding?: {[propertyName: string]: BayConfiguration[]}, 
+    costsPerBuilding?: {[propertyName: string]: BuildingCosts}
+  ) => {
     // Use the area calculated by the Bay Configuration Selector (already includes proportional mechanical allocation)
     setCalculatedFloorArea(area);
     setSelectedBayConfigurations(bayConfigs);
+    
+    // Handle multi-building data if provided
+    if (selectedBaysPerBuilding) {
+      setSelectedBaysPerBuilding(selectedBaysPerBuilding);
+    }
+    if (costsPerBuilding) {
+      setCostsPerBuilding(costsPerBuilding);
+    }
     
     // Auto-populate the project area field with pre-calculated value
     if (area > 0) {
@@ -524,6 +538,13 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                             ))}
                             <div className="font-medium">Total: {calculatedFloorArea.toLocaleString()} SF</div>
                           </div>
+                        ) : multiBuildingMode ? (
+                          Object.keys(selectedBaysPerBuilding).length > 0 ? (
+                            (() => {
+                              const totalBays = Object.values(selectedBaysPerBuilding).reduce((total, bays) => total + bays.length, 0);
+                              return `${totalBays} bay${totalBays !== 1 ? 's' : ''} selected (${calculatedFloorArea.toLocaleString()} SF)`;
+                            })()
+                          ) : 'No bays selected for area calculation'
                         ) : selectedBayConfigurations.length > 0 
                           ? `${selectedBayConfigurations.length} bay${selectedBayConfigurations.length !== 1 ? 's' : ''} selected (${calculatedFloorArea.toLocaleString()} SF)`
                           : 'No bays selected for area calculation'

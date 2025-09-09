@@ -3987,7 +3987,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             th, td { border: 1px solid #e5e7eb; padding: 8px; text-align: left; }
             th { background: #f9fafb; font-weight: 600; }
             th:nth-child(3), th:nth-child(4), th:nth-child(5), th:nth-child(6), th:nth-child(7), th:nth-child(8), th:nth-child(9) { text-align: center; }
-            td:nth-child(3), td:nth-child(4), td:nth-child(5), td:nth-child(6), td:nth-child(8), td:nth-child(9) { text-align: center; }
+            td:nth-child(3), td:nth-child(4), td:nth-child(5), td:nth-child(6), td:nth-child(7), td:nth-child(8), td:nth-child(9) { text-align: center; }
             th:nth-child(3) { width: 100px; }
             td:nth-child(3) { width: 100px; }
             th:nth-child(4) { width: 120px; }
@@ -3996,12 +3996,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             td:nth-child(5) { width: 80px; }
             th:nth-child(6) { width: 120px; }
             td:nth-child(6) { width: 120px; }
-            th:nth-child(7) { width: 90px; }
-            td:nth-child(7) { width: 90px; text-align: left; }
-            th:nth-child(8) { width: 120px; }
-            td:nth-child(8) { width: 120px; text-align: right; }
-            th:nth-child(9) { width: 80px; }
-            td:nth-child(9) { width: 80px; text-align: right; }
+            th:nth-child(7) { width: 70px; }
+            td:nth-child(7) { width: 70px; text-align: center; }
+            th:nth-child(8) { width: 90px; }
+            td:nth-child(8) { width: 90px; text-align: center; }
+            th:nth-child(9) { width: 60px; }
+            td:nth-child(9) { width: 60px; text-align: center; }
             .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; color: white; display: inline-block; }
             .status-received { background: #8B5CF6; }
             .status-inprogress { background: #F59E0B; }
@@ -4179,8 +4179,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   '<td>' + dayDisplay + '</td>' +
                   '<td>' + statusDisplay + '</td>' +
                   '<td>' + devContact + '</td>' +
-                  '<td style="font-weight: bold; text-align: right;">' + grandTotalDisplay + '</td>' +
-                  '<td style="font-weight: bold; text-align: right;">' + rsfDisplay + '</td>' +
+                  '<td style="font-weight: bold; text-align: center;">' + grandTotalDisplay + '</td>' +
+                  '<td style="font-weight: bold; text-align: center;">' + rsfDisplay + '</td>' +
                   '</tr>';
               }).join('')}
             </tbody>

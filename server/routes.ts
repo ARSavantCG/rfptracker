@@ -3996,8 +3996,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             td:nth-child(5) { width: 80px; }
             th:nth-child(6) { width: 120px; }
             td:nth-child(6) { width: 120px; }
-            th:nth-child(7) { width: 150px; }
-            td:nth-child(7) { width: 150px; text-align: left; }
+            th:nth-child(7) { width: 90px; }
+            td:nth-child(7) { width: 90px; text-align: left; }
             th:nth-child(8) { width: 120px; }
             td:nth-child(8) { width: 120px; text-align: right; }
             th:nth-child(9) { width: 80px; }
@@ -4149,6 +4149,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   }
                 }
 
+                // Format development contact name
+                let devContact = 'N/A';
+                if (rfp.developmentContact) {
+                  let contactName = rfp.developmentContact;
+                  // Remove "Bridge Industrial" or similar company references
+                  contactName = contactName.replace(/\s*-\s*Bridge\s*Industrial/i, '').trim();
+                  
+                  // Try to shorten to "First L." format if possible
+                  const nameParts = contactName.split(' ');
+                  if (nameParts.length >= 2) {
+                    const firstName = nameParts[0];
+                    const lastName = nameParts[nameParts.length - 1];
+                    if (lastName.length > 0) {
+                      devContact = firstName + ' ' + lastName.charAt(0) + '.';
+                    } else {
+                      devContact = contactName;
+                    }
+                  } else {
+                    devContact = contactName;
+                  }
+                }
+
                 return '<tr>' +
                   '<td><strong>' + (rfp.rfpNumber || 'N/A') + '</strong></td>' +
                   '<td>' + (rfp.projectName || 'N/A').replace(/ - $/, '') + '</td>' +
@@ -4156,7 +4178,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   '<td>' + dueDateDisplay + '</td>' +
                   '<td>' + dayDisplay + '</td>' +
                   '<td>' + statusDisplay + '</td>' +
-                  '<td>' + (rfp.developmentContact || 'N/A') + '</td>' +
+                  '<td>' + devContact + '</td>' +
                   '<td style="font-weight: bold; text-align: right;">' + grandTotalDisplay + '</td>' +
                   '<td style="font-weight: bold; text-align: right;">' + rsfDisplay + '</td>' +
                   '</tr>';

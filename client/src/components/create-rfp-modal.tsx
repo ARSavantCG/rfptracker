@@ -515,7 +515,16 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                         Bay Configuration {multiBuildingMode && <span className="text-blue-600">(Multi-Building Mode)</span>}
                       </Label>
                       <p className="text-xs text-gray-500 mt-1">
-                        {selectedBayConfigurations.length > 0 
+                        {multiBuildingMode && Object.keys(selectedBaysPerBuilding).length > 0 ? (
+                          <div className="space-y-1">
+                            {Object.entries(selectedBaysPerBuilding).map(([propertyName, bays]) => (
+                              <div key={propertyName}>
+                                {propertyName}: {bays.length} bay{bays.length !== 1 ? 's' : ''} ({bays.reduce((total, bay) => total + (bay.rentableSquareFootage || bay.squareFootage), 0).toLocaleString()} SF)
+                              </div>
+                            ))}
+                            <div className="font-medium">Total: {calculatedFloorArea.toLocaleString()} SF</div>
+                          </div>
+                        ) : selectedBayConfigurations.length > 0 
                           ? `${selectedBayConfigurations.length} bay${selectedBayConfigurations.length !== 1 ? 's' : ''} selected (${calculatedFloorArea.toLocaleString()} SF)`
                           : 'No bays selected for area calculation'
                         }
@@ -567,7 +576,17 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                               return roundedTotal.toLocaleString();
                             })()} SF
                           </div>
-                          <p className="text-xs text-gray-500">From selected bay configurations</p>
+                          {multiBuildingMode && Object.keys(selectedBaysPerBuilding).length > 0 ? (
+                            <div className="text-xs text-gray-500 space-y-1">
+                              {Object.entries(selectedBaysPerBuilding).map(([propertyName, bays]) => (
+                                <div key={propertyName}>
+                                  {propertyName}: {bays.reduce((total, bay) => total + (bay.rentableSquareFootage || bay.squareFootage), 0).toLocaleString()} SF
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-xs text-gray-500">From selected bay configurations</p>
+                          )}
                         </div>
                         <div>
                           <label className="text-sm font-medium text-gray-700">Warehouse Area</label>

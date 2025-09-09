@@ -40,16 +40,20 @@ export function BaySelectionGrid({
   // Initialize building selections for multi-building mode
   useEffect(() => {
     if (multiBuildingMode && properties.length > 0) {
-      const initialBuildingIds: {[propertyName: string]: Set<string>} = {};
-      properties.forEach(prop => {
-        const propName = prop.propertyName;
-        const selectedBays = selectedBaysPerBuilding[propName] || [];
-        initialBuildingIds[propName] = new Set(selectedBays.map(bay => bay.id));
-      });
-      console.log('🔧 Initializing selectedBuildingIds:', initialBuildingIds);
-      setSelectedBuildingIds(initialBuildingIds);
+      // Only initialize if selectedBuildingIds is completely empty
+      const hasExistingData = Object.keys(selectedBuildingIds).length > 0;
+      if (!hasExistingData) {
+        const initialBuildingIds: {[propertyName: string]: Set<string>} = {};
+        properties.forEach(prop => {
+          const propName = prop.propertyName;
+          const selectedBays = selectedBaysPerBuilding[propName] || [];
+          initialBuildingIds[propName] = new Set(selectedBays.map(bay => bay.id));
+        });
+        console.log('🔧 Initializing selectedBuildingIds:', initialBuildingIds);
+        setSelectedBuildingIds(initialBuildingIds);
+      }
     }
-  }, [multiBuildingMode, properties]);
+  }, [multiBuildingMode, properties.length]);
 
   // Handle multi-building toggle
   const handleMultiBuildingToggle = (enabled: boolean) => {
@@ -151,7 +155,7 @@ export function BaySelectionGrid({
     // Copy existing selections (ensure they are Sets)
     Object.keys(selectedBuildingIds).forEach(key => {
       const existing = selectedBuildingIds[key];
-      newSelectedBuildingIds[key] = existing instanceof Set ? existing : new Set();
+      newSelectedBuildingIds[key] = existing instanceof Set ? existing : new Set<string>();
     });
     
     // Update the current property's selection

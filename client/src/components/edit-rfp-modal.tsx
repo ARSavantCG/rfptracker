@@ -214,20 +214,22 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
         }
       }
 
-      // Initialize bay configurations if they exist
-      if (!isMultiBuildingRfp && rfp.selectedBayConfigurations && rfp.selectedBayConfigurations.length > 0) {
+      // Initialize bay configurations if they exist (for both single and multi-building)
+      if (rfp.selectedBayConfigurations && rfp.selectedBayConfigurations.length > 0) {
         setSelectedBayConfigurations(rfp.selectedBayConfigurations);
         
-        // Calculate total using proportional method for display
-        const selectedBaySquareFootage = rfp.selectedBayConfigurations.reduce((sum: number, bay: any) => sum + (bay.squareFootage || 0), 0);
-        const property = properties.find(p => p.id.toString() === rfp.property);
-        const mechanicalRoomSF = property?.mechanicalRoomSquareFootage || 0;
-        
-        if (property?.bayConfigurations) {
-          const totalPropertyBaysSF = property.bayConfigurations.reduce((sum: number, bay: any) => sum + (bay.squareFootage || 0), 0);
-          const proportionalMechanical = totalPropertyBaysSF > 0 ? (selectedBaySquareFootage / totalPropertyBaysSF) * mechanicalRoomSF : 0;
-          const totalRentableArea = selectedBaySquareFootage + proportionalMechanical;
-          setCalculatedFloorArea(Math.round(totalRentableArea));
+        // Calculate total using proportional method for display (only for single-building)
+        if (!isMultiBuildingRfp) {
+          const selectedBaySquareFootage = rfp.selectedBayConfigurations.reduce((sum: number, bay: any) => sum + (bay.squareFootage || 0), 0);
+          const property = properties.find(p => p.id.toString() === rfp.property);
+          const mechanicalRoomSF = property?.mechanicalRoomSquareFootage || 0;
+          
+          if (property?.bayConfigurations) {
+            const totalPropertyBaysSF = property.bayConfigurations.reduce((sum: number, bay: any) => sum + (bay.squareFootage || 0), 0);
+            const proportionalMechanical = totalPropertyBaysSF > 0 ? (selectedBaySquareFootage / totalPropertyBaysSF) * mechanicalRoomSF : 0;
+            const totalRentableArea = selectedBaySquareFootage + proportionalMechanical;
+            setCalculatedFloorArea(Math.round(totalRentableArea));
+          }
         }
       } else if (isMultiBuildingRfp && rfp.selectedBaysPerBuilding) {
         // Calculate total area for multi-building RFPs

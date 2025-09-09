@@ -146,10 +146,15 @@ export function BaySelectionGrid({
     }
     
     // Update the building-specific selections
-    const newSelectedBuildingIds: {[propertyName: string]: Set<string>} = {
-      ...selectedBuildingIds,
-      [propertyName]: newBuildingIds
-    };
+    const newSelectedBuildingIds: {[propertyName: string]: Set<string>} = {};
+    
+    // Copy existing selections
+    Object.keys(selectedBuildingIds).forEach(key => {
+      newSelectedBuildingIds[key] = selectedBuildingIds[key];
+    });
+    
+    // Update the current property's selection
+    newSelectedBuildingIds[propertyName] = newBuildingIds;
     setSelectedBuildingIds(newSelectedBuildingIds);
     
     // Get all bays for this property and filter selected ones

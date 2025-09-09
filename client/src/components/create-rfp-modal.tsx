@@ -9,7 +9,7 @@ import { HierarchicalPropertySelector } from "./hierarchical-property-selector";
 import { BayConfigurationModal } from "./bay-configuration-modal";
 import { useToast } from "@/hooks/use-toast";
 import { getCurrentDateString } from "@shared/date-utils";
-import { type Property, type Contact, type BayConfiguration } from "@shared/schema";
+import { type Property, type Contact, type BayConfiguration, type BuildingCosts } from "@shared/schema";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -64,8 +64,8 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
   
   // Multi-building state
   const [multiBuildingMode, setMultiBuildingMode] = useState(false);
-  const [selectedBaysPerBuilding, setSelectedBaysPerBuilding] = useState<Record<string, string[]>>({});
-  const [costsPerBuilding, setCostsPerBuilding] = useState<Record<string, number>>({});
+  const [selectedBaysPerBuilding, setSelectedBaysPerBuilding] = useState<{[propertyName: string]: BayConfiguration[]}>({});
+  const [costsPerBuilding, setCostsPerBuilding] = useState<{[propertyName: string]: BuildingCosts}>({});
 
   const form = useForm<CreateRfpFormData>({
     resolver: zodResolver(createRfpSchema),

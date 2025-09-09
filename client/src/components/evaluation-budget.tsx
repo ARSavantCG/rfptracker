@@ -609,8 +609,12 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
       return total + (bay.rentableSquareFootage || 0);
     }, 0) + (rfp.mechanicalRoomArea || 0);
     
-    // Get total property rentable area
-    const totalPropertyArea = parseFloat(property.rentableSquareFootage || '0');
+    // Get total property rentable area - calculate from bay configurations
+    const totalPropertyArea = property.bayConfigurations 
+      ? property.bayConfigurations.reduce((total: number, bay: any) => {
+          return total + (bay.rentableSquareFootage || bay.squareFootage || 0);
+        }, 0)
+      : 0;
     
     console.log('Parking Calc Debug - Areas:', { 
       tenantArea: tenantRentableArea, 

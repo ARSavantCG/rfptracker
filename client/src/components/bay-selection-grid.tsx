@@ -273,7 +273,16 @@ export function BaySelectionGrid({
             {multiBuildingMode ? <Building2 className="h-5 w-5" /> : <Grid className="h-5 w-5" />}
             <span>
               {multiBuildingMode 
-                ? `Multi-Building Bay Selection (${properties.length} properties)` 
+                ? (() => {
+                    const propertiesWithInitialSelections = Object.keys(initialSelectedBaysPerBuilding);
+                    const filteredCount = propertiesWithInitialSelections.length > 0 
+                      ? properties.filter(prop => {
+                          const buildingKey = `${prop.propertyName} - Building ${prop.building}`;
+                          return propertiesWithInitialSelections.includes(buildingKey);
+                        }).length
+                      : properties.length;
+                    return `Multi-Building Bay Selection (${filteredCount} properties)`;
+                  })()
                 : `Bay Selection Grid - ${property?.propertyName || 'Property'}`
               }
             </span>
@@ -308,7 +317,18 @@ export function BaySelectionGrid({
         {multiBuildingMode ? (
           /* Multi-Building Mode */
           <div className="space-y-6">
-            {properties.map((prop) => {
+            {(() => {
+              // Filter properties to only show those with initial selections
+              const propertiesWithInitialSelections = Object.keys(initialSelectedBaysPerBuilding);
+              const filteredProperties = propertiesWithInitialSelections.length > 0 
+                ? properties.filter(prop => {
+                    const buildingKey = `${prop.propertyName} - Building ${prop.building}`;
+                    return propertiesWithInitialSelections.includes(buildingKey);
+                  })
+                : properties; // Show all if no initial selections
+              
+              return filteredProperties;
+            })().map((prop) => {
               const propBays = getSortedBays(prop);
               const buildingKey = `${prop.propertyName} - Building ${prop.building}`;
               const propSelectedIds = selectedBuildingIds[buildingKey] || new Set();

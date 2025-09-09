@@ -7,6 +7,7 @@ interface HierarchicalPropertySelectorProps {
   value?: string;
   onChange: (value: string) => void;
   className?: string;
+  isMultiBuilding?: boolean;
 }
 
 interface PropertyGroup {
@@ -15,7 +16,7 @@ interface PropertyGroup {
   isSingleBuilding: boolean;
 }
 
-export function HierarchicalPropertySelector({ value, onChange, className }: HierarchicalPropertySelectorProps) {
+export function HierarchicalPropertySelector({ value, onChange, className, isMultiBuilding = false }: HierarchicalPropertySelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [expandedProperty, setExpandedProperty] = useState<string | null>(null);
 
@@ -44,9 +45,11 @@ export function HierarchicalPropertySelector({ value, onChange, className }: Hie
   // Get display value for selected property
   const selectedProperty = properties.find(p => p.id.toString() === value);
   const displayValue = selectedProperty 
-    ? selectedProperty.isSingleBuilding 
-      ? selectedProperty.propertyName 
-      : `${selectedProperty.propertyName} - Building ${selectedProperty.building}`
+    ? isMultiBuilding
+      ? `${selectedProperty.propertyName} (Multiple Buildings)`
+      : selectedProperty.isSingleBuilding 
+        ? selectedProperty.propertyName 
+        : `${selectedProperty.propertyName} - Building ${selectedProperty.building}`
     : "Select a property...";
 
   // Close dropdown when clicking outside

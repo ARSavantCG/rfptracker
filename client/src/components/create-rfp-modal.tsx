@@ -328,11 +328,36 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                           field.onChange(value);
                           handlePropertyChange(value);
                         }}
+                        isMultiBuilding={multiBuildingMode}
                       />
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+
+                {/* Multi-Building Tenant Checkbox */}
+                <div className="flex items-center space-x-2 p-3 bg-orange-50 rounded-lg border border-orange-200">
+                  <Checkbox 
+                    id="multiBuilding"
+                    checked={multiBuildingMode}
+                    onCheckedChange={(checked) => {
+                      setMultiBuildingMode(checked as boolean);
+                      if (!checked) {
+                        // Clear multi-building data when disabled
+                        setSelectedBaysPerBuilding({});
+                        setCostsPerBuilding({});
+                        setSelectedBayConfigurations([]);
+                        setCalculatedFloorArea(0);
+                      }
+                    }}
+                  />
+                  <Label 
+                    htmlFor="multiBuilding" 
+                    className="text-sm font-medium text-orange-800 cursor-pointer"
+                  >
+                    Multi-Building Tenant (tenant requires space across multiple buildings in the same park)
+                  </Label>
+                </div>
 
                 <FormField
                   control={form.control}
@@ -794,7 +819,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
           onConfirm={handleFloorAreaChange}
           initialSelectedBays={selectedBayConfigurations}
           isMultiBuilding={multiBuildingMode}
-          selectedBaysPerBuilding={selectedBaysPerBuilding}
+          initialSelectedBaysPerBuilding={selectedBaysPerBuilding}
           onBaysPerBuildingChange={setSelectedBaysPerBuilding}
           costsPerBuilding={costsPerBuilding}
           onCostsPerBuildingChange={setCostsPerBuilding}

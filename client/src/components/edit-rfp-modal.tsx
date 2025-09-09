@@ -313,9 +313,17 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
               
               // Convert existing bay configurations to multi-building format
               const buildingKey = `${currentProperty.propertyName} - Building ${currentProperty.building}`;
-              setSelectedBaysPerBuilding({
+              const multiBuildingData = {
                 [buildingKey]: selectedBayConfigurations
+              };
+              
+              console.log('🏢 Converting to multi-building:', {
+                buildingKey,
+                bayCount: selectedBayConfigurations.length,
+                multiBuildingData
               });
+              
+              setSelectedBaysPerBuilding(multiBuildingData);
               
               // Keep the existing project area calculation
               // (don't clear it since user already has selections)
@@ -711,6 +719,10 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
                     onSelectionChange={handleMultiBuildingSelection}
                   />
                 )}
+                {/* Debug info */}
+                <div className="text-xs text-gray-500 p-2 bg-gray-100 rounded">
+                  Debug: {Object.keys(selectedBaysPerBuilding).length} building keys: {Object.keys(selectedBaysPerBuilding).join(', ')}
+                </div>
               </div>
             )}
 

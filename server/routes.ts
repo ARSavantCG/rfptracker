@@ -1421,6 +1421,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         formData.confidential = false; // default to false
       }
 
+      // Parse multi-building fields
+      if (formData.isMultiBuilding === 'true') {
+        formData.isMultiBuilding = true;
+      } else if (formData.isMultiBuilding === 'false') {
+        formData.isMultiBuilding = false;
+      } else {
+        formData.isMultiBuilding = false; // default to false
+      }
+
+      // Parse selectedBaysPerBuilding JSON object
+      if (formData.selectedBaysPerBuilding && typeof formData.selectedBaysPerBuilding === 'string') {
+        try {
+          formData.selectedBaysPerBuilding = JSON.parse(formData.selectedBaysPerBuilding);
+        } catch {
+          formData.selectedBaysPerBuilding = {};
+        }
+      }
+
+      // Parse costsPerBuilding JSON object
+      if (formData.costsPerBuilding && typeof formData.costsPerBuilding === 'string') {
+        try {
+          formData.costsPerBuilding = JSON.parse(formData.costsPerBuilding);
+        } catch {
+          formData.costsPerBuilding = {};
+        }
+      }
+
       // Ensure sentBy field is present (frontend should send this directly now)
 
       // Parse with schema first, then convert dates for database

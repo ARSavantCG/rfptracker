@@ -146,7 +146,7 @@ export function BaySelectionGrid({
     }
     
     // Update the building-specific selections
-    const newSelectedBuildingIds = {
+    const newSelectedBuildingIds: {[propertyName: string]: Set<string>} = {
       ...selectedBuildingIds,
       [propertyName]: newBuildingIds
     };

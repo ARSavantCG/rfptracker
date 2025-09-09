@@ -128,6 +128,9 @@ export function BaySelectionGrid({
 
   // Toggle bay selection for multi-building mode
   const toggleMultiBuildingBaySelection = (propertyName: string, bayId: string, bay: BayConfiguration) => {
+    console.log('🔧 Multi-building bay click:', { propertyName, bayId, bay: bay.bayName });
+    console.log('🔧 Current selectedBuildingIds:', selectedBuildingIds);
+    
     const currentBuildingIds = selectedBuildingIds[propertyName] || new Set();
     const newBuildingIds = new Set(currentBuildingIds);
     
@@ -473,7 +476,7 @@ export function BaySelectionGrid({
                   <Badge 
                     key={bay.id} 
                     variant="outline"
-                    className={getBayColor()}
+                    className={getBayColor(true)}
                   >
                     {bay.bayName} ({(bay.rentableSquareFootage || bay.squareFootage).toLocaleString()} sq ft)
                     {bay.hasStorefrontEntry && <span className="text-orange-600 ml-1" title="Storefront Entry">🚪</span>}

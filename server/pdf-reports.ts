@@ -268,6 +268,13 @@ export function generateExecutiveReportHtml(data: ReportData): string {
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
           <!-- Company logo -->
           <img src="${getBridgeLogo()}" alt="Bridge Industrial" style="height: 30px; width: auto;" />
+          <!-- Development Contact -->
+          <div class="company-info">
+            <div style="font-weight: bold; color: rgb(0,50,130); margin-bottom: 2px;">Development Contact</div>
+            <div style="font-size: 11px; color: #666;">
+              ${rfps.length > 0 && rfps[0].developmentContact ? rfps[0].developmentContact : 'Contact information available upon request'}
+            </div>
+          </div>
         </div>
         <div class="document-title">Executive Summary Report</div>
         <p class="subtitle">RFP Status Overview - Generated on ${format(new Date(generatedAt), 'MMMM dd, yyyy \'at\' h:mm a')}</p>

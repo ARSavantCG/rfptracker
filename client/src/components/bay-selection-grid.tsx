@@ -86,31 +86,26 @@ export function BaySelectionGrid({
   const bays = property ? getSortedBays(property) : [];
   
   // Create a simple grid layout based on number of bays
-  const bayCount = bays.length;
-  const calculatedColumns = Math.ceil(Math.sqrt(bayCount));
-  const calculatedRows = Math.ceil(bayCount / calculatedColumns);
-  const { rows, columns } = { rows: calculatedRows, columns: calculatedColumns };
-
-  // Create a grid array with bay assignments
-  const createGrid = () => {
+  const createGrid = (baysArray: BayConfiguration[]) => {
+    const bayCount = baysArray.length;
+    const calculatedColumns = Math.ceil(Math.sqrt(bayCount));
+    const calculatedRows = Math.ceil(bayCount / calculatedColumns);
     const grid: (BayConfiguration | null)[][] = [];
-    let bayIndex = 0;
     
-    for (let row = 0; row < rows; row++) {
+    let bayIndex = 0;
+    for (let row = 0; row < calculatedRows; row++) {
       grid[row] = [];
-      for (let col = 0; col < columns; col++) {
-        if (bayIndex < bays.length) {
-          grid[row][col] = bays[bayIndex];
+      for (let col = 0; col < calculatedColumns; col++) {
+        if (bayIndex < baysArray.length) {
+          grid[row][col] = baysArray[bayIndex];
           bayIndex++;
         } else {
           grid[row][col] = null;
         }
       }
     }
-    return grid;
+    return { grid, columns: calculatedColumns };
   };
-
-  const grid = createGrid();
 
   // Toggle bay selection for single building mode
   const toggleBaySelection = (bayId: string) => {
@@ -298,31 +293,7 @@ export function BaySelectionGrid({
               const propSelectedBays = propBays.filter(bay => propSelectedIds.has(bay.id));
               const propTotalSF = propSelectedBays.reduce((total, bay) => total + (bay.rentableSquareFootage || bay.squareFootage), 0);
               
-              // Create grid layout for this property
-              const bayCount = propBays.length;
-              const calculatedColumns = Math.ceil(Math.sqrt(bayCount));
-              const calculatedRows = Math.ceil(bayCount / calculatedColumns);
-              const { rows, columns } = { rows: calculatedRows, columns: calculatedColumns };
-              
-              // Create grid array
-              const createGrid = () => {
-                const grid: (BayConfiguration | null)[][] = [];
-                let bayIndex = 0;
-                for (let row = 0; row < rows; row++) {
-                  grid[row] = [];
-                  for (let col = 0; col < columns; col++) {
-                    if (bayIndex < propBays.length) {
-                      grid[row][col] = propBays[bayIndex];
-                      bayIndex++;
-                    } else {
-                      grid[row][col] = null;
-                    }
-                  }
-                }
-                return grid;
-              };
-              
-              const grid = createGrid();
+              const { grid, columns } = createGrid(propBays);
               
               return (
                 <div key={prop.id} className="border rounded-lg p-4 bg-gray-50">
@@ -413,29 +384,7 @@ export function BaySelectionGrid({
                 }}
               >
                 {(() => {
-                  const bayCount = bays.length;
-                  const calculatedColumns = Math.ceil(Math.sqrt(bayCount));
-                  const calculatedRows = Math.ceil(bayCount / calculatedColumns);
-                  const { rows, columns } = { rows: calculatedRows, columns: calculatedColumns };
-                  
-                  const createGrid = () => {
-                    const grid: (BayConfiguration | null)[][] = [];
-                    let bayIndex = 0;
-                    for (let row = 0; row < rows; row++) {
-                      grid[row] = [];
-                      for (let col = 0; col < columns; col++) {
-                        if (bayIndex < bays.length) {
-                          grid[row][col] = bays[bayIndex];
-                          bayIndex++;
-                        } else {
-                          grid[row][col] = null;
-                        }
-                      }
-                    }
-                    return grid;
-                  };
-                  
-                  const grid = createGrid();
+                  const { grid } = createGrid(bays);
                   
                   return grid.map((row, rowIndex) =>
                     row.map((bay, colIndex) => (
@@ -473,60 +422,26 @@ export function BaySelectionGrid({
                       </div>
                     ))
                   );
-                })()
-              }
+                })()}
+              </div>
             </div>
           </div>
         )}
-            {grid.map((row, rowIndex) =>
-              row.map((bay, colIndex) => (
-                <div key={`${rowIndex}-${colIndex}`} className="h-32 w-24">
-                  {bay ? (
-                    <button
-                      onClick={() => toggleBaySelection(bay.id)}
-                      className={`
-                        w-full h-full p-2 rounded-lg border-2 transition-all duration-200
-                        flex flex-col items-center justify-center text-xs font-medium
-                        hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500
-                        ${selectedBayIds.has(bay.id) 
-                          ? 'ring-2 ring-blue-500 shadow-lg scale-105' 
-                          : 'hover:scale-102'
-                        }
-                        ${getBayColor()}
-                      `}
-                    >
-                      <div className="text-center">
-                        <div className="font-bold truncate w-full">{bay.bayName}</div>
-                        <div className="text-xs mt-1">{(bay.rentableSquareFootage || bay.squareFootage).toLocaleString()} sq ft</div>
-                        <div className="flex justify-center mt-1 gap-1 text-xs min-h-[1.5rem]">
-                          {bay.hasStorefrontEntry && (
-                            <span className="text-orange-600 text-lg" title="Storefront Entry">🚪</span>
-                          )}
-                          {bay.hasSpeculativeOffice && (
-                            <span className="text-blue-600 text-lg" title="Speculative Office">🏢</span>
-                          )}
-                        </div>
-                      </div>
-                    </button>
-                  ) : (
-                    <div className="w-full h-full border-2 border-dashed border-gray-200 rounded-lg bg-gray-50"></div>
-                  )}
-                </div>
-              ))
-            )}
-            </div>
-          </div>
-        </div>
 
         {/* Selection Summary */}
         <div className="bg-gray-50 p-4 rounded-lg">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center space-x-2">
               <Calculator className="h-5 w-5 text-blue-600" />
-              <span className="font-medium">Selection Summary</span>
+              <span className="font-medium">
+                {multiBuildingMode ? 'Multi-Building Selection Summary' : 'Selection Summary'}
+              </span>
             </div>
             <Badge variant="secondary">
-              {selectedBays.length} of {bays.length} bays selected
+              {multiBuildingMode 
+                ? `${selectedBays.length} bays total across ${Object.keys(selectedBaysPerBuilding).length} buildings`
+                : `${selectedBays.length} of ${bays.length} bays selected`
+              }
             </Badge>
           </div>
           

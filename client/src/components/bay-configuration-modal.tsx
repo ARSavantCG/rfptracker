@@ -86,6 +86,13 @@ export function BayConfigurationModal({
   }, []);
 
   const handleConfirm = () => {
+    console.log('🔧 BayConfigurationModal handleConfirm called with:', {
+      currentArea,
+      currentBaysLength: currentBays.length,
+      currentSelectedBaysPerBuilding,
+      currentCostsPerBuilding,
+      isMultiBuilding
+    });
     onConfirm(currentArea, currentBays, currentOverride, currentSelectedBaysPerBuilding, currentCostsPerBuilding);
     onClose();
   };

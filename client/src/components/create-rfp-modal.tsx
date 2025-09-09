@@ -249,15 +249,25 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
     selectedBaysPerBuilding?: {[propertyName: string]: BayConfiguration[]}, 
     costsPerBuilding?: {[propertyName: string]: BuildingCosts}
   ) => {
+    console.log('🔧 handleFloorAreaChange called with:', {
+      area,
+      bayConfigsLength: bayConfigs.length,
+      selectedBaysPerBuilding,
+      costsPerBuilding,
+      multiBuildingMode
+    });
+    
     // Use the area calculated by the Bay Configuration Selector (already includes proportional mechanical allocation)
     setCalculatedFloorArea(area);
     setSelectedBayConfigurations(bayConfigs);
     
     // Handle multi-building data if provided
     if (selectedBaysPerBuilding) {
+      console.log('🔧 Setting selectedBaysPerBuilding:', selectedBaysPerBuilding);
       setSelectedBaysPerBuilding(selectedBaysPerBuilding);
     }
     if (costsPerBuilding) {
+      console.log('🔧 Setting costsPerBuilding:', costsPerBuilding);
       setCostsPerBuilding(costsPerBuilding);
     }
     

@@ -40,20 +40,15 @@ export function BaySelectionGrid({
   // Initialize building selections for multi-building mode
   useEffect(() => {
     if (multiBuildingMode && properties.length > 0) {
-      // Only initialize if selectedBuildingIds is completely empty
-      const hasExistingData = Object.keys(selectedBuildingIds).length > 0;
-      if (!hasExistingData) {
-        const initialBuildingIds: {[propertyName: string]: Set<string>} = {};
-        properties.forEach(prop => {
-          const propName = prop.propertyName;
-          const selectedBays = selectedBaysPerBuilding[propName] || [];
-          initialBuildingIds[propName] = new Set(selectedBays.map(bay => bay.id));
-        });
-        console.log('🔧 Initializing selectedBuildingIds:', initialBuildingIds);
-        setSelectedBuildingIds(initialBuildingIds);
-      }
+      const initialBuildingIds: {[propertyName: string]: Set<string>} = {};
+      properties.forEach(prop => {
+        const propName = prop.propertyName;
+        const selectedBays = initialSelectedBaysPerBuilding[propName] || [];
+        initialBuildingIds[propName] = new Set(selectedBays.map(bay => bay.id));
+      });
+      setSelectedBuildingIds(initialBuildingIds);
     }
-  }, [multiBuildingMode, properties.length]);
+  }, [multiBuildingMode, properties.length, initialSelectedBaysPerBuilding]);
 
   // Handle multi-building toggle
   const handleMultiBuildingToggle = (enabled: boolean) => {
@@ -133,10 +128,6 @@ export function BaySelectionGrid({
 
   // Toggle bay selection for multi-building mode
   const toggleMultiBuildingBaySelection = (propertyName: string, bayId: string, bay: BayConfiguration) => {
-    console.log('🔧 Multi-building bay click:', { propertyName, bayId, bay: bay.bayName });
-    console.log('🔧 Current selectedBuildingIds:', selectedBuildingIds);
-    console.log('🔧 Type of selectedBuildingIds[propertyName]:', typeof selectedBuildingIds[propertyName], selectedBuildingIds[propertyName]);
-    console.log('🔧 Is Set?:', selectedBuildingIds[propertyName] instanceof Set);
     
     const currentBuildingIds = selectedBuildingIds[propertyName] instanceof Set 
       ? selectedBuildingIds[propertyName] 
@@ -159,7 +150,7 @@ export function BaySelectionGrid({
     });
     
     // Update the current property's selection
-    newSelectedBuildingIds[propertyName] = newBuildingIds;
+    newSelectedBuildingIds[propertyName] = newBuildingIds as Set<string>;
     setSelectedBuildingIds(newSelectedBuildingIds);
     
     // Get all bays for this property and filter selected ones

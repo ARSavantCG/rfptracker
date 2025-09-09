@@ -185,6 +185,14 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
         }
       }
 
+      console.log('🔍 Form initialization:', {
+        rfpProperty: rfp.property,
+        rfpId: rfp.id,
+        tenantName: rfp.tenantName,
+        isMultiBuilding: isMultiBuildingRfp,
+        bayConfigCount: rfp.selectedBayConfigurations?.length || 0
+      });
+
       form.reset({
         rfpNumber: rfp.rfpNumber || "",
         property: rfp.property || "",

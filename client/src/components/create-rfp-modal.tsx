@@ -528,7 +528,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                       <Label className="text-sm font-medium text-gray-700">
                         Bay Configuration {multiBuildingMode && <span className="text-blue-600">(Multi-Building Mode)</span>}
                       </Label>
-                      <p className="text-xs text-gray-500 mt-1">
+                      <div className="text-xs text-gray-500 mt-1">
                         {multiBuildingMode && Object.keys(selectedBaysPerBuilding).length > 0 ? (
                           <div className="space-y-1">
                             {Object.entries(selectedBaysPerBuilding).map(([propertyName, bays]) => (
@@ -549,7 +549,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                           ? `${selectedBayConfigurations.length} bay${selectedBayConfigurations.length !== 1 ? 's' : ''} selected (${calculatedFloorArea.toLocaleString()} SF)`
                           : 'No bays selected for area calculation'
                         }
-                      </p>
+                      </div>
                     </div>
                     <Button
                       type="button"
@@ -606,7 +606,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                               ))}
                             </div>
                           ) : (
-                            <p className="text-xs text-gray-500">From selected bay configurations</p>
+                            <div className="text-xs text-gray-500">From selected bay configurations</div>
                           )}
                         </div>
                         <div>

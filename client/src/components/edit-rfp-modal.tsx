@@ -682,7 +682,37 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
                   <FormControl>
                     <Checkbox
                       checked={field.value}
-                      onCheckedChange={field.onChange}
+                      onCheckedChange={(value) => {
+                        field.onChange(value);
+                        
+                        console.log('🎯 Direct checkbox toggle:', { 
+                          value, 
+                          currentProperty: form.getValues("property"),
+                          bayCount: selectedBayConfigurations.length 
+                        });
+                        
+                        // Handle multi-building conversion directly
+                        if (value) {
+                          const currentPropertyId = form.getValues("property");
+                          const currentProperty = properties.find(p => p.id.toString() === currentPropertyId);
+                          
+                          if (currentProperty && selectedBayConfigurations.length > 0) {
+                            const buildingKey = `${currentProperty.propertyName} - Building ${currentProperty.building}`;
+                            const multiBuildingData = {
+                              [buildingKey]: selectedBayConfigurations
+                            };
+                            
+                            console.log('🏢 Direct conversion to multi-building:', {
+                              buildingKey,
+                              bayCount: selectedBayConfigurations.length,
+                              multiBuildingData
+                            });
+                            
+                            setSelectedProperties([currentPropertyId]);
+                            setSelectedBaysPerBuilding(multiBuildingData);
+                          }
+                        }
+                      }}
                     />
                   </FormControl>
                   <div className="space-y-1 leading-none">

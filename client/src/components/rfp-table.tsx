@@ -217,9 +217,9 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
     const property = properties.find(p => p.id.toString() === propertyId);
     if (!property) return propertyId;
     
-    // For multi-building RFPs, show "Multiple Buildings" instead of a specific building
+    // For multi-building RFPs, show "Multiple Bldgs." instead of a specific building
     if (rfp?.isMultiBuilding) {
-      return `${property.propertyName} - Multiple Buildings`;
+      return `${property.propertyName} - Multiple Bldgs.`;
     }
     
     // Format property name with building using "Bldg." prefix for single-building properties

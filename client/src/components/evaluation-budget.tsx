@@ -151,6 +151,21 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
     queryKey: [`/api/properties/${rfp?.property}`],
     enabled: !!rfp?.property,
   });
+
+  // For multi-building RFPs, also load all selected properties if they exist
+  const { data: multiBuildingProperties } = useQuery({
+    queryKey: [`/api/properties`],
+    enabled: rfp?.isMultiBuilding && (!rfp?.properties || rfp?.properties?.length === 0),
+    select: (allProperties: any[]) => {
+      // If no specific properties selected, return the primary property
+      if (!rfp?.properties || rfp?.properties.length === 0) {
+        return rfp?.property ? [allProperties.find(p => p.id.toString() === rfp.property.toString())] : [];
+      }
+      return rfp.properties.map((propId: string) => 
+        allProperties.find(p => p.id.toString() === propId.toString())
+      ).filter(Boolean);
+    }
+  });
   
 
 
@@ -572,12 +587,22 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
 
   // Calculate parking counts based on tenant's allocated area
   const calculateParkingCounts = () => {
-    if (!propertyData || !rfp?.selectedBayConfigurations) {
-      console.log('Parking Calc Debug - Missing data:', { hasProperty: !!propertyData, hasBays: !!rfp?.selectedBayConfigurations });
+    // For multi-building RFPs, get property data from primary property or multi-building data
+    const activePropertyData = rfp?.isMultiBuilding 
+      ? (multiBuildingProperties?.[0] || propertyData)
+      : propertyData;
+
+    if (!activePropertyData || !rfp?.selectedBayConfigurations) {
+      console.log('Parking Calc Debug - Missing data:', { 
+        hasProperty: !!activePropertyData, 
+        hasBays: !!rfp?.selectedBayConfigurations,
+        isMultiBuilding: rfp?.isMultiBuilding,
+        propertyId: rfp?.property
+      });
       return { vehicular: 0, trailer: 0 };
     }
     
-    const property = propertyData as any;
+    const property = activePropertyData as any;
     
     // Calculate tenant's rentable area from selected bays
     const tenantRentableArea = rfp.selectedBayConfigurations.reduce((total, bay) => {

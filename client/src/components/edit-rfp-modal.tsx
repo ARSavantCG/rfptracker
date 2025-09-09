@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { HierarchicalPropertySelector } from "./hierarchical-property-selector";
+import { BaySelectionGrid } from "./bay-selection-grid";
 import { FileUpload } from "./file-upload";
 import { BayConfigurationModal } from "./bay-configuration-modal";
 import { Edit, Save, X, Download, Trash2, Grid3x3, ChevronDown } from "lucide-react";
@@ -21,6 +22,8 @@ import type { RfpRequest, RfpFile, Property, BayConfiguration, Contact } from "@
 const editRfpSchema = z.object({
   rfpNumber: z.string().min(1, "RFP number is required"),
   property: z.string().min(1, "Property is required"),
+  isMultiBuilding: z.boolean().optional(),
+  properties: z.array(z.string()).optional(),
   tenantName: z.string().min(1, "Tenant name is required"),
   alternateDescription: z.string().optional(),
   projectName: z.string().min(1, "Project name is required"),
@@ -51,6 +54,9 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [calculatedFloorArea, setCalculatedFloorArea] = useState<number>(0);
   const [selectedBayConfigurations, setSelectedBayConfigurations] = useState<BayConfiguration[]>([]);
+  const [isMultiBuilding, setIsMultiBuilding] = useState<boolean>(false);
+  const [selectedProperties, setSelectedProperties] = useState<string[]>([]);
+  const [selectedBaysPerBuilding, setSelectedBaysPerBuilding] = useState<{[propertyName: string]: BayConfiguration[]}>({});
   const [bayConfigModalOpen, setBayConfigModalOpen] = useState(false);
 
   // Fetch properties for bay configuration
@@ -134,6 +140,8 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
     defaultValues: {
       rfpNumber: "",
       property: "",
+      isMultiBuilding: false,
+      properties: [],
       tenantName: "",
       alternateDescription: "",
       projectName: "",
@@ -165,9 +173,23 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
         }
       }
 
+      // Set multi-building state
+      const isMultiBuildingRfp = Boolean(rfp.isMultiBuilding);
+      setIsMultiBuilding(isMultiBuildingRfp);
+      
+      // Set properties based on multi-building status
+      if (isMultiBuildingRfp) {
+        setSelectedProperties(rfp.properties || []);
+        if (rfp.selectedBaysPerBuilding) {
+          setSelectedBaysPerBuilding(rfp.selectedBaysPerBuilding);
+        }
+      }
+
       form.reset({
         rfpNumber: rfp.rfpNumber || "",
         property: rfp.property || "",
+        isMultiBuilding: isMultiBuildingRfp,
+        properties: rfp.properties || [],
         tenantName: rfp.tenantName || "",
         alternateDescription: alternateDescription,
         projectName: cleanProjectName,
@@ -184,8 +206,8 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
         workflowPhase: (rfp.workflowPhase || "rfp-entry") as "rfp-entry" | "rfp-validation" | "invitation-to-bid" | "bid-collection" | "evaluation" | "award" | "publish",
       });
 
-      // Set selected property for bay configuration
-      if (rfp.property && properties.length > 0) {
+      // Set selected property for bay configuration (single-building)
+      if (!isMultiBuildingRfp && rfp.property && properties.length > 0) {
         const property = properties.find(p => p.id.toString() === rfp.property);
         if (property) {
           setSelectedProperty(property);
@@ -193,7 +215,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
       }
 
       // Initialize bay configurations if they exist
-      if (rfp.selectedBayConfigurations && rfp.selectedBayConfigurations.length > 0) {
+      if (!isMultiBuildingRfp && rfp.selectedBayConfigurations && rfp.selectedBayConfigurations.length > 0) {
         setSelectedBayConfigurations(rfp.selectedBayConfigurations);
         
         // Calculate total using proportional method for display
@@ -207,6 +229,13 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
           const totalRentableArea = selectedBaySquareFootage + proportionalMechanical;
           setCalculatedFloorArea(Math.round(totalRentableArea));
         }
+      } else if (isMultiBuildingRfp && rfp.selectedBaysPerBuilding) {
+        // Calculate total area for multi-building RFPs
+        let totalArea = 0;
+        Object.values(rfp.selectedBaysPerBuilding).forEach(bays => {
+          totalArea += bays.reduce((sum: number, bay: any) => sum + (bay.squareFootage || 0), 0);
+        });
+        setCalculatedFloorArea(totalArea);
       } else {
         // Try to extract from project area if it contains calculated text
         const projectArea = rfp.projectArea || "";
@@ -221,14 +250,57 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
     }
   }, [rfp, isOpen, form, properties]);
 
+  // Handle multi-building selection changes
+  const handleMultiBuildingSelection = (newSelectedBaysPerBuilding: {[propertyName: string]: BayConfiguration[]}) => {
+    setSelectedBaysPerBuilding(newSelectedBaysPerBuilding);
+    
+    // Calculate total area across all buildings
+    let totalArea = 0;
+    Object.values(newSelectedBaysPerBuilding).forEach(bays => {
+      totalArea += bays.reduce((sum, bay) => sum + (bay.squareFootage || 0), 0);
+    });
+    
+    setCalculatedFloorArea(totalArea);
+    
+    // Update project area field
+    if (totalArea > 0) {
+      const areaText = `${totalArea.toLocaleString()} SF (calculated from selected bay configurations across multiple buildings)`;
+      form.setValue("projectArea", areaText);
+    } else {
+      form.setValue("projectArea", "");
+    }
+  };
+
   // Auto-format project name when tenant name, property, alternate description, or confidential status changes
   useEffect(() => {
     const subscription = form.watch((value, { name, type }) => {
-      if (name === 'tenantName' || name === 'property' || name === 'alternateDescription' || name === 'confidential') {
+      if (name === 'tenantName' || name === 'property' || name === 'alternateDescription' || name === 'confidential' || name === 'isMultiBuilding') {
         const tenantName = value.tenantName || '';
         const property = value.property || '';
         const alternateDescription = value.alternateDescription || '';
         const confidential = value.confidential || false;
+        const isMultiBuildingValue = value.isMultiBuilding || false;
+        
+        // Handle multi-building toggle
+        if (name === 'isMultiBuilding') {
+          setIsMultiBuilding(isMultiBuildingValue);
+          
+          if (isMultiBuildingValue) {
+            // Clear single property selection when switching to multi-building
+            setSelectedProperty(null);
+            setSelectedBayConfigurations([]);
+            form.setValue("property", "");
+          } else {
+            // Clear multi-building selections when switching to single
+            setSelectedProperties([]);
+            setSelectedBaysPerBuilding({});
+            form.setValue("properties", []);
+          }
+          
+          setCalculatedFloorArea(0);
+          form.setValue("projectArea", "");
+          return;
+        }
 
         // Update selected property when property field changes
         if (name === 'property' && property && properties.length > 0) {
@@ -242,19 +314,30 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
           }
         }
         
-        // Only auto-format if we have both tenant and property, or if this is not a template alternate
-        if ((tenantName && property && property !== "Select property...") || (rfp && rfp.id !== 0)) {
-          // Find the selected property by ID
-          const selectedProp = properties.find(p => p.id.toString() === property);
+        // Only auto-format if we have both tenant and property (for single-building) or properties (for multi-building), or if this is not a template alternate
+        if (((tenantName && property && property !== "Select property...") && !isMultiBuildingValue) || 
+            ((tenantName && isMultiBuildingValue && selectedProperties.length > 0)) || 
+            (rfp && rfp.id !== 0)) {
           let propertyName = property;
           
-          if (selectedProp) {
-            // Only add building name if it exists, is not empty, and is different from property name
-            if (selectedProp.building && 
-                selectedProp.building.trim() !== '') {
-              propertyName = `${selectedProp.propertyName} - Bldg. ${selectedProp.building}`;
-            } else {
-              propertyName = selectedProp.propertyName;
+          if (isMultiBuildingValue && selectedProperties.length > 0) {
+            // For multi-building RFPs, get the base property name
+            const firstSelectedProperty = properties.find(p => selectedProperties.includes(p.id.toString()));
+            if (firstSelectedProperty) {
+              propertyName = `${firstSelectedProperty.propertyName} - Multiple Buildings`;
+            }
+          } else {
+            // Find the selected property by ID for single-building
+            const selectedProp = properties.find(p => p.id.toString() === property);
+            
+            if (selectedProp) {
+              // Only add building name if it exists, is not empty, and is different from property name
+              if (selectedProp.building && 
+                  selectedProp.building.trim() !== '') {
+                propertyName = `${selectedProp.propertyName} - Bldg. ${selectedProp.building}`;
+              } else {
+                propertyName = selectedProp.propertyName;
+              }
             }
           }
           
@@ -325,8 +408,12 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
         }
       });
       
-      // Add selected bay configurations
-      if (selectedBayConfigurations.length > 0) {
+      // Add bay configurations (single or multi-building)
+      if (isMultiBuilding) {
+        formData.append('isMultiBuilding', 'true');
+        formData.append('selectedBaysPerBuilding', JSON.stringify(selectedBaysPerBuilding));
+        formData.append('properties', JSON.stringify(selectedProperties));
+      } else if (selectedBayConfigurations.length > 0) {
         formData.append('selectedBayConfigurations', JSON.stringify(selectedBayConfigurations));
       }
       
@@ -419,8 +506,12 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
           }
         });
         
-        // Add selected bay configurations
-        if (selectedBayConfigurations.length > 0) {
+        // Add bay configurations (single or multi-building)
+        if (isMultiBuilding) {
+          formData.append('isMultiBuilding', 'true');
+          formData.append('selectedBaysPerBuilding', JSON.stringify(selectedBaysPerBuilding));
+          formData.append('properties', JSON.stringify(selectedProperties));
+        } else if (selectedBayConfigurations.length > 0) {
           formData.append('selectedBayConfigurations', JSON.stringify(selectedBayConfigurations));
         }
         
@@ -504,22 +595,61 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
               )}
             />
 
+            {/* Multi-Building Toggle */}
             <FormField
               control={form.control}
-              name="property"
+              name="isMultiBuilding"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Property</FormLabel>
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0">
                   <FormControl>
-                    <HierarchicalPropertySelector
-                      value={field.value}
-                      onChange={field.onChange}
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
                     />
                   </FormControl>
-                  <FormMessage />
+                  <div className="space-y-1 leading-none">
+                    <FormLabel>Multi-Building RFP</FormLabel>
+                    <p className="text-sm text-muted-foreground">
+                      Enable this for RFPs requiring multiple buildings in the same property park
+                    </p>
+                  </div>
                 </FormItem>
               )}
             />
+
+            {/* Property Selection - Conditional based on multi-building */}
+            {!isMultiBuilding ? (
+              <FormField
+                control={form.control}
+                name="property"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Property</FormLabel>
+                    <FormControl>
+                      <HierarchicalPropertySelector
+                        value={field.value}
+                        onChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            ) : (
+              <div className="space-y-4">
+                <FormLabel>Multi-Building Bay Selection</FormLabel>
+                <p className="text-sm text-muted-foreground">
+                  Select bays from multiple buildings within the same property park.
+                </p>
+                {properties.length > 0 && (
+                  <BaySelectionGrid
+                    properties={properties}
+                    selectedBaysPerBuilding={selectedBaysPerBuilding}
+                    onSelectionChange={handleMultiBuildingSelection}
+                  />
+                )}
+              </div>
+            )}
 
             <FormField
               control={form.control}
@@ -695,7 +825,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Project Area (sq ft)</FormLabel>
-                    {selectedProperty ? (
+                    {!isMultiBuilding && selectedProperty ? (
                       <div className="space-y-4">
                         <div className="flex items-center justify-between p-4 border rounded-lg bg-gray-50">
                           <div>
@@ -727,6 +857,29 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
                         </FormControl>
                         <p className="text-sm text-muted-foreground">
                           Automatically calculated from selected bay configurations
+                        </p>
+                      </div>
+                    ) : isMultiBuilding ? (
+                      <div className="space-y-4">
+                        <div className="p-4 border rounded-lg bg-gray-50">
+                          <div className="text-sm font-medium text-gray-700">Multi-Building Configuration</div>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {Object.keys(selectedBaysPerBuilding).length > 0
+                              ? `${Object.values(selectedBaysPerBuilding).flat().length} bays selected across ${Object.keys(selectedBaysPerBuilding).length} buildings (${calculatedFloorArea.toLocaleString()} SF)`
+                              : 'No bays selected for area calculation'
+                            }
+                          </p>
+                        </div>
+                        
+                        <FormControl>
+                          <Input 
+                            {...field}
+                            readOnly
+                            className="bg-gray-50"
+                          />
+                        </FormControl>
+                        <p className="text-sm text-muted-foreground">
+                          Automatically calculated from selected bay configurations across multiple buildings
                         </p>
                       </div>
                     ) : (

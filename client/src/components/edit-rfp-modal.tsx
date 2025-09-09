@@ -307,6 +307,14 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
             const currentPropertyId = value.property || form.getValues("property");
             const currentProperty = properties.find(p => p.id.toString() === currentPropertyId);
             
+            console.log('🔍 Multi-building toggle debug:', {
+              currentPropertyId,
+              currentProperty: currentProperty?.propertyName,
+              selectedBayCount: selectedBayConfigurations.length,
+              hasProperty: !!currentProperty,
+              hasBays: selectedBayConfigurations.length > 0
+            });
+            
             if (currentProperty && selectedBayConfigurations.length > 0) {
               // Pre-select the original property in multi-building mode
               setSelectedProperties([currentPropertyId]);

@@ -4032,7 +4032,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 <th>Rentable SF</th>
                 <th>Date Received</th>
                 <th>Due Date</th>
-                <th>Days Until Due</th>
+                <th>Day(s) Until Due</th>
                 <th>Status</th>
                 <th>Grand Total</th>
                 <th>$/RSF</th>
@@ -4056,9 +4056,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 } else {
                   dueDateDisplay = dueDate.toLocaleDateString();
                   if (daysUntil < 0) {
-                    dayDisplay = Math.abs(daysUntil) + ' days overdue';
+                    dayDisplay = Math.abs(daysUntil) + ' day(s) overdue';
                   } else {
-                    dayDisplay = daysUntil + ' days';
+                    dayDisplay = daysUntil + ' day(s)';
                   }
                 }
                 

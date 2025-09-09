@@ -282,7 +282,7 @@ export function generateExecutiveReportHtml(data: ReportData): string {
             <th style="width: 35%;">Project Name</th>
             <th style="width: 15%;">Due Date</th>
             <th style="width: 15%;">Status</th>
-            <th style="width: 20%;">Days Until Due</th>
+            <th style="width: 20%;">Day(s) Until Due</th>
           </tr>
         </thead>
         <tbody>
@@ -308,7 +308,7 @@ export function generateExecutiveReportHtml(data: ReportData): string {
                   ${rfp.status === 'completed' ? 
                     '<span style="color: #6b7280;">—</span>' : 
                     (isValidDate ? 
-                      `<span class="${daysUntilDue < 0 ? 'overdue-text' : daysUntilDue <= 3 ? 'critical-text' : ''}">${daysUntilDue < 0 ? `${Math.abs(daysUntilDue)} days overdue` : `${daysUntilDue} days`}</span>` :
+                      `<span class="${daysUntilDue < 0 ? 'overdue-text' : daysUntilDue <= 3 ? 'critical-text' : ''}">${daysUntilDue < 0 ? `${Math.abs(daysUntilDue)} day(s) overdue` : `${daysUntilDue} day(s)`}</span>` :
                       '<span style="color: #6b7280;">—</span>'
                     )
                   }

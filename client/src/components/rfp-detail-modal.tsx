@@ -14,9 +14,10 @@ interface RfpDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   rfp: RfpRequest | null;
+  onRfpUpdated?: (updatedRfp: RfpRequest) => void;
 }
 
-export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
+export function RfpDetailModal({ isOpen, onClose, rfp, onRfpUpdated }: RfpDetailModalProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editStatus, setEditStatus] = useState("");
   const [editWorkflowPhase, setEditWorkflowPhase] = useState("");
@@ -77,12 +78,14 @@ export function RfpDetailModal({ isOpen, onClose, rfp }: RfpDetailModalProps) {
 
       return await apiRequest(`/api/rfp-requests/${rfp.id}`, "PATCH", updateData);
     },
-    onSuccess: () => {
+    onSuccess: (updatedRfp: RfpRequest) => {
       // Invalidate all RFP-related queries to ensure fresh data
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
-      // Force reload of the entire RFP list to update the modal prop
-      queryClient.refetchQueries({ queryKey: ["/api/rfp-requests"] });
+      // Update the parent component with fresh RFP data
+      if (onRfpUpdated && updatedRfp) {
+        onRfpUpdated(updatedRfp);
+      }
       toast({
         title: "Success",
         description: "Project completion dates updated successfully",

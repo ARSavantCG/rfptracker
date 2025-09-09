@@ -495,6 +495,9 @@ export default function Dashboard() {
           setDetailRfp(null);
         }}
         rfp={detailRfp}
+        onRfpUpdated={(updatedRfp) => {
+          setDetailRfp(updatedRfp);
+        }}
       />
 
       {/* Bid Collection View */}

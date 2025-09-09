@@ -459,29 +459,62 @@ export function BaySelectionGrid({
             </div>
             <Badge variant="secondary">
               {multiBuildingMode 
-                ? `${selectedBays.length} bays total across ${Object.keys(selectedBaysPerBuilding).length} buildings`
+                ? (() => {
+                    const buildingBreakdown = Object.entries(selectedBaysPerBuilding)
+                      .filter(([_, bays]) => bays.length > 0)
+                      .map(([propertyName, bays]) => {
+                        const buildingNumber = properties.find(p => p.propertyName === propertyName)?.building || '?';
+                        return `Building ${buildingNumber}: ${bays.length} bays`;
+                      })
+                      .join(', ');
+                    return buildingBreakdown || '0 bays selected';
+                  })()
                 : `${selectedBays.length} of ${bays.length} bays selected`
               }
             </Badge>
           </div>
           
-          <div className="grid grid-cols-2 gap-4">
+          <div className={`grid ${multiBuildingMode ? 'grid-cols-1' : 'grid-cols-2'} gap-4`}>
             <div>
               <p className="text-sm text-gray-600">Total Square Footage</p>
               <p className="text-2xl font-bold text-blue-600">
                 {totalSquareFootage.toLocaleString()} sq ft
               </p>
             </div>
-            <div>
-              <p className="text-sm text-gray-600">Average per Bay</p>
-              <p className="text-2xl font-bold text-gray-700">
-                {selectedBays.length > 0 
-                  ? Math.round(totalSquareFootage / selectedBays.length).toLocaleString()
-                  : '0'
-                } sq ft
-              </p>
-            </div>
+            {!multiBuildingMode && (
+              <div>
+                <p className="text-sm text-gray-600">Average per Bay</p>
+                <p className="text-2xl font-bold text-gray-700">
+                  {selectedBays.length > 0 
+                    ? Math.round(totalSquareFootage / selectedBays.length).toLocaleString()
+                    : '0'
+                  } sq ft
+                </p>
+              </div>
+            )}
           </div>
+
+          {multiBuildingMode && Object.keys(selectedBaysPerBuilding).length > 0 && (
+            <div className="mt-4">
+              <p className="text-sm text-gray-600 mb-2">Per-Building Breakdown:</p>
+              <div className="grid grid-cols-2 gap-3">
+                {Object.entries(selectedBaysPerBuilding)
+                  .filter(([_, bays]) => bays.length > 0)
+                  .map(([propertyName, bays]) => {
+                    const buildingNumber = properties.find(p => p.propertyName === propertyName)?.building || '?';
+                    const buildingSquareFootage = bays.reduce((total, bay) => total + (bay.rentableSquareFootage || bay.squareFootage), 0);
+                    return (
+                      <div key={propertyName} className="bg-white p-3 rounded border">
+                        <p className="text-sm font-medium text-gray-800">Building {buildingNumber}</p>
+                        <p className="text-lg font-bold text-blue-600">{buildingSquareFootage.toLocaleString()} sq ft</p>
+                        <p className="text-xs text-gray-500">{bays.length} bays selected</p>
+                      </div>
+                    );
+                  })
+                }
+              </div>
+            </div>
+          )}
 
           {selectedBays.length > 0 && (
             <div className="mt-4">

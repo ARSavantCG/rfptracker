@@ -303,19 +303,58 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
           setIsMultiBuilding(isMultiBuildingValue);
           
           if (isMultiBuildingValue) {
-            // Clear single property selection when switching to multi-building
-            setSelectedProperty(null);
-            setSelectedBayConfigurations([]);
+            // When switching to multi-building, preserve the original property selection
+            const currentPropertyId = value.property || form.getValues("property");
+            const currentProperty = properties.find(p => p.id.toString() === currentPropertyId);
+            
+            if (currentProperty && selectedBayConfigurations.length > 0) {
+              // Pre-select the original property in multi-building mode
+              setSelectedProperties([currentPropertyId]);
+              
+              // Convert existing bay configurations to multi-building format
+              const buildingKey = `${currentProperty.propertyName} - Building ${currentProperty.building}`;
+              setSelectedBaysPerBuilding({
+                [buildingKey]: selectedBayConfigurations
+              });
+              
+              // Keep the existing project area calculation
+              // (don't clear it since user already has selections)
+            } else {
+              // No existing selections, clear everything
+              setSelectedProperty(null);
+              setSelectedBayConfigurations([]);
+              setSelectedProperties([]);
+              setSelectedBaysPerBuilding({});
+              setCalculatedFloorArea(0);
+              form.setValue("projectArea", "");
+            }
+            
+            // Clear the single property field as it's now managed by multi-building
             form.setValue("property", "");
           } else {
-            // Clear multi-building selections when switching to single
+            // When switching back to single building, try to preserve first selected property
+            if (selectedProperties.length > 0) {
+              const firstPropertyId = selectedProperties[0];
+              form.setValue("property", firstPropertyId);
+              
+              // Find bays from the first property to restore
+              const firstPropertyName = Object.keys(selectedBaysPerBuilding)[0];
+              const firstPropertyBays = selectedBaysPerBuilding[firstPropertyName] || [];
+              
+              if (firstPropertyBays.length > 0) {
+                setSelectedBayConfigurations(firstPropertyBays);
+                const totalArea = firstPropertyBays.reduce((sum, bay) => sum + (bay.rentableSquareFootage || bay.squareFootage || 0), 0);
+                setCalculatedFloorArea(totalArea);
+                form.setValue("projectArea", `${totalArea.toLocaleString()} SF (calculated from selected bay configurations)`);
+              }
+            }
+            
+            // Clear multi-building selections
             setSelectedProperties([]);
             setSelectedBaysPerBuilding({});
             form.setValue("properties", []);
           }
           
-          setCalculatedFloorArea(0);
-          form.setValue("projectArea", "");
           return;
         }
 

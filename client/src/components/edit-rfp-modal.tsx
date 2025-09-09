@@ -695,15 +695,21 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
                       onCheckedChange={(value) => {
                         field.onChange(value);
                         
+                        const currentPropertyId = form.getValues("property") || rfp?.property;
+                        const formState = form.getValues();
+                        
                         console.log('🎯 Direct checkbox toggle:', { 
                           value, 
-                          currentProperty: form.getValues("property"),
-                          bayCount: selectedBayConfigurations.length 
+                          currentPropertyId,
+                          formProperty: form.getValues("property"),
+                          rfpProperty: rfp?.property,
+                          formState,
+                          bayCount: selectedBayConfigurations.length,
+                          rfpBayCount: rfp?.selectedBayConfigurations?.length || 0
                         });
                         
                         // Handle multi-building conversion directly
-                        if (value) {
-                          const currentPropertyId = form.getValues("property");
+                        if (value && currentPropertyId) {
                           const currentProperty = properties.find(p => p.id.toString() === currentPropertyId);
                           
                           // Use the original RFP bay configurations directly
@@ -719,11 +725,17 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
                               buildingKey,
                               bayCount: rfpBayConfigurations.length,
                               multiBuildingData,
-                              currentPropertyId
+                              currentPropertyId,
+                              propertyName: currentProperty.propertyName
                             });
                             
                             setSelectedProperties([currentPropertyId]);
                             setSelectedBaysPerBuilding(multiBuildingData);
+                          } else {
+                            console.log('❌ Cannot convert - missing data:', {
+                              currentProperty: !!currentProperty,
+                              rfpBayConfigurationsCount: rfpBayConfigurations.length
+                            });
                           }
                         }
                       }}

@@ -283,12 +283,17 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
       let propertyName = propertyId;
       
       if (selectedProperty) {
-        // Only add building name if it exists, is not empty, and is different from property name
-        if (selectedProperty.building && 
-            selectedProperty.building.trim() !== '') {
-          propertyName = `${selectedProperty.propertyName} - Bldg. ${selectedProperty.building}`;
+        // For multi-building mode, show "Multiple Buildings"
+        if (multiBuildingMode) {
+          propertyName = `${selectedProperty.propertyName} - Multiple Buildings`;
         } else {
-          propertyName = selectedProperty.propertyName;
+          // Only add building name if it exists, is not empty, and is different from property name
+          if (selectedProperty.building && 
+              selectedProperty.building.trim() !== '') {
+            propertyName = `${selectedProperty.propertyName} - Bldg. ${selectedProperty.building}`;
+          } else {
+            propertyName = selectedProperty.propertyName;
+          }
         }
       }
       
@@ -334,30 +339,6 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                     </FormItem>
                   )}
                 />
-
-                {/* Multi-Building Tenant Checkbox */}
-                <div className="flex items-center space-x-2 p-3 bg-orange-50 rounded-lg border border-orange-200">
-                  <Checkbox 
-                    id="multiBuilding"
-                    checked={multiBuildingMode}
-                    onCheckedChange={(checked) => {
-                      setMultiBuildingMode(checked as boolean);
-                      if (!checked) {
-                        // Clear multi-building data when disabled
-                        setSelectedBaysPerBuilding({});
-                        setCostsPerBuilding({});
-                        setSelectedBayConfigurations([]);
-                        setCalculatedFloorArea(0);
-                      }
-                    }}
-                  />
-                  <Label 
-                    htmlFor="multiBuilding" 
-                    className="text-sm font-medium text-orange-800 cursor-pointer"
-                  >
-                    Multi-Building Tenant (tenant requires space across multiple buildings in the same park)
-                  </Label>
-                </div>
 
                 <FormField
                   control={form.control}

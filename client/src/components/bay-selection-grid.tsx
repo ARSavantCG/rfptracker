@@ -46,9 +46,10 @@ export function BaySelectionGrid({
         const selectedBays = selectedBaysPerBuilding[propName] || [];
         initialBuildingIds[propName] = new Set(selectedBays.map(bay => bay.id));
       });
+      console.log('🔧 Initializing selectedBuildingIds:', initialBuildingIds);
       setSelectedBuildingIds(initialBuildingIds);
     }
-  }, [multiBuildingMode, properties, selectedBaysPerBuilding]);
+  }, [multiBuildingMode, properties]);
 
   // Handle multi-building toggle
   const handleMultiBuildingToggle = (enabled: boolean) => {
@@ -130,8 +131,12 @@ export function BaySelectionGrid({
   const toggleMultiBuildingBaySelection = (propertyName: string, bayId: string, bay: BayConfiguration) => {
     console.log('🔧 Multi-building bay click:', { propertyName, bayId, bay: bay.bayName });
     console.log('🔧 Current selectedBuildingIds:', selectedBuildingIds);
+    console.log('🔧 Type of selectedBuildingIds[propertyName]:', typeof selectedBuildingIds[propertyName], selectedBuildingIds[propertyName]);
+    console.log('🔧 Is Set?:', selectedBuildingIds[propertyName] instanceof Set);
     
-    const currentBuildingIds = selectedBuildingIds[propertyName] || new Set();
+    const currentBuildingIds = selectedBuildingIds[propertyName] instanceof Set 
+      ? selectedBuildingIds[propertyName] 
+      : new Set();
     const newBuildingIds = new Set(currentBuildingIds);
     
     if (newBuildingIds.has(bayId)) {

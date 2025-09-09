@@ -203,8 +203,10 @@ export function BaySelectionGrid({
     onSelectionChange?.(allSelectedBays, totalSquareFootage, selectedBaysPerBuilding, newCostsPerBuilding);
   };
 
-  const getBayColor = () => {
-    return 'bg-gray-100 border-gray-300 text-gray-800';
+  const getBayColor = (isSelected: boolean) => {
+    return isSelected
+      ? 'bg-orange-100 border-orange-500 text-orange-900'
+      : 'bg-gray-100 border-gray-300 text-gray-800';
   };
 
   // Calculate totals for display
@@ -300,7 +302,7 @@ export function BaySelectionGrid({
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="font-semibold text-lg flex items-center gap-2">
                       <Building className="h-5 w-5" />
-                      {prop.propertyName}
+                      {prop.propertyName} - Building {prop.building}
                     </h3>
                     <Badge variant="secondary">
                       {propSelectedBays.length} of {propBays.length} bays
@@ -312,25 +314,25 @@ export function BaySelectionGrid({
                     <div 
                       className="grid gap-2"
                       style={{ 
-                        gridTemplateColumns: `repeat(${columns}, 96px)`,
-                        minWidth: `${columns * 96 + (columns - 1) * 8}px`
+                        gridTemplateColumns: `repeat(${columns}, 80px)`,
+                        minWidth: `${columns * 80 + (columns - 1) * 8}px`
                       }}
                     >
                       {grid.map((row, rowIndex) =>
                         row.map((bay, colIndex) => (
-                          <div key={`${prop.id}-${rowIndex}-${colIndex}`} className="h-32 w-24">
+                          <div key={`${prop.id}-${rowIndex}-${colIndex}`} className="h-24 w-20">
                             {bay ? (
                               <button
                                 onClick={() => toggleMultiBuildingBaySelection(prop.propertyName, bay.id, bay)}
                                 className={`
                                   w-full h-full p-2 rounded-lg border-2 transition-all duration-200
                                   flex flex-col items-center justify-center text-xs font-medium
-                                  hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500
+                                  hover:shadow-md focus:outline-none focus:ring-2 focus:ring-orange-500
                                   ${propSelectedIds.has(bay.id) 
-                                    ? 'ring-2 ring-blue-500 shadow-lg scale-105' 
+                                    ? 'ring-2 ring-orange-500 shadow-lg scale-105' 
                                     : 'hover:scale-102'
                                   }
-                                  ${getBayColor()}
+                                  ${getBayColor(propSelectedIds.has(bay.id))}
                                 `}
                               >
                                 <div className="text-center">
@@ -379,8 +381,8 @@ export function BaySelectionGrid({
               <div 
                 className="grid gap-2"
                 style={{ 
-                  gridTemplateColumns: `repeat(${Math.ceil(Math.sqrt(bays.length))}, 96px)`,
-                  minWidth: `${Math.ceil(Math.sqrt(bays.length)) * 96 + (Math.ceil(Math.sqrt(bays.length)) - 1) * 8}px`
+                  gridTemplateColumns: `repeat(${Math.ceil(Math.sqrt(bays.length))}, 80px)`,
+                  minWidth: `${Math.ceil(Math.sqrt(bays.length)) * 80 + (Math.ceil(Math.sqrt(bays.length)) - 1) * 8}px`
                 }}
               >
                 {(() => {
@@ -388,19 +390,19 @@ export function BaySelectionGrid({
                   
                   return grid.map((row, rowIndex) =>
                     row.map((bay, colIndex) => (
-                      <div key={`${rowIndex}-${colIndex}`} className="h-32 w-24">
+                      <div key={`${rowIndex}-${colIndex}`} className="h-24 w-20">
                         {bay ? (
                           <button
                             onClick={() => toggleBaySelection(bay.id)}
                             className={`
                               w-full h-full p-2 rounded-lg border-2 transition-all duration-200
                               flex flex-col items-center justify-center text-xs font-medium
-                              hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500
+                              hover:shadow-md focus:outline-none focus:ring-2 focus:ring-orange-500
                               ${selectedBayIds.has(bay.id) 
-                                ? 'ring-2 ring-blue-500 shadow-lg scale-105' 
+                                ? 'ring-2 ring-orange-500 shadow-lg scale-105' 
                                 : 'hover:scale-102'
                               }
-                              ${getBayColor()}
+                              ${getBayColor(selectedBayIds.has(bay.id))}
                             `}
                           >
                             <div className="text-center">

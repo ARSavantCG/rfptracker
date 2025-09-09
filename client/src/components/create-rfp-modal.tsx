@@ -307,9 +307,9 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
       let propertyName = propertyId;
       
       if (selectedProperty) {
-        // For multi-building mode, show "Multiple Buildings"
+        // For multi-building mode, show "Multiple Bldgs."
         if (multiBuildingMode) {
-          propertyName = `${selectedProperty.propertyName} - Multiple Buildings`;
+          propertyName = `${selectedProperty.propertyName} - Multiple Bldgs.`;
         } else {
           // Only add building name if it exists, is not empty, and is different from property name
           if (selectedProperty.building && 

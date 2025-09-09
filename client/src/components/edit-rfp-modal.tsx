@@ -251,23 +251,40 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
   }, [rfp, isOpen, form, properties]);
 
   // Handle multi-building selection changes
-  const handleMultiBuildingSelection = (newSelectedBaysPerBuilding: {[propertyName: string]: BayConfiguration[]}) => {
-    setSelectedBaysPerBuilding(newSelectedBaysPerBuilding);
-    
-    // Calculate total area across all buildings
-    let totalArea = 0;
-    Object.values(newSelectedBaysPerBuilding).forEach(bays => {
-      totalArea += bays.reduce((sum, bay) => sum + (bay.squareFootage || 0), 0);
-    });
-    
-    setCalculatedFloorArea(totalArea);
-    
-    // Update project area field
-    if (totalArea > 0) {
-      const areaText = `${totalArea.toLocaleString()} SF (calculated from selected bay configurations across multiple buildings)`;
-      form.setValue("projectArea", areaText);
-    } else {
-      form.setValue("projectArea", "");
+  const handleMultiBuildingSelection = (
+    selectedBays: BayConfiguration[], 
+    totalSquareFootage: number,
+    selectedBaysPerBuilding?: {[propertyName: string]: BayConfiguration[]},
+    costsPerBuilding?: {[propertyName: string]: BuildingCosts}
+  ) => {
+    if (selectedBaysPerBuilding) {
+      setSelectedBaysPerBuilding(selectedBaysPerBuilding);
+      
+      // Update selected properties array
+      const propertyNames = Object.keys(selectedBaysPerBuilding);
+      const propertyIds: string[] = [];
+      
+      propertyNames.forEach(buildingKey => {
+        // Extract property name and find corresponding ID
+        const property = properties.find(p => {
+          const expectedKey = `${p.propertyName} - Building ${p.building}`;
+          return expectedKey === buildingKey;
+        });
+        if (property && !propertyIds.includes(property.id.toString())) {
+          propertyIds.push(property.id.toString());
+        }
+      });
+      
+      setSelectedProperties(propertyIds);
+      setCalculatedFloorArea(totalSquareFootage);
+      
+      // Update project area field
+      if (totalSquareFootage > 0) {
+        const areaText = `${totalSquareFootage.toLocaleString()} SF (calculated from selected bay configurations across multiple buildings)`;
+        form.setValue("projectArea", areaText);
+      } else {
+        form.setValue("projectArea", "");
+      }
     }
   };
 
@@ -324,7 +341,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
             // For multi-building RFPs, get the base property name
             const firstSelectedProperty = properties.find(p => selectedProperties.includes(p.id.toString()));
             if (firstSelectedProperty) {
-              propertyName = `${firstSelectedProperty.propertyName} - Multiple Buildings`;
+              propertyName = `${firstSelectedProperty.propertyName} - Multiple Bldgs.`;
             }
           } else {
             // Find the selected property by ID for single-building
@@ -387,7 +404,10 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
             optionTitle: data.alternateDescription || "Alternate",
             formData: {
               ...data,
-              selectedBayConfigurations: selectedBayConfigurations
+              selectedBayConfigurations: isMultiBuilding ? [] : selectedBayConfigurations,
+              isMultiBuilding: isMultiBuilding,
+              selectedBaysPerBuilding: isMultiBuilding ? selectedBaysPerBuilding : {},
+              properties: isMultiBuilding ? selectedProperties : []
             }
           })
         });
@@ -480,7 +500,10 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
             optionTitle: data.alternateDescription || "Alternate",
             formData: {
               ...data,
-              selectedBayConfigurations: selectedBayConfigurations
+              selectedBayConfigurations: isMultiBuilding ? [] : selectedBayConfigurations,
+              isMultiBuilding: isMultiBuilding,
+              selectedBaysPerBuilding: isMultiBuilding ? selectedBaysPerBuilding : {},
+              properties: isMultiBuilding ? selectedProperties : []
             }
           })
         });
@@ -644,7 +667,8 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
                 {properties.length > 0 && (
                   <BaySelectionGrid
                     properties={properties}
-                    selectedBaysPerBuilding={selectedBaysPerBuilding}
+                    isMultiBuilding={true}
+                    initialSelectedBaysPerBuilding={selectedBaysPerBuilding}
                     onSelectionChange={handleMultiBuildingSelection}
                   />
                 )}

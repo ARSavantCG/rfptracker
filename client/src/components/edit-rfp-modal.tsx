@@ -17,7 +17,7 @@ import { FileUpload } from "./file-upload";
 import { BayConfigurationModal } from "./bay-configuration-modal";
 import { Edit, Save, X, Download, Trash2, Grid3x3, ChevronDown } from "lucide-react";
 import { formatDateForInput } from "@shared/date-utils";
-import type { RfpRequest, RfpFile, Property, BayConfiguration, Contact } from "@shared/schema";
+import type { RfpRequest, RfpFile, Property, BayConfiguration, Contact, BuildingCosts } from "@shared/schema";
 
 const editRfpSchema = z.object({
   rfpNumber: z.string().min(1, "RFP number is required"),
@@ -185,13 +185,6 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
         }
       }
 
-      console.log('🔍 Form initialization:', {
-        rfpProperty: rfp.property,
-        rfpId: rfp.id,
-        tenantName: rfp.tenantName,
-        isMultiBuilding: isMultiBuildingRfp,
-        bayConfigCount: rfp.selectedBayConfigurations?.length || 0
-      });
 
       form.reset({
         rfpNumber: rfp.rfpNumber || "",
@@ -698,15 +691,6 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
                         const currentPropertyId = form.getValues("property") || rfp?.property;
                         const formState = form.getValues();
                         
-                        console.log('🎯 Direct checkbox toggle:', { 
-                          value, 
-                          currentPropertyId,
-                          formProperty: form.getValues("property"),
-                          rfpProperty: rfp?.property,
-                          formState,
-                          bayCount: selectedBayConfigurations.length,
-                          rfpBayCount: rfp?.selectedBayConfigurations?.length || 0
-                        });
                         
                         // Handle multi-building conversion directly
                         if (value && currentPropertyId) {
@@ -721,21 +705,9 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
                               [buildingKey]: rfpBayConfigurations
                             };
                             
-                            console.log('🏢 Direct conversion to multi-building:', {
-                              buildingKey,
-                              bayCount: rfpBayConfigurations.length,
-                              multiBuildingData,
-                              currentPropertyId,
-                              propertyName: currentProperty.propertyName
-                            });
                             
                             setSelectedProperties([currentPropertyId]);
                             setSelectedBaysPerBuilding(multiBuildingData);
-                          } else {
-                            console.log('❌ Cannot convert - missing data:', {
-                              currentProperty: !!currentProperty,
-                              rfpBayConfigurationsCount: rfpBayConfigurations.length
-                            });
                           }
                         }
                       }}

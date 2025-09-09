@@ -318,16 +318,9 @@ export function BaySelectionGrid({
           /* Multi-Building Mode */
           <div className="space-y-6">
             {(() => {
-              // Filter properties to only show those with initial selections
-              const propertiesWithInitialSelections = Object.keys(initialSelectedBaysPerBuilding);
-              const filteredProperties = propertiesWithInitialSelections.length > 0 
-                ? properties.filter(prop => {
-                    const buildingKey = `${prop.propertyName} - Building ${prop.building}`;
-                    return propertiesWithInitialSelections.includes(buildingKey);
-                  })
-                : properties; // Show all if no initial selections
-              
-              return filteredProperties;
+              // In multi-building mode, always show all properties
+              // Initial selections will just pre-populate the bay configurations
+              return properties;
             })().map((prop) => {
               const propBays = getSortedBays(prop);
               const buildingKey = `${prop.propertyName} - Building ${prop.building}`;

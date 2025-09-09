@@ -24,7 +24,14 @@ export const rfpRequests = pgTable("rfp_requests", {
   optionType: text("option_type"), // design-alternative, scope-variation, build-option, etc.
   
   // Initial RFP Entry Fields
-  property: text("property").notNull(),
+  property: text("property").notNull(), // Primary property for single-building RFPs
+  
+  // Multi-building support
+  isMultiBuilding: boolean("is_multi_building").default(false),
+  properties: json("properties").$type<string[]>(), // Array of property names for multi-building RFPs
+  selectedBaysPerBuilding: json("selected_bays_per_building").$type<{[propertyName: string]: BayConfiguration[]}>(),
+  costsPerBuilding: json("costs_per_building").$type<{[propertyName: string]: BuildingCosts}>(),
+  
   tenantName: text("tenant_name").notNull(),
   projectName: text("project_name").notNull(),
   confidential: boolean("confidential").default(false),
@@ -90,6 +97,16 @@ export const insertRfpRequestSchema = createInsertSchema(rfpRequests).omit({
   requestTypes: z.array(z.string()).min(1, "At least one request type is required"),
   status: z.enum(["received", "in-progress", "completed", "on-hold", "archived"]).default("received"),
   workflowPhase: z.enum(["rfp-entry", "rfp-validation", "invitation-to-bid", "bid-collection", "evaluation", "publish"]).default("rfp-entry"),
+  // Multi-building support validation
+  isMultiBuilding: z.boolean().optional().default(false),
+  properties: z.array(z.string()).optional(),
+  selectedBaysPerBuilding: z.record(z.array(z.any())).optional(),
+  costsPerBuilding: z.record(z.object({
+    existing: z.number().default(0),
+    improvements: z.number().default(0),
+    rom: z.number().optional(),
+    notes: z.string().optional()
+  })).optional(),
   receivedOn: z.string().transform((val) => {
     if (!val) return new Date();
     return parseLocalDate(val);
@@ -389,6 +406,14 @@ export type InsertBidAlternate = z.infer<typeof insertBidAlternateSchema>;
 export type UpdateBidAlternate = z.infer<typeof updateBidAlternateSchema>;
 
 // Simple bay configuration type
+// Building-specific cost tracking for multi-building RFPs
+export type BuildingCosts = {
+  existing: number; // Existing building costs
+  improvements: number; // Building improvement costs
+  rom?: number; // ROM (Rough Order of Magnitude) costs
+  notes?: string; // Cost notes specific to this building
+};
+
 export type BayConfiguration = {
   id: string;
   bayName: string; // e.g., "Bay 1-2", "Bay 2-3", etc.

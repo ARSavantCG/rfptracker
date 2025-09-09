@@ -698,16 +698,20 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
                           const currentPropertyId = form.getValues("property");
                           const currentProperty = properties.find(p => p.id.toString() === currentPropertyId);
                           
-                          if (currentProperty && selectedBayConfigurations.length > 0) {
+                          // Use the original RFP bay configurations directly
+                          const rfpBayConfigurations = rfp?.selectedBayConfigurations || [];
+                          
+                          if (currentProperty && rfpBayConfigurations.length > 0) {
                             const buildingKey = `${currentProperty.propertyName} - Building ${currentProperty.building}`;
                             const multiBuildingData = {
-                              [buildingKey]: selectedBayConfigurations
+                              [buildingKey]: rfpBayConfigurations
                             };
                             
                             console.log('🏢 Direct conversion to multi-building:', {
                               buildingKey,
-                              bayCount: selectedBayConfigurations.length,
-                              multiBuildingData
+                              bayCount: rfpBayConfigurations.length,
+                              multiBuildingData,
+                              currentPropertyId
                             });
                             
                             setSelectedProperties([currentPropertyId]);
@@ -759,10 +763,6 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
                     onSelectionChange={handleMultiBuildingSelection}
                   />
                 )}
-                {/* Debug info */}
-                <div className="text-xs text-gray-500 p-2 bg-gray-100 rounded">
-                  Debug: {Object.keys(selectedBaysPerBuilding).length} building keys: {Object.keys(selectedBaysPerBuilding).join(', ')}
-                </div>
               </div>
             )}
 

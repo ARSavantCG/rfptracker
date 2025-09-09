@@ -43,12 +43,13 @@ export function BaySelectionGrid({
       const initialBuildingIds: {[propertyName: string]: Set<string>} = {};
       properties.forEach(prop => {
         const propName = prop.propertyName;
-        const selectedBays = initialSelectedBaysPerBuilding[propName] || [];
+        // Use initial data if available, otherwise start with empty set
+        const selectedBays = initialSelectedBaysPerBuilding[propName] || selectedBaysPerBuilding[propName] || [];
         initialBuildingIds[propName] = new Set(selectedBays.map(bay => bay.id));
       });
       setSelectedBuildingIds(initialBuildingIds);
     }
-  }, [multiBuildingMode, properties.length, initialSelectedBaysPerBuilding]);
+  }, [multiBuildingMode, properties.length]);
 
   // Handle multi-building toggle
   const handleMultiBuildingToggle = (enabled: boolean) => {
@@ -128,6 +129,15 @@ export function BaySelectionGrid({
 
   // Toggle bay selection for multi-building mode
   const toggleMultiBuildingBaySelection = (propertyName: string, bayId: string, bay: BayConfiguration) => {
+    console.log('🔧 Bay click detected:', { propertyName, bayId, bay: bay.bayName });
+    
+    // Ensure the property exists in selectedBuildingIds
+    if (!selectedBuildingIds[propertyName]) {
+      setSelectedBuildingIds(prev => ({
+        ...prev,
+        [propertyName]: new Set()
+      }));
+    }
     
     const currentBuildingIds = selectedBuildingIds[propertyName] instanceof Set 
       ? selectedBuildingIds[propertyName] 

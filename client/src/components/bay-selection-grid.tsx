@@ -42,10 +42,10 @@ export function BaySelectionGrid({
     if (multiBuildingMode && properties.length > 0) {
       const initialBuildingIds: {[propertyName: string]: Set<string>} = {};
       properties.forEach(prop => {
-        const propName = prop.propertyName;
+        const buildingKey = `${prop.propertyName} - Building ${prop.building}`;
         // Use initial data if available, otherwise start with empty set
-        const selectedBays = initialSelectedBaysPerBuilding[propName] || selectedBaysPerBuilding[propName] || [];
-        initialBuildingIds[propName] = new Set(selectedBays.map(bay => bay.id));
+        const selectedBays = initialSelectedBaysPerBuilding[buildingKey] || selectedBaysPerBuilding[buildingKey] || [];
+        initialBuildingIds[buildingKey] = new Set(selectedBays.map(bay => bay.id));
       });
       setSelectedBuildingIds(initialBuildingIds);
     }
@@ -128,19 +128,19 @@ export function BaySelectionGrid({
   };
 
   // Toggle bay selection for multi-building mode
-  const toggleMultiBuildingBaySelection = (propertyName: string, bayId: string, bay: BayConfiguration) => {
-    console.log('🔧 Bay click detected:', { propertyName, bayId, bay: bay.bayName });
+  const toggleMultiBuildingBaySelection = (buildingKey: string, bayId: string, bay: BayConfiguration) => {
+    console.log('🔧 Bay click detected:', { buildingKey, bayId, bay: bay.bayName });
     
-    // Ensure the property exists in selectedBuildingIds
-    if (!selectedBuildingIds[propertyName]) {
+    // Ensure the building exists in selectedBuildingIds
+    if (!selectedBuildingIds[buildingKey]) {
       setSelectedBuildingIds(prev => ({
         ...prev,
-        [propertyName]: new Set()
+        [buildingKey]: new Set()
       }));
     }
     
-    const currentBuildingIds = selectedBuildingIds[propertyName] instanceof Set 
-      ? selectedBuildingIds[propertyName] 
+    const currentBuildingIds = selectedBuildingIds[buildingKey] instanceof Set 
+      ? selectedBuildingIds[buildingKey] 
       : new Set();
     const newBuildingIds = new Set(currentBuildingIds);
     
@@ -159,12 +159,12 @@ export function BaySelectionGrid({
       newSelectedBuildingIds[key] = existing instanceof Set ? existing : new Set<string>();
     });
     
-    // Update the current property's selection
-    newSelectedBuildingIds[propertyName] = newBuildingIds as Set<string>;
+    // Update the current building's selection
+    newSelectedBuildingIds[buildingKey] = newBuildingIds as Set<string>;
     setSelectedBuildingIds(newSelectedBuildingIds);
     
-    // Get all bays for this property and filter selected ones
-    const property = properties.find(p => p.propertyName === propertyName);
+    // Get all bays for this building and filter selected ones
+    const property = properties.find(p => `${p.propertyName} - Building ${p.building}` === buildingKey);
     if (property) {
       const propertyBays = getSortedBays(property);
       const selectedBaysForBuilding = propertyBays.filter(bay => newBuildingIds.has(bay.id));
@@ -172,7 +172,7 @@ export function BaySelectionGrid({
       // Update selected bays per building
       const newSelectedBaysPerBuilding = {
         ...selectedBaysPerBuilding,
-        [propertyName]: selectedBaysForBuilding
+        [buildingKey]: selectedBaysForBuilding
       };
       setSelectedBaysPerBuilding(newSelectedBaysPerBuilding);
       
@@ -310,7 +310,8 @@ export function BaySelectionGrid({
           <div className="space-y-6">
             {properties.map((prop) => {
               const propBays = getSortedBays(prop);
-              const propSelectedIds = selectedBuildingIds[prop.propertyName] || new Set();
+              const buildingKey = `${prop.propertyName} - Building ${prop.building}`;
+              const propSelectedIds = selectedBuildingIds[buildingKey] || new Set();
               const propSelectedBays = propBays.filter(bay => propSelectedIds.has(bay.id));
               const propTotalSF = propSelectedBays.reduce((total, bay) => total + (bay.rentableSquareFootage || bay.squareFootage), 0);
               
@@ -342,7 +343,7 @@ export function BaySelectionGrid({
                           <div key={`${prop.id}-${rowIndex}-${colIndex}`} className="h-24 w-20">
                             {bay ? (
                               <button
-                                onClick={() => toggleMultiBuildingBaySelection(prop.propertyName, bay.id, bay)}
+                                onClick={() => toggleMultiBuildingBaySelection(`${prop.propertyName} - Building ${prop.building}`, bay.id, bay)}
                                 className={`
                                   w-full h-full p-2 rounded-lg border-2 transition-all duration-200
                                   flex flex-col items-center justify-center text-xs font-medium
@@ -463,8 +464,9 @@ export function BaySelectionGrid({
                 ? (() => {
                     const buildingBreakdown = Object.entries(selectedBaysPerBuilding)
                       .filter(([_, bays]) => bays.length > 0)
-                      .map(([propertyName, bays]) => {
-                        const buildingNumber = properties.find(p => p.propertyName === propertyName)?.building || '?';
+                      .map(([buildingKey, bays]) => {
+                        // Extract building number from key like "Bridge Point Miami Station - Building 1"
+                        const buildingNumber = buildingKey.split(' - Building ')[1] || '?';
                         return `Building ${buildingNumber}: ${bays.length} bays`;
                       })
                       .join(', ');
@@ -501,11 +503,12 @@ export function BaySelectionGrid({
               <div className="grid grid-cols-2 gap-3">
                 {Object.entries(selectedBaysPerBuilding)
                   .filter(([_, bays]) => bays.length > 0)
-                  .map(([propertyName, bays]) => {
-                    const buildingNumber = properties.find(p => p.propertyName === propertyName)?.building || '?';
+                  .map(([buildingKey, bays]) => {
+                    // Extract building number from key like "Bridge Point Miami Station - Building 1"
+                    const buildingNumber = buildingKey.split(' - Building ')[1] || '?';
                     const buildingSquareFootage = bays.reduce((total, bay) => total + (bay.rentableSquareFootage || bay.squareFootage), 0);
                     return (
-                      <div key={propertyName} className="bg-white p-3 rounded border">
+                      <div key={buildingKey} className="bg-white p-3 rounded border">
                         <p className="text-sm font-medium text-gray-800">Building {buildingNumber}</p>
                         <p className="text-lg font-bold text-blue-600">{buildingSquareFootage.toLocaleString()} sq ft</p>
                         <p className="text-xs text-gray-500">{bays.length} bays selected</p>
@@ -537,16 +540,6 @@ export function BaySelectionGrid({
           )}
         </div>
 
-        {/* Bay Type Legend */}
-        <div className="border-t pt-4">
-          <p className="text-sm font-medium text-gray-700 mb-2">Bay Types:</p>
-          <div className="flex flex-wrap gap-2">
-            <Badge className="bg-blue-100 border-blue-300 text-blue-800">Office</Badge>
-            <Badge className="bg-gray-100 border-gray-300 text-gray-800">Warehouse</Badge>
-            <Badge className="bg-green-100 border-green-300 text-green-800">Retail</Badge>
-            <Badge className="bg-purple-100 border-purple-300 text-purple-800">Mixed</Badge>
-          </div>
-        </div>
       </CardContent>
     </Card>
   );

@@ -213,11 +213,16 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
   });
 
   // Helper function to get property name with building
-  const getPropertyDisplayName = (propertyId: string) => {
+  const getPropertyDisplayName = (propertyId: string, rfp?: RfpRequest) => {
     const property = properties.find(p => p.id.toString() === propertyId);
     if (!property) return propertyId;
     
-    // Format property name with building using "Bldg." prefix for multi-building properties
+    // For multi-building RFPs, show "Multiple Buildings" instead of a specific building
+    if (rfp?.isMultiBuilding) {
+      return `${property.propertyName} - Multiple Buildings`;
+    }
+    
+    // Format property name with building using "Bldg." prefix for single-building properties
     if (property.building && property.building.trim() !== '') {
       return `${property.propertyName} - Bldg. ${property.building}`;
     } else {
@@ -581,7 +586,7 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
                   <td 
                     className="px-3 py-3 whitespace-nowrap text-xs text-gray-900"
                   >
-                    {getPropertyDisplayName(parentRfp.property)}
+                    {getPropertyDisplayName(parentRfp.property, parentRfp)}
                   </td>
                   <td 
                     className="px-3 py-3 whitespace-nowrap"
@@ -756,7 +761,7 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
                     <td 
                       className="px-3 py-3 whitespace-nowrap text-xs text-gray-700"
                     >
-                      {getPropertyDisplayName(counterOffer.property)}
+                      {getPropertyDisplayName(counterOffer.property, counterOffer)}
                     </td>
                     <td 
                       className="px-3 py-3 whitespace-nowrap"
@@ -880,7 +885,7 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
                     <td 
                       className="px-3 py-3 whitespace-nowrap text-xs text-gray-700"
                     >
-                      {getPropertyDisplayName(option.property)}
+                      {getPropertyDisplayName(option.property, option)}
                     </td>
                     <td 
                       className="px-3 py-3 whitespace-nowrap"

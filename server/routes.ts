@@ -3986,8 +3986,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             table { width: 100%; border-collapse: collapse; margin-top: 20px; }
             th, td { border: 1px solid #e5e7eb; padding: 8px; text-align: left; }
             th { background: #f9fafb; font-weight: 600; }
-            th:nth-child(3), th:nth-child(4), th:nth-child(5), th:nth-child(6), th:nth-child(7), th:nth-child(8) { text-align: center; }
-            td:nth-child(3), td:nth-child(4), td:nth-child(5), td:nth-child(6), td:nth-child(7), td:nth-child(8) { text-align: center; }
+            th:nth-child(3), th:nth-child(4), th:nth-child(5), th:nth-child(6), th:nth-child(7), th:nth-child(8), th:nth-child(9) { text-align: center; }
+            td:nth-child(3), td:nth-child(4), td:nth-child(5), td:nth-child(6), td:nth-child(8), td:nth-child(9) { text-align: center; }
             th:nth-child(3) { width: 100px; }
             td:nth-child(3) { width: 100px; }
             th:nth-child(4) { width: 120px; }
@@ -3996,10 +3996,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             td:nth-child(5) { width: 80px; }
             th:nth-child(6) { width: 120px; }
             td:nth-child(6) { width: 120px; }
-            th:nth-child(7) { width: 140px; }
-            td:nth-child(7) { width: 140px; text-align: right; }
-            th:nth-child(8) { width: 90px; }
-            td:nth-child(8) { width: 90px; text-align: right; }
+            th:nth-child(7) { width: 150px; }
+            td:nth-child(7) { width: 150px; text-align: left; }
+            th:nth-child(8) { width: 120px; }
+            td:nth-child(8) { width: 120px; text-align: right; }
+            th:nth-child(9) { width: 80px; }
+            td:nth-child(9) { width: 80px; text-align: right; }
             .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; color: white; display: inline-block; }
             .status-received { background: #8B5CF6; }
             .status-inprogress { background: #F59E0B; }
@@ -4019,13 +4021,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
               <!-- Company logo -->
               <img src="${getBridgeLogo()}" alt="Bridge Industrial" style="height: 30px; width: auto;" />
-              <!-- Development Contact -->
-              <div style="text-align: right;">
-                <div style="font-weight: bold; color: rgb(0,50,130); margin-bottom: 2px;">Development Contact</div>
-                <div style="font-size: 11px; color: #666;">
-                  ${rfpData.length > 0 && rfpData[0].developmentContact ? rfpData[0].developmentContact : 'Contact information available upon request'}
-                </div>
-              </div>
             </div>
             <div class="document-title">Executive Summary Report</div>
             <div class="subtitle">RFP Status Overview - Generated on ${new Date().toLocaleDateString()}</div>
@@ -4040,6 +4035,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 <th>Due Date</th>
                 <th>Day(s) Until Due</th>
                 <th>Status</th>
+                <th>Development Contact</th>
                 <th>Grand Total</th>
                 <th>$/RSF</th>
               </tr>
@@ -4160,6 +4156,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   '<td>' + dueDateDisplay + '</td>' +
                   '<td>' + dayDisplay + '</td>' +
                   '<td>' + statusDisplay + '</td>' +
+                  '<td>' + (rfp.developmentContact || 'N/A') + '</td>' +
                   '<td style="font-weight: bold; text-align: right;">' + grandTotalDisplay + '</td>' +
                   '<td style="font-weight: bold; text-align: right;">' + rsfDisplay + '</td>' +
                   '</tr>';

@@ -286,10 +286,10 @@ export function generateExecutiveReportHtml(data: ReportData): string {
         <thead>
           <tr>
             <th style="width: 15%;">RFP Number</th>
-            <th style="width: 35%;">Project Name</th>
+            <th style="width: 45%;">Project Name</th>
             <th style="width: 15%;">Due Date</th>
             <th style="width: 15%;">Status</th>
-            <th style="width: 20%;">Day(s) Until Due</th>
+            <th style="width: 10%;">Day(s) Until Due</th>
           </tr>
         </thead>
         <tbody>

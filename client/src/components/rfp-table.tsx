@@ -427,7 +427,17 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
         <h2 className="text-sm font-semibold text-gray-900">RFP Requests</h2>
       </div>
       <div className="overflow-x-auto max-w-full">
-        <table className="rfp-table w-full divide-y divide-gray-200" style={{ minWidth: '800px' }}>
+        <table className="rfp-table w-full divide-y divide-gray-200 table-fixed" style={{ minWidth: '1240px' }}>
+          <colgroup>
+            <col style={{ width: '120px' }} />
+            <col style={{ width: '140px' }} />
+            <col style={{ width: '160px' }} />
+            <col style={{ width: '120px' }} />
+            <col style={{ width: '110px' }} />
+            <col style={{ width: '120px' }} />
+            <col style={{ width: '70px' }} />
+            <col style={{ width: '320px' }} />
+          </colgroup>
           <thead className="bg-gray-50">
             <tr>
               <th 
@@ -475,7 +485,7 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
               <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '70px' }}>
                 Files
               </th>
-              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '280px', minWidth: '280px' }}>
+              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Actions
               </th>
             </tr>
@@ -641,8 +651,8 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
                       <span>{fileCounts[parentRfp.id] || parentRfp.files.length}</span>
                     </div>
                   </td>
-                  <td className="px-3 py-3 whitespace-nowrap text-xs">
-                    <div className="flex items-center space-x-1">
+                  <td className="px-3 py-3 whitespace-nowrap text-xs" style={{ width: '320px', minWidth: '320px' }}>
+                    <div className="flex items-center gap-2">
                       <button 
                         onClick={(e) => {
                           e.stopPropagation();

@@ -328,20 +328,15 @@ export function BaySelectionGrid({
                     </Badge>
                   </div>
                   
-                  {/* Bay Single Row for this property */}
-                  <div className="overflow-x-auto pb-4 bay-scroll">
-                    <div 
-                      className="flex gap-3"
-                      style={{ 
-                        minWidth: `${propBays.length * 168 + (propBays.length - 1) * 12}px`
-                      }}
-                    >
+                  {/* Bay Grid for this property */}
+                  <div className="pb-2">
+                    <div className="flex gap-1 flex-wrap">
                       {propBays.map((bay) => (
                         <div key={bay.id} className="flex-shrink-0">
                           <button
                             onClick={() => toggleMultiBuildingBaySelection(`${prop.propertyName} - Building ${prop.building}`, bay.id, bay)}
                             className={`
-                              w-40 h-32 p-3 rounded-lg border-2 transition-all duration-200
+                              w-16 h-28 p-1 rounded border-2 transition-all duration-200
                               flex flex-col items-center justify-center text-xs font-medium
                               hover:shadow-md focus:outline-none focus:ring-2 focus:ring-orange-500
                               ${propSelectedIds.has(bay.id) 
@@ -352,25 +347,25 @@ export function BaySelectionGrid({
                             `}
                           >
                             <div className="text-center w-full">
-                              <div className="font-bold text-sm mb-1">{getBayDisplayName(bay.bayName)}</div>
-                              <div className="text-xs text-gray-600 mb-2">{(bay.rentableSquareFootage || bay.squareFootage).toLocaleString()} sq ft</div>
+                              <div className="font-bold text-xs mb-1">{getBayDisplayName(bay.bayName)}</div>
+                              <div className="text-xs text-gray-600 mb-1">{Math.round((bay.rentableSquareFootage || bay.squareFootage) / 1000)}k</div>
                               
                               {/* Dock Doors */}
-                              <div className="flex justify-center items-center gap-1 mb-2">
+                              <div className="flex flex-col items-center gap-0.5 mb-1">
                                 {bay.standardDockDoors > 0 && (
-                                  <span className="text-xs bg-blue-100 text-blue-800 px-1 py-0.5 rounded" title={`${bay.standardDockDoors} Standard Dock Doors`}>
+                                  <span className="text-xs text-blue-600" title={`${bay.standardDockDoors} Standard Dock Doors`}>
                                     {bay.standardDockDoors}🚛
                                   </span>
                                 )}
                                 {bay.oversizedDockDoors > 0 && (
-                                  <span className="text-xs bg-purple-100 text-purple-800 px-1 py-0.5 rounded" title={`${bay.oversizedDockDoors} Oversized Dock Doors`}>
+                                  <span className="text-xs text-purple-600" title={`${bay.oversizedDockDoors} Oversized Dock Doors`}>
                                     {bay.oversizedDockDoors}🚚
                                   </span>
                                 )}
                               </div>
 
                               {/* Amenities */}
-                              <div className="flex justify-center flex-wrap gap-1 text-xs">
+                              <div className="flex flex-col items-center gap-0.5">
                                 {bay.hasStorefrontEntry && (
                                   <span className="text-orange-600" title="Storefront Entry">🚪</span>
                                 )}
@@ -409,18 +404,13 @@ export function BaySelectionGrid({
           /* Single Building Mode */
           <div className="space-y-2">
             <div className="overflow-x-auto pb-4 bay-scroll">
-              <div 
-                className="flex gap-3"
-                style={{ 
-                  minWidth: `${bays.length * 168 + (bays.length - 1) * 12}px`
-                }}
-              >
+              <div className="flex gap-1 flex-wrap">
                 {bays.map((bay) => (
                   <div key={bay.id} className="flex-shrink-0">
                     <button
                       onClick={() => toggleBaySelection(bay.id)}
                       className={`
-                        w-40 h-32 p-3 rounded-lg border-2 transition-all duration-200
+                        w-16 h-28 p-1 rounded border-2 transition-all duration-200
                         flex flex-col items-center justify-center text-xs font-medium
                         hover:shadow-md focus:outline-none focus:ring-2 focus:ring-orange-500
                         ${selectedBayIds.has(bay.id) 
@@ -432,25 +422,25 @@ export function BaySelectionGrid({
                       data-testid={`bay-button-${getBayDisplayName(bay.bayName).replace(/\s/g, '-')}`}
                     >
                       <div className="text-center w-full">
-                        <div className="font-bold text-sm mb-1">{getBayDisplayName(bay.bayName)}</div>
-                        <div className="text-xs text-gray-600 mb-2">{(bay.rentableSquareFootage || bay.squareFootage).toLocaleString()} sq ft</div>
+                        <div className="font-bold text-xs mb-1">{getBayDisplayName(bay.bayName)}</div>
+                        <div className="text-xs text-gray-600 mb-1">{Math.round((bay.rentableSquareFootage || bay.squareFootage) / 1000)}k</div>
                         
                         {/* Dock Doors */}
-                        <div className="flex justify-center items-center gap-1 mb-2">
+                        <div className="flex flex-col items-center gap-0.5 mb-1">
                           {bay.standardDockDoors > 0 && (
-                            <span className="text-xs bg-blue-100 text-blue-800 px-1 py-0.5 rounded" title={`${bay.standardDockDoors} Standard Dock Doors`}>
+                            <span className="text-xs text-blue-600" title={`${bay.standardDockDoors} Standard Dock Doors`}>
                               {bay.standardDockDoors}🚛
                             </span>
                           )}
                           {bay.oversizedDockDoors > 0 && (
-                            <span className="text-xs bg-purple-100 text-purple-800 px-1 py-0.5 rounded" title={`${bay.oversizedDockDoors} Oversized Dock Doors`}>
+                            <span className="text-xs text-purple-600" title={`${bay.oversizedDockDoors} Oversized Dock Doors`}>
                               {bay.oversizedDockDoors}🚚
                             </span>
                           )}
                         </div>
 
                         {/* Amenities */}
-                        <div className="flex justify-center flex-wrap gap-1 text-xs">
+                        <div className="flex flex-col items-center gap-0.5">
                           {bay.hasStorefrontEntry && (
                             <span className="text-orange-600" title="Storefront Entry">🚪</span>
                           )}

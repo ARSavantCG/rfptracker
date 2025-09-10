@@ -79,8 +79,10 @@ export function BaySelectionGrid({
       const bStart = parseInt(bMatch[1]);
       return aStart - bStart;
     });
-    // REVERSE the order so Bay 1 is easternmost (rightmost) and increases westward (leftward)
-    return sortedBayConfigs.reverse();
+    // REVERSE the order so Bay 1 is easternmost (rightmost) and increases westward (leftward)  
+    const filtered = sortedBayConfigs.reverse().filter(bay => bay && bay.id && bay.bayName);
+    console.log('🔧 Filtered bays for rendering:', filtered.map(bay => ({name: bay.bayName, id: bay.id})));
+    return filtered;
   };
 
   // Parse bay name to show clean format (Bay 12 instead of Bay 12-13)
@@ -331,7 +333,7 @@ export function BaySelectionGrid({
                   {/* Bay Grid for this property */}
                   <div className="overflow-x-auto pb-2">
                     <div className="flex gap-1" style={{ minWidth: 'max-content' }}>
-                      {propBays.map((bay) => (
+                      {propBays.filter(bay => bay && bay.id && bay.bayName).map((bay) => (
                         <div key={bay.id} className="flex-shrink-0">
                           <button
                             onClick={() => toggleMultiBuildingBaySelection(`${prop.propertyName} - Building ${prop.building}`, bay.id, bay)}
@@ -406,7 +408,7 @@ export function BaySelectionGrid({
           <div className="space-y-2">
             <div className="overflow-x-auto pb-4">
               <div className="flex gap-1" style={{ minWidth: 'max-content' }}>
-                {bays.map((bay) => (
+                {bays.filter(bay => bay && bay.id && bay.bayName).map((bay) => (
                   <div key={bay.id} className="flex-shrink-0">
                     <button
                       onClick={() => toggleBaySelection(bay.id)}
@@ -522,18 +524,20 @@ export function BaySelectionGrid({
           {selectedBays.length > 0 && (
             <div className="mt-4">
               <p className="text-sm text-gray-600 mb-2">Selected Bays:</p>
-              <div className="flex flex-wrap gap-2">
-                {selectedBays.map((bay) => (
-                  <Badge 
-                    key={bay.id} 
-                    variant="outline"
-                    className={getBayColor(true)}
-                  >
-                    {getBayDisplayName(bay.bayName)} ({(bay.rentableSquareFootage || bay.squareFootage).toLocaleString()} sq ft)
-                    {bay.hasStorefrontEntry && <span className="text-orange-600 ml-1" title="Storefront Entry">🚪</span>}
-                    {bay.hasSpeculativeOffice && <span className="text-blue-600 ml-1" title="Speculative Office">🏢</span>}
-                  </Badge>
-                ))}
+              <div className="overflow-x-auto">
+                <div className="flex flex-wrap gap-2" style={{ maxWidth: `${bays.length * 48 + (bays.length - 1) * 4}px` }}>
+                  {selectedBays.map((bay) => (
+                    <Badge 
+                      key={bay.id} 
+                      variant="outline"
+                      className={getBayColor(true)}
+                    >
+                      {getBayDisplayName(bay.bayName)} ({(bay.rentableSquareFootage || bay.squareFootage).toLocaleString()} sq ft)
+                      {bay.hasStorefrontEntry && <span className="text-orange-600 ml-1" title="Storefront Entry">🚪</span>}
+                      {bay.hasSpeculativeOffice && <span className="text-blue-600 ml-1" title="Speculative Office">🏢</span>}
+                    </Badge>
+                  ))}
+                </div>
               </div>
             </div>
           )}

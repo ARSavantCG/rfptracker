@@ -427,14 +427,14 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
         <h2 className="text-sm font-semibold text-gray-900">RFP Requests</h2>
       </div>
       <div className="overflow-x-auto max-w-full">
-        <table className="rfp-table w-full divide-y divide-gray-200 table-fixed" style={{ minWidth: '1240px' }}>
+        <table className="rfp-table w-full divide-y divide-gray-200 table-fixed" style={{ minWidth: '1600px' }}>
           <colgroup>
-            <col style={{ width: '120px' }} />
+            <col style={{ width: '220px' }} />
+            <col style={{ width: '280px' }} />
+            <col style={{ width: '300px' }} />
             <col style={{ width: '140px' }} />
-            <col style={{ width: '160px' }} />
-            <col style={{ width: '120px' }} />
             <col style={{ width: '110px' }} />
-            <col style={{ width: '120px' }} />
+            <col style={{ width: '130px' }} />
             <col style={{ width: '70px' }} />
             <col style={{ width: '320px' }} />
           </colgroup>
@@ -517,21 +517,21 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
                   <td 
                     className="px-3 py-3 whitespace-nowrap text-xs font-medium text-gray-900"
                   >
-                    <div className="flex items-center">
+                    <div className="flex items-center min-w-0 overflow-hidden">
                       {(parentRfp.counterOffers.length > 0 || parentRfp.options.length > 0) && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             toggleExpansion(parentRfp.id);
                           }}
-                          className="mr-2 text-gray-400 hover:text-gray-600"
+                          className="mr-2 text-gray-400 hover:text-gray-600 flex-none shrink-0"
                         >
                           <i className={`fas ${expandedRfps.has(parentRfp.id) ? 'fa-chevron-down' : 'fa-chevron-right'} text-xs`}></i>
                         </button>
                       )}
-                      {parentRfp.rfpNumber}
+                      <span className="truncate">{parentRfp.rfpNumber}</span>
                       {parentRfp.counterOffers.length > 0 && (
-                        <span className={`ml-2 px-1.5 py-0.5 text-xs rounded ${
+                        <span className={`ml-2 px-1.5 py-0.5 text-xs rounded flex-none shrink-0 ${
                           // Determine badge color based on counter offer statuses, not parent status
                           (() => {
                             const counterStatuses = parentRfp.counterOffers.map(co => co.status);
@@ -559,7 +559,7 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
                         </span>
                       )}
                       {parentRfp.options.length > 0 && (
-                        <span className={`ml-2 px-1.5 py-0.5 text-xs rounded ${
+                        <span className={`ml-2 px-1.5 py-0.5 text-xs rounded flex-none shrink-0 ${
                           // Determine badge color based on alternate statuses, not parent status
                           (() => {
                             const alternateStatuses = parentRfp.options.map(opt => opt.status);
@@ -591,12 +591,16 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
                   <td 
                     className="px-3 py-3 whitespace-nowrap text-xs text-gray-900"
                   >
-                    {parentRfp.tenantName}
+                    <div className="min-w-0 overflow-hidden">
+                      <span className="truncate" title={parentRfp.tenantName}>{parentRfp.tenantName}</span>
+                    </div>
                   </td>
                   <td 
                     className="px-3 py-3 whitespace-nowrap text-xs text-gray-900"
                   >
-                    {getPropertyDisplayName(parentRfp.property, parentRfp)}
+                    <div className="min-w-0 overflow-hidden">
+                      <span className="truncate" title={getPropertyDisplayName(parentRfp.property, parentRfp)}>{getPropertyDisplayName(parentRfp.property, parentRfp)}</span>
+                    </div>
                   </td>
                   <td 
                     className="px-3 py-3 whitespace-nowrap"

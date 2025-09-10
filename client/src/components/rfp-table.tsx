@@ -475,7 +475,7 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
               <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '70px' }}>
                 Files
               </th>
-              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '80px' }}>
+              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '140px' }}>
                 Actions
               </th>
             </tr>

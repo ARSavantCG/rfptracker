@@ -83,30 +83,18 @@ export function BaySelectionGrid({
     return sortedBayConfigs.reverse();
   };
 
+  // Parse bay name to show clean format (Bay 12 instead of Bay 12-13)
+  const getBayDisplayName = (bayName: string) => {
+    const match = bayName.match(/Bay (\d+)-(\d+)/);
+    if (match) {
+      return `Bay ${match[1]}`;
+    }
+    return bayName; // Fallback if no match
+  };
+
   // For single building mode, get bays from the property
   const bays = property ? getSortedBays(property) : [];
   
-  // Create a simple grid layout based on number of bays
-  const createGrid = (baysArray: BayConfiguration[]) => {
-    const bayCount = baysArray.length;
-    const calculatedColumns = Math.ceil(Math.sqrt(bayCount));
-    const calculatedRows = Math.ceil(bayCount / calculatedColumns);
-    const grid: (BayConfiguration | null)[][] = [];
-    
-    let bayIndex = 0;
-    for (let row = 0; row < calculatedRows; row++) {
-      grid[row] = [];
-      for (let col = 0; col < calculatedColumns; col++) {
-        if (bayIndex < baysArray.length) {
-          grid[row][col] = baysArray[bayIndex];
-          bayIndex++;
-        } else {
-          grid[row][col] = null;
-        }
-      }
-    }
-    return { grid, columns: calculatedColumns };
-  };
 
   // Toggle bay selection for single building mode
   const toggleBaySelection = (bayId: string) => {
@@ -328,8 +316,6 @@ export function BaySelectionGrid({
               const propSelectedBays = propBays.filter(bay => propSelectedIds.has(bay.id));
               const propTotalSF = propSelectedBays.reduce((total, bay) => total + (bay.rentableSquareFootage || bay.squareFootage), 0);
               
-              const { grid, columns } = createGrid(propBays);
-              
               return (
                 <div key={prop.id} className="border rounded-lg p-4 bg-gray-50">
                   <div className="flex items-center justify-between mb-4">
@@ -342,51 +328,63 @@ export function BaySelectionGrid({
                     </Badge>
                   </div>
                   
-                  {/* Bay Grid for this property */}
-                  <div className="overflow-x-scroll pb-4 bay-scroll">
+                  {/* Bay Single Row for this property */}
+                  <div className="overflow-x-auto pb-4 bay-scroll">
                     <div 
-                      className="grid gap-2"
+                      className="flex gap-3"
                       style={{ 
-                        gridTemplateColumns: `repeat(${columns}, 80px)`,
-                        minWidth: `${columns * 80 + (columns - 1) * 8}px`
+                        minWidth: `${propBays.length * 168 + (propBays.length - 1) * 12}px`
                       }}
                     >
-                      {grid.map((row, rowIndex) =>
-                        row.map((bay, colIndex) => (
-                          <div key={`${prop.id}-${rowIndex}-${colIndex}`} className="h-24 w-20">
-                            {bay ? (
-                              <button
-                                onClick={() => toggleMultiBuildingBaySelection(`${prop.propertyName} - Building ${prop.building}`, bay.id, bay)}
-                                className={`
-                                  w-full h-full p-2 rounded-lg border-2 transition-all duration-200
-                                  flex flex-col items-center justify-center text-xs font-medium
-                                  hover:shadow-md focus:outline-none focus:ring-2 focus:ring-orange-500
-                                  ${propSelectedIds.has(bay.id) 
-                                    ? 'ring-2 ring-orange-500 shadow-lg scale-105' 
-                                    : 'hover:scale-102'
-                                  }
-                                  ${getBayColor(propSelectedIds.has(bay.id))}
-                                `}
-                              >
-                                <div className="text-center">
-                                  <div className="font-bold truncate w-full">{bay.bayName}</div>
-                                  <div className="text-xs mt-1">{(bay.rentableSquareFootage || bay.squareFootage).toLocaleString()} sq ft</div>
-                                  <div className="flex justify-center mt-1 gap-1 text-xs min-h-[1.5rem]">
-                                    {bay.hasStorefrontEntry && (
-                                      <span className="text-orange-600 text-lg" title="Storefront Entry">🚪</span>
-                                    )}
-                                    {bay.hasSpeculativeOffice && (
-                                      <span className="text-blue-600 text-lg" title="Speculative Office">🏢</span>
-                                    )}
-                                  </div>
-                                </div>
-                              </button>
-                            ) : (
-                              <div className="w-full h-full border-2 border-dashed border-gray-200 rounded-lg bg-gray-50"></div>
-                            )}
-                          </div>
-                        ))
-                      )}
+                      {propBays.map((bay) => (
+                        <div key={bay.id} className="flex-shrink-0">
+                          <button
+                            onClick={() => toggleMultiBuildingBaySelection(`${prop.propertyName} - Building ${prop.building}`, bay.id, bay)}
+                            className={`
+                              w-40 h-32 p-3 rounded-lg border-2 transition-all duration-200
+                              flex flex-col items-center justify-center text-xs font-medium
+                              hover:shadow-md focus:outline-none focus:ring-2 focus:ring-orange-500
+                              ${propSelectedIds.has(bay.id) 
+                                ? 'ring-2 ring-orange-500 shadow-lg scale-105' 
+                                : 'hover:scale-102'
+                              }
+                              ${getBayColor(propSelectedIds.has(bay.id))}
+                            `}
+                          >
+                            <div className="text-center w-full">
+                              <div className="font-bold text-sm mb-1">{getBayDisplayName(bay.bayName)}</div>
+                              <div className="text-xs text-gray-600 mb-2">{(bay.rentableSquareFootage || bay.squareFootage).toLocaleString()} sq ft</div>
+                              
+                              {/* Dock Doors */}
+                              <div className="flex justify-center items-center gap-1 mb-2">
+                                {bay.standardDockDoors > 0 && (
+                                  <span className="text-xs bg-blue-100 text-blue-800 px-1 py-0.5 rounded" title={`${bay.standardDockDoors} Standard Dock Doors`}>
+                                    {bay.standardDockDoors}🚛
+                                  </span>
+                                )}
+                                {bay.oversizedDockDoors > 0 && (
+                                  <span className="text-xs bg-purple-100 text-purple-800 px-1 py-0.5 rounded" title={`${bay.oversizedDockDoors} Oversized Dock Doors`}>
+                                    {bay.oversizedDockDoors}🚚
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Amenities */}
+                              <div className="flex justify-center flex-wrap gap-1 text-xs">
+                                {bay.hasStorefrontEntry && (
+                                  <span className="text-orange-600" title="Storefront Entry">🚪</span>
+                                )}
+                                {bay.hasSpeculativeOffice && (
+                                  <span className="text-blue-600" title="Speculative Office">🏢</span>
+                                )}
+                                {bay.hasRestroom && (
+                                  <span className="text-green-600" title="Restroom">🚽</span>
+                                )}
+                              </div>
+                            </div>
+                          </button>
+                        </div>
+                      ))}
                     </div>
                   </div>
                   
@@ -397,7 +395,7 @@ export function BaySelectionGrid({
                       <div className="flex flex-wrap gap-2">
                         {propSelectedBays.map((bay) => (
                           <Badge key={bay.id} variant="outline" className="text-xs">
-                            {bay.bayName}
+                            {getBayDisplayName(bay.bayName)}
                           </Badge>
                         ))}
                       </div>
@@ -410,54 +408,63 @@ export function BaySelectionGrid({
         ) : (
           /* Single Building Mode */
           <div className="space-y-2">
-            <div className="overflow-x-scroll pb-4 bay-scroll">
+            <div className="overflow-x-auto pb-4 bay-scroll">
               <div 
-                className="grid gap-2"
+                className="flex gap-3"
                 style={{ 
-                  gridTemplateColumns: `repeat(${Math.ceil(Math.sqrt(bays.length))}, 80px)`,
-                  minWidth: `${Math.ceil(Math.sqrt(bays.length)) * 80 + (Math.ceil(Math.sqrt(bays.length)) - 1) * 8}px`
+                  minWidth: `${bays.length * 168 + (bays.length - 1) * 12}px`
                 }}
               >
-                {(() => {
-                  const { grid } = createGrid(bays);
-                  
-                  return grid.map((row, rowIndex) =>
-                    row.map((bay, colIndex) => (
-                      <div key={`${rowIndex}-${colIndex}`} className="h-24 w-20">
-                        {bay ? (
-                          <button
-                            onClick={() => toggleBaySelection(bay.id)}
-                            className={`
-                              w-full h-full p-2 rounded-lg border-2 transition-all duration-200
-                              flex flex-col items-center justify-center text-xs font-medium
-                              hover:shadow-md focus:outline-none focus:ring-2 focus:ring-orange-500
-                              ${selectedBayIds.has(bay.id) 
-                                ? 'ring-2 ring-orange-500 shadow-lg scale-105' 
-                                : 'hover:scale-102'
-                              }
-                              ${getBayColor(selectedBayIds.has(bay.id))}
-                            `}
-                          >
-                            <div className="text-center">
-                              <div className="font-bold truncate w-full">{bay.bayName}</div>
-                              <div className="text-xs mt-1">{(bay.rentableSquareFootage || bay.squareFootage).toLocaleString()} sq ft</div>
-                              <div className="flex justify-center mt-1 gap-1 text-xs min-h-[1.5rem]">
-                                {bay.hasStorefrontEntry && (
-                                  <span className="text-orange-600 text-lg" title="Storefront Entry">🚪</span>
-                                )}
-                                {bay.hasSpeculativeOffice && (
-                                  <span className="text-blue-600 text-lg" title="Speculative Office">🏢</span>
-                                )}
-                              </div>
-                            </div>
-                          </button>
-                        ) : (
-                          <div className="w-full h-full border-2 border-dashed border-gray-200 rounded-lg bg-gray-50"></div>
-                        )}
+                {bays.map((bay) => (
+                  <div key={bay.id} className="flex-shrink-0">
+                    <button
+                      onClick={() => toggleBaySelection(bay.id)}
+                      className={`
+                        w-40 h-32 p-3 rounded-lg border-2 transition-all duration-200
+                        flex flex-col items-center justify-center text-xs font-medium
+                        hover:shadow-md focus:outline-none focus:ring-2 focus:ring-orange-500
+                        ${selectedBayIds.has(bay.id) 
+                          ? 'ring-2 ring-orange-500 shadow-lg scale-105' 
+                          : 'hover:scale-102'
+                        }
+                        ${getBayColor(selectedBayIds.has(bay.id))}
+                      `}
+                      data-testid={`bay-button-${getBayDisplayName(bay.bayName).replace(/\s/g, '-')}`}
+                    >
+                      <div className="text-center w-full">
+                        <div className="font-bold text-sm mb-1">{getBayDisplayName(bay.bayName)}</div>
+                        <div className="text-xs text-gray-600 mb-2">{(bay.rentableSquareFootage || bay.squareFootage).toLocaleString()} sq ft</div>
+                        
+                        {/* Dock Doors */}
+                        <div className="flex justify-center items-center gap-1 mb-2">
+                          {bay.standardDockDoors > 0 && (
+                            <span className="text-xs bg-blue-100 text-blue-800 px-1 py-0.5 rounded" title={`${bay.standardDockDoors} Standard Dock Doors`}>
+                              {bay.standardDockDoors}🚛
+                            </span>
+                          )}
+                          {bay.oversizedDockDoors > 0 && (
+                            <span className="text-xs bg-purple-100 text-purple-800 px-1 py-0.5 rounded" title={`${bay.oversizedDockDoors} Oversized Dock Doors`}>
+                              {bay.oversizedDockDoors}🚚
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Amenities */}
+                        <div className="flex justify-center flex-wrap gap-1 text-xs">
+                          {bay.hasStorefrontEntry && (
+                            <span className="text-orange-600" title="Storefront Entry">🚪</span>
+                          )}
+                          {bay.hasSpeculativeOffice && (
+                            <span className="text-blue-600" title="Speculative Office">🏢</span>
+                          )}
+                          {bay.hasRestroom && (
+                            <span className="text-green-600" title="Restroom">🚽</span>
+                          )}
+                        </div>
                       </div>
-                    ))
-                  );
-                })()}
+                    </button>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
@@ -543,7 +550,7 @@ export function BaySelectionGrid({
                     variant="outline"
                     className={getBayColor(true)}
                   >
-                    {bay.bayName} ({(bay.rentableSquareFootage || bay.squareFootage).toLocaleString()} sq ft)
+                    {getBayDisplayName(bay.bayName)} ({(bay.rentableSquareFootage || bay.squareFootage).toLocaleString()} sq ft)
                     {bay.hasStorefrontEntry && <span className="text-orange-600 ml-1" title="Storefront Entry">🚪</span>}
                     {bay.hasSpeculativeOffice && <span className="text-blue-600 ml-1" title="Speculative Office">🏢</span>}
                   </Badge>

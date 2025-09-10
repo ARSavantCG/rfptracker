@@ -522,18 +522,20 @@ export function BaySelectionGrid({
           {selectedBays.length > 0 && (
             <div className="mt-4">
               <p className="text-sm text-gray-600 mb-2">Selected Bays:</p>
-              <div className="flex flex-wrap gap-2">
-                {selectedBays.map((bay) => (
-                  <Badge 
-                    key={bay.id} 
-                    variant="outline"
-                    className={getBayColor(true)}
-                  >
-                    {getBayDisplayName(bay.bayName)} ({(bay.rentableSquareFootage || bay.squareFootage).toLocaleString()} sq ft)
-                    {bay.hasStorefrontEntry && <span className="text-orange-600 ml-1" title="Storefront Entry">🚪</span>}
-                    {bay.hasSpeculativeOffice && <span className="text-blue-600 ml-1" title="Speculative Office">🏢</span>}
-                  </Badge>
-                ))}
+              <div className="overflow-x-auto pb-2" style={{height: '40px'}}>
+                <div className="flex gap-2 w-max">
+                  {selectedBays.map((bay) => (
+                    <Badge 
+                      key={bay.id} 
+                      variant="outline"
+                      className={`${getBayColor(true)} flex-shrink-0`}
+                    >
+                      {getBayDisplayName(bay.bayName)} ({(bay.rentableSquareFootage || bay.squareFootage).toLocaleString()} sq ft)
+                      {bay.hasStorefrontEntry && <span className="text-orange-600 ml-1" title="Storefront Entry">🚪</span>}
+                      {bay.hasSpeculativeOffice && <span className="text-blue-600 ml-1" title="Speculative Office">🏢</span>}
+                    </Badge>
+                  ))}
+                </div>
               </div>
             </div>
           )}

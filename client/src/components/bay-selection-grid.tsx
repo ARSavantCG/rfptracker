@@ -336,7 +336,7 @@ export function BaySelectionGrid({
                           <button
                             onClick={() => toggleMultiBuildingBaySelection(`${prop.propertyName} - Building ${prop.building}`, bay.id, bay)}
                             className={`
-                              w-16 h-28 p-1 rounded border-2 transition-all duration-200
+                              w-12 h-36 p-0.5 rounded border-2 transition-all duration-200
                               flex flex-col items-center justify-center text-xs font-medium
                               hover:shadow-md focus:outline-none focus:ring-2 focus:ring-orange-500
                               ${propSelectedIds.has(bay.id) 
@@ -347,34 +347,34 @@ export function BaySelectionGrid({
                             `}
                           >
                             <div className="text-center w-full">
-                              <div className="font-bold text-xs mb-1">{getBayDisplayName(bay.bayName)}</div>
-                              <div className="text-xs text-gray-600 mb-1">{Math.round((bay.rentableSquareFootage || bay.squareFootage) / 1000)}k</div>
+                              <div className="font-bold" style={{fontSize: '9px', lineHeight: '10px', marginBottom: '2px'}}>{getBayDisplayName(bay.bayName)}</div>
+                              <div className="text-gray-600" style={{fontSize: '8px', lineHeight: '9px', marginBottom: '2px'}}>{Math.round((bay.rentableSquareFootage || bay.squareFootage) / 1000)}k</div>
                               
                               {/* Vertical Stack: Doors → Amenities */}
-                              <div className="flex flex-col items-center gap-0.5">
+                              <div className="flex flex-col items-center gap-px">
                                 {/* Standard Dock Doors */}
                                 {bay.standardDockDoors > 0 && (
-                                  <span className="text-xs text-blue-600" title={`${bay.standardDockDoors} Standard Dock Doors`}>
+                                  <span className="text-blue-600" style={{fontSize: '8px', lineHeight: '9px'}} title={`${bay.standardDockDoors} Standard Dock Doors`}>
                                     {bay.standardDockDoors}🚛
                                   </span>
                                 )}
                                 {/* Oversized Dock Doors */}
                                 {bay.oversizedDockDoors > 0 && (
-                                  <span className="text-xs text-purple-600" title={`${bay.oversizedDockDoors} Oversized Dock Doors`}>
+                                  <span className="text-purple-600" style={{fontSize: '8px', lineHeight: '9px'}} title={`${bay.oversizedDockDoors} Oversized Dock Doors`}>
                                     {bay.oversizedDockDoors}🚚
                                   </span>
                                 )}
                                 {/* Storefront Entry */}
                                 {bay.hasStorefrontEntry && (
-                                  <span className="text-orange-600" title="Storefront Entry">🚪</span>
+                                  <span className="text-orange-600" style={{fontSize: '10px', lineHeight: '11px'}} title="Storefront Entry">🚪</span>
                                 )}
                                 {/* Speculative Office */}
                                 {bay.hasSpeculativeOffice && (
-                                  <span className="text-blue-600" title="Speculative Office">🏢</span>
+                                  <span className="text-blue-600" style={{fontSize: '10px', lineHeight: '11px'}} title="Speculative Office">🏢</span>
                                 )}
                                 {/* Restroom */}
                                 {bay.hasRestroom && (
-                                  <span className="text-green-600" title="Restroom">🚽</span>
+                                  <span className="text-green-600" style={{fontSize: '10px', lineHeight: '11px'}} title="Restroom">🚽</span>
                                 )}
                               </div>
                             </div>
@@ -411,7 +411,7 @@ export function BaySelectionGrid({
                     <button
                       onClick={() => toggleBaySelection(bay.id)}
                       className={`
-                        w-16 h-28 p-1 rounded border-2 transition-all duration-200
+                        w-12 h-36 p-0.5 rounded border-2 transition-all duration-200
                         flex flex-col items-center justify-center text-xs font-medium
                         hover:shadow-md focus:outline-none focus:ring-2 focus:ring-orange-500
                         ${selectedBayIds.has(bay.id) 
@@ -423,34 +423,34 @@ export function BaySelectionGrid({
                       data-testid={`bay-button-${getBayDisplayName(bay.bayName).replace(/\s/g, '-')}`}
                     >
                       <div className="text-center w-full">
-                        <div className="font-bold text-xs mb-1">{getBayDisplayName(bay.bayName)}</div>
-                        <div className="text-xs text-gray-600 mb-1">{Math.round((bay.rentableSquareFootage || bay.squareFootage) / 1000)}k</div>
+                        <div className="font-bold" style={{fontSize: '9px', lineHeight: '10px', marginBottom: '2px'}}>{getBayDisplayName(bay.bayName)}</div>
+                        <div className="text-gray-600" style={{fontSize: '8px', lineHeight: '9px', marginBottom: '2px'}}>{Math.round((bay.rentableSquareFootage || bay.squareFootage) / 1000)}k</div>
                         
                         {/* Vertical Stack: Doors → Amenities */}
-                        <div className="flex flex-col items-center gap-0.5">
+                        <div className="flex flex-col items-center gap-px">
                           {/* Standard Dock Doors */}
                           {bay.standardDockDoors > 0 && (
-                            <span className="text-xs text-blue-600" title={`${bay.standardDockDoors} Standard Dock Doors`}>
+                            <span className="text-blue-600" style={{fontSize: '8px', lineHeight: '9px'}} title={`${bay.standardDockDoors} Standard Dock Doors`}>
                               {bay.standardDockDoors}🚛
                             </span>
                           )}
                           {/* Oversized Dock Doors */}
                           {bay.oversizedDockDoors > 0 && (
-                            <span className="text-xs text-purple-600" title={`${bay.oversizedDockDoors} Oversized Dock Doors`}>
+                            <span className="text-purple-600" style={{fontSize: '8px', lineHeight: '9px'}} title={`${bay.oversizedDockDoors} Oversized Dock Doors`}>
                               {bay.oversizedDockDoors}🚚
                             </span>
                           )}
                           {/* Storefront Entry */}
                           {bay.hasStorefrontEntry && (
-                            <span className="text-orange-600" title="Storefront Entry">🚪</span>
+                            <span className="text-orange-600" style={{fontSize: '10px', lineHeight: '11px'}} title="Storefront Entry">🚪</span>
                           )}
                           {/* Speculative Office */}
                           {bay.hasSpeculativeOffice && (
-                            <span className="text-blue-600" title="Speculative Office">🏢</span>
+                            <span className="text-blue-600" style={{fontSize: '10px', lineHeight: '11px'}} title="Speculative Office">🏢</span>
                           )}
                           {/* Restroom */}
                           {bay.hasRestroom && (
-                            <span className="text-green-600" title="Restroom">🚽</span>
+                            <span className="text-green-600" style={{fontSize: '10px', lineHeight: '11px'}} title="Restroom">🚽</span>
                           )}
                         </div>
                       </div>

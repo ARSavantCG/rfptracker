@@ -427,16 +427,16 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
         <h2 className="text-sm font-semibold text-gray-900">RFP Requests</h2>
       </div>
       <div className="w-full overflow-x-auto">
-        <table className="rfp-table w-full divide-y divide-gray-200 table-fixed" style={{ minWidth: '1800px' }}>
+        <table className="rfp-table w-full divide-y divide-gray-200 table-fixed" style={{ minWidth: '1600px' }}>
           <colgroup>
             <col style={{ width: '280px' }} />
-            <col style={{ width: '300px' }} />
-            <col style={{ width: '320px' }} />
+            <col style={{ width: '220px' }} />
+            <col style={{ width: '260px' }} />
             <col style={{ width: '140px' }} />
             <col style={{ width: '140px' }} />
             <col style={{ width: '140px' }} />
             <col style={{ width: '80px' }} />
-            <col style={{ width: '400px' }} />
+            <col style={{ width: '340px' }} />
           </colgroup>
           <thead className="bg-gray-50">
             <tr>
@@ -650,7 +650,7 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
                       <span>{fileCounts[parentRfp.id] || parentRfp.files.length}</span>
                     </div>
                   </td>
-                  <td className="px-3 py-3 whitespace-nowrap text-xs" style={{ width: '400px', minWidth: '400px' }}>
+                  <td className="px-3 py-3 whitespace-nowrap text-xs" style={{ width: '340px', minWidth: '340px' }}>
                     <div className="flex items-center gap-2">
                       <button 
                         onClick={(e) => {

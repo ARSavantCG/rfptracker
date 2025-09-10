@@ -329,8 +329,8 @@ export function BaySelectionGrid({
                   </div>
                   
                   {/* Bay Grid for this property */}
-                  <div className="pb-2">
-                    <div className="flex gap-1 flex-wrap">
+                  <div className="overflow-x-auto pb-2">
+                    <div className="flex gap-1" style={{ minWidth: 'max-content' }}>
                       {propBays.map((bay) => (
                         <div key={bay.id} className="flex-shrink-0">
                           <button
@@ -404,8 +404,8 @@ export function BaySelectionGrid({
         ) : (
           /* Single Building Mode */
           <div className="space-y-2">
-            <div className="overflow-x-auto pb-4 bay-scroll">
-              <div className="flex gap-1 flex-wrap">
+            <div className="overflow-x-auto pb-4">
+              <div className="flex gap-1" style={{ minWidth: 'max-content' }}>
                 {bays.map((bay) => (
                   <div key={bay.id} className="flex-shrink-0">
                     <button
@@ -522,20 +522,18 @@ export function BaySelectionGrid({
           {selectedBays.length > 0 && (
             <div className="mt-4">
               <p className="text-sm text-gray-600 mb-2">Selected Bays:</p>
-              <div className="overflow-x-auto pb-2" style={{height: '40px'}}>
-                <div className="flex gap-2 w-max">
-                  {selectedBays.map((bay) => (
-                    <Badge 
-                      key={bay.id} 
-                      variant="outline"
-                      className={`${getBayColor(true)} flex-shrink-0`}
-                    >
-                      {getBayDisplayName(bay.bayName)} ({(bay.rentableSquareFootage || bay.squareFootage).toLocaleString()} sq ft)
-                      {bay.hasStorefrontEntry && <span className="text-orange-600 ml-1" title="Storefront Entry">🚪</span>}
-                      {bay.hasSpeculativeOffice && <span className="text-blue-600 ml-1" title="Speculative Office">🏢</span>}
-                    </Badge>
-                  ))}
-                </div>
+              <div className="flex flex-wrap gap-2">
+                {selectedBays.map((bay) => (
+                  <Badge 
+                    key={bay.id} 
+                    variant="outline"
+                    className={getBayColor(true)}
+                  >
+                    {getBayDisplayName(bay.bayName)} ({(bay.rentableSquareFootage || bay.squareFootage).toLocaleString()} sq ft)
+                    {bay.hasStorefrontEntry && <span className="text-orange-600 ml-1" title="Storefront Entry">🚪</span>}
+                    {bay.hasSpeculativeOffice && <span className="text-blue-600 ml-1" title="Speculative Office">🏢</span>}
+                  </Badge>
+                ))}
               </div>
             </div>
           )}

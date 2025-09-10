@@ -399,7 +399,7 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
 
   if (isLoading) {
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
         <div className="animate-pulse">
           <div className="px-6 py-4 border-b border-gray-200">
             <div className="h-6 bg-gray-200 rounded w-32"></div>
@@ -422,67 +422,62 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200">
       <div className="px-4 py-2 border-b border-gray-200">
         <h2 className="text-sm font-semibold text-gray-900">RFP Requests</h2>
       </div>
-      <div className="overflow-x-auto max-w-full">
-        <table className="rfp-table w-full divide-y divide-gray-200 table-fixed" style={{ minWidth: '1600px' }}>
+      <div className="w-full overflow-x-auto">
+        <table className="rfp-table w-full divide-y divide-gray-200 table-fixed" style={{ minWidth: '1360px' }}>
           <colgroup>
-            <col style={{ width: '220px' }} />
-            <col style={{ width: '280px' }} />
-            <col style={{ width: '300px' }} />
-            <col style={{ width: '140px' }} />
-            <col style={{ width: '110px' }} />
-            <col style={{ width: '130px' }} />
-            <col style={{ width: '70px' }} />
-            <col style={{ width: '320px' }} />
+            <col style={{ width: '160px' }} />
+            <col style={{ width: '240px' }} />
+            <col style={{ width: '260px' }} />
+            <col style={{ width: '120px' }} />
+            <col style={{ width: '120px' }} />
+            <col style={{ width: '120px' }} />
+            <col style={{ width: '72px' }} />
+            <col style={{ width: '268px' }} />
           </colgroup>
           <thead className="bg-gray-50">
             <tr>
               <th 
                 className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
                 onClick={() => handleSort("rfpNumber")}
-                style={{ width: '120px' }}
               >
                 RFP ID <i className={`${getSortIcon("rfpNumber")} ml-1`}></i>
               </th>
               <th 
                 className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
                 onClick={() => handleSort("tenantName")}
-                style={{ width: '140px' }}
               >
                 Tenant <i className={`${getSortIcon("tenantName")} ml-1`}></i>
               </th>
               <th 
                 className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
                 onClick={() => handleSort("property")}
-                style={{ width: '160px' }}
               >
                 Property <i className={`${getSortIcon("property")} ml-1`}></i>
               </th>
               <th 
                 className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
                 onClick={() => handleSort("status")}
-                style={{ width: '120px' }}
               >
                 Status <i className={`${getSortIcon("status")} ml-1`}></i>
               </th>
               <th 
                 className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
                 onClick={() => handleSort("receivedOn")}
-                style={{ width: '110px' }}
+              
               >
                 Received On <i className={`${getSortIcon("receivedOn")} ml-1`}></i>
               </th>
               <th 
                 className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
                 onClick={() => handleSort("internalDueDate")}
-                style={{ width: '120px' }}
               >
                 Internal Due Date <i className={`${getSortIcon("internalDueDate")} ml-1`}></i>
               </th>
-              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '70px' }}>
+              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Files
               </th>
               <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -655,8 +650,8 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
                       <span>{fileCounts[parentRfp.id] || parentRfp.files.length}</span>
                     </div>
                   </td>
-                  <td className="px-3 py-3 whitespace-nowrap text-xs" style={{ width: '320px', minWidth: '320px' }}>
-                    <div className="flex items-center gap-2">
+                  <td className="px-3 py-3 whitespace-nowrap text-xs" style={{ width: '268px', minWidth: '268px' }}>
+                    <div className="flex items-center gap-1">
                       <button 
                         onClick={(e) => {
                           e.stopPropagation();

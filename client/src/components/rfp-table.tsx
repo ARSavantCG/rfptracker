@@ -427,16 +427,16 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
         <h2 className="text-sm font-semibold text-gray-900">RFP Requests</h2>
       </div>
       <div className="w-full overflow-x-auto">
-        <table className="rfp-table w-full divide-y divide-gray-200 table-fixed" style={{ minWidth: '1360px' }}>
+        <table className="rfp-table w-full divide-y divide-gray-200 table-fixed" style={{ minWidth: '1800px' }}>
           <colgroup>
-            <col style={{ width: '160px' }} />
-            <col style={{ width: '240px' }} />
-            <col style={{ width: '260px' }} />
-            <col style={{ width: '120px' }} />
-            <col style={{ width: '120px' }} />
-            <col style={{ width: '120px' }} />
-            <col style={{ width: '72px' }} />
-            <col style={{ width: '268px' }} />
+            <col style={{ width: '280px' }} />
+            <col style={{ width: '300px' }} />
+            <col style={{ width: '320px' }} />
+            <col style={{ width: '140px' }} />
+            <col style={{ width: '140px' }} />
+            <col style={{ width: '140px' }} />
+            <col style={{ width: '80px' }} />
+            <col style={{ width: '400px' }} />
           </colgroup>
           <thead className="bg-gray-50">
             <tr>
@@ -650,8 +650,8 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
                       <span>{fileCounts[parentRfp.id] || parentRfp.files.length}</span>
                     </div>
                   </td>
-                  <td className="px-3 py-3 whitespace-nowrap text-xs" style={{ width: '268px', minWidth: '268px' }}>
-                    <div className="flex items-center gap-1">
+                  <td className="px-3 py-3 whitespace-nowrap text-xs" style={{ width: '400px', minWidth: '400px' }}>
+                    <div className="flex items-center gap-2">
                       <button 
                         onClick={(e) => {
                           e.stopPropagation();

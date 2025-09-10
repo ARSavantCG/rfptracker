@@ -228,7 +228,7 @@ export default function Dashboard() {
 
         {/* Main Content */}
         <div className="flex-1 overflow-auto">
-          <div className="max-w-7xl mx-auto px-4 py-4">
+          <div className="mx-auto px-4 py-4">
             {/* Compact Page Header */}
             <div className="flex items-center justify-between mb-4">
               <div>

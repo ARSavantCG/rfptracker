@@ -350,28 +350,29 @@ export function BaySelectionGrid({
                               <div className="font-bold text-xs mb-1">{getBayDisplayName(bay.bayName)}</div>
                               <div className="text-xs text-gray-600 mb-1">{Math.round((bay.rentableSquareFootage || bay.squareFootage) / 1000)}k</div>
                               
-                              {/* Dock Doors */}
-                              <div className="flex flex-col items-center gap-0.5 mb-1">
+                              {/* Vertical Stack: Doors → Amenities */}
+                              <div className="flex flex-col items-center gap-0.5">
+                                {/* Standard Dock Doors */}
                                 {bay.standardDockDoors > 0 && (
                                   <span className="text-xs text-blue-600" title={`${bay.standardDockDoors} Standard Dock Doors`}>
                                     {bay.standardDockDoors}🚛
                                   </span>
                                 )}
+                                {/* Oversized Dock Doors */}
                                 {bay.oversizedDockDoors > 0 && (
                                   <span className="text-xs text-purple-600" title={`${bay.oversizedDockDoors} Oversized Dock Doors`}>
                                     {bay.oversizedDockDoors}🚚
                                   </span>
                                 )}
-                              </div>
-
-                              {/* Amenities */}
-                              <div className="flex flex-col items-center gap-0.5">
+                                {/* Storefront Entry */}
                                 {bay.hasStorefrontEntry && (
                                   <span className="text-orange-600" title="Storefront Entry">🚪</span>
                                 )}
+                                {/* Speculative Office */}
                                 {bay.hasSpeculativeOffice && (
                                   <span className="text-blue-600" title="Speculative Office">🏢</span>
                                 )}
+                                {/* Restroom */}
                                 {bay.hasRestroom && (
                                   <span className="text-green-600" title="Restroom">🚽</span>
                                 )}
@@ -425,28 +426,29 @@ export function BaySelectionGrid({
                         <div className="font-bold text-xs mb-1">{getBayDisplayName(bay.bayName)}</div>
                         <div className="text-xs text-gray-600 mb-1">{Math.round((bay.rentableSquareFootage || bay.squareFootage) / 1000)}k</div>
                         
-                        {/* Dock Doors */}
-                        <div className="flex flex-col items-center gap-0.5 mb-1">
+                        {/* Vertical Stack: Doors → Amenities */}
+                        <div className="flex flex-col items-center gap-0.5">
+                          {/* Standard Dock Doors */}
                           {bay.standardDockDoors > 0 && (
                             <span className="text-xs text-blue-600" title={`${bay.standardDockDoors} Standard Dock Doors`}>
                               {bay.standardDockDoors}🚛
                             </span>
                           )}
+                          {/* Oversized Dock Doors */}
                           {bay.oversizedDockDoors > 0 && (
                             <span className="text-xs text-purple-600" title={`${bay.oversizedDockDoors} Oversized Dock Doors`}>
                               {bay.oversizedDockDoors}🚚
                             </span>
                           )}
-                        </div>
-
-                        {/* Amenities */}
-                        <div className="flex flex-col items-center gap-0.5">
+                          {/* Storefront Entry */}
                           {bay.hasStorefrontEntry && (
                             <span className="text-orange-600" title="Storefront Entry">🚪</span>
                           )}
+                          {/* Speculative Office */}
                           {bay.hasSpeculativeOffice && (
                             <span className="text-blue-600" title="Speculative Office">🏢</span>
                           )}
+                          {/* Restroom */}
                           {bay.hasRestroom && (
                             <span className="text-green-600" title="Restroom">🚽</span>
                           )}

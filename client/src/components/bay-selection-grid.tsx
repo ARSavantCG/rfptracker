@@ -340,8 +340,8 @@ export function BaySelectionGrid({
                               flex flex-col items-center justify-center text-xs font-medium
                               hover:shadow-md focus:outline-none focus:ring-2 focus:ring-orange-500
                               ${propSelectedIds.has(bay.id) 
-                                ? 'ring-2 ring-orange-500 shadow-lg scale-105' 
-                                : 'hover:scale-102'
+                                ? 'ring-2 ring-orange-500 shadow-lg' 
+                                : ''
                               }
                               ${getBayColor(propSelectedIds.has(bay.id))}
                             `}
@@ -415,8 +415,8 @@ export function BaySelectionGrid({
                         flex flex-col items-center justify-center text-xs font-medium
                         hover:shadow-md focus:outline-none focus:ring-2 focus:ring-orange-500
                         ${selectedBayIds.has(bay.id) 
-                          ? 'ring-2 ring-orange-500 shadow-lg scale-105' 
-                          : 'hover:scale-102'
+                          ? 'ring-2 ring-orange-500 shadow-lg' 
+                          : ''
                         }
                         ${getBayColor(selectedBayIds.has(bay.id))}
                       `}
@@ -489,24 +489,11 @@ export function BaySelectionGrid({
             </Badge>
           </div>
           
-          <div className={`grid ${multiBuildingMode ? 'grid-cols-1' : 'grid-cols-2'} gap-4`}>
-            <div>
-              <p className="text-sm text-gray-600">Total Square Footage</p>
-              <p className="text-2xl font-bold text-blue-600">
-                {totalSquareFootage.toLocaleString()} sq ft
-              </p>
-            </div>
-            {!multiBuildingMode && (
-              <div>
-                <p className="text-sm text-gray-600">Average per Bay</p>
-                <p className="text-2xl font-bold text-gray-700">
-                  {selectedBays.length > 0 
-                    ? Math.round(totalSquareFootage / selectedBays.length).toLocaleString()
-                    : '0'
-                  } sq ft
-                </p>
-              </div>
-            )}
+          <div className="text-center">
+            <p className="text-sm text-gray-600">Total Square Footage</p>
+            <p className="text-2xl font-bold text-blue-600">
+              {totalSquareFootage.toLocaleString()} sq ft
+            </p>
           </div>
 
           {multiBuildingMode && Object.keys(selectedBaysPerBuilding).length > 0 && (

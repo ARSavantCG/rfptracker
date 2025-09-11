@@ -65,13 +65,10 @@ export function BayConfigurationModal({
     refetchOnMount: true,
   });
 
-  // Fetch all properties data for multi-building mode (only when not provided by parent)
-  const { data: allProperties = [], isLoading: isPropertiesLoading } = useQuery<Property[]>({
-    queryKey: ["/api/properties"],
-    enabled: isOpen && isMultiBuilding && (!properties || properties.length === 0),
-    staleTime: 0,
-    refetchOnMount: true,
-  });
+  // Use parent-provided properties for multi-building mode instead of fetching
+  // This prevents showing wrong properties and improves performance
+  const allProperties = properties || [];
+  const isPropertiesLoading = false; // No loading since we use parent data
 
   // Use appropriate data based on mode
   const propertyWithBayConfigs = fullProperty || property;

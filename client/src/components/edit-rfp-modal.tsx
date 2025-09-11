@@ -58,16 +58,8 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
   const [selectedProperties, setSelectedProperties] = useState<string[]>([]);
   const [selectedBaysPerBuilding, setSelectedBaysPerBuilding] = useState<{[propertyName: string]: BayConfiguration[]}>({});
   const [costsPerBuilding, setCostsPerBuilding] = useState<{[propertyName: string]: BuildingCosts}>({});
-  const [bayConfigModalOpen, setBayConfigModalOpenRaw] = useState(false);
-  console.warn('🔍 COMPONENT RENDER - bayConfigModalOpen:', bayConfigModalOpen, 'isMultiBuilding:', isMultiBuilding);
+  const [bayConfigModalOpen, setBayConfigModalOpen] = useState(false);
   
-  // Debug wrapper to track ALL modal opens/closes
-  const setBayConfigModalOpen = useCallback((value: boolean) => {
-    if (value === true) {
-      console.warn('🚨 MODAL OPENING FROM:', new Error().stack?.split('\n')[2]?.trim() || 'unknown');
-    }
-    setBayConfigModalOpenRaw(value);
-  }, []);
 
   // Ensure bay configurator closes when toggling multi-building mode
   useEffect(() => {
@@ -1279,13 +1271,6 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
         const filteredPropertiesForModal = isMultiBuilding && selectedProperty 
           ? properties.filter(p => p.propertyName === selectedProperty.propertyName)
           : [];
-        
-        console.warn('🔍 RENDER DEBUG:', {
-          bayConfigModalOpen,
-          isMultiBuilding,
-          selectedPropertyName: selectedProperty?.propertyName,
-          filteredPropertiesCount: filteredPropertiesForModal.length
-        });
         
         return (
           <BayConfigurationModal

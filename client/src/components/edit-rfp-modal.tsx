@@ -368,19 +368,27 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
               // Pre-select the original property in multi-building mode
               setSelectedProperties([currentPropertyId]);
               
-              // Convert existing bay configurations to multi-building format
+              // SMART BUILDING KEY: Use the actual building number from the property data
+              // This ensures we use the correct building number (like "5" for Bridge Point Doral - Bldg. 5)
+              // instead of defaulting to "1"
               const buildingKey = `${currentProperty.propertyName} - Building ${currentProperty.building}`;
               const multiBuildingData = {
                 [buildingKey]: selectedBayConfigurations
               };
               
+              console.debug('🏗️ Smart building key created:', {
+                propertyName: currentProperty.propertyName,
+                actualBuildingNumber: currentProperty.building,
+                generatedKey: buildingKey
+              });
               
               setSelectedBaysPerBuilding(multiBuildingData);
               
               // Keep the existing project area calculation
               // (don't clear it since user already has selections)
             } else {
-              // No existing selections, clear bay selections but PRESERVE selectedProperty for filtering
+              // No existing selections - don't create any default building keys
+              // Let the user select buildings through the bay configurator modal
               setSelectedBayConfigurations([]);
               setSelectedProperties([]);
               setSelectedBaysPerBuilding({});

@@ -179,13 +179,20 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
   // Ensure selectedProperty is maintained when form property changes or multi-building toggles
   useEffect(() => {
     const currentPropertyId = form.watch('property');
+    console.log('🔍 EditRfpModal property effect:', {
+      currentPropertyId,
+      propertiesCount: properties.length,
+      isMultiBuilding,
+      selectedProperty: selectedProperty ? `${selectedProperty.propertyName} - Building ${selectedProperty.building}` : 'null'
+    });
     if (currentPropertyId && properties.length > 0) {
       const property = properties.find(p => p.id.toString() === currentPropertyId);
       if (property) {
+        console.log('🔍 Setting selectedProperty to:', `${property.propertyName} - Building ${property.building}`);
         setSelectedProperty(property);
       }
     }
-  }, [form.watch('property'), properties, form]);
+  }, [form.watch('property'), properties, form, isMultiBuilding, selectedProperty]);
 
   useEffect(() => {
     if (rfp && isOpen) {

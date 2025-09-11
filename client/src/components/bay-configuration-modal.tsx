@@ -77,9 +77,23 @@ export function BayConfigurationModal({
   const propertyWithBayConfigs = fullProperty || property;
   
   // For multi-building mode, filter to only buildings within the same property park
+  console.log('🔍 BayConfigurationModal DEBUG:', {
+    isMultiBuilding,
+    isOpen,
+    property: property ? `${property.propertyName} - Building ${property.building}` : 'null',
+    allPropertiesCount: allProperties.length,
+    allProperties: allProperties.map(p => `${p.propertyName} - Building ${p.building}`)
+  });
+  
   const propertiesWithBayConfigs = isMultiBuilding ? 
-    allProperties.filter(p => property ? p.propertyName === property.propertyName : false) : 
+    allProperties.filter(p => {
+      const matches = property ? p.propertyName === property.propertyName : false;
+      console.log(`🔍 Checking property ${p.propertyName} - Building ${p.building}: matches = ${matches}`);
+      return matches;
+    }) : 
     (propertyWithBayConfigs ? [propertyWithBayConfigs] : []);
+  
+  console.log('🔍 Final filtered properties:', propertiesWithBayConfigs.map(p => `${p.propertyName} - Building ${p.building}`));
   const isLoading = isMultiBuilding ? isPropertiesLoading : isSinglePropertyLoading;
 
 

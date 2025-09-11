@@ -787,14 +787,17 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
                 <p className="text-sm text-muted-foreground">
                   Select bays from multiple buildings within the same property park.
                 </p>
-                {properties.length > 0 && (
-                  <BaySelectionGrid
-                    properties={properties}
-                    isMultiBuilding={true}
-                    initialSelectedBaysPerBuilding={selectedBaysPerBuilding}
-                    onSelectionChange={handleMultiBuildingSelection}
-                  />
-                )}
+                {/* Remove inline BaySelectionGrid to prevent auto-opening modal */}
+                {/* Users should click "Configure Bays" button to open the modal */}
+                <div className="p-4 border rounded-lg bg-gray-50">
+                  <div className="text-sm font-medium text-gray-700">Multi-Building Configuration</div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {Object.keys(selectedBaysPerBuilding).length > 0
+                      ? `${Object.values(selectedBaysPerBuilding).flat().length} bays selected across ${Object.keys(selectedBaysPerBuilding).length} buildings (${calculatedFloorArea.toLocaleString()} SF)`
+                      : 'Click "Configure Bays" below to select bays from multiple buildings'
+                    }
+                  </p>
+                </div>
               </div>
             )}
 
@@ -1266,19 +1269,33 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
       </DialogContent>
 
       {/* Bay Configuration Modal */}
-      {selectedProperty && (() => {
-        // For multi-building, filter properties to only show buildings from same property park
-        const filteredPropertiesForModal = isMultiBuilding && selectedProperty 
-          ? properties.filter(p => p.propertyName === selectedProperty.propertyName)
-          : [];
+      {(() => {
+        // Derive anchor property for park filtering
+        const anchorProperty = selectedProperty ?? 
+          properties.find(p => p.id.toString() === form.getValues('property')) ?? 
+          properties.find(p => p.id.toString() === (selectedProperties[0] || rfp?.properties?.[0] || ''));
         
+        // Compute park-filtered properties list
+        const parkProperties = anchorProperty ? 
+          properties.filter(p => p.propertyName === anchorProperty.propertyName) : [];
+        
+        // Debug logging (one-time)
+        if (bayConfigModalOpen) {
+          console.debug('🔧 Modal opened by Configure Bays button');
+          console.debug('🏢 Properties passed to modal:', {
+            isMultiBuilding,
+            anchorPropertyName: anchorProperty?.propertyName,
+            parkPropertiesCount: parkProperties.length,
+            parkPropertyNames: parkProperties.map(p => `${p.propertyName} - Building ${p.building || 'N/A'}`)
+          });
+        }
         
         return (
           <BayConfigurationModal
             isOpen={bayConfigModalOpen}
             onClose={() => setBayConfigModalOpen(false)}
-            property={!isMultiBuilding ? selectedProperty : undefined}
-            properties={isMultiBuilding ? filteredPropertiesForModal : undefined}
+            property={!isMultiBuilding ? anchorProperty : undefined}
+            properties={isMultiBuilding ? parkProperties : undefined}
             isMultiBuilding={isMultiBuilding}
             onConfirm={handleFloorAreaChange}
             initialSelectedBays={selectedBayConfigurations}

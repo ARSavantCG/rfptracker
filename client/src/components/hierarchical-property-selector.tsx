@@ -23,9 +23,21 @@ export function HierarchicalPropertySelector({ value, onChange, className, isMul
   const dropdownRef = useRef<HTMLDivElement>(null);
   const submenuRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
-  const { data: properties = [], isLoading } = useQuery<Property[]>({
+  const { data: properties = [], isLoading, error } = useQuery<Property[]>({
     queryKey: ["/api/properties"],
+    retry: 3,
+    retryDelay: 1000,
   });
+
+  // Debug logging for property loading
+  useEffect(() => {
+    console.log('🔧 HierarchicalPropertySelector Debug:', {
+      isLoading,
+      propertiesCount: properties.length,
+      error: error?.message,
+      isOpen
+    });
+  }, [isLoading, properties.length, error, isOpen]);
 
   // Group properties by propertyName
   const propertyGroups: PropertyGroup[] = properties.reduce((groups, property) => {
@@ -58,13 +70,22 @@ export function HierarchicalPropertySelector({ value, onChange, className, isMul
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false);
         setExpandedProperty(null);
-
       }
     }
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    // Only add listener if dropdown is open
+    if (isOpen) {
+      // Add slight delay to prevent immediate closure from the same click that opened it
+      const timer = setTimeout(() => {
+        document.addEventListener('mousedown', handleClickOutside);
+      }, 100);
+      
+      return () => {
+        clearTimeout(timer);
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [isOpen]);
 
   const handlePropertySelect = (propertyId: string) => {
     onChange(propertyId);

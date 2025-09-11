@@ -1337,8 +1337,8 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
             selectedPropertyValue: form.getValues('property'),
             selectedPropertiesArray: selectedProperties,
             anchorPropertyName: anchorProperty?.propertyName,
-            parkPropertiesCount: parkProperties.length,
-            parkPropertyNames: parkProperties.map(p => `${p.propertyName} - Building ${p.building || 'N/A'}`)
+            allPropertiesCount: properties.length,
+            allPropertyNames: properties.map((p: Property) => `${p.propertyName} - Building ${p.building || 'N/A'}`)
           });
           console.log('🔧 INITIAL BAYS:', {
             singleBuildingBays: !isMultiBuilding ? selectedBayConfigurations.length : 'N/A',

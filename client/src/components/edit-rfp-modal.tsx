@@ -60,18 +60,10 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
   const [costsPerBuilding, setCostsPerBuilding] = useState<{[propertyName: string]: BuildingCosts}>({});
   const [bayConfigModalOpen, setBayConfigModalOpen] = useState(false);
 
-  // Debug wrapper to track unexpected opens
-  const setBayConfigModalOpenDebug = useCallback((value: boolean) => {
-    if (value === true) {
-      console.log('🚨 Bay config modal opening!', new Error().stack);
-    }
-    setBayConfigModalOpen(value);
-  }, []);
-
   // Ensure bay configurator closes when toggling multi-building mode
   useEffect(() => {
-    setBayConfigModalOpenDebug(false);
-  }, [isMultiBuilding, setBayConfigModalOpenDebug]);
+    setBayConfigModalOpen(false);
+  }, [isMultiBuilding]);
 
 
   // Fetch properties for bay configuration
@@ -994,7 +986,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
                           <Button
                             type="button"
                             variant="outline"
-                            onClick={() => setBayConfigModalOpenDebug(true)}
+                            onClick={() => setBayConfigModalOpen(true)}
                             className="flex items-center gap-2"
                           >
                             <Grid3x3 className="h-4 w-4" />
@@ -1270,21 +1262,29 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
       </DialogContent>
 
       {/* Bay Configuration Modal */}
-      {selectedProperty && (
-        <BayConfigurationModal
-          isOpen={bayConfigModalOpen}
-          onClose={() => setBayConfigModalOpenDebug(false)}
-          property={selectedProperty}
-          isMultiBuilding={isMultiBuilding}
-          onConfirm={handleFloorAreaChange}
-          initialSelectedBays={selectedBayConfigurations}
-          initialSelectedBaysPerBuilding={selectedBaysPerBuilding}
-          initialCostsPerBuilding={costsPerBuilding}
-          onBaysPerBuildingChange={setSelectedBaysPerBuilding}
-          costsPerBuilding={costsPerBuilding}
-          onCostsPerBuildingChange={setCostsPerBuilding}
-        />
-      )}
+      {selectedProperty && (() => {
+        // For multi-building, filter properties to only show buildings from same property park
+        const filteredPropertiesForModal = isMultiBuilding && selectedProperty 
+          ? properties.filter(p => p.propertyName === selectedProperty.propertyName)
+          : [];
+        
+        return (
+          <BayConfigurationModal
+            isOpen={bayConfigModalOpen}
+            onClose={() => setBayConfigModalOpen(false)}
+            property={!isMultiBuilding ? selectedProperty : undefined}
+            properties={isMultiBuilding ? filteredPropertiesForModal : undefined}
+            isMultiBuilding={isMultiBuilding}
+            onConfirm={handleFloorAreaChange}
+            initialSelectedBays={selectedBayConfigurations}
+            initialSelectedBaysPerBuilding={selectedBaysPerBuilding}
+            initialCostsPerBuilding={costsPerBuilding}
+            onBaysPerBuildingChange={setSelectedBaysPerBuilding}
+            costsPerBuilding={costsPerBuilding}
+            onCostsPerBuildingChange={setCostsPerBuilding}
+          />
+        );
+      })()}
     </Dialog>
   );
 }

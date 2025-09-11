@@ -60,14 +60,6 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
   const [costsPerBuilding, setCostsPerBuilding] = useState<{[propertyName: string]: BuildingCosts}>({});
   const [bayConfigModalOpen, setBayConfigModalOpen] = useState(false);
 
-  // Debug bay config modal opening
-  useEffect(() => {
-    console.log('🔧 Bay config modal state changed:', {
-      bayConfigModalOpen,
-      isMultiBuilding,
-      hasSelectedProperty: !!selectedProperty
-    });
-  }, [bayConfigModalOpen, isMultiBuilding, selectedProperty]);
 
   // Fetch properties for bay configuration
   const { data: properties = [] } = useQuery<Property[]>({
@@ -198,12 +190,6 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
 
   useEffect(() => {
     if (rfp && isOpen) {
-      console.log('🔍 EditRfpModal loading RFP data:', {
-        rfpId: rfp.id,
-        rfpProperty: rfp.property,
-        isMultiBuilding: rfp.isMultiBuilding,
-        propertiesLoaded: properties.length
-      });
 
       // Extract alternate description from project name if it exists
       let alternateDescription = "";
@@ -251,11 +237,21 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
         workflowPhase: (rfp.workflowPhase || "rfp-entry") as "rfp-entry" | "rfp-validation" | "invitation-to-bid" | "bid-collection" | "evaluation" | "award" | "publish",
       });
 
-      // Set selected property for bay configuration (single-building)
-      if (!isMultiBuildingRfp && rfp.property && properties.length > 0) {
-        const property = properties.find(p => p.id.toString() === rfp.property);
-        if (property) {
-          setSelectedProperty(property);
+      // Set selected property for bay configuration (BOTH single and multi-building)
+      // Always maintain an anchor property for filtering in BayConfigurationModal
+      if (properties.length > 0) {
+        let anchorPropertyId = rfp.property;
+        
+        // For multi-building RFPs, use the first property if no single property set
+        if (!anchorPropertyId && rfp.properties && rfp.properties.length > 0) {
+          anchorPropertyId = rfp.properties[0];
+        }
+        
+        if (anchorPropertyId) {
+          const property = properties.find(p => p.id.toString() === anchorPropertyId);
+          if (property) {
+            setSelectedProperty(property);
+          }
         }
       }
 
@@ -354,18 +350,13 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
             const currentPropertyId = value.property || form.getValues("property");
             const currentProperty = properties.find(p => p.id.toString() === currentPropertyId);
             
-            console.log('🔍 Multi-building toggle debug:', {
-              currentPropertyId,
-              currentProperty: currentProperty?.propertyName,
-              selectedBayCount: selectedBayConfigurations.length,
-              hasProperty: !!currentProperty,
-              hasBays: selectedBayConfigurations.length > 0
-            });
             
             // ALWAYS preserve selectedProperty for multi-building filtering, regardless of existing bays
             if (currentProperty) {
               setSelectedProperty(currentProperty);
             }
+            
+            // DON'T auto-open bay configurator on toggle - user should click button manually
             
             if (currentProperty && selectedBayConfigurations.length > 0) {
               // Pre-select the original property in multi-building mode
@@ -377,11 +368,6 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
                 [buildingKey]: selectedBayConfigurations
               };
               
-              console.log('🏢 Converting to multi-building:', {
-                buildingKey,
-                bayCount: selectedBayConfigurations.length,
-                multiBuildingData
-              });
               
               setSelectedBaysPerBuilding(multiBuildingData);
               
@@ -396,8 +382,8 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
               form.setValue("projectArea", "");
             }
             
-            // Clear the single property field as it's now managed by multi-building
-            form.setValue("property", "");
+            // Keep the property field for filtering - don't clear it
+            // form.setValue("property", ""); // REMOVED: Keep property for filtering
           } else {
             // When switching back to single building, try to preserve first selected property
             if (selectedProperties.length > 0) {

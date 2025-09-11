@@ -179,20 +179,13 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
   // Ensure selectedProperty is maintained when form property changes or multi-building toggles
   useEffect(() => {
     const currentPropertyId = form.watch('property');
-    console.log('🔍 EditRfpModal property effect:', {
-      currentPropertyId,
-      propertiesCount: properties.length,
-      isMultiBuilding,
-      selectedProperty: selectedProperty ? `${selectedProperty.propertyName} - Building ${selectedProperty.building}` : 'null'
-    });
     if (currentPropertyId && properties.length > 0) {
       const property = properties.find(p => p.id.toString() === currentPropertyId);
       if (property) {
-        console.log('🔍 Setting selectedProperty to:', `${property.propertyName} - Building ${property.building}`);
         setSelectedProperty(property);
       }
     }
-  }, [form.watch('property'), properties, form, isMultiBuilding, selectedProperty]);
+  }, [form.watch('property'), properties, form]);
 
   useEffect(() => {
     if (rfp && isOpen) {
@@ -374,8 +367,8 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
               // Keep the existing project area calculation
               // (don't clear it since user already has selections)
             } else {
-              // No existing selections, clear everything
-              setSelectedProperty(null);
+              // No existing selections, clear bay selections but PRESERVE selectedProperty for filtering
+              // setSelectedProperty(null); // DON'T clear this - we need it for multi-building filtering
               setSelectedBayConfigurations([]);
               setSelectedProperties([]);
               setSelectedBaysPerBuilding({});

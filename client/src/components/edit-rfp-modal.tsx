@@ -1312,7 +1312,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
         
         // Compute park-filtered properties list  
         // CRITICAL FIX for multi-building RFPs: Always show ALL properties when in multi-building mode
-        let parkProperties;
+        let parkProperties: Property[];
         
         if (isMultiBuilding) {
           // For multi-building RFPs, ALWAYS show all properties to allow cross-park selection

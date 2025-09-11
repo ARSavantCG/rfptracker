@@ -1301,8 +1301,11 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
           properties.find(p => p.id.toString() === (selectedProperties[0] || rfp?.properties?.[0] || ''));
         
         // Compute park-filtered properties list
+        // For NEW RFPs: If no anchor property is found (new RFP creation), show ALL properties
+        // For EXISTING RFPs: Filter by park based on anchor property
         const parkProperties = anchorProperty ? 
-          properties.filter(p => p.propertyName === anchorProperty.propertyName) : [];
+          properties.filter(p => p.propertyName === anchorProperty.propertyName) : 
+          (isMultiBuilding ? properties : []); // Show all properties for new multi-building RFPs
         
         // Debug logging (one-time)
         if (bayConfigModalOpen) {

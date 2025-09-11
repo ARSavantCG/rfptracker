@@ -1309,12 +1309,12 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
         
         // Debug logging (one-time)
         if (bayConfigModalOpen) {
-          console.debug('🔧 Modal opened by Configure Bays button');
-          console.debug('🏢 DEBUG: All available properties:', {
+          console.log('🔧 MODAL OPENED - Bay Configuration Debug');
+          console.log('🏢 ALL PROPERTIES AVAILABLE:', {
             totalPropertiesCount: properties.length,
             allPropertyNames: properties.map(p => `${p.propertyName} - Building ${p.building}`)
           });
-          console.debug('🏢 Properties passed to modal:', {
+          console.log('🏢 PROPERTIES PASSED TO MODAL:', {
             isMultiBuilding,
             selectedPropertyValue: form.getValues('property'),
             selectedPropertiesArray: selectedProperties,
@@ -1322,7 +1322,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
             parkPropertiesCount: parkProperties.length,
             parkPropertyNames: parkProperties.map(p => `${p.propertyName} - Building ${p.building || 'N/A'}`)
           });
-          console.debug('🔧 Initial bays being passed:', {
+          console.log('🔧 INITIAL BAYS:', {
             singleBuildingBays: !isMultiBuilding ? selectedBayConfigurations.length : 'N/A',
             multiBuildingBays: isMultiBuilding ? Object.keys(selectedBaysPerBuilding).length : 'N/A',
             totalSelectedBays: !isMultiBuilding ? selectedBayConfigurations.length : Object.values(selectedBaysPerBuilding).flat().length

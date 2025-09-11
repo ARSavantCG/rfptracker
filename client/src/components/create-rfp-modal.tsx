@@ -846,7 +846,8 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
         <BayConfigurationModal
           isOpen={bayConfigModalOpen}
           onClose={() => setBayConfigModalOpen(false)}
-          property={selectedProperty}
+          property={!multiBuildingMode ? selectedProperty : undefined}
+          properties={multiBuildingMode ? properties : undefined}
           onConfirm={handleFloorAreaChange}
           initialSelectedBays={selectedBayConfigurations}
           isMultiBuilding={multiBuildingMode}

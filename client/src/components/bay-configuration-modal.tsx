@@ -99,7 +99,7 @@ export function BayConfigurationModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-fit min-w-[600px] max-w-[90vw] max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="w-[780px] max-w-[90vw] max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {isMultiBuilding ? <Building2 className="h-5 w-5 text-orange-600" /> : <Grid3x3 className="h-5 w-5 text-orange-600" />}

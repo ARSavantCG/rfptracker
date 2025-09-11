@@ -79,10 +79,8 @@ export function BaySelectionGrid({
       const bStart = parseInt(bMatch[1]);
       return aStart - bStart;
     });
-    // REVERSE the order so Bay 1 is easternmost (rightmost) and increases westward (leftward)  
-    const filtered = sortedBayConfigs.reverse().filter(bay => bay && bay.id && bay.bayName);
-    console.log('🔧 Filtered bays for rendering:', filtered.map(bay => ({name: bay.bayName, id: bay.id})));
-    return filtered;
+    // REVERSE the order so Bay 1 is easternmost (rightmost) and increases westward (leftward)
+    return sortedBayConfigs.reverse().filter(bay => bay && bay.id && bay.bayName);
   };
 
   // Parse bay name to show clean format (Bay 12 instead of Bay 12-13)

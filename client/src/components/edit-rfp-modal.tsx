@@ -68,9 +68,11 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
 
 
   // Fetch properties for bay configuration
+  // CRITICAL FIX: Always load properties, not just when modal is open
+  // This prevents empty property lists when bay modal opens before properties finish loading
   const { data: properties = [], isLoading: isPropertiesLoading } = useQuery<Property[]>({
     queryKey: ["/api/properties"],
-    enabled: isOpen,
+    enabled: true, // Always enabled to ensure properties are available
   });
 
   // Fetch contacts for development contact dropdown

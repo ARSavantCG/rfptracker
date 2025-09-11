@@ -70,6 +70,17 @@ export function BayConfigurationModal({
   const allProperties = properties || [];
   const isPropertiesLoading = false; // No loading since we use parent data
 
+  // DEBUG: Log what properties are actually being received
+  if (isOpen && isMultiBuilding) {
+    console.log('🔧 BAY MODAL DEBUG:', {
+      isOpen,
+      isMultiBuilding,
+      propertiesReceived: properties?.length || 0,
+      allPropertiesLength: allProperties.length,
+      propertiesArray: properties?.map(p => `${p.propertyName} - Building ${p.building}`) || []
+    });
+  }
+
   // Use appropriate data based on mode
   const propertyWithBayConfigs = fullProperty || property;
   

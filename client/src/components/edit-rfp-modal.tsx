@@ -68,7 +68,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
 
 
   // Fetch properties for bay configuration
-  const { data: properties = [] } = useQuery<Property[]>({
+  const { data: properties = [], isLoading: isPropertiesLoading } = useQuery<Property[]>({
     queryKey: ["/api/properties"],
     enabled: isOpen,
   });
@@ -813,8 +813,13 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
                     variant="outline"
                     onClick={() => {
                       console.warn('✅ EXPECTED: Configure Bays button clicked (multi-building)');
+                      if (isPropertiesLoading) {
+                        console.warn('⚠️ Properties still loading, please wait...');
+                        return;
+                      }
                       setBayConfigModalOpen(true);
                     }}
+                    disabled={isPropertiesLoading}
                     className="flex items-center gap-2"
                     data-testid="button-configure-bays"
                   >
@@ -1016,8 +1021,13 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
                             variant="outline"
                             onClick={() => {
                               console.warn('✅ EXPECTED: Configure Bays button clicked (single-building)');
+                              if (isPropertiesLoading) {
+                                console.warn('⚠️ Properties still loading, please wait...');
+                                return;
+                              }
                               setBayConfigModalOpen(true);
                             }}
+                            disabled={isPropertiesLoading}
                             className="flex items-center gap-2"
                             data-testid="button-configure-bays"
                           >

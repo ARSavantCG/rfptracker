@@ -223,6 +223,7 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
     }
     
     // Format property name with building using "Bldg." prefix for single-building properties
+    // Uses actual building number from property data (e.g., "5" for Bridge Point Doral - Building 5)
     if (property.building && property.building.trim() !== '') {
       return `${property.propertyName} - Bldg. ${property.building}`;
     } else {

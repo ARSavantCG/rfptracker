@@ -60,6 +60,15 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
   const [costsPerBuilding, setCostsPerBuilding] = useState<{[propertyName: string]: BuildingCosts}>({});
   const [bayConfigModalOpen, setBayConfigModalOpen] = useState(false);
 
+  // Debug bay config modal opening
+  useEffect(() => {
+    console.log('🔧 Bay config modal state changed:', {
+      bayConfigModalOpen,
+      isMultiBuilding,
+      hasSelectedProperty: !!selectedProperty
+    });
+  }, [bayConfigModalOpen, isMultiBuilding, selectedProperty]);
+
   // Fetch properties for bay configuration
   const { data: properties = [] } = useQuery<Property[]>({
     queryKey: ["/api/properties"],
@@ -353,6 +362,11 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
               hasBays: selectedBayConfigurations.length > 0
             });
             
+            // ALWAYS preserve selectedProperty for multi-building filtering, regardless of existing bays
+            if (currentProperty) {
+              setSelectedProperty(currentProperty);
+            }
+            
             if (currentProperty && selectedBayConfigurations.length > 0) {
               // Pre-select the original property in multi-building mode
               setSelectedProperties([currentPropertyId]);
@@ -375,7 +389,6 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
               // (don't clear it since user already has selections)
             } else {
               // No existing selections, clear bay selections but PRESERVE selectedProperty for filtering
-              // setSelectedProperty(null); // DON'T clear this - we need it for multi-building filtering
               setSelectedBayConfigurations([]);
               setSelectedProperties([]);
               setSelectedBaysPerBuilding({});

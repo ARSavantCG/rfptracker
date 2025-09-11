@@ -9,7 +9,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Grid3x3, Building2 } from "lucide-react";
+import { Grid3x3, Building2, Settings, ArrowLeft } from "lucide-react";
 import { BaySelectionGrid } from "./bay-selection-grid";
 import type { Property, BayConfiguration, BuildingCosts } from "@shared/schema";
 
@@ -56,6 +56,9 @@ export function BayConfigurationModal({
   const [currentOverride, setCurrentOverride] = useState<number | undefined>(initialOverrideArea);
   const [currentSelectedBaysPerBuilding, setCurrentSelectedBaysPerBuilding] = useState<{[propertyName: string]: BayConfiguration[]}>(initialSelectedBaysPerBuilding);
   const [currentCostsPerBuilding, setCurrentCostsPerBuilding] = useState<{[propertyName: string]: BuildingCosts}>(initialCostsPerBuilding);
+  
+  // Master-detail interface state for multi-building mode
+  const [currentBuildingKey, setCurrentBuildingKey] = useState<string | null>(null);
 
   // Fetch full property data with bay configurations when modal is open (single building mode)
   const { data: fullProperty, isLoading: isSinglePropertyLoading } = useQuery<Property>({
@@ -105,6 +108,21 @@ export function BayConfigurationModal({
 
 
 
+  // Helper to generate building key
+  const getBuildingKey = (property: Property) => {
+    return `${property.propertyName} - Building ${property.building}`;
+  };
+
+  // Helper to get selection summary for a building
+  const getBuildingSummary = (buildingKey: string) => {
+    const selectedBays = currentSelectedBaysPerBuilding[buildingKey] || [];
+    const totalSF = selectedBays.reduce((sum, bay) => sum + (bay.rentableSquareFootage || bay.squareFootage), 0);
+    return {
+      bayCount: selectedBays.length,
+      totalSF: totalSF
+    };
+  };
+
   // Handle area changes from the bay selection grid
   const handleAreaChange = useCallback((selectedBays: BayConfiguration[], totalSquareFootage: number, selectedBaysPerBuilding?: {[propertyName: string]: BayConfiguration[]}, costsPerBuilding?: {[propertyName: string]: BuildingCosts}) => {
     setCurrentArea(totalSquareFootage);
@@ -141,22 +159,128 @@ export function BayConfigurationModal({
           </DialogDescription>
         </DialogHeader>
         
-        {/* Scrollable Content Area - allows both vertical and horizontal scrolling */}
+        {/* Content Area */}
         <div className="flex-1 overflow-auto">
           {isLoading ? (
             <div className="text-center py-8 text-gray-500">
               <div className="animate-spin h-8 w-8 border-4 border-orange-600 border-t-transparent rounded-full mx-auto mb-4"></div>
               <p>Loading bay configurations...</p>
             </div>
+          ) : isMultiBuilding ? (
+            // Multi-building master-detail interface
+            <div className="flex h-full min-h-[400px]">
+              {/* Left: Property List */}
+              <div className="w-80 border-r border-gray-200 flex flex-col">
+                <div className="p-4 border-b bg-gray-50">
+                  <h3 className="font-medium text-gray-900">Available Buildings</h3>
+                  <p className="text-sm text-gray-600 mt-1">Click Configure to set up bays for each building</p>
+                </div>
+                <div className="flex-1 overflow-y-auto">
+                  {propertiesWithBayConfigs.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      <Building2 className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                      <p>No properties available for multi-building selection.</p>
+                      <p className="text-sm mt-1">Select properties to enable multi-building mode.</p>
+                    </div>
+                  ) : (
+                    <div className="p-2">
+                      {propertiesWithBayConfigs.map((prop) => {
+                        const buildingKey = getBuildingKey(prop);
+                        const summary = getBuildingSummary(buildingKey);
+                        const isConfiguring = currentBuildingKey === buildingKey;
+                        
+                        return (
+                          <div 
+                            key={buildingKey}
+                            className={`p-3 mb-2 rounded-lg border ${
+                              isConfiguring 
+                                ? 'border-orange-500 bg-orange-50' 
+                                : 'border-gray-200 bg-white hover:bg-gray-50'
+                            }`}
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1 min-w-0">
+                                <h4 className="font-medium text-gray-900 truncate">
+                                  {prop.propertyName}
+                                </h4>
+                                <p className="text-sm text-gray-600">
+                                  Building {prop.building}
+                                </p>
+                                {summary.bayCount > 0 && (
+                                  <p className="text-xs text-green-600 mt-1">
+                                    {summary.bayCount} bays • {summary.totalSF.toLocaleString()} SF
+                                  </p>
+                                )}
+                              </div>
+                              <Button
+                                size="sm"
+                                variant={isConfiguring ? "default" : "outline"}
+                                onClick={() => setCurrentBuildingKey(isConfiguring ? null : buildingKey)}
+                                className={isConfiguring ? "bg-orange-600 hover:bg-orange-700 text-white" : ""}
+                              >
+                                <Settings className="h-4 w-4 mr-1" />
+                                {isConfiguring ? "Close" : "Configure"}
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Right: Bay Configurator for Selected Building */}
+              <div className="flex-1 flex flex-col">
+                {currentBuildingKey ? (
+                  <>
+                    <div className="p-4 border-b bg-gray-50 flex items-center justify-between">
+                      <div>
+                        <h3 className="font-medium text-gray-900">Configuring: {currentBuildingKey}</h3>
+                        <p className="text-sm text-gray-600 mt-1">Select bays for this building</p>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setCurrentBuildingKey(null)}
+                      >
+                        <ArrowLeft className="h-4 w-4 mr-1" />
+                        Back to List
+                      </Button>
+                    </div>
+                    <div className="flex-1 overflow-auto">
+                      {(() => {
+                        const selectedProperty = propertiesWithBayConfigs.find(p => getBuildingKey(p) === currentBuildingKey);
+                        return selectedProperty ? (
+                          <BaySelectionGrid
+                            property={selectedProperty}
+                            isMultiBuilding={true}
+                            onSelectionChange={handleAreaChange}
+                            initialSelectedBaysPerBuilding={currentSelectedBaysPerBuilding}
+                            initialCostsPerBuilding={currentCostsPerBuilding}
+                          />
+                        ) : null;
+                      })()}
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex-1 flex items-center justify-center text-gray-500">
+                    <div className="text-center">
+                      <Settings className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                      <p>Select a building to configure its bays</p>
+                      <p className="text-sm mt-1">Click "Configure" on any building to get started</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           ) : (
+            // Single building mode (unchanged)
             <BaySelectionGrid
-              property={!isMultiBuilding ? propertyWithBayConfigs : undefined}
-              properties={isMultiBuilding ? propertiesWithBayConfigs : undefined}
-              isMultiBuilding={isMultiBuilding}
+              property={propertyWithBayConfigs}
+              isMultiBuilding={false}
               onSelectionChange={handleAreaChange}
-              initialSelectedBays={!isMultiBuilding ? initialSelectedBays : undefined}
-              initialSelectedBaysPerBuilding={isMultiBuilding ? initialSelectedBaysPerBuilding : undefined}
-              initialCostsPerBuilding={isMultiBuilding ? initialCostsPerBuilding : undefined}
+              initialSelectedBays={initialSelectedBays}
             />
           )}
         </div>

@@ -80,6 +80,18 @@ export function BayConfigurationModal({
     (propertyWithBayConfigs ? [propertyWithBayConfigs] : []);
   const isLoading = isMultiBuilding ? isPropertiesLoading : isSinglePropertyLoading;
 
+  // Debug logging for bay configuration modal
+  if (isOpen && isMultiBuilding) {
+    console.log('🚨 BAY CONFIG MODAL DEBUG:', {
+      isOpen,
+      isMultiBuilding,
+      propertiesFromParent: properties?.length || 0,
+      propertiesFromParentArray: properties,
+      propertiesWithBayConfigsLength: propertiesWithBayConfigs.length,
+      propertiesWithBayConfigsArray: propertiesWithBayConfigs
+    });
+  }
+
 
 
   // Handle area changes from the bay selection grid

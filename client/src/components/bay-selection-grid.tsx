@@ -265,7 +265,7 @@ export function BaySelectionGrid({
   
   // Debug logging for multi-building mode
   if (multiBuildingMode) {
-    console.debug('🔧 BaySelectionGrid multi-building debug:', {
+    console.log('🚨 BAY SELECTION GRID DEBUG:', {
       multiBuildingMode,
       propertiesLength: properties.length,
       propertiesArray: properties,

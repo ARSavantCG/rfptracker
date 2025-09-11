@@ -72,10 +72,30 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
   });
 
   // Handle bay configuration selection and use pre-calculated area from bay selector
-  const handleFloorAreaChange = (area: number, bayConfigs: BayConfiguration[], overrideArea?: number) => {
+  const handleFloorAreaChange = (
+    area: number, 
+    bayConfigs: BayConfiguration[], 
+    overrideArea?: number,
+    selectedBaysPerBuilding?: {[propertyName: string]: BayConfiguration[]},
+    costsPerBuilding?: {[propertyName: string]: BuildingCosts}
+  ) => {
+    console.log('🔧 handleFloorAreaChange called with:', {
+      area,
+      bayConfigsLength: bayConfigs.length,
+      selectedBaysPerBuilding,
+      costsPerBuilding,
+      isMultiBuilding
+    });
+    
     // Use the area calculated by the Bay Configuration Selector (already includes proportional mechanical allocation)
     setCalculatedFloorArea(area);
     setSelectedBayConfigurations(bayConfigs);
+    
+    // Update multi-building data if provided
+    if (selectedBaysPerBuilding) {
+      console.log('🔧 Setting selectedBaysPerBuilding:', selectedBaysPerBuilding);
+      setSelectedBaysPerBuilding(selectedBaysPerBuilding);
+    }
     
     // Auto-populate the project area field with pre-calculated value
     if (area > 0) {
@@ -1228,8 +1248,10 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
           isOpen={bayConfigModalOpen}
           onClose={() => setBayConfigModalOpen(false)}
           property={selectedProperty}
+          isMultiBuilding={isMultiBuilding}
           onConfirm={handleFloorAreaChange}
           initialSelectedBays={selectedBayConfigurations}
+          initialSelectedBaysPerBuilding={selectedBaysPerBuilding}
         />
       )}
     </Dialog>

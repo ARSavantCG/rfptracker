@@ -1310,22 +1310,33 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
           properties.find(p => p.id.toString() === form.getValues('property')) ?? 
           properties.find(p => p.id.toString() === (selectedProperties[0] || rfp?.properties?.[0] || ''));
         
-        // Compute park-filtered properties list
-        // For NEW RFPs: If no anchor property is found (new RFP creation), show ALL properties
-        // For EXISTING RFPs: Filter by park based on anchor property
-        const parkProperties = anchorProperty ? 
-          properties.filter(p => p.propertyName === anchorProperty.propertyName) : 
-          (isMultiBuilding ? properties : []); // Show all properties for new multi-building RFPs
+        // Compute park-filtered properties list  
+        // CRITICAL FIX for multi-building RFPs: Always show ALL properties when in multi-building mode
+        let parkProperties;
+        
+        if (isMultiBuilding) {
+          // For multi-building RFPs, ALWAYS show all properties to allow cross-park selection
+          parkProperties = properties;
+          console.log('🏢 MULTI-BUILDING MODE: Showing all properties:', properties.length);
+        } else if (anchorProperty) {
+          // For single-building RFPs, filter by property park
+          parkProperties = properties.filter(p => p.propertyName === anchorProperty.propertyName);
+          console.log('🏠 SINGLE-BUILDING MODE: Filtered by park:', parkProperties.length, 'properties');
+        } else {
+          // Fallback for single-building without anchor
+          parkProperties = [];
+          console.log('⚠️ NO ANCHOR PROPERTY: Empty properties list');
+        }
 
-        // Additional debug to trace the exact issue
-        console.log('🔍 PROPERTY FILTERING DEBUG:', {
+        // Enhanced debug output
+        console.log('🔍 COMPREHENSIVE PROPERTY DEBUG:', {
+          isMultiBuilding,
           anchorProperty: !!anchorProperty,
           anchorPropertyName: anchorProperty?.propertyName,
-          isMultiBuilding,
           totalPropertiesAvailable: properties.length,
           parkPropertiesCalculated: parkProperties.length,
-          propertiesArray: properties.map(p => `${p.propertyName} - Building ${p.building}`),
-          parkPropertiesArray: parkProperties.map(p => `${p.propertyName} - Building ${p.building}`)
+          allPropertiesArray: properties.map(p => `${p.propertyName} - Building ${p.building}`),
+          filteredPropertiesArray: parkProperties.map(p => `${p.propertyName} - Building ${p.building}`)
         });
         
         // Debug logging (one-time)

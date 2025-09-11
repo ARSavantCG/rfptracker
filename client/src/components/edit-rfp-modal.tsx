@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -59,6 +59,19 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
   const [selectedBaysPerBuilding, setSelectedBaysPerBuilding] = useState<{[propertyName: string]: BayConfiguration[]}>({});
   const [costsPerBuilding, setCostsPerBuilding] = useState<{[propertyName: string]: BuildingCosts}>({});
   const [bayConfigModalOpen, setBayConfigModalOpen] = useState(false);
+
+  // Debug wrapper to track unexpected opens
+  const setBayConfigModalOpenDebug = useCallback((value: boolean) => {
+    if (value === true) {
+      console.log('🚨 Bay config modal opening!', new Error().stack);
+    }
+    setBayConfigModalOpen(value);
+  }, []);
+
+  // Ensure bay configurator closes when toggling multi-building mode
+  useEffect(() => {
+    setBayConfigModalOpenDebug(false);
+  }, [isMultiBuilding, setBayConfigModalOpenDebug]);
 
 
   // Fetch properties for bay configuration
@@ -981,7 +994,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
                           <Button
                             type="button"
                             variant="outline"
-                            onClick={() => setBayConfigModalOpen(true)}
+                            onClick={() => setBayConfigModalOpenDebug(true)}
                             className="flex items-center gap-2"
                           >
                             <Grid3x3 className="h-4 w-4" />
@@ -1260,7 +1273,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
       {selectedProperty && (
         <BayConfigurationModal
           isOpen={bayConfigModalOpen}
-          onClose={() => setBayConfigModalOpen(false)}
+          onClose={() => setBayConfigModalOpenDebug(false)}
           property={selectedProperty}
           isMultiBuilding={isMultiBuilding}
           onConfirm={handleFloorAreaChange}

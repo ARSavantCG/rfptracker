@@ -280,7 +280,7 @@ export function BayConfigurationModal({
                         const selectedProperty = propertiesWithBayConfigs.find(p => getBuildingKey(p) === currentBuildingKey);
                         return selectedProperty ? (
                           <BaySelectionGrid
-                            property={selectedProperty}
+                            properties={[selectedProperty]}
                             isMultiBuilding={true}
                             onSelectionChange={handleAreaChange}
                             initialSelectedBaysPerBuilding={currentSelectedBaysPerBuilding}

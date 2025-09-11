@@ -58,7 +58,15 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
   const [selectedProperties, setSelectedProperties] = useState<string[]>([]);
   const [selectedBaysPerBuilding, setSelectedBaysPerBuilding] = useState<{[propertyName: string]: BayConfiguration[]}>({});
   const [costsPerBuilding, setCostsPerBuilding] = useState<{[propertyName: string]: BuildingCosts}>({});
-  const [bayConfigModalOpen, setBayConfigModalOpen] = useState(false);
+  const [bayConfigModalOpen, setBayConfigModalOpenRaw] = useState(false);
+  
+  // Debug wrapper to track ALL modal opens/closes
+  const setBayConfigModalOpen = useCallback((value: boolean) => {
+    if (value === true) {
+      console.warn('🚨 MODAL OPENING FROM:', new Error().stack?.split('\n')[2]?.trim() || 'unknown');
+    }
+    setBayConfigModalOpenRaw(value);
+  }, []);
 
   // Ensure bay configurator closes when toggling multi-building mode
   useEffect(() => {
@@ -986,7 +994,10 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
                           <Button
                             type="button"
                             variant="outline"
-                            onClick={() => setBayConfigModalOpen(true)}
+                            onClick={() => {
+                              console.warn('✅ EXPECTED: Configure Bays button clicked');
+                              setBayConfigModalOpen(true);
+                            }}
                             className="flex items-center gap-2"
                           >
                             <Grid3x3 className="h-4 w-4" />

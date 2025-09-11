@@ -65,10 +65,10 @@ export function BayConfigurationModal({
     refetchOnMount: true,
   });
 
-  // Fetch all properties data for multi-building mode
+  // Fetch all properties data for multi-building mode (only when not provided by parent)
   const { data: allProperties = [], isLoading: isPropertiesLoading } = useQuery<Property[]>({
     queryKey: ["/api/properties"],
-    enabled: isOpen && isMultiBuilding,
+    enabled: isOpen && isMultiBuilding && (!properties || properties.length === 0),
     staleTime: 0,
     refetchOnMount: true,
   });
@@ -76,9 +76,12 @@ export function BayConfigurationModal({
   // Use appropriate data based on mode
   const propertyWithBayConfigs = fullProperty || property;
   
-  // For multi-building mode, filter to only buildings within the same property park
+  // For multi-building mode, use parent-provided properties or filter from fetched data
   const propertiesWithBayConfigs = isMultiBuilding ? 
-    allProperties.filter(p => property ? p.propertyName === property.propertyName : false) : 
+    (properties && properties.length > 0 
+      ? properties 
+      : allProperties.filter(p => property ? p.propertyName === property.propertyName : false)
+    ) : 
     (propertyWithBayConfigs ? [propertyWithBayConfigs] : []);
   const isLoading = isMultiBuilding ? isPropertiesLoading : isSinglePropertyLoading;
 

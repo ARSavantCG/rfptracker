@@ -19,7 +19,6 @@ interface BayConfigurationModalProps {
   property?: Property; // Optional for single building mode
   properties?: Property[]; // For multi-building mode
   isMultiBuilding?: boolean;
-  parkKey?: string; // Explicit park identifier for filtering
   onConfirm: (
     area: number, 
     selectedBays: BayConfiguration[], 
@@ -31,6 +30,10 @@ interface BayConfigurationModalProps {
   initialOverrideArea?: number;
   initialSelectedBaysPerBuilding?: {[propertyName: string]: BayConfiguration[]};
   initialCostsPerBuilding?: {[propertyName: string]: BuildingCosts};
+  // Props used by create modal (add to interface)
+  onBaysPerBuildingChange?: (bays: {[propertyName: string]: BayConfiguration[]}) => void;
+  costsPerBuilding?: {[propertyName: string]: BuildingCosts};
+  onCostsPerBuildingChange?: (costs: {[propertyName: string]: BuildingCosts}) => void;
 }
 
 export function BayConfigurationModal({ 
@@ -39,12 +42,14 @@ export function BayConfigurationModal({
   property, 
   properties = [],
   isMultiBuilding = false,
-  parkKey,
   onConfirm,
   initialSelectedBays = [],
   initialOverrideArea,
   initialSelectedBaysPerBuilding = {},
-  initialCostsPerBuilding = {}
+  initialCostsPerBuilding = {},
+  onBaysPerBuildingChange,
+  costsPerBuilding = {},
+  onCostsPerBuildingChange
 }: BayConfigurationModalProps) {
   const [currentArea, setCurrentArea] = useState<number>(0);
   const [currentBays, setCurrentBays] = useState<BayConfiguration[]>([]);
@@ -73,7 +78,7 @@ export function BayConfigurationModal({
   
   // For multi-building mode, filter to only buildings within the same property park
   const propertiesWithBayConfigs = isMultiBuilding ? 
-    allProperties.filter(p => parkKey ? p.propertyName === parkKey : (property ? p.propertyName === property.propertyName : false)) : 
+    allProperties.filter(p => property ? p.propertyName === property.propertyName : false) : 
     (propertyWithBayConfigs ? [propertyWithBayConfigs] : []);
   const isLoading = isMultiBuilding ? isPropertiesLoading : isSinglePropertyLoading;
 

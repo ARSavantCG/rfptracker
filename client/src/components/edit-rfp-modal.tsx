@@ -1257,11 +1257,13 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
           onClose={() => setBayConfigModalOpen(false)}
           property={selectedProperty}
           isMultiBuilding={isMultiBuilding}
-          parkKey={selectedProperty.propertyName}
           onConfirm={handleFloorAreaChange}
           initialSelectedBays={selectedBayConfigurations}
           initialSelectedBaysPerBuilding={selectedBaysPerBuilding}
           initialCostsPerBuilding={costsPerBuilding}
+          onBaysPerBuildingChange={setSelectedBaysPerBuilding}
+          costsPerBuilding={costsPerBuilding}
+          onCostsPerBuildingChange={setCostsPerBuilding}
         />
       )}
     </Dialog>

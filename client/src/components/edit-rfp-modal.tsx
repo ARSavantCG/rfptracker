@@ -1310,8 +1310,14 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
         // Debug logging (one-time)
         if (bayConfigModalOpen) {
           console.debug('🔧 Modal opened by Configure Bays button');
+          console.debug('🏢 DEBUG: All available properties:', {
+            totalPropertiesCount: properties.length,
+            allPropertyNames: properties.map(p => `${p.propertyName} - Building ${p.building}`)
+          });
           console.debug('🏢 Properties passed to modal:', {
             isMultiBuilding,
+            selectedPropertyValue: form.getValues('property'),
+            selectedPropertiesArray: selectedProperties,
             anchorPropertyName: anchorProperty?.propertyName,
             parkPropertiesCount: parkProperties.length,
             parkPropertyNames: parkProperties.map(p => `${p.propertyName} - Building ${p.building || 'N/A'}`)

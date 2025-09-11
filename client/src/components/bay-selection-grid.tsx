@@ -263,6 +263,17 @@ export function BaySelectionGrid({
   // Check if we have any data to display
   const hasData = multiBuildingMode ? properties.length > 0 : (property && bays.length > 0);
   
+  // Debug logging for multi-building mode
+  if (multiBuildingMode) {
+    console.debug('🔧 BaySelectionGrid multi-building debug:', {
+      multiBuildingMode,
+      propertiesLength: properties.length,
+      propertiesArray: properties,
+      hasData,
+      isMultiBuilding
+    });
+  }
+  
   if (!hasData) {
     return (
       <Card>

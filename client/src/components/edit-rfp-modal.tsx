@@ -1312,23 +1312,9 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
           properties.find(p => p.id.toString() === form.getValues('property')) ?? 
           properties.find(p => p.id.toString() === (selectedProperties[0] || rfp?.properties?.[0] || ''));
         
-        // Compute park-filtered properties list  
-        // CRITICAL FIX for multi-building RFPs: Always show ALL properties when in multi-building mode
-        let parkProperties: Property[];
-        
-        if (isMultiBuilding) {
-          // For multi-building RFPs, ALWAYS show all properties to allow cross-park selection
-          parkProperties = properties;
-          console.log('🏢 MULTI-BUILDING MODE: Showing all properties:', properties.length);
-        } else if (anchorProperty) {
-          // For single-building RFPs, filter by property park
-          parkProperties = properties.filter(p => p.propertyName === anchorProperty.propertyName);
-          console.log('🏠 SINGLE-BUILDING MODE: Filtered by park:', parkProperties.length, 'properties');
-        } else {
-          // Fallback for single-building without anchor
-          parkProperties = [];
-          console.log('⚠️ NO ANCHOR PROPERTY: Empty properties list');
-        }
+        // CRITICAL FIX: For multi-building RFPs, pass ALL properties directly
+        // Don't filter or compute parkProperties - let the modal handle filtering
+        // This prevents timing issues where properties haven't loaded yet
 
         // Enhanced debug output
         console.log('🔍 COMPREHENSIVE PROPERTY DEBUG:', {
@@ -1336,9 +1322,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
           anchorProperty: !!anchorProperty,
           anchorPropertyName: anchorProperty?.propertyName,
           totalPropertiesAvailable: properties.length,
-          parkPropertiesCalculated: parkProperties.length,
-          allPropertiesArray: properties.map(p => `${p.propertyName} - Building ${p.building}`),
-          filteredPropertiesArray: parkProperties.map(p => `${p.propertyName} - Building ${p.building}`)
+          allPropertiesArray: properties.map((p: Property) => `${p.propertyName} - Building ${p.building}`)
         });
         
         // Debug logging (one-time)
@@ -1368,7 +1352,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
             isOpen={bayConfigModalOpen}
             onClose={() => setBayConfigModalOpen(false)}
             property={!isMultiBuilding ? anchorProperty : undefined}
-            properties={isMultiBuilding ? parkProperties : undefined}
+            properties={isMultiBuilding ? properties : undefined}
             isMultiBuilding={isMultiBuilding}
             onConfirm={handleFloorAreaChange}
             initialSelectedBays={!isMultiBuilding ? selectedBayConfigurations : undefined}

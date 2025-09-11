@@ -63,6 +63,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
 
   // Ensure bay configurator closes when toggling multi-building mode
   useEffect(() => {
+    console.warn('🔧 useEffect [isMultiBuilding] triggered:', { isMultiBuilding, bayConfigModalOpen });
     setBayConfigModalOpen(false);
   }, [isMultiBuilding]);
 
@@ -1271,6 +1272,18 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
         const filteredPropertiesForModal = isMultiBuilding && selectedProperty 
           ? properties.filter(p => p.propertyName === selectedProperty.propertyName)
           : [];
+        
+        // DEBUG: Log the filtering logic
+        if (isMultiBuilding) {
+          console.warn('🔍 FILTERING DEBUG:', {
+            isMultiBuilding,
+            selectedPropertyName: selectedProperty?.propertyName,
+            allPropertiesCount: properties.length,
+            filteredCount: filteredPropertiesForModal.length,
+            allPropertyNames: properties.map(p => `${p.propertyName} - Building ${p.building || 'N/A'}`),
+            filteredNames: filteredPropertiesForModal.map(p => `${p.propertyName} - Building ${p.building || 'N/A'}`)
+          });
+        }
         
         return (
           <BayConfigurationModal

@@ -131,15 +131,42 @@ export function BayConfigurationModal({
     setCurrentCostsPerBuilding(costsPerBuilding || {});
   }, []);
 
+  // Calculate aggregate totals for multi-building mode
+  const getTotalSelections = () => {
+    if (!isMultiBuilding) {
+      return {
+        totalBays: currentBays.length,
+        totalArea: currentArea
+      };
+    }
+
+    const allSelectedBays = Object.values(currentSelectedBaysPerBuilding).flat();
+    const totalArea = allSelectedBays.reduce((sum, bay) => sum + (bay.rentableSquareFootage || bay.squareFootage), 0);
+    
+    return {
+      totalBays: allSelectedBays.length,
+      totalArea: totalArea
+    };
+  };
+
   const handleConfirm = () => {
+    const { totalBays, totalArea } = getTotalSelections();
+    
     console.log('🔧 BayConfigurationModal handleConfirm called with:', {
       currentArea,
+      totalArea,
       currentBaysLength: currentBays.length,
+      totalBays,
       currentSelectedBaysPerBuilding,
       currentCostsPerBuilding,
       isMultiBuilding
     });
-    onConfirm(currentArea, currentBays, currentOverride, currentSelectedBaysPerBuilding, currentCostsPerBuilding);
+    
+    // Use aggregated totals for multi-building mode
+    const finalArea = isMultiBuilding ? totalArea : currentArea;
+    const finalBays = isMultiBuilding ? Object.values(currentSelectedBaysPerBuilding).flat() : currentBays;
+    
+    onConfirm(finalArea, finalBays, currentOverride, currentSelectedBaysPerBuilding, currentCostsPerBuilding);
     onClose();
   };
 
@@ -293,7 +320,7 @@ export function BayConfigurationModal({
           <Button 
             onClick={handleConfirm}
             className="bg-orange-600 hover:bg-orange-700 text-white"
-            disabled={currentBays.length === 0}
+            disabled={getTotalSelections().totalBays === 0}
           >
             Confirm Selection
           </Button>

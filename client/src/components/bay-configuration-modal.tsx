@@ -19,6 +19,7 @@ interface BayConfigurationModalProps {
   property?: Property; // Optional for single building mode
   properties?: Property[]; // For multi-building mode
   isMultiBuilding?: boolean;
+  parkKey?: string; // Explicit park identifier for filtering
   onConfirm: (
     area: number, 
     selectedBays: BayConfiguration[], 
@@ -38,6 +39,7 @@ export function BayConfigurationModal({
   property, 
   properties = [],
   isMultiBuilding = false,
+  parkKey,
   onConfirm,
   initialSelectedBays = [],
   initialOverrideArea,
@@ -69,9 +71,9 @@ export function BayConfigurationModal({
   // Use appropriate data based on mode
   const propertyWithBayConfigs = fullProperty || property;
   
-  // For multi-building mode, filter to only buildings within the same property
-  const propertiesWithBayConfigs = isMultiBuilding && property ? 
-    allProperties.filter(p => p.propertyName === property.propertyName) : 
+  // For multi-building mode, filter to only buildings within the same property park
+  const propertiesWithBayConfigs = isMultiBuilding ? 
+    allProperties.filter(p => parkKey ? p.propertyName === parkKey : (property ? p.propertyName === property.propertyName : false)) : 
     (propertyWithBayConfigs ? [propertyWithBayConfigs] : []);
   const isLoading = isMultiBuilding ? isPropertiesLoading : isSinglePropertyLoading;
 

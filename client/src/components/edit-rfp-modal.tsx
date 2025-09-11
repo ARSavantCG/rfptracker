@@ -57,6 +57,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
   const [isMultiBuilding, setIsMultiBuilding] = useState<boolean>(false);
   const [selectedProperties, setSelectedProperties] = useState<string[]>([]);
   const [selectedBaysPerBuilding, setSelectedBaysPerBuilding] = useState<{[propertyName: string]: BayConfiguration[]}>({});
+  const [costsPerBuilding, setCostsPerBuilding] = useState<{[propertyName: string]: BuildingCosts}>({});
   const [bayConfigModalOpen, setBayConfigModalOpen] = useState(false);
 
   // Fetch properties for bay configuration
@@ -71,6 +72,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
     enabled: isOpen,
   });
 
+
   // Handle bay configuration selection and use pre-calculated area from bay selector
   const handleFloorAreaChange = (
     area: number, 
@@ -79,13 +81,6 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
     selectedBaysPerBuilding?: {[propertyName: string]: BayConfiguration[]},
     costsPerBuilding?: {[propertyName: string]: BuildingCosts}
   ) => {
-    console.log('🔧 handleFloorAreaChange called with:', {
-      area,
-      bayConfigsLength: bayConfigs.length,
-      selectedBaysPerBuilding,
-      costsPerBuilding,
-      isMultiBuilding
-    });
     
     // Use the area calculated by the Bay Configuration Selector (already includes proportional mechanical allocation)
     setCalculatedFloorArea(area);
@@ -93,8 +88,10 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
     
     // Update multi-building data if provided
     if (selectedBaysPerBuilding) {
-      console.log('🔧 Setting selectedBaysPerBuilding:', selectedBaysPerBuilding);
       setSelectedBaysPerBuilding(selectedBaysPerBuilding);
+    }
+    if (costsPerBuilding) {
+      setCostsPerBuilding(costsPerBuilding);
     }
     
     // Auto-populate the project area field with pre-calculated value
@@ -178,6 +175,17 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
       workflowPhase: "rfp-entry",
     },
   });
+
+  // Ensure selectedProperty is maintained when form property changes or multi-building toggles
+  useEffect(() => {
+    const currentPropertyId = form.watch('property');
+    if (currentPropertyId && properties.length > 0) {
+      const property = properties.find(p => p.id.toString() === currentPropertyId);
+      if (property) {
+        setSelectedProperty(property);
+      }
+    }
+  }, [form.watch('property'), properties, form]);
 
   useEffect(() => {
     if (rfp && isOpen) {
@@ -1249,9 +1257,11 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
           onClose={() => setBayConfigModalOpen(false)}
           property={selectedProperty}
           isMultiBuilding={isMultiBuilding}
+          parkKey={selectedProperty.propertyName}
           onConfirm={handleFloorAreaChange}
           initialSelectedBays={selectedBayConfigurations}
           initialSelectedBaysPerBuilding={selectedBaysPerBuilding}
+          initialCostsPerBuilding={costsPerBuilding}
         />
       )}
     </Dialog>

@@ -189,6 +189,13 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
 
   useEffect(() => {
     if (rfp && isOpen) {
+      console.log('🔍 EditRfpModal loading RFP data:', {
+        rfpId: rfp.id,
+        rfpProperty: rfp.property,
+        isMultiBuilding: rfp.isMultiBuilding,
+        propertiesLoaded: properties.length
+      });
+
       // Extract alternate description from project name if it exists
       let alternateDescription = "";
       let cleanProjectName = rfp.projectName || "";

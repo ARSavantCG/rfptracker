@@ -330,7 +330,7 @@ export function BaySelectionGrid({
                   
                   {/* Bay Grid for this property */}
                   <div className="overflow-x-auto pb-2">
-                    <div className="flex gap-1" style={{ minWidth: 'max-content' }}>
+                    <div className="flex gap-1 justify-center" style={{ minWidth: 'max-content' }}>
                       {propBays.filter(bay => bay && bay.id && bay.bayName).map((bay) => (
                         <div key={bay.id} className="flex-shrink-0">
                           <button
@@ -405,7 +405,7 @@ export function BaySelectionGrid({
           /* Single Building Mode */
           <div className="space-y-2">
             <div className="overflow-x-auto pb-4">
-              <div className="flex gap-1" style={{ minWidth: 'max-content' }}>
+              <div className="flex gap-1 justify-center" style={{ minWidth: 'max-content' }}>
                 {bays.filter(bay => bay && bay.id && bay.bayName).map((bay) => (
                   <div key={bay.id} className="flex-shrink-0">
                     <button

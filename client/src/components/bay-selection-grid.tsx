@@ -18,6 +18,7 @@ interface BaySelectionGridProps {
   ) => void;
   isMultiBuilding?: boolean;
   onMultiBuildingToggle?: (enabled: boolean) => void;
+  initialSelectedBays?: BayConfiguration[]; // For single-building mode
   initialSelectedBaysPerBuilding?: {[propertyName: string]: BayConfiguration[]};
   initialCostsPerBuilding?: {[propertyName: string]: BuildingCosts};
 }
@@ -28,6 +29,7 @@ export function BaySelectionGrid({
   onSelectionChange, 
   isMultiBuilding = false,
   onMultiBuildingToggle,
+  initialSelectedBays = [],
   initialSelectedBaysPerBuilding = {},
   initialCostsPerBuilding = {}
 }: BaySelectionGridProps) {
@@ -36,6 +38,15 @@ export function BaySelectionGrid({
   const [selectedBaysPerBuilding, setSelectedBaysPerBuilding] = useState<{[propertyName: string]: BayConfiguration[]}>(initialSelectedBaysPerBuilding);
   const [costsPerBuilding, setCostsPerBuilding] = useState<{[propertyName: string]: BuildingCosts}>(initialCostsPerBuilding);
   const [selectedBuildingIds, setSelectedBuildingIds] = useState<{[propertyName: string]: Set<string>}>({});
+
+  // Initialize single-building mode with previous selections
+  useEffect(() => {
+    if (!multiBuildingMode && initialSelectedBays.length > 0) {
+      console.debug('🔧 Initializing single-building mode with previous selections:', initialSelectedBays.length, 'bays');
+      const initialBayIds = new Set(initialSelectedBays.map(bay => bay.id));
+      setSelectedBayIds(initialBayIds);
+    }
+  }, [initialSelectedBays.length, multiBuildingMode]);
 
   // Initialize building selections for multi-building mode
   useEffect(() => {
@@ -48,8 +59,27 @@ export function BaySelectionGrid({
         initialBuildingIds[buildingKey] = new Set(selectedBays.map(bay => bay.id));
       });
       setSelectedBuildingIds(initialBuildingIds);
+      
+      // Emit initial state on mount for multi-building mode
+      if (Object.keys(initialSelectedBaysPerBuilding).length > 0) {
+        console.debug('🔧 Emitting initial multi-building state on mount');
+        const allSelectedBays = Object.values(initialSelectedBaysPerBuilding).flat();
+        const totalSquareFootage = allSelectedBays.reduce((sum, bay) => 
+          sum + (bay.rentableSquareFootage || bay.squareFootage || 0), 0);
+        onSelectionChange?.(allSelectedBays, totalSquareFootage, initialSelectedBaysPerBuilding, initialCostsPerBuilding);
+      }
     }
   }, [multiBuildingMode, properties.length]);
+
+  // Emit initial state on mount for single-building mode
+  useEffect(() => {
+    if (!multiBuildingMode && initialSelectedBays.length > 0 && property) {
+      console.debug('🔧 Emitting initial single-building state on mount');
+      const totalSquareFootage = initialSelectedBays.reduce((sum, bay) => 
+        sum + (bay.rentableSquareFootage || bay.squareFootage || 0), 0);
+      onSelectionChange?.(initialSelectedBays, totalSquareFootage);
+    }
+  }, [initialSelectedBays.length, multiBuildingMode, property?.id]);
 
   // Handle multi-building toggle
   const handleMultiBuildingToggle = (enabled: boolean) => {

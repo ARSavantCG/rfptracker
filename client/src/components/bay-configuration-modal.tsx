@@ -131,8 +131,9 @@ export function BayConfigurationModal({
               properties={isMultiBuilding ? propertiesWithBayConfigs : undefined}
               isMultiBuilding={isMultiBuilding}
               onSelectionChange={handleAreaChange}
-              initialSelectedBaysPerBuilding={initialSelectedBaysPerBuilding}
-              initialCostsPerBuilding={initialCostsPerBuilding}
+              initialSelectedBays={!isMultiBuilding ? initialSelectedBays : undefined}
+              initialSelectedBaysPerBuilding={isMultiBuilding ? initialSelectedBaysPerBuilding : undefined}
+              initialCostsPerBuilding={isMultiBuilding ? initialCostsPerBuilding : undefined}
             />
           )}
         </div>

@@ -789,14 +789,30 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
                 </p>
                 {/* Remove inline BaySelectionGrid to prevent auto-opening modal */}
                 {/* Users should click "Configure Bays" button to open the modal */}
-                <div className="p-4 border rounded-lg bg-gray-50">
-                  <div className="text-sm font-medium text-gray-700">Multi-Building Configuration</div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {Object.keys(selectedBaysPerBuilding).length > 0
-                      ? `${Object.values(selectedBaysPerBuilding).flat().length} bays selected across ${Object.keys(selectedBaysPerBuilding).length} buildings (${calculatedFloorArea.toLocaleString()} SF)`
-                      : 'Click "Configure Bays" below to select bays from multiple buildings'
-                    }
-                  </p>
+                <div className="space-y-4">
+                  <div className="p-4 border rounded-lg bg-gray-50">
+                    <div className="text-sm font-medium text-gray-700">Multi-Building Configuration</div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {Object.keys(selectedBaysPerBuilding).length > 0
+                        ? `${Object.values(selectedBaysPerBuilding).flat().length} bays selected across ${Object.keys(selectedBaysPerBuilding).length} buildings (${calculatedFloorArea.toLocaleString()} SF)`
+                        : 'Click "Configure Bays" below to select bays from multiple buildings'
+                      }
+                    </p>
+                  </div>
+                  
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      console.warn('✅ EXPECTED: Configure Bays button clicked (multi-building)');
+                      setBayConfigModalOpen(true);
+                    }}
+                    className="flex items-center gap-2"
+                    data-testid="button-configure-bays"
+                  >
+                    <Grid3x3 className="h-4 w-4" />
+                    {Object.keys(selectedBaysPerBuilding).length > 0 ? 'Modify Bay Selection' : 'Configure Bays'}
+                  </Button>
                 </div>
               </div>
             )}
@@ -991,10 +1007,11 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
                             type="button"
                             variant="outline"
                             onClick={() => {
-                              console.warn('✅ EXPECTED: Configure Bays button clicked');
+                              console.warn('✅ EXPECTED: Configure Bays button clicked (single-building)');
                               setBayConfigModalOpen(true);
                             }}
                             className="flex items-center gap-2"
+                            data-testid="button-configure-bays"
                           >
                             <Grid3x3 className="h-4 w-4" />
                             {selectedBayConfigurations.length > 0 ? 'Modify Selection' : 'Select Bays'}
@@ -1288,6 +1305,11 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
             parkPropertiesCount: parkProperties.length,
             parkPropertyNames: parkProperties.map(p => `${p.propertyName} - Building ${p.building || 'N/A'}`)
           });
+          console.debug('🔧 Initial bays being passed:', {
+            singleBuildingBays: !isMultiBuilding ? selectedBayConfigurations.length : 'N/A',
+            multiBuildingBays: isMultiBuilding ? Object.keys(selectedBaysPerBuilding).length : 'N/A',
+            totalSelectedBays: !isMultiBuilding ? selectedBayConfigurations.length : Object.values(selectedBaysPerBuilding).flat().length
+          });
         }
         
         return (
@@ -1298,9 +1320,9 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
             properties={isMultiBuilding ? parkProperties : undefined}
             isMultiBuilding={isMultiBuilding}
             onConfirm={handleFloorAreaChange}
-            initialSelectedBays={selectedBayConfigurations}
-            initialSelectedBaysPerBuilding={selectedBaysPerBuilding}
-            initialCostsPerBuilding={costsPerBuilding}
+            initialSelectedBays={!isMultiBuilding ? selectedBayConfigurations : undefined}
+            initialSelectedBaysPerBuilding={isMultiBuilding ? selectedBaysPerBuilding : undefined}
+            initialCostsPerBuilding={isMultiBuilding ? costsPerBuilding : undefined}
             onBaysPerBuildingChange={setSelectedBaysPerBuilding}
             costsPerBuilding={costsPerBuilding}
             onCostsPerBuildingChange={setCostsPerBuilding}

@@ -1306,6 +1306,17 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
         const parkProperties = anchorProperty ? 
           properties.filter(p => p.propertyName === anchorProperty.propertyName) : 
           (isMultiBuilding ? properties : []); // Show all properties for new multi-building RFPs
+
+        // Additional debug to trace the exact issue
+        console.log('🔍 PROPERTY FILTERING DEBUG:', {
+          anchorProperty: !!anchorProperty,
+          anchorPropertyName: anchorProperty?.propertyName,
+          isMultiBuilding,
+          totalPropertiesAvailable: properties.length,
+          parkPropertiesCalculated: parkProperties.length,
+          propertiesArray: properties.map(p => `${p.propertyName} - Building ${p.building}`),
+          parkPropertiesArray: parkProperties.map(p => `${p.propertyName} - Building ${p.building}`)
+        });
         
         // Debug logging (one-time)
         if (bayConfigModalOpen) {

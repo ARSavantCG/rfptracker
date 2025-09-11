@@ -1451,7 +1451,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Ensure sentBy field is present (frontend should send this directly now)
 
       // Parse with schema first, then convert dates for database
+      console.log('🔧 DEBUG: formData.isMultiBuilding before parsing:', formData.isMultiBuilding);
       const parsed = insertRfpRequestSchema.parse(formData);
+      console.log('🔧 DEBUG: parsed.isMultiBuilding after parsing:', parsed.isMultiBuilding);
       
       // Convert date strings to Date objects for database storage using centralized utility
       if (parsed.receivedOn && typeof parsed.receivedOn === 'string') {

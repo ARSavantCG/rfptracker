@@ -98,7 +98,7 @@ export const insertRfpRequestSchema = createInsertSchema(rfpRequests).omit({
   status: z.enum(["received", "in-progress", "completed", "on-hold", "archived"]).default("received"),
   workflowPhase: z.enum(["rfp-entry", "rfp-validation", "invitation-to-bid", "bid-collection", "evaluation", "publish"]).default("rfp-entry"),
   // Multi-building support validation
-  isMultiBuilding: z.boolean().optional().default(false),
+  isMultiBuilding: z.union([z.boolean(), z.string().transform(val => val === 'true')]).optional().default(false),
   properties: z.array(z.string()).optional(),
   selectedBaysPerBuilding: z.record(z.array(z.any())).optional(),
   costsPerBuilding: z.record(z.object({

@@ -482,6 +482,11 @@ export class DatabaseStorage implements IStorage {
         isCounterOffer: request.isCounterOffer || false,
         isOption: request.isOption || false,
         property: request.property,
+        // Multi-building support fields
+        isMultiBuilding: request.isMultiBuilding || false,
+        properties: request.properties || null,
+        selectedBaysPerBuilding: request.selectedBaysPerBuilding || null,
+        costsPerBuilding: request.costsPerBuilding || null,
         tenantName: request.tenantName,
         projectName: request.projectName,
         confidential: request.confidential || false,

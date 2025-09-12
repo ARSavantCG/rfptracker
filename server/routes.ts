@@ -1355,7 +1355,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log('Creating RFP with data:', req.body);
       
-      const parsed = insertRfpRequestSchema.parse(req.body);
+      const formData = { ...req.body };
+      
+      // Convert string boolean to actual boolean for multi-building support
+      if (formData.isMultiBuilding === 'true') {
+        formData.isMultiBuilding = true;
+      } else if (formData.isMultiBuilding === 'false') {
+        formData.isMultiBuilding = false;
+      } else {
+        formData.isMultiBuilding = false; // default to false
+      }
+      
+      const parsed = insertRfpRequestSchema.parse(formData);
       
       // Create RFP without files initially
       const requestData = {
@@ -1451,9 +1462,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Ensure sentBy field is present (frontend should send this directly now)
 
       // Parse with schema first, then convert dates for database
-      console.log('🔧 DEBUG: formData.isMultiBuilding before parsing:', formData.isMultiBuilding);
       const parsed = insertRfpRequestSchema.parse(formData);
-      console.log('🔧 DEBUG: parsed.isMultiBuilding after parsing:', parsed.isMultiBuilding);
       
       // Convert date strings to Date objects for database storage using centralized utility
       if (parsed.receivedOn && typeof parsed.receivedOn === 'string') {

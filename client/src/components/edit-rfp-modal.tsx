@@ -812,7 +812,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
                   
                   <Button
                     type="button"
-                    variant="outline"
+                    variant={Object.keys(selectedBaysPerBuilding).length > 0 ? "default" : "outline"}
                     onClick={() => {
                       console.warn('✅ EXPECTED: Configure Bays button clicked (multi-building)');
                       if (isPropertiesLoading) {
@@ -822,7 +822,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
                       setBayConfigModalOpen(true);
                     }}
                     disabled={isPropertiesLoading}
-                    className="flex items-center gap-2"
+                    className={`flex items-center gap-2 ${Object.keys(selectedBaysPerBuilding).length > 0 ? 'bg-green-600 hover:bg-green-700 text-white' : ''}`}
                     data-testid="button-configure-bays"
                   >
                     <Grid3x3 className="h-4 w-4" />
@@ -1020,7 +1020,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
                           </div>
                           <Button
                             type="button"
-                            variant="outline"
+                            variant={selectedBayConfigurations.length > 0 ? "default" : "outline"}
                             onClick={() => {
                               console.warn('✅ EXPECTED: Configure Bays button clicked (single-building)');
                               if (isPropertiesLoading) {
@@ -1030,7 +1030,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
                               setBayConfigModalOpen(true);
                             }}
                             disabled={isPropertiesLoading}
-                            className="flex items-center gap-2"
+                            className={`flex items-center gap-2 ${selectedBayConfigurations.length > 0 ? 'bg-green-600 hover:bg-green-700 text-white' : ''}`}
                             data-testid="button-configure-bays"
                           >
                             <Grid3x3 className="h-4 w-4" />

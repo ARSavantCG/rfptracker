@@ -2144,13 +2144,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Convert string boolean to actual boolean
+      // Convert string boolean to actual boolean for confidential
       if (formData.confidential === 'true') {
         formData.confidential = true;
       } else if (formData.confidential === 'false') {
         formData.confidential = false;
       } else {
         formData.confidential = Boolean(formData.confidential);
+      }
+
+      // Convert isMultiBuilding boolean - handle arrays and strings
+      if (Array.isArray(formData.isMultiBuilding)) {
+        // If it's an array, take the first value or convert all to a single boolean
+        formData.isMultiBuilding = formData.isMultiBuilding[0] === 'true' || formData.isMultiBuilding[0] === true;
+      } else if (formData.isMultiBuilding === 'true') {
+        formData.isMultiBuilding = true;
+      } else if (formData.isMultiBuilding === 'false') {
+        formData.isMultiBuilding = false;
+      } else if (formData.isMultiBuilding !== undefined) {
+        formData.isMultiBuilding = Boolean(formData.isMultiBuilding);
       }
 
       // Convert date strings to Date objects for database using centralized utility
@@ -2221,6 +2233,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } catch (e) {
           console.error('Failed to parse selectedBayConfigurations:', e);
           formData.selectedBayConfigurations = [];
+        }
+      }
+
+      // Handle multi-building JSON fields - properties
+      if (formData.properties && typeof formData.properties === 'string') {
+        try {
+          formData.properties = JSON.parse(formData.properties);
+        } catch (e) {
+          console.error('Failed to parse properties:', e);
+          formData.properties = [];
+        }
+      }
+
+      // Handle selectedBaysPerBuilding
+      if (formData.selectedBaysPerBuilding && typeof formData.selectedBaysPerBuilding === 'string') {
+        try {
+          formData.selectedBaysPerBuilding = JSON.parse(formData.selectedBaysPerBuilding);
+        } catch (e) {
+          console.error('Failed to parse selectedBaysPerBuilding:', e);
+          formData.selectedBaysPerBuilding = {};
+        }
+      }
+
+      // Handle costsPerBuilding
+      if (formData.costsPerBuilding && typeof formData.costsPerBuilding === 'string') {
+        try {
+          formData.costsPerBuilding = JSON.parse(formData.costsPerBuilding);
+        } catch (e) {
+          console.error('Failed to parse costsPerBuilding:', e);
+          formData.costsPerBuilding = {};
         }
       }
 

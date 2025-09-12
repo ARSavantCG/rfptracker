@@ -1353,7 +1353,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create new RFP request
   app.post("/api/rfp-requests", async (req, res) => {
     try {
-      console.log('Creating RFP with data:', req.body);
       
       const formData = { ...req.body };
       

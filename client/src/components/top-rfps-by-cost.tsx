@@ -203,13 +203,13 @@ export function TopOutstandingRfpsPanel({
               <th scope="col" className="text-left py-1 text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ fontSize: '8px' }}>
                 Tenant @ Property
               </th>
-              <th scope="col" className="text-right py-1 text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ fontSize: '8px' }}>
+              <th scope="col" className="text-center py-1 text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ fontSize: '8px' }}>
                 SF
               </th>
-              <th scope="col" className="text-right py-1 text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ fontSize: '8px' }}>
+              <th scope="col" className="text-center py-1 text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ fontSize: '8px' }}>
                 Total Cost
               </th>
-              <th scope="col" className="text-right py-1 text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ fontSize: '8px' }}>
+              <th scope="col" className="text-center py-1 text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ fontSize: '8px' }}>
                 $/SF
               </th>
             </tr>
@@ -248,7 +248,7 @@ export function TopOutstandingRfpsPanel({
                   {formatCurrency(rfp.improvement_cost_total)}
                 </td>
                 <td className="py-0.5 text-right text-xs text-gray-900 font-medium" data-testid={`text-cost-per-sf-${rfp.id}`} style={{ fontSize: '8px' }}>
-                  {formatCostPerSf(rfp.cost_per_sf, rfp.area_sf)}
+                  {formatCostPerSf(rfp.cost_per_sf ?? null, rfp.area_sf)}
                 </td>
               </tr>
             ))}

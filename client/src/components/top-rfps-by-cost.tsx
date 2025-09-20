@@ -103,9 +103,9 @@ export function TopOutstandingRfpsPanel({
 
   if (isLoading) {
     return (
-      <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+      <div className="bg-white p-2 rounded-lg shadow-sm border border-gray-200">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-gray-900">Top {limit} RFPs (by Cost)</h3>
+          <h3 className="text-xs font-semibold text-gray-900">Top {limit} RFPs (by Cost)</h3>
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger>
@@ -139,9 +139,9 @@ export function TopOutstandingRfpsPanel({
 
   if (topRfps.length === 0) {
     return (
-      <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+      <div className="bg-white p-2 rounded-lg shadow-sm border border-gray-200">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-gray-900">Top {limit} RFPs (by Cost)</h3>
+          <h3 className="text-xs font-semibold text-gray-900">Top {limit} RFPs (by Cost)</h3>
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger>
@@ -153,7 +153,7 @@ export function TopOutstandingRfpsPanel({
             </Tooltip>
           </TooltipProvider>
         </div>
-        <div className="text-center py-6 text-gray-500 text-sm">
+        <div className="text-center py-3 text-gray-500 text-xs">
           No RFPs with costs yet.
         </div>
       </div>
@@ -161,9 +161,9 @@ export function TopOutstandingRfpsPanel({
   }
 
   return (
-    <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200" aria-label={`Top ${limit} Outstanding RFPs by Cost`}>
+    <div className="bg-white p-2 rounded-lg shadow-sm border border-gray-200" aria-label={`Top ${limit} Outstanding RFPs by Cost`}>
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-gray-900">Top {limit} RFPs (by Cost)</h3>
+        <h3 className="text-xs font-semibold text-gray-900">Top {limit} RFPs (by Cost)</h3>
         <div className="flex items-center space-x-2">
           <TooltipProvider>
             <Tooltip>
@@ -197,19 +197,19 @@ export function TopOutstandingRfpsPanel({
       </div>
       
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-xs">
           <thead>
             <tr className="border-b border-gray-200">
-              <th scope="col" className="text-left py-2 text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th scope="col" className="text-left py-1 text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ fontSize: '10px' }}>
                 Tenant @ Property
               </th>
-              <th scope="col" className="text-right py-2 text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th scope="col" className="text-right py-1 text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ fontSize: '10px' }}>
                 SF
               </th>
-              <th scope="col" className="text-right py-2 text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th scope="col" className="text-right py-1 text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ fontSize: '10px' }}>
                 Total Cost
               </th>
-              <th scope="col" className="text-right py-2 text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th scope="col" className="text-right py-1 text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ fontSize: '10px' }}>
                 $/SF
               </th>
             </tr>
@@ -232,22 +232,22 @@ export function TopOutstandingRfpsPanel({
               >
                 <td className="py-1 pr-3">
                   <div className="flex items-center space-x-2 mb-1">
-                    <div className="text-sm font-medium text-gray-900 truncate max-w-[120px]" title={`${rfp.tenant_name} @ ${rfp.property_name}`}>
+                    <div className="text-xs font-medium text-gray-900 truncate max-w-[120px]" title={`${rfp.tenant_name} @ ${rfp.property_name}`} style={{ fontSize: '10px' }}>
                       {rfp.tenant_name}
                     </div>
                     {getStatusBadge(rfp.status)}
                   </div>
-                  <div className="text-xs text-gray-500 truncate max-w-[160px]" title={rfp.property_name}>
+                  <div className="text-xs text-gray-500 truncate max-w-[160px]" title={rfp.property_name} style={{ fontSize: '9px' }}>
                     @ {rfp.property_name}
                   </div>
                 </td>
-                <td className="py-1 text-right text-sm text-gray-900 font-medium" data-testid={`text-area-${rfp.id}`}>
+                <td className="py-0.5 text-right text-xs text-gray-900 font-medium" data-testid={`text-area-${rfp.id}`} style={{ fontSize: '10px' }}>
                   {formatNumber(rfp.area_sf)}
                 </td>
-                <td className="py-1 text-right text-sm text-gray-900 font-medium" data-testid={`text-cost-${rfp.id}`}>
+                <td className="py-0.5 text-right text-xs text-gray-900 font-medium" data-testid={`text-cost-${rfp.id}`} style={{ fontSize: '10px' }}>
                   {formatCurrency(rfp.improvement_cost_total)}
                 </td>
-                <td className="py-1 text-right text-sm text-gray-900 font-medium" data-testid={`text-cost-per-sf-${rfp.id}`}>
+                <td className="py-0.5 text-right text-xs text-gray-900 font-medium" data-testid={`text-cost-per-sf-${rfp.id}`} style={{ fontSize: '10px' }}>
                   {formatCostPerSf(rfp.cost_per_sf, rfp.area_sf)}
                 </td>
               </tr>

@@ -175,10 +175,10 @@ export function StatsCards({ onStatusFilter, onRfpClick }: StatsCardsProps) {
   return (
     <div className="mb-6">
       {/* Dashboard Grid with 4 Panels */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-1">
         
         {/* Project Status - Compact */}
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+        <div className="bg-white p-2 rounded-lg shadow-sm border border-gray-200">
           <h3 className="text-sm font-semibold text-gray-900 mb-3">Status</h3>
           <div className="space-y-2">
             {cards.map((card, index) => (
@@ -201,7 +201,7 @@ export function StatsCards({ onStatusFilter, onRfpClick }: StatsCardsProps) {
 
         {/* Status Distribution - Compact */}
         {stats.total > 0 && (
-          <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <div className="bg-white p-2 rounded-lg shadow-sm border border-gray-200">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-sm font-semibold text-gray-900">Distribution</h3>
             </div>
@@ -258,7 +258,7 @@ export function StatsCards({ onStatusFilter, onRfpClick }: StatsCardsProps) {
 
         {/* Status Overview - Compact */}
         {stats.total > 0 && (
-          <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <div className="bg-white p-2 rounded-lg shadow-sm border border-gray-200">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-sm font-semibold text-gray-900">Overview</h3>
             </div>

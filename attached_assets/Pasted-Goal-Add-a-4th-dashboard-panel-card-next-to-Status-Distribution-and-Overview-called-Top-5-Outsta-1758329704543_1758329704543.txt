@@ -1,0 +1,50 @@
+Goal: Add a 4th dashboard panel/card next to Status, Distribution, and Overview called “Top 5 Outstanding RFPs (by Cost)” that lists the five largest open RFPs by total improvement cost.
+
+Assume (adjust to my stack if detected):
+	•	Frontend: React + TypeScript.
+	•	Styling: whatever is already used (reuse existing card/panel component).
+	•	Backend: Node/Express (or reuse existing API layer).
+	•	Data source already has an rfps table/collection.
+
+Data fields available per RFP (or derive):
+	•	id: string
+	•	tenant_name: string
+	•	property_name: string
+	•	status: 'received' | 'in_progress' | 'completed' | 'archived'
+	•	area_sf: number (required to compute $/sf; treat 0/nullable as N/A)
+	•	improvement_cost_total: number (USD; may be null)
+	•	received_on: Date (optional)
+
+Business logic:
+	1.	Consider open = status in ('received','in_progress').
+	2.	Compute cost_per_sf = improvement_cost_total / area_sf when both > 0; else display —.
+	3.	Sort open RFPs by improvement_cost_total desc, take top 5.
+	4.	If fewer than 5 exist, show however many are available.
+	5.	Exclude rows where improvement_cost_total is null/0 from ranking, but still allow them to appear if there are fewer than 5 after exclusion (place them at the end).
+
+API:
+	•	If an endpoint exists, use it (e.g., GET /api/rfps?status=open&fields=id,tenant_name,property_name,area_sf,improvement_cost_total).
+	•	If not, create a thin endpoint that returns exactly the fields above and already sorted, e.g.:
+	•	GET /api/rfps/top-open-by-cost?limit=5
+	•	Include backend validation and SQL/ORM query.
+
+UI/UX:
+	•	Panel title: Top 5 Outstanding RFPs (by Cost).
+	•	Compact table within a card:
+	•	Columns: Tenant @ Property, SF, Total Cost, $/SF.
+	•	Format numbers: SF with thousands separators; Total Cost as currency ($1,234,567); $ / SF to 2 decimals.
+	•	Row click opens the existing RFP detail route: /rfps/:id.
+	•	Loading: skeleton rows (5).
+	•	Empty state (no open RFPs): “No open RFPs with costs yet.”
+	•	Tooltip on title icon: “Largest open RFPs by total improvement cost.”
+	•	Respect existing theming; responsive down to iPad width.
+
+Accessibility:
+	•	Table headers <th scope="col">; rows <tr role="button"> with keyboard focus and Enter to open.
+	•	Aria-label on the panel.
+
+Testing:
+	•	Unit test: sorting, open-status filter, cost_per_sf calculation (normal, zero sf, null cost).
+	•	Integration test: renders 5 rows, currency/number formatting, empty state.
+
+Types (frontend):

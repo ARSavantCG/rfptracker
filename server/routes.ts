@@ -1420,7 +1420,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const allProperties = await storage.getAllProperties();
               const matchingProperty = allProperties.find(p => p.id === propertyId);
               if (matchingProperty) {
-                propertyDisplayName = matchingProperty.displayName;
+                // Use property name and building number (if applicable) without full address
+                if (matchingProperty.building) {
+                  propertyDisplayName = `${matchingProperty.propertyName} - Building ${matchingProperty.building}`;
+                } else {
+                  propertyDisplayName = matchingProperty.propertyName;
+                }
               } else {
                 propertyDisplayName = rfp.property;
               }

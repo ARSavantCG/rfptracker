@@ -1336,10 +1336,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     let current = rfp;
     const visited = new Set<number>();
     
-    while (current.parentRfpId && !visited.has(current.id)) {
+    // Handle both camelCase and snake_case field names
+    const getParentId = (obj: any) => obj.parentRfpId || obj.parent_rfp_id;
+    
+    while (getParentId(current) && !visited.has(current.id)) {
       visited.add(current.id);
-      const parent = rfpMap.get(current.parentRfpId);
-      if (!parent) break;
+      const parentId = getParentId(current);
+      const parent = rfpMap.get(parentId);
+      if (!parent) {
+        console.log(`⚠️ WARNING: Parent RFP ${parentId} not found in map for RFP ${current.id}`);
+        break;
+      }
       current = parent;
     }
     
@@ -1448,6 +1455,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const rootRfpId = findRootRfpId(enrichedRfp.originalRfp, rfpMap);
         const existingBest = familyBestRfps.get(rootRfpId);
         
+        
         if (!existingBest || 
             enrichedRfp.improvement_cost_total > existingBest.improvement_cost_total ||
             (enrichedRfp.improvement_cost_total === existingBest.improvement_cost_total && 
@@ -1466,6 +1474,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Sort by cost descending and take top results
       deduplicatedRfps.sort((a, b) => (b.improvement_cost_total || 0) - (a.improvement_cost_total || 0));
       const result = deduplicatedRfps.slice(0, limit);
+      
       
       res.json(result);
     } catch (error) {

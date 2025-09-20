@@ -1331,6 +1331,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get top 5 active RFPs by cost (includes received, in-progress, and completed)
+  app.get("/api/rfp-requests/top-open-by-cost", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 5;
+      
+      // Get all active RFPs (received, in-progress, or completed)
+      const allRfps = await storage.getAllRfpRequests();
+      const filteredRfps = allRfps.filter(rfp => 
+        rfp.status === 'received' || rfp.status === 'in-progress' || rfp.status === 'completed'
+      );
+      
+      // Transform RFPs to include cost and area data
+      const enrichedRfps = await Promise.all(filteredRfps.map(async (rfp) => {
+        let improvementCostTotal = null;
+        let areaSf = null;
+        
+        // Try to get cost from evaluation budget first
+        try {
+          const budget = await storage.getEvaluationBudget(rfp.id);
+          if (budget && budget.grandTotal) {
+            improvementCostTotal = parseFloat(budget.grandTotal.toString()) || null;
+          }
+        } catch (error) {
+          // Evaluation budget might not exist, continue
+        }
+        
+        // Fallback to estimatedValue if no budget data
+        if (!improvementCostTotal && rfp.estimatedValue) {
+          const cleanValue = rfp.estimatedValue.replace(/[$,]/g, '');
+          improvementCostTotal = parseFloat(cleanValue) || null;
+        }
+        
+        // Calculate area from projectArea or bay configurations
+        if (rfp.projectArea) {
+          const cleanArea = rfp.projectArea.replace(/[,]/g, '');
+          areaSf = parseFloat(cleanArea) || null;
+        } else if (rfp.selectedBayConfigurations && rfp.selectedBayConfigurations.length > 0) {
+          areaSf = rfp.selectedBayConfigurations.reduce((total, bay) => 
+            total + (bay.rentableSquareFootage || bay.squareFootage || 0), 0
+          );
+        } else if (rfp.isMultiBuilding && rfp.selectedBaysPerBuilding) {
+          // Calculate total area for multi-building RFPs
+          areaSf = Object.values(rfp.selectedBaysPerBuilding).flat().reduce((total, bay: any) => 
+            total + (bay.rentableSquareFootage || bay.squareFootage || 0), 0
+          );
+        }
+        
+        // Calculate cost per SF - handle edge case: area_sf <= 0 should return null
+        const costPerSf = (improvementCostTotal && areaSf && areaSf > 0) 
+          ? improvementCostTotal / areaSf 
+          : null;
+        
+        return {
+          id: rfp.id.toString(),
+          tenant_name: rfp.tenantName,
+          property_name: rfp.isMultiBuilding && rfp.properties && rfp.properties.length > 0 
+            ? rfp.properties.join(', ') 
+            : rfp.property,
+          status: rfp.status,
+          area_sf: areaSf,
+          improvement_cost_total: improvementCostTotal,
+          cost_per_sf: costPerSf
+        };
+      }));
+      
+      // Filter out RFPs without cost data, but still include them if we have fewer than limit after filtering
+      const rfpsWithCosts = enrichedRfps.filter(rfp => rfp.improvement_cost_total !== null);
+      const rfpsWithoutCosts = enrichedRfps.filter(rfp => rfp.improvement_cost_total === null);
+      
+      // Sort by cost descending
+      rfpsWithCosts.sort((a, b) => (b.improvement_cost_total || 0) - (a.improvement_cost_total || 0));
+      
+      // Take top by cost, then add no-cost RFPs if needed to fill the limit
+      let result = rfpsWithCosts.slice(0, limit);
+      if (result.length < limit) {
+        result = result.concat(rfpsWithoutCosts.slice(0, limit - result.length));
+      }
+      
+      res.json(result);
+    } catch (error) {
+      console.error('Error fetching top active RFPs by cost:', error);
+      res.status(500).json({ message: "Failed to fetch top active RFPs by cost" });
+    }
+  });
+
   // Get single RFP request
   app.get("/api/rfp-requests/:id", async (req, res) => {
     try {
@@ -1633,90 +1718,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get top 5 open RFPs by cost
-  app.get("/api/rfp-requests/top-open-by-cost", async (req, res) => {
-    try {
-      const limit = parseInt(req.query.limit as string) || 5;
-      
-      // Get all open RFPs (received or in-progress)
-      const openRfps = await storage.getAllRfpRequests();
-      const filteredRfps = openRfps.filter(rfp => 
-        rfp.status === 'received' || rfp.status === 'in-progress'
-      );
-      
-      // Transform RFPs to include cost and area data
-      const enrichedRfps = await Promise.all(filteredRfps.map(async (rfp) => {
-        let improvementCostTotal = null;
-        let areaSf = null;
-        
-        // Try to get cost from evaluation budget first
-        try {
-          const budget = await storage.getEvaluationBudget(rfp.id);
-          if (budget && budget.grandTotal) {
-            improvementCostTotal = parseFloat(budget.grandTotal.toString()) || null;
-          }
-        } catch (error) {
-          // Evaluation budget might not exist, continue
-        }
-        
-        // Fallback to estimatedValue if no budget data
-        if (!improvementCostTotal && rfp.estimatedValue) {
-          const cleanValue = rfp.estimatedValue.replace(/[$,]/g, '');
-          improvementCostTotal = parseFloat(cleanValue) || null;
-        }
-        
-        // Calculate area from projectArea or bay configurations
-        if (rfp.projectArea) {
-          const cleanArea = rfp.projectArea.replace(/[,]/g, '');
-          areaSf = parseFloat(cleanArea) || null;
-        } else if (rfp.selectedBayConfigurations && rfp.selectedBayConfigurations.length > 0) {
-          areaSf = rfp.selectedBayConfigurations.reduce((total, bay) => 
-            total + (bay.rentableSquareFootage || bay.squareFootage || 0), 0
-          );
-        } else if (rfp.isMultiBuilding && rfp.selectedBaysPerBuilding) {
-          // Calculate total area for multi-building RFPs
-          areaSf = Object.values(rfp.selectedBaysPerBuilding).flat().reduce((total, bay: any) => 
-            total + (bay.rentableSquareFootage || bay.squareFootage || 0), 0
-          );
-        }
-        
-        // Calculate cost per SF - handle edge case: area_sf <= 0 should return null
-        const costPerSf = (improvementCostTotal && areaSf && areaSf > 0) 
-          ? improvementCostTotal / areaSf 
-          : null;
-        
-        return {
-          id: rfp.id.toString(),
-          tenant_name: rfp.tenantName,
-          property_name: rfp.isMultiBuilding && rfp.properties && rfp.properties.length > 0 
-            ? rfp.properties.join(', ') 
-            : rfp.property,
-          status: rfp.status,
-          area_sf: areaSf,
-          improvement_cost_total: improvementCostTotal,
-          cost_per_sf: costPerSf
-        };
-      }));
-      
-      // Filter out RFPs without cost data, but still include them if we have fewer than limit after filtering
-      const rfpsWithCosts = enrichedRfps.filter(rfp => rfp.improvement_cost_total !== null);
-      const rfpsWithoutCosts = enrichedRfps.filter(rfp => rfp.improvement_cost_total === null);
-      
-      // Sort by cost descending
-      rfpsWithCosts.sort((a, b) => (b.improvement_cost_total || 0) - (a.improvement_cost_total || 0));
-      
-      // Take top by cost, then add no-cost RFPs if needed to fill the limit
-      let result = rfpsWithCosts.slice(0, limit);
-      if (result.length < limit) {
-        result = result.concat(rfpsWithoutCosts.slice(0, limit - result.length));
-      }
-      
-      res.json(result);
-    } catch (error) {
-      console.error('Error fetching top open RFPs by cost:', error);
-      res.status(500).json({ message: "Failed to fetch top open RFPs by cost" });
-    }
-  });
 
   // Create RFP Option (alternative design/scope for same project)
   app.post("/api/rfp-requests/:id/create-option", async (req, res) => {

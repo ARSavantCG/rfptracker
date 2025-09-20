@@ -105,7 +105,7 @@ export function TopOutstandingRfpsPanel({
     return (
       <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-gray-900">Top {limit} Outstanding RFPs (by Cost)</h3>
+          <h3 className="text-sm font-semibold text-gray-900">Top {limit} RFPs (by Cost)</h3>
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger>
@@ -141,20 +141,20 @@ export function TopOutstandingRfpsPanel({
     return (
       <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-gray-900">Top {limit} Outstanding RFPs (by Cost)</h3>
+          <h3 className="text-sm font-semibold text-gray-900">Top {limit} RFPs (by Cost)</h3>
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger>
                 <Info className="h-4 w-4 text-gray-400" />
               </TooltipTrigger>
               <TooltipContent>
-                <p>No open RFPs with costs available</p>
+                <p>No RFPs with costs available</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
         </div>
         <div className="text-center py-6 text-gray-500 text-sm">
-          No open RFPs with costs yet.
+          No RFPs with costs yet.
         </div>
       </div>
     );
@@ -163,7 +163,7 @@ export function TopOutstandingRfpsPanel({
   return (
     <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200" aria-label={`Top ${limit} Outstanding RFPs by Cost`}>
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-gray-900">Top {limit} Outstanding RFPs (by Cost)</h3>
+        <h3 className="text-sm font-semibold text-gray-900">Top {limit} RFPs (by Cost)</h3>
         <div className="flex items-center space-x-2">
           <TooltipProvider>
             <Tooltip>
@@ -189,7 +189,7 @@ export function TopOutstandingRfpsPanel({
                 <Info className="h-4 w-4 text-gray-400" />
               </TooltipTrigger>
               <TooltipContent>
-                <p>Largest open RFPs by {sortBy === 'cost' ? 'total improvement cost' : 'cost per square foot'}</p>
+                <p>Largest RFPs by {sortBy === 'cost' ? 'total improvement cost' : 'cost per square foot'}</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>

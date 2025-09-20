@@ -1383,12 +1383,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ? improvementCostTotal / areaSf 
           : null;
         
+        // Get proper property display name
+        let propertyDisplayName = '';
+        if (rfp.isMultiBuilding && rfp.properties && rfp.properties.length > 0) {
+          propertyDisplayName = rfp.properties.join(', ');
+        } else if (rfp.property) {
+          // Try to get the full property details by finding property with matching name
+          try {
+            const allProperties = await storage.getAllProperties();
+            const matchingProperty = allProperties.find(p => 
+              p.propertyName === rfp.property || p.displayName === rfp.property
+            );
+            if (matchingProperty) {
+              propertyDisplayName = matchingProperty.displayName;
+            } else {
+              propertyDisplayName = rfp.property;
+            }
+          } catch (error) {
+            propertyDisplayName = rfp.property;
+          }
+        } else {
+          propertyDisplayName = 'Unknown Property';
+        }
+
         return {
           id: rfp.id.toString(),
           tenant_name: rfp.tenantName,
-          property_name: rfp.isMultiBuilding && rfp.properties && rfp.properties.length > 0 
-            ? rfp.properties.join(', ') 
-            : rfp.property,
+          property_name: propertyDisplayName,
           status: rfp.status,
           area_sf: areaSf,
           improvement_cost_total: improvementCostTotal,

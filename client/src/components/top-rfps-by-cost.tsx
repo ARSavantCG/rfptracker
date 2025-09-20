@@ -230,9 +230,9 @@ export function TopOutstandingRfpsPanel({
                 }}
                 data-testid={`row-rfp-${rfp.id}`}
               >
-                <td className="py-2 pr-3">
+                <td className="py-1 pr-3">
                   <div className="flex items-center space-x-2 mb-1">
-                    <div className="font-medium text-gray-900 truncate max-w-[120px]" title={`${rfp.tenant_name} @ ${rfp.property_name}`}>
+                    <div className="text-sm font-medium text-gray-900 truncate max-w-[120px]" title={`${rfp.tenant_name} @ ${rfp.property_name}`}>
                       {rfp.tenant_name}
                     </div>
                     {getStatusBadge(rfp.status)}
@@ -241,13 +241,13 @@ export function TopOutstandingRfpsPanel({
                     @ {rfp.property_name}
                   </div>
                 </td>
-                <td className="py-2 text-right text-gray-900 font-medium" data-testid={`text-area-${rfp.id}`}>
+                <td className="py-1 text-right text-sm text-gray-900 font-medium" data-testid={`text-area-${rfp.id}`}>
                   {formatNumber(rfp.area_sf)}
                 </td>
-                <td className="py-2 text-right text-gray-900 font-medium" data-testid={`text-cost-${rfp.id}`}>
+                <td className="py-1 text-right text-sm text-gray-900 font-medium" data-testid={`text-cost-${rfp.id}`}>
                   {formatCurrency(rfp.improvement_cost_total)}
                 </td>
-                <td className="py-2 text-right text-gray-900 font-medium" data-testid={`text-cost-per-sf-${rfp.id}`}>
+                <td className="py-1 text-right text-sm text-gray-900 font-medium" data-testid={`text-cost-per-sf-${rfp.id}`}>
                   {formatCostPerSf(rfp.cost_per_sf, rfp.area_sf)}
                 </td>
               </tr>

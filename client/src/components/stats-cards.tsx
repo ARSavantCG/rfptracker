@@ -175,11 +175,11 @@ export function StatsCards({ onStatusFilter, onRfpClick }: StatsCardsProps) {
   return (
     <div className="mb-6">
       {/* Dashboard Grid with 4 Panels */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-1">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-1" style={{ gridTemplateColumns: '1fr 1fr 1fr 1.4fr' }}>
         
         {/* Project Status - Compact */}
         <div className="bg-white p-2 rounded-lg shadow-sm border border-gray-200">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">Status</h3>
+          <h3 className="text-xs font-semibold text-gray-900 mb-3" style={{ fontSize: '10px' }}>Status</h3>
           <div className="space-y-2">
             {cards.map((card, index) => (
               <div 
@@ -191,9 +191,9 @@ export function StatsCards({ onStatusFilter, onRfpClick }: StatsCardsProps) {
                   <div className={`w-5 h-5 ${card.bgColor} rounded flex items-center justify-center flex-shrink-0`}>
                     <i className={`${card.icon} ${card.iconColor} text-sm`}></i>
                   </div>
-                  <span className="text-sm font-medium text-gray-700 truncate">{card.title}</span>
+                  <span className="text-xs font-medium text-gray-700 truncate" style={{ fontSize: '10px' }}>{card.title}</span>
                 </div>
-                <span className="text-lg font-bold text-gray-900">{card.value}</span>
+                <span className="text-sm font-bold text-gray-900" style={{ fontSize: '12px' }}>{card.value}</span>
               </div>
             ))}
           </div>
@@ -203,7 +203,7 @@ export function StatsCards({ onStatusFilter, onRfpClick }: StatsCardsProps) {
         {stats.total > 0 && (
           <div className="bg-white p-2 rounded-lg shadow-sm border border-gray-200">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-semibold text-gray-900">Distribution</h3>
+              <h3 className="text-xs font-semibold text-gray-900" style={{ fontSize: '10px' }}>Distribution</h3>
             </div>
             
             <div className="h-20">
@@ -246,10 +246,10 @@ export function StatsCards({ onStatusFilter, onRfpClick }: StatsCardsProps) {
                     className="w-2 h-2 rounded-full flex-shrink-0" 
                     style={{ backgroundColor: item.color }}
                   ></div>
-                  <span className="text-sm text-gray-600 truncate flex-1">
+                  <span className="text-xs text-gray-600 truncate flex-1" style={{ fontSize: '10px' }}>
                     {item.name}
                   </span>
-                  <span className="text-sm font-medium text-gray-900">{item.value}</span>
+                  <span className="text-xs font-medium text-gray-900" style={{ fontSize: '10px' }}>{item.value}</span>
                 </div>
               ))}
             </div>
@@ -260,7 +260,7 @@ export function StatsCards({ onStatusFilter, onRfpClick }: StatsCardsProps) {
         {stats.total > 0 && (
           <div className="bg-white p-2 rounded-lg shadow-sm border border-gray-200">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-semibold text-gray-900">Overview</h3>
+              <h3 className="text-xs font-semibold text-gray-900" style={{ fontSize: '10px' }}>Overview</h3>
             </div>
             
             <div className="h-32">

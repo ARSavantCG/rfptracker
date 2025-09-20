@@ -1331,15 +1331,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get top 5 active RFPs by cost (includes received, in-progress, and completed)
+  // Get top 5 completed RFPs by cost (only completed RFPs have evaluation workflow and costs)
   app.get("/api/rfp-requests/top-open-by-cost", async (req, res) => {
     try {
       const limit = parseInt(req.query.limit as string) || 5;
       
-      // Get all active RFPs (received, in-progress, or completed)
+      // Get completed RFPs (only completed RFPs have evaluation workflow and cost calculations)
       const allRfps = await storage.getAllRfpRequests();
       const filteredRfps = allRfps.filter(rfp => 
-        rfp.status === 'received' || rfp.status === 'in-progress' || rfp.status === 'completed'
+        rfp.status === 'completed'
       );
       
       // Transform RFPs to include cost and area data

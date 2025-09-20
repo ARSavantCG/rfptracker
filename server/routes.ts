@@ -1331,6 +1331,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Helper function to find the root RFP ID by walking up the parent chain
+  const findRootRfpId = (rfp: any, rfpMap: Map<number, any>): number => {
+    let current = rfp;
+    const visited = new Set<number>();
+    
+    while (current.parentRfpId && !visited.has(current.id)) {
+      visited.add(current.id);
+      const parent = rfpMap.get(current.parentRfpId);
+      if (!parent) break;
+      current = parent;
+    }
+    
+    return current.id;
+  };
+
   // Get top 5 completed RFPs by cost (only completed RFPs have evaluation workflow and costs)
   app.get("/api/rfp-requests/top-open-by-cost", async (req, res) => {
     try {
@@ -1341,6 +1356,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const filteredRfps = allRfps.filter(rfp => 
         rfp.status === 'completed'
       );
+      
+      // Create a map for efficient parent lookup
+      const rfpMap = new Map(filteredRfps.map(rfp => [rfp.id, rfp]));
       
       // Transform RFPs to include cost and area data
       const enrichedRfps = await Promise.all(filteredRfps.map(async (rfp) => {
@@ -1408,6 +1426,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         return {
           id: rfp.id.toString(),
+          originalRfp: rfp,  // Keep reference for family grouping
           tenant_name: rfp.tenantName,
           property_name: propertyDisplayName,
           status: rfp.status,
@@ -1417,18 +1436,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       }));
       
-      // Filter out RFPs without cost data, but still include them if we have fewer than limit after filtering
-      const rfpsWithCosts = enrichedRfps.filter(rfp => rfp.improvement_cost_total !== null);
-      const rfpsWithoutCosts = enrichedRfps.filter(rfp => rfp.improvement_cost_total === null);
+      // Group RFPs by family (root RFP) and pick the highest cost one from each family
+      const familyBestRfps = new Map<number, any>();
       
-      // Sort by cost descending
-      rfpsWithCosts.sort((a, b) => (b.improvement_cost_total || 0) - (a.improvement_cost_total || 0));
+      enrichedRfps.forEach(enrichedRfp => {
+        // Skip RFPs without cost data
+        if (enrichedRfp.improvement_cost_total === null || enrichedRfp.improvement_cost_total <= 0) {
+          return;
+        }
+        
+        const rootRfpId = findRootRfpId(enrichedRfp.originalRfp, rfpMap);
+        const existingBest = familyBestRfps.get(rootRfpId);
+        
+        if (!existingBest || 
+            enrichedRfp.improvement_cost_total > existingBest.improvement_cost_total ||
+            (enrichedRfp.improvement_cost_total === existingBest.improvement_cost_total && 
+             new Date(enrichedRfp.originalRfp.completedDate || enrichedRfp.originalRfp.updatedAt) > 
+             new Date(existingBest.originalRfp.completedDate || existingBest.originalRfp.updatedAt))) {
+          familyBestRfps.set(rootRfpId, enrichedRfp);
+        }
+      });
       
-      // Take top by cost, then add no-cost RFPs if needed to fill the limit
-      let result = rfpsWithCosts.slice(0, limit);
-      if (result.length < limit) {
-        result = result.concat(rfpsWithoutCosts.slice(0, limit - result.length));
-      }
+      // Get the best RFPs from each family and remove the original RFP reference
+      const deduplicatedRfps = Array.from(familyBestRfps.values()).map(rfp => {
+        const { originalRfp, ...cleanRfp } = rfp;
+        return cleanRfp;
+      });
+      
+      // Sort by cost descending and take top results
+      deduplicatedRfps.sort((a, b) => (b.improvement_cost_total || 0) - (a.improvement_cost_total || 0));
+      const result = deduplicatedRfps.slice(0, limit);
       
       res.json(result);
     } catch (error) {

@@ -1680,7 +1680,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           );
         }
         
-        // Calculate cost per SF
+        // Calculate cost per SF - handle edge case: area_sf <= 0 should return null
         const costPerSf = (improvementCostTotal && areaSf && areaSf > 0) 
           ? improvementCostTotal / areaSf 
           : null;

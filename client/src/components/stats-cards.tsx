@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
+import { TopOutstandingRfpsPanel } from "./top-rfps-by-cost";
 
 interface Stats {
   total: number;
@@ -12,9 +13,10 @@ interface Stats {
 
 interface StatsCardsProps {
   onStatusFilter?: (status: string) => void;
+  onRfpClick?: (rfpId: string) => void;
 }
 
-export function StatsCards({ onStatusFilter }: StatsCardsProps) {
+export function StatsCards({ onStatusFilter, onRfpClick }: StatsCardsProps) {
   const { data: stats, isLoading } = useQuery<Stats>({
     queryKey: ["/api/rfp-requests/stats"],
   });
@@ -172,8 +174,8 @@ export function StatsCards({ onStatusFilter }: StatsCardsProps) {
 
   return (
     <div className="mb-6">
-      {/* Force All Three Boxes Side by Side */}
-      <div className="grid grid-cols-3 gap-3">
+      {/* Dashboard Grid with 4 Panels */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
         
         {/* Project Status - Compact */}
         <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
@@ -302,6 +304,13 @@ export function StatsCards({ onStatusFilter }: StatsCardsProps) {
             </div>
           </div>
         )}
+
+        {/* Top Outstanding RFPs by Cost Panel */}
+        <TopOutstandingRfpsPanel 
+          limit={5} 
+          onRowClick={onRfpClick} 
+        />
+        
       </div>
     </div>
   );

@@ -1413,14 +1413,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (rfp.isMultiBuilding && rfp.properties && rfp.properties.length > 0) {
           propertyDisplayName = rfp.properties.join(', ');
         } else if (rfp.property) {
-          // Try to get the full property details by finding property with matching name
+          // Try to get the full property details by property ID
           try {
-            const allProperties = await storage.getAllProperties();
-            const matchingProperty = allProperties.find(p => 
-              p.propertyName === rfp.property || p.displayName === rfp.property
-            );
-            if (matchingProperty) {
-              propertyDisplayName = matchingProperty.displayName;
+            const propertyId = parseInt(rfp.property);
+            if (!isNaN(propertyId)) {
+              const allProperties = await storage.getAllProperties();
+              const matchingProperty = allProperties.find(p => p.id === propertyId);
+              if (matchingProperty) {
+                propertyDisplayName = matchingProperty.displayName;
+              } else {
+                propertyDisplayName = rfp.property;
+              }
             } else {
               propertyDisplayName = rfp.property;
             }

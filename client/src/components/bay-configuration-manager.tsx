@@ -448,9 +448,22 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
       splitSouthRestroom: newBay.canBeSplit ? newBay.splitSouthRestroom : undefined
     };
 
-    setBayConfigurations(bayConfigurations.map(bay => 
+    const updatedConfigurations = bayConfigurations.map(bay => 
       bay.id === editingBay.id ? updatedBay : bay
-    ));
+    );
+    
+    setBayConfigurations(updatedConfigurations);
+
+    // Save to database
+    const mechanicalSF = parseFloat(mechanicalRoomSF) || 0;
+    const updatedBays = calculateBayAllocations(updatedConfigurations, mechanicalSF);
+    
+    updatePropertyMutation.mutate({
+      bayConfigurations: updatedBays,
+      mechanicalRoomSquareFootage: mechanicalSF,
+      firstBayDirection: firstBayDirection || undefined,
+      bayProgressionDirection: bayProgressionDirection || undefined
+    });
 
     // Reset form
     setEditingBay(null);
@@ -477,11 +490,6 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
       splitSouthOffice: false,
       splitNorthRestroom: false,
       splitSouthRestroom: false
-    });
-
-    toast({
-      title: "Success",
-      description: "Bay configuration updated successfully",
     });
   };
 

@@ -3889,7 +3889,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get list of RFPs with evaluation budgets for import
   app.get("/api/evaluation-budgets/available-for-import", requireAuth, async (req, res) => {
     try {
-      const rfps = await storage.getAllRfps();
+      const rfps = await storage.getAllRfpRequests();
       
       // Get RFPs with evaluation budgets
       const rfpsWithBudgets = [];

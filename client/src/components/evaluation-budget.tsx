@@ -15,6 +15,7 @@ import { Plus, Edit, Trash2, Save, X, ArrowRight, Copy, FileDown, Upload, Packag
 import { EvaluationAttachments } from "./evaluation-attachments";
 import { EvaluationBudgetHistory } from "./evaluation-budget-history";
 import { FormulaInput } from "./formula-input";
+import { RfpImportDialog } from "./rfp-import-dialog";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import { useToast } from "@/hooks/use-toast";
 import { formatDate } from "@/lib/utils";
@@ -105,6 +106,9 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
   const [selectedScopeItems, setSelectedScopeItems] = useState<Set<string>>(new Set());
   const [showDesignImportModal, setShowDesignImportModal] = useState(false);
   const [selectedDesignItems, setSelectedDesignItems] = useState<Set<string>>(new Set());
+  
+  // Import from RFP modal state
+  const [showRfpImportModal, setShowRfpImportModal] = useState(false);
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -475,6 +479,75 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
     }
     setSelectedDesignItems(new Set());
     setShowDesignImportModal(true);
+  };
+
+  // Import evaluation budget from another RFP
+  const handleRfpImport = async (rfpId: number, categories: string[]) => {
+    try {
+      const response = await apiRequest(`/api/rfp-requests/${rfpId}/evaluation-budget`, "GET");
+      
+      if (!response) {
+        throw new Error("No budget data found");
+      }
+
+      const newItems: { 
+        tenantImprovements: EvaluationLineItem[];
+        designSoftCosts: EvaluationLineItem[];
+        existingImprovements: EvaluationLineItem[];
+      } = {
+        tenantImprovements: [],
+        designSoftCosts: [],
+        existingImprovements: [],
+      };
+
+      let totalImported = 0;
+
+      categories.forEach(category => {
+        if (response[category] && Array.isArray(response[category])) {
+          const items = response[category].map((item: EvaluationLineItem, index: number) => ({
+            id: `imported-${category}-${Date.now()}-${index}`,
+            description: item.description,
+            quantity: item.quantity || 1,
+            unit: item.unit || "ea",
+            unitPrice: item.unitPrice?.toString() || "0.00",
+            totalPrice: item.totalPrice?.toString() || "0.00",
+            tenantShare: item.tenantShare || 100,
+            // Exclude bid-specific references
+            bidCollectionId: undefined,
+            bidLineItemId: undefined,
+            // Preserve other properties
+            isRolledUp: item.isRolledUp,
+            rollupTarget: item.rollupTarget,
+            assemblyId: undefined, // Don't copy assembly references
+          }));
+
+          newItems[category as keyof typeof newItems] = items;
+          totalImported += items.length;
+        }
+      });
+
+      setBudgetData(prev => ({
+        ...prev,
+        tenantImprovements: [...prev.tenantImprovements, ...newItems.tenantImprovements],
+        designSoftCosts: [...prev.designSoftCosts, ...newItems.designSoftCosts],
+        existingImprovements: [...prev.existingImprovements, ...newItems.existingImprovements],
+      }));
+
+      toast({
+        title: "Budget Imported Successfully",
+        description: `Imported ${totalImported} line items from selected RFP.`,
+        duration: 4000,
+      });
+    } catch (error) {
+      console.error('Import error:', error);
+      toast({
+        title: "Import Failed",
+        description: "Failed to import budget from selected RFP.",
+        variant: "destructive",
+        duration: 6000,
+      });
+      throw error;
+    }
   };
 
   // Import selected design costs
@@ -2984,6 +3057,17 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
           {/* Show buttons only when workflow is collapsed */}
           {isWorkflowCollapsed && (
             <>
+              {/* Import from Another RFP button */}
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowRfpImportModal(true)}
+                className="h-8"
+              >
+                <Copy className="h-4 w-4 mr-1" />
+                Import from RFP
+              </Button>
+              
               {/* Import buttons for Tenant Improvements */}
               {category === 'tenantImprovements' && (
                 <>
@@ -4448,6 +4532,14 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Import from Another RFP Dialog */}
+      <RfpImportDialog
+        open={showRfpImportModal}
+        onOpenChange={setShowRfpImportModal}
+        currentRfpId={rfp?.id}
+        onImport={handleRfpImport}
+      />
     </div>
   );
 }

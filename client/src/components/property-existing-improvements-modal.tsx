@@ -13,6 +13,7 @@ import { Trash2, Plus, Edit3, Save, X, Grid, Printer, ChevronDown } from "lucide
 import { apiRequest } from "@/lib/queryClient";
 import { FormulaInput } from "@/components/formula-input";
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 import { 
   EXISTING_IMPROVEMENT_CATEGORIES, 
   ALLOCATION_TYPES,
@@ -59,6 +60,7 @@ export function PropertyExistingImprovementsModal({
   const categoryDropdownRef = useRef<HTMLDivElement>(null);
   const allocationDropdownRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -386,26 +388,76 @@ export function PropertyExistingImprovementsModal({
                         <span> Bay{mismatch.bayNames.length !== 1 ? 's' : ''}: {mismatch.bayNames.join(', ')}</span>
                       )}
                     </p>
-                    {(mismatch.hasNoCosts || mismatch.hasFewerCosts) && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="border-yellow-300 text-yellow-800 hover:bg-yellow-100 dark:border-yellow-600 dark:text-yellow-200 dark:hover:bg-yellow-800/20"
-                        onClick={() => {
-                          setShowForm(true);
-                          form.reset({
-                            category: "spec-office",
-                            description: `Spec Office Costs for ${mismatch.bayNames.join(', ')}`,
-                            totalCost: 0,
-                            allocationType: "bay-specific",
-                            applicableBays: availableBays.filter(bay => bay.hasSpeculativeOffice).map(bay => bay.id) || [],
-                            notes: "Auto-suggested based on bay configuration",
-                          });
-                        }}
-                      >
-                        + Add Spec Office Costs
-                      </Button>
-                    )}
+                    <div className="flex gap-2">
+                      {(mismatch.hasNoCosts || mismatch.hasFewerCosts) && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-yellow-300 text-yellow-800 hover:bg-yellow-100 dark:border-yellow-600 dark:text-yellow-200 dark:hover:bg-yellow-800/20"
+                          onClick={() => {
+                            setShowForm(true);
+                            form.reset({
+                              category: "spec-office",
+                              description: `Spec Office Costs for ${mismatch.bayNames.join(', ')}`,
+                              totalCost: 0,
+                              allocationType: "bay-specific",
+                              applicableBays: availableBays.filter(bay => bay.hasSpeculativeOffice).map(bay => bay.id) || [],
+                              notes: "Auto-suggested based on bay configuration",
+                            });
+                          }}
+                        >
+                          + Add Spec Office Costs
+                        </Button>
+                      )}
+                      {mismatch.hasMoreCosts && (
+                        <div className="space-y-2">
+                          <p className="text-xs text-yellow-700 dark:text-yellow-300">
+                            💡 <strong>Suggestion:</strong> You have extra spec office cost entries. Delete the duplicate entries or mark additional bays as having spec offices.
+                          </p>
+                          {(() => {
+                            const specOfficeImprovements = improvements.filter(imp => imp.category === 'spec-office');
+                            const baysWithSpecOffice = currentProperty.bayConfigurations?.filter(bay => bay.hasSpeculativeOffice) || [];
+                            
+                            // Find entries that don't match any bay with spec office
+                            const unmatchedEntries = specOfficeImprovements.filter(imp => {
+                              if (imp.allocationType !== 'bay-specific' || !imp.applicableBays) return false;
+                              return imp.applicableBays.some(bayId => 
+                                !baysWithSpecOffice.some(bay => bay.id === bayId)
+                              );
+                            });
+
+                            if (unmatchedEntries.length > 0) {
+                              return (
+                                <div className="flex items-center gap-2 text-xs">
+                                  <span className="text-yellow-700 dark:text-yellow-300">
+                                    {unmatchedEntries.length} entr{unmatchedEntries.length > 1 ? 'ies' : 'y'} assigned to bays without spec office designation
+                                  </span>
+                                  <Button
+                                    size="sm"
+                                    variant="destructive"
+                                    className="h-6 text-xs px-2"
+                                    onClick={async () => {
+                                      if (confirm(`Remove ${unmatchedEntries.length} mismatched spec office cost entr${unmatchedEntries.length > 1 ? 'ies' : 'y'}?`)) {
+                                        for (const entry of unmatchedEntries) {
+                                          await deleteMutation.mutateAsync(entry.id);
+                                        }
+                                        toast({
+                                          title: "Success",
+                                          description: `Removed ${unmatchedEntries.length} mismatched entr${unmatchedEntries.length > 1 ? 'ies' : 'y'}`,
+                                        });
+                                      }
+                                    }}
+                                  >
+                                    Auto-Fix: Remove Mismatched
+                                  </Button>
+                                </div>
+                              );
+                            }
+                            return null;
+                          })()}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

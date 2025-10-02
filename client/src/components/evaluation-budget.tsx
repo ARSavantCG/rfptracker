@@ -804,8 +804,17 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
           // Include demising wall if either the left or right bay is in our selection
           const demisingData = improvement.demisingWallData;
           if (demisingData) {
+            console.log('🔍 Demising wall check:', {
+              improvementId: improvement.id,
+              leftBayId: demisingData.leftBayId,
+              rightBayId: demisingData.rightBayId,
+              selectedBayIds: selectedBayIds,
+              leftPercentage: demisingData.leftPercentage,
+              rightPercentage: demisingData.rightPercentage
+            });
             const hasLeftBay = demisingData.leftBayId && selectedBayIds.includes(demisingData.leftBayId);
             const hasRightBay = demisingData.rightBayId && selectedBayIds.includes(demisingData.rightBayId);
+            console.log('🔍 Bay match results:', { hasLeftBay, hasRightBay, willInclude: hasLeftBay || hasRightBay });
             return hasLeftBay || hasRightBay;
           }
           return false;
@@ -886,6 +895,16 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
             if (hasRightBay) {
               percentageToInclude += demisingData.rightPercentage || 50; // Default to 50% if not specified
             }
+            
+            console.log('💰 Demising wall cost calculation:', {
+              originalCost: allocatedCost,
+              hasLeftBay,
+              hasRightBay,
+              leftPercentage: demisingData.leftPercentage,
+              rightPercentage: demisingData.rightPercentage,
+              percentageToInclude,
+              calculatedCost: (allocatedCost * percentageToInclude) / 100
+            });
             
             // Apply the percentage to the total cost
             allocatedCost = (allocatedCost * percentageToInclude) / 100;

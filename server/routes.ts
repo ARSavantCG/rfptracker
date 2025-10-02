@@ -3886,6 +3886,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get list of RFPs with evaluation budgets for import
+  app.get("/api/evaluation-budgets/available-for-import", requireAuth, async (req, res) => {
+    try {
+      const rfps = await storage.getAllRfps();
+      
+      // Get RFPs with evaluation budgets
+      const rfpsWithBudgets = [];
+      for (const rfp of rfps) {
+        try {
+          const budget = await storage.getEvaluationBudget(rfp.id);
+          if (budget && (
+            (budget.tenantImprovements && budget.tenantImprovements.length > 0) ||
+            (budget.designSoftCosts && budget.designSoftCosts.length > 0) ||
+            (budget.existingImprovements && budget.existingImprovements.length > 0)
+          )) {
+            const tiCount = budget.tenantImprovements?.length || 0;
+            const dscCount = budget.designSoftCosts?.length || 0;
+            const eiCount = budget.existingImprovements?.length || 0;
+            
+            rfpsWithBudgets.push({
+              id: rfp.id,
+              rfpNumber: rfp.rfpNumber,
+              tenantName: rfp.tenantName,
+              projectName: rfp.projectName,
+              property: rfp.property,
+              itemCount: tiCount + dscCount + eiCount,
+              tenantImprovementsCount: tiCount,
+              designSoftCostsCount: dscCount,
+              existingImprovementsCount: eiCount,
+              grandTotal: budget.grandTotal,
+            });
+          }
+        } catch (error) {
+          // Skip RFPs without budgets
+          continue;
+        }
+      }
+
+      res.json(rfpsWithBudgets);
+    } catch (error) {
+      console.error('Error fetching RFPs with budgets:', error);
+      res.status(500).json({ message: "Failed to fetch RFPs with budgets" });
+    }
+  });
+
   // Clean up orphaned assembly items in evaluation budget
   app.post("/api/rfp-requests/:rfpId/evaluation-budget/cleanup-assemblies", requireAuth, async (req, res) => {
     try {

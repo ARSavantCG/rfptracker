@@ -3690,11 +3690,15 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
             )}
           </div>
           <p className="text-sm text-gray-600">
-            Check this box if there are costs associated with existing improvements that need to be factored into the budget.
-            {budgetData.hasExistingImprovements && propertyImprovements && propertyImprovements.length > 0 && (
-              <span className="text-blue-600 ml-1">
-                ({propertyImprovements.length} improvements available from property)
-              </span>
+            {propertyImprovements && propertyImprovements.length > 0 ? (
+              <>
+                This property has <span className="font-semibold text-blue-600">{propertyImprovements.length} existing improvements</span> available.
+                {budgetData.hasExistingImprovements && budgetData.existingImprovements.length === 0 && (
+                  <span className="text-amber-600 ml-1">Click "Refresh from Property" to load them.</span>
+                )}
+              </>
+            ) : (
+              "Check this box if there are costs associated with existing improvements that need to be factored into the budget."
             )}
           </p>
         </CardHeader>

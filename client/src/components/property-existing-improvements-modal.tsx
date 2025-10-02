@@ -856,7 +856,8 @@ export function PropertyExistingImprovementsModal({
                           </div>
                         </div>
 
-                        {improvement.applicableBays && improvement.applicableBays.length > 0 && (
+                        {(improvement.allocationType === 'bay-specific' || improvement.allocationType === 'demising-wall') && 
+                         improvement.applicableBays && improvement.applicableBays.length > 0 && (
                           <div className="mt-2">
                             <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
                               Applicable Bays: 

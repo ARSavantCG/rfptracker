@@ -100,9 +100,18 @@ export function PropertyExistingImprovementsModal({
     enabled: !!property.id, // Always load data, not just when modal is open
   });
 
+  // Fetch fresh property data to get current bay configurations
+  const { data: freshProperty } = useQuery<Property>({
+    queryKey: [`/api/properties/${property.id}`],
+    enabled: !!property.id && open, // Only fetch when modal is open
+  });
+
+  // Use fresh property data if available, otherwise fall back to prop
+  const currentProperty = freshProperty || property;
+
   // Check for spec office mismatch - more sophisticated logic
   const getSpecOfficeMismatch = () => {
-    const baysWithSpecOffice = property.bayConfigurations?.filter(bay => bay.hasSpeculativeOffice) || [];
+    const baysWithSpecOffice = currentProperty.bayConfigurations?.filter(bay => bay.hasSpeculativeOffice) || [];
     const specOfficeImprovements = improvements.filter(imp => imp.category === 'spec-office');
     
     const baysCount = baysWithSpecOffice.length;
@@ -223,7 +232,7 @@ export function PropertyExistingImprovementsModal({
 
   // Generate all available bay options including split configurations
   const getAllAvailableBays = () => {
-    const sortedBayConfigs = [...(property.bayConfigurations || [])].sort((a, b) => {
+    const sortedBayConfigs = [...(currentProperty.bayConfigurations || [])].sort((a, b) => {
       const aMatch = a.bayName.match(/Bay (\d+)-(\d+)/);
       const bMatch = b.bayName.match(/Bay (\d+)-(\d+)/);
       if (!aMatch || !bMatch) return a.bayName.localeCompare(b.bayName);
@@ -315,7 +324,7 @@ export function PropertyExistingImprovementsModal({
         // Add visual indicator if there's a mismatch (only when data is loaded)
         (() => {
           if (isLoading) return ''; // Don't show warning while loading
-          const baysWithSpecOffice = property.bayConfigurations?.filter(bay => bay.hasSpeculativeOffice) || [];
+          const baysWithSpecOffice = currentProperty.bayConfigurations?.filter(bay => bay.hasSpeculativeOffice) || [];
           const specOfficeImprovements = (improvements || []).filter(imp => imp.category === 'spec-office');
           const baysCount = baysWithSpecOffice.length;
           const costsCount = specOfficeImprovements.length;
@@ -327,7 +336,7 @@ export function PropertyExistingImprovementsModal({
         Manage Costs in Place
         {(() => {
           if (isLoading) return null; // Don't show warning icon while loading
-          const baysWithSpecOffice = property.bayConfigurations?.filter(bay => bay.hasSpeculativeOffice) || [];
+          const baysWithSpecOffice = currentProperty.bayConfigurations?.filter(bay => bay.hasSpeculativeOffice) || [];
           const specOfficeImprovements = (improvements || []).filter(imp => imp.category === 'spec-office');
           const baysCount = baysWithSpecOffice.length;
           const costsCount = specOfficeImprovements.length;
@@ -879,7 +888,7 @@ export function PropertyExistingImprovementsModal({
                                 
                                 // If not found in available bays, check if it's an original bay configuration
                                 // (this handles legacy improvements that might reference original bay IDs)
-                                const bay = property.bayConfigurations?.find(b => b.id === bayId);
+                                const bay = currentProperty.bayConfigurations?.find(b => b.id === bayId);
                                 if (bay) {
                                   return (
                                     <span key={bayId} className="px-2 py-1 bg-slate-200 dark:bg-slate-600 rounded text-xs">

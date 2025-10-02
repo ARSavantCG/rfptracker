@@ -964,7 +964,45 @@ export function PropertyExistingImprovementsModal({
                           </div>
                         </div>
 
-                        {(improvement.allocationType === 'bay-specific' || improvement.allocationType === 'demising-wall') && 
+                        {/* Display demising wall bay information */}
+                        {improvement.allocationType === 'demising-wall' && improvement.demisingWallData && (
+                          <div className="mt-2">
+                            <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                              Applicable Bays: 
+                            </span>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {improvement.demisingWallData.leftBayId && (() => {
+                                const leftBay = availableBays.find(b => b.id === improvement.demisingWallData?.leftBayId) || 
+                                              currentProperty.bayConfigurations?.find(b => b.id === improvement.demisingWallData?.leftBayId);
+                                if (leftBay) {
+                                  return (
+                                    <span key={improvement.demisingWallData.leftBayId} className="px-2 py-1 bg-slate-200 dark:bg-slate-600 rounded text-xs">
+                                      {leftBay.bayName}
+                                      {improvement.demisingWallData.leftPercentage && ` (${improvement.demisingWallData.leftPercentage}%)`}
+                                    </span>
+                                  );
+                                }
+                                return null;
+                              })()}
+                              {improvement.demisingWallData.rightBayId && (() => {
+                                const rightBay = availableBays.find(b => b.id === improvement.demisingWallData?.rightBayId) || 
+                                               currentProperty.bayConfigurations?.find(b => b.id === improvement.demisingWallData?.rightBayId);
+                                if (rightBay) {
+                                  return (
+                                    <span key={improvement.demisingWallData.rightBayId} className="px-2 py-1 bg-slate-200 dark:bg-slate-600 rounded text-xs">
+                                      {rightBay.bayName}
+                                      {improvement.demisingWallData.rightPercentage && ` (${improvement.demisingWallData.rightPercentage}%)`}
+                                    </span>
+                                  );
+                                }
+                                return null;
+                              })()}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Display bay-specific bay information */}
+                        {improvement.allocationType === 'bay-specific' && 
                          improvement.applicableBays && improvement.applicableBays.length > 0 && (
                           <div className="mt-2">
                             <span className="text-sm font-medium text-slate-600 dark:text-slate-400">

@@ -800,6 +800,17 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
           return true; // Include prorated improvements (will be calculated proportionally)
         }
         
+        if (improvement.allocationType === 'demising-wall') {
+          // Include demising wall if either the left or right bay is in our selection
+          const demisingData = improvement.demisingWallData;
+          if (demisingData) {
+            const hasLeftBay = demisingData.leftBayId && selectedBayIds.includes(demisingData.leftBayId);
+            const hasRightBay = demisingData.rightBayId && selectedBayIds.includes(demisingData.rightBayId);
+            return hasLeftBay || hasRightBay;
+          }
+          return false;
+        }
+        
         return false;
       })
       .map((improvement: any) => {
@@ -858,6 +869,31 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
             unitPrice = allocatedCost / quantity;
           } else {
             // No applicable bays selected, skip this improvement
+            return null;
+          }
+        } else if (improvement.allocationType === 'demising-wall') {
+          // For demising walls, calculate cost based on which bay(s) are selected
+          const demisingData = improvement.demisingWallData;
+          if (demisingData) {
+            const hasLeftBay = demisingData.leftBayId && selectedBayIds.includes(demisingData.leftBayId);
+            const hasRightBay = demisingData.rightBayId && selectedBayIds.includes(demisingData.rightBayId);
+            
+            // Calculate percentage of cost to include based on selected bays
+            let percentageToInclude = 0;
+            if (hasLeftBay) {
+              percentageToInclude += demisingData.leftPercentage || 50; // Default to 50% if not specified
+            }
+            if (hasRightBay) {
+              percentageToInclude += demisingData.rightPercentage || 50; // Default to 50% if not specified
+            }
+            
+            // Apply the percentage to the total cost
+            allocatedCost = (allocatedCost * percentageToInclude) / 100;
+            unitPrice = allocatedCost;
+            quantity = 1;
+            unit = 'ea';
+          } else {
+            // No demising data, skip this improvement
             return null;
           }
         }

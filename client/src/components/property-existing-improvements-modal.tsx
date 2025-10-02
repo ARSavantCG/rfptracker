@@ -111,18 +111,33 @@ export function PropertyExistingImprovementsModal({
   // Use fresh property data if available, otherwise fall back to prop
   const currentProperty = freshProperty || property;
 
-  // Check for spec office mismatch - more sophisticated logic
+  // Check for spec office mismatch - more sophisticated logic including split bays
   const getSpecOfficeMismatch = () => {
-    const baysWithSpecOffice = currentProperty.bayConfigurations?.filter(bay => bay.hasSpeculativeOffice) || [];
+    const bayConfigs = currentProperty.bayConfigurations || [];
     const specOfficeImprovements = improvements.filter(imp => imp.category === 'spec-office');
     
-    const baysCount = baysWithSpecOffice.length;
+    // Count all bays with spec office (including split bays)
+    const bayNamesWithSpecOffice: string[] = [];
+    bayConfigs.forEach(bay => {
+      if (bay.hasSpeculativeOffice) {
+        bayNamesWithSpecOffice.push(bay.bayName);
+      }
+      // Also count split bays with spec office
+      if (bay.splitNorthOffice) {
+        bayNamesWithSpecOffice.push(`${bay.bayName} North`);
+      }
+      if (bay.splitSouthOffice) {
+        bayNamesWithSpecOffice.push(`${bay.bayName} South`);
+      }
+    });
+    
+    const baysCount = bayNamesWithSpecOffice.length;
     const costsCount = specOfficeImprovements.length;
     
     // Determine mismatch types
     const hasNoCosts = baysCount > 0 && costsCount === 0;
     const hasFewerCosts = baysCount > costsCount && costsCount > 0;
-    const hasMoreCosts = costsCount > baysCount && costsCount > 0;  // Fixed: only need costsCount > 0
+    const hasMoreCosts = costsCount > baysCount && costsCount > 0;
     const hasMismatch = hasNoCosts || hasFewerCosts || hasMoreCosts;
     
     // Generate appropriate warning message
@@ -143,7 +158,7 @@ export function PropertyExistingImprovementsModal({
       hasFewerCosts,
       hasMoreCosts,
       warningMessage,
-      bayNames: baysWithSpecOffice.map(bay => bay.bayName)
+      bayNames: bayNamesWithSpecOffice
     };
   };
 
@@ -326,9 +341,17 @@ export function PropertyExistingImprovementsModal({
         // Add visual indicator if there's a mismatch (only when data is loaded)
         (() => {
           if (isLoading) return ''; // Don't show warning while loading
-          const baysWithSpecOffice = currentProperty.bayConfigurations?.filter(bay => bay.hasSpeculativeOffice) || [];
+          const bayConfigs = currentProperty.bayConfigurations || [];
           const specOfficeImprovements = (improvements || []).filter(imp => imp.category === 'spec-office');
-          const baysCount = baysWithSpecOffice.length;
+          
+          // Count all bays with spec office (including split bays)
+          let baysCount = 0;
+          bayConfigs.forEach(bay => {
+            if (bay.hasSpeculativeOffice) baysCount++;
+            if (bay.splitNorthOffice) baysCount++;
+            if (bay.splitSouthOffice) baysCount++;
+          });
+          
           const costsCount = specOfficeImprovements.length;
           const hasMismatch = (baysCount > 0 && costsCount === 0) || (baysCount > costsCount && costsCount > 0) || (costsCount > baysCount && costsCount > 0);
           return hasMismatch ? 'border-yellow-300 bg-yellow-50 text-yellow-800 hover:bg-yellow-100' : '';
@@ -338,9 +361,17 @@ export function PropertyExistingImprovementsModal({
         Manage Costs in Place
         {(() => {
           if (isLoading) return null; // Don't show warning icon while loading
-          const baysWithSpecOffice = currentProperty.bayConfigurations?.filter(bay => bay.hasSpeculativeOffice) || [];
+          const bayConfigs = currentProperty.bayConfigurations || [];
           const specOfficeImprovements = (improvements || []).filter(imp => imp.category === 'spec-office');
-          const baysCount = baysWithSpecOffice.length;
+          
+          // Count all bays with spec office (including split bays)
+          let baysCount = 0;
+          bayConfigs.forEach(bay => {
+            if (bay.hasSpeculativeOffice) baysCount++;
+            if (bay.splitNorthOffice) baysCount++;
+            if (bay.splitSouthOffice) baysCount++;
+          });
+          
           const costsCount = specOfficeImprovements.length;
           const hasMismatch = (baysCount > 0 && costsCount === 0) || (baysCount > costsCount && costsCount > 0) || (costsCount > baysCount && costsCount > 0);
           return hasMismatch ? (
@@ -416,14 +447,30 @@ export function PropertyExistingImprovementsModal({
                           </p>
                           {(() => {
                             const specOfficeImprovements = improvements.filter(imp => imp.category === 'spec-office');
-                            const baysWithSpecOffice = currentProperty.bayConfigurations?.filter(bay => bay.hasSpeculativeOffice) || [];
+                            const bayConfigs = currentProperty.bayConfigurations || [];
                             
-                            // Find entries that don't match any bay with spec office
+                            // Build set of all valid bay IDs (including split bays)
+                            // IMPORTANT: Add split bay IDs regardless of base hasSpeculativeOffice flag
+                            const validBayIds = new Set<string>();
+                            bayConfigs.forEach(bay => {
+                              // Add base bay ID if it has spec office OR if any split section has spec office
+                              // (legacy data may reference parent ID even when only splits have spec office)
+                              if (bay.hasSpeculativeOffice || bay.splitNorthOffice || bay.splitSouthOffice) {
+                                validBayIds.add(bay.id);
+                              }
+                              // ALWAYS check split flags independently of base flag
+                              if (bay.splitNorthOffice) {
+                                validBayIds.add(`${bay.id}_north`);
+                              }
+                              if (bay.splitSouthOffice) {
+                                validBayIds.add(`${bay.id}_south`);
+                              }
+                            });
+                            
+                            // Find entries that don't match any bay with spec office (including split bays)
                             const unmatchedEntries = specOfficeImprovements.filter(imp => {
                               if (imp.allocationType !== 'bay-specific' || !imp.applicableBays) return false;
-                              return imp.applicableBays.some(bayId => 
-                                !baysWithSpecOffice.some(bay => bay.id === bayId)
-                              );
+                              return imp.applicableBays.some(bayId => !validBayIds.has(bayId));
                             });
 
                             if (unmatchedEntries.length > 0) {

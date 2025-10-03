@@ -169,7 +169,7 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
         description: "Bay configurations updated successfully",
         duration: 4000,
       });
-      setIsOpen(false);
+      // Don't close the dialog - let users continue editing other bays
     },
     onError: (error) => {
       toast({

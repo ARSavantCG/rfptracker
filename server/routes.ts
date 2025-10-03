@@ -1658,19 +1658,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "RFP request not found" });
       }
 
+      console.log(`🔍 LIVE DATA FETCH for ${rfp.rfpNumber}: propertyId=${rfp.propertyId}, selectedBayIds=${rfp.selectedBayIds?.length || 0}, property=${rfp.property}, bayConfigsCount=${rfp.selectedBayConfigurations?.length || 0}`);
+
       // ALWAYS fetch live bay data from properties (single source of truth)
       // Single building with bay IDs (new approach)
       if (rfp.propertyId && rfp.selectedBayIds && rfp.selectedBayIds.length > 0) {
+        console.log(`✅ NEW APPROACH: Fetching live bays for property ${rfp.propertyId}`);
         const property = await storage.getProperty(rfp.propertyId);
         if (property?.bayConfigurations) {
           const liveBays = property.bayConfigurations.filter((bay: any) => 
             rfp.selectedBayIds!.includes(bay.id)
           );
+          console.log(`📦 Fetched ${liveBays.length} live bays from property`);
           rfp.selectedBayConfigurations = liveBays;
         }
       }
       // Multi-building with bay IDs per building
       else if (rfp.bayIdsPerBuilding && Object.keys(rfp.bayIdsPerBuilding).length > 0) {
+        console.log(`✅ MULTI-BUILDING: Fetching live bays`);
         const allLiveBays: any[] = [];
         for (const [propertyIdStr, bayIds] of Object.entries(rfp.bayIdsPerBuilding)) {
           const propId = parseInt(propertyIdStr);
@@ -1686,9 +1691,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       // Legacy: property field contains property ID as string/number
       else if (rfp.property) {
+        console.log(`⚠️ LEGACY RFP: Using property field ${rfp.property}`);
         const propertyId = parseInt(String(rfp.property));
         if (!isNaN(propertyId)) {
           const property = await storage.getProperty(propertyId);
+          console.log(`📍 Found property ${property?.propertyName} with ${property?.bayConfigurations?.length} bays`);
           if (property?.bayConfigurations && rfp.selectedBayConfigurations) {
             // Match by bay name for legacy RFPs
             const liveBays = rfp.selectedBayConfigurations.map((selectedBay: any) => {
@@ -1697,10 +1704,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
               );
               return matchedBay || selectedBay;
             });
+            console.log(`🔄 Replaced ${liveBays.filter((b: any, i: number) => b !== rfp.selectedBayConfigurations[i]).length} bays with live data`);
             rfp.selectedBayConfigurations = liveBays;
           }
         }
       }
+
+      const totalSF = rfp.selectedBayConfigurations?.reduce((sum: number, bay: any) => 
+        sum + (bay.rentableSquareFootage || bay.squareFootage || 0), 0
+      ) || 0;
+      console.log(`📊 Total SF being returned: ${totalSF}`);
 
       res.json(rfp);
     } catch (error) {

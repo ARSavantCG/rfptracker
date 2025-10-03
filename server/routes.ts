@@ -1347,12 +1347,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // LEGACY SUPPORT: Try to infer bay data for old RFPs by matching bay names
       // This handles existing RFPs that don't have bay IDs
       if (rfp.property && rfp.selectedBayConfigurations && rfp.selectedBayConfigurations.length > 0) {
-        // Find property by name (property field contains property display name)
-        const allProperties = await storage.getAllProperties();
-        const property = allProperties.find((p: any) => 
-          rfp.property.includes(p.propertyName) || 
-          rfp.property === p.displayName
-        );
+        let property;
+        
+        // Try to parse property field as ID first (old RFPs store numeric ID as string)
+        const propertyIdFromString = parseInt(rfp.property);
+        if (!isNaN(propertyIdFromString)) {
+          property = await storage.getProperty(propertyIdFromString);
+          console.log(`🔍 Legacy RFP ${rfp.rfpNumber}: Found property by ID ${propertyIdFromString}`);
+        }
+        
+        // If that didn't work, try matching by name
+        if (!property) {
+          const allProperties = await storage.getAllProperties();
+          property = allProperties.find((p: any) => 
+            rfp.property.includes(p.propertyName) || 
+            rfp.property === p.displayName
+          );
+          if (property) {
+            console.log(`🔍 Legacy RFP ${rfp.rfpNumber}: Found property by name match`);
+          }
+        }
         
         if (property && property.bayConfigurations) {
           // Match bays by bay name
@@ -1364,7 +1378,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             return liveBay || snapshotBay;
           });
           
-          console.log(`🔄 Legacy RFP ${rfp.rfpNumber}: Hydrated ${liveBays.filter((b: any, i: number) => b !== rfp.selectedBayConfigurations[i]).length} bays with live data`);
+          const hydratedCount = liveBays.filter((b: any, i: number) => b !== rfp.selectedBayConfigurations[i]).length;
+          console.log(`🔄 Legacy RFP ${rfp.rfpNumber}: Hydrated ${hydratedCount} of ${rfp.selectedBayConfigurations.length} bays with live data`);
           
           return {
             ...rfp,

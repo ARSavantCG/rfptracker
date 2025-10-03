@@ -271,7 +271,7 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
     const newBayConfig: BayConfiguration = {
       id: Date.now().toString(),
       bayName: `Bay ${startBayNum}-${endBayNum}`,
-      squareFootage: parseInt(newBay.squareFootage),
+      squareFootage: parseFloat(newBay.squareFootage) || 0,
       standardDockDoors: parseInt(newBay.standardDockDoors) || 0,
       oversizedDockDoors: parseInt(newBay.oversizedDockDoors) || 0,
       hasStorefrontEntry: newBay.hasStorefrontEntry,
@@ -429,7 +429,7 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
     const updatedBay: BayConfiguration = {
       ...editingBay,
       bayName: `Bay ${startBayNum}-${endBayNum}`,
-      squareFootage: parseInt(newBay.squareFootage),
+      squareFootage: parseFloat(newBay.squareFootage) || 0,
       standardDockDoors: parseInt(newBay.standardDockDoors) || 0,
       oversizedDockDoors: parseInt(newBay.oversizedDockDoors) || 0,
       hasStorefrontEntry: newBay.hasStorefrontEntry,
@@ -603,19 +603,19 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                 <div className="grid grid-cols-3 gap-6">
                   <div className="text-center">
                     <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                      {Math.round(totalSquareFootage).toLocaleString()} SF
+                      {totalSquareFootage.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} SF
                     </div>
                     <div className="text-sm text-gray-600 dark:text-gray-400">Bay Configurations</div>
                   </div>
                   <div className="text-center">
                     <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                      {Math.round(parseFloat(mechanicalRoomSF) || 0).toLocaleString()} SF
+                      {(parseFloat(mechanicalRoomSF) || 0).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} SF
                     </div>
                     <div className="text-sm text-gray-600 dark:text-gray-400">Mechanical Rooms</div>
                   </div>
                   <div className="text-center">
                     <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                      {Math.round(totalSquareFootage + (parseFloat(mechanicalRoomSF) || 0)).toLocaleString()} SF
+                      {(totalSquareFootage + (parseFloat(mechanicalRoomSF) || 0)).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} SF
                     </div>
                     <div className="text-sm text-gray-600 dark:text-gray-400">Total</div>
                   </div>
@@ -816,11 +816,12 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                   <Input
                     id="squareFootage"
                     type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
+                    inputMode="decimal"
+                    pattern="[0-9]*\.?[0-9]*"
                     value={newBay.squareFootage}
                     onChange={(e) => setNewBay({ ...newBay, squareFootage: e.target.value })}
                     className="[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    placeholder="e.g. 10534.5"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-6">
@@ -913,10 +914,10 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                             <FormulaInput
                               value={newBay.splitNorthSquareFootage}
                               onChange={(value, evaluatedValue) => {
-                                const totalBayArea = parseInt(newBay.squareFootage) || 0;
+                                const totalBayArea = parseFloat(newBay.squareFootage) || 0;
                                 
                                 // Use evaluated value if available, otherwise parse the raw value
-                                const northNum = evaluatedValue !== undefined ? evaluatedValue : (parseInt(String(value)) || 0);
+                                const northNum = evaluatedValue !== undefined ? evaluatedValue : (parseFloat(String(value)) || 0);
                                 const southNum = totalBayArea - northNum;
                                 
                                 setNewBay({ 
@@ -968,10 +969,10 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                             <FormulaInput
                               value={newBay.splitSouthSquareFootage}
                               onChange={(value, evaluatedValue) => {
-                                const totalBayArea = parseInt(newBay.squareFootage) || 0;
+                                const totalBayArea = parseFloat(newBay.squareFootage) || 0;
                                 
                                 // Use evaluated value if available, otherwise parse the raw value
-                                const southNum = evaluatedValue !== undefined ? evaluatedValue : (parseInt(String(value)) || 0);
+                                const southNum = evaluatedValue !== undefined ? evaluatedValue : (parseFloat(String(value)) || 0);
                                 const northNum = totalBayArea - southNum;
                                 
                                 setNewBay({ 
@@ -1035,7 +1036,7 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
 
                         const northValue = evaluateValue(newBay.splitNorthSquareFootage);
                         const southValue = evaluateValue(newBay.splitSouthSquareFootage);
-                        const totalBayArea = parseInt(newBay.squareFootage) || 0;
+                        const totalBayArea = parseFloat(newBay.squareFootage) || 0;
 
                         return (
                           <>
@@ -1167,11 +1168,12 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                                   <Input
                                     id="squareFootage"
                                     type="text"
-                                    inputMode="numeric"
-                                    pattern="[0-9]*"
+                                    inputMode="decimal"
+                                    pattern="[0-9]*\.?[0-9]*"
                                     value={newBay.squareFootage}
                                     onChange={(e) => setNewBay({ ...newBay, squareFootage: e.target.value })}
                                     className="[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                    placeholder="e.g. 10534.5"
                                   />
                                 </div>
                                 <div className="space-y-2">
@@ -1263,10 +1265,10 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                                           <FormulaInput
                                             value={newBay.splitNorthSquareFootage}
                                             onChange={(value, evaluatedValue) => {
-                                              const totalBayArea = parseInt(newBay.squareFootage) || 0;
+                                              const totalBayArea = parseFloat(newBay.squareFootage) || 0;
                                               
                                               // Use evaluated value if available, otherwise parse the raw value
-                                              const northNum = evaluatedValue !== undefined ? evaluatedValue : (parseInt(String(value)) || 0);
+                                              const northNum = evaluatedValue !== undefined ? evaluatedValue : (parseFloat(String(value)) || 0);
                                               const southNum = totalBayArea - northNum;
                                               
                                               setNewBay({ 
@@ -1352,10 +1354,10 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                                           <FormulaInput
                                             value={newBay.splitSouthSquareFootage}
                                             onChange={(value, evaluatedValue) => {
-                                              const totalBayArea = parseInt(newBay.squareFootage) || 0;
+                                              const totalBayArea = parseFloat(newBay.squareFootage) || 0;
                                               
                                               // Use evaluated value if available, otherwise parse the raw value
-                                              const southNum = evaluatedValue !== undefined ? evaluatedValue : (parseInt(String(value)) || 0);
+                                              const southNum = evaluatedValue !== undefined ? evaluatedValue : (parseFloat(String(value)) || 0);
                                               const northNum = totalBayArea - southNum;
                                               
                                               setNewBay({ 
@@ -1453,7 +1455,7 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
 
                                       const northValue = evaluateValue(newBay.splitNorthSquareFootage);
                                       const southValue = evaluateValue(newBay.splitSouthSquareFootage);
-                                      const totalBayArea = parseInt(newBay.squareFootage) || 0;
+                                      const totalBayArea = parseFloat(newBay.squareFootage) || 0;
 
                                       return (
                                         <>
@@ -1494,9 +1496,9 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                             <div className="text-sm">{startBay}</div>
                             <div className="text-sm">{endBay}</div>
                             <div className="text-sm font-medium">Bay {startBay}</div>
-                            <div className="text-sm text-right">{Math.round(bay.squareFootage).toLocaleString()} SF</div>
-                            <div className="text-sm text-right">{mechanicalRoomAllocation > 0 ? Math.round(mechanicalRoomAllocation).toLocaleString() : '0'} SF</div>
-                            <div className="text-sm text-right font-medium">{Math.round(rentableSquareFootage).toLocaleString()} SF</div>
+                            <div className="text-sm text-right">{bay.squareFootage.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} SF</div>
+                            <div className="text-sm text-right">{mechanicalRoomAllocation > 0 ? mechanicalRoomAllocation.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : '0.0'} SF</div>
+                            <div className="text-sm text-right font-medium">{rentableSquareFootage.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} SF</div>
                             <div className="text-sm text-center">{bay.standardDockDoors || 0} / {bay.oversizedDockDoors || 0}</div>
                             <div className="flex justify-center gap-1">
                               <Button
@@ -1538,9 +1540,9 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                         <div></div>
                         <div></div>
                         <div className="text-sm">Total</div>
-                        <div className="text-sm text-right">{Math.round(totalSquareFootage).toLocaleString()} SF</div>
-                        <div className="text-sm text-right">{Math.round(parseFloat(mechanicalRoomSF) || 0).toLocaleString()} SF</div>
-                        <div className="text-sm text-right">{Math.round(totalSquareFootage + (parseFloat(mechanicalRoomSF) || 0)).toLocaleString()} SF</div>
+                        <div className="text-sm text-right">{totalSquareFootage.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} SF</div>
+                        <div className="text-sm text-right">{(parseFloat(mechanicalRoomSF) || 0).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} SF</div>
+                        <div className="text-sm text-right">{(totalSquareFootage + (parseFloat(mechanicalRoomSF) || 0)).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} SF</div>
                         <div className="text-sm text-center">{totalStandardDoors} / {totalOversizedDoors}</div>
                         <div></div>
                       </div>

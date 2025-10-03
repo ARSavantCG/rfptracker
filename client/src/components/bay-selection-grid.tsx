@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Grid, Calculator, RotateCcw, Building, Building2 } from "lucide-react";
-import type { Property, BayConfiguration, BuildingCosts } from "@shared/schema";
+import type { Property, BayConfiguration, BuildingCosts, ExecutedLease } from "@shared/schema";
 
 interface BaySelectionGridProps {
   property?: Property;
@@ -38,6 +39,29 @@ export function BaySelectionGrid({
   const [selectedBaysPerBuilding, setSelectedBaysPerBuilding] = useState<{[propertyName: string]: BayConfiguration[]}>(initialSelectedBaysPerBuilding);
   const [costsPerBuilding, setCostsPerBuilding] = useState<{[propertyName: string]: BuildingCosts}>(initialCostsPerBuilding);
   const [selectedBuildingIds, setSelectedBuildingIds] = useState<{[propertyName: string]: Set<string>}>({});
+
+  // Fetch executed leases to exclude leased bays from selection
+  const { data: executedLeasesForProperty = [] } = useQuery<ExecutedLease[]>({
+    queryKey: [`/api/properties/${property?.id}/executed-leases`],
+    enabled: !!property?.id && !multiBuildingMode
+  });
+  
+  // Fetch executed leases for all properties in multi-building mode
+  const multiPropertyIds = multiBuildingMode ? properties.map(p => p.id) : [];
+  const executedLeasesQueries = multiPropertyIds.map(propId => 
+    useQuery<ExecutedLease[]>({
+      queryKey: [`/api/properties/${propId}/executed-leases`],
+      enabled: multiBuildingMode && !!propId
+    })
+  );
+  
+  // Combine all executed leases from all properties
+  const allExecutedLeases = multiBuildingMode 
+    ? executedLeasesQueries.flatMap(query => query.data || [])
+    : executedLeasesForProperty;
+  
+  // Get all leased bay IDs
+  const leasedBayIds = allExecutedLeases.flatMap(lease => lease.assignedBays || []);
 
   // Initialize single-building mode with previous selections
   useEffect(() => {
@@ -396,19 +420,24 @@ export function BaySelectionGrid({
                   {/* Bay Grid for this property */}
                   <div className="overflow-x-auto pb-2">
                     <div className="flex gap-1 justify-center" style={{ minWidth: 'max-content' }}>
-                      {propBays.filter(bay => bay && bay.id && bay.bayName).map((bay) => (
+                      {propBays.filter(bay => bay && bay.id && bay.bayName).map((bay) => {
+                        const isLeased = leasedBayIds.includes(bay.id);
+                        const isSelected = propSelectedIds.has(bay.id);
+                        
+                        return (
                         <div key={bay.id} className="flex-shrink-0">
                           <button
-                            onClick={() => toggleMultiBuildingBaySelection(`${prop.propertyName} - Building ${prop.building}`, bay.id, bay)}
+                            onClick={() => !isLeased && toggleMultiBuildingBaySelection(`${prop.propertyName} - Building ${prop.building}`, bay.id, bay)}
+                            disabled={isLeased}
                             className={`
                               w-12 h-36 p-0.5 rounded border-2 transition-all duration-200
                               flex flex-col items-center justify-center text-xs font-medium
-                              hover:shadow-md focus:outline-none focus:ring-2 focus:ring-orange-500
-                              ${propSelectedIds.has(bay.id) 
-                                ? 'ring-2 ring-orange-500 shadow-lg' 
-                                : ''
+                              ${isLeased
+                                ? 'bg-red-800 border-red-900 text-white cursor-not-allowed opacity-95'
+                                : `hover:shadow-md focus:outline-none focus:ring-2 focus:ring-orange-500
+                                   ${isSelected ? 'ring-2 ring-orange-500 shadow-lg' : ''}
+                                   ${getBayColor(isSelected)}`
                               }
-                              ${getBayColor(propSelectedIds.has(bay.id))}
                             `}
                           >
                             <div className="text-center w-full">
@@ -445,7 +474,8 @@ export function BaySelectionGrid({
                             </div>
                           </button>
                         </div>
-                      ))}
+                      );
+                      })}
                     </div>
                   </div>
                   
@@ -496,19 +526,24 @@ export function BaySelectionGrid({
             )}
             <div className="overflow-x-auto pb-4">
               <div className="flex gap-1 justify-center" style={{ minWidth: 'max-content' }}>
-                {bays.filter(bay => bay && bay.id && bay.bayName).map((bay) => (
+                {bays.filter(bay => bay && bay.id && bay.bayName).map((bay) => {
+                  const isLeased = leasedBayIds.includes(bay.id);
+                  const isSelected = selectedBayIds.has(bay.id);
+                  
+                  return (
                   <div key={bay.id} className="flex-shrink-0">
                     <button
-                      onClick={() => toggleBaySelection(bay.id)}
+                      onClick={() => !isLeased && toggleBaySelection(bay.id)}
+                      disabled={isLeased}
                       className={`
                         w-12 h-36 p-0.5 rounded border-2 transition-all duration-200
                         flex flex-col items-center justify-center text-xs font-medium
-                        hover:shadow-md focus:outline-none focus:ring-2 focus:ring-orange-500
-                        ${selectedBayIds.has(bay.id) 
-                          ? 'ring-2 ring-orange-500 shadow-lg' 
-                          : ''
+                        ${isLeased
+                          ? 'bg-red-800 border-red-900 text-white cursor-not-allowed opacity-95'
+                          : `hover:shadow-md focus:outline-none focus:ring-2 focus:ring-orange-500
+                             ${isSelected ? 'ring-2 ring-orange-500 shadow-lg' : ''}
+                             ${getBayColor(isSelected)}`
                         }
-                        ${getBayColor(selectedBayIds.has(bay.id))}
                       `}
                       data-testid={`bay-button-${getBayDisplayName(bay.bayName).replace(/\s/g, '-')}`}
                     >
@@ -546,7 +581,8 @@ export function BaySelectionGrid({
                       </div>
                     </button>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>

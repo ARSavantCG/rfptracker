@@ -54,6 +54,12 @@ export const rfpRequests = pgTable("rfp_requests", {
   files: json("files").$type<RfpFile[]>().notNull().default([]),
   selectedBayConfigurations: json("selected_bay_configurations").$type<BayConfiguration[]>().default([]),
   
+  // Bay configuration references for real-time synchronization (new approach)
+  propertyId: integer("property_id"), // Foreign key to properties table for single-building RFPs
+  selectedBayIds: json("selected_bay_ids").$type<string[]>(), // Array of bay configuration IDs for single-building
+  propertyIdsPerBuilding: json("property_ids_per_building").$type<{[propertyName: string]: number}>(), // Property IDs for multi-building
+  bayIdsPerBuilding: json("bay_ids_per_building").$type<{[propertyName: string]: string[]}>(), // Bay IDs per building for multi-building
+  
   // Validation fields for workflow progression
   isValidated: json("is_validated").default(false).$type<boolean>(),
   validationErrors: json("validation_errors").$type<string[]>().default([]),

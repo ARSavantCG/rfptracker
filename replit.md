@@ -63,6 +63,7 @@ Preferred communication style: Simple, everyday language.
     - **Enhanced Bay Configuration UX**: Comprehensive layout shift prevention ensuring bay grid remains stable during selection, professional dynamic container expansion, and improved cursor tracking.
     - **Parking Allocation Management**: Advanced parking override system with independent save functionality, professional font sizing, reset capabilities, and proportional allocation calculations.
     - **Professional Interface Design**: Implemented dashed border containers, centered empty states with icons, and smooth downward expansion without affecting upper layout elements.
+    - **Bay Directional Indicators**: Restored compass rose visual indicators in bay-selection-grid for RFP creation, showing building orientation with N/S/E/W labels and Bay 1 facing direction, available in both single and multi-building modes.
 
 ## External Dependencies
 - **Database**: PostgreSQL (Neon serverless).

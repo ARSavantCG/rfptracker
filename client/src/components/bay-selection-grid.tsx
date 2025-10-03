@@ -364,9 +364,33 @@ export function BaySelectionGrid({
                       <Building className="h-5 w-5" />
                       {prop.propertyName} - Building {prop.building}
                     </h3>
-                    <Badge variant="secondary">
-                      {propSelectedBays.length} of {propBays.length} bays
-                    </Badge>
+                    <div className="flex items-center gap-4">
+                      {/* Building Orientation Compass */}
+                      {prop.firstBayDirection && (
+                        <div className="flex items-center gap-2 bg-white border border-gray-200 rounded px-2 py-1">
+                          <div className="relative w-8 h-8">
+                            <div className="absolute inset-0 border border-gray-400 rounded-full"></div>
+                            <svg className="absolute inset-0.5 w-7 h-7" viewBox="0 0 72 72">
+                              <path d="M36 4 L37.5 32 L36 36 L34.5 32 Z" fill="#374151"/>
+                              <path d="M68 36 L40 37.5 L36 36 L40 34.5 Z" fill="#374151"/>
+                              <path d="M36 68 L34.5 40 L36 36 L37.5 40 Z" fill="#374151"/>
+                              <path d="M4 36 L32 34.5 L36 36 L32 37.5 Z" fill="#374151"/>
+                              <circle cx="36" cy="36" r="2" fill="#374151"/>
+                            </svg>
+                            <div className={`absolute -top-2 left-1/2 transform -translate-x-1/2 text-[8px] font-bold ${prop.firstBayDirection === 'north' ? 'text-red-600' : 'text-gray-700'}`}>N</div>
+                            <div className={`absolute top-1/2 -right-2 transform -translate-y-1/2 text-[8px] font-bold ${prop.firstBayDirection === 'east' ? 'text-red-600' : 'text-gray-700'}`}>E</div>
+                            <div className={`absolute -bottom-2 left-1/2 transform -translate-x-1/2 text-[8px] font-bold ${prop.firstBayDirection === 'south' ? 'text-red-600' : 'text-gray-700'}`}>S</div>
+                            <div className={`absolute top-1/2 -left-2 transform -translate-y-1/2 text-[8px] font-bold ${prop.firstBayDirection === 'west' ? 'text-red-600' : 'text-gray-700'}`}>W</div>
+                          </div>
+                          <div className="text-[9px] text-gray-600">
+                            Bay 1: <span className="font-semibold text-gray-800">{prop.firstBayDirection.toUpperCase()}</span>
+                          </div>
+                        </div>
+                      )}
+                      <Badge variant="secondary">
+                        {propSelectedBays.length} of {propBays.length} bays
+                      </Badge>
+                    </div>
                   </div>
                   
                   {/* Bay Grid for this property */}
@@ -445,6 +469,31 @@ export function BaySelectionGrid({
         ) : (
           /* Single Building Mode */
           <div className="space-y-2">
+            {/* Building Orientation Compass for Single Building */}
+            {property && property.firstBayDirection && (
+              <div className="flex justify-center mb-3">
+                <div className="flex items-center gap-2 bg-white border border-gray-200 rounded px-3 py-2 shadow-sm">
+                  <div className="relative w-10 h-10">
+                    <div className="absolute inset-0 border-2 border-gray-600 rounded-full"></div>
+                    <svg className="absolute inset-0.5 w-9 h-9" viewBox="0 0 72 72">
+                      <path d="M36 4 L37.5 32 L36 36 L34.5 32 Z" fill="#374151"/>
+                      <path d="M68 36 L40 37.5 L36 36 L40 34.5 Z" fill="#374151"/>
+                      <path d="M36 68 L34.5 40 L36 36 L37.5 40 Z" fill="#374151"/>
+                      <path d="M4 36 L32 34.5 L36 36 L32 37.5 Z" fill="#374151"/>
+                      <circle cx="36" cy="36" r="2.5" fill="#374151"/>
+                    </svg>
+                    <div className={`absolute -top-2.5 left-1/2 transform -translate-x-1/2 text-[9px] font-bold ${property.firstBayDirection === 'north' ? 'text-red-600' : 'text-gray-800'}`}>N</div>
+                    <div className={`absolute top-1/2 -right-2.5 transform -translate-y-1/2 text-[9px] font-bold ${property.firstBayDirection === 'east' ? 'text-red-600' : 'text-gray-800'}`}>E</div>
+                    <div className={`absolute -bottom-2.5 left-1/2 transform -translate-x-1/2 text-[9px] font-bold ${property.firstBayDirection === 'south' ? 'text-red-600' : 'text-gray-800'}`}>S</div>
+                    <div className={`absolute top-1/2 -left-2.5 transform -translate-y-1/2 text-[9px] font-bold ${property.firstBayDirection === 'west' ? 'text-red-600' : 'text-gray-800'}`}>W</div>
+                  </div>
+                  <div className="text-[10px] text-gray-600">
+                    <div className="font-medium">Building Orientation</div>
+                    <div>Bay 1 faces <span className="font-semibold text-gray-900">{property.firstBayDirection.charAt(0).toUpperCase() + property.firstBayDirection.slice(1)}</span></div>
+                  </div>
+                </div>
+              </div>
+            )}
             <div className="overflow-x-auto pb-4">
               <div className="flex gap-1 justify-center" style={{ minWidth: 'max-content' }}>
                 {bays.filter(bay => bay && bay.id && bay.bayName).map((bay) => (

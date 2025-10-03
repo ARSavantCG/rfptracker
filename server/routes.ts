@@ -1428,12 +1428,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Hydrate live bay configurations for all RFPs
-      const hydratedRequests = await Promise.all(
-        requests.map(rfp => hydrateLiveBayConfigurations(rfp))
+      // Fetch LIVE bay data from properties for all RFPs (single source of truth)
+      const requestsWithLiveData = await Promise.all(
+        requests.map(async (rfp) => {
+          // Single building with bay IDs
+          if (rfp.propertyId && rfp.selectedBayIds && rfp.selectedBayIds.length > 0) {
+            const property = await storage.getProperty(rfp.propertyId);
+            if (property?.bayConfigurations) {
+              rfp.selectedBayConfigurations = property.bayConfigurations.filter((bay: any) => 
+                rfp.selectedBayIds!.includes(bay.id)
+              );
+            }
+          }
+          // Multi-building with bay IDs per building
+          else if (rfp.bayIdsPerBuilding && Object.keys(rfp.bayIdsPerBuilding).length > 0) {
+            const allLiveBays: any[] = [];
+            for (const [propertyIdStr, bayIds] of Object.entries(rfp.bayIdsPerBuilding)) {
+              const propId = parseInt(propertyIdStr);
+              const property = await storage.getProperty(propId);
+              if (property?.bayConfigurations) {
+                const baysForProperty = property.bayConfigurations.filter((bay: any) => 
+                  bayIds.includes(bay.id)
+                );
+                allLiveBays.push(...baysForProperty);
+              }
+            }
+            rfp.selectedBayConfigurations = allLiveBays;
+          }
+          // Legacy: property field contains property ID
+          else if (rfp.property) {
+            const propertyId = parseInt(String(rfp.property));
+            if (!isNaN(propertyId)) {
+              const property = await storage.getProperty(propertyId);
+              if (property?.bayConfigurations && rfp.selectedBayConfigurations) {
+                rfp.selectedBayConfigurations = rfp.selectedBayConfigurations.map((selectedBay: any) => {
+                  const matchedBay = property.bayConfigurations.find((pb: any) => 
+                    pb.bayName === selectedBay.bayName
+                  );
+                  return matchedBay || selectedBay;
+                });
+              }
+            }
+          }
+          return rfp;
+        })
       );
       
-      res.json(hydratedRequests);
+      res.json(requestsWithLiveData);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch RFP requests" });
     }

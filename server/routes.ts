@@ -1306,7 +1306,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Helper function to hydrate live bay configurations from properties
   const hydrateLiveBayConfigurations = async (rfp: any) => {
     try {
-      // Single building RFP with bay IDs
+      // Single building RFP with bay IDs (new approach)
       if (rfp.propertyId && rfp.selectedBayIds && rfp.selectedBayIds.length > 0) {
         const property = await storage.getProperty(rfp.propertyId);
         if (property && property.bayConfigurations) {
@@ -1316,13 +1316,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return {
             ...rfp,
             selectedBayConfigurations: liveBays,
-            // Keep the original snapshot for reference
             _originalBaySnapshot: rfp.selectedBayConfigurations
           };
         }
       }
       
-      // Multi-building RFP with bay IDs
+      // Multi-building RFP with bay IDs (new approach)
       if (rfp.isMultiBuilding && rfp.bayIdsPerBuilding && rfp.propertyIdsPerBuilding) {
         const selectedBaysPerBuilding: {[propertyName: string]: any[]} = {};
         
@@ -1341,12 +1340,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return {
           ...rfp,
           selectedBaysPerBuilding: selectedBaysPerBuilding,
-          // Keep the original snapshot for reference
           _originalBaySnapshot: rfp.selectedBaysPerBuilding
         };
       }
       
-      // Fallback to original snapshot data (backward compatibility)
+      // LEGACY SUPPORT: Try to infer bay data for old RFPs by matching bay names
+      // This handles existing RFPs that don't have bay IDs
+      if (rfp.property && rfp.selectedBayConfigurations && rfp.selectedBayConfigurations.length > 0) {
+        // Find property by name (property field contains property display name)
+        const allProperties = await storage.getAllProperties();
+        const property = allProperties.find((p: any) => 
+          rfp.property.includes(p.propertyName) || 
+          rfp.property === p.displayName
+        );
+        
+        if (property && property.bayConfigurations) {
+          // Match bays by bay name
+          const liveBays = rfp.selectedBayConfigurations.map((snapshotBay: any) => {
+            const liveBay = property.bayConfigurations.find((bay: any) => 
+              bay.bayName === snapshotBay.bayName
+            );
+            // Use live bay data if found, otherwise keep snapshot
+            return liveBay || snapshotBay;
+          });
+          
+          console.log(`🔄 Legacy RFP ${rfp.rfpNumber}: Hydrated ${liveBays.filter((b: any, i: number) => b !== rfp.selectedBayConfigurations[i]).length} bays with live data`);
+          
+          return {
+            ...rfp,
+            selectedBayConfigurations: liveBays,
+            _wasLegacyHydrated: true,
+            _originalBaySnapshot: rfp.selectedBayConfigurations
+          };
+        }
+      }
+      
+      // Fallback to original snapshot data
       return rfp;
     } catch (error) {
       console.error('Error hydrating live bay data:', error);

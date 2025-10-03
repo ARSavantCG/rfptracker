@@ -146,6 +146,80 @@ export function BaySelectionGrid({
     return bayName; // Fallback if no match
   };
 
+  // Generate individual bays with split support
+  const generateIndividualBays = (bayConfigs: BayConfiguration[]) => {
+    const sortedBayConfigs = [...bayConfigs].sort((a, b) => {
+      const aMatch = a.bayName.match(/Bay (\d+)-(\d+)/);
+      const bMatch = b.bayName.match(/Bay (\d+)-(\d+)/);
+      if (!aMatch || !bMatch) return 0;
+      const aStart = parseInt(aMatch[1]);
+      const bStart = parseInt(bMatch[1]);
+      return aStart - bStart;
+    });
+
+    return sortedBayConfigs.flatMap((bayConfig, index) => {
+      const squareFootage = typeof bayConfig.squareFootage === 'string' 
+        ? parseInt(bayConfig.squareFootage) || 0 
+        : bayConfig.squareFootage || 0;
+      
+      if (!bayConfig || !bayConfig.bayName || !squareFootage || squareFootage === 0) {
+        return [];
+      }
+      
+      const match = bayConfig.bayName.match(/Bay (\d+)-(\d+)/);
+      if (!match) return [];
+      
+      const bayNumber = index + 1;
+      
+      // If this bay is splittable, create north and south halves
+      if (bayConfig.canBeSplit) {
+        return [
+          // North half
+          {
+            ...bayConfig,
+            id: `${bayConfig.id}_north`,
+            bayNumber: bayNumber,
+            bayName: `Bay ${bayNumber} North`,
+            originalBayName: `${bayConfig.bayName} North`,
+            squareFootage: bayConfig.splitNorthSquareFootage || Math.floor(squareFootage / 2),
+            standardDockDoors: bayConfig.splitNorthDockDoors || Math.floor((bayConfig.standardDockDoors || 0) / 2),
+            oversizedDockDoors: bayConfig.splitNorthOversizedDoors || Math.floor((bayConfig.oversizedDockDoors || 0) / 2),
+            hasStorefrontEntry: bayConfig.splitNorthStorefront === true,
+            hasSpeculativeOffice: bayConfig.splitNorthOffice === true,
+            hasRestroom: bayConfig.splitNorthRestroom === true,
+            isSplitBay: true,
+            splitSide: 'north' as const,
+            parentBayId: bayConfig.id
+          },
+          // South half
+          {
+            ...bayConfig,
+            id: `${bayConfig.id}_south`,
+            bayNumber: bayNumber,
+            bayName: `Bay ${bayNumber} South`,
+            originalBayName: `${bayConfig.bayName} South`,
+            squareFootage: bayConfig.splitSouthSquareFootage || Math.ceil(squareFootage / 2),
+            standardDockDoors: bayConfig.splitSouthDockDoors || Math.ceil((bayConfig.standardDockDoors || 0) / 2),
+            oversizedDockDoors: bayConfig.splitSouthOversizedDoors || Math.ceil((bayConfig.oversizedDockDoors || 0) / 2),
+            hasStorefrontEntry: bayConfig.splitSouthStorefront === true,
+            hasSpeculativeOffice: bayConfig.splitSouthOffice === true,
+            hasRestroom: bayConfig.splitSouthRestroom === true,
+            isSplitBay: true,
+            splitSide: 'south' as const,
+            parentBayId: bayConfig.id
+          }
+        ];
+      } else {
+        // For non-splittable bays, return the full bay
+        return [{
+          ...bayConfig,
+          bayNumber: bayNumber,
+          isSplitBay: false
+        }];
+      }
+    });
+  };
+
   // For single building mode, get bays from the property
   const bays = property ? getSortedBays(property) : [];
   
@@ -471,63 +545,107 @@ export function BaySelectionGrid({
                   
                   {/* Bay Grid for this property */}
                   <div className="overflow-x-auto pb-2">
-                    <div className="flex gap-1 justify-center" style={{ minWidth: 'max-content' }}>
-                      {propBays.filter(bay => bay && bay.id && bay.bayName).map((bay) => {
-                        const isLeased = leasedBayIds.includes(bay.id);
-                        const isSelected = propSelectedIds.has(bay.id);
+                    <div className="flex gap-0.5 justify-center" style={{ minWidth: 'max-content' }}>
+                      {(() => {
+                        // Generate individual bays with split support
+                        const individualBays = generateIndividualBays(prop.bayConfigurations || []);
                         
-                        return (
-                        <div key={bay.id} className="flex-shrink-0">
-                          <button
-                            onClick={() => !isLeased && toggleMultiBuildingBaySelection(`${prop.propertyName} - Building ${prop.building}`, bay.id, bay)}
-                            disabled={isLeased}
-                            className={`
-                              w-12 h-36 p-0.5 rounded border-2 transition-all duration-200
-                              flex flex-col items-center justify-center text-xs font-medium
-                              ${isLeased
-                                ? 'bg-red-800 border-red-900 text-white cursor-not-allowed opacity-95'
-                                : `hover:shadow-md focus:outline-none focus:ring-2 focus:ring-orange-500
-                                   ${isSelected ? 'ring-2 ring-orange-500 shadow-lg' : ''}
-                                   ${getBayColor(isSelected)}`
+                        // Group bays by bay number to stack split bays vertically
+                        const bayGroups = new Map<number, typeof individualBays>();
+                        individualBays.forEach((bay: any) => {
+                          if (!bayGroups.has(bay.bayNumber)) {
+                            bayGroups.set(bay.bayNumber, []);
+                          }
+                          bayGroups.get(bay.bayNumber)!.push(bay);
+                        });
+
+                        // Sort groups by bay number and render each group
+                        return Array.from(bayGroups.entries())
+                          .sort(([a], [b]) => b - a) // Reverse order for display
+                          .map(([bayNumber, baysInGroup]) => {
+                            // Sort bays within group: North first, then South
+                            const sortedBays = baysInGroup.sort((a: any, b: any) => {
+                              if (a.isSplitBay && b.isSplitBay) {
+                                return a.splitSide === 'north' ? -1 : 1;
                               }
-                            `}
-                          >
-                            <div className="text-center w-full">
-                              <div className="font-bold" style={{fontSize: '9px', lineHeight: '10px', marginBottom: '2px'}}>{getBayDisplayName(bay.bayName)}</div>
-                              <div className="text-gray-600" style={{fontSize: '8px', lineHeight: '9px', marginBottom: '2px'}}>{Math.round((bay.rentableSquareFootage || bay.squareFootage) / 1000)}k</div>
-                              
-                              {/* Vertical Stack: Doors → Amenities */}
-                              <div className="flex flex-col items-center gap-px">
-                                {/* Standard Dock Doors */}
-                                {bay.standardDockDoors > 0 && (
-                                  <span className="text-blue-600" style={{fontSize: '8px', lineHeight: '9px'}} title={`${bay.standardDockDoors} Standard Dock Doors`}>
-                                    {bay.standardDockDoors}🚛
-                                  </span>
-                                )}
-                                {/* Oversized Dock Doors */}
-                                {bay.oversizedDockDoors > 0 && (
-                                  <span className="text-purple-600" style={{fontSize: '8px', lineHeight: '9px'}} title={`${bay.oversizedDockDoors} Oversized Dock Doors`}>
-                                    {bay.oversizedDockDoors}🚚
-                                  </span>
-                                )}
-                                {/* Storefront Entry */}
-                                {bay.hasStorefrontEntry && (
-                                  <span className="text-orange-600" style={{fontSize: '10px', lineHeight: '11px'}} title="Storefront Entry">🚪</span>
-                                )}
-                                {/* Speculative Office */}
-                                {bay.hasSpeculativeOffice && (
-                                  <span className="text-blue-600" style={{fontSize: '10px', lineHeight: '11px'}} title="Speculative Office">🏢</span>
-                                )}
-                                {/* Restroom */}
-                                {bay.hasRestroom && (
-                                  <span className="text-green-600" style={{fontSize: '10px', lineHeight: '11px'}} title="Restroom">🚽</span>
-                                )}
+                              return 0;
+                            });
+
+                            return (
+                              <div key={bayNumber} className="flex flex-col gap-0.5">
+                                {sortedBays.map((bay: any) => {
+                                  const isLeased = leasedBayIds.includes(bay.id) || leasedBayIds.includes(bay.parentBayId);
+                                  const isSelected = propSelectedIds.has(bay.id);
+                                  const isSplitBay = bay.isSplitBay;
+                                  const splitSideClass = isSplitBay 
+                                    ? bay.splitSide === 'north' 
+                                      ? "border-t-2 border-t-blue-400" 
+                                      : "border-b-2 border-b-green-400"
+                                    : "";
+
+                                  return (
+                                    <div key={bay.id} className="flex-shrink-0">
+                                      <button
+                                        onClick={() => !isLeased && toggleMultiBuildingBaySelection(`${prop.propertyName} - Building ${prop.building}`, bay.id, bay)}
+                                        disabled={isLeased}
+                                        className={`
+                                          ${isSplitBay ? 'w-12 h-[72px]' : 'w-12 h-36'} p-0.5 rounded border-2 transition-all duration-200
+                                          flex flex-col items-center justify-center text-xs font-medium
+                                          ${splitSideClass}
+                                          ${isLeased
+                                            ? 'bg-red-800 border-red-900 text-white cursor-not-allowed opacity-95'
+                                            : `hover:shadow-md focus:outline-none focus:ring-2 focus:ring-orange-500
+                                               ${isSelected ? 'ring-2 ring-orange-500 shadow-lg' : ''}
+                                               ${getBayColor(isSelected)}`
+                                          }
+                                        `}
+                                      >
+                                        <div className="text-center w-full">
+                                          <div className="font-bold" style={{fontSize: '9px', lineHeight: '10px', marginBottom: '2px'}}>
+                                            {isSplitBay ? (
+                                              <>
+                                                Bay {bay.bayNumber}
+                                                <span className={`ml-0.5 text-[8px] ${bay.splitSide === 'north' ? 'text-blue-600' : 'text-green-600'}`}>
+                                                  ({bay.splitSide === 'north' ? 'N' : 'S'})
+                                                </span>
+                                              </>
+                                            ) : (
+                                              getBayDisplayName(bay.bayName)
+                                            )}
+                                          </div>
+                                          <div className="text-gray-600" style={{fontSize: '8px', lineHeight: '9px', marginBottom: '2px'}}>{Math.round((bay.rentableSquareFootage || bay.squareFootage) / 1000)}k</div>
+                                          
+                                          {/* Vertical Stack: Doors → Amenities */}
+                                          <div className="flex flex-col items-center gap-px">
+                                            {bay.standardDockDoors > 0 && (
+                                              <span className="text-blue-600" style={{fontSize: '8px', lineHeight: '9px'}} title={`${bay.standardDockDoors} Standard Dock Doors`}>
+                                                {bay.standardDockDoors}🚛
+                                              </span>
+                                            )}
+                                            {bay.oversizedDockDoors > 0 && (
+                                              <span className="text-purple-600" style={{fontSize: '8px', lineHeight: '9px'}} title={`${bay.oversizedDockDoors} Oversized Dock Doors`}>
+                                                {bay.oversizedDockDoors}🚚
+                                              </span>
+                                            )}
+                                            {bay.hasStorefrontEntry && (
+                                              <span className="text-orange-600" style={{fontSize: '10px', lineHeight: '11px'}} title="Storefront Entry">🚪</span>
+                                            )}
+                                            {bay.hasSpeculativeOffice && (
+                                              <span className="text-blue-600" style={{fontSize: '10px', lineHeight: '11px'}} title="Speculative Office">🏢</span>
+                                            )}
+                                            {bay.hasRestroom && (
+                                              <span className="text-green-600" style={{fontSize: '10px', lineHeight: '11px'}} title="Restroom">🚽</span>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </button>
+                                    </div>
+                                  );
+                                })}
                               </div>
-                            </div>
-                          </button>
-                        </div>
-                      );
-                      })}
+                            );
+                          });
+                      })()}
                     </div>
                   </div>
                   
@@ -577,64 +695,108 @@ export function BaySelectionGrid({
               </div>
             )}
             <div className="overflow-x-auto pb-4">
-              <div className="flex gap-1 justify-center" style={{ minWidth: 'max-content' }}>
-                {bays.filter(bay => bay && bay.id && bay.bayName).map((bay) => {
-                  const isLeased = leasedBayIds.includes(bay.id);
-                  const isSelected = selectedBayIds.has(bay.id);
+              <div className="flex gap-0.5 justify-center" style={{ minWidth: 'max-content' }}>
+                {(() => {
+                  // Generate individual bays with split support
+                  const individualBays = generateIndividualBays(property?.bayConfigurations || []);
                   
-                  return (
-                  <div key={bay.id} className="flex-shrink-0">
-                    <button
-                      onClick={() => !isLeased && toggleBaySelection(bay.id)}
-                      disabled={isLeased}
-                      className={`
-                        w-12 h-36 p-0.5 rounded border-2 transition-all duration-200
-                        flex flex-col items-center justify-center text-xs font-medium
-                        ${isLeased
-                          ? 'bg-red-800 border-red-900 text-white cursor-not-allowed opacity-95'
-                          : `hover:shadow-md focus:outline-none focus:ring-2 focus:ring-orange-500
-                             ${isSelected ? 'ring-2 ring-orange-500 shadow-lg' : ''}
-                             ${getBayColor(isSelected)}`
+                  // Group bays by bay number to stack split bays vertically
+                  const bayGroups = new Map<number, typeof individualBays>();
+                  individualBays.forEach((bay: any) => {
+                    if (!bayGroups.has(bay.bayNumber)) {
+                      bayGroups.set(bay.bayNumber, []);
+                    }
+                    bayGroups.get(bay.bayNumber)!.push(bay);
+                  });
+
+                  // Sort groups by bay number and render each group
+                  return Array.from(bayGroups.entries())
+                    .sort(([a], [b]) => b - a) // Reverse order for display
+                    .map(([bayNumber, baysInGroup]) => {
+                      // Sort bays within group: North first, then South
+                      const sortedBays = baysInGroup.sort((a: any, b: any) => {
+                        if (a.isSplitBay && b.isSplitBay) {
+                          return a.splitSide === 'north' ? -1 : 1;
                         }
-                      `}
-                      data-testid={`bay-button-${getBayDisplayName(bay.bayName).replace(/\s/g, '-')}`}
-                    >
-                      <div className="text-center w-full">
-                        <div className="font-bold" style={{fontSize: '9px', lineHeight: '10px', marginBottom: '2px'}}>{getBayDisplayName(bay.bayName)}</div>
-                        <div className="text-gray-600" style={{fontSize: '8px', lineHeight: '9px', marginBottom: '2px'}}>{Math.round((bay.rentableSquareFootage || bay.squareFootage) / 1000)}k</div>
-                        
-                        {/* Vertical Stack: Doors → Amenities */}
-                        <div className="flex flex-col items-center gap-px">
-                          {/* Standard Dock Doors */}
-                          {bay.standardDockDoors > 0 && (
-                            <span className="text-blue-600" style={{fontSize: '8px', lineHeight: '9px'}} title={`${bay.standardDockDoors} Standard Dock Doors`}>
-                              {bay.standardDockDoors}🚛
-                            </span>
-                          )}
-                          {/* Oversized Dock Doors */}
-                          {bay.oversizedDockDoors > 0 && (
-                            <span className="text-purple-600" style={{fontSize: '8px', lineHeight: '9px'}} title={`${bay.oversizedDockDoors} Oversized Dock Doors`}>
-                              {bay.oversizedDockDoors}🚚
-                            </span>
-                          )}
-                          {/* Storefront Entry */}
-                          {bay.hasStorefrontEntry && (
-                            <span className="text-orange-600" style={{fontSize: '10px', lineHeight: '11px'}} title="Storefront Entry">🚪</span>
-                          )}
-                          {/* Speculative Office */}
-                          {bay.hasSpeculativeOffice && (
-                            <span className="text-blue-600" style={{fontSize: '10px', lineHeight: '11px'}} title="Speculative Office">🏢</span>
-                          )}
-                          {/* Restroom */}
-                          {bay.hasRestroom && (
-                            <span className="text-green-600" style={{fontSize: '10px', lineHeight: '11px'}} title="Restroom">🚽</span>
-                          )}
+                        return 0;
+                      });
+
+                      return (
+                        <div key={bayNumber} className="flex flex-col gap-0.5">
+                          {sortedBays.map((bay: any) => {
+                            const isLeased = leasedBayIds.includes(bay.id) || leasedBayIds.includes(bay.parentBayId);
+                            const isSelected = selectedBayIds.has(bay.id);
+                            const isSplitBay = bay.isSplitBay;
+                            const splitSideClass = isSplitBay 
+                              ? bay.splitSide === 'north' 
+                                ? "border-t-2 border-t-blue-400" 
+                                : "border-b-2 border-b-green-400"
+                              : "";
+
+                            return (
+                              <div key={bay.id} className="flex-shrink-0">
+                                <button
+                                  onClick={() => !isLeased && toggleBaySelection(bay.id)}
+                                  disabled={isLeased}
+                                  className={`
+                                    ${isSplitBay ? 'w-12 h-[72px]' : 'w-12 h-36'} p-0.5 rounded border-2 transition-all duration-200
+                                    flex flex-col items-center justify-center text-xs font-medium
+                                    ${splitSideClass}
+                                    ${isLeased
+                                      ? 'bg-red-800 border-red-900 text-white cursor-not-allowed opacity-95'
+                                      : `hover:shadow-md focus:outline-none focus:ring-2 focus:ring-orange-500
+                                         ${isSelected ? 'ring-2 ring-orange-500 shadow-lg' : ''}
+                                         ${getBayColor(isSelected)}`
+                                    }
+                                  `}
+                                  data-testid={`bay-button-${getBayDisplayName(bay.bayName || `Bay ${bay.bayNumber}`).replace(/\s/g, '-')}`}
+                                >
+                                  <div className="text-center w-full">
+                                    <div className="font-bold" style={{fontSize: '9px', lineHeight: '10px', marginBottom: '2px'}}>
+                                      {isSplitBay ? (
+                                        <>
+                                          Bay {bay.bayNumber}
+                                          <span className={`ml-0.5 text-[8px] ${bay.splitSide === 'north' ? 'text-blue-600' : 'text-green-600'}`}>
+                                            ({bay.splitSide === 'north' ? 'N' : 'S'})
+                                          </span>
+                                        </>
+                                      ) : (
+                                        getBayDisplayName(bay.bayName)
+                                      )}
+                                    </div>
+                                    <div className="text-gray-600" style={{fontSize: '8px', lineHeight: '9px', marginBottom: '2px'}}>{Math.round((bay.rentableSquareFootage || bay.squareFootage) / 1000)}k</div>
+                                    
+                                    {/* Vertical Stack: Doors → Amenities */}
+                                    <div className="flex flex-col items-center gap-px">
+                                      {bay.standardDockDoors > 0 && (
+                                        <span className="text-blue-600" style={{fontSize: '8px', lineHeight: '9px'}} title={`${bay.standardDockDoors} Standard Dock Doors`}>
+                                          {bay.standardDockDoors}🚛
+                                        </span>
+                                      )}
+                                      {bay.oversizedDockDoors > 0 && (
+                                        <span className="text-purple-600" style={{fontSize: '8px', lineHeight: '9px'}} title={`${bay.oversizedDockDoors} Oversized Dock Doors`}>
+                                          {bay.oversizedDockDoors}🚚
+                                        </span>
+                                      )}
+                                      {bay.hasStorefrontEntry && (
+                                        <span className="text-orange-600" style={{fontSize: '10px', lineHeight: '11px'}} title="Storefront Entry">🚪</span>
+                                      )}
+                                      {bay.hasSpeculativeOffice && (
+                                        <span className="text-blue-600" style={{fontSize: '10px', lineHeight: '11px'}} title="Speculative Office">🏢</span>
+                                      )}
+                                      {bay.hasRestroom && (
+                                        <span className="text-green-600" style={{fontSize: '10px', lineHeight: '11px'}} title="Restroom">🚽</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </button>
+                              </div>
+                            );
+                          })}
                         </div>
-                      </div>
-                    </button>
-                  </div>
-                  );
-                })}
+                      );
+                    });
+                })()}
               </div>
             </div>
           </div>

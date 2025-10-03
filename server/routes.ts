@@ -1599,9 +1599,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get single RFP request
+  // Get single RFP request with LIVE property bay data (single source of truth)
   app.get("/api/rfp-requests/:id", async (req, res) => {
-    // Prevent caching to ensure fresh data with hydration
+    // Prevent caching to ensure fresh data
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
@@ -1612,16 +1612,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid ID" });
       }
 
-      const request = await storage.getRfpRequest(id);
-      if (!request) {
+      const rfp = await storage.getRfpRequest(id);
+      if (!rfp) {
         return res.status(404).json({ message: "RFP request not found" });
       }
 
-      // Hydrate live bay configurations
-      const hydratedRequest = await hydrateLiveBayConfigurations(request);
+      // ALWAYS fetch live bay data from properties (single source of truth)
+      // Single building with bay IDs (new approach)
+      if (rfp.propertyId && rfp.selectedBayIds && rfp.selectedBayIds.length > 0) {
+        const property = await storage.getProperty(rfp.propertyId);
+        if (property?.bayConfigurations) {
+          const liveBays = property.bayConfigurations.filter((bay: any) => 
+            rfp.selectedBayIds!.includes(bay.id)
+          );
+          rfp.selectedBayConfigurations = liveBays;
+        }
+      }
+      // Multi-building with bay IDs per building
+      else if (rfp.bayIdsPerBuilding && Object.keys(rfp.bayIdsPerBuilding).length > 0) {
+        const allLiveBays: any[] = [];
+        for (const [propertyIdStr, bayIds] of Object.entries(rfp.bayIdsPerBuilding)) {
+          const propId = parseInt(propertyIdStr);
+          const property = await storage.getProperty(propId);
+          if (property?.bayConfigurations) {
+            const baysForProperty = property.bayConfigurations.filter((bay: any) => 
+              bayIds.includes(bay.id)
+            );
+            allLiveBays.push(...baysForProperty);
+          }
+        }
+        rfp.selectedBayConfigurations = allLiveBays;
+      }
+      // Legacy: property field contains property ID as string/number
+      else if (rfp.property) {
+        const propertyId = parseInt(String(rfp.property));
+        if (!isNaN(propertyId)) {
+          const property = await storage.getProperty(propertyId);
+          if (property?.bayConfigurations && rfp.selectedBayConfigurations) {
+            // Match by bay name for legacy RFPs
+            const liveBays = rfp.selectedBayConfigurations.map((selectedBay: any) => {
+              const matchedBay = property.bayConfigurations.find((pb: any) => 
+                pb.bayName === selectedBay.bayName
+              );
+              return matchedBay || selectedBay;
+            });
+            rfp.selectedBayConfigurations = liveBays;
+          }
+        }
+      }
 
-      res.json(hydratedRequest);
+      res.json(rfp);
     } catch (error) {
+      console.error('Error fetching RFP:', error);
       res.status(500).json({ message: "Failed to fetch RFP request" });
     }
   });

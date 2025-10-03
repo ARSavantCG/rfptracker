@@ -28,6 +28,15 @@ export function RfpDetailModal({ isOpen, onClose, rfp, onRfpUpdated }: RfpDetail
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
+  // Fetch the specific RFP to get live data (bypasses prop caching)
+  const { data: liveRfp } = useQuery<RfpRequest>({
+    queryKey: [`/api/rfp-requests/${rfp?.id}`],
+    enabled: !!rfp?.id,
+  });
+
+  // Use live RFP data if available, fallback to prop
+  const displayRfp = liveRfp || rfp;
+
   // Get comprehensive file count from all workflow stages
   const { data: fileCountData } = useQuery({
     queryKey: [`/api/rfp-requests/${rfp?.id}/file-count`],
@@ -36,8 +45,8 @@ export function RfpDetailModal({ isOpen, onClose, rfp, onRfpUpdated }: RfpDetail
 
   // Get property information for project summary
   const { data: property } = useQuery({
-    queryKey: [`/api/properties/${rfp?.property}`],
-    enabled: !!rfp?.property,
+    queryKey: [`/api/properties/${displayRfp?.property}`],
+    enabled: !!displayRfp?.property,
   });
 
   const updateStatusMutation = useMutation({
@@ -148,13 +157,15 @@ export function RfpDetailModal({ isOpen, onClose, rfp, onRfpUpdated }: RfpDetail
       duration: 2000,
     });
     
-    // Force invalidate all caches to bypass 304 responses
-    await queryClient.invalidateQueries({ queryKey: ['/api/rfp-requests'] });
+    // Force invalidate and refetch the specific RFP to bypass HTTP cache
     await queryClient.invalidateQueries({ queryKey: [`/api/rfp-requests/${rfp.id}`] });
-    await queryClient.invalidateQueries({ queryKey: ['/api/properties'] });
+    await queryClient.refetchQueries({ 
+      queryKey: [`/api/rfp-requests/${rfp.id}`],
+      type: 'active'
+    });
     
-    // Refetch with cache bypass
-    await queryClient.refetchQueries({ queryKey: ['/api/rfp-requests'] });
+    // Also invalidate the list queries
+    await queryClient.invalidateQueries({ queryKey: ['/api/rfp-requests'] });
     
     toast({
       title: "Refreshed",
@@ -301,7 +312,7 @@ export function RfpDetailModal({ isOpen, onClose, rfp, onRfpUpdated }: RfpDetail
           <div className="bg-white px-6 pt-6">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">{rfp.rfpNumber} Details</h3>
+                <h3 className="text-lg font-semibold text-gray-900">{displayRfp?.rfpNumber} Details</h3>
                 <p className="text-sm text-gray-600">{rfp.projectName}</p>
               </div>
               <button 
@@ -334,7 +345,7 @@ export function RfpDetailModal({ isOpen, onClose, rfp, onRfpUpdated }: RfpDetail
                     </div>
                     <div className="flex items-start">
                       <span className="text-blue-700 font-medium">Tenant:</span>
-                      <span className="ml-2 text-blue-900">{rfp.tenantName}</span>
+                      <span className="ml-2 text-blue-900">{displayRfp?.tenantName}</span>
                     </div>
                     <div className="flex items-start">
                       <span className="text-blue-700 font-medium">Rentable Area:</span>
@@ -346,8 +357,8 @@ export function RfpDetailModal({ isOpen, onClose, rfp, onRfpUpdated }: RfpDetail
                           }
                           
                           // Calculate from selected bay configurations
-                          if (rfp.selectedBayConfigurations && rfp.selectedBayConfigurations.length > 0) {
-                            const totalRentable = rfp.selectedBayConfigurations.reduce((sum: number, bay: any) => {
+                          if (displayRfp?.selectedBayConfigurations && displayRfp.selectedBayConfigurations.length > 0) {
+                            const totalRentable = displayRfp.selectedBayConfigurations.reduce((sum: number, bay: any) => {
                               return sum + (bay.rentableSquareFootage || 0);
                             }, 0);
                             return totalRentable > 0 ? `${Math.round(totalRentable).toLocaleString()} SF` : 'Not specified';
@@ -360,7 +371,7 @@ export function RfpDetailModal({ isOpen, onClose, rfp, onRfpUpdated }: RfpDetail
                     <div className="flex items-start">
                       <span className="text-blue-700 font-medium">Bay Count:</span>
                       <span className="ml-2 text-blue-900">
-                        {rfp.selectedBayConfigurations ? `${rfp.selectedBayConfigurations.length} bays` : 'Not specified'}
+                        {displayRfp?.selectedBayConfigurations ? `${displayRfp.selectedBayConfigurations.length} bays` : 'Not specified'}
                       </span>
                     </div>
                     <div className="flex items-start">

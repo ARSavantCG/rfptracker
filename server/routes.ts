@@ -1403,6 +1403,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Get all RFP requests
   app.get("/api/rfp-requests", async (req, res) => {
+    // Prevent caching to ensure fresh data with hydration
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    
     try {
       const { search, status, include_archived } = req.query;
       
@@ -1596,6 +1601,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Get single RFP request
   app.get("/api/rfp-requests/:id", async (req, res) => {
+    // Prevent caching to ensure fresh data with hydration
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {

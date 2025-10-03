@@ -58,10 +58,10 @@ export function BaySelectionGrid({
   // Combine all executed leases from all properties
   const allExecutedLeases = multiBuildingMode 
     ? executedLeasesQueries.flatMap(query => query.data || [])
-    : executedLeasesForProperty;
+    : (executedLeasesForProperty || []);
   
   // Get all leased bay IDs
-  const leasedBayIds = allExecutedLeases.flatMap(lease => lease.assignedBays || []);
+  const leasedBayIds = (allExecutedLeases || []).flatMap(lease => lease.assignedBays || []);
 
   // Initialize single-building mode with previous selections
   useEffect(() => {
@@ -244,6 +244,48 @@ export function BaySelectionGrid({
     }
   };
 
+  // Select all available (non-leased) bays
+  const selectAllAvailable = () => {
+    if (multiBuildingMode) {
+      // Multi-building mode: select all available bays from each property
+      const newSelectedBuildingIds: {[propertyName: string]: Set<string>} = {};
+      const newSelectedBaysPerBuilding: {[propertyName: string]: BayConfiguration[]} = {};
+      
+      properties.forEach(prop => {
+        const buildingKey = `${prop.propertyName} - Building ${prop.building}`;
+        const propertyBays = getSortedBays(prop);
+        
+        // Filter out leased bays
+        const availableBays = propertyBays.filter(bay => !leasedBayIds.includes(bay.id));
+        const availableBayIds = new Set(availableBays.map(bay => bay.id));
+        
+        newSelectedBuildingIds[buildingKey] = availableBayIds;
+        newSelectedBaysPerBuilding[buildingKey] = availableBays;
+      });
+      
+      setSelectedBuildingIds(newSelectedBuildingIds);
+      setSelectedBaysPerBuilding(newSelectedBaysPerBuilding);
+      
+      // Calculate totals
+      const allSelectedBays = Object.values(newSelectedBaysPerBuilding).flat();
+      const totalSquareFootage = allSelectedBays.reduce((sum, bay) => 
+        sum + (bay.rentableSquareFootage || bay.squareFootage || 0), 0);
+      
+      onSelectionChange?.(allSelectedBays, totalSquareFootage, newSelectedBaysPerBuilding, costsPerBuilding);
+    } else {
+      // Single-building mode: select all available bays
+      const availableBays = bays.filter(bay => !leasedBayIds.includes(bay.id));
+      const availableBayIds = new Set(availableBays.map(bay => bay.id));
+      
+      setSelectedBayIds(availableBayIds);
+      
+      const totalSquareFootage = availableBays.reduce((sum, bay) => 
+        sum + (bay.rentableSquareFootage || bay.squareFootage || 0), 0);
+      
+      onSelectionChange?.(availableBays, totalSquareFootage);
+    }
+  };
+
   // Update costs for a specific building
   const updateBuildingCosts = (propertyName: string, costs: BuildingCosts) => {
     const newCostsPerBuilding = {
@@ -355,10 +397,20 @@ export function BaySelectionGrid({
               </div>
             )}
             <Button
+              variant="default"
+              size="sm"
+              onClick={selectAllAvailable}
+              data-testid="button-select-all-available"
+            >
+              <Grid className="h-4 w-4 mr-1" />
+              Select All Available
+            </Button>
+            <Button
               variant="outline"
               size="sm"
               onClick={clearSelection}
               disabled={multiBuildingMode ? Object.keys(selectedBaysPerBuilding).length === 0 : selectedBayIds.size === 0}
+              data-testid="button-clear-all"
             >
               <RotateCcw className="h-4 w-4 mr-1" />
               Clear All

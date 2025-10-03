@@ -177,11 +177,15 @@ export function BaySelectionGrid({
         const southSquareFootage = bayConfig.splitSouthSquareFootage || Math.ceil(squareFootage / 2);
         
         // Calculate proportional mechanical room allocation and rentable SF
-        const totalRentableSF = bayConfig.rentableSquareFootage || squareFootage;
-        const totalMechanicalAllocation = bayConfig.mechanicalRoomAllocation || 0;
+        const totalRentableSF = typeof bayConfig.rentableSquareFootage === 'number' 
+          ? bayConfig.rentableSquareFootage 
+          : squareFootage;
+        const totalMechanicalAllocation = typeof bayConfig.mechanicalRoomAllocation === 'number' 
+          ? bayConfig.mechanicalRoomAllocation 
+          : 0;
         
-        const northProportion = northSquareFootage / squareFootage;
-        const southProportion = southSquareFootage / squareFootage;
+        const northProportion = squareFootage > 0 ? northSquareFootage / squareFootage : 0.5;
+        const southProportion = squareFootage > 0 ? southSquareFootage / squareFootage : 0.5;
         
         const northMechanicalAllocation = Math.floor(totalMechanicalAllocation * northProportion);
         const southMechanicalAllocation = totalMechanicalAllocation - northMechanicalAllocation;
@@ -231,10 +235,23 @@ export function BaySelectionGrid({
         ];
       } else {
         // For non-splittable bays, return the full bay
+        const rentableSF = typeof bayConfig.rentableSquareFootage === 'number' 
+          ? bayConfig.rentableSquareFootage 
+          : squareFootage;
+        const mechanicalAllocation = typeof bayConfig.mechanicalRoomAllocation === 'number'
+          ? bayConfig.mechanicalRoomAllocation
+          : 0;
+        
         return [{
           ...bayConfig,
+          squareFootage: squareFootage,
+          rentableSquareFootage: rentableSF,
+          mechanicalRoomAllocation: mechanicalAllocation,
           bayNumber: bayNumber,
-          isSplitBay: false
+          isSplitBay: false,
+          originalBayName: bayConfig.bayName,
+          splitSide: undefined,
+          parentBayId: undefined
         }];
       }
     });

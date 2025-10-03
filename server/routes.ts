@@ -1305,6 +1305,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Helper function to hydrate live bay configurations from properties
   const hydrateLiveBayConfigurations = async (rfp: any) => {
+    console.log(`🔍 Hydration called for RFP ${rfp.rfpNumber}: propertyId=${rfp.propertyId}, selectedBayIds=${rfp.selectedBayIds}, property=${rfp.property}, bayConfigsLength=${rfp.selectedBayConfigurations?.length}`);
+    
     try {
       // Single building RFP with bay IDs (new approach)
       if (rfp.propertyId && rfp.selectedBayIds && rfp.selectedBayIds.length > 0) {

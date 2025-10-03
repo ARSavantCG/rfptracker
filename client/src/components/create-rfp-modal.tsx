@@ -129,6 +129,25 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
       if (multiBuildingMode) {
         formData.append('selectedBaysPerBuilding', JSON.stringify(selectedBaysPerBuilding));
         formData.append('costsPerBuilding', JSON.stringify(costsPerBuilding));
+        
+        // Extract bay IDs and property IDs for multi-building
+        const propertyIdsPerBuilding: {[propertyName: string]: number} = {};
+        const bayIdsPerBuilding: {[propertyName: string]: string[]} = {};
+        
+        for (const [propertyName, bays] of Object.entries(selectedBaysPerBuilding)) {
+          const property = properties.find(p => p.propertyName === propertyName || p.displayName === propertyName);
+          if (property) {
+            propertyIdsPerBuilding[propertyName] = property.id;
+            bayIdsPerBuilding[propertyName] = bays.map(bay => bay.id);
+          }
+        }
+        
+        formData.append('propertyIdsPerBuilding', JSON.stringify(propertyIdsPerBuilding));
+        formData.append('bayIdsPerBuilding', JSON.stringify(bayIdsPerBuilding));
+      } else if (selectedProperty && selectedBayConfigurations.length > 0) {
+        // Single building: send property ID and bay IDs
+        formData.append('propertyId', selectedProperty.id.toString());
+        formData.append('selectedBayIds', JSON.stringify(selectedBayConfigurations.map(bay => bay.id)));
       }
       
       // Append files

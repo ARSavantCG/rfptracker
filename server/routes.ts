@@ -1657,11 +1657,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.error('Failed to parse selectedBayConfigurations:', e);
         }
       }
+      
+      // Handle bay configuration IDs for real-time synchronization
+      let propertyId: number | undefined = undefined;
+      let selectedBayIds: string[] | undefined = undefined;
+      let propertyIdsPerBuilding: {[propertyName: string]: number} | undefined = undefined;
+      let bayIdsPerBuilding: {[propertyName: string]: string[]} | undefined = undefined;
+      
+      if (req.body.propertyId) {
+        propertyId = parseInt(req.body.propertyId);
+      }
+      
+      if (req.body.selectedBayIds) {
+        try {
+          selectedBayIds = JSON.parse(req.body.selectedBayIds);
+          console.log('Parsed selectedBayIds:', selectedBayIds?.length || 0, 'bay IDs');
+        } catch (e) {
+          console.error('Failed to parse selectedBayIds:', e);
+        }
+      }
+      
+      if (req.body.propertyIdsPerBuilding) {
+        try {
+          propertyIdsPerBuilding = JSON.parse(req.body.propertyIdsPerBuilding);
+          console.log('Parsed propertyIdsPerBuilding:', Object.keys(propertyIdsPerBuilding || {}).length, 'properties');
+        } catch (e) {
+          console.error('Failed to parse propertyIdsPerBuilding:', e);
+        }
+      }
+      
+      if (req.body.bayIdsPerBuilding) {
+        try {
+          bayIdsPerBuilding = JSON.parse(req.body.bayIdsPerBuilding);
+          console.log('Parsed bayIdsPerBuilding:', Object.keys(bayIdsPerBuilding || {}).length, 'buildings');
+        } catch (e) {
+          console.error('Failed to parse bayIdsPerBuilding:', e);
+        }
+      }
 
       const requestWithFiles = {
         ...parsed,
         files: uploadedFiles,
         selectedBayConfigurations: selectedBayConfigurations,
+        propertyId: propertyId,
+        selectedBayIds: selectedBayIds,
+        propertyIdsPerBuilding: propertyIdsPerBuilding,
+        bayIdsPerBuilding: bayIdsPerBuilding,
         dueDate: parsed.internalDueDate, // Map internalDueDate to dueDate for validation
       };
 

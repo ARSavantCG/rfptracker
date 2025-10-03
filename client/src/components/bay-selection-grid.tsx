@@ -236,11 +236,30 @@ export function BaySelectionGrid({
     
     setSelectedBayIds(newSelectedBayIds);
     
-    // Calculate selected bays and total rentable square footage (includes mechanical room allocation)
-    const selectedBays = bays.filter(bay => newSelectedBayIds.has(bay.id));
-    const totalSquareFootage = selectedBays.reduce((total, bay) => total + (bay.rentableSquareFootage || bay.squareFootage), 0);
+    // Generate individual bays (with split support) to match against selection
+    const individualBays = generateIndividualBays(property?.bayConfigurations || []);
     
-    onSelectionChange?.(selectedBays, totalSquareFootage);
+    // Filter selected bays from individual bays (which includes split bays)
+    const selectedBays = individualBays.filter((bay: any) => newSelectedBayIds.has(bay.id));
+    
+    // Calculate total from individual split bays, mapping to BayConfiguration format
+    const selectedBayConfigs: BayConfiguration[] = selectedBays.map((bay: any) => ({
+      id: bay.id,
+      bayName: bay.originalBayName || bay.bayName,
+      squareFootage: bay.squareFootage,
+      standardDockDoors: bay.standardDockDoors || 0,
+      oversizedDockDoors: bay.oversizedDockDoors || 0,
+      hasStorefrontEntry: bay.hasStorefrontEntry || false,
+      hasSpeculativeOffice: bay.hasSpeculativeOffice || false,
+      hasRestroom: bay.hasRestroom || false,
+      rentableSquareFootage: bay.rentableSquareFootage || bay.squareFootage,
+      mechanicalRoomAllocation: bay.mechanicalRoomAllocation || 0
+    }));
+    
+    const totalSquareFootage = selectedBayConfigs.reduce((total, bay) => 
+      total + (bay.rentableSquareFootage || bay.squareFootage), 0);
+    
+    onSelectionChange?.(selectedBayConfigs, totalSquareFootage);
   };
 
   // Toggle bay selection for multi-building mode
@@ -389,6 +408,7 @@ export function BaySelectionGrid({
   // Calculate totals for display
   let selectedBays: BayConfiguration[] = [];
   let totalSquareFootage = 0;
+  let totalBaysCount = 0;
   
   if (multiBuildingMode) {
     Object.values(selectedBaysPerBuilding).forEach(buildingBays => {
@@ -396,8 +416,26 @@ export function BaySelectionGrid({
       totalSquareFootage += buildingBays.reduce((total, bay) => total + (bay.rentableSquareFootage || bay.squareFootage), 0);
     });
   } else {
-    selectedBays = bays.filter(bay => selectedBayIds.has(bay.id));
+    // Generate individual bays for display (includes split bays)
+    const individualBays = generateIndividualBays(property?.bayConfigurations || []);
+    const selectedIndividualBays = individualBays.filter((bay: any) => selectedBayIds.has(bay.id));
+    
+    // Map to BayConfiguration format for display
+    selectedBays = selectedIndividualBays.map((bay: any) => ({
+      id: bay.id,
+      bayName: bay.originalBayName || bay.bayName,
+      squareFootage: bay.squareFootage,
+      standardDockDoors: bay.standardDockDoors || 0,
+      oversizedDockDoors: bay.oversizedDockDoors || 0,
+      hasStorefrontEntry: bay.hasStorefrontEntry || false,
+      hasSpeculativeOffice: bay.hasSpeculativeOffice || false,
+      hasRestroom: bay.hasRestroom || false,
+      rentableSquareFootage: bay.rentableSquareFootage || bay.squareFootage,
+      mechanicalRoomAllocation: bay.mechanicalRoomAllocation || 0
+    }));
+    
     totalSquareFootage = selectedBays.reduce((total, bay) => total + (bay.rentableSquareFootage || bay.squareFootage), 0);
+    totalBaysCount = individualBays.length;
   }
 
   // Check if we have any data to display
@@ -824,7 +862,7 @@ export function BaySelectionGrid({
                       .join(', ');
                     return buildingBreakdown || '0 bays selected';
                   })()
-                : `${selectedBays.length} of ${bays.length} bays selected`
+                : `${selectedBays.length} of ${totalBaysCount} bays selected`
               }
             </Badge>
           </div>

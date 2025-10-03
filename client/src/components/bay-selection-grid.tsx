@@ -173,6 +173,22 @@ export function BaySelectionGrid({
       
       // If this bay is splittable, create north and south halves
       if (bayConfig.canBeSplit) {
+        const northSquareFootage = bayConfig.splitNorthSquareFootage || Math.floor(squareFootage / 2);
+        const southSquareFootage = bayConfig.splitSouthSquareFootage || Math.ceil(squareFootage / 2);
+        
+        // Calculate proportional mechanical room allocation and rentable SF
+        const totalRentableSF = bayConfig.rentableSquareFootage || squareFootage;
+        const totalMechanicalAllocation = bayConfig.mechanicalRoomAllocation || 0;
+        
+        const northProportion = northSquareFootage / squareFootage;
+        const southProportion = southSquareFootage / squareFootage;
+        
+        const northMechanicalAllocation = Math.floor(totalMechanicalAllocation * northProportion);
+        const southMechanicalAllocation = totalMechanicalAllocation - northMechanicalAllocation;
+        
+        const northRentableSF = northSquareFootage + northMechanicalAllocation;
+        const southRentableSF = southSquareFootage + southMechanicalAllocation;
+        
         return [
           // North half
           {
@@ -181,7 +197,9 @@ export function BaySelectionGrid({
             bayNumber: bayNumber,
             bayName: `Bay ${bayNumber} North`,
             originalBayName: `${bayConfig.bayName} North`,
-            squareFootage: bayConfig.splitNorthSquareFootage || Math.floor(squareFootage / 2),
+            squareFootage: northSquareFootage,
+            rentableSquareFootage: northRentableSF,
+            mechanicalRoomAllocation: northMechanicalAllocation,
             standardDockDoors: bayConfig.splitNorthDockDoors || Math.floor((bayConfig.standardDockDoors || 0) / 2),
             oversizedDockDoors: bayConfig.splitNorthOversizedDoors || Math.floor((bayConfig.oversizedDockDoors || 0) / 2),
             hasStorefrontEntry: bayConfig.splitNorthStorefront === true,
@@ -198,7 +216,9 @@ export function BaySelectionGrid({
             bayNumber: bayNumber,
             bayName: `Bay ${bayNumber} South`,
             originalBayName: `${bayConfig.bayName} South`,
-            squareFootage: bayConfig.splitSouthSquareFootage || Math.ceil(squareFootage / 2),
+            squareFootage: southSquareFootage,
+            rentableSquareFootage: southRentableSF,
+            mechanicalRoomAllocation: southMechanicalAllocation,
             standardDockDoors: bayConfig.splitSouthDockDoors || Math.ceil((bayConfig.standardDockDoors || 0) / 2),
             oversizedDockDoors: bayConfig.splitSouthOversizedDoors || Math.ceil((bayConfig.oversizedDockDoors || 0) / 2),
             hasStorefrontEntry: bayConfig.splitSouthStorefront === true,

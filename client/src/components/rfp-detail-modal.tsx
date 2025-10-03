@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { CalendarIcon, Edit, Check, X } from "lucide-react";
+import { CalendarIcon, Edit, Check, X, RefreshCw } from "lucide-react";
 import type { RfpRequest } from "@shared/schema";
 
 interface RfpDetailModalProps {
@@ -137,6 +137,31 @@ export function RfpDetailModal({ isOpen, onClose, rfp, onRfpUpdated }: RfpDetail
 
   // Check if user has admin permissions
   const isAdmin = user?.permissions?.['admin.access'] || user?.isAdmin;
+
+  // Refresh handler to force fresh data from server
+  const handleRefresh = async () => {
+    if (!rfp) return;
+    
+    toast({
+      title: "Refreshing...",
+      description: "Loading latest bay configuration data",
+      duration: 2000,
+    });
+    
+    // Force invalidate all caches to bypass 304 responses
+    await queryClient.invalidateQueries({ queryKey: ['/api/rfp-requests'] });
+    await queryClient.invalidateQueries({ queryKey: [`/api/rfp-requests/${rfp.id}`] });
+    await queryClient.invalidateQueries({ queryKey: ['/api/properties'] });
+    
+    // Refetch with cache bypass
+    await queryClient.refetchQueries({ queryKey: ['/api/rfp-requests'] });
+    
+    toast({
+      title: "Refreshed",
+      description: "Bay configuration data updated",
+      duration: 2000,
+    });
+  };
 
   if (!isOpen || !rfp) return null;
 
@@ -624,6 +649,15 @@ export function RfpDetailModal({ isOpen, onClose, rfp, onRfpUpdated }: RfpDetail
                   </>
                 ) : (
                   <>
+                    <button
+                      onClick={handleRefresh}
+                      className="px-4 py-2 text-sm font-medium text-green-700 bg-green-50 border border-green-300 rounded-lg hover:bg-green-100 flex items-center gap-2"
+                      title="Refresh bay configuration data from properties"
+                      data-testid="button-refresh-rfp"
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                      Refresh Data
+                    </button>
                     {isAdmin && (
                       <button
                         onClick={startEditingStatus}

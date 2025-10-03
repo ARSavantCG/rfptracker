@@ -164,6 +164,7 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/properties"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
       toast({
         title: "Success",
         description: "Bay configurations updated successfully",

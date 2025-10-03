@@ -119,15 +119,10 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
         }
       });
       
-      // Append selected bay configurations
-      if (selectedBayConfigurations.length > 0) {
-        formData.append('selectedBayConfigurations', JSON.stringify(selectedBayConfigurations));
-      }
-      
       // Append multi-building data
       formData.append('isMultiBuilding', multiBuildingMode.toString());
       if (multiBuildingMode) {
-        formData.append('selectedBaysPerBuilding', JSON.stringify(selectedBaysPerBuilding));
+        // Multi-building: Send ONLY references (property IDs + bay IDs), NOT snapshots
         formData.append('costsPerBuilding', JSON.stringify(costsPerBuilding));
         
         // Extract bay IDs and property IDs for multi-building
@@ -145,7 +140,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
         formData.append('propertyIdsPerBuilding', JSON.stringify(propertyIdsPerBuilding));
         formData.append('bayIdsPerBuilding', JSON.stringify(bayIdsPerBuilding));
       } else if (selectedProperty && selectedBayConfigurations.length > 0) {
-        // Single building: send property ID and bay IDs
+        // Single building: Send ONLY references (property ID + bay IDs), NOT snapshots
         formData.append('propertyId', selectedProperty.id.toString());
         formData.append('selectedBayIds', JSON.stringify(selectedBayConfigurations.map(bay => bay.id)));
       }

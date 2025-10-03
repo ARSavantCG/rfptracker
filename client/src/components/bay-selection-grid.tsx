@@ -386,16 +386,38 @@ export function BaySelectionGrid({
       
       onSelectionChange?.(allSelectedBays, totalSquareFootage, newSelectedBaysPerBuilding, costsPerBuilding);
     } else {
-      // Single-building mode: select all available bays
-      const availableBays = bays.filter(bay => !leasedBayIds.includes(bay.id));
-      const availableBayIds = new Set(availableBays.map(bay => bay.id));
+      // Single-building mode: select all available bays (including split bay halves)
+      // Generate individual bays with split support
+      const individualBays = generateIndividualBays(property?.bayConfigurations || []);
+      
+      // Filter out leased bays - check parent bay IDs for split bays
+      const availableIndividualBays = individualBays.filter((bay: any) => {
+        const parentId = bay.parentBayId || bay.id;
+        return !leasedBayIds.includes(parentId);
+      });
+      
+      const availableBayIds = new Set(availableIndividualBays.map((bay: any) => bay.id));
       
       setSelectedBayIds(availableBayIds);
       
-      const totalSquareFootage = availableBays.reduce((sum, bay) => 
+      // Map to BayConfiguration format for callback
+      const selectedBayConfigs: BayConfiguration[] = availableIndividualBays.map((bay: any) => ({
+        id: bay.id,
+        bayName: bay.originalBayName || bay.bayName,
+        squareFootage: bay.squareFootage,
+        standardDockDoors: bay.standardDockDoors || 0,
+        oversizedDockDoors: bay.oversizedDockDoors || 0,
+        hasStorefrontEntry: bay.hasStorefrontEntry || false,
+        hasSpeculativeOffice: bay.hasSpeculativeOffice || false,
+        hasRestroom: bay.hasRestroom || false,
+        rentableSquareFootage: bay.rentableSquareFootage || bay.squareFootage,
+        mechanicalRoomAllocation: bay.mechanicalRoomAllocation || 0
+      }));
+      
+      const totalSquareFootage = selectedBayConfigs.reduce((sum, bay) => 
         sum + (bay.rentableSquareFootage || bay.squareFootage || 0), 0);
       
-      onSelectionChange?.(availableBays, totalSquareFootage);
+      onSelectionChange?.(selectedBayConfigs, totalSquareFootage);
     }
   };
 

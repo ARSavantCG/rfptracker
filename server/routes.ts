@@ -1303,6 +1303,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Helper function to hydrate live bay configurations from properties
+  const hydrateLiveBayConfigurations = async (rfp: any) => {
+    try {
+      // Single building RFP with bay IDs
+      if (rfp.propertyId && rfp.selectedBayIds && rfp.selectedBayIds.length > 0) {
+        const property = await storage.getProperty(rfp.propertyId);
+        if (property && property.bayConfigurations) {
+          const liveBays = property.bayConfigurations.filter((bay: any) => 
+            rfp.selectedBayIds.includes(bay.id)
+          );
+          return {
+            ...rfp,
+            selectedBayConfigurations: liveBays,
+            // Keep the original snapshot for reference
+            _originalBaySnapshot: rfp.selectedBayConfigurations
+          };
+        }
+      }
+      
+      // Multi-building RFP with bay IDs
+      if (rfp.isMultiBuilding && rfp.bayIdsPerBuilding && rfp.propertyIdsPerBuilding) {
+        const selectedBaysPerBuilding: {[propertyName: string]: any[]} = {};
+        
+        for (const [propertyName, propertyId] of Object.entries(rfp.propertyIdsPerBuilding)) {
+          const property = await storage.getProperty(propertyId as number);
+          const bayIds = rfp.bayIdsPerBuilding[propertyName];
+          
+          if (property && property.bayConfigurations && bayIds) {
+            const liveBays = property.bayConfigurations.filter((bay: any) => 
+              bayIds.includes(bay.id)
+            );
+            selectedBaysPerBuilding[propertyName] = liveBays;
+          }
+        }
+        
+        return {
+          ...rfp,
+          selectedBaysPerBuilding: selectedBaysPerBuilding,
+          // Keep the original snapshot for reference
+          _originalBaySnapshot: rfp.selectedBaysPerBuilding
+        };
+      }
+      
+      // Fallback to original snapshot data (backward compatibility)
+      return rfp;
+    } catch (error) {
+      console.error('Error hydrating live bay data:', error);
+      // On error, return original RFP with snapshot data
+      return rfp;
+    }
+  };
+
   // Get all RFP requests
   app.get("/api/rfp-requests", async (req, res) => {
     try {
@@ -1325,7 +1377,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      res.json(requests);
+      // Hydrate live bay configurations for all RFPs
+      const hydratedRequests = await Promise.all(
+        requests.map(rfp => hydrateLiveBayConfigurations(rfp))
+      );
+      
+      res.json(hydratedRequests);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch RFP requests" });
     }
@@ -1504,7 +1561,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "RFP request not found" });
       }
 
-      res.json(request);
+      // Hydrate live bay configurations
+      const hydratedRequest = await hydrateLiveBayConfigurations(request);
+
+      res.json(hydratedRequest);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch RFP request" });
     }

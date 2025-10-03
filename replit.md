@@ -64,6 +64,7 @@ Preferred communication style: Simple, everyday language.
     - **Parking Allocation Management**: Advanced parking override system with independent save functionality, professional font sizing, reset capabilities, and proportional allocation calculations.
     - **Professional Interface Design**: Implemented dashed border containers, centered empty states with icons, and smooth downward expansion without affecting upper layout elements.
     - **Bay Directional Indicators**: Restored compass rose visual indicators in bay-selection-grid for RFP creation, showing building orientation with N/S/E/W labels and Bay 1 facing direction, available in both single and multi-building modes.
+    - **Single Source of Truth for Bay Data**: Architectural shift from snapshot-based storage to reference-based live lookups. RFPs now store only property_id + bay_ids references and always fetch current bay data from Properties module at request time. Eliminates data divergence between RFPs and Properties. Backend GET endpoints fetch live data directly, frontend RFP creation sends only references (not snapshots), no-cache headers prevent stale 304 responses. Properties module is the definitive source for all bay configuration data.
 
 ## External Dependencies
 - **Database**: PostgreSQL (Neon serverless).

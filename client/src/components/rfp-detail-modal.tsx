@@ -392,15 +392,12 @@ export function RfpDetailModal({ isOpen, onClose, rfp, onRfpUpdated }: RfpDetail
                         {(() => {
                           // FORCE DIRECT DATE PARSING - NO TIMEZONE CONVERSION
                           const dateStr = rfp.receivedOn as string | Date | null | undefined;
-                          console.log('🚨 DEBUGGING DATE ISSUE - Raw input:', dateStr);
                           
                           if (typeof dateStr === 'string' && dateStr.includes('T')) {
-                            const datePart = dateStr.split('T')[0]; // "2025-08-08"
+                            const datePart = dateStr.split('T')[0];
                             const [year, month, day] = datePart.split('-').map(Number);
                             const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-                            const result = `${monthNames[month - 1]} ${day}, ${year}`;
-                            console.log('🚨 DIRECT PARSING RESULT:', result);
-                            return result;
+                            return `${monthNames[month - 1]} ${day}, ${year}`;
                           }
                           
                           return 'Date Error';

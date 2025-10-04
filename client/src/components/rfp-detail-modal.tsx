@@ -38,13 +38,25 @@ export function RfpDetailModal({ isOpen, onClose, rfp, onRfpUpdated }: RfpDetail
   const displayRfp = liveRfp || rfp;
 
   // Get comprehensive file count from all workflow stages
-  const { data: fileCountData } = useQuery({
+  const { data: fileCountData } = useQuery<{
+    totalFiles: number;
+    filesByStage: {
+      rfpEntry: number;
+      bidCollection: number;
+      evaluationBudget: number;
+      publishedFiles: number;
+    };
+  }>({
     queryKey: [`/api/rfp-requests/${rfp?.id}/file-count`],
     enabled: !!rfp?.id,
   });
 
   // Get property information for project summary
-  const { data: property } = useQuery({
+  const { data: property } = useQuery<{
+    id: number;
+    propertyName: string;
+    building: string;
+  }>({
     queryKey: [`/api/properties/${displayRfp?.property}`],
     enabled: !!displayRfp?.property,
   });
@@ -379,7 +391,7 @@ export function RfpDetailModal({ isOpen, onClose, rfp, onRfpUpdated }: RfpDetail
                       <span className="ml-2 text-blue-900">
                         {(() => {
                           // FORCE DIRECT DATE PARSING - NO TIMEZONE CONVERSION
-                          const dateStr = rfp.receivedOn;
+                          const dateStr = rfp.receivedOn as string | Date | null | undefined;
                           console.log('🚨 DEBUGGING DATE ISSUE - Raw input:', dateStr);
                           
                           if (typeof dateStr === 'string' && dateStr.includes('T')) {
@@ -400,7 +412,7 @@ export function RfpDetailModal({ isOpen, onClose, rfp, onRfpUpdated }: RfpDetail
                       <span className="ml-2 text-blue-900">
                         {(() => {
                           // FORCE DIRECT DATE PARSING - NO TIMEZONE CONVERSION  
-                          const dateStr = rfp.internalDueDate;
+                          const dateStr = rfp.internalDueDate as string | Date | null | undefined;
                           
                           if (typeof dateStr === 'string' && dateStr.includes('T')) {
                             const datePart = dateStr.split('T')[0];

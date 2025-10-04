@@ -351,17 +351,17 @@ export function RfpDetailModal({ isOpen, onClose, rfp, onRfpUpdated }: RfpDetail
                       <span className="text-blue-700 font-medium">Rentable Area:</span>
                       <span className="ml-2 text-blue-900">
                         {(() => {
-                          // ALWAYS calculate from LIVE bay configurations (single source of truth from Properties)
+                          // First try warehouseArea, then calculate from bay configurations
+                          if (rfp.warehouseArea) {
+                            return `${parseInt(rfp.warehouseArea).toLocaleString()} SF`;
+                          }
+                          
+                          // Calculate from selected bay configurations
                           if (displayRfp?.selectedBayConfigurations && displayRfp.selectedBayConfigurations.length > 0) {
                             const totalRentable = displayRfp.selectedBayConfigurations.reduce((sum: number, bay: any) => {
                               return sum + (bay.rentableSquareFootage || 0);
                             }, 0);
                             return totalRentable > 0 ? `${Math.round(totalRentable).toLocaleString()} SF` : 'Not specified';
-                          }
-                          
-                          // Fallback to stored warehouseArea only if no bay configurations
-                          if (rfp.warehouseArea) {
-                            return `${parseInt(rfp.warehouseArea).toLocaleString()} SF`;
                           }
                           
                           return 'Not specified';

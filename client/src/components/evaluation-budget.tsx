@@ -751,10 +751,9 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
     const selectedBayIds = rfp.selectedBayConfigurations.map(bay => bay.id);
     
     // Calculate tenant area using legally compliant totals
+    // ALWAYS calculate from LIVE bay configurations (Properties is single source of truth)
     let totalSelectedArea = 0;
-    if (rfp?.warehouseArea) {
-      totalSelectedArea = parseInt(rfp.warehouseArea);
-    } else {
+    if (rfp?.selectedBayConfigurations && rfp.selectedBayConfigurations.length > 0) {
       // Use legal compliance totals based on property name
       const propertyLegalTotals: Record<string, number> = {
         'Bridge Point Gratigny': 409189,
@@ -780,6 +779,9 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
         // Fallback to calculated total if no legal total available
         totalSelectedArea = Math.round(rfp.selectedBayConfigurations.reduce((sum, bay) => sum + (bay.rentableSquareFootage || bay.squareFootage || 0), 0));
       }
+    } else if (rfp?.warehouseArea) {
+      // Final fallback to stored warehouseArea only if no bay configurations
+      totalSelectedArea = parseInt(rfp.warehouseArea);
     }
     
     return propertyImprovements
@@ -1293,10 +1295,9 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
     const workbook = XLSX.utils.book_new();
     
     // Calculate rentable area using legally compliant totals
+    // ALWAYS calculate from LIVE bay configurations (Properties is single source of truth)
     let rentableArea = 0;
-    if (rfp?.warehouseArea) {
-      rentableArea = parseInt(rfp.warehouseArea);
-    } else if (rfp?.selectedBayConfigurations && Array.isArray(rfp.selectedBayConfigurations)) {
+    if (rfp?.selectedBayConfigurations && Array.isArray(rfp.selectedBayConfigurations)) {
       // Use legal compliance totals based on property
       const propertyLegalTotals: Record<string, number> = {
         'Bridge Point Gratigny': 409189,
@@ -1323,6 +1324,9 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
           return total + (bay.rentableSquareFootage || 0);
         }, 0));
       }
+    } else if (rfp?.warehouseArea) {
+      // Final fallback to stored warehouseArea only if no bay configurations
+      rentableArea = parseInt(rfp.warehouseArea);
     }
 
     // Helper function to prepare line items for export
@@ -1499,10 +1503,9 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
     const workbook = XLSX.utils.book_new();
     
     // Calculate rentable area using legally compliant totals
+    // ALWAYS calculate from LIVE bay configurations (Properties is single source of truth)
     let rentableArea = 0;
-    if (rfp?.warehouseArea) {
-      rentableArea = parseInt(rfp.warehouseArea);
-    } else if (rfp?.selectedBayConfigurations && Array.isArray(rfp.selectedBayConfigurations)) {
+    if (rfp?.selectedBayConfigurations && Array.isArray(rfp.selectedBayConfigurations)) {
       // Use legal compliance totals based on property
       const propertyLegalTotals: Record<string, number> = {
         'Bridge Point Gratigny': 409189,
@@ -1529,6 +1532,9 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
           return total + (bay.rentableSquareFootage || 0);
         }, 0));
       }
+    } else if (rfp?.warehouseArea) {
+      // Final fallback to stored warehouseArea only if no bay configurations
+      rentableArea = parseInt(rfp.warehouseArea);
     }
 
     // Helper function to prepare ALL line items exactly as entered

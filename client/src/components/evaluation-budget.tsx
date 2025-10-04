@@ -1843,10 +1843,9 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
 
     // Extract property data for use in report - calculate from bay configurations if warehouse_area is null
     // Use legally compliant totals to ensure accurate reporting
+    // ALWAYS calculate from LIVE bay configurations (Properties is single source of truth)
     let rentableArea = 0;
-    if (rfp?.warehouseArea) {
-      rentableArea = parseInt(rfp.warehouseArea);
-    } else if (rfp?.selectedBayConfigurations && Array.isArray(rfp.selectedBayConfigurations)) {
+    if (rfp?.selectedBayConfigurations && Array.isArray(rfp.selectedBayConfigurations)) {
       // Use legal compliance totals based on property
       const propertyLegalTotals: Record<string, number> = {
         'Bridge Point Gratigny': 409189,
@@ -1873,6 +1872,9 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
           return total + (bay.rentableSquareFootage || 0);
         }, 0));
       }
+    } else if (rfp?.warehouseArea) {
+      // Final fallback to stored warehouseArea only if no bay configurations
+      rentableArea = parseInt(rfp.warehouseArea);
     }
     const standardParking = (propertyData as any)?.standardParking || 0;
     const accessibleParking = (propertyData as any)?.accessibleParking || 0;

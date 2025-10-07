@@ -771,20 +771,19 @@ export function PropertyExistingImprovementsModal({
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Left Bay</FormLabel>
-                              <Select onValueChange={field.onChange} value={field.value}>
-                                <FormControl>
-                                  <SelectTrigger className="w-full">
-                                    <SelectValue placeholder="Select left bay" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
+                              <FormControl>
+                                <select
+                                  {...field}
+                                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                  <option value="">Select left bay</option>
                                   {availableBays.map((bay) => (
-                                    <SelectItem key={bay.id} value={bay.id}>
+                                    <option key={bay.id} value={bay.id}>
                                       {bay.bayName}
-                                    </SelectItem>
+                                    </option>
                                   ))}
-                                </SelectContent>
-                              </Select>
+                                </select>
+                              </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -796,20 +795,19 @@ export function PropertyExistingImprovementsModal({
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Right Bay</FormLabel>
-                              <Select onValueChange={field.onChange} value={field.value}>
-                                <FormControl>
-                                  <SelectTrigger className="w-full">
-                                    <SelectValue placeholder="Select right bay" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
+                              <FormControl>
+                                <select
+                                  {...field}
+                                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                  <option value="">Select right bay</option>
                                   {availableBays.map((bay) => (
-                                    <SelectItem key={bay.id} value={bay.id}>
+                                    <option key={bay.id} value={bay.id}>
                                       {bay.bayName}
-                                    </SelectItem>
+                                    </option>
                                   ))}
-                                </SelectContent>
-                              </Select>
+                                </select>
+                              </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}

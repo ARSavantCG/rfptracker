@@ -278,7 +278,7 @@ export function PropertyExistingImprovementsModal({
         };
       });
 
-    // Then, get split bay options for splittable bays (no original bay)
+    // Then, get splittable bays (includes full bay + split options)
     const splitBays = sortedBayConfigs
       .filter(bayConfig => bayConfig.canBeSplit)
       .flatMap(bayConfig => {
@@ -291,6 +291,15 @@ export function PropertyExistingImprovementsModal({
         }
         
         return [
+          // Include the full original bay
+          {
+            id: bayConfig.id,
+            bayName: bayConfig.bayName,
+            squareFootage: squareFootage,
+            hasSpeculativeOffice: bayConfig.hasSpeculativeOffice || false,
+            isSplitBay: false
+          },
+          // Include the north split option
           {
             id: `${bayConfig.id}_north`,
             bayName: `${bayConfig.bayName} North`,
@@ -300,6 +309,7 @@ export function PropertyExistingImprovementsModal({
             splitSide: 'north' as const,
             parentBayId: bayConfig.id
           },
+          // Include the south split option
           {
             id: `${bayConfig.id}_south`,
             bayName: `${bayConfig.bayName} South`,

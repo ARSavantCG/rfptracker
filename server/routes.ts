@@ -1832,10 +1832,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         formData.propertyId = parseInt(formData.propertyId);
       }
 
-      // Convert property from string to number if present (legacy field)
-      if (formData.property && typeof formData.property === 'string') {
-        formData.property = parseInt(formData.property);
-      }
+      // property field should remain as a string (it's defined as text in the schema)
 
       // Ensure sentBy field is present (frontend should send this directly now)
 

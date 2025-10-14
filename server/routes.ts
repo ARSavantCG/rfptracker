@@ -1808,13 +1808,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Parse costsPerBuilding JSON object
+      // Parse costsPerBuilding JSON object and convert numeric strings to numbers
       if (formData.costsPerBuilding && typeof formData.costsPerBuilding === 'string') {
         try {
-          formData.costsPerBuilding = JSON.parse(formData.costsPerBuilding);
+          const parsedCosts = JSON.parse(formData.costsPerBuilding);
+          // Convert all numeric cost values from strings to numbers
+          formData.costsPerBuilding = Object.entries(parsedCosts).reduce((acc: any, [key, value]: [string, any]) => {
+            acc[key] = {
+              existing: Number(value.existing) || 0,
+              improvements: Number(value.improvements) || 0,
+              rom: Number(value.rom) || 0,
+              notes: value.notes || ''
+            };
+            return acc;
+          }, {});
         } catch {
           formData.costsPerBuilding = {};
         }
+      }
+
+      // Convert propertyId from string to number if present
+      if (formData.propertyId && typeof formData.propertyId === 'string') {
+        formData.propertyId = parseInt(formData.propertyId);
+      }
+
+      // Convert property from string to number if present (legacy field)
+      if (formData.property && typeof formData.property === 'string') {
+        formData.property = parseInt(formData.property);
       }
 
       // Ensure sentBy field is present (frontend should send this directly now)

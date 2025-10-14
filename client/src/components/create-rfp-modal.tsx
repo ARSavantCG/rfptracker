@@ -123,7 +123,18 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
       formData.append('isMultiBuilding', multiBuildingMode.toString());
       if (multiBuildingMode) {
         // Multi-building: Send ONLY references (property IDs + bay IDs), NOT snapshots
-        formData.append('costsPerBuilding', JSON.stringify(costsPerBuilding));
+        // Convert all cost values from strings to numbers before sending
+        const convertedCosts = Object.entries(costsPerBuilding).reduce((acc, [key, value]) => {
+          acc[key] = {
+            existing: Number(value.existing) || 0,
+            improvements: Number(value.improvements) || 0,
+            rom: Number(value.rom) || 0,
+            notes: value.notes || ''
+          };
+          return acc;
+        }, {} as typeof costsPerBuilding);
+        
+        formData.append('costsPerBuilding', JSON.stringify(convertedCosts));
         
         // Extract bay IDs and property IDs for multi-building
         const propertyIdsPerBuilding: {[propertyName: string]: number} = {};
@@ -141,6 +152,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
         formData.append('bayIdsPerBuilding', JSON.stringify(bayIdsPerBuilding));
       } else if (selectedProperty && selectedBayConfigurations.length > 0) {
         // Single building: Send ONLY references (property ID + bay IDs), NOT snapshots
+        // Send propertyId as number, not string
         formData.append('propertyId', selectedProperty.id.toString());
         formData.append('selectedBayIds', JSON.stringify(selectedBayConfigurations.map(bay => bay.id)));
       }

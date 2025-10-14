@@ -348,6 +348,18 @@ export function BaySelectionGrid({
       };
       setSelectedBaysPerBuilding(newSelectedBaysPerBuilding);
       
+      // Initialize or update costs for this building with numeric defaults
+      const newCostsPerBuilding = {
+        ...costsPerBuilding,
+        [buildingKey]: costsPerBuilding[buildingKey] || {
+          existing: 0,
+          improvements: 0,
+          rom: 0,
+          notes: ''
+        }
+      };
+      setCostsPerBuilding(newCostsPerBuilding);
+      
       // Calculate totals for all buildings
       const allSelectedBays: BayConfiguration[] = [];
       let totalSquareFootage = 0;
@@ -357,8 +369,8 @@ export function BaySelectionGrid({
         totalSquareFootage += buildingBays.reduce((total, bay) => total + (bay.rentableSquareFootage || bay.squareFootage), 0);
       });
       
-      // Notify parent component
-      onSelectionChange?.(allSelectedBays, totalSquareFootage, newSelectedBaysPerBuilding, costsPerBuilding);
+      // Notify parent component with properly initialized costs
+      onSelectionChange?.(allSelectedBays, totalSquareFootage, newSelectedBaysPerBuilding, newCostsPerBuilding);
     }
   };
 
@@ -380,6 +392,7 @@ export function BaySelectionGrid({
       // Multi-building mode: select all available bays from each property
       const newSelectedBuildingIds: {[propertyName: string]: Set<string>} = {};
       const newSelectedBaysPerBuilding: {[propertyName: string]: BayConfiguration[]} = {};
+      const newCostsPerBuilding: {[propertyName: string]: BuildingCosts} = {};
       
       properties.forEach(prop => {
         const buildingKey = `${prop.propertyName} - Building ${prop.building}`;
@@ -391,17 +404,26 @@ export function BaySelectionGrid({
         
         newSelectedBuildingIds[buildingKey] = availableBayIds;
         newSelectedBaysPerBuilding[buildingKey] = availableBays;
+        
+        // Initialize costs with numeric defaults
+        newCostsPerBuilding[buildingKey] = costsPerBuilding[buildingKey] || {
+          existing: 0,
+          improvements: 0,
+          rom: 0,
+          notes: ''
+        };
       });
       
       setSelectedBuildingIds(newSelectedBuildingIds);
       setSelectedBaysPerBuilding(newSelectedBaysPerBuilding);
+      setCostsPerBuilding(newCostsPerBuilding);
       
       // Calculate totals
       const allSelectedBays = Object.values(newSelectedBaysPerBuilding).flat();
       const totalSquareFootage = allSelectedBays.reduce((sum, bay) => 
         sum + (bay.rentableSquareFootage || bay.squareFootage || 0), 0);
       
-      onSelectionChange?.(allSelectedBays, totalSquareFootage, newSelectedBaysPerBuilding, costsPerBuilding);
+      onSelectionChange?.(allSelectedBays, totalSquareFootage, newSelectedBaysPerBuilding, newCostsPerBuilding);
     } else {
       // Single-building mode: select all available bays (including split bay halves)
       // Generate individual bays with split support

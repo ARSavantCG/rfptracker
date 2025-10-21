@@ -1833,6 +1833,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // property field should remain as a string (it's defined as text in the schema)
+      // Convert to string if it comes in as a number
+      if (formData.property && typeof formData.property === 'number') {
+        formData.property = formData.property.toString();
+      }
 
       // Ensure sentBy field is present (frontend should send this directly now)
 

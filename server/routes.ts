@@ -1724,6 +1724,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         formData.isMultiBuilding = false; // default to false
       }
       
+      // Convert propertyId from string to number if present
+      if (formData.propertyId && typeof formData.propertyId === 'string') {
+        formData.propertyId = parseInt(formData.propertyId);
+      }
+
+      // property field should remain as a string (it's defined as text in the schema)
+      // Convert to string if it comes in as a number
+      if (formData.property && typeof formData.property === 'number') {
+        formData.property = formData.property.toString();
+      }
+      
       const parsed = insertRfpRequestSchema.parse(formData);
       
       // Create RFP without files initially

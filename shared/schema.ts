@@ -100,6 +100,8 @@ export const insertRfpRequestSchema = createInsertSchema(rfpRequests).omit({
   isValidated: true,
   validationErrors: true,
 }).extend({
+  property: z.string(), // Explicitly define as string to match database text type
+  propertyId: z.number().optional(), // Explicitly define as number
   requestTypes: z.array(z.string()).min(1, "At least one request type is required"),
   status: z.enum(["received", "in-progress", "completed", "on-hold", "archived"]).default("received"),
   workflowPhase: z.enum(["rfp-entry", "rfp-validation", "invitation-to-bid", "bid-collection", "evaluation", "publish"]).default("rfp-entry"),

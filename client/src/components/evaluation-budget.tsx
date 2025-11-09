@@ -2057,9 +2057,18 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
     };
 
     const renderExistingImprovementsSection = () => {
+      // DEBUG: Log existing improvements data
+      console.log('🔍 DEBUG Existing Improvements:', budgetData.existingImprovements.map(item => ({
+        description: item.description,
+        bucket: item.bucket,
+        id: item.id
+      })));
+      
       // Separate improvements by bucket
       const actualsItems = budgetData.existingImprovements.filter((item: any) => item.bucket === 'ACTUALS');
       const pipelineItems = budgetData.existingImprovements.filter((item: any) => item.bucket === 'PIPELINE');
+      
+      console.log('🔍 DEBUG Actuals count:', actualsItems.length, 'Pipeline count:', pipelineItems.length);
       
       const actualsTotal = calculateCategoryTotal(actualsItems);
       const pipelineTotal = calculateCategoryTotal(pipelineItems);

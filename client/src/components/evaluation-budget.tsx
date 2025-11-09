@@ -926,12 +926,18 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
       const savedVehicular = (existingBudget as any).metadata?.vehicularParking;
       const savedTrailer = (existingBudget as any).metadata?.trailerParking;
       
-
+      // Check if saved existing improvements have the bucket field (added in cost lifecycle tracking)
+      // If not, refresh from property to get updated data with bucket field
+      const savedExistingImprovements = (existingBudget as any).existingImprovements || [];
+      const needsBucketRefresh = savedExistingImprovements.length > 0 && 
+                                  savedExistingImprovements.some((item: any) => item.bucket === undefined);
+      
+      const existingImprovementsToUse = needsBucketRefresh ? existingImprovementsFromProperty : savedExistingImprovements;
       
       setBudgetData({
         tenantImprovements: (existingBudget as any).tenantImprovements || [],
         designSoftCosts: (existingBudget as any).designSoftCosts || [],
-        existingImprovements: (existingBudget as any).existingImprovements || existingImprovementsFromProperty,
+        existingImprovements: existingImprovementsToUse.length > 0 ? existingImprovementsToUse : existingImprovementsFromProperty,
         hasExistingImprovements: (existingBudget as any).hasExistingImprovements || existingImprovementsFromProperty.length > 0,
         includeExistingInTotal: (existingBudget as any).includeExistingInTotal || false,
         separateDesignCosts: (existingBudget as any).separateDesignCosts !== undefined ? (existingBudget as any).separateDesignCosts : false,

@@ -799,7 +799,7 @@ export function PropertyExistingImprovementsModal({
                                     placeholder="0.00"
                                     className="w-full"
                                     decimalPlaces={2}
-                                    type="currency"
+                                    type="rate"
                                   />
                                 </FormControl>
                                 <div className="text-xs text-muted-foreground mt-1">
@@ -824,7 +824,7 @@ export function PropertyExistingImprovementsModal({
                                     placeholder="0.00"
                                     className="w-full"
                                     decimalPlaces={2}
-                                    type="currency"
+                                    type="rate"
                                   />
                                 </FormControl>
                                 <div className="text-xs text-muted-foreground mt-1">

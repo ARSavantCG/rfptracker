@@ -590,7 +590,7 @@ export function PropertyExistingImprovementsModal({
                 className="px-3 py-1 text-sm"
               >
                 <Plus className="mr-1 h-3 w-3" />
-                Add Existing Improvement
+                Add Improvement Cost(s)
               </Button>
             </div>
           )}
@@ -769,13 +769,13 @@ export function PropertyExistingImprovementsModal({
                               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                               <option value="ACTUALS">Cost to Date (Actuals)</option>
-                              <option value="PIPELINE">Committed / Projected (Pipeline)</option>
+                              <option value="PIPELINE">Committed / Projected</option>
                             </select>
                           </FormControl>
                           <div className="text-xs text-muted-foreground mt-1">
                             <strong>Cost to Date:</strong> Confirmed expenditures from lender draws
                             <br />
-                            <strong>Pipeline:</strong> Committed or projected costs not yet in draws
+                            <strong>Committed / Projected:</strong> Committed or projected costs not yet in draws
                           </div>
                           <FormMessage />
                         </FormItem>
@@ -792,14 +792,19 @@ export function PropertyExistingImprovementsModal({
                               <FormItem>
                                 <FormLabel>Original Commitment ($)</FormLabel>
                                 <FormControl>
-                                  <Input
-                                    type="number"
+                                  <FormulaInput
                                     {...field}
-                                    value={field.value || 0}
-                                    onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                                    value={field.value?.toString() || '0'}
+                                    onChange={field.onChange}
                                     placeholder="0.00"
+                                    className="w-full"
+                                    decimalPlaces={2}
+                                    type="currency"
                                   />
                                 </FormControl>
+                                <div className="text-xs text-muted-foreground mt-1">
+                                  💡 <strong>Formula support:</strong> Enter formulas like =123*5 or =15000/12. Press Enter or click away to save.
+                                </div>
                                 <FormMessage />
                               </FormItem>
                             )}
@@ -812,16 +817,21 @@ export function PropertyExistingImprovementsModal({
                               <FormItem>
                                 <FormLabel>Added Amounts ($)</FormLabel>
                                 <FormControl>
-                                  <Input
-                                    type="number"
+                                  <FormulaInput
                                     {...field}
-                                    value={field.value || 0}
-                                    onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                                    value={field.value?.toString() || '0'}
+                                    onChange={field.onChange}
                                     placeholder="0.00"
+                                    className="w-full"
+                                    decimalPlaces={2}
+                                    type="currency"
                                   />
                                 </FormControl>
-                                <div className="text-xs text-muted-foreground">
+                                <div className="text-xs text-muted-foreground mt-1">
                                   Change orders or additional commitments
+                                </div>
+                                <div className="text-xs text-muted-foreground mt-1">
+                                  💡 <strong>Formula support:</strong> Enter formulas like =123+5 or =15000/2. Press Enter or click away to save.
                                 </div>
                                 <FormMessage />
                               </FormItem>
@@ -1089,7 +1099,7 @@ export function PropertyExistingImprovementsModal({
             </div>
           )}
 
-          {/* Improvements List - Split into Pipeline and Actuals */}
+          {/* Improvements List - Split into Committed/Projected and Actuals */}
           <div className="space-y-6">
             {isLoading ? (
               <div className="text-center py-4">Loading improvements...</div>
@@ -1112,7 +1122,7 @@ export function PropertyExistingImprovementsModal({
                   
                   {pipelineImprovements.length === 0 ? (
                     <div className="text-center py-4 text-slate-500 italic">
-                      No pipeline costs recorded.
+                      No committed or projected costs recorded.
                     </div>
                   ) : (
                     <div className="space-y-2">

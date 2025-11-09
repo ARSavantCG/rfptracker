@@ -840,7 +840,7 @@ export function PropertyExistingImprovementsModal({
                         </div>
 
                         <div className="text-sm font-medium text-blue-700 dark:text-blue-300">
-                          Total Committed: ${((form.watch('originalCommitment') || 0) + (form.watch('addedAmount') || 0)).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                          Total Committed: ${((Number(form.watch('originalCommitment')) || 0) + (Number(form.watch('addedAmount')) || 0)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </div>
 
                         <FormField

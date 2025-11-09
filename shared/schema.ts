@@ -643,6 +643,13 @@ export const propertyExistingImprovements = pgTable("property_existing_improveme
     wallLocation?: string; // description of wall location
   }>(),
   
+  // Cost lifecycle tracking fields
+  bucket: text("bucket").notNull().default("ACTUALS"), // 'ACTUALS' (Cost to Date) or 'PIPELINE' (Committed/Projected)
+  drawCaptured: boolean("draw_captured").default(false).notNull(), // True when included in lender draw
+  originalCommitment: integer("original_commitment"), // Initial commitment amount in cents (for pipeline items)
+  addedAmount: integer("added_amount"), // Additional amounts/change orders in cents (for pipeline items)
+  drawRef: text("draw_ref"), // Draw number or reference when captured
+  
   // Additional metadata
   notes: text("notes"),
   isActive: boolean("is_active").default(true),
@@ -657,6 +664,11 @@ export const insertPropertyExistingImprovementSchema = createInsertSchema(proper
   updatedAt: true,
 }).extend({
   totalCost: z.number().min(0),
+  bucket: z.enum(["ACTUALS", "PIPELINE"]).default("ACTUALS"),
+  drawCaptured: z.boolean().default(false),
+  originalCommitment: z.number().min(0).optional(),
+  addedAmount: z.number().min(0).optional(),
+  drawRef: z.string().optional(),
   demisingWallData: z.object({
     leftBayId: z.string().optional(),
     rightBayId: z.string().optional(),

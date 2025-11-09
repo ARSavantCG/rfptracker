@@ -32,6 +32,11 @@ const formSchema = z.object({
   units: z.string().optional(),
   applicableBays: z.array(z.string()).optional(),
   notes: z.string().optional(),
+  bucket: z.enum(["ACTUALS", "PIPELINE"]).default("ACTUALS"),
+  drawCaptured: z.boolean().default(false),
+  originalCommitment: z.number().min(0).optional(),
+  addedAmount: z.number().min(0).optional(),
+  drawRef: z.string().optional(),
   demisingWallData: z.object({
     leftBayId: z.string().optional(),
     rightBayId: z.string().optional(),
@@ -90,6 +95,11 @@ export function PropertyExistingImprovementsModal({
       allocationType: "prorated",
       applicableBays: [],
       notes: "",
+      bucket: "ACTUALS",
+      drawCaptured: false,
+      originalCommitment: 0,
+      addedAmount: 0,
+      drawRef: "",
       demisingWallData: {
         leftPercentage: 50,
         rightPercentage: 50,
@@ -213,6 +223,11 @@ export function PropertyExistingImprovementsModal({
       allocationType: improvement.allocationType as "prorated" | "bay-specific" | "whole-property" | "demising-wall",
       applicableBays: improvement.applicableBays || [],
       notes: improvement.notes || "",
+      bucket: (improvement.bucket || "ACTUALS") as "ACTUALS" | "PIPELINE",
+      drawCaptured: improvement.drawCaptured || false,
+      originalCommitment: improvement.originalCommitment ? improvement.originalCommitment / 100 : 0, // Convert from cents to dollars
+      addedAmount: improvement.addedAmount ? improvement.addedAmount / 100 : 0, // Convert from cents to dollars
+      drawRef: improvement.drawRef || "",
       demisingWallData: improvement.demisingWallData || undefined,
     });
     setShowForm(true);
@@ -713,6 +728,133 @@ export function PropertyExistingImprovementsModal({
                         </FormItem>
                       )}
                     />
+                  </div>
+
+                  {/* Cost Lifecycle Tracking Fields */}
+                  <div className="space-y-4 p-4 border rounded-lg bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20">
+                    <div className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                      💼 Cost Lifecycle Tracking
+                    </div>
+                    
+                    <FormField
+                      control={form.control}
+                      name="bucket"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Cost Category</FormLabel>
+                          <FormControl>
+                            <select
+                              {...field}
+                              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              <option value="ACTUALS">Cost to Date (Actuals)</option>
+                              <option value="PIPELINE">Committed / Projected (Pipeline)</option>
+                            </select>
+                          </FormControl>
+                          <div className="text-xs text-muted-foreground mt-1">
+                            <strong>Cost to Date:</strong> Confirmed expenditures from lender draws
+                            <br />
+                            <strong>Pipeline:</strong> Committed or projected costs not yet in draws
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {form.watch('bucket') === 'PIPELINE' && (
+                      <div className="space-y-3 pl-4 border-l-2 border-blue-300">
+                        <div className="grid grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="originalCommitment"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Original Commitment ($)</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="number"
+                                    {...field}
+                                    value={field.value || 0}
+                                    onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                                    placeholder="0.00"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="addedAmount"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Added Amounts ($)</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="number"
+                                    {...field}
+                                    value={field.value || 0}
+                                    onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                                    placeholder="0.00"
+                                  />
+                                </FormControl>
+                                <div className="text-xs text-muted-foreground">
+                                  Change orders or additional commitments
+                                </div>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        <div className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                          Total Committed: ${((form.watch('originalCommitment') || 0) + (form.watch('addedAmount') || 0)).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                        </div>
+
+                        <FormField
+                          control={form.control}
+                          name="drawCaptured"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                />
+                              </FormControl>
+                              <div className="space-y-1 leading-none">
+                                <FormLabel>
+                                  Mark as Captured in Draw
+                                </FormLabel>
+                                <div className="text-xs text-muted-foreground">
+                                  Check this when the cost has been included in a lender draw
+                                </div>
+                              </div>
+                            </FormItem>
+                          )}
+                        />
+
+                        {form.watch('drawCaptured') && (
+                          <FormField
+                            control={form.control}
+                            name="drawRef"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Draw Reference (Optional)</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    {...field}
+                                    placeholder="e.g., Draw #3, April 2025"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {allocationType === "bay-specific" && (

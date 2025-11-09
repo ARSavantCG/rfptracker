@@ -3920,11 +3920,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid property ID" });
       }
 
-      // Convert total cost from dollars to cents
+      // Convert cost fields from dollars to cents
       const improvementData = {
         ...req.body,
         propertyId,
         totalCost: Math.round(req.body.totalCost * 100), // Convert to cents
+        originalCommitment: req.body.originalCommitment ? Math.round(req.body.originalCommitment * 100) : undefined,
+        addedAmount: req.body.addedAmount ? Math.round(req.body.addedAmount * 100) : undefined,
       };
 
       const improvement = await storage.createPropertyExistingImprovement(improvementData);
@@ -3945,9 +3947,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const updates = { ...req.body };
-      // Convert total cost from dollars to cents if provided
+      // Convert cost fields from dollars to cents if provided
       if (updates.totalCost !== undefined) {
         updates.totalCost = Math.round(updates.totalCost * 100);
+      }
+      if (updates.originalCommitment !== undefined) {
+        updates.originalCommitment = updates.originalCommitment ? Math.round(updates.originalCommitment * 100) : undefined;
+      }
+      if (updates.addedAmount !== undefined) {
+        updates.addedAmount = updates.addedAmount ? Math.round(updates.addedAmount * 100) : undefined;
       }
 
       const improvement = await storage.updatePropertyExistingImprovement(id, updates);

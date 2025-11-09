@@ -2055,75 +2055,137 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
     };
 
     const renderExistingImprovementsSection = () => {
-      const total = calculateCategoryTotal(budgetData.existingImprovements);
+      // Separate improvements by bucket
+      const actualsItems = budgetData.existingImprovements.filter((item: any) => item.bucket === 'ACTUALS');
+      const pipelineItems = budgetData.existingImprovements.filter((item: any) => item.bucket === 'PIPELINE');
+      
+      const actualsTotal = calculateCategoryTotal(actualsItems);
+      const pipelineTotal = calculateCategoryTotal(pipelineItems);
+      const grandTotal = actualsTotal + pipelineTotal;
+      
+      const renderSection = (title: string, items: any[], total: number, colorClass: string, description: string) => {
+        if (items.length === 0) return '';
+        
+        return `
+        <div class="section" style="margin-bottom: 20px;">
+            <div class="section-header">
+                <h2 class="section-title" style="color: #333;">
+                    ${title}
+                    <span style="color: ${colorClass} !important; font-style: italic !important; font-weight: bold !important; font-size: 16px !important;">${formatCurrency(total)} <span style="font-size: 50%; font-weight: normal;">${(() => {
+                      const pricePerSf = rentableArea > 0 ? total / rentableArea : 0;
+                      return pricePerSf > 0 ? '($' + pricePerSf.toFixed(2) + '/RSF)' : '';
+                    })()}</span></span>
+                </h2>
+                <p style="font-size: 12px; color: #666; margin-top: 5px;">${description}</p>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Description</th>
+                            <th>Quantity</th>
+                            <th>Unit</th>
+                            <th>Unit Price</th>
+                            <th>Total Price</th>
+                            <th>$/RSF</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${items.filter(item => {
+                          // Always show items that don't belong to an assembly
+                          if (!item.assemblyId) return true;
+                          
+                          // For items in assemblies, check if the assembly spans multiple buckets
+                          const assemblyEntry = Object.entries(budgetData.assemblies || {}).find(([name]) => name === item.assemblyId);
+                          if (!assemblyEntry) return true; // Show if assembly not found
+                          
+                          const [_, assemblyData] = assemblyEntry;
+                          const allComponentItems = assemblyData.components.map(id => {
+                            return budgetData.existingImprovements.find(compItem => compItem.id === id);
+                          }).filter(Boolean);
+                          
+                          // Show individual items if assembly spans multiple buckets
+                          const assemblySpansBuckets = !allComponentItems.every(compItem => items.includes(compItem));
+                          return assemblySpansBuckets;
+                        }).map(item => {
+                          const totalPrice = parseFloat(item.totalPrice) || 0;
+                          const pricePerSf = rentableArea > 0 ? totalPrice / rentableArea : 0;
+                          return `
+                          <tr>
+                              <td>${item.description}${item.assemblyId ? ' <em>(from mixed-bucket assembly)</em>' : ''}</td>
+                              <td>${new Intl.NumberFormat('en-US').format(item.quantity)}</td>
+                              <td>${item.unit}</td>
+                              <td class="currency">${formatCurrency(parseFloat(item.unitPrice) || 0)}</td>
+                              <td class="currency">${formatCurrency(totalPrice)}</td>
+                              <td class="currency">${pricePerSf > 0 ? '$' + pricePerSf.toFixed(2) : 'N/A'}</td>
+                          </tr>
+                          `;
+                        }).join('')}
+                        
+                        ${Object.entries(budgetData.assemblies || {}).filter(([name, data]) => {
+                          // Get all component items from the full list to check their buckets
+                          const allComponentItems = data.components.map(id => {
+                            return budgetData.existingImprovements.find(item => item.id === id);
+                          }).filter(Boolean);
+                          
+                          // Only show assembly row if ALL components belong to this bucket
+                          return allComponentItems.length > 0 && allComponentItems.every(item => items.includes(item));
+                        }).map(([assemblyName, assemblyData]) => {
+                          const pricePerSf = rentableArea > 0 ? assemblyData.total / rentableArea : 0;
+                          return `
+                          <tr>
+                              <td><strong>${assemblyName}</strong></td>
+                              <td>1</td>
+                              <td>assembly</td>
+                              <td class="currency">${formatCurrency(assemblyData.total)}</td>
+                              <td class="currency">${formatCurrency(assemblyData.total)}</td>
+                              <td class="currency">${pricePerSf > 0 ? '$' + pricePerSf.toFixed(2) : 'N/A'}</td>
+                          </tr>
+                          `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>`;
+      };
+      
+      if (budgetData.existingImprovements.length === 0) {
+        return `
+        <div class="section">
+            <div class="section-header">
+                <h2 class="section-title" style="color: #333;">Existing Improvements</h2>
+            </div>
+            <div class="table-container">
+                <p style="text-align: center; color: #6c757d; padding: 20px;">No existing improvements added yet</p>
+            </div>
+        </div>`;
+      }
       
       return `
-      <div class="section">
-          <div class="section-header">
-              <h2 class="section-title" style="color: #333;">
-                  Existing Improvements
-                  <span style="color: #0891b2 !important; font-style: italic !important; font-weight: bold !important; font-size: 16px !important;">${formatCurrency(total)} <span style="font-size: 50%; font-weight: normal;">${(() => {
-                    const pricePerSf = rentableArea > 0 ? total / rentableArea : 0;
-                    return pricePerSf > 0 ? '($' + pricePerSf.toFixed(2) + '/RSF)' : '';
-                  })()}</span></span>
-              </h2>
-          </div>
-          <div class="table-container">
-              ${budgetData.existingImprovements.length > 0 ? `
-              <table>
-                  <thead>
-                      <tr>
-                          <th>Description</th>
-                          <th>Quantity</th>
-                          <th>Unit</th>
-                          <th>Unit Price</th>
-                          <th>Total Price</th>
-                          <th>$/RSF</th>
-                      </tr>
-                  </thead>
-                  <tbody>
-                      ${budgetData.existingImprovements.filter(item => !item.assemblyId).map(item => {
-                        const totalPrice = parseFloat(item.totalPrice) || 0;
-                        const pricePerSf = rentableArea > 0 ? totalPrice / rentableArea : 0;
-                        return `
-                        <tr>
-                            <td>${item.description}</td>
-                            <td>${new Intl.NumberFormat('en-US').format(item.quantity)}</td>
-                            <td>${item.unit}</td>
-                            <td class="currency">${formatCurrency(parseFloat(item.unitPrice) || 0)}</td>
-                            <td class="currency">${formatCurrency(totalPrice)}</td>
-                            <td class="currency">${pricePerSf > 0 ? '$' + pricePerSf.toFixed(2) : 'N/A'}</td>
-                        </tr>
-                        `;
-                      }).join('')}
-                      
-                      ${Object.entries(budgetData.assemblies || {}).filter(([name, data]) => {
-                        const assemblyItems = data.components.map(id => {
-                          return budgetData.existingImprovements.find(item => item.id === id);
-                        }).filter(Boolean);
-                        return assemblyItems.length > 0;
-                      }).map(([assemblyName, assemblyData]) => {
-                        const pricePerSf = rentableArea > 0 ? assemblyData.total / rentableArea : 0;
-                        return `
-                        <tr>
-                            <td><strong>${assemblyName}</strong></td>
-                            <td>1</td>
-                            <td>assembly</td>
-                            <td class="currency">${formatCurrency(assemblyData.total)}</td>
-                            <td class="currency">${formatCurrency(assemblyData.total)}</td>
-                            <td class="currency">${pricePerSf > 0 ? '$' + pricePerSf.toFixed(2) : 'N/A'}</td>
-                        </tr>
-                        `;
-                      }).join('')}
-                  </tbody>
-              </table>
-              ` : '<p style="text-align: center; color: #6c757d; padding: 20px;">No existing improvements added yet</p>'}
-              
-              <div class="existing-improvements-note">
-                  <strong>Note:</strong> These existing improvements are ${budgetData.includeExistingInTotal ? 'included in' : 'excluded from'} the Grand Total calculation.
-                  ${!budgetData.includeExistingInTotal ? ' They are tracked separately for financial modeling purposes.' : ''}
-              </div>
-          </div>
+      ${renderSection(
+        'Cost to Date (Actuals)', 
+        actualsItems, 
+        actualsTotal, 
+        '#10b981', 
+        'Confirmed expenditures from lender draws'
+      )}
+      
+      ${renderSection(
+        'Committed / Projected Costs', 
+        pipelineItems, 
+        pipelineTotal, 
+        '#0891b2', 
+        'Committed or projected costs not yet in draws'
+      )}
+      
+      ${(actualsItems.length > 0 && pipelineItems.length > 0) ? `
+      <div style="text-align: right; padding: 10px; background-color: #f8f9fa; border-radius: 4px; margin-bottom: 15px;">
+          <span style="font-weight: bold; font-size: 16px;">Total Existing Improvements: ${formatCurrency(grandTotal)}</span>
+      </div>` : ''}
+      
+      <div class="existing-improvements-note">
+          <strong>Note:</strong> These existing improvements are ${budgetData.includeExistingInTotal ? 'included in' : 'excluded from'} the Grand Total calculation.
+          ${!budgetData.includeExistingInTotal ? ' They are tracked separately for financial modeling purposes.' : ''}
       </div>`;
     };
     

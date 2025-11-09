@@ -1,8 +1,8 @@
 /**
  * RFP Tracker - Request for Proposals Management System
  * Copyright (c) 2025 Savant Consulting Group LLC. All rights reserved.
- * 
- * This software is proprietary and confidential. Unauthorized copying, 
+ *
+ * This software is proprietary and confidential. Unauthorized copying,
  * distribution, or use of this software is strictly prohibited.
  */
 
@@ -27,6 +27,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { ErrorBoundary } from "@/components/error-boundary";
 import AuthCheck from "@/components/auth-check";
 import Footer from "@/components/footer";
+import DemoRadix from "./demo-radix";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -51,14 +52,21 @@ function Router() {
 
   if (!isAuthenticated) {
     // Check if we're on the reset password page
-    if (window.location.pathname === '/reset-password' || window.location.search.includes('token=')) {
+    if (
+      window.location.pathname === "/reset-password" ||
+      window.location.search.includes("token=")
+    ) {
       return <ResetPassword />;
     }
-    return <Login onLoginSuccess={() => {
-      // Clear any error states and reload
-      queryClient.clear();
-      window.location.reload();
-    }} />;
+    return (
+      <Login
+        onLoginSuccess={() => {
+          // Clear any error states and reload
+          queryClient.clear();
+          window.location.reload();
+        }}
+      />
+    );
   }
 
   return (
@@ -72,8 +80,12 @@ function Router() {
             <Route path="/rom-pilot" component={RomPilot} />
             <Route path="/reports" component={Reports} />
             <Route path="/admin" component={Admin} />
-            <Route path="/admin/property-summary-report" component={PropertySummaryReport} />
+            <Route
+              path="/admin/property-summary-report"
+              component={PropertySummaryReport}
+            />
             <Route path="/reset-password" component={ResetPassword} />
+            <Route path="/demo-radix" component={DemoRadix} />
             <Route component={NotFound} />
           </Switch>
         </div>
@@ -85,7 +97,7 @@ function Router() {
 
 function App() {
   console.log("App component rendering");
-  
+
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>

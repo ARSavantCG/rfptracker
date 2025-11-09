@@ -1099,11 +1099,11 @@ export function PropertyExistingImprovementsModal({
               </div>
             ) : (
               <>
-                {/* Committed / Projected Costs (Pipeline) */}
+                {/* Committed / Projected Costs */}
                 <div className="space-y-3">
                   <div className="flex justify-between items-baseline border-b-2 border-blue-200 dark:border-blue-800 pb-2">
                     <h3 className="text-lg font-semibold text-blue-700 dark:text-blue-300">
-                      Committed / Projected Costs (Pipeline)
+                      Committed / Projected Costs
                     </h3>
                     <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
                       Total: {formatCurrency(pipelineTotal)}

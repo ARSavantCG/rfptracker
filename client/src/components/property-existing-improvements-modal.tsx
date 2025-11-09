@@ -34,8 +34,8 @@ const formSchema = z.object({
   notes: z.string().optional(),
   bucket: z.enum(["ACTUALS", "PIPELINE"]).default("ACTUALS"),
   drawCaptured: z.boolean().default(false),
-  originalCommitment: z.number().min(0).optional(),
-  addedAmount: z.number().min(0).optional(),
+  originalCommitment: z.coerce.number().min(0).optional(),
+  addedAmount: z.coerce.number().min(0).optional(),
   drawRef: z.string().optional(),
   demisingWallData: z.object({
     leftBayId: z.string().optional(),

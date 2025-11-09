@@ -1836,6 +1836,15 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
   const generateReportPreview = async (hideDesignCosts: boolean) => {
     if (!rfp) return;
     
+    // 🔍 DEBUG: Log existing improvements bucket data BEFORE PDF generation
+    console.log('🔍 PRE-PDF DEBUG: Existing Improvements Count:', budgetData.existingImprovements.length);
+    console.log('🔍 PRE-PDF DEBUG: Existing Improvements Details:', budgetData.existingImprovements.map(item => ({
+      id: item.id,
+      description: item.description,
+      bucket: item.bucket,
+      totalPrice: item.totalPrice
+    })));
+    
     const currentDate = new Date().toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',

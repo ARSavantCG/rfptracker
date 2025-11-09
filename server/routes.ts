@@ -3906,6 +3906,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const improvements = await storage.getPropertyExistingImprovements(propertyId);
+      
+      // DEBUG: Log bucket fields to verify data
+      console.log('🔍 BACKEND DEBUG: Existing Improvements from DB:', improvements.map(imp => ({
+        id: imp.id,
+        description: imp.description,
+        bucket: imp.bucket
+      })));
+      
+      // CRITICAL: No-cache headers to ensure bucket field is always fresh (cost lifecycle tracking)
+      res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.set('Pragma', 'no-cache');
+      res.set('Expires', '0');
+      
       res.json(improvements);
     } catch (error) {
       console.error('Error fetching property existing improvements:', error);

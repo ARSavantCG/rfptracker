@@ -809,6 +809,7 @@ export type EvaluationLineItem = {
   tenantShare: number; // Percentage of cost attributed to tenant (0-100)
   bidCollectionId?: number; // Reference to original bid if applicable
   bidLineItemId?: number; // Reference to original bid line item if applicable
+  bucket?: 'ACTUALS' | 'PIPELINE'; // Cost lifecycle bucket for existing improvements
 };
 
 export const insertEvaluationBudgetSchema = createInsertSchema(evaluationBudgets).omit({

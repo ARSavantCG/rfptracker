@@ -36,6 +36,7 @@ interface EvaluationLineItem {
   isRolledUp?: boolean;
   rollupTarget?: 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements';
   assemblyId?: string;
+  bucket?: 'ACTUALS' | 'PIPELINE'; // Cost lifecycle bucket for existing improvements
 }
 
 interface CustomAssembly {
@@ -908,6 +909,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
           unitPrice: unitPrice.toFixed(2),
           totalPrice: allocatedCost.toFixed(2),
           tenantShare: 100, // Default to 100% tenant responsibility
+          bucket: improvement.bucket, // Preserve bucket for cost lifecycle tracking
         } as EvaluationLineItem;
       })
       .filter(item => item !== null);

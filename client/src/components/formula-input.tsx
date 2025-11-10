@@ -3,6 +3,33 @@ import { Input } from '@/components/ui/input';
 import { evaluateFormula, formatFormulaResult, type FormulaResult } from '@shared/formula-utils';
 import { cn } from '@/lib/utils';
 
+// Helper to format number with thousands separators
+function formatWithThousands(value: string): string {
+  if (!value || value.startsWith('=')) return value;
+  
+  // Remove existing commas
+  const cleaned = value.replace(/,/g, '');
+  
+  // Don't format if empty or just a decimal point
+  if (!cleaned || cleaned === '.' || cleaned === '-' || cleaned === '-.') {
+    return cleaned;
+  }
+  
+  // Split on decimal point
+  const parts = cleaned.split('.');
+  
+  // Add commas to integer part
+  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  
+  // Rejoin with decimal
+  return parts.join('.');
+}
+
+// Helper to remove thousands separators
+function removeThousands(value: string): string {
+  return value.replace(/,/g, '');
+}
+
 interface FormulaInputProps {
   value: string | number;
   onChange: (value: string | number, evaluatedValue?: number) => void;
@@ -12,6 +39,7 @@ interface FormulaInputProps {
   disabled?: boolean;
   decimalPlaces?: number;
   type?: 'quantity' | 'rate' | 'total';
+  formatThousands?: boolean;
 }
 
 export function FormulaInput({
@@ -22,7 +50,8 @@ export function FormulaInput({
   className,
   disabled,
   decimalPlaces = 2,
-  type = 'quantity'
+  type = 'quantity',
+  formatThousands = false
 }: FormulaInputProps) {
   const [displayValue, setDisplayValue] = useState<string>('');
   const [isEditing, setIsEditing] = useState(false);
@@ -34,7 +63,13 @@ export function FormulaInput({
   useEffect(() => {
     if (!isEditing) {
       const strValue = String(value || '');
-      setDisplayValue(strValue);
+      
+      // Apply thousands formatting if enabled and not a formula
+      const formatted = formatThousands && !strValue.startsWith('=') 
+        ? formatWithThousands(strValue)
+        : strValue;
+      
+      setDisplayValue(formatted);
       
       if (strValue.startsWith('=')) {
         const result = evaluateFormula(strValue);
@@ -46,12 +81,18 @@ export function FormulaInput({
         setShowFormula(false);
       }
     }
-  }, [value, isEditing]);
+  }, [value, isEditing, formatThousands]);
 
   const handleFocus = () => {
     setIsEditing(true);
     const strValue = String(value || '');
-    setDisplayValue(strValue);
+    
+    // Apply formatting when focusing if enabled
+    const formatted = formatThousands && !strValue.startsWith('=')
+      ? formatWithThousands(strValue)
+      : strValue;
+    
+    setDisplayValue(formatted);
     
     // If it's a formula, show the formula when editing
     if (strValue.startsWith('=')) {
@@ -62,8 +103,11 @@ export function FormulaInput({
   const handleBlur = () => {
     setIsEditing(false);
     
-    const result = evaluateFormula(displayValue);
-    console.log('🔍 FormulaInput handleBlur evaluation:', displayValue, '=>', result);
+    // Remove commas for evaluation and submission
+    const rawValue = removeThousands(displayValue);
+    
+    const result = evaluateFormula(rawValue);
+    console.log('🔍 FormulaInput handleBlur evaluation:', rawValue, '=>', result);
     setFormulaResult(result);
     
     // If it's a valid formula, show the result
@@ -74,29 +118,74 @@ export function FormulaInput({
     // Call the onChange with both the raw value and evaluated value
     // For non-formula values, use the parsed number as evaluatedValue
     let evaluatedValue = result.value;
-    if (!result.isFormula && displayValue) {
-      const numValue = parseFloat(displayValue);
+    if (!result.isFormula && rawValue) {
+      const numValue = parseFloat(rawValue);
       if (!isNaN(numValue)) {
         evaluatedValue = numValue;
       }
     }
     
-    // Always call onChange with the displayValue to preserve manual entries
-    onChange(displayValue, evaluatedValue || undefined);
+    // Always call onChange with the RAW value (no commas) for validation
+    onChange(rawValue, evaluatedValue || undefined);
     onBlur?.();
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
-    setDisplayValue(newValue);
+    const cursorPos = e.target.selectionStart || 0;
     
     // Real-time formula evaluation for immediate feedback
     if (newValue.startsWith('=')) {
+      setDisplayValue(newValue);
       const result = evaluateFormula(newValue);
       setFormulaResult(result);
-    } else {
-      setFormulaResult(null);
+      return;
     }
+    
+    // If formatThousands is disabled, use normal path
+    if (!formatThousands) {
+      setDisplayValue(newValue);
+      setFormulaResult(null);
+      return;
+    }
+    
+    // Format thousands: validate and reformat with cursor preservation
+    const rawValue = removeThousands(newValue);
+    
+    // Validate input: allow digits, one decimal, optional leading minus
+    if (rawValue && !/^-?\d*\.?\d*$/.test(rawValue)) {
+      return; // Invalid input, don't update
+    }
+    
+    // Format with thousands separators
+    const formatted = formatWithThousands(rawValue);
+    
+    // Calculate cursor position adjustment for inserted/removed commas
+    const oldRawBeforeCursor = removeThousands(displayValue.substring(0, cursorPos));
+    const newRawBeforeCursor = oldRawBeforeCursor.length;
+    
+    // Count commas in the formatted string up to the equivalent position
+    let newCursorPos = 0;
+    let rawCount = 0;
+    for (let i = 0; i < formatted.length; i++) {
+      if (formatted[i] !== ',') {
+        rawCount++;
+      }
+      if (rawCount > newRawBeforeCursor) {
+        break;
+      }
+      newCursorPos = i + 1;
+    }
+    
+    setDisplayValue(formatted);
+    setFormulaResult(null);
+    
+    // Restore cursor position after state update
+    requestAnimationFrame(() => {
+      if (inputRef.current) {
+        inputRef.current.setSelectionRange(newCursorPos, newCursorPos);
+      }
+    });
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

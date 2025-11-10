@@ -658,6 +658,7 @@ export function PropertyExistingImprovementsModal({
                                     className="w-full"
                                     decimalPlaces={2}
                                     type="rate"
+                                    formatThousands={true}
                                   />
                                 </FormControl>
                                 <div className="text-xs text-muted-foreground mt-1">
@@ -683,6 +684,7 @@ export function PropertyExistingImprovementsModal({
                                     className="w-full"
                                     decimalPlaces={2}
                                     type="rate"
+                                    formatThousands={true}
                                   />
                                 </FormControl>
                                 <div className="text-xs text-muted-foreground mt-1">
@@ -877,6 +879,7 @@ export function PropertyExistingImprovementsModal({
                               className="w-full"
                               decimalPlaces={2}
                               type="rate"
+                              formatThousands={true}
                             />
                           </FormControl>
                           <div className="text-xs text-muted-foreground mt-1">

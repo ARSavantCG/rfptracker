@@ -2718,7 +2718,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
       `;
     })()}
 
-    ${budgetData.hasExistingImprovements ? renderCategorySection("Existing Improvements", budgetData.existingImprovements, "existingImprovements") : ''}
+    ${budgetData.hasExistingImprovements ? renderExistingImprovementsSection() : ''}
 </body>
 </html>`;
     

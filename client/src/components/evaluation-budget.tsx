@@ -749,6 +749,14 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
       return [];
     }
 
+    // 🔍 DEBUG: Log property improvements data from API
+    console.log('🔍 populateExistingImprovements - Raw API Data:', propertyImprovements.map((imp: any) => ({
+      id: imp.id,
+      description: imp.description,
+      bucket: imp.bucket,
+      hasBucketField: 'bucket' in imp
+    })));
+
     const selectedBayIds = rfp.selectedBayConfigurations.map(bay => bay.id);
     
     // Calculate tenant area using legally compliant totals

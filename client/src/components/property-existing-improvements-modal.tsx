@@ -860,7 +860,7 @@ export function PropertyExistingImprovementsModal({
                       name="totalCost"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Total Cost ($)</FormLabel>
+                          <FormLabel>Current Total Cost ($)</FormLabel>
                           <FormControl>
                             <FormulaInput
                               value={field.value || 0}
@@ -880,7 +880,9 @@ export function PropertyExistingImprovementsModal({
                             />
                           </FormControl>
                           <div className="text-xs text-muted-foreground mt-1">
-                            💡 <strong>Formula support:</strong> Enter formulas like =123*5 or =15000/12. Press Enter or click away to save.
+                            <strong>For Actuals:</strong> Enter confirmed expenditure amount.<br/>
+                            <strong>For Committed/Projected:</strong> This typically equals Original Commitment + Added Amounts.<br/>
+                            💡 <strong>Formulas supported:</strong> =123*5 or =15000/12 (press Enter to save)
                           </div>
                           <FormMessage />
                         </FormItem>

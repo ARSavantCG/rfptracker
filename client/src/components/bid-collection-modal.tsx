@@ -929,6 +929,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                                       placeholder="0.00"
                                       type="rate"
                                       className="w-full text-xs h-8"
+                                      formatThousands={true}
                                     />
                                   </TableCell>
                                   <TableCell>
@@ -957,6 +958,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                                       placeholder="0.00"
                                       type="total"
                                       className="w-full text-xs h-8"
+                                      formatThousands={true}
                                     />
                                   </TableCell>
                                   <TableCell>
@@ -1076,6 +1078,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                               placeholder="0.00"
                               type="total"
                               className="w-full text-xs h-8"
+                              formatThousands={true}
                             />
                           </TableCell>
                           <TableCell>

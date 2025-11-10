@@ -708,6 +708,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                         }}
                         className="pl-10"
                         decimalPlaces={2}
+                        formatThousands={true}
                       />
                     </div>
                   </div>
@@ -740,6 +741,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                           }}
                           className="pl-10"
                           decimalPlaces={2}
+                          formatThousands={true}
                         />
                       </div>
                       <p className="text-xs text-gray-500">
@@ -1221,6 +1223,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                                       placeholder="0.00 or =15000*1.15"
                                       className="pl-10"
                                       decimalPlaces={2}
+                                      formatThousands={true}
                                     />
                                   </div>
                                 </div>
@@ -1254,6 +1257,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                                         placeholder="15000.00"
                                         className="pl-10"
                                         decimalPlaces={2}
+                                        formatThousands={true}
                                       />
                                     </div>
                                     <p className="text-xs text-gray-500">

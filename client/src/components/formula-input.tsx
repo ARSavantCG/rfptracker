@@ -160,21 +160,33 @@ export function FormulaInput({
     // Format with thousands separators
     const formatted = formatWithThousands(rawValue);
     
-    // Calculate cursor position adjustment for inserted/removed commas
-    const oldRawBeforeCursor = removeThousands(displayValue.substring(0, cursorPos));
-    const newRawBeforeCursor = oldRawBeforeCursor.length;
+    // Calculate cursor position: count raw digits in the new input up to cursor position
+    const rawBeforeCursor = removeThousands(newValue.substring(0, cursorPos));
+    const targetRawCount = rawBeforeCursor.length;
     
-    // Count commas in the formatted string up to the equivalent position
+    // Find cursor position in formatted string by counting raw digits
     let newCursorPos = 0;
-    let rawCount = 0;
-    for (let i = 0; i < formatted.length; i++) {
-      if (formatted[i] !== ',') {
-        rawCount++;
+    
+    // Handle edge case: cursor at start (targetRawCount === 0)
+    if (targetRawCount === 0) {
+      newCursorPos = 0;
+    } else {
+      // Count raw digits to find cursor position
+      let rawCount = 0;
+      for (let i = 0; i < formatted.length; i++) {
+        if (formatted[i] !== ',') {
+          rawCount++;
+          if (rawCount >= targetRawCount) {
+            newCursorPos = i + 1;
+            break;
+          }
+        }
       }
-      if (rawCount > newRawBeforeCursor) {
-        break;
+      
+      // Handle case where cursor is at the end
+      if (rawCount < targetRawCount) {
+        newCursorPos = formatted.length;
       }
-      newCursorPos = i + 1;
     }
     
     setDisplayValue(formatted);

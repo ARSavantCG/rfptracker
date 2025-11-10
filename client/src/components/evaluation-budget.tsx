@@ -3461,6 +3461,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
                                       }}
                                       className="text-sm text-center"
                                       type="rate"
+                                      formatThousands={true}
                                     />
                                   </TableCell>
                                   {!newItemCategory && <TableCell className="font-medium text-center">{formatCurrency(item.totalPrice)}</TableCell>}
@@ -3676,6 +3677,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
                   }}
                   placeholder="0.00"
                   type="rate"
+                  formatThousands={true}
                 />
               </div>
               <div>
@@ -3687,6 +3689,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
                   }}
                   placeholder="0.00"
                   type="total"
+                  formatThousands={true}
                 />
               </div>
               <div>

@@ -7020,11 +7020,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/rfp-requests/:rfpId/evaluation-budget-history', requireAuth, async (req, res) => {
     try {
       const rfpId = parseInt(req.params.rfpId);
-      const { reportName, generatedContent, notes } = req.body;
+      const { reportName, generatedContent, notes, budgetData } = req.body;
       const generatedBy = req.user?.username || 'Unknown';
       
-      // Get current evaluation budget to compare changes
-      const currentBudget = await storage.getEvaluationBudget(rfpId);
+      // Use sent budgetData if available, otherwise try to fetch from database
+      let currentBudget = budgetData;
+      if (!currentBudget) {
+        currentBudget = await storage.getEvaluationBudget(rfpId);
+      }
       
       // Get the most recent history item to compare against
       const previousHistory = await storage.getEvaluationBudgetHistory(rfpId);

@@ -116,7 +116,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
 
   // Mutation for logging evaluation budget history
   const logHistoryMutation = useMutation({
-    mutationFn: async (historyData: { rfpId: number; reportName: string; generatedContent: string; notes?: string }) => {
+    mutationFn: async (historyData: { rfpId: number; reportName: string; generatedContent: string; notes?: string; budgetData?: any }) => {
       const response = await fetch(`/api/rfp-requests/${historyData.rfpId}/evaluation-budget-history`, {
         method: 'POST',
         headers: {
@@ -2734,7 +2734,8 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
         rfpId: rfp.id,
         reportName: `Evaluation Budget Report${hideDesignCosts ? ' (Design Costs Hidden)' : ''}`,
         generatedContent: reportHtml,
-        notes: `Generated on ${currentDate}. Grand Total: ${formatCurrency(grandTotal)}`
+        notes: `Generated on ${currentDate}. Grand Total: ${formatCurrency(grandTotal)}`,
+        budgetData: budgetData // Send current budget data for change tracking
       });
     }
   };

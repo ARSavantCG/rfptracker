@@ -237,6 +237,11 @@ export function PropertyExistingImprovementsModal({
 
   const startEdit = (improvement: PropertyExistingImprovement) => {
     setEditingId(improvement.id);
+    const bucket = (improvement.bucket || "ACTUALS") as "ACTUALS" | "PIPELINE";
+    
+    // Update previousBucketRef to match the record being edited to prevent unwanted bucket switching logic
+    previousBucketRef.current = bucket;
+    
     form.reset({
       category: improvement.category,
       description: improvement.description,
@@ -244,7 +249,7 @@ export function PropertyExistingImprovementsModal({
       allocationType: improvement.allocationType as "prorated" | "bay-specific" | "whole-property" | "demising-wall",
       applicableBays: improvement.applicableBays || [],
       notes: improvement.notes || "",
-      bucket: (improvement.bucket || "ACTUALS") as "ACTUALS" | "PIPELINE",
+      bucket: bucket,
       drawCaptured: improvement.drawCaptured || false,
       originalCommitment: improvement.originalCommitment ? improvement.originalCommitment / 100 : 0, // Convert from cents to dollars
       addedAmount: improvement.addedAmount ? improvement.addedAmount / 100 : 0, // Convert from cents to dollars
@@ -258,6 +263,8 @@ export function PropertyExistingImprovementsModal({
     setEditingId(null);
     setShowForm(false);
     form.reset();
+    // Reset previousBucketRef to default bucket when canceling
+    previousBucketRef.current = "ACTUALS";
   };
 
   const handlePrint = async () => {
@@ -282,6 +289,40 @@ export function PropertyExistingImprovementsModal({
   };
 
   const allocationType = form.watch("allocationType");
+  
+  // Track previous bucket to handle bucket switching
+  const previousBucketRef = useRef<"ACTUALS" | "PIPELINE">(form.getValues("bucket"));
+  
+  // Watch form values for cost lifecycle logic
+  const currentBucket = form.watch("bucket");
+  const originalCommitment = form.watch("originalCommitment");
+  const addedAmount = form.watch("addedAmount");
+  
+  // Auto-calculate totalCost for PIPELINE bucket and handle bucket switching
+  useEffect(() => {
+    const previousBucket = previousBucketRef.current;
+    
+    // Handle bucket switching
+    if (previousBucket !== currentBucket) {
+      if (currentBucket === "ACTUALS") {
+        // Switching to ACTUALS: preserve totalCost, clear commitment fields
+        form.setValue("originalCommitment", 0, { shouldDirty: true, shouldValidate: true });
+        form.setValue("addedAmount", 0, { shouldDirty: true, shouldValidate: true });
+        form.setValue("drawCaptured", false, { shouldDirty: true, shouldValidate: true });
+        form.setValue("drawRef", "", { shouldDirty: true, shouldValidate: true });
+      } else if (currentBucket === "PIPELINE") {
+        // Switching to PIPELINE: reset totalCost to 0, prompt for commitments
+        form.setValue("totalCost", 0, { shouldDirty: true, shouldValidate: true });
+      }
+      previousBucketRef.current = currentBucket;
+    }
+    
+    // Auto-calculate totalCost for PIPELINE bucket
+    if (currentBucket === "PIPELINE") {
+      const calculatedTotal = (Number(originalCommitment) || 0) + (Number(addedAmount) || 0);
+      form.setValue("totalCost", calculatedTotal, { shouldDirty: true, shouldValidate: true });
+    }
+  }, [currentBucket, originalCommitment, addedAmount, form]);
 
   // Generate all available bay options including split configurations
   const getAllAvailableBays = () => {
@@ -584,6 +625,8 @@ export function PropertyExistingImprovementsModal({
                 onClick={() => {
                   setShowForm(true);
                   form.reset(); // Clear form when adding new improvement
+                  // Reset previousBucketRef to default bucket when adding new
+                  previousBucketRef.current = "ACTUALS";
                 }} 
                 size="sm"
                 variant="outline"
@@ -640,7 +683,7 @@ export function PropertyExistingImprovementsModal({
                       )}
                     />
 
-                    {form.watch('bucket') === 'PIPELINE' && (
+                    {currentBucket === 'PIPELINE' && (
                       <div className="space-y-3 pl-4 border-l-2 border-blue-300">
                         <div className="grid grid-cols-2 gap-4">
                           <FormField
@@ -700,7 +743,7 @@ export function PropertyExistingImprovementsModal({
                         </div>
 
                         <div className="text-sm font-medium text-blue-700 dark:text-blue-300">
-                          Total Committed: ${((Number(form.watch('originalCommitment')) || 0) + (Number(form.watch('addedAmount')) || 0)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          Total Committed: ${((Number(originalCommitment) || 0) + (Number(addedAmount) || 0)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </div>
 
                         <FormField
@@ -864,28 +907,44 @@ export function PropertyExistingImprovementsModal({
                         <FormItem>
                           <FormLabel>Current Total Cost ($)</FormLabel>
                           <FormControl>
-                            <FormulaInput
-                              value={field.value || 0}
-                              onChange={(rawValue, evaluatedValue) => {
-                                console.log('📝 FormulaInput onChange:', { rawValue, evaluatedValue });
-                                // Use evaluatedValue (the calculated result) for the form
-                                field.onChange(evaluatedValue);
-                              }}
-                              onBlur={() => {
-                                // Save the form when formula input loses focus
-                                field.onBlur();
-                              }}
-                              placeholder="Enter cost amount or formula (press Enter to save)"
-                              className="w-full"
-                              decimalPlaces={2}
-                              type="rate"
-                              formatThousands={true}
-                            />
+                            {currentBucket === 'PIPELINE' ? (
+                              <div className="flex h-10 w-full rounded-md border border-input bg-slate-100 dark:bg-slate-800 px-3 py-2 text-sm ring-offset-background items-center">
+                                <span className="font-semibold text-slate-700 dark:text-slate-300">
+                                  ${(field.value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </span>
+                                <span className="ml-2 text-xs text-slate-500 dark:text-slate-400">(Auto-calculated)</span>
+                              </div>
+                            ) : (
+                              <FormulaInput
+                                value={field.value || 0}
+                                onChange={(rawValue, evaluatedValue) => {
+                                  console.log('📝 FormulaInput onChange:', { rawValue, evaluatedValue });
+                                  // Use evaluatedValue (the calculated result) for the form
+                                  field.onChange(evaluatedValue);
+                                }}
+                                onBlur={() => {
+                                  // Save the form when formula input loses focus
+                                  field.onBlur();
+                                }}
+                                placeholder="Enter cost amount or formula (press Enter to save)"
+                                className="w-full"
+                                decimalPlaces={2}
+                                type="rate"
+                                formatThousands={true}
+                              />
+                            )}
                           </FormControl>
                           <div className="text-xs text-muted-foreground mt-1">
-                            <strong>For Actuals:</strong> Enter confirmed expenditure amount.<br/>
-                            <strong>For Committed/Projected:</strong> This typically equals Original Commitment + Added Amounts.<br/>
-                            💡 <strong>Formulas supported:</strong> =123*5 or =15000/12 (press Enter to save)
+                            {currentBucket === 'ACTUALS' ? (
+                              <>
+                                <strong>For Actuals:</strong> Enter confirmed expenditure amount from lender draws.<br/>
+                                💡 <strong>Formulas supported:</strong> =123*5 or =15000/12 (press Enter to save)
+                              </>
+                            ) : (
+                              <>
+                                <strong>For Committed/Projected:</strong> This value is automatically calculated from Original Commitment + Added Amounts.
+                              </>
+                            )}
                           </div>
                           <FormMessage />
                         </FormItem>

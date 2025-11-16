@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Search, Copy, CheckCircle2 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Search, Copy, CheckCircle2, FileText, FolderOpen } from "lucide-react";
 
 interface RfpForImport {
   id: number;
@@ -20,22 +22,46 @@ interface RfpForImport {
   grandTotal: string;
 }
 
+interface TemplateRecord {
+  id: string;
+  name: string;
+  description?: string;
+  category?: string;
+  version?: number;
+  items: any[];
+  metadata: {
+    createdBy: string;
+    createdAt: string;
+    updatedAt: string;
+    isArchived: boolean;
+  };
+}
+
 interface RfpImportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   currentRfpId?: number;
   onImport: (rfpId: number, categories: string[]) => Promise<void>;
+  onTemplateImport?: (templateId: string) => Promise<void>;
 }
 
-export function RfpImportDialog({ open, onOpenChange, currentRfpId, onImport }: RfpImportDialogProps) {
+export function RfpImportDialog({ open, onOpenChange, currentRfpId, onImport, onTemplateImport }: RfpImportDialogProps) {
+  const [activeTab, setActiveTab] = useState<"projects" | "templates">("projects");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRfpId, setSelectedRfpId] = useState<number | null>(null);
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set(['tenantImprovements']));
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [isImporting, setIsImporting] = useState(false);
 
   const { data: availableRfps = [], isLoading } = useQuery<RfpForImport[]>({
     queryKey: ['/api/evaluation-budgets/available-for-import'],
-    enabled: open,
+    enabled: open && activeTab === "projects",
+  });
+
+  const { data: templatesData, isLoading: templatesLoading } = useQuery({
+    queryKey: ["/api/templates"],
+    enabled: open && activeTab === "templates",
+    select: (data: any) => data?.items || []
   });
 
   // Filter out current RFP and apply search
@@ -65,21 +91,49 @@ export function RfpImportDialog({ open, onOpenChange, currentRfpId, onImport }: 
   };
 
   const handleImport = async () => {
-    if (!selectedRfpId || selectedCategories.size === 0) return;
-    
-    setIsImporting(true);
-    try {
-      await onImport(selectedRfpId, Array.from(selectedCategories));
-      onOpenChange(false);
-      setSelectedRfpId(null);
-      setSelectedCategories(new Set(['tenantImprovements']));
-      setSearchTerm("");
-    } catch (error) {
-      console.error('Import error:', error);
-    } finally {
-      setIsImporting(false);
+    if (activeTab === "projects") {
+      if (!selectedRfpId || selectedCategories.size === 0) return;
+      
+      setIsImporting(true);
+      try {
+        await onImport(selectedRfpId, Array.from(selectedCategories));
+        onOpenChange(false);
+        setSelectedRfpId(null);
+        setSelectedCategories(new Set(['tenantImprovements']));
+        setSearchTerm("");
+      } catch (error) {
+        console.error('Import error:', error);
+      } finally {
+        setIsImporting(false);
+      }
+    } else if (activeTab === "templates") {
+      if (!selectedTemplateId || !onTemplateImport) return;
+      
+      setIsImporting(true);
+      try {
+        await onTemplateImport(selectedTemplateId);
+        onOpenChange(false);
+        setSelectedTemplateId(null);
+        setSearchTerm("");
+      } catch (error) {
+        console.error('Import error:', error);
+      } finally {
+        setIsImporting(false);
+      }
     }
   };
+
+  const filteredTemplates = (templatesData || [])
+    .filter((t: TemplateRecord) => !t.metadata.isArchived)
+    .filter((t: TemplateRecord) => {
+      if (!searchTerm) return true;
+      const search = searchTerm.toLowerCase();
+      return (
+        t.name.toLowerCase().includes(search) ||
+        t.description?.toLowerCase().includes(search) ||
+        t.category?.toLowerCase().includes(search)
+      );
+    });
 
   const formatCurrency = (value: string | number) => {
     const numValue = typeof value === 'string' ? parseFloat(value) : value;
@@ -90,17 +144,35 @@ export function RfpImportDialog({ open, onOpenChange, currentRfpId, onImport }: 
     }).format(numValue / 100);
   };
 
+  const selectedTemplate = filteredTemplates.find((t: TemplateRecord) => t.id === selectedTemplateId);
+
+  const canImport = activeTab === "projects" 
+    ? selectedRfpId && selectedCategories.size > 0
+    : selectedTemplateId;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
-          <DialogTitle>Import Evaluation Budget from Another RFP</DialogTitle>
+          <DialogTitle>Import Evaluation Budget</DialogTitle>
           <DialogDescription>
-            Select an RFP to copy its evaluation budget line items
+            Import line items from another RFP or a pre-configured template
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-hidden flex flex-col gap-4">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "projects" | "templates")} className="flex-1 overflow-hidden flex flex-col">
+          <TabsList className="w-full grid grid-cols-2">
+            <TabsTrigger value="projects" className="flex items-center gap-2">
+              <FolderOpen className="h-4 w-4" />
+              From Projects
+            </TabsTrigger>
+            <TabsTrigger value="templates" className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              From Templates
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="projects" className="flex-1 overflow-hidden flex flex-col gap-4 mt-4">
           {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -216,7 +288,64 @@ export function RfpImportDialog({ open, onOpenChange, currentRfpId, onImport }: 
               </div>
             </div>
           )}
-        </div>
+          </TabsContent>
+
+          <TabsContent value="templates" className="flex-1 overflow-hidden flex flex-col gap-4 mt-4">
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="Search templates..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+
+            {/* Templates List */}
+            <div className="flex-1 overflow-y-auto border rounded-md">
+              {templatesLoading ? (
+                <div className="p-8 text-center text-gray-500">Loading templates...</div>
+              ) : filteredTemplates.length === 0 ? (
+                <div className="p-8 text-center text-gray-500">
+                  {searchTerm ? 'No templates match your search' : 'No templates available'}
+                </div>
+              ) : (
+                <div className="divide-y">
+                  {filteredTemplates.map((template: TemplateRecord) => (
+                    <div
+                      key={template.id}
+                      className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors ${
+                        selectedTemplateId === template.id ? 'bg-blue-50 border-l-4 border-blue-500' : ''
+                      }`}
+                      onClick={() => setSelectedTemplateId(template.id)}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-blue-600">{template.name}</span>
+                            {selectedTemplateId === template.id && (
+                              <CheckCircle2 className="h-4 w-4 text-blue-500" />
+                            )}
+                          </div>
+                          {template.description && (
+                            <div className="text-sm text-gray-700 mt-1">{template.description}</div>
+                          )}
+                          <div className="flex gap-3 mt-2 text-xs">
+                            {template.category && (
+                              <Badge variant="secondary">{template.category}</Badge>
+                            )}
+                            <span className="text-gray-600">{template.items.length} items</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </TabsContent>
+        </Tabs>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
@@ -224,7 +353,7 @@ export function RfpImportDialog({ open, onOpenChange, currentRfpId, onImport }: 
           </Button>
           <Button
             onClick={handleImport}
-            disabled={!selectedRfpId || selectedCategories.size === 0 || isImporting}
+            disabled={!canImport || isImporting}
           >
             <Copy className="h-4 w-4 mr-2" />
             {isImporting ? 'Importing...' : 'Import Selected Items'}

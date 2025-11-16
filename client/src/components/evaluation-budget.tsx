@@ -551,6 +551,59 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
     }
   };
 
+  // Import evaluation budget from template
+  const handleTemplateImport = async (templateId: string) => {
+    try {
+      const response = await apiRequest(`/api/templates/${templateId}/for-import`, "GET");
+      
+      if (!response) {
+        throw new Error("No template data found");
+      }
+
+      const newItems = {
+        tenantImprovements: response.tenantImprovements?.map((item: any, index: number) => ({
+          ...item,
+          id: `template-ti-${Date.now()}-${index}`,
+        })) || [],
+        designSoftCosts: response.designSoftCosts?.map((item: any, index: number) => ({
+          ...item,
+          id: `template-dsc-${Date.now()}-${index}`,
+        })) || [],
+        existingImprovements: response.existingImprovements?.map((item: any, index: number) => ({
+          ...item,
+          id: `template-ei-${Date.now()}-${index}`,
+        })) || [],
+      };
+
+      const totalImported = 
+        newItems.tenantImprovements.length +
+        newItems.designSoftCosts.length +
+        newItems.existingImprovements.length;
+
+      setBudgetData(prev => ({
+        ...prev,
+        tenantImprovements: [...prev.tenantImprovements, ...newItems.tenantImprovements],
+        designSoftCosts: [...prev.designSoftCosts, ...newItems.designSoftCosts],
+        existingImprovements: [...prev.existingImprovements, ...newItems.existingImprovements],
+      }));
+
+      toast({
+        title: "Template Imported Successfully",
+        description: `Imported ${totalImported} line items from template.`,
+        duration: 4000,
+      });
+    } catch (error) {
+      console.error('Template import error:', error);
+      toast({
+        title: "Import Failed",
+        description: "Failed to import template.",
+        variant: "destructive",
+        duration: 6000,
+      });
+      throw error;
+    }
+  };
+
   // Import selected design costs
   const importSelectedDesignItems = () => {
     if (!allDesignLineItems || selectedDesignItems.size === 0) return;
@@ -4681,12 +4734,13 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
         </DialogContent>
       </Dialog>
 
-      {/* Import from Another RFP Dialog */}
+      {/* Import from Another RFP or Template Dialog */}
       <RfpImportDialog
         open={showRfpImportModal}
         onOpenChange={setShowRfpImportModal}
         currentRfpId={rfp?.id}
         onImport={handleRfpImport}
+        onTemplateImport={handleTemplateImport}
       />
     </div>
   );

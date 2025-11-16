@@ -23,6 +23,7 @@ import { EnhancedRfpCustomizer } from "@/components/enhanced-rfp-customizer";
 import { TimezoneAdminPanel } from "@/components/timezone-admin-panel";
 import { LegalCompliancePanel } from "@/components/legal-compliance-panel";
 import { PropertyRenumberingPanel } from "@/components/property-renumbering-panel";
+import { TemplatesManagement } from "@/components/templates-management";
 import type { User, UserRole, Permission } from "@shared/schema";
 import { ROLE_PERMISSIONS } from "@shared/schema";
 
@@ -914,6 +915,11 @@ export default function Admin() {
               <Hash className="h-4 w-4" />
               Properties
             </TabsTrigger>
+            <TabsTrigger value="rfp-templates" className="flex items-center gap-2 flex-shrink-0">
+              <FileText className="h-4 w-4" />
+              <span className="hidden sm:inline">RFP Templates</span>
+              <span className="sm:hidden">Templates</span>
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="users" className="mt-6">
@@ -1033,6 +1039,10 @@ export default function Admin() {
 
           <TabsContent value="renumber" className="mt-6">
             <PropertyRenumberingPanel />
+          </TabsContent>
+
+          <TabsContent value="rfp-templates" className="mt-6">
+            <TemplatesManagement />
           </TabsContent>
         </Tabs>
       </div>

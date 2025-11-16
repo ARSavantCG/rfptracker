@@ -4210,6 +4210,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get template for evaluation budget import
+  app.get("/api/templates/:id/for-import", requireAuth, async (req, res) => {
+    try {
+      const template = await rfpTemplates.getTemplate(req.params.id);
+      if (!template) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+
+      // Convert template items to evaluation line item format
+      const evaluationItems = {
+        tenantImprovements: [] as any[],
+        designSoftCosts: [] as any[],
+        existingImprovements: [] as any[],
+      };
+
+      template.items.forEach((item: any, index: number) => {
+        const lineItem = {
+          id: `template-${template.id}-${index}`,
+          description: item.label,
+          quantity: item.qty || 1,
+          unit: item.unit || "ea",
+          unitPrice: item.unit_cost ? (item.unit_cost * 100).toString() : "0",
+          totalPrice: item.unit_cost && item.qty ? ((item.unit_cost * item.qty) * 100).toString() : "0",
+          tenantShare: item.percent || 100,
+          notes: item.notes || "",
+        };
+
+        // Categorize based on item tags or type
+        const tags = item.tags || [];
+        if (tags.includes("design") || item.type === "design") {
+          evaluationItems.designSoftCosts.push(lineItem);
+        } else if (tags.includes("existing") || item.type === "existing") {
+          evaluationItems.existingImprovements.push(lineItem);
+        } else {
+          evaluationItems.tenantImprovements.push(lineItem);
+        }
+      });
+
+      res.json(evaluationItems);
+    } catch (error) {
+      console.error('Template import fetch error:', error);
+      res.status(500).json({ message: "Failed to fetch template for import" });
+    }
+  });
+
   // Clean up orphaned assembly items in evaluation budget
   app.post("/api/rfp-requests/:rfpId/evaluation-budget/cleanup-assemblies", requireAuth, async (req, res) => {
     try {

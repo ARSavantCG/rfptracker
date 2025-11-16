@@ -119,6 +119,284 @@
         "updatedAt": "2025-11-16T18:55:31.144Z",
         "isArchived": false
       }
+    },
+    {
+      "id": "tpl_rom_integration_test_a7ue_amu8",
+      "name": "ROM Integration Test a7uE",
+      "description": "Phase 1 ROM pilot integration testing",
+      "category": "Industrial",
+      "version": 1,
+      "items": [
+        {
+          "code": "ROM-37",
+          "label": "Office Area",
+          "type": "cost",
+          "qty": 1,
+          "unit": "sf.",
+          "unit_cost": 195,
+          "tags": [
+            "tenant-improvements"
+          ],
+          "notes": "(> 3,000 sf; up to 5,000 sf)",
+          "romScopeItemId": 37,
+          "sourceType": "rom"
+        },
+        {
+          "code": "ROM-38",
+          "label": "Office Area",
+          "type": "cost",
+          "qty": 1,
+          "unit": "sf.",
+          "unit_cost": 185,
+          "tags": [
+            "tenant-improvements"
+          ],
+          "notes": "(>5,000 sf)",
+          "romScopeItemId": 38,
+          "sourceType": "rom"
+        },
+        {
+          "code": "ROM-24",
+          "label": "Demising Wall (Un-painted)",
+          "type": "cost",
+          "qty": 1,
+          "unit": "lf.",
+          "unit_cost": 795,
+          "tags": [
+            "tenant-improvements"
+          ],
+          "notes": "Up to 40' clear.",
+          "romScopeItemId": 24,
+          "sourceType": "rom"
+        }
+      ],
+      "metadata": {
+        "createdBy": "AReutlinger@bridgeindustrial.com",
+        "createdAt": "2025-11-16T20:12:01.237Z",
+        "updatedAt": "2025-11-16T20:12:01.237Z",
+        "isArchived": false
+      }
+    },
+    {
+      "id": "tpl_rom_test_amlo_a7ux",
+      "name": "ROM Test amlO",
+      "description": "Testing ROM pilot item selector",
+      "category": "Industrial TI",
+      "version": 1,
+      "items": [
+        {
+          "code": "ROM-38",
+          "label": "Office Area",
+          "type": "cost",
+          "qty": 1,
+          "unit": "sf.",
+          "unit_cost": 185,
+          "tags": [
+            "tenant-improvements"
+          ],
+          "notes": "(>5,000 sf)",
+          "romScopeItemId": 38,
+          "sourceType": "rom"
+        },
+        {
+          "code": "ROM-27",
+          "label": "Office Area",
+          "type": "cost",
+          "qty": 1,
+          "unit": "sf.",
+          "unit_cost": 265,
+          "tags": [
+            "tenant-improvements"
+          ],
+          "notes": "Standard Office (Bridge Standard)",
+          "romScopeItemId": 27,
+          "sourceType": "rom"
+        },
+        {
+          "code": "ROM-37",
+          "label": "Office Area",
+          "type": "cost",
+          "qty": 1,
+          "unit": "sf.",
+          "unit_cost": 195,
+          "tags": [
+            "tenant-improvements"
+          ],
+          "notes": "(> 3,000 sf; up to 5,000 sf)",
+          "romScopeItemId": 37,
+          "sourceType": "rom"
+        }
+      ],
+      "metadata": {
+        "createdBy": "AReutlinger@bridgeindustrial.com",
+        "createdAt": "2025-11-16T20:18:08.786Z",
+        "updatedAt": "2025-11-16T20:18:08.786Z",
+        "isArchived": false
+      }
+    },
+    {
+      "id": "tpl_snapshot_test_k5v4_s32k",
+      "name": "Snapshot Test k5V4",
+      "description": "Testing ROM snapshot persistence",
+      "category": "Test",
+      "version": 1,
+      "items": [
+        {
+          "code": "ROM-37",
+          "label": "Office Area",
+          "type": "cost",
+          "qty": 1,
+          "unit": "sf.",
+          "unit_cost": 195,
+          "tags": [
+            "tenant-improvements"
+          ],
+          "notes": "(> 3,000 sf; up to 5,000 sf)",
+          "romScopeItemId": 37,
+          "sourceType": "rom",
+          "snapshot": {
+            "label": "Office Area",
+            "unit": "sf.",
+            "unitPrice": 195,
+            "category": "Tenant Improvements",
+            "source": "ROM Pilot",
+            "capturedAt": "2025-11-16T20:24:00.194Z"
+          }
+        },
+        {
+          "code": "ROM-38",
+          "label": "Office Area",
+          "type": "cost",
+          "qty": 1,
+          "unit": "sf.",
+          "unit_cost": 185,
+          "tags": [
+            "tenant-improvements"
+          ],
+          "notes": "(>5,000 sf)",
+          "romScopeItemId": 38,
+          "sourceType": "rom",
+          "snapshot": {
+            "label": "Office Area",
+            "unit": "sf.",
+            "unitPrice": 185,
+            "category": "Tenant Improvements",
+            "source": "ROM Pilot",
+            "capturedAt": "2025-11-16T20:24:00.194Z"
+          }
+        },
+        {
+          "code": "ROM-24",
+          "label": "Demising Wall (Un-painted)",
+          "type": "cost",
+          "qty": 1,
+          "unit": "lf.",
+          "unit_cost": 795,
+          "tags": [
+            "tenant-improvements"
+          ],
+          "notes": "Up to 40' clear.",
+          "romScopeItemId": 24,
+          "sourceType": "rom",
+          "snapshot": {
+            "label": "Demising Wall (Un-painted)",
+            "unit": "lf.",
+            "unitPrice": 795,
+            "category": "Tenant Improvements",
+            "source": "ROM Pilot",
+            "capturedAt": "2025-11-16T20:24:00.194Z"
+          }
+        }
+      ],
+      "metadata": {
+        "createdBy": "AReutlinger@bridgeindustrial.com",
+        "createdAt": "2025-11-16T20:22:56.742Z",
+        "updatedAt": "2025-11-16T20:24:00.441Z",
+        "isArchived": false,
+        "updatedBy": "AReutlinger@bridgeindustrial.com"
+      }
+    },
+    {
+      "id": "tpl_timestamp_test_ov4_jxrx",
+      "name": "Timestamp Test oV4",
+      "description": "Testing timestamp preservation",
+      "category": "Test",
+      "version": 1,
+      "items": [
+        {
+          "code": "ROM-37",
+          "label": "Office Area",
+          "type": "cost",
+          "qty": 1,
+          "unit": "sf.",
+          "unit_cost": 195,
+          "tags": [
+            "tenant-improvements"
+          ],
+          "notes": "(> 3,000 sf; up to 5,000 sf)",
+          "romScopeItemId": 37,
+          "sourceType": "rom",
+          "snapshot": {
+            "label": "Office Area",
+            "unit": "sf.",
+            "unitPrice": 195,
+            "category": "Tenant Improvements",
+            "source": "ROM Pilot",
+            "capturedAt": "2025-11-16T20:26:55.113Z"
+          }
+        },
+        {
+          "code": "ROM-38",
+          "label": "Office Area",
+          "type": "cost",
+          "qty": 1,
+          "unit": "sf.",
+          "unit_cost": 185,
+          "tags": [
+            "tenant-improvements"
+          ],
+          "notes": "(>5,000 sf)",
+          "romScopeItemId": 38,
+          "sourceType": "rom",
+          "snapshot": {
+            "label": "Office Area",
+            "unit": "sf.",
+            "unitPrice": 185,
+            "category": "Tenant Improvements",
+            "source": "ROM Pilot",
+            "capturedAt": "2025-11-16T20:26:55.113Z"
+          }
+        },
+        {
+          "code": "ROM-24",
+          "label": "Demising Wall (Un-painted)",
+          "type": "cost",
+          "qty": 1,
+          "unit": "lf.",
+          "unit_cost": 795,
+          "tags": [
+            "tenant-improvements"
+          ],
+          "notes": "Up to 40' clear.",
+          "romScopeItemId": 24,
+          "sourceType": "rom",
+          "snapshot": {
+            "label": "Demising Wall (Un-painted)",
+            "unit": "lf.",
+            "unitPrice": 795,
+            "category": "Tenant Improvements",
+            "source": "ROM Pilot",
+            "capturedAt": "2025-11-16T20:27:58.161Z"
+          }
+        }
+      ],
+      "metadata": {
+        "createdBy": "AReutlinger@bridgeindustrial.com",
+        "createdAt": "2025-11-16T20:26:55.364Z",
+        "updatedAt": "2025-11-16T20:27:58.398Z",
+        "isArchived": false,
+        "updatedBy": "AReutlinger@bridgeindustrial.com"
+      }
     }
   ]
 }

@@ -208,8 +208,19 @@ export function TemplatesManagement() {
       return;
     }
 
-    // Convert selected ROM items to template items
+    // Convert selected ROM items to template items WITH SNAPSHOTS
+    // IMPORTANT: Preserve existing snapshots for items already in template
     const templateItems: TemplateItem[] = Array.from(selectedRomItems).map(romId => {
+      // Check if this ROM item already exists in the template
+      const existingItem = formData.items.find(item => item.romScopeItemId === romId);
+      
+      if (existingItem) {
+        // Deep clone to prevent mutation of original item in React state
+        // This preserves the original snapshot timestamp immutably
+        return JSON.parse(JSON.stringify(existingItem));
+      }
+      
+      // New ROM item - create fresh snapshot with current timestamp
       const romItem = romItems.find((item: RomScopeItem) => item.id === romId);
       if (!romItem) return null;
       
@@ -223,13 +234,27 @@ export function TemplatesManagement() {
         tags: [romItem.category.toLowerCase().replace(/\s+/g, "-")],
         notes: romItem.description,
         romScopeItemId: romItem.id,
-        sourceType: "rom" as const
+        sourceType: "rom" as const,
+        // Capture immutable snapshot for staleness detection
+        snapshot: {
+          label: romItem.name,
+          unit: romItem.unit,
+          unitPrice: parseFloat(romItem.unitPrice),
+          category: romItem.category,
+          source: romItem.source || 'ROM Pilot',
+          capturedAt: new Date().toISOString()
+        }
       };
     }).filter(Boolean) as TemplateItem[];
 
-    // Add any existing custom items
-    const customItems = formData.items.filter(item => item.sourceType === "custom");
-    const allItems = [...templateItems, ...customItems];
+    // Preserve ALL existing items that aren't in the current ROM selection
+    // This includes custom items, legacy items, and any items without sourceType
+    const existingItemsToKeep = formData.items.filter(item => 
+      // Keep if it's NOT a ROM item, OR if it's a ROM item not in current selection
+      !item.romScopeItemId || !selectedRomItems.has(item.romScopeItemId)
+    );
+    
+    const allItems = [...templateItems, ...existingItemsToKeep];
 
     const payload = {
       name: formData.name,

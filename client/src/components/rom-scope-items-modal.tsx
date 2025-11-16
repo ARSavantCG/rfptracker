@@ -195,6 +195,11 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
       return acc;
     }, {} as Record<string, RomScopeItem[]>);
 
+    // Sort items alphabetically within each category
+    Object.keys(itemsByCategory).forEach(category => {
+      itemsByCategory[category].sort((a, b) => a.name.localeCompare(b.name));
+    });
+
     const currentDate = new Date().toLocaleDateString('en-US', { 
       weekday: 'long', 
       year: 'numeric', 
@@ -613,7 +618,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
     }
   };
 
-  // Group items by category
+  // Group items by category and sort alphabetically by name
   const itemsByCategory = scopeItems.reduce((acc, item) => {
     if (!acc[item.category]) {
       acc[item.category] = [];
@@ -621,6 +626,11 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
     acc[item.category].push(item);
     return acc;
   }, {} as Record<string, RomScopeItem[]>);
+
+  // Sort items alphabetically within each category
+  Object.keys(itemsByCategory).forEach(category => {
+    itemsByCategory[category].sort((a, b) => a.name.localeCompare(b.name));
+  });
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>

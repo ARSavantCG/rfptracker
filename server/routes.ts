@@ -8517,7 +8517,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create new template (admin only)
-  app.post("/api/templates", requireAuth, checkPermission('admin'), async (req, res) => {
+  app.post("/api/templates", requireAuth, checkPermission('admin.access'), async (req, res) => {
     try {
       const user = (req as any).user;
       const template = await Templates.createTemplate({
@@ -8533,7 +8533,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update template (admin only)
-  app.patch("/api/templates/:id", requireAuth, checkPermission('admin'), async (req, res) => {
+  app.patch("/api/templates/:id", requireAuth, checkPermission('admin.access'), async (req, res) => {
     try {
       const user = (req as any).user;
       const template = await Templates.updateTemplate(req.params.id, {
@@ -8552,7 +8552,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Duplicate template (admin only)
-  app.post("/api/templates/:id/duplicate", requireAuth, checkPermission('admin'), async (req, res) => {
+  app.post("/api/templates/:id/duplicate", requireAuth, checkPermission('admin.access'), async (req, res) => {
     try {
       const user = (req as any).user;
       const template = await Templates.duplicateTemplate(req.params.id, user?.username || 'admin');
@@ -8565,7 +8565,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Archive/Unarchive template (admin only)
-  app.patch("/api/templates/:id/archive", requireAuth, checkPermission('admin'), async (req, res) => {
+  app.patch("/api/templates/:id/archive", requireAuth, checkPermission('admin.access'), async (req, res) => {
     try {
       const { archived } = req.body;
       const template = await Templates.archiveTemplate(req.params.id, archived === true);

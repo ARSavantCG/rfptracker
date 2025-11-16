@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,21 +9,37 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Plus, Edit, Copy, Archive, Trash2, Search, FileText } from "lucide-react";
+import { Plus, Edit, Copy, Archive, Trash2, Search, FileText, AlertCircle, X } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { useAuth } from "@/hooks/useAuth";
+
+interface RomScopeItem {
+  id: number;
+  name: string;
+  description: string;
+  unit: string;
+  unitPrice: string;
+  minimumCost: string | null;
+  category: string;
+  source: string;
+}
 
 interface TemplateItem {
   code: string;
   label: string;
   type: "cost" | "allowance" | "percent" | "note";
   qty?: number | null;
+  unit?: string | null;
   unit_cost?: number | null;
   percent?: number | null;
   percent_of?: string | null;
   tags?: string[];
   notes?: string;
+  romScopeItemId?: number | null;
+  sourceType?: "rom" | "custom";
 }
 
 interface TemplateRecord {
@@ -45,17 +61,23 @@ interface TemplateRecord {
 export function TemplatesManagement() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<TemplateRecord | null>(null);
-  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
     category: "",
     items: [] as TemplateItem[]
   });
+  
+  // ROM Pilot item selection
+  const [romSearchTerm, setRomSearchTerm] = useState("");
+  const [selectedRomItems, setSelectedRomItems] = useState<Set<number>>(new Set());
+  const [showCustomItemPrompt, setShowCustomItemPrompt] = useState(false);
 
+  // Fetch templates
   const { data: templatesData, isLoading } = useQuery({
     queryKey: ["/api/templates", searchTerm],
     queryFn: async () => {
@@ -66,6 +88,38 @@ export function TemplatesManagement() {
       return response.json();
     }
   });
+
+  // Fetch ROM scope items
+  const { data: romItems = [], isLoading: isLoadingRom, isError: isRomError } = useQuery<RomScopeItem[]>({
+    queryKey: ["/api/rom-scope-items"],
+    enabled: showCreateDialog || !!editingTemplate
+  });
+
+  // Filter ROM items by search
+  const filteredRomItems = useMemo(() => {
+    if (!romSearchTerm) return romItems;
+    const term = romSearchTerm.toLowerCase();
+    return romItems.filter((item: RomScopeItem) =>
+      item.name.toLowerCase().includes(term) ||
+      item.category.toLowerCase().includes(term) ||
+      item.description?.toLowerCase().includes(term)
+    );
+  }, [romItems, romSearchTerm]);
+
+  // Group ROM items by category
+  const groupedRomItems = useMemo(() => {
+    const groups: Record<string, RomScopeItem[]> = {};
+    filteredRomItems.forEach((item: RomScopeItem) => {
+      if (!groups[item.category]) {
+        groups[item.category] = [];
+      }
+      groups[item.category].push(item);
+    });
+    return groups;
+  }, [filteredRomItems]);
+
+  const templates = templatesData?.items || [];
+  const isAdmin = user?.permissions?.includes?.("admin.access");
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => apiRequest("/api/templates", "POST", data),
@@ -107,7 +161,7 @@ export function TemplatesManagement() {
 
   const archiveMutation = useMutation({
     mutationFn: async ({ id, archived }: { id: string; archived: boolean }) =>
-      apiRequest(`/api/templates/${id}/archive`, "PATCH", { archived }),
+      apiRequest(`/api/templates/${id}/archive`, "PUT", { archived }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/templates"] });
       toast({ title: "Template archived successfully", duration: 4000 });
@@ -119,6 +173,8 @@ export function TemplatesManagement() {
 
   const resetForm = () => {
     setFormData({ name: "", description: "", category: "", items: [] });
+    setSelectedRomItems(new Set());
+    setRomSearchTerm("");
   };
 
   const handleEdit = (template: TemplateRecord) => {
@@ -127,44 +183,97 @@ export function TemplatesManagement() {
       name: template.name,
       description: template.description || "",
       category: template.category || "",
-      items: template.items
+      items: template.items || []
+    });
+    // Pre-select ROM items if they exist
+    const romIds = new Set(template.items.filter(item => item.romScopeItemId).map(item => item.romScopeItemId!));
+    setSelectedRomItems(romIds);
+  };
+
+  const handleToggleRomItem = (itemId: number) => {
+    setSelectedRomItems(prev => {
+      const next = new Set(prev);
+      if (next.has(itemId)) {
+        next.delete(itemId);
+      } else {
+        next.add(itemId);
+      }
+      return next;
     });
   };
 
   const handleSubmit = () => {
+    if (!formData.name) {
+      toast({ title: "Error", description: "Template name is required", variant: "destructive" });
+      return;
+    }
+
+    // Convert selected ROM items to template items
+    const templateItems: TemplateItem[] = Array.from(selectedRomItems).map(romId => {
+      const romItem = romItems.find((item: RomScopeItem) => item.id === romId);
+      if (!romItem) return null;
+      
+      return {
+        code: `ROM-${romItem.id}`,
+        label: romItem.name,
+        type: "cost" as const,
+        qty: 1,
+        unit: romItem.unit,
+        unit_cost: parseFloat(romItem.unitPrice) || 0,
+        tags: [romItem.category.toLowerCase().replace(/\s+/g, "-")],
+        notes: romItem.description,
+        romScopeItemId: romItem.id,
+        sourceType: "rom" as const
+      };
+    }).filter(Boolean) as TemplateItem[];
+
+    // Add any existing custom items
+    const customItems = formData.items.filter(item => item.sourceType === "custom");
+    const allItems = [...templateItems, ...customItems];
+
+    const payload = {
+      name: formData.name,
+      description: formData.description,
+      category: formData.category,
+      items: allItems
+    };
+
     if (editingTemplate) {
-      updateMutation.mutate({ id: editingTemplate.id, data: formData });
+      updateMutation.mutate({ id: editingTemplate.id, data: payload });
     } else {
-      createMutation.mutate(formData);
+      createMutation.mutate(payload);
     }
   };
 
-  const templates = templatesData?.items || [];
+  const handleRemoveSelectedItem = (itemId: number) => {
+    setSelectedRomItems(prev => {
+      const next = new Set(prev);
+      next.delete(itemId);
+      return next;
+    });
+  };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="templates-management">
       <Card>
-        <CardHeader className="border-b">
+        <CardHeader>
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              <CardTitle>
-                Templates 
-                {templates.length > 0 && (
-                  <Badge variant="outline" className="ml-2">{templates.length}</Badge>
-                )}
-              </CardTitle>
+            <div>
+              <CardTitle>RFP Templates</CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                Create reusable cost templates from ROM pilot items
+              </p>
             </div>
             <Button onClick={() => setShowCreateDialog(true)} data-testid="button-create-template">
               <Plus className="h-4 w-4 mr-2" />
-              New Template
+              Create Template
             </Button>
           </div>
         </CardHeader>
-        <CardContent className="p-6">
+        <CardContent>
           <div className="mb-4">
-            <div className="relative w-72">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search templates..."
                 value={searchTerm}
@@ -252,6 +361,7 @@ export function TemplatesManagement() {
         </CardContent>
       </Card>
 
+      {/* Create/Edit Template Dialog */}
       <Dialog open={showCreateDialog || !!editingTemplate} onOpenChange={(open) => {
         if (!open) {
           setShowCreateDialog(false);
@@ -259,47 +369,161 @@ export function TemplatesManagement() {
           resetForm();
         }
       }}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>{editingTemplate ? "Edit Template" : "Create Template"}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Template Name *</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="e.g., Baseline Industrial TI"
-                data-testid="input-template-name"
-              />
+          
+          <div className="grid grid-cols-2 gap-4 py-4 overflow-y-auto">
+            {/* Left: Template Info */}
+            <div className="space-y-4 pr-4 border-r">
+              <div className="space-y-2">
+                <Label htmlFor="name">Template Name *</Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="e.g., Baseline Industrial TI"
+                  data-testid="input-template-name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="category">Category</Label>
+                <Input
+                  id="category"
+                  value={formData.category}
+                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                  placeholder="e.g., Industrial, Office"
+                  data-testid="input-template-category"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="Brief description of this template"
+                  rows={3}
+                  data-testid="textarea-template-description"
+                />
+              </div>
+
+              {/* Selected Items Summary */}
+              <div className="space-y-2 pt-4">
+                <Label>Selected Items ({selectedRomItems.size})</Label>
+                {selectedRomItems.size === 0 ? (
+                  <p className="text-sm text-muted-foreground">No items selected yet</p>
+                ) : (
+                  <div className="space-y-1 max-h-[300px] overflow-y-auto border rounded-md p-2">
+                    {Array.from(selectedRomItems).map(itemId => {
+                      const romItem = romItems.find((item: RomScopeItem) => item.id === itemId);
+                      if (!romItem) return null;
+                      return (
+                        <div key={itemId} className="flex items-center justify-between text-sm py-1 px-2 hover:bg-slate-50 rounded">
+                          <span className="truncate flex-1">{romItem.name}</span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRemoveSelectedItem(itemId)}
+                            className="h-6 w-6 p-0 ml-2"
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {isAdmin && (
+                <div className="pt-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowCustomItemPrompt(true)}
+                    className="w-full"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Custom Item (Admin Only)
+                  </Button>
+                </div>
+              )}
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="category">Category</Label>
-              <Input
-                id="category"
-                value={formData.category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                placeholder="e.g., TI, Core/Shell"
-                data-testid="input-template-category"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Brief description of this template"
-                rows={3}
-                data-testid="textarea-template-description"
-              />
-            </div>
-            <div className="text-sm text-muted-foreground">
-              <p>Note: Template items can be added and edited after creation through the full template editor.</p>
+
+            {/* Right: ROM Pilot Items Browser */}
+            <div className="space-y-4 pl-4">
+              <div>
+                <Label>Select from ROM Pilot</Label>
+                <div className="relative mt-2">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search ROM items..."
+                    value={romSearchTerm}
+                    onChange={(e) => setRomSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+
+              <div className="border rounded-md max-h-[500px] overflow-y-auto">
+                {isLoadingRom ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    Loading ROM pilot items...
+                  </div>
+                ) : isRomError ? (
+                  <div className="text-center py-12">
+                    <AlertCircle className="h-8 w-8 mx-auto mb-2 text-red-500" />
+                    <p className="text-sm text-red-600">Failed to load ROM pilot items</p>
+                    <p className="text-xs text-muted-foreground mt-1">Please try again later</p>
+                  </div>
+                ) : romItems.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <p className="text-sm">No ROM pilot items found</p>
+                    <p className="text-xs mt-1">Add items in ROM Pilot management first</p>
+                  </div>
+                ) : Object.entries(groupedRomItems).length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p className="text-sm">No items match your search</p>
+                  </div>
+                ) : (
+                  Object.entries(groupedRomItems).map(([category, items]) => (
+                  <div key={category} className="border-b last:border-b-0">
+                    <div className="bg-slate-50 px-3 py-2 font-medium text-sm sticky top-0">
+                      {category} ({items.length})
+                    </div>
+                    <div className="divide-y">
+                      {items.map((item: RomScopeItem) => (
+                        <div
+                          key={item.id}
+                          className="flex items-start gap-3 p-3 hover:bg-slate-50"
+                        >
+                          <Checkbox
+                            checked={selectedRomItems.has(item.id)}
+                            onCheckedChange={() => handleToggleRomItem(item.id)}
+                            className="mt-1"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-sm">{item.name}</div>
+                            {item.description && (
+                              <div className="text-xs text-muted-foreground mt-0.5">{item.description}</div>
+                            )}
+                            <div className="text-xs text-muted-foreground mt-1">
+                              {item.unit} • ${parseFloat(item.unitPrice).toFixed(2)}/{item.unit}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  ))
+                )}
+              </div>
             </div>
           </div>
-          <div className="flex justify-end gap-2">
+
+          <div className="flex justify-end gap-2 pt-4 border-t">
             <Button variant="ghost" onClick={() => {
               setShowCreateDialog(false);
               setEditingTemplate(null);
@@ -307,12 +531,41 @@ export function TemplatesManagement() {
             }}>
               Cancel
             </Button>
-            <Button onClick={handleSubmit} disabled={!formData.name} data-testid="button-save-template">
+            <Button onClick={handleSubmit} disabled={!formData.name || selectedRomItems.size === 0} data-testid="button-save-template">
               {editingTemplate ? "Save Changes" : "Create Template"}
             </Button>
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Custom Item Prompt */}
+      <AlertDialog open={showCustomItemPrompt} onOpenChange={setShowCustomItemPrompt}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-amber-500" />
+              Add Item to ROM Pilot First
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>
+                This item is not in the ROM Pilot. For consistency and reusability, we recommend adding it to the ROM Pilot first.
+              </p>
+              <p className="font-medium">
+                Would you like to navigate to ROM Pilot management to add this item?
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => {
+              setShowCustomItemPrompt(false);
+              window.location.href = "/rom-pilot";
+            }}>
+              Go to ROM Pilot
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -855,6 +855,8 @@ export const romScopeItems = pgTable("rom_scope_items", {
   isActive: boolean("is_active").default(true),
   includeByDefault: boolean("include_by_default").default(false), // Auto-include in new ROMs
   attachments: json("attachments").$type<RfpFile[]>().default([]),
+  // Reference pricing for quarterly contractor verification (not used in ROMs/Evaluations)
+  referencePricing: json("reference_pricing").$type<{contractorName: string, price: string, date: string}[]>().default([]),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

@@ -5190,7 +5190,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/rom-scope-items/:id", requireAuth, checkPermission('rom.scope.delete'), async (req, res) => {
+  app.delete("/api/rom-scope-items/:id", requireAuth, checkPermission('admin.access'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {

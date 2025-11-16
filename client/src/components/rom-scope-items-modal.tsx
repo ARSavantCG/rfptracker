@@ -50,8 +50,8 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
-  // Check if user has ROM scope delete permissions (only for deleting master scope items)
-  const canDeleteRomScope = user?.permissions?.includes('rom.scope.delete') || false;
+  // Check if user has admin permissions for ROM scope management
+  const canDeleteRomScope = user?.permissions?.includes('admin.access') || false;
   
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingItem, setEditingItem] = useState<RomScopeItem | null>(null);

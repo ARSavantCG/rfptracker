@@ -1,0 +1,124 @@
+{
+  "templates": [
+    {
+      "id": "tpl_ti_baseline_v1",
+      "name": "Baseline Industrial TI",
+      "description": "Design, permit fees, and owner soft costs starter.",
+      "category": "TI",
+      "version": 1,
+      "items": [
+        {
+          "code": "DES-100",
+          "label": "Design",
+          "type": "cost",
+          "qty": 1,
+          "unit_cost": 45000,
+          "tags": [
+            "soft_cost",
+            "precon"
+          ],
+          "notes": ""
+        },
+        {
+          "code": "PER-350",
+          "label": "Permit Fees",
+          "type": "percent",
+          "percent": 3.5,
+          "percent_of": "subtotal_hard_costs",
+          "qty": 1,
+          "tags": [
+            "fees"
+          ],
+          "notes": ""
+        },
+        {
+          "code": "MAT-TEST",
+          "label": "Materials Testing",
+          "type": "cost",
+          "qty": 1,
+          "unit_cost": 30000,
+          "tags": [
+            "quality"
+          ],
+          "notes": ""
+        },
+        {
+          "code": "BIRD-SP",
+          "label": "Bird Spikes",
+          "type": "cost",
+          "qty": 1,
+          "unit_cost": 25000,
+          "tags": [
+            "façade"
+          ],
+          "notes": ""
+        },
+        {
+          "code": "STR-MOD",
+          "label": "Storefront Modifications",
+          "type": "cost",
+          "qty": 1,
+          "unit_cost": 40000,
+          "tags": [
+            "façade"
+          ],
+          "notes": ""
+        }
+      ],
+      "metadata": {
+        "createdBy": "seed",
+        "createdAt": "2025-11-16T18:55:31.143Z",
+        "updatedAt": "2025-11-16T18:55:31.144Z",
+        "isArchived": false
+      }
+    },
+    {
+      "id": "tpl_core_shell_utils_v1",
+      "name": "Core & Shell + Utilities",
+      "description": "Core/shell placeholders incl. switchgear, dock equipment, air curtain.",
+      "category": "Core/Shell",
+      "version": 1,
+      "items": [
+        {
+          "code": "SWGR-PL",
+          "label": "Switchgear Placeholder",
+          "type": "allowance",
+          "qty": 1,
+          "unit_cost": 150000,
+          "tags": [
+            "electrical"
+          ],
+          "notes": ""
+        },
+        {
+          "code": "DOCK-EQ",
+          "label": "Dock Equipment Allowance",
+          "type": "allowance",
+          "qty": 1,
+          "unit_cost": 120000,
+          "tags": [
+            "dock"
+          ],
+          "notes": ""
+        },
+        {
+          "code": "AIR-CRT",
+          "label": "Air Curtain",
+          "type": "cost",
+          "qty": 1,
+          "unit_cost": 20000,
+          "tags": [
+            "hvac"
+          ],
+          "notes": ""
+        }
+      ],
+      "metadata": {
+        "createdBy": "seed",
+        "createdAt": "2025-11-16T18:55:31.144Z",
+        "updatedAt": "2025-11-16T18:55:31.144Z",
+        "isArchived": false
+      }
+    }
+  ]
+}

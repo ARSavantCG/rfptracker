@@ -1,0 +1,56 @@
+You have one new drop-in module at ./src/lib/rfp_templates.ts (or rfp_templates_dropin.ts if I didn’t rename it). Wire it into the app to add first-class **Templates**:
+
+**Scope**
+- Add an **Admin → Templates** screen with full CRUD using the module’s `Templates` facade:
+  - `init`, `listTemplates`, `getTemplate`, `createTemplate`, `updateTemplate`, `duplicateTemplate`, `archiveTemplate`.
+- Extend the **Evaluation → Import** modal to include a **Templates** tab alongside the existing Projects import.
+- After import, trigger our existing recalculation pipeline (unchanged) and show an “Undo” using a simple reverse patch.
+
+**File to use**
+- Import default export from the new module: `import Templates from "src/lib/rfp_templates";`
+- On server startup (or app init), call `await Templates.init()` once to ensure `data/templates.json` exists and seeds are loaded.
+
+**Admin → Templates UI**
+- Left-nav: “Admin” → “Templates”.
+- Table columns: Name, Category, #Items, Updated (relative), Actions (Edit, Duplicate, Archive/Unarchive).
+- “New Template” button → modal/drawer with fields:
+  - Template: Name (required), Category, Description (optional).
+  - Items editor grid with columns: Code, Label, Type (select: cost | allowance | percent | note), Qty, Unit Cost, Percent, Percent Of (autocomplete list of existing subtotal keys like `subtotal_hard_costs`), Tags (comma-separated), Notes.
+  - Validation: use `validateItem`/`validateTemplate`; handle type-specific rules (percent requires `percent` + `percent_of`; cost/allowance require numeric `qty` + `unit_cost`).
+- CRUD wiring:
+  - List/search: `Templates.listTemplates({ search, includeArchived })`.
+  - Create: `Templates.createTemplate(payload)`.
+  - Update: `Templates.updateTemplate(id, patch)`.
+  - Duplicate: `Templates.duplicateTemplate(id)`.
+  - Archive toggle: `Templates.archiveTemplate(id, flag)`.
+- Show “Last updated by X • {time ago}” in the table (use record.metadata).
+
+**Import → Templates tab (Evaluation screen)**
+- Tabs: Projects (existing) | Templates (new).
+- List: searchable by name/category/tags (use `listTemplates`).
+- On select: preview using `Templates.buildImportPreview(template, { subtotal_hard_costs: currentSubtotals.subtotal_hard_costs, ... })`.
+- Confirm dialog options:
+  - Target section (default current).
+  - Conflict policy (radio):
+    - “Add all as new lines” → call `Templates.importIntoEvaluation(existingLines, template, "add_all", tagWithTemplateId)`
+    - “Merge by Code” → `"merge_by_code"`
+    - “Skip duplicates by Code” → `"skip_duplicates"`
+  - Checkbox: “Tag lines with Template ID” (default true).
+- After applying, run our normal totals recalculation. Show toast: `Imported N lines from "<name>" (X merged). Undo`. Implement Undo by storing the patch returned by your evaluation store (or compute reverse diff before applying).
+
+**Permissions**
+- Gate Admin → Templates to `role=admin`. Import tab is visible to all users but lists only non-archived templates.
+
+**Non-goals**
+- Do not alter existing project import logic or calculator internals; only add template import path.
+- No multi-tenant work.
+
+**Testing**
+- Add lightweight tests around:
+  - template validation (percent rules; cost/allowance rules),
+  - merge policy behavior for `importIntoEvaluation`,
+  - that `init()` creates `data/templates.json` with seeds on a fresh workspace.
+
+**Notes**
+- The module persists to `./data/templates.json`. Ensure the runtime has write access.
+- If the codebase is JavaScript-only, convert the file to `.js` and strip TypeScript types.

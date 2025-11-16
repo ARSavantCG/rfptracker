@@ -9,6 +9,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import Templates from "./lib/rfp-templates";
 
 const app = express();
 app.use(express.json());
@@ -54,6 +55,14 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Initialize RFP Templates module
+  try {
+    await Templates.init();
+    log("✅ RFP Templates initialized successfully");
+  } catch (error) {
+    log(`⚠️  Warning: Failed to initialize RFP Templates: ${error}`);
+  }
+
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

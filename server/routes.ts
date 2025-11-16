@@ -59,11 +59,9 @@ import {
   fixBIALeaseTotal,
   applySymmetricalLegalCompliance
 } from "./property-legal-compliance";
-import archiver from "archiver";
-import fs, { readFileSync } from "fs";
-import path from "path";
 import { applyLegalRounding, validateLegalCompliance, LEGAL_TOTALS } from "./legal-rounding-system";
 import { deleteEntityFiles, cleanupOrphanedFiles, getCleanupStats, findOrphanedFiles } from "./file-cleanup";
+import Templates from "./lib/rfp-templates";
 
 // Helper function to clean invalid values like "$NaN", "NaN", etc.
 function cleanInvalidValue(value: any): string {
@@ -8438,6 +8436,115 @@ export async function registerRoutes(app: Express): Promise<Server> {
         version: "unknown",
         environment: process.env.NODE_ENV || 'development'
       });
+    }
+  });
+
+  // ============================================================================
+  // RFP TEMPLATES API ROUTES
+  // ============================================================================
+
+  // List templates with optional search and archived filter
+  app.get("/api/templates", async (req, res) => {
+    try {
+      const search = typeof req.query.search === 'string' ? req.query.search : undefined;
+      const includeArchived = req.query.includeArchived === 'true';
+      
+      const result = await Templates.listTemplates({ search, includeArchived });
+      res.json(result);
+    } catch (error) {
+      console.error("Error listing templates:", error);
+      res.status(500).json({ message: "Failed to list templates" });
+    }
+  });
+
+  // Get single template by ID
+  app.get("/api/templates/:id", async (req, res) => {
+    try {
+      const template = await Templates.getTemplate(req.params.id);
+      if (!template) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      res.json(template);
+    } catch (error) {
+      console.error("Error fetching template:", error);
+      res.status(500).json({ message: "Failed to fetch template" });
+    }
+  });
+
+  // Create new template (admin only)
+  app.post("/api/templates", requireAuth, checkPermission('admin'), async (req, res) => {
+    try {
+      const user = (req as any).user;
+      const template = await Templates.createTemplate({
+        ...req.body,
+        createdBy: user?.username || 'admin'
+      });
+      res.status(201).json(template);
+    } catch (error) {
+      console.error("Error creating template:", error);
+      const message = error instanceof Error ? error.message : "Failed to create template";
+      res.status(400).json({ message });
+    }
+  });
+
+  // Update template (admin only)
+  app.patch("/api/templates/:id", requireAuth, checkPermission('admin'), async (req, res) => {
+    try {
+      const user = (req as any).user;
+      const template = await Templates.updateTemplate(req.params.id, {
+        ...req.body,
+        metadata: {
+          ...req.body.metadata,
+          updatedBy: user?.username || 'admin'
+        }
+      });
+      res.json(template);
+    } catch (error) {
+      console.error("Error updating template:", error);
+      const message = error instanceof Error ? error.message : "Failed to update template";
+      res.status(400).json({ message });
+    }
+  });
+
+  // Duplicate template (admin only)
+  app.post("/api/templates/:id/duplicate", requireAuth, checkPermission('admin'), async (req, res) => {
+    try {
+      const user = (req as any).user;
+      const template = await Templates.duplicateTemplate(req.params.id, user?.username || 'admin');
+      res.status(201).json(template);
+    } catch (error) {
+      console.error("Error duplicating template:", error);
+      const message = error instanceof Error ? error.message : "Failed to duplicate template";
+      res.status(400).json({ message });
+    }
+  });
+
+  // Archive/Unarchive template (admin only)
+  app.patch("/api/templates/:id/archive", requireAuth, checkPermission('admin'), async (req, res) => {
+    try {
+      const { archived } = req.body;
+      const template = await Templates.archiveTemplate(req.params.id, archived === true);
+      res.json(template);
+    } catch (error) {
+      console.error("Error archiving template:", error);
+      const message = error instanceof Error ? error.message : "Failed to archive template";
+      res.status(400).json({ message });
+    }
+  });
+
+  // Build import preview for a template
+  app.post("/api/templates/:id/preview", async (req, res) => {
+    try {
+      const template = await Templates.getTemplate(req.params.id);
+      if (!template) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      const { subtotalsContext = {} } = req.body;
+      const preview = Templates.buildImportPreview(template, subtotalsContext);
+      res.json(preview);
+    } catch (error) {
+      console.error("Error building template preview:", error);
+      res.status(500).json({ message: "Failed to build template preview" });
     }
   });
 

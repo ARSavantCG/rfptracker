@@ -25,6 +25,7 @@ import * as path from "path";
 // ---------- Types ----------
 
 export type TemplateLineType = "cost" | "allowance" | "percent" | "note";
+export type TemplateItemSource = "rom" | "custom";
 
 export interface TemplateItem {
   code: string;                 // merge key
@@ -37,6 +38,23 @@ export interface TemplateItem {
   percent_of?: string | null;   // e.g., "subtotal_hard_costs"
   tags?: string[];
   notes?: string;
+  
+  // ROM Pilot Integration
+  romScopeItemId?: number | null;  // Reference to ROM scope item
+  sourceType?: TemplateItemSource; // 'rom' (from ROM pilot) or 'custom' (admin-added)
+  
+  // Snapshot fields (immutable copy for reliability)
+  snapshot?: {
+    label: string;
+    unit: string;
+    unitPrice: number;
+    category: string;
+    source: string;
+    capturedAt: string;          // ISO timestamp when snapshot was taken
+  };
+  
+  // Staleness indicator
+  isStale?: boolean;              // True if ROM item has been updated since snapshot
 }
 
 export interface TemplateRecord {

@@ -36,6 +36,11 @@ interface RomScopeItem {
     filePath: string;
     uploadedAt: string;
   }>;
+  referencePricing?: Array<{
+    contractorName: string;
+    price: string;
+    date: string;
+  }>;
   createdAt: string;
   updatedAt: string;
 }
@@ -74,6 +79,11 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
       filePath: string;
       uploadedAt: string;
     }>,
+    referencePricing: [] as Array<{
+      contractorName: string;
+      price: string;
+      date: string;
+    }>,
   });
 
   const [fileUploadInputs, setFileUploadInputs] = useState<File[]>([]);
@@ -81,6 +91,12 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
   const [editingFileId, setEditingFileId] = useState<string | null>(null);
   const [editingFileName, setEditingFileName] = useState("");
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
+  const [isAddingReferencePrice, setIsAddingReferencePrice] = useState(false);
+  const [newReferencePrice, setNewReferencePrice] = useState({
+    contractorName: "",
+    price: "",
+    date: new Date().toISOString().split('T')[0],
+  });
 
   // Fetch scope items
   const { data: scopeItems = [], isLoading } = useQuery<RomScopeItem[]>({
@@ -174,6 +190,56 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
       newCollapsed.add(category);
     }
     setCollapsedCategories(newCollapsed);
+  };
+
+  // Reference pricing helpers
+  const startAddingReferencePrice = () => {
+    setIsAddingReferencePrice(true);
+    setNewReferencePrice({
+      contractorName: "",
+      price: "",
+      date: new Date().toISOString().split('T')[0],
+    });
+  };
+
+  const cancelAddReferencePrice = () => {
+    setIsAddingReferencePrice(false);
+    setNewReferencePrice({
+      contractorName: "",
+      price: "",
+      date: new Date().toISOString().split('T')[0],
+    });
+  };
+
+  const saveReferencePrice = () => {
+    if (!newReferencePrice.contractorName || !newReferencePrice.price || !newReferencePrice.date) {
+      toast({
+        title: "Error",
+        description: "Please fill in all reference pricing fields",
+        variant: "destructive",
+        duration: 4000,
+      });
+      return;
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      referencePricing: [...prev.referencePricing, newReferencePrice]
+    }));
+    
+    setIsAddingReferencePrice(false);
+    setNewReferencePrice({
+      contractorName: "",
+      price: "",
+      date: new Date().toISOString().split('T')[0],
+    });
+  };
+
+  const removeReferencePrice = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      referencePricing: prev.referencePricing.filter((_, i) => i !== index)
+    }));
   };
 
   // Print function - opens in new tab like other reports
@@ -548,10 +614,17 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
       lastUpdated: "",
       includeByDefault: false,
       attachments: [],
+      referencePricing: [],
     });
     setFileUploadInputs([]);
     setShowAddForm(false);
     setEditingItem(null);
+    setIsAddingReferencePrice(false);
+    setNewReferencePrice({
+      contractorName: "",
+      price: "",
+      date: new Date().toISOString().split('T')[0],
+    });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -606,6 +679,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
       lastUpdated: item.lastUpdated ? new Date(item.lastUpdated).toISOString().split('T')[0] : "",
       includeByDefault: (item as any).includeByDefault || false,
       attachments: item.attachments || [],
+      referencePricing: item.referencePricing || [],
     });
     setFileUploadInputs([]);
     setEditingItem(item);
@@ -1273,6 +1347,335 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                                     <p className="text-xs text-gray-500">
                                       Total cost will never be less than this amount, regardless of quantity × unit price
                                     </p>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Source and Include by Default Section */}
+                              <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                  <Label htmlFor="source">Source</Label>
+                                  <Input
+                                    id="source"
+                                    value={formData.source}
+                                    onChange={(e) => setFormData({...formData, source: e.target.value})}
+                                    placeholder="e.g., RS Means 2024"
+                                  />
+                                </div>
+
+                                <div className="space-y-2">
+                                  <div className="flex items-center space-x-2">
+                                    <input
+                                      type="checkbox"
+                                      id="includeByDefault-inline"
+                                      checked={formData.includeByDefault}
+                                      onChange={(e) => setFormData({...formData, includeByDefault: e.target.checked})}
+                                      className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                    />
+                                    <Label htmlFor="includeByDefault-inline" className="text-sm font-medium text-gray-700">
+                                      Include by default in ROMs and RFP Evaluations
+                                    </Label>
+                                  </div>
+                                  <p className="text-xs text-gray-500">
+                                    When checked, this item will automatically be added to new ROM pilots and RFP evaluations
+                                  </p>
+                                </div>
+                              </div>
+
+                              {/* Reference Pricing Section */}
+                              {canDeleteRomScope && (
+                                <div className="space-y-4 pt-4 border-t">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-base font-semibold">Reference Pricing (for quarterly contractor verification)</Label>
+                                    <Button 
+                                      type="button"
+                                      onClick={startAddingReferencePrice} 
+                                      size="sm" 
+                                      variant="outline"
+                                      disabled={isAddingReferencePrice}
+                                    >
+                                      <Plus className="h-4 w-4 mr-1" /> Add Reference Price
+                                    </Button>
+                                  </div>
+                                  <p className="text-xs text-gray-500">
+                                    Reference pricing is for tracking only and is not used in ROM Pilot calculations or RFP Evaluations
+                                  </p>
+
+                                  {/* Existing reference prices table */}
+                                  {formData.referencePricing.length > 0 && (
+                                    <div className="overflow-x-auto">
+                                      <table className="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-md">
+                                        <thead className="bg-gray-50">
+                                          <tr>
+                                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                              Contractor Name
+                                            </th>
+                                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                              Price
+                                            </th>
+                                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                              Date
+                                            </th>
+                                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                              Actions
+                                            </th>
+                                          </tr>
+                                        </thead>
+                                        <tbody className="bg-white divide-y divide-gray-200">
+                                          {formData.referencePricing.map((ref, index) => (
+                                            <tr key={index}>
+                                              <td className="px-4 py-2 text-sm text-gray-900">
+                                                {ref.contractorName}
+                                              </td>
+                                              <td className="px-4 py-2 text-sm text-gray-900">
+                                                ${parseFloat(ref.price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                              </td>
+                                              <td className="px-4 py-2 text-sm text-gray-900">
+                                                {new Date(ref.date).toLocaleDateString()}
+                                              </td>
+                                              <td className="px-4 py-2 text-sm">
+                                                <Button
+                                                  type="button"
+                                                  variant="ghost"
+                                                  size="sm"
+                                                  onClick={() => removeReferencePrice(index)}
+                                                  className="text-red-600 hover:text-red-700"
+                                                >
+                                                  <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                              </td>
+                                            </tr>
+                                          ))}
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  )}
+
+                                  {/* Add new reference price form */}
+                                  {isAddingReferencePrice && (
+                                    <div className="bg-gray-50 p-4 rounded-lg space-y-4 border border-gray-200">
+                                      <h5 className="text-sm font-medium text-gray-900">Add Reference Price</h5>
+                                      <div className="grid grid-cols-3 gap-4">
+                                        <div className="space-y-2">
+                                          <Label htmlFor="contractor-name">Contractor Name *</Label>
+                                          <Input
+                                            id="contractor-name"
+                                            value={newReferencePrice.contractorName}
+                                            onChange={(e) => setNewReferencePrice({...newReferencePrice, contractorName: e.target.value})}
+                                            placeholder="Enter contractor name"
+                                          />
+                                        </div>
+                                        <div className="space-y-2">
+                                          <Label htmlFor="ref-price">Price *</Label>
+                                          <div className="relative">
+                                            <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 z-10" />
+                                            <FormulaInput
+                                              value={newReferencePrice.price}
+                                              onChange={(rawValue, evaluatedValue) => {
+                                                setNewReferencePrice({...newReferencePrice, price: rawValue.toString()});
+                                              }}
+                                              placeholder="0.00"
+                                              className="pl-10"
+                                              decimalPlaces={2}
+                                              formatThousands={true}
+                                            />
+                                          </div>
+                                        </div>
+                                        <div className="space-y-2">
+                                          <Label htmlFor="ref-date">Date *</Label>
+                                          <Input
+                                            id="ref-date"
+                                            type="date"
+                                            value={newReferencePrice.date}
+                                            onChange={(e) => setNewReferencePrice({...newReferencePrice, date: e.target.value})}
+                                          />
+                                        </div>
+                                      </div>
+                                      <div className="flex justify-end space-x-2">
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={cancelAddReferencePrice}
+                                        >
+                                          Cancel
+                                        </Button>
+                                        <Button
+                                          type="button"
+                                          size="sm"
+                                          onClick={saveReferencePrice}
+                                          className="bg-blue-600 hover:bg-blue-700"
+                                        >
+                                          Save Reference Price
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* File Attachments Section */}
+                              <div className="space-y-4 pt-4 border-t">
+                                <div className="space-y-2">
+                                  <Label htmlFor="attachments">Attachments</Label>
+                                  <div 
+                                    className={`border-2 border-dashed rounded-lg p-4 transition-colors ${
+                                      isDragging 
+                                        ? 'border-blue-500 bg-blue-50' 
+                                        : 'border-gray-300 hover:border-gray-400'
+                                    }`}
+                                    onDragOver={handleDragOver}
+                                    onDragLeave={handleDragLeave}
+                                    onDrop={handleDrop}
+                                  >
+                                    <div className="text-center">
+                                      <Upload className={`h-8 w-8 mx-auto mb-2 ${isDragging ? 'text-blue-500' : 'text-gray-400'}`} />
+                                      <input
+                                        type="file"
+                                        multiple
+                                        onChange={(e) => handleFileSelect(e.target.files)}
+                                        className="hidden"
+                                        id="file-upload-inline"
+                                        accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.jpg,.jpeg,.png"
+                                      />
+                                      <Label 
+                                        htmlFor="file-upload-inline" 
+                                        className="cursor-pointer text-sm text-blue-600 hover:text-blue-700"
+                                      >
+                                        Choose files or drag and drop
+                                      </Label>
+                                      <p className="text-xs text-gray-500 mt-1">
+                                        Specifications, drawings, or related documents
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* New file uploads */}
+                                {fileUploadInputs.length > 0 && (
+                                  <div className="space-y-2">
+                                    <p className="text-sm font-medium">Files to upload:</p>
+                                    {fileUploadInputs.map((file, index) => (
+                                      <div key={index} className="flex items-center justify-between bg-blue-50 p-2 rounded">
+                                        <div className="flex items-center space-x-2 flex-1">
+                                          <FileText className="h-4 w-4 text-blue-600" />
+                                          <input
+                                            type="text"
+                                            value={file.name}
+                                            onChange={(e) => {
+                                              const newFiles = [...fileUploadInputs];
+                                              const newFile = new File([file], e.target.value, { type: file.type });
+                                              newFiles[index] = newFile;
+                                              setFileUploadInputs(newFiles);
+                                            }}
+                                            className="text-sm bg-transparent border-none outline-none flex-1"
+                                            placeholder="Enter file name"
+                                          />
+                                          <span className="text-xs text-gray-500">
+                                            ({(file.size / 1024).toFixed(1)} KB)
+                                          </span>
+                                        </div>
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => removeFileInput(index)}
+                                        >
+                                          <X className="h-4 w-4" />
+                                        </Button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+
+                                {/* Existing attachments */}
+                                {formData.attachments.length > 0 && (
+                                  <div className="space-y-2">
+                                    <p className="text-sm font-medium">Current attachments:</p>
+                                    {formData.attachments.map((file) => (
+                                      <div key={file.id} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                                        <div className="flex items-center space-x-2 flex-1">
+                                          <FileText className="h-4 w-4 text-gray-600" />
+                                          
+                                          {editingFileId === file.id ? (
+                                            <div className="flex items-center space-x-2 flex-1">
+                                              <input
+                                                type="text"
+                                                value={editingFileName}
+                                                onChange={(e) => setEditingFileName(e.target.value)}
+                                                className="text-sm bg-white border border-blue-300 rounded px-2 py-1 flex-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                placeholder="Enter file name"
+                                                autoFocus
+                                                onKeyDown={(e) => {
+                                                  if (e.key === 'Enter') saveFileRename();
+                                                  if (e.key === 'Escape') cancelFileRename();
+                                                }}
+                                              />
+                                              <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={saveFileRename}
+                                                className="text-green-600 hover:text-green-700"
+                                                title="Save"
+                                              >
+                                                <Check className="h-4 w-4" />
+                                              </Button>
+                                              <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={cancelFileRename}
+                                                className="text-gray-500 hover:text-gray-700"
+                                                title="Cancel"
+                                              >
+                                                <X className="h-4 w-4" />
+                                              </Button>
+                                            </div>
+                                          ) : (
+                                            <div className="flex items-center space-x-2 flex-1">
+                                              <span className="text-sm flex-1">{file.fileName}</span>
+                                              <span className="text-xs text-gray-500">
+                                                (uploaded {new Date(file.uploadedAt).toLocaleDateString()})
+                                              </span>
+                                              <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => startEditingFile(file.id, file.fileName)}
+                                                className="text-blue-600 hover:text-blue-700"
+                                                title="Rename file"
+                                              >
+                                                <Edit3 className="h-4 w-4" />
+                                              </Button>
+                                            </div>
+                                          )}
+                                        </div>
+                                        
+                                        {editingFileId !== file.id && (
+                                          <div className="flex items-center space-x-1">
+                                            <Button
+                                              type="button"
+                                              variant="ghost"
+                                              size="sm"
+                                              onClick={() => handleDownloadFile(file.fileName, file.filePath)}
+                                              title="Download file"
+                                            >
+                                              <i className="fas fa-download h-3 w-3"></i>
+                                            </Button>
+                                            <Button
+                                              type="button"
+                                              variant="ghost"
+                                              size="sm"
+                                              onClick={() => removeExistingFile(file.id)}
+                                              title="Delete file"
+                                            >
+                                              <X className="h-4 w-4" />
+                                            </Button>
+                                          </div>
+                                        )}
+                                      </div>
+                                    ))}
                                   </div>
                                 )}
                               </div>

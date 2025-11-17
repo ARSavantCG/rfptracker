@@ -753,23 +753,46 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
         return item;
       };
 
+      // Helper to recalculate totalPrice after all transformations
+      const recalculateTotalPrice = (item: any) => {
+        const qty = parseFloat(item.quantity) || 0;
+        const unitPx = parseFloat(item.unitPrice) || 0;
+        const totalPx = qty * unitPx;
+        
+        console.log(`💵 Recalculating ${item.description}: ${qty} × ${unitPx} = ${totalPx}`);
+        
+        return {
+          ...item,
+          totalPrice: totalPx.toString(),
+        };
+      };
+
       const newItems = {
-        tenantImprovements: response.tenantImprovements?.map((item: any, index: number) => ({
-          ...autoPopulateQuantity(applyTieredPricing(item)),
-          id: `template-ti-${Date.now()}-${index}`,
-        })) || [],
-        designSoftCosts: (response.designSoftCosts?.map((item: any, index: number) => ({
-          ...autoPopulateContingency(autoPopulateQuantity(applyTieredPricing(item))),
-          id: `template-dsc-${Date.now()}-${index}`,
-        })) || []).sort((a, b) => {
+        tenantImprovements: response.tenantImprovements?.map((item: any, index: number) => {
+          const processed = autoPopulateQuantity(applyTieredPricing(item));
+          return {
+            ...recalculateTotalPrice(processed),
+            id: `template-ti-${Date.now()}-${index}`,
+          };
+        }) || [],
+        designSoftCosts: (response.designSoftCosts?.map((item: any, index: number) => {
+          const processed = autoPopulateContingency(autoPopulateQuantity(applyTieredPricing(item)));
+          return {
+            ...recalculateTotalPrice(processed),
+            id: `template-dsc-${Date.now()}-${index}`,
+          };
+        }) || []).sort((a, b) => {
           const priorityA = getDesignCostPriority(a.description || "");
           const priorityB = getDesignCostPriority(b.description || "");
           return priorityA - priorityB;
         }),
-        existingImprovements: response.existingImprovements?.map((item: any, index: number) => ({
-          ...autoPopulateQuantity(applyTieredPricing(item)),
-          id: `template-ei-${Date.now()}-${index}`,
-        })) || [],
+        existingImprovements: response.existingImprovements?.map((item: any, index: number) => {
+          const processed = autoPopulateQuantity(applyTieredPricing(item));
+          return {
+            ...recalculateTotalPrice(processed),
+            id: `template-ei-${Date.now()}-${index}`,
+          };
+        }) || [],
       };
 
       const totalImported = 

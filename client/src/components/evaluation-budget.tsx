@@ -1177,7 +1177,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
     return { vehicular: allocatedVehicular, trailer: allocatedTrailer };
   };
 
-  // Auto-calculate demising wall quantities when building depth changes
+  // Auto-calculate demising wall quantities when building depth changes or items are added
   useEffect(() => {
     if (!propertyData?.buildingDepth || budgetData.tenantImprovements.length === 0) return;
 
@@ -1226,7 +1226,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
     }
   }, [
     propertyData?.buildingDepth,
-    budgetData.tenantImprovements.length,
+    budgetData.tenantImprovements,
     manualOverrides
   ]);
 

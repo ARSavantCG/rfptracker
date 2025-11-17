@@ -4255,6 +4255,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           totalPrice: item.unit_cost && item.qty ? (item.unit_cost * item.qty).toString() : "0",
           tenantShare: item.percent || 100,
           notes: item.notes || "",
+          // Add ROM snapshot for tiered pricing logic
+          romSnapshot: item.snapshot ? {
+            ...item.snapshot,
+            itemGroup: item.snapshot.itemGroup,
+            minSquareFootage: item.snapshot.minSquareFootage,
+            maxSquareFootage: item.snapshot.maxSquareFootage,
+          } : undefined,
         };
 
         // Categorize based on snapshot.category, tags, or type

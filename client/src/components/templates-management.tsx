@@ -257,7 +257,11 @@ export function TemplatesManagement() {
           unitPrice: parseFloat(romItem.unitPrice),
           category: romItem.category,
           source: romItem.source || 'ROM Pilot',
-          capturedAt: new Date().toISOString()
+          capturedAt: new Date().toISOString(),
+          // Tiered pricing fields for automatic tier selection
+          itemGroup: romItem.itemGroup || undefined,
+          minSquareFootage: romItem.minSquareFootage || undefined,
+          maxSquareFootage: romItem.maxSquareFootage || undefined,
         }
       };
     }).filter(Boolean) as TemplateItem[];

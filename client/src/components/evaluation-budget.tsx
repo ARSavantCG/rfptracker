@@ -1013,6 +1013,22 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
         }
       }
 
+      // Builder's Risk Insurance - auto-populate with TI total (same as Permit Fees)
+      if (desc.includes("builder") && desc.includes("risk")) {
+        const newQty = tiTotal;
+        const unitPx = parseFloat(item.unitPrice || "0");
+        const newTotal = (newQty * unitPx).toString();
+        
+        if (item.quantity !== newQty || item.totalPrice !== newTotal) {
+          console.log(`🏢 Auto-calc Builder's Risk: ${newQty} @ $${unitPx} = $${newTotal}`);
+          return {
+            ...item,
+            quantity: newQty,
+            totalPrice: newTotal,
+          };
+        }
+      }
+
       // Permit Fees - auto-populate with TI total
       if (desc.includes("permit") && desc.includes("fee")) {
         const newQty = tiTotal;

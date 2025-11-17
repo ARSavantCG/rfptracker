@@ -477,6 +477,7 @@ export const properties = pgTable("properties", {
   trailerParking: integer("trailer_parking").default(0),
   
   // Building Specifications
+  buildingDepth: integer("building_depth"), // Building depth in feet (used for demising wall calculations)
   slabThickness: text("slab_thickness"), // e.g., "6 inches @ 4000 PSI"
   clearHeight: text("clear_height"), // e.g., "32 feet"
   floorFlatness: text("floor_flatness"), // FF/FL values e.g., "FF 25 / FL 20"

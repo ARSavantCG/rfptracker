@@ -162,13 +162,13 @@ export function RfpImportDialog({ open, onOpenChange, currentRfpId, onImport, on
 
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "projects" | "templates")} className="flex-1 overflow-hidden flex flex-col">
           <TabsList className="w-full grid grid-cols-2">
-            <TabsTrigger value="projects" className="flex items-center gap-2">
-              <FolderOpen className="h-4 w-4" />
-              From Projects
-            </TabsTrigger>
             <TabsTrigger value="templates" className="flex items-center gap-2">
               <FileText className="h-4 w-4" />
               From Templates
+            </TabsTrigger>
+            <TabsTrigger value="projects" className="flex items-center gap-2">
+              <FolderOpen className="h-4 w-4" />
+              From Projects
             </TabsTrigger>
           </TabsList>
 

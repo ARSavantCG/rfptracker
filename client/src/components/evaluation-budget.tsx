@@ -934,6 +934,18 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
   // Track which items have been manually overridden (won't auto-calculate)
   const [manualOverrides, setManualOverrides] = useState<Set<string>>(new Set());
 
+  // Helper function to calculate rentable area from selected bays
+  const calculateRentableArea = (): number => {
+    if (rfp?.selectedBayConfigurations && Array.isArray(rfp.selectedBayConfigurations)) {
+      return Math.round(rfp.selectedBayConfigurations.reduce((total, bay) => {
+        return total + (bay.rentableSquareFootage || 0);
+      }, 0));
+    } else if (rfp?.warehouseArea) {
+      return parseInt(rfp.warehouseArea);
+    }
+    return 0;
+  };
+
   // Auto-calculate special fields (Design, Permit Fees, Construction Management, Contingency)
   useEffect(() => {
     if (budgetData.designSoftCosts.length === 0) return;
@@ -3980,9 +3992,9 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
                                       const totalCost = parseFloat(item.totalPrice) || 0;
                                       const tenantShare = (item.tenantShare || 100) / 100;
                                       const tenantCost = totalCost * tenantShare;
-                                      const warehouseArea = parseFloat(rfp?.warehouseArea || '0');
-                                      if (warehouseArea > 0) {
-                                        const perSF = tenantCost / warehouseArea;
+                                      const rentableArea = calculateRentableArea();
+                                      if (rentableArea > 0) {
+                                        const perSF = tenantCost / rentableArea;
                                         return `$${perSF.toFixed(2)}`;
                                       }
                                       return 'N/A';
@@ -4054,9 +4066,9 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
                                         const totalCost = calculateDistributedCosts(item);
                                         const tenantShare = (item.tenantShare || 100) / 100;
                                         const tenantCost = totalCost * tenantShare;
-                                        const warehouseArea = parseFloat(rfp?.warehouseArea || '0');
-                                        if (warehouseArea > 0) {
-                                          const perSF = tenantCost / warehouseArea;
+                                        const rentableArea = calculateRentableArea();
+                                        if (rentableArea > 0) {
+                                          const perSF = tenantCost / rentableArea;
                                           return `$${perSF.toFixed(2)}`;
                                         }
                                         return 'N/A';

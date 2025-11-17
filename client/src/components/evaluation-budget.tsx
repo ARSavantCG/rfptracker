@@ -566,11 +566,17 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
       // Helper function to match tiered items and select correct tier
       const applyTieredPricing = (item: any) => {
         const snapshot = item.romSnapshot;
+        console.log('🎯 applyTieredPricing - Item:', item);
+        console.log('🎯 Snapshot:', snapshot);
+        
         if (!snapshot || !snapshot.itemGroup) {
+          console.log('❌ No snapshot or itemGroup');
           return item; // No tiered pricing metadata
         }
 
         const areaBreakdown = rfp?.areaBreakdown || [];
+        console.log('📋 Area Breakdown:', areaBreakdown);
+        console.log('🏷️ Looking for itemGroup:', snapshot.itemGroup);
         
         // Find matching area by itemGroup (e.g., "Office Area")
         const matchedArea = areaBreakdown.find((area: any) => 
@@ -578,23 +584,36 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
           area.description?.includes(snapshot.itemGroup)
         );
 
+        console.log('📍 Matched Area:', matchedArea);
+
         if (!matchedArea || !matchedArea.squareFootage) {
+          console.log('❌ No matching area or square footage');
           return item; // No matching area breakdown
         }
 
         const sqft = parseInt(matchedArea.squareFootage.replace(/,/g, ""));
+        console.log('📏 Square Footage:', sqft);
         
         // Find all ROM items with the same itemGroup
         const tieredItems = romItems.filter((romItem: any) => 
           romItem.itemGroup === snapshot.itemGroup && romItem.isActive
         );
 
+        console.log('📦 Tiered Items Found:', tieredItems.length);
+        tieredItems.forEach((t: any) => {
+          console.log(`  - ${t.name}: ${t.minSquareFootage || 0} to ${t.maxSquareFootage || 'Infinity'}, $${t.unitPrice}`);
+        });
+
         // Find the tier that matches this square footage
         const matchingTier = tieredItems.find((tier: any) => {
           const minSf = tier.minSquareFootage ?? -Infinity;
           const maxSf = tier.maxSquareFootage ?? Infinity;
-          return sqft >= minSf && sqft <= maxSf;
+          const matches = sqft >= minSf && sqft <= maxSf;
+          console.log(`  Checking ${tier.name}: ${minSf} <= ${sqft} <= ${maxSf}? ${matches}`);
+          return matches;
         });
+
+        console.log('✅ Matching Tier:', matchingTier);
 
         if (matchingTier) {
           // Replace with the correct tier's pricing
@@ -603,7 +622,9 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
             ? matchingTier.unitPrice 
             : matchingTier.unitPrice.toString();
           
-          return {
+          console.log('💰 Setting unitPrice to:', tierUnitPrice);
+          
+          const result = {
             ...item,
             name: matchingTier.name,
             description: matchingTier.description || item.description,
@@ -616,85 +637,50 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
               maxSquareFootage: matchingTier.maxSquareFootage,
             },
           };
+          
+          console.log('✅ Final Item:', result);
+          return result;
         }
 
+        console.log('❌ No matching tier found');
         return item;
       };
 
       // Helper function to match item with area breakdown and auto-populate quantity
+      // NOTE: Only area matching happens here. Design/Permit/CM auto-calculate in real-time based on budget state.
       const autoPopulateQuantity = (item: any) => {
         const description = (item.description || "").toLowerCase();
         const areaBreakdown = rfp?.areaBreakdown || [];
         
-        // Calculate total rentable area from RFP
-        const getTotalRentableArea = () => {
-          if (rfp?.totalFloorArea) {
-            return parseInt(String(rfp.totalFloorArea).replace(/,/g, "")) || 0;
-          }
-          return 0;
-        };
-        
-        // Calculate total Tenant Improvements costs (for Permit Fees)
-        const getTotalTICosts = () => {
-          return budgetData.tenantImprovements.reduce((sum, ti) => {
-            const total = parseFloat(ti.totalPrice?.toString() || "0");
-            return sum + total;
-          }, 0);
-        };
-        
-        // Calculate TI + DSC before contingency (for Construction Management)
-        const getTIPlusDSCBeforeContingency = () => {
-          const tiTotal = budgetData.tenantImprovements.reduce((sum, ti) => {
-            const total = parseFloat(ti.totalPrice?.toString() || "0");
-            return sum + total;
-          }, 0);
-          
-          const dscTotal = budgetData.designSoftCosts
-            .filter((item: any) => {
-              const desc = (item.description || "").toLowerCase();
-              return !desc.includes("contingency"); // Exclude contingency
-            })
-            .reduce((sum, dsc) => {
-              const total = parseFloat(dsc.totalPrice?.toString() || "0");
-              return sum + total;
-            }, 0);
-          
-          return tiTotal + dscTotal;
-        };
-        
-        // Check if this item matches an area type or special calculation
-        let matchedArea = null;
         let quantity = item.quantity;
         let unit = item.unit;
         
-        // Design (Architectural) - use total rentable area
-        if (description.includes("design") && (description.includes("architectural") || description.includes("architect"))) {
-          quantity = getTotalRentableArea();
+        // Match Office Area items
+        if (description.includes("office area") || description.includes("office space")) {
+          const matchedArea = areaBreakdown.find((area: any) => area.areaType === "Office Area");
+          if (matchedArea && matchedArea.squareFootage) {
+            quantity = parseInt(matchedArea.squareFootage.replace(/,/g, ""));
+            console.log(`📍 Matched Office Area: ${quantity} sf`);
+          }
+        }
+        // Match Warehouse Office items
+        else if (description.includes("warehouse office")) {
+          const matchedArea = areaBreakdown.find((area: any) => area.areaType === "Warehouse Office");
+          if (matchedArea && matchedArea.squareFootage) {
+            quantity = parseInt(matchedArea.squareFootage.replace(/,/g, ""));
+            console.log(`📍 Matched Warehouse Office: ${quantity} sf`);
+          }
+        }
+        // Set default quantity for Design (will be overridden in real-time)
+        else if (description.includes("design") && (description.includes("architectural") || description.includes("architect"))) {
           unit = "sf.";
         }
-        // Permit Fees - use total TI costs  
+        // Set default unit for Permit Fees and Construction Management (will be overridden in real-time)
         else if (description.includes("permit") && description.includes("fee")) {
-          quantity = getTotalTICosts();
           unit = "$";
         }
-        // Construction Management - use TI + DSC (before contingency)
         else if (description.includes("construction") && description.includes("management")) {
-          quantity = getTIPlusDSCBeforeContingency();
           unit = "$";
-        }
-        // Office Area items
-        else if (description.includes("office area") || description.includes("office space")) {
-          matchedArea = areaBreakdown.find((area: any) => area.areaType === "Office Area");
-          if (matchedArea && matchedArea.squareFootage) {
-            quantity = parseInt(matchedArea.squareFootage.replace(/,/g, ""));
-          }
-        }
-        // Warehouse Office items
-        else if (description.includes("warehouse office")) {
-          matchedArea = areaBreakdown.find((area: any) => area.areaType === "Warehouse Office");
-          if (matchedArea && matchedArea.squareFootage) {
-            quantity = parseInt(matchedArea.squareFootage.replace(/,/g, ""));
-          }
         }
         
         // Normalize unit format: lowercase with period

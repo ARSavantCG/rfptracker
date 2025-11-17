@@ -655,8 +655,14 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
         let quantity = item.quantity;
         let unit = item.unit;
         
+        // Match Demising Wall items - auto-populate with building depth
+        if (description.includes("demising wall") && propertyData?.buildingDepth) {
+          quantity = propertyData.buildingDepth;
+          unit = "ft.";
+          console.log(`🧱 Matched Demising Wall: ${quantity} ft (from building depth)`);
+        }
         // Match Office Area items
-        if (description.includes("office area") || description.includes("office space")) {
+        else if (description.includes("office area") || description.includes("office space")) {
           const matchedArea = areaBreakdown.find((area: any) => area.areaType === "Office Area");
           if (matchedArea && matchedArea.squareFootage) {
             quantity = parseInt(matchedArea.squareFootage.replace(/,/g, ""));

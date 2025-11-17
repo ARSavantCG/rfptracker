@@ -1898,7 +1898,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // fetch the property and extract the matching bay configurations
       if (propertyId && selectedBayIds && selectedBayIds.length > 0 && selectedBayConfigurations.length === 0) {
         try {
-          const property = await storage.getPropertyById(propertyId);
+          const property = await storage.getProperty(propertyId);
           if (property && property.bayConfigurations) {
             selectedBayConfigurations = property.bayConfigurations.filter(bay => 
               selectedBayIds.includes(bay.id)
@@ -4233,7 +4233,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get template for evaluation budget import
   app.get("/api/templates/:id/for-import", requireAuth, async (req, res) => {
     try {
-      const template = await rfpTemplates.getTemplate(req.params.id);
+      const template = await Templates.getTemplate(req.params.id);
       if (!template) {
         return res.status(404).json({ message: "Template not found" });
       }

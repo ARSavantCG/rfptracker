@@ -560,6 +560,62 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
         throw new Error("No template data found");
       }
 
+      // Fetch all ROM items for tier matching
+      const romItems = await apiRequest("/api/rom-scope-items", "GET");
+
+      // Helper function to match tiered items and select correct tier
+      const applyTieredPricing = (item: any) => {
+        const snapshot = item.romSnapshot;
+        if (!snapshot || !snapshot.itemGroup) {
+          return item; // No tiered pricing metadata
+        }
+
+        const areaBreakdown = rfp?.areaBreakdown || [];
+        
+        // Find matching area by itemGroup (e.g., "Office Area")
+        const matchedArea = areaBreakdown.find((area: any) => 
+          area.areaType === snapshot.itemGroup || 
+          area.description?.includes(snapshot.itemGroup)
+        );
+
+        if (!matchedArea || !matchedArea.squareFootage) {
+          return item; // No matching area breakdown
+        }
+
+        const sqft = parseInt(matchedArea.squareFootage.replace(/,/g, ""));
+        
+        // Find all ROM items with the same itemGroup
+        const tieredItems = romItems.filter((romItem: any) => 
+          romItem.itemGroup === snapshot.itemGroup && romItem.isActive
+        );
+
+        // Find the tier that matches this square footage
+        const matchingTier = tieredItems.find((tier: any) => {
+          const minSf = tier.minSquareFootage ?? -Infinity;
+          const maxSf = tier.maxSquareFootage ?? Infinity;
+          return sqft >= minSf && sqft <= maxSf;
+        });
+
+        if (matchingTier) {
+          // Replace with the correct tier's pricing
+          return {
+            ...item,
+            name: matchingTier.name,
+            description: matchingTier.description || item.description,
+            unitPrice: matchingTier.unitPrice,
+            romSnapshot: {
+              ...snapshot,
+              name: matchingTier.name,
+              unitPrice: matchingTier.unitPrice,
+              minSquareFootage: matchingTier.minSquareFootage,
+              maxSquareFootage: matchingTier.maxSquareFootage,
+            },
+          };
+        }
+
+        return item;
+      };
+
       // Helper function to match item with area breakdown and auto-populate quantity
       const autoPopulateQuantity = (item: any) => {
         const description = (item.description || "").toLowerCase();
@@ -645,11 +701,11 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
 
       const newItems = {
         tenantImprovements: response.tenantImprovements?.map((item: any, index: number) => ({
-          ...autoPopulateQuantity(item),
+          ...autoPopulateQuantity(applyTieredPricing(item)),
           id: `template-ti-${Date.now()}-${index}`,
         })) || [],
         designSoftCosts: (response.designSoftCosts?.map((item: any, index: number) => ({
-          ...autoPopulateContingency(autoPopulateQuantity(item)),
+          ...autoPopulateContingency(autoPopulateQuantity(applyTieredPricing(item))),
           id: `template-dsc-${Date.now()}-${index}`,
         })) || []).sort((a, b) => {
           const priorityA = getDesignCostPriority(a.description || "");
@@ -657,7 +713,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
           return priorityA - priorityB;
         }),
         existingImprovements: response.existingImprovements?.map((item: any, index: number) => ({
-          ...autoPopulateQuantity(item),
+          ...autoPopulateQuantity(applyTieredPricing(item)),
           id: `template-ei-${Date.now()}-${index}`,
         })) || [],
       };

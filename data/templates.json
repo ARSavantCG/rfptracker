@@ -204,13 +204,36 @@
             "source": "TEST",
             "capturedAt": "2025-11-17T00:43:11.636Z"
           }
+        },
+        {
+          "code": "ROM-51",
+          "label": "Materials Testing",
+          "type": "cost",
+          "qty": 1,
+          "unit": "ls.",
+          "unit_cost": 12500,
+          "tags": [
+            "design-/-soft-costs-/-other-fees"
+          ],
+          "notes": "",
+          "romScopeItemId": 51,
+          "sourceType": "rom",
+          "snapshot": {
+            "label": "Materials Testing",
+            "unit": "ls.",
+            "unitPrice": 12500,
+            "category": "Design / Soft Costs / Other Fees",
+            "source": "ROM Pilot",
+            "capturedAt": "2025-11-17T04:07:58.723Z"
+          }
         }
       ],
       "metadata": {
         "createdBy": "AReutlinger@bridgeindustrial.com",
         "createdAt": "2025-11-17T00:43:12.269Z",
-        "updatedAt": "2025-11-17T00:43:12.269Z",
-        "isArchived": false
+        "updatedAt": "2025-11-17T04:07:59.606Z",
+        "isArchived": false,
+        "updatedBy": "AReutlinger@bridgeindustrial.com"
       }
     }
   ]

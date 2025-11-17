@@ -1708,7 +1708,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create new RFP request
-  app.post("/api/rfp-requests", async (req, res) => {
+  app.post("/api/rfp-requests", upload.array("files"), async (req, res) => {
     try {
       
       const formData = { ...req.body };
@@ -1939,6 +1939,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         dueDate: parsed.internalDueDate, // Map internalDueDate to dueDate for validation
       };
 
+      console.log('🔍 RFP Creation Debug:');
+      console.log('  - selectedBayConfigurations:', requestWithFiles.selectedBayConfigurations?.length || 0, 'bays');
+      console.log('  - propertyId:', requestWithFiles.propertyId);
+      console.log('  - selectedBayIds:', requestWithFiles.selectedBayIds?.length || 0, 'IDs');
       console.log('About to create RFP with selectedBayConfigurations:', requestWithFiles.selectedBayConfigurations?.length || 0);
 
       const newRequest = await storage.createRfpRequest(requestWithFiles);

@@ -503,6 +503,11 @@ export class DatabaseStorage implements IStorage {
         notes: request.notes || null,
         files: request.files || [],
         selectedBayConfigurations: request.selectedBayConfigurations || [],
+        // Bay configuration references for real-time synchronization
+        propertyId: request.propertyId || null,
+        selectedBayIds: request.selectedBayIds || null,
+        propertyIdsPerBuilding: request.propertyIdsPerBuilding || null,
+        bayIdsPerBuilding: request.bayIdsPerBuilding || null,
         status: request.status || "in-progress",
         workflowPhase: request.workflowPhase || "rfp-validation",
       })

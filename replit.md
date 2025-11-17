@@ -32,6 +32,7 @@ Key advanced systems and features include:
 - A comprehensive cost lifecycle tracking system separating lender-draw actuals from pipeline costs, with bucket categorization and integer-based monetary storage. This includes enhanced evaluation report integration and UI improvements for cost entry.
 - Automatic thousands separator formatting for monetary input fields, enhancing readability while maintaining formula support.
 - A comprehensive RFP Templates System for managing pre-configured cost item sets, stored in JSON, with secure API routes for CRUD operations, admin UI, and seamless integration into the evaluation import process. Templates now source items from a ROM Pilot catalog.
+- Building depth tracking per property for automatic demising wall quantity calculations. When importing templates or creating RFPs, demising wall line items automatically populate with the building's depth value for accurate pricing.
 
 ### External Dependencies
 - **Database**: PostgreSQL (Neon serverless)

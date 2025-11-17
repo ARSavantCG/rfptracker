@@ -1177,6 +1177,59 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
     return { vehicular: allocatedVehicular, trailer: allocatedTrailer };
   };
 
+  // Auto-calculate demising wall quantities when building depth changes
+  useEffect(() => {
+    if (!propertyData?.buildingDepth || budgetData.tenantImprovements.length === 0) return;
+
+    const buildingDepth = propertyData.buildingDepth;
+    
+    // Update tenant improvements with demising wall auto-calculations
+    const updatedTenantImprovements = budgetData.tenantImprovements.map(item => {
+      const desc = (item.description || "").toLowerCase();
+      const itemId = item.id;
+
+      // Skip if manually overridden
+      if (manualOverrides.has(itemId)) {
+        return item;
+      }
+
+      // Demising Wall - auto-populate with building depth
+      if (desc.includes("demising wall")) {
+        const newQty = buildingDepth;
+        const unitPx = parseFloat(item.unitPrice || "0");
+        const newTotal = (newQty * unitPx).toString();
+        
+        // Only update if different
+        if (item.quantity !== newQty || item.totalPrice !== newTotal) {
+          console.log(`🧱 Auto-calc Demising Wall: ${newQty} ft @ $${unitPx} = $${newTotal}`);
+          return {
+            ...item,
+            quantity: newQty,
+            unit: "ft.",
+            totalPrice: newTotal,
+          };
+        }
+      }
+
+      return item;
+    });
+
+    // Only update if something actually changed
+    const hasChanges = JSON.stringify(updatedTenantImprovements) !== JSON.stringify(budgetData.tenantImprovements);
+    
+    if (hasChanges) {
+      console.log('🧱 Updating tenant improvements with demising wall auto-calculations');
+      setBudgetData(prev => ({
+        ...prev,
+        tenantImprovements: updatedTenantImprovements,
+      }));
+    }
+  }, [
+    propertyData?.buildingDepth,
+    budgetData.tenantImprovements.length,
+    manualOverrides
+  ]);
+
   // Update budgetData door and parking counts when RFP data changes
   // This must run AFTER initial load to override any saved door counts with current calculation
   useEffect(() => {

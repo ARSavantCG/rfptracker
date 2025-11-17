@@ -4247,7 +4247,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       template.items.forEach((item: any, index: number) => {
         // Normalize unit format: lowercase with period
-        let normalizedUnit = item.unit || "ea.";
+        // IMPORTANT: Prioritize snapshot.unit (from ROM pilot) over template.unit for consistency
+        let normalizedUnit = item.snapshot?.unit || item.unit || "ea.";
         normalizedUnit = normalizedUnit.toLowerCase();
         if (!normalizedUnit.endsWith('.')) {
           normalizedUnit = normalizedUnit + '.';

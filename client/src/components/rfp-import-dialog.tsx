@@ -46,7 +46,7 @@ interface RfpImportDialogProps {
 }
 
 export function RfpImportDialog({ open, onOpenChange, currentRfpId, onImport, onTemplateImport }: RfpImportDialogProps) {
-  const [activeTab, setActiveTab] = useState<"projects" | "templates">("projects");
+  const [activeTab, setActiveTab] = useState<"projects" | "templates">("templates");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRfpId, setSelectedRfpId] = useState<number | null>(null);
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set(['tenantImprovements']));

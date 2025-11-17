@@ -41,6 +41,9 @@ interface RomScopeItem {
     price: string;
     date: string;
   }>;
+  itemGroup?: string | null; // For tiered pricing - groups related tiers
+  minSquareFootage?: number | null; // Minimum square footage for this tier
+  maxSquareFootage?: number | null; // Maximum square footage for this tier
   createdAt: string;
   updatedAt: string;
 }
@@ -73,6 +76,9 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
     source: "",
     lastUpdated: "",
     includeByDefault: false,
+    itemGroup: "", // Tiered pricing group name
+    minSquareFootage: "", // Minimum square footage for tier
+    maxSquareFootage: "", // Maximum square footage for tier
     attachments: [] as Array<{
       id: string;
       fileName: string;
@@ -613,6 +619,9 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
       source: "",
       lastUpdated: "",
       includeByDefault: false,
+      itemGroup: "",
+      minSquareFootage: "",
+      maxSquareFootage: "",
       attachments: [],
       referencePricing: [],
     });
@@ -656,6 +665,9 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
       ...formData,
       unitPrice: formData.unitPrice, // Keep the raw value (formula or number)
       minimumCost: formData.hasMinimumCost ? formData.minimumCost : null,
+      itemGroup: formData.itemGroup || null,
+      minSquareFootage: formData.minSquareFootage ? parseInt(formData.minSquareFootage) : null,
+      maxSquareFootage: formData.maxSquareFootage ? parseInt(formData.maxSquareFootage) : null,
       lastUpdated: new Date(), // Always set to current date when saving
     };
 
@@ -678,6 +690,9 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
       source: item.source || "",
       lastUpdated: item.lastUpdated ? new Date(item.lastUpdated).toISOString().split('T')[0] : "",
       includeByDefault: (item as any).includeByDefault || false,
+      itemGroup: item.itemGroup || "",
+      minSquareFootage: item.minSquareFootage?.toString() || "",
+      maxSquareFootage: item.maxSquareFootage?.toString() || "",
       attachments: item.attachments || [],
       referencePricing: item.referencePricing || [],
     });
@@ -892,6 +907,61 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                         }
                       }}
                     />
+                  </div>
+                </div>
+
+                {/* Tiered Pricing Section */}
+                <div className="space-y-4 pt-4 border-t">
+                  <div className="flex items-center space-x-2">
+                    <Label className="text-sm font-semibold">Tiered Pricing (Optional)</Label>
+                    <p className="text-xs text-gray-500">
+                      Use for items with different pricing based on square footage tiers
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="itemGroup">Item Group</Label>
+                      <Input
+                        id="itemGroup"
+                        data-testid="input-itemGroup"
+                        placeholder="e.g., Office Area"
+                        value={formData.itemGroup}
+                        onChange={(e) => setFormData({...formData, itemGroup: e.target.value})}
+                      />
+                      <p className="text-xs text-gray-500">
+                        Groups related tiers together
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="minSquareFootage">Min Square Footage</Label>
+                      <Input
+                        id="minSquareFootage"
+                        data-testid="input-minSquareFootage"
+                        type="number"
+                        placeholder="e.g., 3001"
+                        value={formData.minSquareFootage}
+                        onChange={(e) => setFormData({...formData, minSquareFootage: e.target.value})}
+                      />
+                      <p className="text-xs text-gray-500">
+                        Leave blank for no minimum
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="maxSquareFootage">Max Square Footage</Label>
+                      <Input
+                        id="maxSquareFootage"
+                        data-testid="input-maxSquareFootage"
+                        type="number"
+                        placeholder="e.g., 5000"
+                        value={formData.maxSquareFootage}
+                        onChange={(e) => setFormData({...formData, maxSquareFootage: e.target.value})}
+                      />
+                      <p className="text-xs text-gray-500">
+                        Leave blank for no maximum
+                      </p>
+                    </div>
                   </div>
                 </div>
 

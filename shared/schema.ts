@@ -858,6 +858,10 @@ export const romScopeItems = pgTable("rom_scope_items", {
   attachments: json("attachments").$type<RfpFile[]>().default([]),
   // Reference pricing for quarterly contractor verification (not used in ROMs/Evaluations)
   referencePricing: json("reference_pricing").$type<{contractorName: string, price: string, date: string}[]>().default([]),
+  // Tiered pricing metadata for automatic tier selection
+  itemGroup: text("item_group"), // e.g., "Office Area", "Warehouse Office" - groups related tiers together
+  minSquareFootage: integer("min_square_footage"), // Minimum square footage for this tier (null = no minimum)
+  maxSquareFootage: integer("max_square_footage"), // Maximum square footage for this tier (null = no maximum)
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

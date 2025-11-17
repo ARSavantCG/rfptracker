@@ -740,14 +740,16 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
         return tiTotal + dscTotal + eiTotal;
       };
 
-      // Auto-populate contingency quantity with project total
+      // Auto-populate contingency with correct unit price and zero quantity (will calculate dynamically)
       const autoPopulateContingency = (item: any) => {
         const description = (item.description || "").toLowerCase();
         if (description.includes("contingency")) {
-          const projectTotal = calculateProjectTotal();
+          console.log('🎲 Setting up contingency for dynamic calculation');
           return {
             ...item,
-            quantity: projectTotal > 0 ? projectTotal : item.quantity,
+            unitPrice: "0.05", // 5% rate
+            quantity: 0, // Will be calculated dynamically based on budget total
+            unit: "$", // Percentage applied to dollar amount
           };
         }
         return item;

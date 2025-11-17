@@ -929,6 +929,8 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
 
   // Auto-calculate special fields (Design, Permit Fees, Construction Management, Contingency)
   useEffect(() => {
+    if (budgetData.designSoftCosts.length === 0) return;
+
     // Calculate total rentable area
     const totalRentableArea = rfp?.totalFloorArea 
       ? parseInt(String(rfp.totalFloorArea).replace(/,/g, "")) || 0 
@@ -940,8 +942,22 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
       return sum + total;
     }, 0);
 
-    // Calculate DSC total (excluding contingency)
-    const dscTotal = budgetData.designSoftCosts
+    // Calculate DSC total (excluding CM and contingency for CM base calculation)
+    const dscBeforeCM = budgetData.designSoftCosts
+      .filter(item => {
+        const desc = (item.description || "").toLowerCase();
+        return !desc.includes("contingency") && !desc.includes("construction") && !desc.includes("management");
+      })
+      .reduce((sum, item) => {
+        const total = parseFloat(item.totalPrice?.toString() || "0");
+        return sum + total;
+      }, 0);
+
+    // Base for CM calculation (TI + DSC before CM)
+    const cmBase = tiTotal + dscBeforeCM;
+
+    // Calculate DSC total (excluding contingency only, includes CM for contingency base)
+    const dscBeforeContingency = budgetData.designSoftCosts
       .filter(item => {
         const desc = (item.description || "").toLowerCase();
         return !desc.includes("contingency");
@@ -951,8 +967,8 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
         return sum + total;
       }, 0);
 
-    // Calculate base for contingency (TI + DSC before contingency)
-    const contingencyBase = tiTotal + dscTotal;
+    // Base for contingency calculation (TI + all DSC including CM, before contingency)
+    const contingencyBase = tiTotal + dscBeforeContingency;
 
     // Update design/soft costs with auto-calculations
     const updatedDesignSoftCosts = budgetData.designSoftCosts.map(item => {
@@ -968,44 +984,65 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
       if (desc.includes("design") && (desc.includes("architectural") || desc.includes("architect"))) {
         const newQty = totalRentableArea;
         const unitPx = parseFloat(item.unitPrice || "0");
-        return {
-          ...item,
-          quantity: newQty,
-          totalPrice: (newQty * unitPx).toString(),
-        };
+        const newTotal = (newQty * unitPx).toString();
+        
+        // Only update if different
+        if (item.quantity !== newQty || item.totalPrice !== newTotal) {
+          console.log(`🏗️ Auto-calc Design: ${newQty} sf @ $${unitPx} = $${newTotal}`);
+          return {
+            ...item,
+            quantity: newQty,
+            totalPrice: newTotal,
+          };
+        }
       }
 
       // Permit Fees - auto-populate with TI total
       if (desc.includes("permit") && desc.includes("fee")) {
         const newQty = tiTotal;
         const unitPx = parseFloat(item.unitPrice || "0");
-        return {
-          ...item,
-          quantity: newQty,
-          totalPrice: (newQty * unitPx).toString(),
-        };
+        const newTotal = (newQty * unitPx).toString();
+        
+        if (item.quantity !== newQty || item.totalPrice !== newTotal) {
+          console.log(`💳 Auto-calc Permit Fees: ${newQty} @ $${unitPx} = $${newTotal}`);
+          return {
+            ...item,
+            quantity: newQty,
+            totalPrice: newTotal,
+          };
+        }
       }
 
-      // Construction Management - auto-populate with TI + DSC (before contingency)
+      // Construction Management - auto-populate with TI + DSC (before CM and contingency)
       if (desc.includes("construction") && desc.includes("management")) {
-        const newQty = contingencyBase;
+        const newQty = cmBase;
         const unitPx = parseFloat(item.unitPrice || "0");
-        return {
-          ...item,
-          quantity: newQty,
-          totalPrice: (newQty * unitPx).toString(),
-        };
+        const newTotal = (newQty * unitPx).toString();
+        
+        if (item.quantity !== newQty || item.totalPrice !== newTotal) {
+          console.log(`👷 Auto-calc Construction Management: ${newQty} @ $${unitPx} = $${newTotal}`);
+          return {
+            ...item,
+            quantity: newQty,
+            totalPrice: newTotal,
+          };
+        }
       }
 
-      // Contingency - auto-populate with TI + DSC (before contingency)
+      // Contingency - auto-populate with TI + DSC (including CM, before contingency)
       if (desc.includes("contingency")) {
         const newQty = contingencyBase;
         const unitPx = parseFloat(item.unitPrice || "0");
-        return {
-          ...item,
-          quantity: newQty,
-          totalPrice: (newQty * unitPx).toString(),
-        };
+        const newTotal = (newQty * unitPx).toString();
+        
+        if (item.quantity !== newQty || item.totalPrice !== newTotal) {
+          console.log(`🎲 Auto-calc Contingency: ${newQty} @ $${unitPx} = $${newTotal}`);
+          return {
+            ...item,
+            quantity: newQty,
+            totalPrice: newTotal,
+          };
+        }
       }
 
       return item;
@@ -1015,12 +1052,19 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
     const hasChanges = JSON.stringify(updatedDesignSoftCosts) !== JSON.stringify(budgetData.designSoftCosts);
     
     if (hasChanges) {
+      console.log('📊 Updating budget with auto-calculations');
       setBudgetData(prev => ({
         ...prev,
         designSoftCosts: updatedDesignSoftCosts,
       }));
     }
-  }, [budgetData.tenantImprovements, budgetData.existingImprovements, rfp?.totalFloorArea, manualOverrides]);
+  }, [
+    budgetData.tenantImprovements.length,
+    budgetData.tenantImprovements.reduce((sum, i) => sum + parseFloat(i.totalPrice?.toString() || "0"), 0),
+    budgetData.existingImprovements.length,
+    rfp?.totalFloorArea,
+    manualOverrides
+  ]);
 
   // Calculate door counts from bay configuration data
   const calculateDoorCounts = () => {

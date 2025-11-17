@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Plus, Edit, Copy, Archive, Trash2, Search, FileText, AlertCircle, X } from "lucide-react";
+import { Plus, Edit2, Copy, Trash2, Search, FileText, AlertCircle, X } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -76,6 +76,9 @@ export function TemplatesManagement() {
   const [romSearchTerm, setRomSearchTerm] = useState("");
   const [selectedRomItems, setSelectedRomItems] = useState<Set<number>>(new Set());
   const [showCustomItemPrompt, setShowCustomItemPrompt] = useState(false);
+  
+  // Delete confirmation
+  const [deletingTemplate, setDeletingTemplate] = useState<TemplateRecord | null>(null);
 
   // Fetch templates
   const { data: templatesData, isLoading } = useQuery({
@@ -165,6 +168,18 @@ export function TemplatesManagement() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/templates"] });
       toast({ title: "Template archived successfully", duration: 4000 });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive", duration: 6000 });
+    }
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => apiRequest(`/api/templates/${id}`, "DELETE"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/templates"] });
+      setDeletingTemplate(null);
+      toast({ title: "Template deleted successfully", duration: 4000 });
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.message, variant: "destructive", duration: 6000 });
@@ -358,7 +373,7 @@ export function TemplatesManagement() {
                           onClick={() => handleEdit(template)}
                           data-testid={`button-edit-${template.id}`}
                         >
-                          <Edit className="h-4 w-4" />
+                          <Edit2 className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
@@ -366,16 +381,18 @@ export function TemplatesManagement() {
                           onClick={() => duplicateMutation.mutate(template.id)}
                           data-testid={`button-duplicate-${template.id}`}
                         >
-                          <Copy className="h-4 w-4 text-green-600" />
+                          <Copy className="h-4 w-4" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => archiveMutation.mutate({ id: template.id, archived: !template.metadata.isArchived })}
-                          data-testid={`button-archive-${template.id}`}
-                        >
-                          <Archive className="h-4 w-4 text-muted-foreground" />
-                        </Button>
+                        {isAdmin && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setDeletingTemplate(template)}
+                            data-testid={`button-delete-${template.id}`}
+                          >
+                            <Trash2 className="h-4 w-4 text-red-600" />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -587,6 +604,28 @@ export function TemplatesManagement() {
               window.location.href = "/rom-pilot";
             }}>
               Go to ROM Pilot
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deletingTemplate} onOpenChange={(open) => !open && setDeletingTemplate(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Template</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{deletingTemplate?.name}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deletingTemplate && deleteMutation.mutate(deletingTemplate.id)}
+              className="bg-red-600 hover:bg-red-700"
+              data-testid="button-confirm-delete"
+            >
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

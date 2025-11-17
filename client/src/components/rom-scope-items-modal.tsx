@@ -1584,6 +1584,61 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                                 </div>
                               )}
 
+                              {/* Tiered Pricing Section */}
+                              <div className="space-y-4 pt-4 border-t">
+                                <div className="flex items-center space-x-2">
+                                  <Label className="text-sm font-semibold">Tiered Pricing (Optional)</Label>
+                                  <p className="text-xs text-gray-500">
+                                    Use for items with different pricing based on square footage tiers
+                                  </p>
+                                </div>
+                                <div className="grid grid-cols-3 gap-4">
+                                  <div className="space-y-2">
+                                    <Label htmlFor="itemGroup-inline">Item Group</Label>
+                                    <Input
+                                      id="itemGroup-inline"
+                                      data-testid="input-itemGroup-inline"
+                                      placeholder="e.g., Office Area"
+                                      value={formData.itemGroup}
+                                      onChange={(e) => setFormData({...formData, itemGroup: e.target.value})}
+                                    />
+                                    <p className="text-xs text-gray-500">
+                                      Groups related tiers together
+                                    </p>
+                                  </div>
+
+                                  <div className="space-y-2">
+                                    <Label htmlFor="minSquareFootage-inline">Min Square Footage</Label>
+                                    <Input
+                                      id="minSquareFootage-inline"
+                                      data-testid="input-minSquareFootage-inline"
+                                      type="number"
+                                      placeholder="e.g., 3001"
+                                      value={formData.minSquareFootage}
+                                      onChange={(e) => setFormData({...formData, minSquareFootage: e.target.value})}
+                                    />
+                                    <p className="text-xs text-gray-500">
+                                      Leave blank for no minimum
+                                    </p>
+                                  </div>
+
+                                  <div className="space-y-2">
+                                    <Label htmlFor="maxSquareFootage-inline">Max Square Footage</Label>
+                                    <Input
+                                      id="maxSquareFootage-inline"
+                                      data-testid="input-maxSquareFootage-inline"
+                                      type="number"
+                                      placeholder="e.g., 5000"
+                                      value={formData.maxSquareFootage}
+                                      onChange={(e) => setFormData({...formData, maxSquareFootage: e.target.value})}
+                                    />
+                                    <p className="text-xs text-gray-500">
+                                      Leave blank for no maximum
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+
                               {/* File Attachments Section */}
                               <div className="space-y-4 pt-4 border-t">
                                 <div className="space-y-2">

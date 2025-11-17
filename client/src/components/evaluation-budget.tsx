@@ -3347,6 +3347,28 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
   };
 
   const updateItem = (category: 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', itemId: string, updates: Partial<EvaluationLineItem>) => {
+    // Track manual override for auto-calculated items when quantity is manually changed
+    if (updates.quantity !== undefined && category === 'designSoftCosts') {
+      setBudgetData(prev => {
+        const item = prev[category].find(i => i.id === itemId);
+        if (item) {
+          const desc = (item.description || "").toLowerCase();
+          // Check if this is an auto-calculated item
+          const isAutoCalcItem = 
+            (desc.includes("design") && (desc.includes("architectural") || desc.includes("architect"))) ||
+            (desc.includes("builder") && desc.includes("risk")) ||
+            (desc.includes("permit") && desc.includes("fee")) ||
+            (desc.includes("construction") && desc.includes("management")) ||
+            desc.includes("contingency");
+          
+          if (isAutoCalcItem) {
+            setManualOverrides(prev => new Set(prev).add(itemId));
+          }
+        }
+        return prev;
+      });
+    }
+
     setBudgetData(prev => ({
       ...prev,
       [category]: prev[category].map(item => {

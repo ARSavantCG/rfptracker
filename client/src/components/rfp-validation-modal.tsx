@@ -51,6 +51,7 @@ interface RfpValidationModalProps {
 export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete }: RfpValidationModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [openAreaTypeIndex, setOpenAreaTypeIndex] = useState<number | null>(null);
 
   const form = useForm<ValidationFormData>({
     resolver: zodResolver(validationSchema),
@@ -63,6 +64,26 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
       areaBreakdown: [],
     },
   });
+
+  // Close area type dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.area-type-dropdown')) {
+        setOpenAreaTypeIndex(null);
+      }
+    }
+
+    if (openAreaTypeIndex !== null) {
+      setTimeout(() => {
+        document.addEventListener('mousedown', handleClickOutside);
+      }, 100);
+      
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [openAreaTypeIndex]);
 
   const { data: contacts = [] } = useQuery<Contact[]>({
     queryKey: ["/api/contacts"],
@@ -358,29 +379,46 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                     {form.watch("areaBreakdown")?.map((area, index) => (
                       <div key={area.id} className="space-y-2 p-3 border rounded-md bg-gray-50">
                         <div className="grid grid-cols-12 gap-2 items-center">
-                          <div className="col-span-3">
+                          <div className="col-span-3 relative">
                             <label className="text-xs font-medium text-gray-600">Area Type</label>
-                            <Select
-                              value={area.areaType}
-                              onValueChange={(value) => {
-                                updateAreaBreakdown(index, "areaType", value);
-                                // Auto-fill description for non-miscellaneous types
-                                if (value !== "Miscellaneous") {
-                                  updateAreaBreakdown(index, "description", value);
-                                } else {
-                                  updateAreaBreakdown(index, "description", "");
-                                }
-                              }}
-                            >
-                              <SelectTrigger className="w-full">
-                                <SelectValue placeholder="Select area type" />
-                              </SelectTrigger>
-                              <SelectContent className="z-[9999]">
-                                <SelectItem value="Office Area">Office Area</SelectItem>
-                                <SelectItem value="Warehouse Office">Warehouse Office</SelectItem>
-                                <SelectItem value="Miscellaneous">Miscellaneous</SelectItem>
-                              </SelectContent>
-                            </Select>
+                            <div className="relative area-type-dropdown">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setOpenAreaTypeIndex(openAreaTypeIndex === index ? null : index);
+                                }}
+                                className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                              >
+                                <span className={area.areaType ? "text-foreground" : "text-muted-foreground"}>
+                                  {area.areaType || "Select area type"}
+                                </span>
+                                <ChevronDown className={`h-4 w-4 opacity-70 transition-transform ${openAreaTypeIndex === index ? "rotate-180" : ""}`} />
+                              </button>
+                              {openAreaTypeIndex === index && (
+                                <div className="absolute z-[9999] mt-1 w-full rounded-md border bg-popover shadow-lg">
+                                  <div className="p-1">
+                                    {["Office Area", "Warehouse Office", "Miscellaneous"].map((option) => (
+                                      <div
+                                        key={option}
+                                        className="px-3 py-2 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground rounded-sm"
+                                        onClick={() => {
+                                          updateAreaBreakdown(index, "areaType", option);
+                                          // Auto-fill description for non-miscellaneous types
+                                          if (option !== "Miscellaneous") {
+                                            updateAreaBreakdown(index, "description", option);
+                                          } else {
+                                            updateAreaBreakdown(index, "description", "");
+                                          }
+                                          setOpenAreaTypeIndex(null);
+                                        }}
+                                      >
+                                        {option}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
                           </div>
                           {area.areaType === "Miscellaneous" && (
                             <div className="col-span-3">

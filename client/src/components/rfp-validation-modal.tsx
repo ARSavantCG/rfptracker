@@ -372,10 +372,10 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                                 }
                               }}
                             >
-                              <SelectTrigger>
+                              <SelectTrigger className="w-full">
                                 <SelectValue placeholder="Select area type" />
                               </SelectTrigger>
-                              <SelectContent>
+                              <SelectContent className="z-[9999]">
                                 <SelectItem value="Office Area">Office Area</SelectItem>
                                 <SelectItem value="Warehouse Office">Warehouse Office</SelectItem>
                                 <SelectItem value="Miscellaneous">Miscellaneous</SelectItem>

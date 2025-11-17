@@ -1098,6 +1098,8 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
     budgetData.tenantImprovements.length,
     budgetData.tenantImprovements.reduce((sum, i) => sum + parseFloat(i.totalPrice?.toString() || "0"), 0),
     budgetData.existingImprovements.length,
+    budgetData.designSoftCosts.length,
+    budgetData.designSoftCosts.reduce((sum, i) => sum + parseFloat(i.totalPrice?.toString() || "0"), 0),
     rfp?.selectedBayConfigurations?.length || 0,
     rfp?.selectedBayConfigurations?.reduce((total, bay) => total + (bay.rentableSquareFootage || 0), 0) || 0,
     manualOverrides

@@ -329,6 +329,14 @@ async function archiveTemplate(id: string, flag: boolean): Promise<TemplateRecor
   return store.templates[idx];
 }
 
+async function deleteTemplate(id: string): Promise<void> {
+  const store = await loadStore();
+  const idx = store.templates.findIndex(t => t.id === id);
+  if (idx === -1) throw new Error("Template not found");
+  store.templates.splice(idx, 1);
+  await saveStore(store);
+}
+
 // ---------- Helpers for Import Flow ----------
 
 export type ConflictPolicy = "add_all" | "merge_by_code" | "skip_duplicates";
@@ -454,6 +462,7 @@ const Templates = {
   updateTemplate,
   duplicateTemplate,
   archiveTemplate,
+  deleteTemplate,
   buildImportPreview,
   importIntoEvaluation,
   validateTemplate,

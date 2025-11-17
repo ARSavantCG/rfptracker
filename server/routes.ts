@@ -8577,6 +8577,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete template (admin only)
+  app.delete("/api/templates/:id", requireAuth, checkPermission('admin.access'), async (req, res) => {
+    try {
+      await Templates.deleteTemplate(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting template:", error);
+      const message = error instanceof Error ? error.message : "Failed to delete template";
+      res.status(400).json({ message });
+    }
+  });
+
   // Build import preview for a template
   app.post("/api/templates/:id/preview", async (req, res) => {
     try {

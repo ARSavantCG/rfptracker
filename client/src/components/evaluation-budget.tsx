@@ -942,21 +942,29 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
       return sum + total;
     }, 0);
 
-    // Calculate DSC total (excluding only CM and Contingency for CM base calculation)
-    // IMPORTANT: Design IS included in CM calculation base
+    // Pre-calculate what Design (Architectural) will be
+    const designItem = budgetData.designSoftCosts.find(item => {
+      const desc = (item.description || "").toLowerCase();
+      return desc.includes("design") && (desc.includes("architectural") || desc.includes("architect"));
+    });
+    const designUnitPrice = designItem ? parseFloat(designItem.unitPrice || "0") : 0;
+    const calculatedDesignTotal = totalRentableArea * designUnitPrice;
+
+    // Calculate DSC total (excluding Design, CM, and Contingency for CM base calculation)
     const dscBeforeCM = budgetData.designSoftCosts
       .filter(item => {
         const desc = (item.description || "").toLowerCase();
         return !desc.includes("contingency") && 
-               !(desc.includes("construction") && desc.includes("management"));
+               !(desc.includes("construction") && desc.includes("management")) &&
+               !(desc.includes("design") && (desc.includes("architectural") || desc.includes("architect")));
       })
       .reduce((sum, item) => {
         const total = parseFloat(item.totalPrice?.toString() || "0");
         return sum + total;
       }, 0);
 
-    // Base for CM calculation (TI + ALL DSC before CM, INCLUDING Design)
-    const cmBase = tiTotal + dscBeforeCM;
+    // Base for CM calculation (TI + calculated Design + other DSC before CM)
+    const cmBase = tiTotal + calculatedDesignTotal + dscBeforeCM;
 
     // Update design/soft costs with auto-calculations
     // First pass: update all items except Contingency (which needs CM to be calculated first)

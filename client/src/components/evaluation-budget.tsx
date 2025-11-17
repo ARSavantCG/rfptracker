@@ -653,7 +653,8 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
         const areaBreakdown = rfp?.areaBreakdown || [];
         
         let quantity = item.quantity;
-        let unit = item.unit;
+        // Preserve ROM pilot unit if available, otherwise use item unit
+        let unit = item.romSnapshot?.unit || item.unit;
         
         // Match Demising Wall items - auto-populate with building depth
         if (description.includes("demising wall") && propertyData?.buildingDepth) {

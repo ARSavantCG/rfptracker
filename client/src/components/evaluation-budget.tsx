@@ -931,9 +931,9 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
   useEffect(() => {
     if (budgetData.designSoftCosts.length === 0) return;
 
-    // Calculate total rentable area
-    const totalRentableArea = rfp?.totalFloorArea 
-      ? parseInt(String(rfp.totalFloorArea).replace(/,/g, "")) || 0 
+    // Calculate total rentable area from selected bay configurations
+    const totalRentableArea = rfp?.selectedBayConfigurations 
+      ? rfp.selectedBayConfigurations.reduce((total, bay) => total + (bay.rentableSquareFootage || 0), 0)
       : 0;
 
     // Calculate TI total
@@ -1062,7 +1062,8 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
     budgetData.tenantImprovements.length,
     budgetData.tenantImprovements.reduce((sum, i) => sum + parseFloat(i.totalPrice?.toString() || "0"), 0),
     budgetData.existingImprovements.length,
-    rfp?.totalFloorArea,
+    rfp?.selectedBayConfigurations?.length || 0,
+    rfp?.selectedBayConfigurations?.reduce((total, bay) => total + (bay.rentableSquareFootage || 0), 0) || 0,
     manualOverrides
   ]);
 

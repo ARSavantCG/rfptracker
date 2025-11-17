@@ -946,7 +946,8 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
     const dscBeforeCM = budgetData.designSoftCosts
       .filter(item => {
         const desc = (item.description || "").toLowerCase();
-        return !desc.includes("contingency") && !desc.includes("construction") && !desc.includes("management");
+        return !desc.includes("contingency") && 
+               !(desc.includes("construction") && desc.includes("management"));
       })
       .reduce((sum, item) => {
         const total = parseFloat(item.totalPrice?.toString() || "0");
@@ -956,22 +957,9 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
     // Base for CM calculation (TI + DSC before CM)
     const cmBase = tiTotal + dscBeforeCM;
 
-    // Calculate DSC total (excluding contingency only, includes CM for contingency base)
-    const dscBeforeContingency = budgetData.designSoftCosts
-      .filter(item => {
-        const desc = (item.description || "").toLowerCase();
-        return !desc.includes("contingency");
-      })
-      .reduce((sum, item) => {
-        const total = parseFloat(item.totalPrice?.toString() || "0");
-        return sum + total;
-      }, 0);
-
-    // Base for contingency calculation (TI + all DSC including CM, before contingency)
-    const contingencyBase = tiTotal + dscBeforeContingency;
-
     // Update design/soft costs with auto-calculations
-    const updatedDesignSoftCosts = budgetData.designSoftCosts.map(item => {
+    // First pass: update all items except Contingency (which needs CM to be calculated first)
+    let updatedDesignSoftCosts = budgetData.designSoftCosts.map(item => {
       const desc = (item.description || "").toLowerCase();
       const itemId = item.id;
 
@@ -1029,14 +1017,46 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
         }
       }
 
-      // Contingency - auto-populate with TI + DSC (including CM, before contingency)
+      // Skip Contingency in first pass - will calculate after CM is updated
       if (desc.includes("contingency")) {
+        return item;
+      }
+
+      return item;
+    });
+
+    // Second pass: Calculate contingency base including the newly calculated CM
+    const dscBeforeContingency = updatedDesignSoftCosts
+      .filter(item => {
+        const desc = (item.description || "").toLowerCase();
+        return !desc.includes("contingency");
+      })
+      .reduce((sum, item) => {
+        const total = parseFloat(item.totalPrice?.toString() || "0");
+        return sum + total;
+      }, 0);
+
+    // Base for contingency calculation (TI + all DSC including CM, before contingency)
+    const contingencyBase = tiTotal + dscBeforeContingency;
+
+    // Update Contingency with the correct base
+    updatedDesignSoftCosts = updatedDesignSoftCosts.map(item => {
+      const desc = (item.description || "").toLowerCase();
+      const itemId = item.id;
+
+      // Only process Contingency in this pass
+      if (desc.includes("contingency")) {
+        // Skip if manually overridden
+        if (manualOverrides.has(itemId)) {
+          return item;
+        }
+
         const newQty = contingencyBase;
         const unitPx = parseFloat(item.unitPrice || "0");
         const newTotal = (newQty * unitPx).toString();
         
         if (item.quantity !== newQty || item.totalPrice !== newTotal) {
-          console.log(`🎲 Auto-calc Contingency: ${newQty} @ $${unitPx} = $${newTotal}`);
+          console.log(`🎲 Auto-calc Contingency: ${newQty} @ $${unitPx} = $${newTotal} (includes CM)`);
           return {
             ...item,
             quantity: newQty,

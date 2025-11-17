@@ -4251,8 +4251,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           description: item.label,
           quantity: item.qty || 1,
           unit: item.unit || "ea",
-          unitPrice: item.unit_cost ? (item.unit_cost * 100).toString() : "0",
-          totalPrice: item.unit_cost && item.qty ? ((item.unit_cost * item.qty) * 100).toString() : "0",
+          unitPrice: item.unit_cost ? item.unit_cost.toString() : "0",
+          totalPrice: item.unit_cost && item.qty ? (item.unit_cost * item.qty).toString() : "0",
           tenantShare: item.percent || 100,
           notes: item.notes || "",
         };

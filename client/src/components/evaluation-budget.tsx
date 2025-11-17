@@ -942,19 +942,20 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
       return sum + total;
     }, 0);
 
-    // Calculate DSC total (excluding CM and contingency for CM base calculation)
+    // Calculate DSC total (excluding Design, CM, and Contingency for CM base calculation)
     const dscBeforeCM = budgetData.designSoftCosts
       .filter(item => {
         const desc = (item.description || "").toLowerCase();
         return !desc.includes("contingency") && 
-               !(desc.includes("construction") && desc.includes("management"));
+               !(desc.includes("construction") && desc.includes("management")) &&
+               !(desc.includes("design") && (desc.includes("architectural") || desc.includes("architect")));
       })
       .reduce((sum, item) => {
         const total = parseFloat(item.totalPrice?.toString() || "0");
         return sum + total;
       }, 0);
 
-    // Base for CM calculation (TI + DSC before CM)
+    // Base for CM calculation (TI + DSC before CM, excluding Design)
     const cmBase = tiTotal + dscBeforeCM;
 
     // Update design/soft costs with auto-calculations
@@ -1025,18 +1026,19 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
       return item;
     });
 
-    // Second pass: Calculate contingency base including the newly calculated CM
+    // Second pass: Calculate contingency base including the newly calculated CM (but excluding Design)
     const dscBeforeContingency = updatedDesignSoftCosts
       .filter(item => {
         const desc = (item.description || "").toLowerCase();
-        return !desc.includes("contingency");
+        return !desc.includes("contingency") &&
+               !(desc.includes("design") && (desc.includes("architectural") || desc.includes("architect")));
       })
       .reduce((sum, item) => {
         const total = parseFloat(item.totalPrice?.toString() || "0");
         return sum + total;
       }, 0);
 
-    // Base for contingency calculation (TI + all DSC including CM, before contingency)
+    // Base for contingency calculation (TI + all DSC including CM, excluding Design and Contingency)
     const contingencyBase = tiTotal + dscBeforeContingency;
 
     // Update Contingency with the correct base

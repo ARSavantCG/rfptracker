@@ -122,7 +122,7 @@
           "label": "Permit Expediter",
           "type": "cost",
           "qty": 1,
-          "unit": "Lot",
+          "unit": "ls.",
           "unit_cost": 7500,
           "tags": [
             "design-/-soft-costs-/-other-fees"
@@ -132,7 +132,7 @@
           "sourceType": "rom",
           "snapshot": {
             "label": "Permit Expediter",
-            "unit": "Lot",
+            "unit": "ls.",
             "unitPrice": 7500,
             "category": "Design / Soft Costs / Other Fees",
             "source": "Bridge Industrial",
@@ -166,7 +166,7 @@
           "label": "Certificate of Occupancy",
           "type": "cost",
           "qty": 1,
-          "unit": "Lot",
+          "unit": "ls.",
           "unit_cost": 2500,
           "tags": [
             "design-/-soft-costs-/-other-fees"
@@ -176,7 +176,7 @@
           "sourceType": "rom",
           "snapshot": {
             "label": "Certificate of Occupancy",
-            "unit": "Lot",
+            "unit": "ls.",
             "unitPrice": 2500,
             "category": "Design / Soft Costs / Other Fees",
             "source": "Bridge Industrial",

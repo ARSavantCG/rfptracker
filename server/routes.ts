@@ -1893,6 +1893,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.error('Failed to parse selectedBayIds:', e);
         }
       }
+
+      // If we have propertyId and selectedBayIds but no selectedBayConfigurations,
+      // fetch the property and extract the matching bay configurations
+      if (propertyId && selectedBayIds && selectedBayIds.length > 0 && selectedBayConfigurations.length === 0) {
+        try {
+          const property = await storage.getPropertyById(propertyId);
+          if (property && property.bayConfigurations) {
+            selectedBayConfigurations = property.bayConfigurations.filter(bay => 
+              selectedBayIds.includes(bay.id)
+            );
+            console.log('Retrieved', selectedBayConfigurations.length, 'bay configurations from property', propertyId);
+          }
+        } catch (e) {
+          console.error('Failed to retrieve bay configurations from property:', e);
+        }
+      }
       
       if (req.body.propertyIdsPerBuilding) {
         try {

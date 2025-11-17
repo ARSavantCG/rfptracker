@@ -1,244 +1,10 @@
 {
   "templates": [
     {
-      "id": "tpl_ti_baseline_v1",
-      "name": "Baseline Industrial TI",
-      "description": "Design, permit fees, and owner soft costs starter.",
-      "category": "TI",
-      "version": 1,
-      "items": [
-        {
-          "code": "DES-100",
-          "label": "Design",
-          "type": "cost",
-          "qty": 1,
-          "unit_cost": 45000,
-          "tags": [
-            "soft_cost",
-            "precon"
-          ],
-          "notes": ""
-        },
-        {
-          "code": "PER-350",
-          "label": "Permit Fees",
-          "type": "percent",
-          "percent": 3.5,
-          "percent_of": "subtotal_hard_costs",
-          "qty": 1,
-          "tags": [
-            "fees"
-          ],
-          "notes": ""
-        },
-        {
-          "code": "MAT-TEST",
-          "label": "Materials Testing",
-          "type": "cost",
-          "qty": 1,
-          "unit_cost": 30000,
-          "tags": [
-            "quality"
-          ],
-          "notes": ""
-        },
-        {
-          "code": "BIRD-SP",
-          "label": "Bird Spikes",
-          "type": "cost",
-          "qty": 1,
-          "unit_cost": 25000,
-          "tags": [
-            "façade"
-          ],
-          "notes": ""
-        },
-        {
-          "code": "STR-MOD",
-          "label": "Storefront Modifications",
-          "type": "cost",
-          "qty": 1,
-          "unit_cost": 40000,
-          "tags": [
-            "façade"
-          ],
-          "notes": ""
-        }
-      ],
-      "metadata": {
-        "createdBy": "seed",
-        "createdAt": "2025-11-16T18:55:31.143Z",
-        "updatedAt": "2025-11-16T18:55:31.144Z",
-        "isArchived": false
-      }
-    },
-    {
-      "id": "tpl_core_shell_utils_v1",
-      "name": "Core & Shell + Utilities",
-      "description": "Core/shell placeholders incl. switchgear, dock equipment, air curtain.",
-      "category": "Core/Shell",
-      "version": 1,
-      "items": [
-        {
-          "code": "SWGR-PL",
-          "label": "Switchgear Placeholder",
-          "type": "allowance",
-          "qty": 1,
-          "unit_cost": 150000,
-          "tags": [
-            "electrical"
-          ],
-          "notes": ""
-        },
-        {
-          "code": "DOCK-EQ",
-          "label": "Dock Equipment Allowance",
-          "type": "allowance",
-          "qty": 1,
-          "unit_cost": 120000,
-          "tags": [
-            "dock"
-          ],
-          "notes": ""
-        },
-        {
-          "code": "AIR-CRT",
-          "label": "Air Curtain",
-          "type": "cost",
-          "qty": 1,
-          "unit_cost": 20000,
-          "tags": [
-            "hvac"
-          ],
-          "notes": ""
-        }
-      ],
-      "metadata": {
-        "createdBy": "seed",
-        "createdAt": "2025-11-16T18:55:31.144Z",
-        "updatedAt": "2025-11-16T18:55:31.144Z",
-        "isArchived": false
-      }
-    },
-    {
-      "id": "tpl_rom_integration_test_a7ue_amu8",
-      "name": "ROM Integration Test a7uE",
-      "description": "Phase 1 ROM pilot integration testing",
-      "category": "Industrial",
-      "version": 1,
-      "items": [
-        {
-          "code": "ROM-37",
-          "label": "Office Area",
-          "type": "cost",
-          "qty": 1,
-          "unit": "sf.",
-          "unit_cost": 195,
-          "tags": [
-            "tenant-improvements"
-          ],
-          "notes": "(> 3,000 sf; up to 5,000 sf)",
-          "romScopeItemId": 37,
-          "sourceType": "rom"
-        },
-        {
-          "code": "ROM-38",
-          "label": "Office Area",
-          "type": "cost",
-          "qty": 1,
-          "unit": "sf.",
-          "unit_cost": 185,
-          "tags": [
-            "tenant-improvements"
-          ],
-          "notes": "(>5,000 sf)",
-          "romScopeItemId": 38,
-          "sourceType": "rom"
-        },
-        {
-          "code": "ROM-24",
-          "label": "Demising Wall (Un-painted)",
-          "type": "cost",
-          "qty": 1,
-          "unit": "lf.",
-          "unit_cost": 795,
-          "tags": [
-            "tenant-improvements"
-          ],
-          "notes": "Up to 40' clear.",
-          "romScopeItemId": 24,
-          "sourceType": "rom"
-        }
-      ],
-      "metadata": {
-        "createdBy": "AReutlinger@bridgeindustrial.com",
-        "createdAt": "2025-11-16T20:12:01.237Z",
-        "updatedAt": "2025-11-16T20:12:01.237Z",
-        "isArchived": false
-      }
-    },
-    {
-      "id": "tpl_rom_test_amlo_a7ux",
-      "name": "ROM Test amlO",
-      "description": "Testing ROM pilot item selector",
-      "category": "Industrial TI",
-      "version": 1,
-      "items": [
-        {
-          "code": "ROM-38",
-          "label": "Office Area",
-          "type": "cost",
-          "qty": 1,
-          "unit": "sf.",
-          "unit_cost": 185,
-          "tags": [
-            "tenant-improvements"
-          ],
-          "notes": "(>5,000 sf)",
-          "romScopeItemId": 38,
-          "sourceType": "rom"
-        },
-        {
-          "code": "ROM-27",
-          "label": "Office Area",
-          "type": "cost",
-          "qty": 1,
-          "unit": "sf.",
-          "unit_cost": 265,
-          "tags": [
-            "tenant-improvements"
-          ],
-          "notes": "Standard Office (Bridge Standard)",
-          "romScopeItemId": 27,
-          "sourceType": "rom"
-        },
-        {
-          "code": "ROM-37",
-          "label": "Office Area",
-          "type": "cost",
-          "qty": 1,
-          "unit": "sf.",
-          "unit_cost": 195,
-          "tags": [
-            "tenant-improvements"
-          ],
-          "notes": "(> 3,000 sf; up to 5,000 sf)",
-          "romScopeItemId": 37,
-          "sourceType": "rom"
-        }
-      ],
-      "metadata": {
-        "createdBy": "AReutlinger@bridgeindustrial.com",
-        "createdAt": "2025-11-16T20:18:08.786Z",
-        "updatedAt": "2025-11-16T20:18:08.786Z",
-        "isArchived": false
-      }
-    },
-    {
-      "id": "tpl_snapshot_test_k5v4_s32k",
-      "name": "Snapshot Test k5V4",
-      "description": "Testing ROM snapshot persistence",
-      "category": "Test",
+      "id": "tpl_standard_ti_zvc6",
+      "name": "Standard TI",
+      "description": "",
+      "category": "",
       "version": 1,
       "items": [
         {
@@ -260,29 +26,7 @@
             "unitPrice": 195,
             "category": "Tenant Improvements",
             "source": "ROM Pilot",
-            "capturedAt": "2025-11-16T20:24:00.194Z"
-          }
-        },
-        {
-          "code": "ROM-38",
-          "label": "Office Area",
-          "type": "cost",
-          "qty": 1,
-          "unit": "sf.",
-          "unit_cost": 185,
-          "tags": [
-            "tenant-improvements"
-          ],
-          "notes": "(>5,000 sf)",
-          "romScopeItemId": 38,
-          "sourceType": "rom",
-          "snapshot": {
-            "label": "Office Area",
-            "unit": "sf.",
-            "unitPrice": 185,
-            "category": "Tenant Improvements",
-            "source": "ROM Pilot",
-            "capturedAt": "2025-11-16T20:24:00.194Z"
+            "capturedAt": "2025-11-17T00:43:11.636Z"
           }
         },
         {
@@ -304,16 +48,169 @@
             "unitPrice": 795,
             "category": "Tenant Improvements",
             "source": "ROM Pilot",
-            "capturedAt": "2025-11-16T20:24:00.194Z"
+            "capturedAt": "2025-11-17T00:43:11.636Z"
+          }
+        },
+        {
+          "code": "ROM-31",
+          "label": "Design & Construction Contingency (5%)",
+          "type": "cost",
+          "qty": 1,
+          "unit": "$",
+          "unit_cost": 0.05,
+          "tags": [
+            "design-/-soft-costs-/-other-fees"
+          ],
+          "notes": "",
+          "romScopeItemId": 31,
+          "sourceType": "rom",
+          "snapshot": {
+            "label": "Design & Construction Contingency (5%)",
+            "unit": "$",
+            "unitPrice": 0.05,
+            "category": "Design / Soft Costs / Other Fees",
+            "source": "Bridge Industrial",
+            "capturedAt": "2025-11-17T00:43:11.636Z"
+          }
+        },
+        {
+          "code": "ROM-30",
+          "label": "Permit Fees (3.5%)",
+          "type": "cost",
+          "qty": 1,
+          "unit": "$",
+          "unit_cost": 0.035,
+          "tags": [
+            "design-/-soft-costs-/-other-fees"
+          ],
+          "notes": "",
+          "romScopeItemId": 30,
+          "sourceType": "rom",
+          "snapshot": {
+            "label": "Permit Fees (3.5%)",
+            "unit": "$",
+            "unitPrice": 0.035,
+            "category": "Design / Soft Costs / Other Fees",
+            "source": "Bridge Industrial",
+            "capturedAt": "2025-11-17T00:43:11.636Z"
+          }
+        },
+        {
+          "code": "ROM-29",
+          "label": "Construction Management (3.5%)",
+          "type": "cost",
+          "qty": 1,
+          "unit": "$",
+          "unit_cost": 0.035,
+          "tags": [
+            "design-/-soft-costs-/-other-fees"
+          ],
+          "notes": "",
+          "romScopeItemId": 29,
+          "sourceType": "rom",
+          "snapshot": {
+            "label": "Construction Management (3.5%)",
+            "unit": "$",
+            "unitPrice": 0.035,
+            "category": "Design / Soft Costs / Other Fees",
+            "source": "Bridge Industrial",
+            "capturedAt": "2025-11-17T00:43:11.636Z"
+          }
+        },
+        {
+          "code": "ROM-33",
+          "label": "Permit Expediter",
+          "type": "cost",
+          "qty": 1,
+          "unit": "Lot",
+          "unit_cost": 7500,
+          "tags": [
+            "design-/-soft-costs-/-other-fees"
+          ],
+          "notes": "",
+          "romScopeItemId": 33,
+          "sourceType": "rom",
+          "snapshot": {
+            "label": "Permit Expediter",
+            "unit": "Lot",
+            "unitPrice": 7500,
+            "category": "Design / Soft Costs / Other Fees",
+            "source": "Bridge Industrial",
+            "capturedAt": "2025-11-17T00:43:11.636Z"
+          }
+        },
+        {
+          "code": "ROM-32",
+          "label": "Builder's Risk Insurance",
+          "type": "cost",
+          "qty": 1,
+          "unit": "$",
+          "unit_cost": 0.25,
+          "tags": [
+            "design-/-soft-costs-/-other-fees"
+          ],
+          "notes": "",
+          "romScopeItemId": 32,
+          "sourceType": "rom",
+          "snapshot": {
+            "label": "Builder's Risk Insurance",
+            "unit": "$",
+            "unitPrice": 0.25,
+            "category": "Design / Soft Costs / Other Fees",
+            "source": "Bridge Industrial",
+            "capturedAt": "2025-11-17T00:43:11.636Z"
+          }
+        },
+        {
+          "code": "ROM-34",
+          "label": "Certificate of Occupancy",
+          "type": "cost",
+          "qty": 1,
+          "unit": "Lot",
+          "unit_cost": 2500,
+          "tags": [
+            "design-/-soft-costs-/-other-fees"
+          ],
+          "notes": "",
+          "romScopeItemId": 34,
+          "sourceType": "rom",
+          "snapshot": {
+            "label": "Certificate of Occupancy",
+            "unit": "Lot",
+            "unitPrice": 2500,
+            "category": "Design / Soft Costs / Other Fees",
+            "source": "Bridge Industrial",
+            "capturedAt": "2025-11-17T00:43:11.636Z"
+          }
+        },
+        {
+          "code": "ROM-26",
+          "label": "Design (Architectural)",
+          "type": "cost",
+          "qty": 1,
+          "unit": "SF",
+          "unit_cost": 1.5,
+          "tags": [
+            "design-/-soft-costs-/-other-fees"
+          ],
+          "notes": "",
+          "romScopeItemId": 26,
+          "sourceType": "rom",
+          "snapshot": {
+            "label": "Design (Architectural)",
+            "unit": "SF",
+            "unitPrice": 1.5,
+            "category": "Design / Soft Costs / Other Fees",
+            "source": "TEST",
+            "capturedAt": "2025-11-17T00:43:11.636Z"
           }
         }
       ],
       "metadata": {
         "createdBy": "AReutlinger@bridgeindustrial.com",
-        "createdAt": "2025-11-16T20:22:56.742Z",
-        "updatedAt": "2025-11-16T20:24:00.441Z",
-        "isArchived": false,
-        "updatedBy": "AReutlinger@bridgeindustrial.com"
+        "createdAt": "2025-11-17T00:43:12.269Z",
+        "updatedAt": "2025-11-17T00:43:12.269Z",
+        "isArchived": false
       }
     }
   ]

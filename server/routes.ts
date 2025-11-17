@@ -4246,11 +4246,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       template.items.forEach((item: any, index: number) => {
+        // Normalize unit format: lowercase with period
+        let normalizedUnit = item.unit || "ea.";
+        normalizedUnit = normalizedUnit.toLowerCase();
+        if (!normalizedUnit.endsWith('.')) {
+          normalizedUnit = normalizedUnit + '.';
+        }
+        
         const lineItem = {
           id: `template-${template.id}-${index}`,
           description: item.label,
           quantity: item.qty || 1,
-          unit: item.unit || "ea",
+          unit: normalizedUnit,
           unitPrice: item.unit_cost ? item.unit_cost.toString() : "0",
           totalPrice: item.unit_cost && item.qty ? (item.unit_cost * item.qty).toString() : "0",
           tenantShare: item.percent || 100,

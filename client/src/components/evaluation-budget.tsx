@@ -924,6 +924,104 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
     trailerParking: 0,
   });
 
+  // Track which items have been manually overridden (won't auto-calculate)
+  const [manualOverrides, setManualOverrides] = useState<Set<string>>(new Set());
+
+  // Auto-calculate special fields (Design, Permit Fees, Construction Management, Contingency)
+  useEffect(() => {
+    // Calculate total rentable area
+    const totalRentableArea = rfp?.totalFloorArea 
+      ? parseInt(String(rfp.totalFloorArea).replace(/,/g, "")) || 0 
+      : 0;
+
+    // Calculate TI total
+    const tiTotal = budgetData.tenantImprovements.reduce((sum, item) => {
+      const total = parseFloat(item.totalPrice?.toString() || "0");
+      return sum + total;
+    }, 0);
+
+    // Calculate DSC total (excluding contingency)
+    const dscTotal = budgetData.designSoftCosts
+      .filter(item => {
+        const desc = (item.description || "").toLowerCase();
+        return !desc.includes("contingency");
+      })
+      .reduce((sum, item) => {
+        const total = parseFloat(item.totalPrice?.toString() || "0");
+        return sum + total;
+      }, 0);
+
+    // Calculate base for contingency (TI + DSC before contingency)
+    const contingencyBase = tiTotal + dscTotal;
+
+    // Update design/soft costs with auto-calculations
+    const updatedDesignSoftCosts = budgetData.designSoftCosts.map(item => {
+      const desc = (item.description || "").toLowerCase();
+      const itemId = item.id;
+
+      // Skip if manually overridden
+      if (manualOverrides.has(itemId)) {
+        return item;
+      }
+
+      // Design (Architectural) - auto-populate with total rentable area
+      if (desc.includes("design") && (desc.includes("architectural") || desc.includes("architect"))) {
+        const newQty = totalRentableArea;
+        const unitPx = parseFloat(item.unitPrice || "0");
+        return {
+          ...item,
+          quantity: newQty,
+          totalPrice: (newQty * unitPx).toString(),
+        };
+      }
+
+      // Permit Fees - auto-populate with TI total
+      if (desc.includes("permit") && desc.includes("fee")) {
+        const newQty = tiTotal;
+        const unitPx = parseFloat(item.unitPrice || "0");
+        return {
+          ...item,
+          quantity: newQty,
+          totalPrice: (newQty * unitPx).toString(),
+        };
+      }
+
+      // Construction Management - auto-populate with TI + DSC (before contingency)
+      if (desc.includes("construction") && desc.includes("management")) {
+        const newQty = contingencyBase;
+        const unitPx = parseFloat(item.unitPrice || "0");
+        return {
+          ...item,
+          quantity: newQty,
+          totalPrice: (newQty * unitPx).toString(),
+        };
+      }
+
+      // Contingency - auto-populate with TI + DSC (before contingency)
+      if (desc.includes("contingency")) {
+        const newQty = contingencyBase;
+        const unitPx = parseFloat(item.unitPrice || "0");
+        return {
+          ...item,
+          quantity: newQty,
+          totalPrice: (newQty * unitPx).toString(),
+        };
+      }
+
+      return item;
+    });
+
+    // Only update if something actually changed
+    const hasChanges = JSON.stringify(updatedDesignSoftCosts) !== JSON.stringify(budgetData.designSoftCosts);
+    
+    if (hasChanges) {
+      setBudgetData(prev => ({
+        ...prev,
+        designSoftCosts: updatedDesignSoftCosts,
+      }));
+    }
+  }, [budgetData.tenantImprovements, budgetData.existingImprovements, rfp?.totalFloorArea, manualOverrides]);
+
   // Calculate door counts from bay configuration data
   const calculateDoorCounts = () => {
     if (!rfp?.selectedBayConfigurations) return { oversized: 0, regular: 0 };

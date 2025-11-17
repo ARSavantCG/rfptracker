@@ -16,6 +16,7 @@ interface BuildingSpecificationsModalProps {
 }
 
 interface BuildingSpecifications {
+  buildingDepth?: number;
   slabThickness?: string;
   clearHeight?: string;
   floorFlatness?: string;
@@ -33,6 +34,7 @@ export function BuildingSpecificationsModal({ property }: BuildingSpecifications
   const queryClient = useQueryClient();
 
   const [specifications, setSpecifications] = useState<BuildingSpecifications>({
+    buildingDepth: property.buildingDepth || undefined,
     slabThickness: property.slabThickness || '',
     clearHeight: property.clearHeight || '',
     floorFlatness: property.floorFlatness || '',
@@ -77,6 +79,7 @@ export function BuildingSpecificationsModal({ property }: BuildingSpecifications
   const handleCancel = () => {
     // Reset to original values
     setSpecifications({
+      buildingDepth: property.buildingDepth || undefined,
       slabThickness: property.slabThickness || '',
       clearHeight: property.clearHeight || '',
       floorFlatness: property.floorFlatness || '',
@@ -224,6 +227,19 @@ export function BuildingSpecificationsModal({ property }: BuildingSpecifications
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="buildingDepth">Building Depth (ft)</Label>
+                  <Input
+                    id="buildingDepth"
+                    type="number"
+                    placeholder="e.g., 180"
+                    value={specifications.buildingDepth || ''}
+                    onChange={(e) => handleInputChange('buildingDepth', e.target.value ? parseInt(e.target.value) : undefined as any)}
+                    disabled={!isEditing}
+                    data-testid="input-building-depth"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">Used for demising wall quantity calculations</p>
+                </div>
                 <div>
                   <Label htmlFor="slabThickness">Slab Thickness & PSI</Label>
                   <Input

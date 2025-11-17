@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChevronDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, X, Save } from "lucide-react";
@@ -31,6 +32,7 @@ const validationSchema = z.object({
   contactEmail: z.string().optional(),
   areaBreakdown: z.array(z.object({
     id: z.string(),
+    areaType: z.string(),
     description: z.string(),
     squareFootage: z.string(),
     notes: z.string().optional()
@@ -181,7 +183,8 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
       ...currentBreakdown,
       {
         id: nanoid(),
-        description: "",
+        areaType: "Office Area",
+        description: "Office Area",
         squareFootage: "",
         notes: ""
       }
@@ -351,60 +354,75 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
 
                 {form.watch("areaBreakdown")?.length > 0 && (
                   <div className="space-y-2">
-                    {/* Column Headers - Show only once */}
-                    <div className="grid grid-cols-12 gap-2 items-center">
-                      <div className="col-span-3">
-                        <label className="text-sm font-medium text-gray-700">Space Type</label>
-                      </div>
-                      <div className="col-span-3">
-                        <label className="text-sm font-medium text-gray-700">Area (sq ft)</label>
-                      </div>
-                      <div className="col-span-5">
-                        <label className="text-sm font-medium text-gray-700">Notes</label>
-                      </div>
-                      <div className="col-span-1">
-                        {/* Empty space for remove button column */}
-                      </div>
-                    </div>
-
                     {/* Area Items */}
                     {form.watch("areaBreakdown")?.map((area, index) => (
-                      <div key={area.id} className="grid grid-cols-12 gap-2 items-center">
-                        <div className="col-span-3">
-                          <Input
-                            value={area.description}
-                            onChange={(e) => updateAreaBreakdown(index, "description", e.target.value)}
-                            placeholder="e.g., Office Space"
-                          />
-                        </div>
-                        <div className="col-span-3">
-                          <Input
-                            value={area.squareFootage ? parseInt(area.squareFootage.replace(/,/g, "")).toLocaleString() : ""}
-                            onChange={(e) => {
-                              const value = e.target.value.replace(/,/g, "");
-                              if (value === "" || /^\d+$/.test(value)) {
-                                updateAreaBreakdown(index, "squareFootage", value);
-                              }
-                            }}
-                            placeholder="e.g., 5,000"
-                          />
-                        </div>
-                        <div className="col-span-5">
-                          <Input
-                            value={area.notes || ""}
-                            onChange={(e) => updateAreaBreakdown(index, "notes", e.target.value)}
-                            placeholder="Additional notes"
-                          />
-                        </div>
-                        <div className="col-span-1">
-                          <Button
-                            type="button"
-                            onClick={() => removeAreaBreakdown(index)}
-                            variant="outline"
-                            size="sm"
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
+                      <div key={area.id} className="space-y-2 p-3 border rounded-md bg-gray-50">
+                        <div className="grid grid-cols-12 gap-2 items-center">
+                          <div className="col-span-3">
+                            <label className="text-xs font-medium text-gray-600">Area Type</label>
+                            <Select
+                              value={area.areaType}
+                              onValueChange={(value) => {
+                                updateAreaBreakdown(index, "areaType", value);
+                                // Auto-fill description for non-miscellaneous types
+                                if (value !== "Miscellaneous") {
+                                  updateAreaBreakdown(index, "description", value);
+                                } else {
+                                  updateAreaBreakdown(index, "description", "");
+                                }
+                              }}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select area type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Office Area">Office Area</SelectItem>
+                                <SelectItem value="Warehouse Office">Warehouse Office</SelectItem>
+                                <SelectItem value="Miscellaneous">Miscellaneous</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          {area.areaType === "Miscellaneous" && (
+                            <div className="col-span-3">
+                              <label className="text-xs font-medium text-gray-600">Custom Name</label>
+                              <Input
+                                value={area.description}
+                                onChange={(e) => updateAreaBreakdown(index, "description", e.target.value)}
+                                placeholder="Enter custom name"
+                              />
+                            </div>
+                          )}
+                          <div className={area.areaType === "Miscellaneous" ? "col-span-2" : "col-span-3"}>
+                            <label className="text-xs font-medium text-gray-600">Area (sq ft)</label>
+                            <Input
+                              value={area.squareFootage ? parseInt(area.squareFootage.replace(/,/g, "")).toLocaleString() : ""}
+                              onChange={(e) => {
+                                const value = e.target.value.replace(/,/g, "");
+                                if (value === "" || /^\d+$/.test(value)) {
+                                  updateAreaBreakdown(index, "squareFootage", value);
+                                }
+                              }}
+                              placeholder="e.g., 5,000"
+                            />
+                          </div>
+                          <div className={area.areaType === "Miscellaneous" ? "col-span-3" : "col-span-5"}>
+                            <label className="text-xs font-medium text-gray-600">Notes</label>
+                            <Input
+                              value={area.notes || ""}
+                              onChange={(e) => updateAreaBreakdown(index, "notes", e.target.value)}
+                              placeholder="Additional notes"
+                            />
+                          </div>
+                          <div className="col-span-1 flex items-end pb-1">
+                            <Button
+                              type="button"
+                              onClick={() => removeAreaBreakdown(index)}
+                              variant="outline"
+                              size="sm"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     ))}

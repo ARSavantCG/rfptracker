@@ -72,7 +72,7 @@ export const rfpRequests = pgTable("rfp_requests", {
   warehouseArea: text("warehouse_area"),
   warehouseAreaOverride: text("warehouse_area_override"), // Manual override for existing tenant situations
   warehouseNotes: text("warehouse_notes"),
-  areaBreakdown: json("area_breakdown").$type<{id: string, description: string, squareFootage: string, notes?: string}[]>().default([]),
+  areaBreakdown: json("area_breakdown").$type<{id: string, areaType: string, description: string, squareFootage: string, notes?: string}[]>().default([]),
   projectAddress: text("project_address"),
   projectSize: text("project_size"),
   estimatedValue: text("estimated_value"),
@@ -132,6 +132,7 @@ export const insertRfpRequestSchema = createInsertSchema(rfpRequests).omit({
   warehouseAreaOverride: z.string().optional().nullable(),
   areaBreakdown: z.array(z.object({
     id: z.string(),
+    areaType: z.string().default("Miscellaneous"), // For backward compatibility
     description: z.string(),
     squareFootage: z.string(),
     notes: z.string().optional()

@@ -560,17 +560,104 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
         throw new Error("No template data found");
       }
 
+      // Helper function to match item with area breakdown and auto-populate quantity
+      const autoPopulateQuantity = (item: any) => {
+        const description = (item.description || "").toLowerCase();
+        const areaBreakdown = rfp?.areaBreakdown || [];
+        
+        // Check if this item matches an area type
+        let matchedArea = null;
+        
+        // Match "Office Area" items
+        if (description.includes("office area") || description.includes("office space")) {
+          matchedArea = areaBreakdown.find((area: any) => area.areaType === "Office Area");
+        }
+        // Match "Warehouse Office" items
+        else if (description.includes("warehouse office")) {
+          matchedArea = areaBreakdown.find((area: any) => area.areaType === "Warehouse Office");
+        }
+        
+        // If we found a matching area, auto-populate the quantity
+        if (matchedArea && matchedArea.squareFootage) {
+          return {
+            ...item,
+            quantity: parseInt(matchedArea.squareFootage.replace(/,/g, "")) || item.quantity,
+          };
+        }
+        
+        return item;
+      };
+
+      // Helper function to get sort priority for Design/Soft Costs items
+      const getDesignCostPriority = (description: string): number => {
+        const desc = description.toLowerCase();
+        
+        // Fixed ordering:
+        // 1. Design (Architectural) - FIRST
+        // 2. Builder's Risk Insurance - SECOND
+        // 3. Permit Expediter - THIRD
+        // 4. Certificate of Occupancy - FOURTH
+        // 5. Permit Fees - FIFTH
+        // 6. Construction Management - SECOND TO LAST (998)
+        // 7. Design & Construction Contingency - LAST (999)
+        
+        if (desc.includes("design") && (desc.includes("architectural") || desc.includes("architect"))) return 1;
+        if (desc.includes("builder") && desc.includes("risk")) return 2;
+        if (desc.includes("permit expediter")) return 3;
+        if (desc.includes("certificate") && desc.includes("occupancy")) return 4;
+        if (desc.includes("permit") && desc.includes("fee")) return 5;
+        if (desc.includes("construction") && desc.includes("management")) return 998;
+        if (desc.includes("contingency")) return 999;
+        
+        // Default priority for other items (will be inserted between fixed items)
+        return 500;
+      };
+
+      // Helper function to calculate current project total for contingency auto-population
+      const calculateProjectTotal = (): number => {
+        const sumItems = (items: any[]) => items.reduce((sum, item) => {
+          const total = parseFloat(item.totalPrice?.toString() || "0");
+          return sum + total;
+        }, 0);
+        
+        const tiTotal = sumItems(budgetData.tenantImprovements);
+        const dscTotal = sumItems(budgetData.designSoftCosts.filter((item: any) => {
+          const desc = (item.description || "").toLowerCase();
+          return !desc.includes("contingency"); // Exclude contingency from total
+        }));
+        const eiTotal = sumItems(budgetData.existingImprovements);
+        
+        return tiTotal + dscTotal + eiTotal;
+      };
+
+      // Auto-populate contingency quantity with project total
+      const autoPopulateContingency = (item: any) => {
+        const description = (item.description || "").toLowerCase();
+        if (description.includes("contingency")) {
+          const projectTotal = calculateProjectTotal();
+          return {
+            ...item,
+            quantity: projectTotal > 0 ? projectTotal : item.quantity,
+          };
+        }
+        return item;
+      };
+
       const newItems = {
         tenantImprovements: response.tenantImprovements?.map((item: any, index: number) => ({
-          ...item,
+          ...autoPopulateQuantity(item),
           id: `template-ti-${Date.now()}-${index}`,
         })) || [],
-        designSoftCosts: response.designSoftCosts?.map((item: any, index: number) => ({
-          ...item,
+        designSoftCosts: (response.designSoftCosts?.map((item: any, index: number) => ({
+          ...autoPopulateContingency(autoPopulateQuantity(item)),
           id: `template-dsc-${Date.now()}-${index}`,
-        })) || [],
+        })) || []).sort((a, b) => {
+          const priorityA = getDesignCostPriority(a.description || "");
+          const priorityB = getDesignCostPriority(b.description || "");
+          return priorityA - priorityB;
+        }),
         existingImprovements: response.existingImprovements?.map((item: any, index: number) => ({
-          ...item,
+          ...autoPopulateQuantity(item),
           id: `template-ei-${Date.now()}-${index}`,
         })) || [],
       };

@@ -4257,13 +4257,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
           notes: item.notes || "",
         };
 
-        // Categorize based on item tags or type
+        // Categorize based on snapshot.category, tags, or type
+        const category = item.snapshot?.category || "";
         const tags = item.tags || [];
-        if (tags.includes("design") || item.type === "design") {
+        
+        // Check snapshot category first (most reliable)
+        if (category.toLowerCase().includes("design") || 
+            category.toLowerCase().includes("soft cost") ||
+            category.toLowerCase().includes("other fees")) {
           evaluationItems.designSoftCosts.push(lineItem);
-        } else if (tags.includes("existing") || item.type === "existing") {
+        } else if (category.toLowerCase().includes("existing")) {
           evaluationItems.existingImprovements.push(lineItem);
-        } else {
+        } 
+        // Fall back to tag checking
+        else if (tags.some((tag: string) => tag.includes("design") || tag.includes("soft-cost"))) {
+          evaluationItems.designSoftCosts.push(lineItem);
+        } else if (tags.some((tag: string) => tag.includes("existing"))) {
+          evaluationItems.existingImprovements.push(lineItem);
+        } 
+        // Default to tenant improvements
+        else {
           evaluationItems.tenantImprovements.push(lineItem);
         }
       });

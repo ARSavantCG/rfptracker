@@ -212,10 +212,10 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 overflow-x-hidden">
       <Navigation />
 
-      <div className="flex">
+      <div className="flex w-full max-w-full">
         {/* Quick Actions Sidebar */}
         <QuickActionsSidebar
           onCreateRfp={() => setIsCreateModalOpen(true)}
@@ -227,8 +227,8 @@ export default function Dashboard() {
         />
 
         {/* Main Content */}
-        <div className="flex-1 overflow-auto">
-          <div className="mx-auto px-4 py-4">
+        <div className="flex-1 overflow-x-hidden overflow-y-auto min-w-0">
+          <div className="mx-auto px-4 py-4 max-w-full">
             {/* Compact Page Header */}
             <div className="flex items-center justify-between mb-4">
               <div>

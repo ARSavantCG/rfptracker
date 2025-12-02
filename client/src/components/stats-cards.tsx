@@ -307,7 +307,7 @@ export function StatsCards({ onStatusFilter, onRfpClick }: StatsCardsProps) {
 
         {/* Top Outstanding RFPs by Cost Panel */}
         <TopOutstandingRfpsPanel 
-          limit={5} 
+          limit={3} 
           onRowClick={onRfpClick} 
         />
         

@@ -41,7 +41,7 @@ export function QuickActionsSidebar({
   onSearch,
   className = ""
 }: QuickActionsSidebarProps) {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true);
 
   // Fetch recent data for quick access
   const { data: rfpRequests = [] } = useQuery<RfpRequest[]>({

@@ -562,8 +562,27 @@ export function PropertyExistingImprovementsModal({
     <>
       <Button variant="outline" size="sm" onClick={() => {
         setOpen(true);
-        // Reset form when opening modal for new entries
-        form.reset();
+        // Reset form when opening modal for new entries with explicit blank values
+        form.reset({
+          category: "",
+          description: "",
+          totalCost: 0,
+          forecastCost: 0,
+          committedCost: 0,
+          actualsCost: 0,
+          allocationType: "prorated",
+          applicableBays: [],
+          notes: "",
+          bucket: "FORECAST",
+          drawCaptured: false,
+          originalCommitment: 0,
+          addedAmount: 0,
+          drawRef: "",
+          demisingWallData: {
+            leftPercentage: 50,
+            rightPercentage: 50,
+          },
+        });
         setShowForm(false);
         setEditingId(null);
       }} className={`flex items-center gap-1 text-xs px-2 py-1 h-6 ${
@@ -766,7 +785,28 @@ export function PropertyExistingImprovementsModal({
               <Button 
                 onClick={() => {
                   setShowForm(true);
-                  form.reset(); // Clear form when adding new improvement
+                  setEditingId(null);
+                  // Explicitly reset form with blank default values
+                  form.reset({
+                    category: "",
+                    description: "",
+                    totalCost: 0,
+                    forecastCost: 0,
+                    committedCost: 0,
+                    actualsCost: 0,
+                    allocationType: "prorated",
+                    applicableBays: [],
+                    notes: "",
+                    bucket: "FORECAST",
+                    drawCaptured: false,
+                    originalCommitment: 0,
+                    addedAmount: 0,
+                    drawRef: "",
+                    demisingWallData: {
+                      leftPercentage: 50,
+                      rightPercentage: 50,
+                    },
+                  });
                   // Reset previousBucketRef to default bucket when adding new
                   previousBucketRef.current = "ACTUALS";
                 }} 

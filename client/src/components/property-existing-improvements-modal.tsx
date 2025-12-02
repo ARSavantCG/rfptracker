@@ -35,6 +35,10 @@ const formSchema = z.object({
   category: z.string().min(1, "Category is required"),
   description: z.string().min(1, "Description is required"),
   totalCost: z.number().min(0, "Cost must be positive"),
+  // Per-stage cost fields (in dollars for form entry)
+  forecastCost: z.coerce.number().min(0).default(0),
+  committedCost: z.coerce.number().min(0).default(0),
+  actualsCost: z.coerce.number().min(0).default(0),
   allocationType: z.enum(["prorated", "bay-specific", "whole-property", "demising-wall"]),
   allocationValue: z.number().optional(),
   units: z.string().optional(),
@@ -100,6 +104,9 @@ export function PropertyExistingImprovementsModal({
       category: "",
       description: "",
       totalCost: 0,
+      forecastCost: 0,
+      committedCost: 0,
+      actualsCost: 0,
       allocationType: "prorated",
       applicableBays: [],
       notes: "",
@@ -120,31 +127,15 @@ export function PropertyExistingImprovementsModal({
     enabled: !!property.id, // Always load data, not just when modal is open
   });
 
-  // Split improvements into 3 stages: Forecast, Committed, Actuals
-  const { forecastImprovements, committedImprovements, actualsImprovements, forecastTotal, committedTotal, actualsTotal, grandTotal } = useMemo(() => {
-    // Map PIPELINE to FORECAST for backward compatibility
-    const normalizedBucket = (bucket: string) => bucket === 'PIPELINE' ? 'FORECAST' : bucket;
-    
-    const forecast = improvements.filter(
-      imp => normalizedBucket(imp.bucket) === 'FORECAST' && !imp.drawCaptured
-    );
-    const committed = improvements.filter(
-      imp => normalizedBucket(imp.bucket) === 'COMMITTED' && !imp.drawCaptured
-    );
-    const actuals = improvements.filter(
-      imp => normalizedBucket(imp.bucket) === 'ACTUALS' || imp.drawCaptured
-    );
-    
-    // Sum costs in cents (formatCurrency will handle cent-to-dollar conversion)
-    const forecastTotal = forecast.reduce((sum, imp) => sum + imp.totalCost, 0);
-    const committedTotal = committed.reduce((sum, imp) => sum + imp.totalCost, 0);
-    const actualsTotal = actuals.reduce((sum, imp) => sum + imp.totalCost, 0);
+  // Calculate totals from per-stage cost fields
+  const { forecastTotal, committedTotal, actualsTotal, grandTotal } = useMemo(() => {
+    // Sum per-stage costs across all improvements (values are in cents)
+    const forecastTotal = improvements.reduce((sum, imp) => sum + ((imp as any).forecastCost || 0), 0);
+    const committedTotal = improvements.reduce((sum, imp) => sum + ((imp as any).committedCost || 0), 0);
+    const actualsTotal = improvements.reduce((sum, imp) => sum + ((imp as any).actualsCost || 0), 0);
     const grandTotal = forecastTotal + committedTotal + actualsTotal;
     
     return { 
-      forecastImprovements: forecast,
-      committedImprovements: committed,
-      actualsImprovements: actuals,
       forecastTotal,
       committedTotal,
       actualsTotal,
@@ -1202,7 +1193,7 @@ export function PropertyExistingImprovementsModal({
             </div>
           )}
 
-          {/* Improvements List - Split into Forecast, Committed, and Actuals stages */}
+          {/* Improvements List - Table with per-improvement cost breakdown */}
           <div className="space-y-6">
             {isLoading ? (
               <div className="text-center py-4">Loading improvements...</div>
@@ -1217,447 +1208,121 @@ export function PropertyExistingImprovementsModal({
                   <div className="flex flex-wrap justify-between items-center gap-4">
                     <div className="flex flex-wrap gap-4 text-sm">
                       <span className="text-purple-600 dark:text-purple-400">
-                        <strong>Forecast:</strong> {formatCurrency(forecastTotal)}
+                        <strong>Budget:</strong> {formatCurrency(forecastTotal)}
                       </span>
                       <span className="text-blue-600 dark:text-blue-400">
                         <strong>Committed:</strong> {formatCurrency(committedTotal)}
                       </span>
                       <span className="text-green-600 dark:text-green-400">
-                        <strong>Actuals:</strong> {formatCurrency(actualsTotal)}
+                        <strong>Paid:</strong> {formatCurrency(actualsTotal)}
                       </span>
                     </div>
-                    <span className="font-bold text-slate-700 dark:text-slate-300">
-                      Total Projected: {formatCurrency(grandTotal)}
+                    <span className="font-bold text-lg text-slate-700 dark:text-slate-300">
+                      Total: {formatCurrency(grandTotal)}
                     </span>
                   </div>
                 </div>
 
-                {/* Forecast Costs (Budgeted/Projected) */}
-                <div className="space-y-3">
-                  <div className="flex justify-between items-baseline border-b-2 border-purple-200 dark:border-purple-800 pb-2">
-                    <h3 className="text-lg font-semibold text-purple-700 dark:text-purple-300">
-                      Forecast (Projected)
-                    </h3>
-                    <span className="text-sm font-medium text-purple-600 dark:text-purple-400">
-                      Total: {formatCurrency(forecastTotal)}
-                    </span>
-                  </div>
-                  
-                  {forecastImprovements.length === 0 ? (
-                    <div className="text-center py-4 text-slate-500 italic">
-                      No forecast costs recorded.
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {forecastImprovements.map((improvement: PropertyExistingImprovement) => (
-                  <div 
-                    key={improvement.id}
-                    className="border rounded-lg p-4 hover:bg-slate-50 dark:hover:bg-slate-800"
-                  >
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded text-xs font-medium">
-                            {EXISTING_IMPROVEMENT_CATEGORIES[improvement.category as keyof typeof EXISTING_IMPROVEMENT_CATEGORIES]}
-                          </span>
-                          <span className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded text-xs">
-                            {ALLOCATION_TYPES[improvement.allocationType as keyof typeof ALLOCATION_TYPES]}
-                          </span>
-                          {!improvement.isActive && (
-                            <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded text-xs">
-                              Inactive
-                            </span>
-                          )}
-                        </div>
+                {/* Improvements Table with Per-Item Cost Breakdown */}
+                <div className="border rounded-lg overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-slate-100 dark:bg-slate-800">
+                      <tr>
+                        <th className="text-left p-3 font-medium">Description</th>
+                        <th className="text-left p-3 font-medium">Category</th>
+                        <th className="text-right p-3 font-medium text-purple-600 dark:text-purple-400">Budget</th>
+                        <th className="text-right p-3 font-medium text-blue-600 dark:text-blue-400">Committed</th>
+                        <th className="text-right p-3 font-medium text-green-600 dark:text-green-400">Paid</th>
+                        <th className="text-right p-3 font-bold">Total Cost</th>
+                        <th className="text-center p-3 w-24">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+                      {improvements.map((improvement: PropertyExistingImprovement) => {
+                        const imp = improvement as any;
+                        const forecastCost = imp.forecastCost || 0;
+                        const committedCost = imp.committedCost || 0;
+                        const actualsCost = imp.actualsCost || 0;
+                        const totalCost = forecastCost + committedCost + actualsCost;
                         
-                        <h4 className="font-medium">{improvement.description}</h4>
-                        
-                        <div className="mt-2 grid grid-cols-2 gap-4 text-sm text-slate-600 dark:text-slate-400">
-                          <div>
-                            <span className="font-medium">Total Cost: </span>
-                            {formatCurrency(improvement.totalCost)}
-                          </div>
-                          <div>
-                            <span className="font-medium">Allocation: </span>
-                            {ALLOCATION_TYPES[improvement.allocationType as keyof typeof ALLOCATION_TYPES]}
-                          </div>
-                        </div>
-
-                        {/* Display demising wall bay information */}
-                        {improvement.allocationType === 'demising-wall' && improvement.demisingWallData && (
-                          <div className="mt-2">
-                            <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
-                              Applicable Bays: 
-                            </span>
-                            <div className="flex flex-wrap gap-1 mt-1">
-                              {improvement.demisingWallData.leftBayId && (() => {
-                                const leftBay = availableBays.find(b => b.id === improvement.demisingWallData?.leftBayId) || 
-                                              currentProperty.bayConfigurations?.find(b => b.id === improvement.demisingWallData?.leftBayId);
-                                if (leftBay) {
-                                  return (
-                                    <span key={improvement.demisingWallData.leftBayId} className="px-2 py-1 bg-slate-200 dark:bg-slate-600 rounded text-xs">
-                                      {leftBay.bayName}
-                                      {improvement.demisingWallData.leftPercentage && ` (${improvement.demisingWallData.leftPercentage}%)`}
-                                    </span>
-                                  );
-                                }
-                                return null;
-                              })()}
-                              {improvement.demisingWallData.rightBayId && (() => {
-                                const rightBay = availableBays.find(b => b.id === improvement.demisingWallData?.rightBayId) || 
-                                               currentProperty.bayConfigurations?.find(b => b.id === improvement.demisingWallData?.rightBayId);
-                                if (rightBay) {
-                                  return (
-                                    <span key={improvement.demisingWallData.rightBayId} className="px-2 py-1 bg-slate-200 dark:bg-slate-600 rounded text-xs">
-                                      {rightBay.bayName}
-                                      {improvement.demisingWallData.rightPercentage && ` (${improvement.demisingWallData.rightPercentage}%)`}
-                                    </span>
-                                  );
-                                }
-                                return null;
-                              })()}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Display bay-specific bay information */}
-                        {improvement.allocationType === 'bay-specific' && 
-                         improvement.applicableBays && improvement.applicableBays.length > 0 && (
-                          <div className="mt-2">
-                            <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
-                              Applicable Bays: 
-                            </span>
-                            <div className="flex flex-wrap gap-1 mt-1">
-                              {improvement.applicableBays.map(bayId => {
-                                // First check if it's a split bay in our available bays list
-                                const splitBay = availableBays.find(b => b.id === bayId);
-                                if (splitBay) {
-                                  return (
-                                    <span key={bayId} className="px-2 py-1 bg-slate-200 dark:bg-slate-600 rounded text-xs">
-                                      {splitBay.bayName}
-                                      {splitBay.hasSpeculativeOffice && (
-                                        <span className="text-blue-600 ml-1" title="Has Speculative Office">🏢</span>
-                                      )}
-                                    </span>
-                                  );
-                                }
-                                
-                                // If not found in available bays, check if it's an original bay configuration
-                                // (this handles legacy improvements that might reference original bay IDs)
-                                const bay = currentProperty.bayConfigurations?.find(b => b.id === bayId);
-                                if (bay) {
-                                  return (
-                                    <span key={bayId} className="px-2 py-1 bg-slate-200 dark:bg-slate-600 rounded text-xs">
-                                      {bay.bayName}
-                                    </span>
-                                  );
-                                }
-                                
-                                return null;
-                              })}
-                            </div>
-                          </div>
-                        )}
-
-                        {improvement.notes && (
-                          <div className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-                            <span className="font-medium">Notes: </span>
-                            {improvement.notes}
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="flex flex-col gap-2 ml-4">
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => startEdit(improvement)}
-                          >
-                            <Edit3 className="h-4 w-4" />
-                          </Button>
-                          {canDeleteProperties && (
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => deleteMutation.mutate(improvement.id)}
-                              disabled={deleteMutation.isPending}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          className="bg-blue-100 hover:bg-blue-200 text-blue-700 dark:bg-blue-900 dark:hover:bg-blue-800 dark:text-blue-300"
-                          onClick={() => promoteStageMutation.mutate({ id: improvement.id, newBucket: 'COMMITTED' })}
-                          disabled={promoteStageMutation.isPending}
-                        >
-                          <ArrowRight className="h-4 w-4 mr-1" />
-                          Commit
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Committed Costs (Contracted) */}
-          <div className="space-y-3">
-            <div className="flex justify-between items-baseline border-b-2 border-blue-200 dark:border-blue-800 pb-2">
-              <h3 className="text-lg font-semibold text-blue-700 dark:text-blue-300">
-                Committed (Contracted)
-              </h3>
-              <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
-                Total: {formatCurrency(committedTotal)}
-              </span>
-            </div>
-            
-            {committedImprovements.length === 0 ? (
-              <div className="text-center py-4 text-slate-500 italic">
-                No committed costs recorded.
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {committedImprovements.map((improvement: PropertyExistingImprovement) => (
-                  <div 
-                    key={improvement.id}
-                    className="border rounded-lg p-4 hover:bg-slate-50 dark:hover:bg-slate-800"
-                  >
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded text-xs font-medium">
-                            {EXISTING_IMPROVEMENT_CATEGORIES[improvement.category as keyof typeof EXISTING_IMPROVEMENT_CATEGORIES]}
-                          </span>
-                          <span className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded text-xs">
-                            {ALLOCATION_TYPES[improvement.allocationType as keyof typeof ALLOCATION_TYPES]}
-                          </span>
-                          {!improvement.isActive && (
-                            <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded text-xs">
-                              Inactive
-                            </span>
-                          )}
-                        </div>
-                        
-                        <h4 className="font-medium">{improvement.description}</h4>
-                        
-                        <div className="mt-2 grid grid-cols-2 gap-4 text-sm text-slate-600 dark:text-slate-400">
-                          <div>
-                            <span className="font-medium">Total Cost: </span>
-                            {formatCurrency(improvement.totalCost)}
-                          </div>
-                          <div>
-                            <span className="font-medium">Allocation: </span>
-                            {ALLOCATION_TYPES[improvement.allocationType as keyof typeof ALLOCATION_TYPES]}
-                          </div>
-                        </div>
-
-                        {improvement.notes && (
-                          <div className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-                            <span className="font-medium">Notes: </span>
-                            {improvement.notes}
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="flex flex-col gap-2 ml-4">
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => startEdit(improvement)}
-                          >
-                            <Edit3 className="h-4 w-4" />
-                          </Button>
-                          {canDeleteProperties && (
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => deleteMutation.mutate(improvement.id)}
-                              disabled={deleteMutation.isPending}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          className="bg-green-100 hover:bg-green-200 text-green-700 dark:bg-green-900 dark:hover:bg-green-800 dark:text-green-300"
-                          onClick={() => promoteStageMutation.mutate({ id: improvement.id, newBucket: 'ACTUALS' })}
-                          disabled={promoteStageMutation.isPending}
-                        >
-                          <ArrowRight className="h-4 w-4 mr-1" />
-                          Confirm
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Actuals (Spent from Draws) */}
-          <div className="space-y-3">
-            <div className="flex justify-between items-baseline border-b-2 border-green-200 dark:border-green-800 pb-2">
-              <h3 className="text-lg font-semibold text-green-700 dark:text-green-300">
-                Actuals (Spent)
-              </h3>
-              <span className="text-sm font-medium text-green-600 dark:text-green-400">
-                Total: {formatCurrency(actualsTotal)}
-              </span>
-            </div>
-            
-            {actualsImprovements.length === 0 ? (
-              <div className="text-center py-4 text-slate-500 italic">
-                No actuals recorded.
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {actualsImprovements.map((improvement: PropertyExistingImprovement) => (
-                        <div 
-                          key={improvement.id}
-                          className="border rounded-lg p-4 hover:bg-slate-50 dark:hover:bg-slate-800"
-                        >
-                          <div className="flex justify-between items-start">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-3 mb-2">
-                                <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded text-xs font-medium">
-                                  {EXISTING_IMPROVEMENT_CATEGORIES[improvement.category as keyof typeof EXISTING_IMPROVEMENT_CATEGORIES]}
-                                </span>
-                                <span className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded text-xs">
+                        return (
+                          <tr key={improvement.id} className="hover:bg-slate-50 dark:hover:bg-slate-800">
+                            <td className="p-3">
+                              <div className="font-medium">{improvement.description}</div>
+                              <div className="flex gap-1 mt-1">
+                                <span className="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-700 rounded text-xs text-slate-600 dark:text-slate-400">
                                   {ALLOCATION_TYPES[improvement.allocationType as keyof typeof ALLOCATION_TYPES]}
                                 </span>
                                 {!improvement.isActive && (
-                                  <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded text-xs">
+                                  <span className="px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 rounded text-xs text-gray-600 dark:text-gray-400">
                                     Inactive
                                   </span>
                                 )}
                               </div>
-                              
-                              <h4 className="font-medium">{improvement.description}</h4>
-                              
-                              <div className="mt-2 grid grid-cols-2 gap-4 text-sm text-slate-600 dark:text-slate-400">
-                                <div>
-                                  <span className="font-medium">Total Cost: </span>
-                                  {formatCurrency(improvement.totalCost)}
-                                </div>
-                                <div>
-                                  <span className="font-medium">Allocation: </span>
-                                  {ALLOCATION_TYPES[improvement.allocationType as keyof typeof ALLOCATION_TYPES]}
-                                </div>
-                              </div>
-
-                              {/* Display demising wall bay information */}
-                              {improvement.allocationType === 'demising-wall' && improvement.demisingWallData && (
-                                <div className="mt-2">
-                                  <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
-                                    Applicable Bays: 
-                                  </span>
-                                  <div className="flex flex-wrap gap-1 mt-1">
-                                    {improvement.demisingWallData.leftBayId && (() => {
-                                      const leftBay = availableBays.find(b => b.id === improvement.demisingWallData?.leftBayId) || 
-                                                    currentProperty.bayConfigurations?.find(b => b.id === improvement.demisingWallData?.leftBayId);
-                                      if (leftBay) {
-                                        return (
-                                          <span key={improvement.demisingWallData.leftBayId} className="px-2 py-1 bg-slate-200 dark:bg-slate-600 rounded text-xs">
-                                            {leftBay.bayName}
-                                            {improvement.demisingWallData.leftPercentage && ` (${improvement.demisingWallData.leftPercentage}%)`}
-                                          </span>
-                                        );
-                                      }
-                                      return null;
-                                    })()}
-                                    {improvement.demisingWallData.rightBayId && (() => {
-                                      const rightBay = availableBays.find(b => b.id === improvement.demisingWallData?.rightBayId) || 
-                                                     currentProperty.bayConfigurations?.find(b => b.id === improvement.demisingWallData?.rightBayId);
-                                      if (rightBay) {
-                                        return (
-                                          <span key={improvement.demisingWallData.rightBayId} className="px-2 py-1 bg-slate-200 dark:bg-slate-600 rounded text-xs">
-                                            {rightBay.bayName}
-                                            {improvement.demisingWallData.rightPercentage && ` (${improvement.demisingWallData.rightPercentage}%)`}
-                                          </span>
-                                        );
-                                      }
-                                      return null;
-                                    })()}
-                                  </div>
-                                </div>
-                              )}
-
-                              {/* Display bay-specific bay information */}
-                              {improvement.allocationType === 'bay-specific' && 
-                               improvement.applicableBays && improvement.applicableBays.length > 0 && (
-                                <div className="mt-2">
-                                  <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
-                                    Applicable Bays: 
-                                  </span>
-                                  <div className="flex flex-wrap gap-1 mt-1">
-                                    {improvement.applicableBays.map(bayId => {
-                                      const splitBay = availableBays.find(b => b.id === bayId);
-                                      if (splitBay) {
-                                        return (
-                                          <span key={bayId} className="px-2 py-1 bg-slate-200 dark:bg-slate-600 rounded text-xs">
-                                            {splitBay.bayName}
-                                            {splitBay.hasSpeculativeOffice && (
-                                              <span className="text-blue-600 ml-1" title="Has Speculative Office">🏢</span>
-                                            )}
-                                          </span>
-                                        );
-                                      }
-                                      
-                                      const bay = currentProperty.bayConfigurations?.find(b => b.id === bayId);
-                                      if (bay) {
-                                        return (
-                                          <span key={bayId} className="px-2 py-1 bg-slate-200 dark:bg-slate-600 rounded text-xs">
-                                            {bay.bayName}
-                                          </span>
-                                        );
-                                      }
-                                      
-                                      return null;
-                                    })}
-                                  </div>
-                                </div>
-                              )}
-
-                              {improvement.notes && (
-                                <div className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-                                  <span className="font-medium">Notes: </span>
-                                  {improvement.notes}
-                                </div>
-                              )}
-                            </div>
-
-                            <div className="flex gap-2 ml-4">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => startEdit(improvement)}
-                              >
-                                <Edit3 className="h-4 w-4" />
-                              </Button>
-                              {canDeleteProperties && (
+                            </td>
+                            <td className="p-3">
+                              <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded text-xs font-medium">
+                                {EXISTING_IMPROVEMENT_CATEGORIES[improvement.category as keyof typeof EXISTING_IMPROVEMENT_CATEGORIES]}
+                              </span>
+                            </td>
+                            <td className="p-3 text-right font-mono text-purple-600 dark:text-purple-400">
+                              {forecastCost > 0 ? formatCurrency(forecastCost) : '-'}
+                            </td>
+                            <td className="p-3 text-right font-mono text-blue-600 dark:text-blue-400">
+                              {committedCost > 0 ? formatCurrency(committedCost) : '-'}
+                            </td>
+                            <td className="p-3 text-right font-mono text-green-600 dark:text-green-400">
+                              {actualsCost > 0 ? formatCurrency(actualsCost) : '-'}
+                            </td>
+                            <td className="p-3 text-right font-mono font-bold">
+                              {formatCurrency(totalCost > 0 ? totalCost : improvement.totalCost)}
+                            </td>
+                            <td className="p-3">
+                              <div className="flex gap-1 justify-center">
                                 <Button
-                                  variant="destructive"
+                                  variant="outline"
                                   size="sm"
-                                  onClick={() => deleteMutation.mutate(improvement.id)}
-                                  disabled={deleteMutation.isPending}
+                                  onClick={() => startEdit(improvement)}
+                                  className="h-8 w-8 p-0"
                                 >
-                                  <Trash2 className="h-4 w-4" />
+                                  <Edit3 className="h-4 w-4" />
                                 </Button>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                                {canDeleteProperties && (
+                                  <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() => deleteMutation.mutate(improvement.id)}
+                                    disabled={deleteMutation.isPending}
+                                    className="h-8 w-8 p-0"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    <tfoot className="bg-slate-100 dark:bg-slate-800 font-medium">
+                      <tr>
+                        <td className="p-3 font-bold" colSpan={2}>Totals</td>
+                        <td className="p-3 text-right font-mono text-purple-600 dark:text-purple-400">
+                          {formatCurrency(forecastTotal)}
+                        </td>
+                        <td className="p-3 text-right font-mono text-blue-600 dark:text-blue-400">
+                          {formatCurrency(committedTotal)}
+                        </td>
+                        <td className="p-3 text-right font-mono text-green-600 dark:text-green-400">
+                          {formatCurrency(actualsTotal)}
+                        </td>
+                        <td className="p-3 text-right font-mono font-bold text-lg">
+                          {formatCurrency(grandTotal)}
+                        </td>
+                        <td></td>
+                      </tr>
+                    </tfoot>
+                  </table>
                 </div>
               </>
             )}

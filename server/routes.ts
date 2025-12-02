@@ -3951,30 +3951,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid property ID" });
       }
 
-      // Convert per-stage cost fields from dollars to cents
-      const forecastCost = req.body.forecastCost ? Math.round(req.body.forecastCost * 100) : 0;
-      const committedCost = req.body.committedCost ? Math.round(req.body.committedCost * 100) : 0;
-      const actualsCost = req.body.actualsCost ? Math.round(req.body.actualsCost * 100) : 0;
+      // Handle costStage -> bucket mapping (form sends costStage, DB expects bucket)
+      const bucket = req.body.bucket || req.body.costStage || 'FORECAST';
       
-      // Compute total as sum of all stages
-      const computedTotal = forecastCost + committedCost + actualsCost;
-      
-      // If totalCost is explicitly provided, use it; otherwise use computed total
-      // This allows backward compatibility with legacy single-cost entries
-      const totalCost = req.body.totalCost !== undefined 
+      // Convert totalCost from dollars to cents
+      const totalCostCents = req.body.totalCost !== undefined 
         ? Math.round(req.body.totalCost * 100) 
-        : computedTotal;
-
+        : 0;
+      
+      // Convert per-stage cost fields from dollars to cents
+      // If per-stage fields are not provided, distribute totalCost to the appropriate stage based on bucket
+      let forecastCost = req.body.forecastCost ? Math.round(req.body.forecastCost * 100) : 0;
+      let committedCost = req.body.committedCost ? Math.round(req.body.committedCost * 100) : 0;
+      let actualsCost = req.body.actualsCost ? Math.round(req.body.actualsCost * 100) : 0;
+      
+      // If no per-stage costs are provided but totalCost is, distribute to the appropriate stage
+      if (forecastCost === 0 && committedCost === 0 && actualsCost === 0 && totalCostCents > 0) {
+        if (bucket === 'FORECAST' || bucket === 'PIPELINE') {
+          forecastCost = totalCostCents;
+        } else if (bucket === 'COMMITTED') {
+          committedCost = totalCostCents;
+        } else if (bucket === 'ACTUALS') {
+          actualsCost = totalCostCents;
+        }
+      }
+      
+      // Compute total as sum of all stages (or use the provided total for backward compatibility)
+      const computedTotal = forecastCost + committedCost + actualsCost;
+      const totalCost = computedTotal > 0 ? computedTotal : totalCostCents;
+      
       const improvementData = {
         ...req.body,
         propertyId,
+        bucket, // Ensure bucket is always set
         forecastCost,
         committedCost,
         actualsCost,
-        totalCost: computedTotal > 0 ? computedTotal : totalCost, // Prefer computed if stages provided
+        totalCost, // Already computed correctly above
         originalCommitment: req.body.originalCommitment ? Math.round(req.body.originalCommitment * 100) : undefined,
         addedAmount: req.body.addedAmount ? Math.round(req.body.addedAmount * 100) : undefined,
       };
+      
+      // Clean up costStage if it was sent (not a DB field)
+      delete improvementData.costStage;
 
       const improvement = await storage.createPropertyExistingImprovement(improvementData);
       res.status(201).json(improvement);

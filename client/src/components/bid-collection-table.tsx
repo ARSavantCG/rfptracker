@@ -14,9 +14,10 @@ import type { RfpRequest, BidCollection } from "@shared/schema";
 
 interface BidCollectionTableProps {
   rfp: RfpRequest | null;
+  onComplete?: () => void;
 }
 
-export function BidCollectionTable({ rfp }: BidCollectionTableProps) {
+export function BidCollectionTable({ rfp, onComplete }: BidCollectionTableProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedBid, setSelectedBid] = useState<BidCollection | null>(null);
@@ -80,6 +81,8 @@ export function BidCollectionTable({ rfp }: BidCollectionTableProps) {
         description: "Advanced to Evaluation phase successfully",
         duration: 4000,
       });
+      // Auto-advance: Call onComplete to open Evaluation
+      onComplete?.();
     },
     onError: (error: Error) => {
       toast({

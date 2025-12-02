@@ -71,9 +71,10 @@ interface EvaluationBudgetData {
 interface EvaluationBudgetProps {
   rfp: RfpRequest | null;
   isWorkflowCollapsed?: boolean;
+  onComplete?: () => void;
 }
 
-export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: EvaluationBudgetProps) {
+export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete }: EvaluationBudgetProps) {
   const [editingItem, setEditingItem] = useState<string | null>(null);
   const [newItemCategory, setNewItemCategory] = useState<string>("");
   const [newItem, setNewItem] = useState<Partial<EvaluationLineItem>>({
@@ -3569,6 +3570,8 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false }: Evaluatio
         title: "Budget Saved & Workflow Advanced",
         description: "Evaluation budget saved and project moved to publish phase.",
       });
+      // Auto-advance: Call onComplete to open Publish
+      onComplete?.();
     },
     onError: () => {
       toast({

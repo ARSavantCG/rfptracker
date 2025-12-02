@@ -55,6 +55,7 @@ interface InvitationToBidModalProps {
   isOpen: boolean;
   onClose: () => void;
   rfp: RfpRequest | null;
+  onComplete?: () => void;
 }
 
 // Helper function to clean up project names by removing trailing dashes and spaces
@@ -66,7 +67,7 @@ const cleanProjectName = (projectName: string): string => {
 
 
 
-export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidModalProps) {
+export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: InvitationToBidModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isGeneratingPdfs, setIsGeneratingPdfs] = useState(false);
@@ -710,6 +711,8 @@ export function InvitationToBidModal({ isOpen, onClose, rfp }: InvitationToBidMo
       });
       setIsGeneratingPdfs(false);
       onClose();
+      // Auto-advance: Call onComplete to open Bid Collection
+      onComplete?.();
     },
     onError: (error) => {
       setIsGeneratingPdfs(false);

@@ -352,7 +352,14 @@ export default function Dashboard() {
                     ← Back to RFP List
                   </Button>
                 </div>
-                <BidCollectionTable rfp={selectedRfp} />
+                <BidCollectionTable 
+                  rfp={selectedRfp} 
+                  onComplete={() => {
+                    // Auto-advance: Open Evaluation after Bid Collection completes
+                    setShowBidCollection(false);
+                    setShowEvaluation(true);
+                  }}
+                />
               </div>
             ) : showEvaluation && selectedRfp ? (
               <div className="space-y-4">
@@ -365,7 +372,15 @@ export default function Dashboard() {
                     ← Back to RFP List
                   </Button>
                 </div>
-                <EvaluationBudget rfp={selectedRfp} isWorkflowCollapsed={isWorkflowCollapsed} />
+                <EvaluationBudget 
+                  rfp={selectedRfp} 
+                  isWorkflowCollapsed={isWorkflowCollapsed}
+                  onComplete={() => {
+                    // Auto-advance: Open Publish after Evaluation completes
+                    setShowEvaluation(false);
+                    setShowPublish(true);
+                  }}
+                />
               </div>
             ) : showPublish && selectedRfp ? (
               <div className="space-y-4">
@@ -476,6 +491,14 @@ export default function Dashboard() {
         isOpen={isInvitationModalOpen}
         onClose={() => setIsInvitationModalOpen(false)}
         rfp={workflowRfp}
+        onComplete={() => {
+          // Auto-advance: Open Bid Collection after ITB completes
+          if (workflowRfp) {
+            setSelectedRfp(workflowRfp);
+            setShowBidCollection(true);
+          }
+          setWorkflowRfp(null);
+        }}
       />
 
       <RfpValidationModal
@@ -484,6 +507,11 @@ export default function Dashboard() {
         rfp={validationRfp}
         onValidationComplete={() => {
           setIsValidationModalOpen(false);
+          // Auto-advance: Open Invitation to Bid modal after validation completes
+          if (validationRfp) {
+            setWorkflowRfp(validationRfp);
+            setIsInvitationModalOpen(true);
+          }
           setValidationRfp(null);
         }}
       />
@@ -522,7 +550,14 @@ export default function Dashboard() {
               </Button>
             </div>
             <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
-              <BidCollectionTable rfp={selectedRfp} />
+              <BidCollectionTable 
+                rfp={selectedRfp}
+                onComplete={() => {
+                  // Auto-advance: Open Evaluation after Bid Collection completes
+                  setShowBidCollection(false);
+                  setShowEvaluation(true);
+                }}
+              />
             </div>
           </div>
         </div>

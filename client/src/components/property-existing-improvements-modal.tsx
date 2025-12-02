@@ -23,6 +23,14 @@ import {
 } from "@shared/schema";
 import { Checkbox } from "@/components/ui/checkbox";
 
+// Cost stage labels for UI display
+const COST_STAGE_LABELS = {
+  FORECAST: 'Forecast',
+  COMMITTED: 'Committed',
+  ACTUALS: 'Actuals',
+  PIPELINE: 'Forecast', // Legacy mapping
+} as const;
+
 const formSchema = z.object({
   category: z.string().min(1, "Category is required"),
   description: z.string().min(1, "Description is required"),
@@ -32,7 +40,7 @@ const formSchema = z.object({
   units: z.string().optional(),
   applicableBays: z.array(z.string()).optional(),
   notes: z.string().optional(),
-  bucket: z.enum(["ACTUALS", "PIPELINE"]).default("ACTUALS"),
+  bucket: z.enum(["ACTUALS", "COMMITTED", "FORECAST", "PIPELINE"]).default("FORECAST"),
   drawCaptured: z.boolean().default(false),
   originalCommitment: z.coerce.number().min(0).optional(),
   addedAmount: z.coerce.number().min(0).optional(),
@@ -95,7 +103,7 @@ export function PropertyExistingImprovementsModal({
       allocationType: "prorated",
       applicableBays: [],
       notes: "",
-      bucket: "ACTUALS",
+      bucket: "FORECAST",
       drawCaptured: false,
       originalCommitment: 0,
       addedAmount: 0,
@@ -112,24 +120,35 @@ export function PropertyExistingImprovementsModal({
     enabled: !!property.id, // Always load data, not just when modal is open
   });
 
-  // Split improvements into pipeline and actuals
-  const { pipelineImprovements, actualsImprovements, pipelineTotal, actualsTotal } = useMemo(() => {
-    const pipeline = improvements.filter(
-      imp => imp.bucket === 'PIPELINE' && !imp.drawCaptured
+  // Split improvements into 3 stages: Forecast, Committed, Actuals
+  const { forecastImprovements, committedImprovements, actualsImprovements, forecastTotal, committedTotal, actualsTotal, grandTotal } = useMemo(() => {
+    // Map PIPELINE to FORECAST for backward compatibility
+    const normalizedBucket = (bucket: string) => bucket === 'PIPELINE' ? 'FORECAST' : bucket;
+    
+    const forecast = improvements.filter(
+      imp => normalizedBucket(imp.bucket) === 'FORECAST' && !imp.drawCaptured
+    );
+    const committed = improvements.filter(
+      imp => normalizedBucket(imp.bucket) === 'COMMITTED' && !imp.drawCaptured
     );
     const actuals = improvements.filter(
-      imp => imp.bucket === 'ACTUALS' || imp.drawCaptured
+      imp => normalizedBucket(imp.bucket) === 'ACTUALS' || imp.drawCaptured
     );
     
     // Sum costs in cents (formatCurrency will handle cent-to-dollar conversion)
-    const pipelineTotal = pipeline.reduce((sum, imp) => sum + imp.totalCost, 0);
+    const forecastTotal = forecast.reduce((sum, imp) => sum + imp.totalCost, 0);
+    const committedTotal = committed.reduce((sum, imp) => sum + imp.totalCost, 0);
     const actualsTotal = actuals.reduce((sum, imp) => sum + imp.totalCost, 0);
+    const grandTotal = forecastTotal + committedTotal + actualsTotal;
     
     return { 
-      pipelineImprovements: pipeline, 
+      forecastImprovements: forecast,
+      committedImprovements: committed,
       actualsImprovements: actuals,
-      pipelineTotal,
-      actualsTotal
+      forecastTotal,
+      committedTotal,
+      actualsTotal,
+      grandTotal
     };
   }, [improvements]);
 
@@ -237,7 +256,10 @@ export function PropertyExistingImprovementsModal({
 
   const startEdit = (improvement: PropertyExistingImprovement) => {
     setEditingId(improvement.id);
-    const bucket = (improvement.bucket || "ACTUALS") as "ACTUALS" | "PIPELINE";
+    // Map PIPELINE to FORECAST for backward compatibility
+    let bucket = improvement.bucket || "ACTUALS";
+    if (bucket === "PIPELINE") bucket = "FORECAST";
+    const typedBucket = bucket as "ACTUALS" | "COMMITTED" | "FORECAST";
     
     // Update previousBucketRef to match the record being edited to prevent unwanted bucket switching logic
     previousBucketRef.current = bucket;
@@ -264,7 +286,7 @@ export function PropertyExistingImprovementsModal({
     setShowForm(false);
     form.reset();
     // Reset previousBucketRef to default bucket when canceling
-    previousBucketRef.current = "ACTUALS";
+    previousBucketRef.current = "FORECAST";
   };
 
   const handlePrint = async () => {
@@ -291,14 +313,14 @@ export function PropertyExistingImprovementsModal({
   const allocationType = form.watch("allocationType");
   
   // Track previous bucket to handle bucket switching
-  const previousBucketRef = useRef<"ACTUALS" | "PIPELINE">(form.getValues("bucket"));
+  const previousBucketRef = useRef<"ACTUALS" | "COMMITTED" | "FORECAST" | "PIPELINE">(form.getValues("bucket"));
   
   // Watch form values for cost lifecycle logic
   const currentBucket = form.watch("bucket");
   const originalCommitment = form.watch("originalCommitment");
   const addedAmount = form.watch("addedAmount");
   
-  // Auto-calculate totalCost for PIPELINE bucket and handle bucket switching
+  // Auto-calculate totalCost for FORECAST/COMMITTED bucket and handle bucket switching
   useEffect(() => {
     const previousBucket = previousBucketRef.current;
     
@@ -310,15 +332,15 @@ export function PropertyExistingImprovementsModal({
         form.setValue("addedAmount", 0, { shouldDirty: true, shouldValidate: true });
         form.setValue("drawCaptured", false, { shouldDirty: true, shouldValidate: true });
         form.setValue("drawRef", "", { shouldDirty: true, shouldValidate: true });
-      } else if (currentBucket === "PIPELINE") {
-        // Switching to PIPELINE: reset totalCost to 0, prompt for commitments
+      } else if (currentBucket === "FORECAST" || currentBucket === "COMMITTED" || currentBucket === "PIPELINE") {
+        // Switching to FORECAST/COMMITTED: reset totalCost to 0, prompt for commitments
         form.setValue("totalCost", 0, { shouldDirty: true, shouldValidate: true });
       }
       previousBucketRef.current = currentBucket;
     }
     
-    // Auto-calculate totalCost for PIPELINE bucket
-    if (currentBucket === "PIPELINE") {
+    // Auto-calculate totalCost for FORECAST/COMMITTED/PIPELINE bucket
+    if (currentBucket === "FORECAST" || currentBucket === "COMMITTED" || currentBucket === "PIPELINE") {
       const calculatedTotal = (Number(originalCommitment) || 0) + (Number(addedAmount) || 0);
       form.setValue("totalCost", calculatedTotal, { shouldDirty: true, shouldValidate: true });
     }
@@ -663,20 +685,23 @@ export function PropertyExistingImprovementsModal({
                       name="bucket"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Cost Category</FormLabel>
+                          <FormLabel>Cost Stage</FormLabel>
                           <FormControl>
                             <select
                               {...field}
                               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                             >
-                              <option value="ACTUALS">Cost to Date (Actuals)</option>
-                              <option value="PIPELINE">Committed / Projected</option>
+                              <option value="FORECAST">Forecast (Projected)</option>
+                              <option value="COMMITTED">Committed (Contracted)</option>
+                              <option value="ACTUALS">Actuals (Spent)</option>
                             </select>
                           </FormControl>
                           <div className="text-xs text-muted-foreground mt-1">
-                            <strong>Cost to Date:</strong> Confirmed expenditures from lender draws
+                            <strong>Forecast:</strong> Budgeted/projected costs
                             <br />
-                            <strong>Committed / Projected:</strong> Committed or projected costs not yet in draws
+                            <strong>Committed:</strong> Contracted but not yet drawn
+                            <br />
+                            <strong>Actuals:</strong> Confirmed from lender draws
                           </div>
                           <FormMessage />
                         </FormItem>
@@ -1163,7 +1188,7 @@ export function PropertyExistingImprovementsModal({
             </div>
           )}
 
-          {/* Improvements List - Split into Committed/Projected and Actuals */}
+          {/* Improvements List - Split into Forecast, Committed, and Actuals stages */}
           <div className="space-y-6">
             {isLoading ? (
               <div className="text-center py-4">Loading improvements...</div>
@@ -1173,24 +1198,44 @@ export function PropertyExistingImprovementsModal({
               </div>
             ) : (
               <>
-                {/* Committed / Projected Costs */}
+                {/* Grand Total Summary */}
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
+                  <div className="flex flex-wrap justify-between items-center gap-4">
+                    <div className="flex flex-wrap gap-4 text-sm">
+                      <span className="text-purple-600 dark:text-purple-400">
+                        <strong>Forecast:</strong> {formatCurrency(forecastTotal)}
+                      </span>
+                      <span className="text-blue-600 dark:text-blue-400">
+                        <strong>Committed:</strong> {formatCurrency(committedTotal)}
+                      </span>
+                      <span className="text-green-600 dark:text-green-400">
+                        <strong>Actuals:</strong> {formatCurrency(actualsTotal)}
+                      </span>
+                    </div>
+                    <span className="font-bold text-slate-700 dark:text-slate-300">
+                      Total Projected: {formatCurrency(grandTotal)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Forecast Costs (Budgeted/Projected) */}
                 <div className="space-y-3">
-                  <div className="flex justify-between items-baseline border-b-2 border-blue-200 dark:border-blue-800 pb-2">
-                    <h3 className="text-lg font-semibold text-blue-700 dark:text-blue-300">
-                      Committed / Projected Costs
+                  <div className="flex justify-between items-baseline border-b-2 border-purple-200 dark:border-purple-800 pb-2">
+                    <h3 className="text-lg font-semibold text-purple-700 dark:text-purple-300">
+                      Forecast (Projected)
                     </h3>
-                    <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
-                      Total: {formatCurrency(pipelineTotal)}
+                    <span className="text-sm font-medium text-purple-600 dark:text-purple-400">
+                      Total: {formatCurrency(forecastTotal)}
                     </span>
                   </div>
                   
-                  {pipelineImprovements.length === 0 ? (
+                  {forecastImprovements.length === 0 ? (
                     <div className="text-center py-4 text-slate-500 italic">
-                      No committed or projected costs recorded.
+                      No forecast costs recorded.
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      {pipelineImprovements.map((improvement: PropertyExistingImprovement) => (
+                      {forecastImprovements.map((improvement: PropertyExistingImprovement) => (
                   <div 
                     key={improvement.id}
                     className="border rounded-lg p-4 hover:bg-slate-50 dark:hover:bg-slate-800"
@@ -1334,24 +1379,109 @@ export function PropertyExistingImprovementsModal({
             )}
           </div>
 
-          {/* Cost to Date (Actuals) */}
-                <div className="space-y-3">
-                  <div className="flex justify-between items-baseline border-b-2 border-green-200 dark:border-green-800 pb-2">
-                    <h3 className="text-lg font-semibold text-green-700 dark:text-green-300">
-                      Cost to Date (Actuals)
-                    </h3>
-                    <span className="text-sm font-medium text-green-600 dark:text-green-400">
-                      Total: {formatCurrency(actualsTotal)}
-                    </span>
-                  </div>
-                  
-                  {actualsImprovements.length === 0 ? (
-                    <div className="text-center py-4 text-slate-500 italic">
-                      No actuals recorded.
+          {/* Committed Costs (Contracted) */}
+          <div className="space-y-3">
+            <div className="flex justify-between items-baseline border-b-2 border-blue-200 dark:border-blue-800 pb-2">
+              <h3 className="text-lg font-semibold text-blue-700 dark:text-blue-300">
+                Committed (Contracted)
+              </h3>
+              <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                Total: {formatCurrency(committedTotal)}
+              </span>
+            </div>
+            
+            {committedImprovements.length === 0 ? (
+              <div className="text-center py-4 text-slate-500 italic">
+                No committed costs recorded.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {committedImprovements.map((improvement: PropertyExistingImprovement) => (
+                  <div 
+                    key={improvement.id}
+                    className="border rounded-lg p-4 hover:bg-slate-50 dark:hover:bg-slate-800"
+                  >
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded text-xs font-medium">
+                            {EXISTING_IMPROVEMENT_CATEGORIES[improvement.category as keyof typeof EXISTING_IMPROVEMENT_CATEGORIES]}
+                          </span>
+                          <span className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded text-xs">
+                            {ALLOCATION_TYPES[improvement.allocationType as keyof typeof ALLOCATION_TYPES]}
+                          </span>
+                          {!improvement.isActive && (
+                            <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded text-xs">
+                              Inactive
+                            </span>
+                          )}
+                        </div>
+                        
+                        <h4 className="font-medium">{improvement.description}</h4>
+                        
+                        <div className="mt-2 grid grid-cols-2 gap-4 text-sm text-slate-600 dark:text-slate-400">
+                          <div>
+                            <span className="font-medium">Total Cost: </span>
+                            {formatCurrency(improvement.totalCost)}
+                          </div>
+                          <div>
+                            <span className="font-medium">Allocation: </span>
+                            {ALLOCATION_TYPES[improvement.allocationType as keyof typeof ALLOCATION_TYPES]}
+                          </div>
+                        </div>
+
+                        {improvement.notes && (
+                          <div className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+                            <span className="font-medium">Notes: </span>
+                            {improvement.notes}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex gap-2 ml-4">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => startEdit(improvement)}
+                        >
+                          <Edit3 className="h-4 w-4" />
+                        </Button>
+                        {canDeleteProperties && (
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => deleteMutation.mutate(improvement.id)}
+                            disabled={deleteMutation.isPending}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {actualsImprovements.map((improvement: PropertyExistingImprovement) => (
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Actuals (Spent from Draws) */}
+          <div className="space-y-3">
+            <div className="flex justify-between items-baseline border-b-2 border-green-200 dark:border-green-800 pb-2">
+              <h3 className="text-lg font-semibold text-green-700 dark:text-green-300">
+                Actuals (Spent)
+              </h3>
+              <span className="text-sm font-medium text-green-600 dark:text-green-400">
+                Total: {formatCurrency(actualsTotal)}
+              </span>
+            </div>
+            
+            {actualsImprovements.length === 0 ? (
+              <div className="text-center py-4 text-slate-500 italic">
+                No actuals recorded.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {actualsImprovements.map((improvement: PropertyExistingImprovement) => (
                         <div 
                           key={improvement.id}
                           className="border rounded-lg p-4 hover:bg-slate-50 dark:hover:bg-slate-800"

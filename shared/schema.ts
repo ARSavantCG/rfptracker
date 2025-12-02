@@ -646,7 +646,9 @@ export const propertyExistingImprovements = pgTable("property_existing_improveme
   }>(),
   
   // Cost lifecycle tracking fields
-  bucket: text("bucket").notNull().default("ACTUALS"), // 'ACTUALS' (Cost to Date) or 'PIPELINE' (Committed/Projected)
+  // ACTUALS = Spent (confirmed from draws), COMMITTED = Contracted but not drawn, FORECAST = Projected/budgeted
+  // PIPELINE kept for backward compatibility (maps to FORECAST)
+  bucket: text("bucket").notNull().default("ACTUALS"), // 'ACTUALS', 'COMMITTED', 'FORECAST', or 'PIPELINE' (legacy)
   drawCaptured: boolean("draw_captured").default(false).notNull(), // True when included in lender draw
   originalCommitment: integer("original_commitment"), // Initial commitment amount in cents (for pipeline items)
   addedAmount: integer("added_amount"), // Additional amounts/change orders in cents (for pipeline items)
@@ -666,7 +668,7 @@ export const insertPropertyExistingImprovementSchema = createInsertSchema(proper
   updatedAt: true,
 }).extend({
   totalCost: z.number().min(0),
-  bucket: z.enum(["ACTUALS", "PIPELINE"]).default("ACTUALS"),
+  bucket: z.enum(["ACTUALS", "COMMITTED", "FORECAST", "PIPELINE"]).default("ACTUALS"),
   drawCaptured: z.boolean().default(false),
   originalCommitment: z.number().min(0).optional(),
   addedAmount: z.number().min(0).optional(),
@@ -811,7 +813,7 @@ export type EvaluationLineItem = {
   tenantShare: number; // Percentage of cost attributed to tenant (0-100)
   bidCollectionId?: number; // Reference to original bid if applicable
   bidLineItemId?: number; // Reference to original bid line item if applicable
-  bucket?: 'ACTUALS' | 'PIPELINE'; // Cost lifecycle bucket for existing improvements
+  bucket?: 'ACTUALS' | 'COMMITTED' | 'FORECAST' | 'PIPELINE'; // Cost lifecycle bucket for existing improvements
 };
 
 export const insertEvaluationBudgetSchema = createInsertSchema(evaluationBudgets).omit({

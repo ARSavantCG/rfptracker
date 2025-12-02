@@ -66,6 +66,86 @@ interface PropertyExistingImprovementsModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
+// Inline editable cell for direct cost editing in table
+function InlineEditableCell({ 
+  value, 
+  improvementId,
+  field,
+  colorClass,
+  onSave
+}: { 
+  value: number;
+  improvementId: number;
+  field: 'forecastCost' | 'committedCost' | 'actualsCost';
+  colorClass: string;
+  onSave: (improvementId: number, field: string, value: number) => void;
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+  
+  const formatCurrency = (cents: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(cents / 100);
+  };
+  
+  const startEditing = () => {
+    setEditValue(value > 0 ? (value / 100).toString() : '');
+    setIsEditing(true);
+  };
+  
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [isEditing]);
+  
+  const handleSave = () => {
+    const numValue = parseFloat(editValue) || 0;
+    onSave(improvementId, field, numValue);
+    setIsEditing(false);
+  };
+  
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSave();
+    } else if (e.key === 'Escape') {
+      setIsEditing(false);
+    }
+  };
+  
+  if (isEditing) {
+    return (
+      <input
+        ref={inputRef}
+        type="number"
+        value={editValue}
+        onChange={(e) => setEditValue(e.target.value)}
+        onBlur={handleSave}
+        onKeyDown={handleKeyDown}
+        className={`w-24 px-2 py-1 text-right font-mono border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 ${colorClass}`}
+        data-testid={`inline-edit-${field}-${improvementId}`}
+      />
+    );
+  }
+  
+  return (
+    <span
+      onClick={startEditing}
+      className={`cursor-pointer hover:underline hover:bg-slate-100 dark:hover:bg-slate-700 px-2 py-1 rounded ${colorClass}`}
+      title="Click to edit"
+      data-testid={`cell-${field}-${improvementId}`}
+    >
+      {value > 0 ? formatCurrency(value) : '-'}
+    </span>
+  );
+}
+
 export function PropertyExistingImprovementsModal({ 
   property 
 }: { property: Property }) {
@@ -226,6 +306,34 @@ export function PropertyExistingImprovementsModal({
     },
   });
 
+  // Inline cost update mutation for quick editing in table
+  const inlineUpdateMutation = useMutation({
+    mutationFn: async ({ id, field, value }: { id: number; field: string; value: number }) => {
+      return await apiRequest(`/api/properties/${property.id}/existing-improvements/${id}`, "PATCH", {
+        [field]: value
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/properties/${property.id}/existing-improvements`] });
+      toast({
+        title: "Cost Updated",
+        description: "The cost has been updated successfully.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Update Failed",
+        description: "Failed to update the cost. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Handler for inline cost cell edits
+  const handleInlineCostSave = (improvementId: number, field: string, value: number) => {
+    inlineUpdateMutation.mutate({ id: improvementId, field, value });
+  };
+
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
       return await apiRequest(`/api/properties/${property.id}/existing-improvements/${id}`, "DELETE");
@@ -269,10 +377,17 @@ export function PropertyExistingImprovementsModal({
     // Update previousBucketRef to match the record being edited to prevent unwanted bucket switching logic
     previousBucketRef.current = bucket;
     
+    // Get per-stage costs from the improvement (cast to any to access dynamic fields)
+    const imp = improvement as any;
+    
     form.reset({
       category: improvement.category,
       description: improvement.description,
       totalCost: improvement.totalCost / 100, // Convert from cents to dollars
+      // Per-stage costs - convert from cents to dollars
+      forecastCost: imp.forecastCost ? imp.forecastCost / 100 : 0,
+      committedCost: imp.committedCost ? imp.committedCost / 100 : 0,
+      actualsCost: imp.actualsCost ? imp.actualsCost / 100 : 0,
       allocationType: improvement.allocationType as "prorated" | "bay-specific" | "whole-property" | "demising-wall",
       applicableBays: improvement.applicableBays || [],
       notes: improvement.notes || "",
@@ -679,149 +794,120 @@ export function PropertyExistingImprovementsModal({
 
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                  {/* Cost Lifecycle Tracking Fields */}
-                  <div className="space-y-4 p-4 border rounded-lg bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20">
+                  {/* Cost Lifecycle Tracking Fields - Per-Stage Entry */}
+                  <div className="space-y-4 p-4 border rounded-lg bg-gradient-to-r from-purple-50 via-blue-50 to-green-50 dark:from-purple-900/20 dark:via-blue-900/20 dark:to-green-900/20">
                     <div className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                      💼 Cost Lifecycle Tracking
+                      💼 Cost Lifecycle Tracking - Enter amounts for each stage
                     </div>
                     
-                    <FormField
-                      control={form.control}
-                      name="bucket"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Cost Stage</FormLabel>
-                          <FormControl>
-                            <select
-                              {...field}
-                              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                              <option value="FORECAST">Forecast (Projected)</option>
-                              <option value="COMMITTED">Committed (Contracted)</option>
-                              <option value="ACTUALS">Actuals (Spent)</option>
-                            </select>
-                          </FormControl>
-                          <div className="text-xs text-muted-foreground mt-1">
-                            <strong>Forecast:</strong> Budgeted/projected costs
-                            <br />
-                            <strong>Committed:</strong> Contracted but not yet drawn
-                            <br />
-                            <strong>Actuals:</strong> Confirmed from lender draws
-                          </div>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    {currentBucket === 'PIPELINE' && (
-                      <div className="space-y-3 pl-4 border-l-2 border-blue-300">
-                        <div className="grid grid-cols-2 gap-4">
-                          <FormField
-                            control={form.control}
-                            name="originalCommitment"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Original Commitment ($)</FormLabel>
-                                <FormControl>
-                                  <FormulaInput
-                                    {...field}
-                                    value={field.value?.toString() || '0'}
-                                    onChange={field.onChange}
-                                    placeholder="0.00"
-                                    className="w-full"
-                                    decimalPlaces={2}
-                                    type="rate"
-                                    formatThousands={true}
-                                  />
-                                </FormControl>
-                                <div className="text-xs text-muted-foreground mt-1">
-                                  💡 <strong>Formula support:</strong> Enter formulas like =123*5 or =15000/12. Press Enter or click away to save.
-                                </div>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                            control={form.control}
-                            name="addedAmount"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Added Amounts ($)</FormLabel>
-                                <FormControl>
-                                  <FormulaInput
-                                    {...field}
-                                    value={field.value?.toString() || '0'}
-                                    onChange={field.onChange}
-                                    placeholder="0.00"
-                                    className="w-full"
-                                    decimalPlaces={2}
-                                    type="rate"
-                                    formatThousands={true}
-                                  />
-                                </FormControl>
-                                <div className="text-xs text-muted-foreground mt-1">
-                                  Change orders or additional commitments
-                                </div>
-                                <div className="text-xs text-muted-foreground mt-1">
-                                  💡 <strong>Formula support:</strong> Enter formulas like =123+5 or =15000/2. Press Enter or click away to save.
-                                </div>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-
-                        <div className="text-sm font-medium text-blue-700 dark:text-blue-300">
-                          Total Committed: ${((Number(originalCommitment) || 0) + (Number(addedAmount) || 0)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </div>
-
-                        <FormField
-                          control={form.control}
-                          name="drawCaptured"
-                          render={({ field }) => (
-                            <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                              <FormControl>
-                                <Checkbox
-                                  checked={field.value}
-                                  onCheckedChange={field.onChange}
-                                />
-                              </FormControl>
-                              <div className="space-y-1 leading-none">
-                                <FormLabel>
-                                  Mark as Captured in Draw
-                                </FormLabel>
-                                <div className="text-xs text-muted-foreground">
-                                  Check this when the cost has been included in a lender draw
-                                </div>
-                              </div>
-                            </FormItem>
-                          )}
-                        />
-
-                        {form.watch('drawCaptured') && (
-                          <FormField
-                            control={form.control}
-                            name="drawRef"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Draw Reference (Optional)</FormLabel>
-                                <FormControl>
-                                  <Input
-                                    {...field}
-                                    placeholder="e.g., Draw #3, April 2025"
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
+                    <div className="grid grid-cols-3 gap-4">
+                      {/* Budget (Forecast) */}
+                      <FormField
+                        control={form.control}
+                        name="forecastCost"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-purple-700 dark:text-purple-400 font-semibold">
+                              Budget (Forecast) $
+                            </FormLabel>
+                            <FormControl>
+                              <FormulaInput
+                                value={field.value || 0}
+                                onChange={(rawValue, evaluatedValue) => {
+                                  field.onChange(evaluatedValue);
+                                }}
+                                placeholder="0.00"
+                                className="w-full border-purple-300 focus:border-purple-500"
+                                decimalPlaces={2}
+                                type="rate"
+                                formatThousands={true}
+                              />
+                            </FormControl>
+                            <div className="text-xs text-purple-600 dark:text-purple-400">
+                              Budgeted/projected costs
+                            </div>
+                            <FormMessage />
+                          </FormItem>
                         )}
-                      </div>
-                    )}
+                      />
+
+                      {/* Committed */}
+                      <FormField
+                        control={form.control}
+                        name="committedCost"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-blue-700 dark:text-blue-400 font-semibold">
+                              Committed $
+                            </FormLabel>
+                            <FormControl>
+                              <FormulaInput
+                                value={field.value || 0}
+                                onChange={(rawValue, evaluatedValue) => {
+                                  field.onChange(evaluatedValue);
+                                }}
+                                placeholder="0.00"
+                                className="w-full border-blue-300 focus:border-blue-500"
+                                decimalPlaces={2}
+                                type="rate"
+                                formatThousands={true}
+                              />
+                            </FormControl>
+                            <div className="text-xs text-blue-600 dark:text-blue-400">
+                              Contracted but not yet drawn
+                            </div>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Paid (Actuals) */}
+                      <FormField
+                        control={form.control}
+                        name="actualsCost"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-green-700 dark:text-green-400 font-semibold">
+                              Paid (Actuals) $
+                            </FormLabel>
+                            <FormControl>
+                              <FormulaInput
+                                value={field.value || 0}
+                                onChange={(rawValue, evaluatedValue) => {
+                                  field.onChange(evaluatedValue);
+                                }}
+                                placeholder="0.00"
+                                className="w-full border-green-300 focus:border-green-500"
+                                decimalPlaces={2}
+                                type="rate"
+                                formatThousands={true}
+                              />
+                            </FormControl>
+                            <div className="text-xs text-green-600 dark:text-green-400">
+                              Confirmed from lender draws
+                            </div>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    
+                    {/* Computed Total */}
+                    <div className="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-700">
+                      <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                        Total Cost (auto-calculated):
+                      </span>
+                      <span className="text-lg font-bold text-slate-800 dark:text-slate-200">
+                        ${((Number(form.watch('forecastCost')) || 0) + (Number(form.watch('committedCost')) || 0) + (Number(form.watch('actualsCost')) || 0)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                    
+                    <div className="text-xs text-muted-foreground">
+                      💡 <strong>Tip:</strong> Enter costs directly into any column. Formulas supported: =123*5 or =15000/12
+                    </div>
                   </div>
 
-                  <div className="grid grid-cols-4 gap-4">
+                  <div className="grid grid-cols-3 gap-4">
                     <FormField
                       control={form.control}
                       name="category"
@@ -845,10 +931,8 @@ export function PropertyExistingImprovementsModal({
                                   <div className="max-h-60 overflow-auto p-1">
                                     {Object.entries(EXISTING_IMPROVEMENT_CATEGORIES)
                                       .sort(([keyA, labelA], [keyB, labelB]) => {
-                                        // Put "Custom" at the end
                                         if (keyA === 'custom') return 1;
                                         if (keyB === 'custom') return -1;
-                                        // Sort all others alphabetically by label
                                         return labelA.localeCompare(labelB);
                                       })
                                       .map(([key, label]) => (
@@ -925,57 +1009,6 @@ export function PropertyExistingImprovementsModal({
                           <FormControl>
                             <Input {...field} placeholder="e.g., LED warehouse lighting upgrade" />
                           </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="totalCost"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Current Total Cost ($)</FormLabel>
-                          <FormControl>
-                            {currentBucket === 'PIPELINE' ? (
-                              <div className="flex h-10 w-full rounded-md border border-input bg-slate-100 dark:bg-slate-800 px-3 py-2 text-sm ring-offset-background items-center">
-                                <span className="font-semibold text-slate-700 dark:text-slate-300">
-                                  ${(field.value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                </span>
-                                <span className="ml-2 text-xs text-slate-500 dark:text-slate-400">(Auto-calculated)</span>
-                              </div>
-                            ) : (
-                              <FormulaInput
-                                value={field.value || 0}
-                                onChange={(rawValue, evaluatedValue) => {
-                                  console.log('📝 FormulaInput onChange:', { rawValue, evaluatedValue });
-                                  // Use evaluatedValue (the calculated result) for the form
-                                  field.onChange(evaluatedValue);
-                                }}
-                                onBlur={() => {
-                                  // Save the form when formula input loses focus
-                                  field.onBlur();
-                                }}
-                                placeholder="Enter cost amount or formula (press Enter to save)"
-                                className="w-full"
-                                decimalPlaces={2}
-                                type="rate"
-                                formatThousands={true}
-                              />
-                            )}
-                          </FormControl>
-                          <div className="text-xs text-muted-foreground mt-1">
-                            {currentBucket === 'ACTUALS' ? (
-                              <>
-                                <strong>For Actuals:</strong> Enter confirmed expenditure amount from lender draws.<br/>
-                                💡 <strong>Formulas supported:</strong> =123*5 or =15000/12 (press Enter to save)
-                              </>
-                            ) : (
-                              <>
-                                <strong>For Committed/Projected:</strong> This value is automatically calculated from Original Commitment + Added Amounts.
-                              </>
-                            )}
-                          </div>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -1265,14 +1298,32 @@ export function PropertyExistingImprovementsModal({
                                 {EXISTING_IMPROVEMENT_CATEGORIES[improvement.category as keyof typeof EXISTING_IMPROVEMENT_CATEGORIES]}
                               </span>
                             </td>
-                            <td className="p-3 text-right font-mono text-purple-600 dark:text-purple-400">
-                              {forecastCost > 0 ? formatCurrency(forecastCost) : '-'}
+                            <td className="p-3 text-right">
+                              <InlineEditableCell
+                                value={forecastCost}
+                                improvementId={improvement.id}
+                                field="forecastCost"
+                                colorClass="font-mono text-purple-600 dark:text-purple-400"
+                                onSave={handleInlineCostSave}
+                              />
                             </td>
-                            <td className="p-3 text-right font-mono text-blue-600 dark:text-blue-400">
-                              {committedCost > 0 ? formatCurrency(committedCost) : '-'}
+                            <td className="p-3 text-right">
+                              <InlineEditableCell
+                                value={committedCost}
+                                improvementId={improvement.id}
+                                field="committedCost"
+                                colorClass="font-mono text-blue-600 dark:text-blue-400"
+                                onSave={handleInlineCostSave}
+                              />
                             </td>
-                            <td className="p-3 text-right font-mono text-green-600 dark:text-green-400">
-                              {actualsCost > 0 ? formatCurrency(actualsCost) : '-'}
+                            <td className="p-3 text-right">
+                              <InlineEditableCell
+                                value={actualsCost}
+                                improvementId={improvement.id}
+                                field="actualsCost"
+                                colorClass="font-mono text-green-600 dark:text-green-400"
+                                onSave={handleInlineCostSave}
+                              />
                             </td>
                             <td className="p-3 text-right font-mono font-bold">
                               {formatCurrency(totalCost > 0 ? totalCost : improvement.totalCost)}

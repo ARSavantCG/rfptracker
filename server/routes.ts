@@ -4008,6 +4008,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/properties/:propertyId/existing-improvements/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
+      console.log('📝 PATCH existing-improvements - ID:', id, 'Body:', JSON.stringify(req.body));
+      
       if (isNaN(id)) {
         return res.status(400).json({ message: "Invalid improvement ID" });
       }
@@ -4016,6 +4018,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Convert per-stage cost fields from dollars to cents if provided
       if (updates.forecastCost !== undefined) {
+        console.log('📝 Converting forecastCost from dollars to cents:', updates.forecastCost, '→', Math.round(updates.forecastCost * 100));
         updates.forecastCost = Math.round(updates.forecastCost * 100);
       }
       if (updates.committedCost !== undefined) {

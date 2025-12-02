@@ -3951,11 +3951,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid property ID" });
       }
 
-      // Convert cost fields from dollars to cents
+      // Convert per-stage cost fields from dollars to cents
+      const forecastCost = req.body.forecastCost ? Math.round(req.body.forecastCost * 100) : 0;
+      const committedCost = req.body.committedCost ? Math.round(req.body.committedCost * 100) : 0;
+      const actualsCost = req.body.actualsCost ? Math.round(req.body.actualsCost * 100) : 0;
+      
+      // Compute total as sum of all stages
+      const computedTotal = forecastCost + committedCost + actualsCost;
+      
+      // If totalCost is explicitly provided, use it; otherwise use computed total
+      // This allows backward compatibility with legacy single-cost entries
+      const totalCost = req.body.totalCost !== undefined 
+        ? Math.round(req.body.totalCost * 100) 
+        : computedTotal;
+
       const improvementData = {
         ...req.body,
         propertyId,
-        totalCost: Math.round(req.body.totalCost * 100), // Convert to cents
+        forecastCost,
+        committedCost,
+        actualsCost,
+        totalCost: computedTotal > 0 ? computedTotal : totalCost, // Prefer computed if stages provided
         originalCommitment: req.body.originalCommitment ? Math.round(req.body.originalCommitment * 100) : undefined,
         addedAmount: req.body.addedAmount ? Math.round(req.body.addedAmount * 100) : undefined,
       };
@@ -3978,10 +3994,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const updates = { ...req.body };
-      // Convert cost fields from dollars to cents if provided
-      if (updates.totalCost !== undefined) {
+      
+      // Convert per-stage cost fields from dollars to cents if provided
+      if (updates.forecastCost !== undefined) {
+        updates.forecastCost = Math.round(updates.forecastCost * 100);
+      }
+      if (updates.committedCost !== undefined) {
+        updates.committedCost = Math.round(updates.committedCost * 100);
+      }
+      if (updates.actualsCost !== undefined) {
+        updates.actualsCost = Math.round(updates.actualsCost * 100);
+      }
+      
+      // If any stage cost is updated, get existing values and recompute total
+      if (updates.forecastCost !== undefined || updates.committedCost !== undefined || updates.actualsCost !== undefined) {
+        // Get current improvement to compute new total
+        const currentImprovement = await storage.getPropertyExistingImprovement(id);
+        if (currentImprovement) {
+          const forecast = updates.forecastCost !== undefined ? updates.forecastCost : (currentImprovement.forecastCost || 0);
+          const committed = updates.committedCost !== undefined ? updates.committedCost : (currentImprovement.committedCost || 0);
+          const actuals = updates.actualsCost !== undefined ? updates.actualsCost : (currentImprovement.actualsCost || 0);
+          updates.totalCost = forecast + committed + actuals;
+        }
+      } else if (updates.totalCost !== undefined) {
+        // Legacy: If only totalCost provided (backward compatibility)
         updates.totalCost = Math.round(updates.totalCost * 100);
       }
+      
       if (updates.originalCommitment !== undefined) {
         updates.originalCommitment = updates.originalCommitment ? Math.round(updates.originalCommitment * 100) : undefined;
       }

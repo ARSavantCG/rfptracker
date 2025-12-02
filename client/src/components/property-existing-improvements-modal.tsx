@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Trash2, Plus, Edit3, Save, X, Grid, Printer, ChevronDown } from "lucide-react";
+import { Trash2, Plus, Edit3, Save, X, Grid, Printer, ChevronDown, ArrowRight } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { FormulaInput } from "@/components/formula-input";
 import { useAuth } from "@/hooks/useAuth";
@@ -241,6 +241,20 @@ export function PropertyExistingImprovementsModal({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/properties/${property.id}/existing-improvements`] });
+    },
+  });
+
+  // Stage promotion mutation: Forecast → Committed → Actuals
+  const promoteStageMutation = useMutation({
+    mutationFn: async ({ id, newBucket }: { id: number; newBucket: 'COMMITTED' | 'ACTUALS' }) => {
+      return await apiRequest(`/api/properties/${property.id}/existing-improvements/${id}`, "PATCH", { bucket: newBucket });
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: [`/api/properties/${property.id}/existing-improvements`] });
+      toast({
+        title: "Stage Updated",
+        description: `Cost promoted to ${COST_STAGE_LABELS[variables.newBucket]}`,
+      });
     },
   });
 
@@ -1353,24 +1367,36 @@ export function PropertyExistingImprovementsModal({
                         )}
                       </div>
 
-                      <div className="flex gap-2 ml-4">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => startEdit(improvement)}
-                        >
-                          <Edit3 className="h-4 w-4" />
-                        </Button>
-                        {canDeleteProperties && (
+                      <div className="flex flex-col gap-2 ml-4">
+                        <div className="flex gap-2">
                           <Button
-                            variant="destructive"
+                            variant="outline"
                             size="sm"
-                            onClick={() => deleteMutation.mutate(improvement.id)}
-                            disabled={deleteMutation.isPending}
+                            onClick={() => startEdit(improvement)}
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Edit3 className="h-4 w-4" />
                           </Button>
-                        )}
+                          {canDeleteProperties && (
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => deleteMutation.mutate(improvement.id)}
+                              disabled={deleteMutation.isPending}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="bg-blue-100 hover:bg-blue-200 text-blue-700 dark:bg-blue-900 dark:hover:bg-blue-800 dark:text-blue-300"
+                          onClick={() => promoteStageMutation.mutate({ id: improvement.id, newBucket: 'COMMITTED' })}
+                          disabled={promoteStageMutation.isPending}
+                        >
+                          <ArrowRight className="h-4 w-4 mr-1" />
+                          Commit
+                        </Button>
                       </div>
                     </div>
                   </div>
@@ -1438,24 +1464,36 @@ export function PropertyExistingImprovementsModal({
                         )}
                       </div>
 
-                      <div className="flex gap-2 ml-4">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => startEdit(improvement)}
-                        >
-                          <Edit3 className="h-4 w-4" />
-                        </Button>
-                        {canDeleteProperties && (
+                      <div className="flex flex-col gap-2 ml-4">
+                        <div className="flex gap-2">
                           <Button
-                            variant="destructive"
+                            variant="outline"
                             size="sm"
-                            onClick={() => deleteMutation.mutate(improvement.id)}
-                            disabled={deleteMutation.isPending}
+                            onClick={() => startEdit(improvement)}
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Edit3 className="h-4 w-4" />
                           </Button>
-                        )}
+                          {canDeleteProperties && (
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => deleteMutation.mutate(improvement.id)}
+                              disabled={deleteMutation.isPending}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="bg-green-100 hover:bg-green-200 text-green-700 dark:bg-green-900 dark:hover:bg-green-800 dark:text-green-300"
+                          onClick={() => promoteStageMutation.mutate({ id: improvement.id, newBucket: 'ACTUALS' })}
+                          disabled={promoteStageMutation.isPending}
+                        >
+                          <ArrowRight className="h-4 w-4 mr-1" />
+                          Confirm
+                        </Button>
                       </div>
                     </div>
                   </div>

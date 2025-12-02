@@ -173,9 +173,9 @@ export function StatsCards({ onStatusFilter, onRfpClick }: StatsCardsProps) {
   };
 
   return (
-    <div className="mb-6">
+    <div className="mb-6 w-full max-w-full overflow-hidden">
       {/* Dashboard Grid with 4 Panels */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-1" style={{ gridTemplateColumns: '1fr 1fr 1fr 1.4fr' }}>
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-1 w-full">
         
         {/* Project Status - Compact */}
         <div className="bg-white p-2 rounded-lg shadow-sm border border-gray-200">

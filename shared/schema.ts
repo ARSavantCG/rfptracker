@@ -628,7 +628,7 @@ export const propertyExistingImprovements = pgTable("property_existing_improveme
   propertyId: integer("property_id").references(() => properties.id, { onDelete: "cascade" }).notNull(),
   category: text("category").notNull(), // lighting, restrooms, spec-office, hvac, fire-alarm, demising-wall, custom
   description: text("description").notNull(),
-  totalCost: integer("total_cost").notNull(), // Cost in cents for precision
+  totalCost: integer("total_cost").notNull(), // Computed total cost in cents (forecast + committed + actuals)
   allocationType: text("allocation_type").notNull(), // "prorated", "bay-specific", "whole-property", "demising-wall"
   allocationValue: integer("allocation_value"), // For percentage-based or custom allocations
   units: text("units"), // Units for the allocation (sf, percentage, etc.)
@@ -645,9 +645,14 @@ export const propertyExistingImprovements = pgTable("property_existing_improveme
     wallLocation?: string; // description of wall location
   }>(),
   
-  // Cost lifecycle tracking fields
-  // ACTUALS = Spent (confirmed from draws), COMMITTED = Contracted but not drawn, FORECAST = Projected/budgeted
-  // PIPELINE kept for backward compatibility (maps to FORECAST)
+  // Per-stage cost tracking (in cents for precision)
+  // Each improvement tracks costs across all three lifecycle stages
+  forecastCost: integer("forecast_cost").default(0).notNull(), // Budget/projected cost in cents
+  committedCost: integer("committed_cost").default(0).notNull(), // Contracted cost in cents
+  actualsCost: integer("actuals_cost").default(0).notNull(), // Paid/spent cost in cents
+  
+  // Legacy bucket field - kept for backward compatibility during migration
+  // New records should use the per-stage cost fields above
   bucket: text("bucket").notNull().default("ACTUALS"), // 'ACTUALS', 'COMMITTED', 'FORECAST', or 'PIPELINE' (legacy)
   drawCaptured: boolean("draw_captured").default(false).notNull(), // True when included in lender draw
   originalCommitment: integer("original_commitment"), // Initial commitment amount in cents (for pipeline items)
@@ -668,6 +673,11 @@ export const insertPropertyExistingImprovementSchema = createInsertSchema(proper
   updatedAt: true,
 }).extend({
   totalCost: z.number().min(0),
+  // Per-stage cost fields (in cents)
+  forecastCost: z.number().min(0).default(0),
+  committedCost: z.number().min(0).default(0),
+  actualsCost: z.number().min(0).default(0),
+  // Legacy bucket field - kept for backward compatibility
   bucket: z.enum(["ACTUALS", "COMMITTED", "FORECAST", "PIPELINE"]).default("ACTUALS"),
   drawCaptured: z.boolean().default(false),
   originalCommitment: z.number().min(0).optional(),

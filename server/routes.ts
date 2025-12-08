@@ -8819,6 +8819,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Alternative test email endpoint (outside /api/admin path)
+  app.post("/api/email/test", requireAuth, async (req, res) => {
+    console.log("Test email endpoint called");
+    try {
+      const { email } = req.body;
+      if (!email || typeof email !== 'string') {
+        return res.status(400).json({ message: "Email address is required" });
+      }
+      
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({ message: "Invalid email address format" });
+      }
+      
+      console.log(`Sending test email to: ${email}`);
+      const result = await sendTestStatusReportEmail(email);
+      if (result.success) {
+        res.json({ message: `Test email sent successfully to ${email}` });
+      } else {
+        res.status(500).json({ message: result.error || "Failed to send test email" });
+      }
+    } catch (error) {
+      console.error("Error sending test email:", error);
+      res.status(500).json({ message: "Failed to send test email" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

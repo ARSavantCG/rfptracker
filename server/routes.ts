@@ -62,7 +62,7 @@ import {
 import { applyLegalRounding, validateLegalCompliance, LEGAL_TOTALS } from "./legal-rounding-system";
 import { deleteEntityFiles, cleanupOrphanedFiles, getCleanupStats, findOrphanedFiles } from "./file-cleanup";
 import Templates from "./lib/rfp-templates";
-import { sendWorkflowCompletionEmail } from "./email-service";
+import { sendWorkflowCompletionEmail, sendTestStatusReportEmail } from "./email-service";
 import { startEmailScheduler, sendStatusReportNow } from "./email-scheduler";
 
 // Helper function to clean invalid values like "$NaN", "NaN", etc.
@@ -8791,6 +8791,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching owner contacts:", error);
       res.status(500).json({ message: "Failed to fetch owner contacts" });
+    }
+  });
+
+  // Send test status report to a specific email (admin only)
+  app.post("/api/admin/email/send-test", requireAuth, checkPermission('admin.access'), async (req, res) => {
+    try {
+      const { email } = req.body;
+      if (!email || typeof email !== 'string') {
+        return res.status(400).json({ message: "Email address is required" });
+      }
+      
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({ message: "Invalid email address format" });
+      }
+      
+      const result = await sendTestStatusReportEmail(email);
+      if (result.success) {
+        res.json({ message: `Test email sent successfully to ${email}` });
+      } else {
+        res.status(500).json({ message: result.error || "Failed to send test email" });
+      }
+    } catch (error) {
+      console.error("Error sending test email:", error);
+      res.status(500).json({ message: "Failed to send test email" });
     }
   });
 

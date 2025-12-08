@@ -371,6 +371,28 @@ export async function sendStatusReportEmail(): Promise<{ success: boolean; error
   }
 }
 
+export async function sendTestStatusReportEmail(testEmail: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { client, fromEmail } = await getUncachableSendGridClient();
+    const rfps = await storage.getAllRfpRequests();
+    const html = generateStatusReportHtml(rfps);
+    
+    const msg = {
+      to: testEmail,
+      from: fromEmail,
+      subject: `[TEST] RFP Status Report - ${new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}`,
+      html: html
+    };
+
+    await client.send(msg);
+    console.log(`Test status report sent to ${testEmail}`);
+    return { success: true };
+  } catch (error: any) {
+    console.error('Failed to send test status report email:', error);
+    return { success: false, error: error.message };
+  }
+}
+
 export async function sendWorkflowCompletionEmail(
   rfp: RfpRequest, 
   completionType: 'rfp-entry' | 'publish'

@@ -4,9 +4,18 @@ import { RfpRequest, Contact } from '@shared/schema';
 import path from 'path';
 import fs from 'fs';
 
-let connectionSettings: any;
-
 async function getCredentials() {
+  // First, check for environment variables (highest priority - user-provided secrets)
+  const envApiKey = process.env.SENDGRID_API_KEY;
+  const envFromEmail = process.env.SENDGRID_FROM_EMAIL || 'noreply@bridgeindustrial.com';
+  
+  if (envApiKey) {
+    console.log('Using SendGrid credentials from environment variables');
+    return { apiKey: envApiKey, email: envFromEmail };
+  }
+  
+  // Fallback to Replit connector if env vars not available
+  console.log('Falling back to Replit connector for SendGrid credentials');
   const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
   const xReplitToken = process.env.REPL_IDENTITY 
     ? 'repl ' + process.env.REPL_IDENTITY 
@@ -15,10 +24,10 @@ async function getCredentials() {
     : null;
 
   if (!xReplitToken) {
-    throw new Error('X_REPLIT_TOKEN not found for repl/depl');
+    throw new Error('SENDGRID_API_KEY not found in environment and X_REPLIT_TOKEN not available for connector');
   }
 
-  connectionSettings = await fetch(
+  const connectionSettings = await fetch(
     'https://' + hostname + '/api/v2/connection?include_secrets=true&connector_names=sendgrid',
     {
       headers: {
@@ -29,7 +38,7 @@ async function getCredentials() {
   ).then(res => res.json()).then(data => data.items?.[0]);
 
   if (!connectionSettings || (!connectionSettings.settings.api_key || !connectionSettings.settings.from_email)) {
-    throw new Error('SendGrid not connected');
+    throw new Error('SendGrid not connected - please add SENDGRID_API_KEY to secrets');
   }
   return { apiKey: connectionSettings.settings.api_key, email: connectionSettings.settings.from_email };
 }

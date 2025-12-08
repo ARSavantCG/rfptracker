@@ -875,9 +875,16 @@ function EmailTestPanel() {
 
     setIsSending(true);
     try {
+      const token = localStorage.getItem('auth-token');
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
       const response = await fetch('/api/email/test', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
+        credentials: 'include',
         body: JSON.stringify({ email: testEmail }),
       });
       

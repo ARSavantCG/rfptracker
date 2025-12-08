@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Shield, Users, Settings, Edit, Trash2, CheckCircle, XCircle, User as UserIcon, KeyRound, FileText, HardDrive, Layout, Clock, Scale, ChevronDown, Hash, BarChart, ExternalLink } from "lucide-react";
+import { Shield, Users, Settings, Edit, Trash2, CheckCircle, XCircle, User as UserIcon, KeyRound, FileText, HardDrive, Layout, Clock, Scale, ChevronDown, Hash, BarChart, ExternalLink, Mail } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
@@ -848,6 +848,119 @@ function UserProfileDialog({ user, open, onOpenChange, onSave, onDelete, isSavin
   );
 }
 
+function EmailTestPanel() {
+  const { toast } = useToast();
+  const [testEmail, setTestEmail] = useState("");
+  const [isSending, setIsSending] = useState(false);
+
+  const handleSendTestEmail = async () => {
+    if (!testEmail.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter an email address",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(testEmail)) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid email address",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSending(true);
+    try {
+      const response = await fetch('/api/email/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: testEmail }),
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: `Test email sent to ${testEmail}`,
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: data.message || "Failed to send test email",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send test email",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center space-x-2">
+          <Mail className="h-5 w-5" />
+          <span>Email Testing</span>
+        </CardTitle>
+        <CardDescription>
+          Send test emails to preview how automated notifications will look
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <h3 className="font-medium text-blue-900 mb-2">Automated Email Schedule</h3>
+          <p className="text-sm text-blue-700">
+            Status report emails are automatically sent every <strong>Monday, Wednesday, and Friday at 8 AM</strong> to all contacts tagged as "Owner". 
+            Additionally, emails are sent when an RFP is created (Step 1 complete) and when published (Step 6 complete).
+          </p>
+        </div>
+
+        <div className="space-y-4">
+          <h3 className="font-medium text-gray-900">Send Test Status Report</h3>
+          <p className="text-sm text-gray-600">
+            Send a test status report email to yourself to preview the format before it goes out to Owner contacts.
+          </p>
+          
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <Input
+                type="email"
+                placeholder="Enter your email address"
+                value={testEmail}
+                onChange={(e) => setTestEmail(e.target.value)}
+                data-testid="input-test-email"
+              />
+            </div>
+            <Button 
+              onClick={handleSendTestEmail}
+              disabled={isSending}
+              data-testid="button-send-test-email"
+            >
+              <Mail className="h-4 w-4 mr-2" />
+              {isSending ? 'Sending...' : 'Send Test Email'}
+            </Button>
+          </div>
+          
+          <p className="text-xs text-gray-500">
+            The test email will be marked with [TEST] in the subject line.
+          </p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function Admin() {
   const { isAdmin } = usePermissions();
 
@@ -919,6 +1032,11 @@ export default function Admin() {
               <FileText className="h-4 w-4" />
               <span className="hidden sm:inline">RFP Templates</span>
               <span className="sm:hidden">Templates</span>
+            </TabsTrigger>
+            <TabsTrigger value="email" className="flex items-center gap-2 flex-shrink-0">
+              <Mail className="h-4 w-4" />
+              <span className="hidden sm:inline">Email Testing</span>
+              <span className="sm:hidden">Email</span>
             </TabsTrigger>
           </TabsList>
 
@@ -1043,6 +1161,10 @@ export default function Admin() {
 
           <TabsContent value="rfp-templates" className="mt-6">
             <TemplatesManagement />
+          </TabsContent>
+
+          <TabsContent value="email" className="mt-6">
+            <EmailTestPanel />
           </TabsContent>
         </Tabs>
       </div>

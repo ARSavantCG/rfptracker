@@ -6,11 +6,17 @@ import fs from 'fs';
 
 async function getCredentials() {
   // First, check for environment variables (highest priority - user-provided secrets)
-  const envApiKey = process.env.SENDGRID_API_KEY;
+  const envApiKey = process.env.SENDGRID_API_KEY?.trim();
   const envFromEmail = process.env.SENDGRID_FROM_EMAIL || 'noreply@bridgeindustrial.com';
   
   if (envApiKey) {
-    console.log('Using SendGrid credentials from environment variables');
+    // Log API key format for debugging (first 5 and last 4 chars only for security)
+    const keyPreview = envApiKey.length > 10 
+      ? `${envApiKey.substring(0, 5)}...${envApiKey.substring(envApiKey.length - 4)} (${envApiKey.length} chars)`
+      : `[too short: ${envApiKey.length} chars]`;
+    console.log(`Using SendGrid credentials from environment variables`);
+    console.log(`API key format: ${keyPreview}`);
+    console.log(`From email: ${envFromEmail}`);
     return { apiKey: envApiKey, email: envFromEmail };
   }
   
@@ -398,6 +404,10 @@ export async function sendTestStatusReportEmail(testEmail: string): Promise<{ su
     return { success: true };
   } catch (error: any) {
     console.error('Failed to send test status report email:', error);
+    // Log detailed SendGrid error response if available
+    if (error.response?.body?.errors) {
+      console.error('SendGrid error details:', JSON.stringify(error.response.body.errors, null, 2));
+    }
     return { success: false, error: error.message };
   }
 }

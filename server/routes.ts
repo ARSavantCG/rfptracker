@@ -8794,8 +8794,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Send test status report to a specific email (admin only)
-  app.post("/api/admin/email/send-test", requireAuth, checkPermission('admin.access'), async (req, res) => {
+  // Send test status report to a specific email (any authenticated user)
+  app.post("/api/admin/email/send-test", requireAuth, async (req, res) => {
     try {
       const { email } = req.body;
       if (!email || typeof email !== 'string') {

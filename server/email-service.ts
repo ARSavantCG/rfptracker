@@ -407,6 +407,18 @@ export async function sendTestStatusReportEmail(testEmail: string): Promise<{ su
     // Log detailed SendGrid error response if available
     if (error.response?.body?.errors) {
       console.error('SendGrid error details:', JSON.stringify(error.response.body.errors, null, 2));
+      // Extract specific error messages from SendGrid
+      const errors = error.response.body.errors;
+      if (errors && errors.length > 0) {
+        const firstError = errors[0];
+        if (firstError.message?.includes('Maximum credits exceeded')) {
+          return { success: false, error: 'SendGrid email quota exceeded. Please upgrade your SendGrid plan or wait for your monthly limit to reset.' };
+        }
+        if (firstError.message?.includes('Sender not verified')) {
+          return { success: false, error: 'Sender email not verified in SendGrid. Please verify noreply@bridgeindustrial.com in Settings → Sender Authentication.' };
+        }
+        return { success: false, error: `SendGrid error: ${firstError.message}` };
+      }
     }
     return { success: false, error: error.message };
   }

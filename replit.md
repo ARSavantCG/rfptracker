@@ -34,6 +34,13 @@ Key advanced systems and features include:
 - A comprehensive RFP Templates System for managing pre-configured cost item sets, stored in JSON, with secure API routes for CRUD operations, admin UI, and seamless integration into the evaluation import process. Templates now source items from a ROM Pilot catalog.
 - Building depth tracking per property for automatic demising wall quantity calculations. When importing templates or creating RFPs, demising wall line items automatically populate with the building's depth value for accurate pricing.
 - Auto-calculation system for Design (from rentable area), Builder's Risk Insurance (from TI total), Permit Fees (from TI total), Construction Management (from TI + all DSC including Design), and Contingency (5% of TI + all DSC including CM) with real-time updates.
+- **Automated Email Notification System**: Integrated with SendGrid via Replit connector for transactional emails.
+  - **Scheduled Status Reports**: Mon/Wed/Fri at 8 AM automatically sends a status report showing all incomplete RFPs (any status other than "Published") to all contacts tagged as "Owner". Reports are grouped by workflow phase.
+  - **Step 1 Completion Email**: When a new RFP is created (RFP Entry complete), an automatic email is sent to all Owner contacts with project details and all attached files.
+  - **Step 6 Completion Email**: When a project reaches the Publish phase, an automatic email is sent to all Owner contacts with project details and all associated attachments including evaluation budget documents.
+  - **Admin Controls**: Manual status report trigger available via API endpoint `/api/admin/email/send-status-report` (admin access required).
+  - Email service files: `server/email-service.ts` (templates and sending), `server/email-scheduler.ts` (scheduled job system).
+  - The scheduler runs every minute to check if it's time to send (8 AM on Mon/Wed/Fri) and prevents duplicate sends per day.
 
 ### External Dependencies
 - **Database**: PostgreSQL (Neon serverless)

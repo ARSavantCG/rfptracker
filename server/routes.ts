@@ -62,6 +62,8 @@ import {
 import { applyLegalRounding, validateLegalCompliance, LEGAL_TOTALS } from "./legal-rounding-system";
 import { deleteEntityFiles, cleanupOrphanedFiles, getCleanupStats, findOrphanedFiles } from "./file-cleanup";
 import Templates from "./lib/rfp-templates";
+import { sendWorkflowCompletionEmail } from "./email-service";
+import { startEmailScheduler, sendStatusReportNow } from "./email-scheduler";
 
 // Helper function to clean invalid values like "$NaN", "NaN", etc.
 function cleanInvalidValue(value: any): string {
@@ -1747,6 +1749,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // status remains "received" until Step 2 validation is completed
       });
       
+      // Send Step 1 completion email (RFP Entry complete) with attachments
+      try {
+        const rfpForEmail = advancedRequest || newRequest;
+        await sendWorkflowCompletionEmail(rfpForEmail, 'rfp-entry');
+      } catch (emailError) {
+        console.error('Failed to send RFP entry completion email:', emailError);
+        // Don't fail the request if email fails
+      }
+      
       res.status(201).json(advancedRequest || newRequest);
     } catch (error) {
       console.error('RFP creation error:', error);
@@ -1956,6 +1967,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // status remains "received" until Step 2 validation is completed
       });
       
+      // Send Step 1 completion email (RFP Entry complete) with attachments
+      try {
+        const rfpForEmail = advancedRequest || newRequest;
+        await sendWorkflowCompletionEmail(rfpForEmail, 'rfp-entry');
+      } catch (emailError) {
+        console.error('Failed to send RFP entry completion email:', emailError);
+        // Don't fail the request if email fails
+      }
+      
       res.status(201).json(advancedRequest || newRequest);
     } catch (error) {
       console.error('RFP creation error:', error);
@@ -2005,6 +2025,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!updatedRequest) {
         return res.status(404).json({ message: "RFP request not found" });
+      }
+
+      // Send Step 6 completion email when advancing to publish phase
+      if (newPhase === 'publish') {
+        try {
+          await sendWorkflowCompletionEmail(updatedRequest, 'publish');
+        } catch (emailError) {
+          console.error('Failed to send publish completion email:', emailError);
+        }
       }
 
       res.json(updatedRequest);
@@ -2914,6 +2943,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "RFP request not found" });
       }
 
+      // Send Step 6 completion email when advancing to publish phase
+      if (phase === 'publish') {
+        try {
+          await sendWorkflowCompletionEmail(updated, 'publish');
+        } catch (emailError) {
+          console.error('Failed to send publish completion email:', emailError);
+        }
+      }
+
       res.json(updated);
     } catch (error) {
       res.status(500).json({ message: "Failed to update workflow phase" });
@@ -2950,6 +2988,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updated = await storage.advanceWorkflowPhase(id, newPhase);
       if (!updated) {
         return res.status(404).json({ message: "RFP request not found" });
+      }
+
+      // Send Step 6 completion email when advancing to publish phase
+      if (newPhase === 'publish') {
+        try {
+          await sendWorkflowCompletionEmail(updated, 'publish');
+        } catch (emailError) {
+          console.error('Failed to send publish completion email:', emailError);
+        }
       }
 
       res.json(updated);
@@ -8711,6 +8758,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error building template preview:", error);
       res.status(500).json({ message: "Failed to build template preview" });
+    }
+  });
+
+  // Email Admin Routes
+
+  // Send status report manually (admin only)
+  app.post("/api/admin/email/send-status-report", requireAuth, checkPermission('admin.access'), async (req, res) => {
+    try {
+      const result = await sendStatusReportNow();
+      if (result.success) {
+        res.json({ message: "Status report sent successfully" });
+      } else {
+        res.status(500).json({ message: result.error || "Failed to send status report" });
+      }
+    } catch (error) {
+      console.error("Error sending status report:", error);
+      res.status(500).json({ message: "Failed to send status report" });
+    }
+  });
+
+  // Get owner contacts (for preview/testing)
+  app.get("/api/admin/email/owner-contacts", requireAuth, checkPermission('admin.access'), async (req, res) => {
+    try {
+      const owners = await storage.getContactsByType('owner');
+      res.json(owners.map(owner => ({
+        id: owner.id,
+        name: owner.name,
+        email: owner.email,
+        company: owner.company
+      })));
+    } catch (error) {
+      console.error("Error fetching owner contacts:", error);
+      res.status(500).json({ message: "Failed to fetch owner contacts" });
     }
   });
 

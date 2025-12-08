@@ -10,6 +10,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import Templates from "./lib/rfp-templates";
+import { startEmailScheduler } from "./email-scheduler";
 
 const app = express();
 app.use(express.json());
@@ -80,6 +81,14 @@ app.use((req, res, next) => {
     await setupVite(app, server);
   } else {
     serveStatic(app);
+  }
+
+  // Start the email scheduler for Mon/Wed/Fri 8 AM status reports
+  try {
+    startEmailScheduler();
+    log("✅ Email scheduler started (Mon/Wed/Fri at 8 AM)");
+  } catch (error) {
+    log(`⚠️  Warning: Failed to start email scheduler: ${error}`);
   }
 
   // ALWAYS serve the app on port 5000

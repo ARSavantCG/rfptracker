@@ -3944,6 +3944,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Dedicated endpoint for updating electrical allocation settings
+  app.patch("/api/properties/:id/electrical-allocation", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid ID" });
+      }
+
+      const { electricalAllocation, electricalAllocationIncrement } = req.body;
+      
+      // Validate the input
+      if (typeof electricalAllocation !== 'number' || typeof electricalAllocationIncrement !== 'number') {
+        return res.status(400).json({ message: "Invalid input: electricalAllocation and electricalAllocationIncrement must be numbers" });
+      }
+
+      const property = await storage.updateProperty(id, { 
+        electricalAllocation, 
+        electricalAllocationIncrement 
+      });
+      
+      if (!property) {
+        return res.status(404).json({ message: "Property not found" });
+      }
+
+      res.json(property);
+    } catch (error) {
+      console.error('Electrical allocation update error:', error);
+      res.status(500).json({ message: "Failed to update electrical allocation settings" });
+    }
+  });
+
   app.delete("/api/properties/:id", requireAuth, checkPermission('properties.delete'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);

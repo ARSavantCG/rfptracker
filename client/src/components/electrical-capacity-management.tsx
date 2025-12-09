@@ -156,7 +156,7 @@ export function ElectricalCapacityManagement({ propertyId, propertyName, propert
   // Mutation to update property tenant allocation settings
   const updateTenantAllocationMutation = useMutation({
     mutationFn: async (data: { electricalAllocation: number; electricalAllocationIncrement: number }) =>
-      apiRequest(`/api/properties/${propertyId}`, 'PATCH', data),
+      apiRequest(`/api/properties/${propertyId}/electrical-allocation`, 'PATCH', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/properties/${propertyId}`] });
       queryClient.invalidateQueries({ queryKey: ['/api/properties'] });

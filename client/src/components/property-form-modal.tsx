@@ -385,41 +385,6 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
                 </div>
               </div>
               
-              {/* Electrical Allocation */}
-              <div className="mt-4 pt-4 border-t border-gray-200">
-                <Label className="text-sm font-semibold text-gray-700 flex items-center gap-2 mb-3">
-                  ⚡ Electrical Allocation
-                </Label>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="electricalAllocation">Total Electrical Capacity (AMPS)</Label>
-                    <Input
-                      id="electricalAllocation"
-                      type="number"
-                      min="0"
-                      value={formData.electricalAllocation || 0}
-                      onChange={(e) => setFormData(prev => ({ ...prev, electricalAllocation: parseInt(e.target.value) || 0 }))}
-                      placeholder="0"
-                      data-testid="input-electrical-allocation"
-                    />
-                    <p className="text-xs text-gray-500">Total electrical capacity for the property</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="electricalAllocationIncrement">Tenant Allocation Increment (AMPS)</Label>
-                    <Input
-                      id="electricalAllocationIncrement"
-                      type="number"
-                      min="0"
-                      step="50"
-                      value={formData.electricalAllocationIncrement || 200}
-                      onChange={(e) => setFormData(prev => ({ ...prev, electricalAllocationIncrement: parseInt(e.target.value) || 200 }))}
-                      placeholder="200"
-                      data-testid="input-electrical-allocation-increment"
-                    />
-                    <p className="text-xs text-gray-500">Tenant allocations round to this increment (e.g., 200 AMPS)</p>
-                  </div>
-                </div>
-              </div>
               
               {/* Parking Ratio Display */}
               <div className="mt-3 pt-3 border-t border-gray-200">

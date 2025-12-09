@@ -1,5 +1,5 @@
 import { db } from './db';
-import { properties, executedLeases, propertyExistingImprovements, rfpRequests } from '../shared/schema';
+import { properties, executedLeases, propertyExistingImprovements, rfpRequests, transformers, mainPanels } from '../shared/schema';
 import { eq, sql } from 'drizzle-orm';
 import { formatDateForDisplay } from '../shared/date-utils';
 
@@ -167,12 +167,21 @@ interface BayConfig {
   notes: string;
 }
 
+interface PanelInfo {
+  panelName: string;
+  voltage: string;
+  capacityAmps: number;
+  capacityKva: number;
+  location: string;
+}
+
 interface ElectricalConfig {
   transformerName: string;
   capacity: number;
   allocated: number;
   available: number;
   utilizationPercentage: number;
+  panels: PanelInfo[];
 }
 
 interface LeaseInfo {
@@ -299,6 +308,62 @@ async function getPropertySummaryData(options?: RfpOptions): Promise<PropertySum
       .from(propertyExistingImprovements)
       .where(eq(propertyExistingImprovements.propertyId, property.id));
 
+    // Get electrical capacity data - transformers and panels
+    const propertyTransformers = await db
+      .select()
+      .from(transformers)
+      .where(eq(transformers.propertyId, property.id));
+    
+    const allPanels = await db
+      .select()
+      .from(mainPanels);
+    
+    // Helper function to normalize voltage string to base number
+    const normalizeVoltage = (voltage: string): string => {
+      // Handle various formats: "480", "480V", "208/120V", "208", "240V", "240"
+      const v = (voltage || '480').replace(/[Vv]/g, '').trim();
+      if (v.startsWith('208') || v === '120') return '208';
+      if (v.startsWith('240')) return '240';
+      if (v.startsWith('480')) return '480';
+      return '480'; // Default fallback
+    };
+    
+    // Helper function to convert kVA to AMPS based on voltage (3-phase systems)
+    const kvaToAmps = (kva: number, voltage: string = '480'): number => {
+      const normalizedVoltage = normalizeVoltage(voltage);
+      const voltageMultipliers: Record<string, number> = {
+        '480': 480 * Math.sqrt(3),
+        '208': 208 * Math.sqrt(3),
+        '240': 240 * Math.sqrt(3)
+      };
+      const multiplier = voltageMultipliers[normalizedVoltage] || voltageMultipliers['480'];
+      return Math.round((kva * 1000) / multiplier);
+    };
+    
+    // Build electrical capacity with panels grouped by transformer
+    const electricalCapacity: ElectricalConfig[] = propertyTransformers.map(transformer => {
+      const transformerPanels = allPanels.filter(p => p.transformerId === transformer.id);
+      const allocatedKva = transformerPanels.reduce((sum, p) => sum + p.maxCapacityKva, 0);
+      
+      return {
+        transformerName: transformer.transformerName,
+        capacity: transformer.totalCapacityKva,
+        allocated: allocatedKva,
+        available: Math.max(0, transformer.totalCapacityKva - allocatedKva),
+        utilizationPercentage: transformer.totalCapacityKva > 0 ? (allocatedKva / transformer.totalCapacityKva) * 100 : 0,
+        panels: transformerPanels.map(panel => {
+          const voltage = panel.voltage || '480';
+          return {
+            panelName: panel.panelName,
+            voltage: voltage,
+            capacityAmps: panel.capacityAmps || kvaToAmps(panel.maxCapacityKva, voltage),
+            capacityKva: panel.maxCapacityKva,
+            location: panel.panelLocation || ''
+          };
+        })
+      };
+    });
+
     // Calculate totals - use selected bays in RFP mode, all bays otherwise
     const bayConfigs = property.bayConfigurations || [];
     const relevantBays = selectedBayConfigurations && selectedBayConfigurations.length > 0 ? selectedBayConfigurations : bayConfigs;
@@ -398,7 +463,7 @@ async function getPropertySummaryData(options?: RfpOptions): Promise<PropertySum
         office: property.mechanicalRoomSquareFootage ? 'Office space available' : 'Warehouse only',
         notes: bay.notes || ''
       })),
-      electricalCapacity: [], // Dynamic electrical capacity data would be retrieved from electrical_capacity table if implemented
+      electricalCapacity: electricalCapacity, // Real data from transformers and panels tables
       executedLeases: leases.map((lease: any) => ({
         tenantName: lease.tenantName,
         leaseStartDate: formatDateForDisplay(lease.leaseStartDate),
@@ -715,11 +780,39 @@ function generatePropertySummaryHTML(data: PropertySummaryData): string {
                             ${property.electricalCapacity.map(elec => `
                             <tr>
                                 <td><strong>${elec.transformerName}</strong></td>
-                                <td class="metric-value">${formatNumber(elec.capacity)} kW</td>
-                                <td>${formatNumber(elec.allocated)} kW</td>
-                                <td class="metric-value">${formatNumber(elec.available)} kW</td>
-                                <td>${elec.utilizationPercentage}%</td>
+                                <td class="metric-value">${formatNumber(elec.capacity)} kVA</td>
+                                <td>${formatNumber(elec.allocated)} kVA</td>
+                                <td class="metric-value">${formatNumber(elec.available)} kVA</td>
+                                <td>${elec.utilizationPercentage.toFixed(1)}%</td>
                             </tr>
+                            ${elec.panels.length > 0 ? `
+                            <tr>
+                                <td colspan="5" style="padding: 0; background: #f8f9fa;">
+                                    <table style="width: 100%; margin: 0; border: none;">
+                                        <thead>
+                                            <tr style="background: #e9ecef;">
+                                                <th style="padding: 4px 8px; font-size: 11px;">Panel</th>
+                                                <th style="padding: 4px 8px; font-size: 11px;">Voltage</th>
+                                                <th style="padding: 4px 8px; font-size: 11px;">Capacity (AMPS)</th>
+                                                <th style="padding: 4px 8px; font-size: 11px;">Capacity (kVA)</th>
+                                                <th style="padding: 4px 8px; font-size: 11px;">Location</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${elec.panels.map(panel => `
+                                            <tr>
+                                                <td style="padding: 4px 8px; font-size: 11px;">${panel.panelName}</td>
+                                                <td style="padding: 4px 8px; font-size: 11px;">${panel.voltage}V</td>
+                                                <td style="padding: 4px 8px; font-size: 11px;">${formatNumber(panel.capacityAmps)} AMPS</td>
+                                                <td style="padding: 4px 8px; font-size: 11px;">${panel.capacityKva.toFixed(1)} kVA</td>
+                                                <td style="padding: 4px 8px; font-size: 11px;">${panel.location || 'N/A'}</td>
+                                            </tr>
+                                            `).join('')}
+                                        </tbody>
+                                    </table>
+                                </td>
+                            </tr>
+                            ` : ''}
                             `).join('')}
                         </tbody>
                     </table>

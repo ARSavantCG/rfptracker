@@ -69,7 +69,29 @@ interface EvaluationBudgetData {
   electricalAllocation: number;
   calculatedElectricalAllocation: number;
   electricalAllocationOverride: number | null;
+  tenantVoltage: string;
 }
+
+// Voltage options for tenant electrical allocation
+const VOLTAGE_OPTIONS = [
+  { value: "480", label: "480V (3-Phase)", multiplier: 480 * Math.sqrt(3) },
+  { value: "208", label: "208/120V (3-Phase)", multiplier: 208 * Math.sqrt(3) },
+  { value: "240", label: "240V (3-Phase)", multiplier: 240 * Math.sqrt(3) },
+] as const;
+
+// Convert AMPS to kVA based on voltage
+const ampsToKva = (amps: number, voltage: string = "480"): number => {
+  const option = VOLTAGE_OPTIONS.find(v => v.value === voltage);
+  const multiplier = option ? option.multiplier : 480 * Math.sqrt(3);
+  return Math.round((amps * multiplier) / 1000);
+};
+
+// Convert kVA to AMPS based on voltage
+const kvaToAmps = (kva: number, voltage: string = "480"): number => {
+  const option = VOLTAGE_OPTIONS.find(v => v.value === voltage);
+  const multiplier = option ? option.multiplier : 480 * Math.sqrt(3);
+  return Math.round((kva * 1000) / multiplier);
+};
 
 interface EvaluationBudgetProps {
   rfp: RfpRequest | null;
@@ -936,6 +958,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
     electricalAllocation: 0,
     calculatedElectricalAllocation: 0,
     electricalAllocationOverride: null,
+    tenantVoltage: "480",
   });
 
   // Track which items have been manually overridden (won't auto-calculate)
@@ -1554,6 +1577,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       const savedElectrical = (existingBudget as any).metadata?.electricalAllocation;
       const savedElectricalOverride = (existingBudget as any).metadata?.electricalAllocationOverride;
       const savedCalculatedElectrical = (existingBudget as any).metadata?.calculatedElectricalAllocation;
+      const savedTenantVoltage = (existingBudget as any).metadata?.tenantVoltage;
       
       // Calculate current electrical allocation based on tenant SF percentage
       const currentCalculatedElectrical = calculateElectricalAllocation();
@@ -1592,6 +1616,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         electricalAllocation: effectiveElectrical,
         calculatedElectricalAllocation: currentCalculatedElectrical,
         electricalAllocationOverride: effectiveElectricalOverride,
+        tenantVoltage: savedTenantVoltage || "480",
       });
     } else {
       // Initialize with door counts and existing improvements even if no other data
@@ -3552,7 +3577,8 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
           trailerParking: budgetData.trailerParking,
           electricalAllocation: budgetData.electricalAllocation,
           calculatedElectricalAllocation: budgetData.calculatedElectricalAllocation,
-          electricalAllocationOverride: budgetData.electricalAllocationOverride
+          electricalAllocationOverride: budgetData.electricalAllocationOverride,
+          tenantVoltage: budgetData.tenantVoltage
         },
       };
 
@@ -3626,7 +3652,8 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
           trailerParking: budgetData.trailerParking,
           electricalAllocation: budgetData.electricalAllocation,
           calculatedElectricalAllocation: budgetData.calculatedElectricalAllocation,
-          electricalAllocationOverride: budgetData.electricalAllocationOverride
+          electricalAllocationOverride: budgetData.electricalAllocationOverride,
+          tenantVoltage: budgetData.tenantVoltage
         },
       };
 
@@ -4943,9 +4970,18 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
                 const propertyTotalAllocation = (activeProperty as any)?.electricalAllocation || 0;
                 const minimumAllocation = (activeProperty as any)?.electricalAllocationIncrement || 200;
                 const effectiveAmps = budgetData.electricalAllocation || 0;
-                const exceedsCapacity = propertyTotalAllocation > 0 && effectiveAmps > propertyTotalAllocation;
+                const tenantVoltage = budgetData.tenantVoltage || "480";
+                
+                // Convert effective AMPS to kVA based on selected voltage for capacity comparison
+                const effectiveKva = ampsToKva(effectiveAmps, tenantVoltage);
+                const propertyKva = ampsToKva(propertyTotalAllocation, "480"); // Property is always at 480V
+                
+                const exceedsCapacity = propertyKva > 0 && effectiveKva > propertyKva;
                 const belowMinimum = effectiveAmps > 0 && effectiveAmps < minimumAllocation;
                 const noCapacityAvailable = propertyTotalAllocation === 0;
+                
+                // Get voltage label for display
+                const voltageLabel = VOLTAGE_OPTIONS.find(v => v.value === tenantVoltage)?.label || "480V";
                 
                 return (
                   <>
@@ -4954,9 +4990,9 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
                         <Zap className="h-4 w-4 text-yellow-500" />
                         Electrical Allocation
                       </Label>
-                      {propertyTotalAllocation > 0 && (
+                      {propertyKva > 0 && (
                         <span className="text-xs text-gray-500">
-                          Property Total: {propertyTotalAllocation.toLocaleString()} AMPS available
+                          Property Capacity: {propertyKva.toLocaleString()} kVA ({propertyTotalAllocation.toLocaleString()} AMPS @ 480V)
                         </span>
                       )}
                     </div>
@@ -4974,8 +5010,8 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
                       <div className="mb-3 p-2 bg-red-100 border border-red-300 rounded-lg flex items-center gap-2">
                         <AlertTriangle className="h-4 w-4 text-red-600" />
                         <p className="text-xs text-red-700 font-medium">
-                          Requested {effectiveAmps.toLocaleString()} AMPS exceeds available capacity of {propertyTotalAllocation.toLocaleString()} AMPS.
-                          Shortfall: {(effectiveAmps - propertyTotalAllocation).toLocaleString()} AMPS
+                          Tenant requires {effectiveKva.toLocaleString()} kVA but only {propertyKva.toLocaleString()} kVA is available.
+                          Shortfall: {(effectiveKva - propertyKva).toLocaleString()} kVA
                         </p>
                       </div>
                     )}
@@ -4988,7 +5024,33 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
                       </div>
                     )}
                     
-                    <div className="grid grid-cols-3 gap-4">
+                    {/* Voltage Selection */}
+                    <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Zap className="h-4 w-4 text-blue-600" />
+                          <div>
+                            <p className="text-xs font-medium text-blue-700">Tenant Voltage Requirement</p>
+                            <p className="text-xs text-blue-500">Same kVA provides different AMPS at different voltages</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <select
+                            value={tenantVoltage}
+                            onChange={(e) => setBudgetData(prev => ({ ...prev, tenantVoltage: e.target.value }))}
+                            disabled={!premisesEditMode}
+                            className="h-9 rounded-md border border-blue-300 bg-white px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                            data-testid="select-tenant-voltage"
+                          >
+                            {VOLTAGE_OPTIONS.map(option => (
+                              <option key={option.value} value={option.value}>{option.label}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-4 gap-4">
                       <div>
                         <Label htmlFor="calculatedElectrical">Calculated AMPS</Label>
                         <Input
@@ -5030,32 +5092,49 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
                           Leave blank to use calculated
                         </p>
                       </div>
-                      <div className="flex flex-col justify-between">
-                        <div>
-                          <Label>Effective AMPS</Label>
-                          <p className={`text-lg font-semibold mt-2 ${exceedsCapacity ? 'text-red-600' : ''}`} data-testid="text-effective-electrical-allocation">
-                            {effectiveAmps.toLocaleString()} AMPS
-                            {exceedsCapacity && <AlertTriangle className="inline h-4 w-4 ml-1 text-red-600" />}
-                          </p>
-                        </div>
-                        {premisesEditMode && budgetData.electricalAllocationOverride !== null && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setBudgetData(prev => ({
-                                ...prev,
-                                electricalAllocationOverride: null,
-                                electricalAllocation: prev.calculatedElectricalAllocation
-                              }));
-                            }}
-                            className="text-xs h-7"
-                          >
-                            Reset to Calculated
-                          </Button>
-                        )}
+                      <div>
+                        <Label>Effective AMPS</Label>
+                        <p className={`text-lg font-semibold mt-2 ${exceedsCapacity ? 'text-red-600' : ''}`} data-testid="text-effective-electrical-allocation">
+                          {effectiveAmps.toLocaleString()} AMPS
+                          {exceedsCapacity && <AlertTriangle className="inline h-4 w-4 ml-1 text-red-600" />}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          @ {voltageLabel}
+                        </p>
+                      </div>
+                      <div>
+                        <Label>Equivalent kVA</Label>
+                        <p className={`text-lg font-semibold mt-2 ${exceedsCapacity ? 'text-red-600' : ''}`} data-testid="text-effective-kva">
+                          {effectiveKva.toLocaleString()} kVA
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {exceedsCapacity 
+                            ? <span className="text-red-600">Exceeds {propertyKva} kVA capacity</span>
+                            : propertyKva > 0 
+                              ? `${Math.round((effectiveKva / propertyKva) * 100)}% of capacity`
+                              : "Voltage-agnostic power"}
+                        </p>
                       </div>
                     </div>
+                    
+                    {premisesEditMode && budgetData.electricalAllocationOverride !== null && (
+                      <div className="mt-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setBudgetData(prev => ({
+                              ...prev,
+                              electricalAllocationOverride: null,
+                              electricalAllocation: prev.calculatedElectricalAllocation
+                            }));
+                          }}
+                          className="text-xs h-7"
+                        >
+                          Reset to Calculated
+                        </Button>
+                      </div>
+                    )}
                   </>
                 );
               })()}

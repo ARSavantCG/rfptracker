@@ -476,6 +476,9 @@ export const properties = pgTable("properties", {
   evParking: integer("ev_parking").default(0),
   trailerParking: integer("trailer_parking").default(0),
   
+  // Electrical Allocation
+  electricalAllocation: integer("electrical_allocation").default(0), // Total electrical allocation in amps
+  
   // Building Specifications
   buildingDepth: integer("building_depth"), // Building depth in feet (used for demising wall calculations)
   slabThickness: text("slab_thickness"), // e.g., "6 inches @ 4000 PSI"

@@ -32,11 +32,20 @@ interface MainPanel {
   transformerId: number;
   panelName: string;
   maxCapacityKva: number;
+  capacityAmps?: number; // Direct AMPS entry for panels
   panelLocation?: string;
   isActive?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
+
+// Helper function to convert kVA to AMPS (3-phase 480V)
+// Formula: AMPS = (kVA × 1000) / (480 × √3) ≈ kVA × 1.2
+const kvaToAmps = (kva: number): number => Math.round(kva * 1.2);
+
+// Helper function to convert AMPS to kVA (3-phase 480V)  
+// Formula: kVA = (AMPS × 480 × √3) / 1000 ≈ AMPS × 0.83
+const ampsToKva = (amps: number): number => Math.round(amps * 0.83);
 
 interface BayPanelAssignment {
   id: number;
@@ -260,10 +269,12 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
   const handleMainPanelSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
+    const capacityAmps = parseInt(formData.get('capacityAmps') as string);
     const panel = {
       transformerId: parseInt(formData.get('transformerId') as string),
       panelName: formData.get('name') as string,
-      maxCapacityKva: parseFloat(formData.get('capacity') as string),
+      maxCapacityKva: ampsToKva(capacityAmps), // Convert AMPS to kVA for storage
+      capacityAmps: capacityAmps, // Store AMPS directly
       panelLocation: formData.get('location') as string,
     };
 
@@ -584,7 +595,7 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
                         <TableRow key={panel.id}>
                           <TableCell className="font-medium">{panel.panelName}</TableCell>
                           <TableCell>{transformer?.transformerName || 'Unknown'}</TableCell>
-                          <TableCell>{panel.maxCapacityKva.toLocaleString()} kVA</TableCell>
+                          <TableCell>{(panel.capacityAmps || kvaToAmps(panel.maxCapacityKva)).toLocaleString()} AMPS</TableCell>
                           <TableCell>{panel.panelLocation || 'N/A'}</TableCell>
                           <TableCell>
                             <div className="flex gap-2">
@@ -839,14 +850,16 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
                 />
               </div>
               <div>
-                <Label htmlFor="capacity">Capacity (kVA) *</Label>
+                <Label htmlFor="capacityAmps">Capacity (AMPS) *</Label>
                 <Input
-                  name="capacity"
+                  name="capacityAmps"
                   type="number"
-                  defaultValue={editingPanel?.maxCapacityKva || ''}
-                  placeholder="e.g., 800"
+                  step="200"
+                  defaultValue={editingPanel?.capacityAmps || (editingPanel?.maxCapacityKva ? kvaToAmps(editingPanel.maxCapacityKva) : '')}
+                  placeholder="e.g., 200, 400, 600, 800"
                   required
                 />
+                <p className="text-xs text-gray-500 mt-1">Enter in 200 AMP increments</p>
               </div>
               <div>
                 <Label htmlFor="transformerId">Transformer *</Label>
@@ -936,7 +949,7 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
                     <option value="">Select main panel</option>
                     {mainPanels.map((panel: MainPanel) => (
                       <option key={panel.id} value={panel.id.toString()}>
-                        {panel.panelName} ({panel.maxCapacityKva} kVA)
+                        {panel.panelName} ({panel.capacityAmps || kvaToAmps(panel.maxCapacityKva)} AMPS)
                       </option>
                     ))}
                   </select>

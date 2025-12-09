@@ -532,6 +532,7 @@ export const mainPanels = pgTable("main_panels", {
   transformerId: integer("transformer_id").notNull().references(() => transformers.id, { onDelete: "cascade" }),
   panelName: text("panel_name").notNull(), // e.g., "Panel A", "Main Panel 1"
   maxCapacityKva: integer("max_capacity_kva").notNull(), // Panel's maximum capacity in kVA
+  capacityAmps: integer("capacity_amps"), // Panel's capacity in AMPS (optional, can be entered directly or calculated)
   panelLocation: text("panel_location"), // Physical location description
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -602,7 +603,7 @@ export const updateTransformerSchema = insertTransformerSchema.partial().extend(
 });
 
 export const updateMainPanelSchema = insertMainPanelSchema.partial().extend({
-  id: z.number(),
+  id: z.number().optional(),
 });
 
 export const updateElectricalReservationSchema = insertElectricalReservationSchema.partial().extend({

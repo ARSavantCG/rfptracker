@@ -3039,6 +3039,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
                 <div>
                     <p style="margin: 4px 0; font-size: 13px;"><strong>Vehicular Parking:</strong> ${budgetData.vehicularParking || 0} spaces</p>
                     <p style="margin: 4px 0; font-size: 13px;"><strong>Trailer Parking:</strong> ${budgetData.trailerParking || 0} spaces</p>
+                    <p style="margin: 4px 0; font-size: 13px;"><strong>Electrical Allocation:</strong> ${budgetData.electricalAllocation || 0} AMPS</p>
                 </div>
             </div>
         </div>

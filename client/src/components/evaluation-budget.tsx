@@ -1478,6 +1478,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       // For parking, ALWAYS use saved metadata values if they exist, never recalculate
       const savedVehicular = (existingBudget as any).metadata?.vehicularParking;
       const savedTrailer = (existingBudget as any).metadata?.trailerParking;
+      const savedElectrical = (existingBudget as any).metadata?.electricalAllocation;
       
       // Check if saved existing improvements have the bucket field (added in cost lifecycle tracking)
       // If not, refresh from property to get updated data with bucket field
@@ -1506,6 +1507,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         regularDoors: doorCounts.regular,
         vehicularParking: savedVehicular !== undefined ? savedVehicular : 0,
         trailerParking: savedTrailer !== undefined ? savedTrailer : 0,
+        electricalAllocation: savedElectrical !== undefined ? savedElectrical : (propertyData?.electricalAllocation || 0),
       });
     } else {
       // Initialize with door counts and existing improvements even if no other data
@@ -3459,7 +3461,8 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
           oversizedDoors: budgetData.oversizedDoors, 
           regularDoors: budgetData.regularDoors,
           vehicularParking: budgetData.vehicularParking,
-          trailerParking: budgetData.trailerParking
+          trailerParking: budgetData.trailerParking,
+          electricalAllocation: budgetData.electricalAllocation
         },
       };
 
@@ -3530,7 +3533,8 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
           oversizedDoors: budgetData.oversizedDoors, 
           regularDoors: budgetData.regularDoors,
           vehicularParking: budgetData.vehicularParking,
-          trailerParking: budgetData.trailerParking
+          trailerParking: budgetData.trailerParking,
+          electricalAllocation: budgetData.electricalAllocation
         },
       };
 

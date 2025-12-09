@@ -533,6 +533,7 @@ export const mainPanels = pgTable("main_panels", {
   panelName: text("panel_name").notNull(), // e.g., "Panel A", "Main Panel 1"
   maxCapacityKva: integer("max_capacity_kva").notNull(), // Panel's maximum capacity in kVA
   capacityAmps: integer("capacity_amps"), // Panel's capacity in AMPS (optional, can be entered directly or calculated)
+  voltage: text("voltage").default("480"), // Voltage configuration: "480", "208", "240" - defaults to 480V 3-phase
   panelLocation: text("panel_location"), // Physical location description
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow().notNull(),

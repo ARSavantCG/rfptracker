@@ -66,6 +66,7 @@ interface EvaluationBudgetData {
   regularDoors: number;
   vehicularParking: number;
   trailerParking: number;
+  electricalAllocation: number;
 }
 
 interface EvaluationBudgetProps {
@@ -930,6 +931,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
     regularDoors: 0,
     vehicularParking: 0,
     trailerParking: 0,
+    electricalAllocation: 0,
   });
 
   // Track which items have been manually overridden (won't auto-calculate)
@@ -1272,12 +1274,16 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       
       console.log('🚪 Door counts calculated:', { oversized: doorCounts.oversized, regular: doorCounts.regular });
       
+      // Get electrical allocation from property
+      const electricalAllocation = propertyData?.electricalAllocation || 0;
+      
       setBudgetData(prev => ({
         ...prev,
         oversizedDoors: doorCounts.oversized,
         regularDoors: doorCounts.regular,
         vehicularParking: parkingCounts.vehicular,
-        trailerParking: parkingCounts.trailer
+        trailerParking: parkingCounts.trailer,
+        electricalAllocation: electricalAllocation
       }));
     }
   }, [rfp?.selectedBayConfigurations, propertyData, existingBudget]);
@@ -1512,9 +1518,10 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         regularDoors: doorCounts.regular,
         vehicularParking: parkingCounts.vehicular,
         trailerParking: parkingCounts.trailer,
+        electricalAllocation: propertyData?.electricalAllocation || 0,
       }));
     }
-  }, [existingBudget, allBidLineItems, bidCollections, rfp?.selectedBayConfigurations, propertyImprovements]);
+  }, [existingBudget, allBidLineItems, bidCollections, rfp?.selectedBayConfigurations, propertyImprovements, propertyData]);
 
   const formatCurrency = (amount: string | number) => {
     const num = typeof amount === 'string' ? parseFloat(amount) : amount;
@@ -4810,6 +4817,36 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
                     readOnly={!premisesEditMode}
                     disabled={!premisesEditMode}
                   />
+                </div>
+              </div>
+            </div>
+
+            {/* Electrical Allocation Section */}
+            <div>
+              <Label className="text-base font-medium mb-3 block">⚡ Electrical Allocation</Label>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="electricalAllocation">Total AMPS</Label>
+                  <Input
+                    id="electricalAllocation"
+                    type="number"
+                    min="0"
+                    value={budgetData.electricalAllocation || 0}
+                    onChange={(e) => setBudgetData(prev => ({
+                      ...prev,
+                      electricalAllocation: parseInt(e.target.value) || 0
+                    }))}
+                    className="mt-1"
+                    placeholder="0"
+                    readOnly={!premisesEditMode}
+                    disabled={!premisesEditMode}
+                    data-testid="input-evaluation-electrical-allocation"
+                  />
+                </div>
+                <div className="flex items-end">
+                  <p className="text-sm text-gray-500 mb-2">
+                    Electrical capacity from property settings
+                  </p>
                 </div>
               </div>
             </div>

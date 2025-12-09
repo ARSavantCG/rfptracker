@@ -478,6 +478,7 @@ export const properties = pgTable("properties", {
   
   // Electrical Allocation
   electricalAllocation: integer("electrical_allocation").default(0), // Total electrical allocation in amps
+  electricalAllocationIncrement: integer("electrical_allocation_increment").default(200), // Increment for tenant allocation rounding (default 200 AMPS)
   
   // Building Specifications
   buildingDepth: integer("building_depth"), // Building depth in feet (used for demising wall calculations)

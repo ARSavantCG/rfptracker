@@ -1254,14 +1254,24 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
     // Get total electrical allocation from property
     const totalElectricalAllocation = property.electricalAllocation || 0;
     
+    // Get the increment for rounding (default 200 AMPS)
+    const increment = property.electricalAllocationIncrement || 200;
+    
     // Calculate proportional electrical allocation
-    const allocatedElectrical = Math.round(totalElectricalAllocation * tenantPercentage);
+    const rawAllocation = totalElectricalAllocation * tenantPercentage;
+    
+    // Round up to nearest increment (e.g., 450 AMPS → 600 AMPS if increment is 200)
+    const allocatedElectrical = increment > 0 
+      ? Math.ceil(rawAllocation / increment) * increment 
+      : Math.round(rawAllocation);
     
     console.log('⚡ Electrical Calc Debug:', { 
       tenantArea: tenantRentableArea,
       totalArea: totalPropertyArea,
       percentage: (tenantPercentage * 100).toFixed(1) + '%',
       totalElectrical: totalElectricalAllocation,
+      increment: increment,
+      rawAllocation: rawAllocation.toFixed(0),
       allocatedElectrical
     });
     

@@ -326,7 +326,16 @@ async function getPropertySummaryData(options?: RfpOptions): Promise<PropertySum
     // Calculate proportional electrical allocation
     const totalElectrical = property.electricalAllocation || 0;
     
-    return Math.round(totalElectrical * tenantPercentage);
+    // Get the increment for rounding (default 200 AMPS)
+    const increment = property.electricalAllocationIncrement || 200;
+    
+    // Calculate raw allocation and round up to nearest increment
+    const rawAllocation = totalElectrical * tenantPercentage;
+    
+    // Round up to nearest increment (e.g., 450 AMPS → 600 AMPS if increment is 200)
+    return increment > 0 
+      ? Math.ceil(rawAllocation / increment) * increment 
+      : Math.round(rawAllocation);
   };
 
   for (const property of allProperties) {

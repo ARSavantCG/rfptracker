@@ -33,6 +33,7 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
     evParking: property?.evParking || 0,
     trailerParking: property?.trailerParking || 0,
     electricalAllocation: property?.electricalAllocation || 0,
+    electricalAllocationIncrement: property?.electricalAllocationIncrement || 200,
   });
 
   // Calculate parking ratio
@@ -145,6 +146,7 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
       evParking: 0,
       trailerParking: 0,
       electricalAllocation: 0,
+      electricalAllocationIncrement: 200,
     });
   };
 
@@ -177,6 +179,7 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
       evParking: formData.evParking || 0,
       trailerParking: formData.trailerParking || 0,
       electricalAllocation: formData.electricalAllocation || 0,
+      electricalAllocationIncrement: formData.electricalAllocationIncrement || 200,
     };
 
     if (isEdit) {
@@ -387,18 +390,34 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
                 <Label className="text-sm font-semibold text-gray-700 flex items-center gap-2 mb-3">
                   ⚡ Electrical Allocation
                 </Label>
-                <div className="space-y-2">
-                  <Label htmlFor="electricalAllocation">Total Electrical Capacity (AMPS)</Label>
-                  <Input
-                    id="electricalAllocation"
-                    type="number"
-                    min="0"
-                    value={formData.electricalAllocation || 0}
-                    onChange={(e) => setFormData(prev => ({ ...prev, electricalAllocation: parseInt(e.target.value) || 0 }))}
-                    placeholder="0"
-                    data-testid="input-electrical-allocation"
-                  />
-                  <p className="text-xs text-gray-500">Total available electrical capacity for the property in amperage</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="electricalAllocation">Total Electrical Capacity (AMPS)</Label>
+                    <Input
+                      id="electricalAllocation"
+                      type="number"
+                      min="0"
+                      value={formData.electricalAllocation || 0}
+                      onChange={(e) => setFormData(prev => ({ ...prev, electricalAllocation: parseInt(e.target.value) || 0 }))}
+                      placeholder="0"
+                      data-testid="input-electrical-allocation"
+                    />
+                    <p className="text-xs text-gray-500">Total electrical capacity for the property</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="electricalAllocationIncrement">Tenant Allocation Increment (AMPS)</Label>
+                    <Input
+                      id="electricalAllocationIncrement"
+                      type="number"
+                      min="0"
+                      step="50"
+                      value={formData.electricalAllocationIncrement || 200}
+                      onChange={(e) => setFormData(prev => ({ ...prev, electricalAllocationIncrement: parseInt(e.target.value) || 200 }))}
+                      placeholder="200"
+                      data-testid="input-electrical-allocation-increment"
+                    />
+                    <p className="text-xs text-gray-500">Tenant allocations round to this increment (e.g., 200 AMPS)</p>
+                  </div>
                 </div>
               </div>
               

@@ -33,25 +33,46 @@ interface MainPanel {
   panelName: string;
   maxCapacityKva: number;
   capacityAmps?: number; // Direct AMPS entry for panels
+  voltage?: string; // Voltage configuration: "480", "208", "240"
   panelLocation?: string;
   isActive?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
 
-// Precise conversion constants for 3-phase 480V systems
-// Formula: AMPS = (kVA × 1000) / (480 × √3)
-const KVA_TO_AMPS = 1000 / (480 * Math.sqrt(3)); // ≈ 1.2028
-const AMPS_TO_KVA = (480 * Math.sqrt(3)) / 1000; // ≈ 0.8314
+// Voltage options for panel configuration
+const VOLTAGE_OPTIONS = [
+  { value: "480", label: "480V (3-Phase)", multiplier: 480 * Math.sqrt(3) },
+  { value: "208", label: "208/120V (3-Phase)", multiplier: 208 * Math.sqrt(3) },
+  { value: "240", label: "240V (3-Phase)", multiplier: 240 * Math.sqrt(3) },
+] as const;
 
-// Helper function to convert kVA to AMPS (3-phase 480V)
-const kvaToAmps = (kva: number): number => Math.round(kva * KVA_TO_AMPS);
+// Get voltage multiplier for 3-phase systems
+const getVoltageMultiplier = (voltage: string = "480"): number => {
+  const option = VOLTAGE_OPTIONS.find(v => v.value === voltage);
+  return option ? option.multiplier : 480 * Math.sqrt(3);
+};
 
-// Helper function to convert AMPS to kVA (3-phase 480V) - preserve precision for storage
-const ampsToKva = (amps: number): number => parseFloat((amps * AMPS_TO_KVA).toFixed(2));
+// Helper function to convert kVA to AMPS based on voltage
+const kvaToAmps = (kva: number, voltage: string = "480"): number => {
+  const multiplier = getVoltageMultiplier(voltage);
+  return Math.round((kva * 1000) / multiplier);
+};
 
-// Get panel capacity in AMPS - prefer stored value, fallback to conversion
-const getPanelAmps = (panel: MainPanel): number => panel.capacityAmps || kvaToAmps(panel.maxCapacityKva);
+// Helper function to convert AMPS to kVA based on voltage - preserve precision for storage
+const ampsToKva = (amps: number, voltage: string = "480"): number => {
+  const multiplier = getVoltageMultiplier(voltage);
+  return parseFloat(((amps * multiplier) / 1000).toFixed(2));
+};
+
+// Get panel capacity in AMPS - prefer stored value, fallback to conversion using voltage
+const getPanelAmps = (panel: MainPanel): number => panel.capacityAmps || kvaToAmps(panel.maxCapacityKva, panel.voltage || "480");
+
+// Get voltage display label
+const getVoltageLabel = (voltage: string = "480"): string => {
+  const option = VOLTAGE_OPTIONS.find(v => v.value === voltage);
+  return option ? option.label : "480V (3-Phase)";
+};
 
 interface BayPanelAssignment {
   id: number;
@@ -284,6 +305,7 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
     const formData = new FormData(e.currentTarget);
     const capacityAmps = parseInt(formData.get('capacityAmps') as string);
     const transformerId = parseInt(formData.get('transformerId') as string);
+    const voltage = formData.get('voltage') as string || "480";
     
     // Check for overallocation - calculate total panel capacity for this transformer
     const selectedTransformer = transformers.find((t: Transformer) => t.id === transformerId);
@@ -293,20 +315,21 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
         .filter((p: MainPanel) => p.transformerId === transformerId && (!editingPanel || p.id !== editingPanel.id))
         .reduce((sum: number, p: MainPanel) => sum + p.maxCapacityKva, 0);
       
-      const newTotalKva = existingPanelsKva + ampsToKva(capacityAmps);
+      const newPanelKva = ampsToKva(capacityAmps, voltage);
+      const newTotalKva = existingPanelsKva + newPanelKva;
       const transformerCapacityKva = selectedTransformer.totalCapacityKva;
       
       if (newTotalKva > transformerCapacityKva) {
         const overageKva = newTotalKva - transformerCapacityKva;
-        const overageAmps = kvaToAmps(overageKva);
+        const overageAmps = kvaToAmps(overageKva, voltage);
         const proceed = window.confirm(
           `⚠️ OVERALLOCATION WARNING\n\n` +
           `This will exceed the transformer capacity!\n\n` +
           `Transformer: ${selectedTransformer.transformerName} (${transformerCapacityKva} kVA)\n` +
-          `Current panels: ${existingPanelsKva} kVA\n` +
-          `New panel: ${ampsToKva(capacityAmps)} kVA\n` +
-          `Total: ${newTotalKva} kVA\n` +
-          `Over by: ${overageKva} kVA (~${overageAmps} AMPS)\n\n` +
+          `Current panels: ${existingPanelsKva.toFixed(1)} kVA\n` +
+          `New panel: ${newPanelKva.toFixed(1)} kVA @ ${voltage}V\n` +
+          `Total: ${newTotalKva.toFixed(1)} kVA\n` +
+          `Over by: ${overageKva.toFixed(1)} kVA (~${overageAmps} AMPS)\n\n` +
           `A transformer upgrade may be required.\n\n` +
           `Do you want to proceed anyway?`
         );
@@ -319,8 +342,9 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
     const panel = {
       transformerId: transformerId,
       panelName: formData.get('name') as string,
-      maxCapacityKva: ampsToKva(capacityAmps), // Convert AMPS to kVA for storage
+      maxCapacityKva: ampsToKva(capacityAmps, voltage), // Convert AMPS to kVA using selected voltage
       capacityAmps: capacityAmps, // Store AMPS directly
+      voltage: voltage, // Store the voltage configuration
       panelLocation: formData.get('location') as string,
     };
 
@@ -629,6 +653,7 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
                     <TableRow>
                       <TableHead>Name</TableHead>
                       <TableHead>Transformer</TableHead>
+                      <TableHead>Voltage</TableHead>
                       <TableHead>Capacity</TableHead>
                       <TableHead>Location</TableHead>
                       <TableHead>Actions</TableHead>
@@ -641,6 +666,7 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
                         <TableRow key={panel.id}>
                           <TableCell className="font-medium">{panel.panelName}</TableCell>
                           <TableCell>{transformer?.transformerName || 'Unknown'}</TableCell>
+                          <TableCell>{panel.voltage || '480'}V</TableCell>
                           <TableCell>{getPanelAmps(panel).toLocaleString()} AMPS</TableCell>
                           <TableCell>{panel.panelLocation || 'N/A'}</TableCell>
                           <TableCell>
@@ -925,6 +951,25 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
                   </select>
                   <ChevronDown className="absolute right-3 top-3 h-4 w-4 opacity-50 pointer-events-none" />
                 </div>
+              </div>
+              <div>
+                <Label htmlFor="voltage">Voltage *</Label>
+                <div className="relative">
+                  <select
+                    name="voltage"
+                    defaultValue={editingPanel?.voltage || '480'}
+                    required
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none pr-8"
+                  >
+                    {VOLTAGE_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-3 top-3 h-4 w-4 opacity-50 pointer-events-none" />
+                </div>
+                <p className="text-xs text-gray-500 mt-1">Higher voltage = lower amperage for same kVA</p>
               </div>
               <div>
                 <Label htmlFor="location">Location *</Label>

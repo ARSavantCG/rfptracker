@@ -4800,6 +4800,23 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
                   >
                     Reset Parking
                   </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const newElectrical = calculateElectricalAllocation();
+                      setBudgetData(prev => ({
+                        ...prev,
+                        calculatedElectricalAllocation: newElectrical,
+                        electricalAllocationOverride: null,
+                        electricalAllocation: newElectrical,
+                      }));
+                    }}
+                    title="Reset electrical allocation to calculated value based on tenant area"
+                    className="h-8"
+                  >
+                    Reset Electrical
+                  </Button>
                 </>
               )}
               <Button

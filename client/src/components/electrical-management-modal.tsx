@@ -63,7 +63,8 @@ export function ElectricalManagementModal({ property }: ElectricalManagementModa
         <div className="mt-4">
           <ElectricalCapacityManagement 
             propertyId={property.id} 
-            propertyName={property.propertyName || 'Property'} 
+            propertyName={property.propertyName || 'Property'}
+            property={property}
           />
         </div>
       </DialogContent>

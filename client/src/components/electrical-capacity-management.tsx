@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, Zap, Cable, Building2, Activity, ChevronDown } from "lucide-react";
+import { Plus, Edit, Trash2, Zap, Cable, Building2, Activity, ChevronDown, Save, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatDate } from "@/lib/utils";
 
@@ -98,9 +98,14 @@ interface ElectricalReservation {
 interface ElectricalCapacityManagementProps {
   propertyId: number;
   propertyName: string;
+  property?: {
+    id: number;
+    electricalAllocation?: number | null;
+    electricalAllocationIncrement?: number | null;
+  };
 }
 
-export function ElectricalCapacityManagement({ propertyId, propertyName }: ElectricalCapacityManagementProps) {
+export function ElectricalCapacityManagement({ propertyId, propertyName, property: initialProperty }: ElectricalCapacityManagementProps) {
   const [activeTab, setActiveTab] = useState("overview");
   const [showTransformerDialog, setShowTransformerDialog] = useState(false);
   const [showPanelDialog, setShowPanelDialog] = useState(false);
@@ -131,8 +136,36 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
     queryKey: [`/api/properties/${propertyId}/electrical-reservations`],
   });
 
-  const { data: property } = useQuery({
+  const { data: propertyData, refetch: refetchProperty } = useQuery({
     queryKey: [`/api/properties/${propertyId}`],
+  });
+  
+  // State for tenant allocation settings - use propertyData from query
+  const propData = propertyData as { electricalAllocation?: number | null; electricalAllocationIncrement?: number | null } | undefined;
+  const [tenantAllocation, setTenantAllocation] = useState<number>(propData?.electricalAllocation || initialProperty?.electricalAllocation || 0);
+  const [allocationIncrement, setAllocationIncrement] = useState<number>(propData?.electricalAllocationIncrement || initialProperty?.electricalAllocationIncrement || 200);
+  
+  // Update state when property data changes
+  useEffect(() => {
+    if (propData) {
+      setTenantAllocation(propData.electricalAllocation || 0);
+      setAllocationIncrement(propData.electricalAllocationIncrement || 200);
+    }
+  }, [propData]);
+  
+  // Mutation to update property tenant allocation settings
+  const updateTenantAllocationMutation = useMutation({
+    mutationFn: async (data: { electricalAllocation: number; electricalAllocationIncrement: number }) =>
+      apiRequest(`/api/properties/${propertyId}`, 'PATCH', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/properties/${propertyId}`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/properties'] });
+      refetchProperty();
+      toast({ title: "Tenant allocation settings saved", duration: 3000 });
+    },
+    onError: () => {
+      toast({ title: "Failed to save settings", variant: "destructive", duration: 3000 });
+    },
   });
 
   // Mutations for CRUD operations
@@ -464,7 +497,66 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
         </Card>
       </div>
 
-
+      {/* Tenant Allocation Settings */}
+      <Card className="border-2 border-cyan-200 bg-cyan-50/30">
+        <CardContent className="p-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 bg-cyan-100 rounded-md">
+                <Users className="h-4 w-4 text-cyan-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-sm">Tenant Electrical Allocation</h3>
+                <p className="text-xs text-gray-500">Configure how tenant electrical allocations are calculated</p>
+              </div>
+            </div>
+          </div>
+          <div className="mt-3 grid grid-cols-3 gap-4 items-end">
+            <div>
+              <Label htmlFor="totalAllocation" className="text-xs font-medium">Total Property Allocation (AMPS)</Label>
+              <Input
+                id="totalAllocation"
+                type="number"
+                min="0"
+                step="100"
+                value={tenantAllocation}
+                onChange={(e) => setTenantAllocation(parseInt(e.target.value) || 0)}
+                className="mt-1"
+                data-testid="input-total-electrical-allocation"
+              />
+              <p className="text-xs text-gray-500 mt-1">Total electrical capacity available for tenants</p>
+            </div>
+            <div>
+              <Label htmlFor="allocationIncrement" className="text-xs font-medium">Rounding Increment (AMPS)</Label>
+              <Input
+                id="allocationIncrement"
+                type="number"
+                min="50"
+                step="50"
+                value={allocationIncrement}
+                onChange={(e) => setAllocationIncrement(parseInt(e.target.value) || 200)}
+                className="mt-1"
+                data-testid="input-allocation-increment"
+              />
+              <p className="text-xs text-gray-500 mt-1">Tenant allocations round up to this increment</p>
+            </div>
+            <div>
+              <Button
+                onClick={() => updateTenantAllocationMutation.mutate({ 
+                  electricalAllocation: tenantAllocation, 
+                  electricalAllocationIncrement: allocationIncrement 
+                })}
+                disabled={updateTenantAllocationMutation.isPending}
+                className="bg-cyan-600 hover:bg-cyan-700"
+                data-testid="button-save-allocation"
+              >
+                <Save className="h-4 w-4 mr-1" />
+                {updateTenantAllocationMutation.isPending ? "Saving..." : "Save Settings"}
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Management Sections */}
       <Card>

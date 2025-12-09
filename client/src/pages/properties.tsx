@@ -483,6 +483,16 @@ export default function Properties() {
                                 </div>
                               </div>
 
+                              {/* Electrical Allocation */}
+                              <div className="text-sm bg-yellow-50 p-2 rounded mb-3">
+                                <div className="flex justify-between items-center">
+                                  <span className="text-gray-600">Electrical Allocation:</span>
+                                  <span className="font-medium text-yellow-700">
+                                    {(property.electricalAllocation || 0).toLocaleString()} AMPS
+                                  </span>
+                                </div>
+                              </div>
+
                               {/* Executed Leases */}
                               {(() => {
                                 const propertyLeases = (allExecutedLeases || []).filter(

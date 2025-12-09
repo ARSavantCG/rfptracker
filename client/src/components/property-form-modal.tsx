@@ -32,6 +32,7 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
     accessibleParking: property?.accessibleParking || 0,
     evParking: property?.evParking || 0,
     trailerParking: property?.trailerParking || 0,
+    electricalAllocation: property?.electricalAllocation || 0,
   });
 
   // Calculate parking ratio
@@ -143,6 +144,7 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
       accessibleParking: 0,
       evParking: 0,
       trailerParking: 0,
+      electricalAllocation: 0,
     });
   };
 
@@ -174,6 +176,7 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
       accessibleParking: formData.accessibleParking || 0,
       evParking: formData.evParking || 0,
       trailerParking: formData.trailerParking || 0,
+      electricalAllocation: formData.electricalAllocation || 0,
     };
 
     if (isEdit) {
@@ -376,6 +379,26 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
                     onChange={(e) => setFormData(prev => ({ ...prev, trailerParking: parseInt(e.target.value) || 0 }))}
                     placeholder="0"
                   />
+                </div>
+              </div>
+              
+              {/* Electrical Allocation */}
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <Label className="text-sm font-semibold text-gray-700 flex items-center gap-2 mb-3">
+                  ⚡ Electrical Allocation
+                </Label>
+                <div className="space-y-2">
+                  <Label htmlFor="electricalAllocation">Total Electrical Capacity (AMPS)</Label>
+                  <Input
+                    id="electricalAllocation"
+                    type="number"
+                    min="0"
+                    value={formData.electricalAllocation || 0}
+                    onChange={(e) => setFormData(prev => ({ ...prev, electricalAllocation: parseInt(e.target.value) || 0 }))}
+                    placeholder="0"
+                    data-testid="input-electrical-allocation"
+                  />
+                  <p className="text-xs text-gray-500">Total available electrical capacity for the property in amperage</p>
                 </div>
               </div>
               

@@ -270,8 +270,41 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const capacityAmps = parseInt(formData.get('capacityAmps') as string);
+    const transformerId = parseInt(formData.get('transformerId') as string);
+    
+    // Check for overallocation - calculate total panel capacity for this transformer
+    const selectedTransformer = transformers.find((t: Transformer) => t.id === transformerId);
+    if (selectedTransformer) {
+      // Get all existing panels for this transformer (excluding the one being edited)
+      const existingPanelsKva = mainPanels
+        .filter((p: MainPanel) => p.transformerId === transformerId && (!editingPanel || p.id !== editingPanel.id))
+        .reduce((sum: number, p: MainPanel) => sum + p.maxCapacityKva, 0);
+      
+      const newTotalKva = existingPanelsKva + ampsToKva(capacityAmps);
+      const transformerCapacityKva = selectedTransformer.totalCapacityKva;
+      
+      if (newTotalKva > transformerCapacityKva) {
+        const overageKva = newTotalKva - transformerCapacityKva;
+        const overageAmps = kvaToAmps(overageKva);
+        const proceed = window.confirm(
+          `⚠️ OVERALLOCATION WARNING\n\n` +
+          `This will exceed the transformer capacity!\n\n` +
+          `Transformer: ${selectedTransformer.transformerName} (${transformerCapacityKva} kVA)\n` +
+          `Current panels: ${existingPanelsKva} kVA\n` +
+          `New panel: ${ampsToKva(capacityAmps)} kVA\n` +
+          `Total: ${newTotalKva} kVA\n` +
+          `Over by: ${overageKva} kVA (~${overageAmps} AMPS)\n\n` +
+          `A transformer upgrade may be required.\n\n` +
+          `Do you want to proceed anyway?`
+        );
+        if (!proceed) {
+          return;
+        }
+      }
+    }
+    
     const panel = {
-      transformerId: parseInt(formData.get('transformerId') as string),
+      transformerId: transformerId,
       panelName: formData.get('name') as string,
       maxCapacityKva: ampsToKva(capacityAmps), // Convert AMPS to kVA for storage
       capacityAmps: capacityAmps, // Store AMPS directly
@@ -854,12 +887,12 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
                 <Input
                   name="capacityAmps"
                   type="number"
-                  step="200"
+                  min="0"
                   defaultValue={editingPanel?.capacityAmps || (editingPanel?.maxCapacityKva ? kvaToAmps(editingPanel.maxCapacityKva) : '')}
                   placeholder="e.g., 200, 400, 600, 800"
                   required
                 />
-                <p className="text-xs text-gray-500 mt-1">Enter in 200 AMP increments</p>
+                <p className="text-xs text-gray-500 mt-1">Recommended: 200 AMP increments</p>
               </div>
               <div>
                 <Label htmlFor="transformerId">Transformer *</Label>

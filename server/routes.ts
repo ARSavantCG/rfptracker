@@ -3952,17 +3952,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid ID" });
       }
 
-      const { electricalAllocation, electricalAllocationIncrement } = req.body;
+      // Use partial schema for electrical allocation fields
+      const electricalAllocationSchema = updatePropertySchema.pick({ 
+        electricalAllocation: true, 
+        electricalAllocationIncrement: true 
+      });
       
-      // Validate the input
-      if (typeof electricalAllocation !== 'number' || typeof electricalAllocationIncrement !== 'number') {
-        return res.status(400).json({ message: "Invalid input: electricalAllocation and electricalAllocationIncrement must be numbers" });
+      const result = electricalAllocationSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid input", errors: result.error.issues });
       }
 
-      const property = await storage.updateProperty(id, { 
-        electricalAllocation, 
-        electricalAllocationIncrement 
-      });
+      // Ensure non-negative values
+      const { electricalAllocation, electricalAllocationIncrement } = result.data;
+      if ((electricalAllocation !== undefined && electricalAllocation < 0) || 
+          (electricalAllocationIncrement !== undefined && electricalAllocationIncrement < 0)) {
+        return res.status(400).json({ message: "Electrical allocation values must be non-negative" });
+      }
+
+      // Apply legal compliance middleware (consistent with main property update route)
+      const legallyCompliantData = await autoEnforceLegalComplianceMiddleware(id, result.data);
+      
+      const property = await storage.updateProperty(id, legallyCompliantData);
       
       if (!property) {
         return res.status(404).json({ message: "Property not found" });

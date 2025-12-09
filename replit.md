@@ -25,7 +25,7 @@ Key advanced systems and features include:
 - Comprehensive backend search across multiple RFP fields.
 - Integrated systems for building specifications and vendor workload reports.
 - A robust version tracking system with detailed displays.
-- Management of electrical capacity (transformers).
+- Management of electrical capacity (transformers) with voltage-aware panel capacity management. Panels support three voltage configurations (480V, 208/120V, 240V) with automatic amperage calculations based on the selected voltage using 3-phase formulas. The property summary report displays transformer and panel details including voltage, AMPS, and kVA values.
 - Advanced bay configuration with real-time updates, separate door count displays, adaptive layouts, and directional indicators.
 - An architectural shift to a single source of truth for bay data, referencing live property data instead of snapshots.
 - Multi-building cost initialization ensures accurate numeric data for costs.

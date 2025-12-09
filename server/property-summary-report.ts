@@ -132,6 +132,7 @@ interface PropertyDetails {
   totalRentableArea: number;
   parkingSpaces: number;
   trailerParkingSpaces?: number;
+  electricalAllocationAmps?: number;
   mechanicalRoomSquareFootage?: number;
   doorCounts?: { standard: number; oversized: number; total: number } | null;
   selectedBayCount?: number;
@@ -293,6 +294,40 @@ async function getPropertySummaryData(options?: RfpOptions): Promise<PropertySum
       trailer: Math.round(totalTrailer * tenantPercentage)
     };
   };
+  
+  // Calculate electrical allocation from selected bay configurations (RFP mode only)
+  // When selectedBays is empty array, returns 0 (tenant has no allocation)
+  // For full property view (no RFP), pass null to get full property allocation
+  const calculateElectricalAllocation = (property: any, selectedBays: any[] | null) => {
+    // If null is passed, return full property allocation (non-RFP mode)
+    if (selectedBays === null) {
+      return property.electricalAllocation || 0;
+    }
+    
+    // If empty array, tenant has no selected bays = 0 allocation (RFP mode)
+    if (selectedBays.length === 0) {
+      return 0;
+    }
+    
+    // Calculate tenant's rentable area
+    const tenantArea = selectedBays.reduce((sum, bay) => sum + (bay.rentableSquareFootage || bay.squareFootage || 0), 0);
+    
+    // Get total property area from bay configurations
+    const bayConfigs = property.bayConfigurations || [];
+    const totalPropertyArea = bayConfigs.reduce((sum: number, bay: any) => sum + (bay.rentableSquareFootage || bay.squareFootage || 0), 0);
+    
+    if (totalPropertyArea === 0 || tenantArea === 0) {
+      return 0;
+    }
+    
+    // Calculate tenant's percentage of the property
+    const tenantPercentage = tenantArea / totalPropertyArea;
+    
+    // Calculate proportional electrical allocation
+    const totalElectrical = property.electricalAllocation || 0;
+    
+    return Math.round(totalElectrical * tenantPercentage);
+  };
 
   for (const property of allProperties) {
     // Get executed leases
@@ -369,9 +404,11 @@ async function getPropertySummaryData(options?: RfpOptions): Promise<PropertySum
     const relevantBays = selectedBayConfigurations && selectedBayConfigurations.length > 0 ? selectedBayConfigurations : bayConfigs;
     const totalRentableArea = relevantBays.reduce((sum: number, bay: any) => sum + (bay.rentableSquareFootage || bay.squareFootage || 0), 0);
     
-    // Calculate door counts and parking allocation for RFP mode
+    // Calculate door counts, parking allocation, and electrical allocation for RFP mode
     const doorCounts = selectedBayConfigurations ? calculateDoorCounts(selectedBayConfigurations) : null;
     const parkingAllocation = selectedBayConfigurations ? calculateParkingAllocation(property, selectedBayConfigurations) : null;
+    // Pass null for non-RFP mode (shows full property allocation), or the actual array for RFP mode
+    const electricalAllocation = calculateElectricalAllocation(property, selectedBayConfigurations || null);
     
     // Calculate cost breakdown from actual data
     const costBreakdown = {
@@ -450,6 +487,7 @@ async function getPropertySummaryData(options?: RfpOptions): Promise<PropertySum
       totalRentableArea,
       parkingSpaces: parkingAllocation ? parkingAllocation.vehicular : ((property.standardParking || 0) + (property.accessibleParking || 0) + (property.evParking || 0)),
       trailerParkingSpaces: parkingAllocation ? parkingAllocation.trailer : (property.trailerParking || 0),
+      electricalAllocationAmps: electricalAllocation,
       doorCounts: doorCounts,
       selectedBayCount: selectedBayConfigurations ? selectedBayConfigurations.length : bayConfigs.length,
       mechanicalRoomSquareFootage: property.mechanicalRoomSquareFootage || 0,
@@ -703,6 +741,7 @@ function generatePropertySummaryHTML(data: PropertySummaryData): string {
                     ` : ''}
                     <p><strong>Vehicular Parking:</strong> ${formatNumber(property.parkingSpaces)}${property.doorCounts ? ' (tenant allocation)' : ''}</p>
                     <p><strong>Trailer Parking:</strong> ${formatNumber(property.trailerParkingSpaces || 0)}${property.doorCounts ? ' (tenant allocation)' : ''}</p>
+                    <p><strong>Electrical Allocation:</strong> ${formatNumber(property.electricalAllocationAmps || 0)} AMPS${property.doorCounts ? ' (tenant allocation)' : ''}</p>
                 </div>
                 <div class="info-card">
                     <h4>Area Summary</h4>

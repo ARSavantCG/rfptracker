@@ -67,6 +67,8 @@ interface EvaluationBudgetData {
   vehicularParking: number;
   trailerParking: number;
   electricalAllocation: number;
+  calculatedElectricalAllocation: number;
+  electricalAllocationOverride: number | null;
 }
 
 interface EvaluationBudgetProps {
@@ -932,6 +934,8 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
     vehicularParking: 0,
     trailerParking: 0,
     electricalAllocation: 0,
+    calculatedElectricalAllocation: 0,
+    electricalAllocationOverride: null,
   });
 
   // Track which items have been manually overridden (won't auto-calculate)
@@ -1211,6 +1215,59 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
     return { vehicular: allocatedVehicular, trailer: allocatedTrailer };
   };
 
+  // Calculate proportional electrical allocation based on tenant SF percentage
+  const calculateElectricalAllocation = () => {
+    const activePropertyData = rfp?.isMultiBuilding 
+      ? (multiBuildingProperties?.[0] || propertyData)
+      : propertyData;
+
+    if (!activePropertyData || !rfp?.selectedBayConfigurations) {
+      console.log('Electrical Calc Debug - Missing data:', { 
+        hasProperty: !!activePropertyData, 
+        hasBays: !!rfp?.selectedBayConfigurations
+      });
+      return 0;
+    }
+    
+    const property = activePropertyData as any;
+    
+    // Calculate tenant's rentable area from selected bays
+    const tenantRentableArea = rfp.selectedBayConfigurations.reduce((total, bay) => {
+      return total + (bay.rentableSquareFootage || 0);
+    }, 0) + (rfp.mechanicalRoomArea || 0);
+    
+    // Get total property rentable area from bay configurations
+    const totalPropertyArea = property.bayConfigurations 
+      ? property.bayConfigurations.reduce((total: number, bay: any) => {
+          return total + (bay.rentableSquareFootage || bay.squareFootage || 0);
+        }, 0)
+      : 0;
+    
+    if (totalPropertyArea === 0 || tenantRentableArea === 0) {
+      console.log('Electrical Calc Debug - Zero areas detected');
+      return 0;
+    }
+    
+    // Calculate tenant's percentage of the property
+    const tenantPercentage = tenantRentableArea / totalPropertyArea;
+    
+    // Get total electrical allocation from property
+    const totalElectricalAllocation = property.electricalAllocation || 0;
+    
+    // Calculate proportional electrical allocation
+    const allocatedElectrical = Math.round(totalElectricalAllocation * tenantPercentage);
+    
+    console.log('⚡ Electrical Calc Debug:', { 
+      tenantArea: tenantRentableArea,
+      totalArea: totalPropertyArea,
+      percentage: (tenantPercentage * 100).toFixed(1) + '%',
+      totalElectrical: totalElectricalAllocation,
+      allocatedElectrical
+    });
+    
+    return allocatedElectrical;
+  };
+
   // Auto-calculate demising wall quantities when building depth changes or items are added
   useEffect(() => {
     if (!propertyData?.buildingDepth || budgetData.tenantImprovements.length === 0) return;
@@ -1271,20 +1328,26 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       console.log('🔄 Updating door counts from current bay selection...');
       const doorCounts = calculateDoorCounts();
       const parkingCounts = calculateParkingCounts();
+      const calculatedElectrical = calculateElectricalAllocation();
       
       console.log('🚪 Door counts calculated:', { oversized: doorCounts.oversized, regular: doorCounts.regular });
+      console.log('⚡ Calculated electrical allocation:', calculatedElectrical, 'AMPS');
       
-      // Get electrical allocation from property
-      const electricalAllocation = propertyData?.electricalAllocation || 0;
-      
-      setBudgetData(prev => ({
-        ...prev,
-        oversizedDoors: doorCounts.oversized,
-        regularDoors: doorCounts.regular,
-        vehicularParking: parkingCounts.vehicular,
-        trailerParking: parkingCounts.trailer,
-        electricalAllocation: electricalAllocation
-      }));
+      setBudgetData(prev => {
+        // Preserve existing override if set, otherwise use calculated value
+        const existingOverride = prev.electricalAllocationOverride;
+        const effectiveElectrical = existingOverride !== null ? existingOverride : calculatedElectrical;
+        
+        return {
+          ...prev,
+          oversizedDoors: doorCounts.oversized,
+          regularDoors: doorCounts.regular,
+          vehicularParking: parkingCounts.vehicular,
+          trailerParking: parkingCounts.trailer,
+          calculatedElectricalAllocation: calculatedElectrical,
+          electricalAllocation: effectiveElectrical,
+        };
+      });
     }
   }, [rfp?.selectedBayConfigurations, propertyData, existingBudget]);
 
@@ -1479,6 +1542,11 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       const savedVehicular = (existingBudget as any).metadata?.vehicularParking;
       const savedTrailer = (existingBudget as any).metadata?.trailerParking;
       const savedElectrical = (existingBudget as any).metadata?.electricalAllocation;
+      const savedElectricalOverride = (existingBudget as any).metadata?.electricalAllocationOverride;
+      const savedCalculatedElectrical = (existingBudget as any).metadata?.calculatedElectricalAllocation;
+      
+      // Calculate current electrical allocation based on tenant SF percentage
+      const currentCalculatedElectrical = calculateElectricalAllocation();
       
       // Check if saved existing improvements have the bucket field (added in cost lifecycle tracking)
       // If not, refresh from property to get updated data with bucket field
@@ -1487,6 +1555,10 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
                                   savedExistingImprovements.some((item: any) => item.bucket === undefined);
       
       const existingImprovementsToUse = needsBucketRefresh ? existingImprovementsFromProperty : savedExistingImprovements;
+      
+      // Use saved override if set, otherwise use calculated value
+      const effectiveElectricalOverride = savedElectricalOverride !== undefined ? savedElectricalOverride : null;
+      const effectiveElectrical = effectiveElectricalOverride !== null ? effectiveElectricalOverride : currentCalculatedElectrical;
       
       setBudgetData({
         tenantImprovements: (existingBudget as any).tenantImprovements || [],
@@ -1507,11 +1579,14 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         regularDoors: doorCounts.regular,
         vehicularParking: savedVehicular !== undefined ? savedVehicular : 0,
         trailerParking: savedTrailer !== undefined ? savedTrailer : 0,
-        electricalAllocation: savedElectrical !== undefined ? savedElectrical : (propertyData?.electricalAllocation || 0),
+        electricalAllocation: effectiveElectrical,
+        calculatedElectricalAllocation: currentCalculatedElectrical,
+        electricalAllocationOverride: effectiveElectricalOverride,
       });
     } else {
       // Initialize with door counts and existing improvements even if no other data
       const parkingCounts = calculateParkingCounts();
+      const calculatedElectrical = calculateElectricalAllocation();
       setBudgetData(prev => ({
         ...prev,
         existingImprovements: existingImprovementsFromProperty,
@@ -1520,7 +1595,9 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         regularDoors: doorCounts.regular,
         vehicularParking: parkingCounts.vehicular,
         trailerParking: parkingCounts.trailer,
-        electricalAllocation: propertyData?.electricalAllocation || 0,
+        electricalAllocation: calculatedElectrical,
+        calculatedElectricalAllocation: calculatedElectrical,
+        electricalAllocationOverride: null,
       }));
     }
   }, [existingBudget, allBidLineItems, bidCollections, rfp?.selectedBayConfigurations, propertyImprovements, propertyData]);
@@ -3463,7 +3540,9 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
           regularDoors: budgetData.regularDoors,
           vehicularParking: budgetData.vehicularParking,
           trailerParking: budgetData.trailerParking,
-          electricalAllocation: budgetData.electricalAllocation
+          electricalAllocation: budgetData.electricalAllocation,
+          calculatedElectricalAllocation: budgetData.calculatedElectricalAllocation,
+          electricalAllocationOverride: budgetData.electricalAllocationOverride
         },
       };
 
@@ -3535,7 +3614,9 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
           regularDoors: budgetData.regularDoors,
           vehicularParking: budgetData.vehicularParking,
           trailerParking: budgetData.trailerParking,
-          electricalAllocation: budgetData.electricalAllocation
+          electricalAllocation: budgetData.electricalAllocation,
+          calculatedElectricalAllocation: budgetData.calculatedElectricalAllocation,
+          electricalAllocationOverride: budgetData.electricalAllocationOverride
         },
       };
 
@@ -4829,29 +4910,71 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
             {/* Electrical Allocation Section */}
             <div>
               <Label className="text-base font-medium mb-3 block">⚡ Electrical Allocation</Label>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <Label htmlFor="electricalAllocation">Total AMPS</Label>
+                  <Label htmlFor="calculatedElectrical">Calculated AMPS</Label>
+                  <Input
+                    id="calculatedElectrical"
+                    type="number"
+                    value={budgetData.calculatedElectricalAllocation || 0}
+                    className="mt-1 bg-gray-50"
+                    readOnly
+                    disabled
+                    data-testid="input-calculated-electrical-allocation"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Based on tenant SF %
+                  </p>
+                </div>
+                <div>
+                  <Label htmlFor="electricalAllocation">Override AMPS</Label>
                   <Input
                     id="electricalAllocation"
                     type="number"
                     min="0"
-                    value={budgetData.electricalAllocation || 0}
-                    onChange={(e) => setBudgetData(prev => ({
-                      ...prev,
-                      electricalAllocation: parseInt(e.target.value) || 0
-                    }))}
+                    value={budgetData.electricalAllocationOverride !== null ? budgetData.electricalAllocationOverride : ''}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      const parsedValue = value === '' ? null : parseInt(value) || 0;
+                      setBudgetData(prev => ({
+                        ...prev,
+                        electricalAllocationOverride: parsedValue,
+                        electricalAllocation: parsedValue !== null ? parsedValue : prev.calculatedElectricalAllocation
+                      }));
+                    }}
                     className="mt-1"
-                    placeholder="0"
+                    placeholder={String(budgetData.calculatedElectricalAllocation || 0)}
                     readOnly={!premisesEditMode}
                     disabled={!premisesEditMode}
                     data-testid="input-evaluation-electrical-allocation"
                   />
-                </div>
-                <div className="flex items-end">
-                  <p className="text-sm text-gray-500 mb-2">
-                    Electrical capacity from property settings
+                  <p className="text-xs text-gray-500 mt-1">
+                    Leave blank to use calculated
                   </p>
+                </div>
+                <div className="flex flex-col justify-between">
+                  <div>
+                    <Label>Effective AMPS</Label>
+                    <p className="text-lg font-semibold mt-2" data-testid="text-effective-electrical-allocation">
+                      {(budgetData.electricalAllocation || 0).toLocaleString()} AMPS
+                    </p>
+                  </div>
+                  {premisesEditMode && budgetData.electricalAllocationOverride !== null && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setBudgetData(prev => ({
+                          ...prev,
+                          electricalAllocationOverride: null,
+                          electricalAllocation: prev.calculatedElectricalAllocation
+                        }));
+                      }}
+                      className="text-xs h-7"
+                    >
+                      Reset to Calculated
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>

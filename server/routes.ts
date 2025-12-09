@@ -7057,8 +7057,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const totalCapacity = transformers.reduce((sum, t) => sum + (t.totalCapacityKva || 0), 0);
-      const totalReserved = allReservations.reduce((sum, r) => sum + (r.reservedKva || 0), 0);
-      const availableCapacity = totalCapacity - totalReserved;
+      
+      // Calculate allocated capacity from panels (not reservations)
+      // Use stored capacityAmps if available, otherwise convert from kVA
+      const kvaToAmps = (kva: number): number => Math.round(kva * (1000 / (480 * Math.sqrt(3))));
+      const ampsToKva = (amps: number): number => parseFloat((amps * (480 * Math.sqrt(3)) / 1000).toFixed(2));
+      
+      const totalAllocatedKva = allMainPanels.reduce((sum, p) => sum + (p.maxCapacityKva || 0), 0);
+      const totalAllocatedAmps = allMainPanels.reduce((sum, p) => sum + (p.capacityAmps || kvaToAmps(p.maxCapacityKva || 0)), 0);
+      const availableCapacity = Math.max(0, totalCapacity - totalAllocatedKva);
+      const utilizationPercent = totalCapacity > 0 ? ((totalAllocatedKva / totalCapacity) * 100).toFixed(1) : '0.0';
 
       const html = `
         <!DOCTYPE html>
@@ -7103,12 +7111,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 <p><strong>${availableCapacity} kVA</strong></p>
               </div>
               <div class="capacity-item">
-                <h4>Reserved</h4>
-                <p><strong>${totalReserved} kVA</strong></p>
+                <h4>Allocated</h4>
+                <p><strong>${totalAllocatedAmps.toLocaleString()} AMPS</strong></p>
+                <p style="font-size: 12px; color: #666;">(${totalAllocatedKva.toLocaleString()} kVA)</p>
               </div>
               <div class="capacity-item">
                 <h4>Utilization</h4>
-                <p><strong>${totalCapacity > 0 ? ((totalReserved / totalCapacity) * 100).toFixed(1) : 0}%</strong></p>
+                <p><strong>${utilizationPercent}%</strong></p>
               </div>
             </div>
           </div>
@@ -7150,21 +7159,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
           <table>
             <thead>
               <tr>
-                <th>Panel ID</th>
+                <th>Panel Name</th>
                 <th>Transformer</th>
-                <th>Capacity (A)</th>
+                <th>Capacity (AMPS)</th>
                 <th>Location</th>
               </tr>
             </thead>
             <tbody>
-              ${allMainPanels.map(panel => `
+              ${allMainPanels.map(panel => {
+                const transformer = transformers.find(t => t.id === panel.transformerId);
+                const panelAmps = panel.capacityAmps || kvaToAmps(panel.maxCapacityKva || 0);
+                return `
                 <tr>
                   <td>${panel.panelName}</td>
-                  <td>${panel.transformerId || 'N/A'}</td>
-                  <td>${panel.maxCapacityKva || 0}</td>
+                  <td>${transformer?.transformerName || 'N/A'}</td>
+                  <td>${panelAmps.toLocaleString()} AMPS</td>
                   <td>${panel.panelLocation || 'N/A'}</td>
                 </tr>
-              `).join('')}
+              `}).join('')}
             </tbody>
           </table>
           ` : ''}

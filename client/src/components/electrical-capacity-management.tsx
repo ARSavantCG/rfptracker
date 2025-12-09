@@ -59,10 +59,10 @@ const kvaToAmps = (kva: number, voltage: string = "480"): number => {
   return Math.round((kva * 1000) / multiplier);
 };
 
-// Helper function to convert AMPS to kVA based on voltage - preserve precision for storage
+// Helper function to convert AMPS to kVA based on voltage - round to integer for database storage
 const ampsToKva = (amps: number, voltage: string = "480"): number => {
   const multiplier = getVoltageMultiplier(voltage);
-  return parseFloat(((amps * multiplier) / 1000).toFixed(2));
+  return Math.round((amps * multiplier) / 1000);
 };
 
 // Get panel capacity in AMPS - prefer stored value, fallback to conversion using voltage

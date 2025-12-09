@@ -39,13 +39,19 @@ interface MainPanel {
   updatedAt?: string;
 }
 
-// Helper function to convert kVA to AMPS (3-phase 480V)
-// Formula: AMPS = (kVA × 1000) / (480 × √3) ≈ kVA × 1.2
-const kvaToAmps = (kva: number): number => Math.round(kva * 1.2);
+// Precise conversion constants for 3-phase 480V systems
+// Formula: AMPS = (kVA × 1000) / (480 × √3)
+const KVA_TO_AMPS = 1000 / (480 * Math.sqrt(3)); // ≈ 1.2028
+const AMPS_TO_KVA = (480 * Math.sqrt(3)) / 1000; // ≈ 0.8314
 
-// Helper function to convert AMPS to kVA (3-phase 480V)  
-// Formula: kVA = (AMPS × 480 × √3) / 1000 ≈ AMPS × 0.83
-const ampsToKva = (amps: number): number => Math.round(amps * 0.83);
+// Helper function to convert kVA to AMPS (3-phase 480V)
+const kvaToAmps = (kva: number): number => Math.round(kva * KVA_TO_AMPS);
+
+// Helper function to convert AMPS to kVA (3-phase 480V) - preserve precision for storage
+const ampsToKva = (amps: number): number => parseFloat((amps * AMPS_TO_KVA).toFixed(2));
+
+// Get panel capacity in AMPS - prefer stored value, fallback to conversion
+const getPanelAmps = (panel: MainPanel): number => panel.capacityAmps || kvaToAmps(panel.maxCapacityKva);
 
 interface BayPanelAssignment {
   id: number;
@@ -229,18 +235,25 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
     },
   });
 
-  // Calculate capacity utilization
+  // Calculate capacity utilization based on panel allocation
   const calculateCapacityUtilization = () => {
     const totalTransformerCapacity = transformers.reduce((sum: number, t: Transformer) => sum + t.totalCapacityKva, 0);
-    const totalReservedCapacity = reservations
-      .filter((r: ElectricalReservation) => r.status === 'active')
-      .reduce((sum: number, r: ElectricalReservation) => sum + r.reservedCapacity, 0);
+    
+    // Calculate total panel capacity in kVA (this is what's allocated from transformers)
+    const totalPanelCapacityKva = mainPanels.reduce((sum: number, p: MainPanel) => sum + p.maxCapacityKva, 0);
+    
+    // Calculate total AMPS in service for display
+    const totalPanelAmps = mainPanels.reduce((sum: number, p: MainPanel) => sum + getPanelAmps(p), 0);
+    
+    // Reserved is what's allocated to panels (subtract from transformer capacity)
+    const availableCapacity = Math.max(0, totalTransformerCapacity - totalPanelCapacityKva);
     
     return {
       total: totalTransformerCapacity,
-      reserved: totalReservedCapacity,
-      available: totalTransformerCapacity - totalReservedCapacity,
-      utilizationPercent: totalTransformerCapacity > 0 ? (totalReservedCapacity / totalTransformerCapacity) * 100 : 0
+      allocated: totalPanelCapacityKva,
+      allocatedAmps: totalPanelAmps,
+      available: availableCapacity,
+      utilizationPercent: totalTransformerCapacity > 0 ? (totalPanelCapacityKva / totalTransformerCapacity) * 100 : 0
     };
   };
 
@@ -406,9 +419,9 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
               <Building2 className="h-3 w-3 text-orange-600" />
             </div>
             <div>
-              <p className="text-xs font-medium text-gray-600">Reserved</p>
-              <p className="text-lg font-bold text-orange-600">{capacityStats.reserved.toLocaleString()}</p>
-              <p className="text-xs text-gray-500">kVA</p>
+              <p className="text-xs font-medium text-gray-600">Allocated</p>
+              <p className="text-lg font-bold text-orange-600">{capacityStats.allocatedAmps.toLocaleString()}</p>
+              <p className="text-xs text-gray-500">AMPS ({capacityStats.allocated.toLocaleString()} kVA)</p>
             </div>
           </div>
         </Card>
@@ -628,7 +641,7 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
                         <TableRow key={panel.id}>
                           <TableCell className="font-medium">{panel.panelName}</TableCell>
                           <TableCell>{transformer?.transformerName || 'Unknown'}</TableCell>
-                          <TableCell>{(panel.capacityAmps || kvaToAmps(panel.maxCapacityKva)).toLocaleString()} AMPS</TableCell>
+                          <TableCell>{getPanelAmps(panel).toLocaleString()} AMPS</TableCell>
                           <TableCell>{panel.panelLocation || 'N/A'}</TableCell>
                           <TableCell>
                             <div className="flex gap-2">
@@ -982,7 +995,7 @@ export function ElectricalCapacityManagement({ propertyId, propertyName }: Elect
                     <option value="">Select main panel</option>
                     {mainPanels.map((panel: MainPanel) => (
                       <option key={panel.id} value={panel.id.toString()}>
-                        {panel.panelName} ({panel.capacityAmps || kvaToAmps(panel.maxCapacityKva)} AMPS)
+                        {panel.panelName} ({getPanelAmps(panel)} AMPS)
                       </option>
                     ))}
                   </select>

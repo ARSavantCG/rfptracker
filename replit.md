@@ -26,7 +26,12 @@ Key advanced systems and features include:
 - Integrated systems for building specifications and vendor workload reports.
 - A robust version tracking system with detailed displays.
 - Management of electrical capacity (transformers) with voltage-aware panel capacity management. Panels support three voltage configurations (480V, 208/120V, 240V) with automatic amperage calculations based on the selected voltage using 3-phase formulas. The property summary report displays transformer and panel details including voltage, AMPS, and kVA values.
-- **Tenant Electrical Allocation System**: Automatically calculates a tenant's proportional electrical allocation (in AMPS) based on their square footage percentage of the building, mirroring the parking allocation pattern. Properties define total electrical capacity and a configurable allocation increment (default 200 AMPS). When an RFP selects specific bays, the system calculates: Math.ceil((tenant SF / total property SF) × total electrical allocation / increment) × increment. This rounds allocations up to the nearest increment (e.g., 450 AMPS → 600 AMPS with 200 AMPS increment). The evaluation budget UI displays three fields: "Calculated AMPS" (auto-calculated with increment rounding, read-only), "Override AMPS" (manual override option), and "Effective AMPS" (the value that will be used). Override values are persisted and can be reset to calculated values. The property summary report also reflects tenant electrical allocation when viewing RFP-specific reports.
+- **Multi-Voltage Tenant Electrical Allocation System**: Supports flexible tenant electrical allocations with multiple voltage services. Properties define transformer capacity (kVA), and the evaluation budget allows adding multiple electrical allocations at different voltages (e.g., 100 kVA @ 480V + 100 kVA @ 240V). Each allocation entry shows:
+  - kVA amount (editable)
+  - Voltage selection (480V, 208/120V, 240V)
+  - Calculated AMPS equivalent based on voltage (using 3-phase formula: AMPS = kVA × 1000 / (Voltage × √3))
+  - Service summary (e.g., "100 kVA @ 480V (3-Phase)")
+  The UI displays property total transformer capacity, available capacity, and usage percentage with capacity warnings when tenant allocations exceed property limits. Allocations are stored as an array in budget metadata for persistence. Legacy single-allocation fields are maintained for backward compatibility.
 - Advanced bay configuration with real-time updates, separate door count displays, adaptive layouts, and directional indicators.
 - An architectural shift to a single source of truth for bay data, referencing live property data instead of snapshots.
 - Multi-building cost initialization ensures accurate numeric data for costs.

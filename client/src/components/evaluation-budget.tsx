@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 // Removed Select import - using native HTML selects for consistency
-import { Plus, Edit, Trash2, Save, X, ArrowRight, Copy, FileDown, Upload, Package, Users, ChevronUp, ChevronDown, GripVertical, Check as CheckIcon, FileText } from "lucide-react";
+import { Plus, Edit, Trash2, Save, X, ArrowRight, Copy, FileDown, Upload, Package, Users, ChevronUp, ChevronDown, GripVertical, Check as CheckIcon, FileText, AlertTriangle, Zap } from "lucide-react";
 import { EvaluationAttachments } from "./evaluation-attachments";
 import { EvaluationBudgetHistory } from "./evaluation-budget-history";
 import { FormulaInput } from "./formula-input";
@@ -4936,74 +4936,129 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
 
             {/* Electrical Allocation Section */}
             <div>
-              <Label className="text-base font-medium mb-3 block">⚡ Electrical Allocation</Label>
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor="calculatedElectrical">Calculated AMPS</Label>
-                  <Input
-                    id="calculatedElectrical"
-                    type="number"
-                    value={budgetData.calculatedElectricalAllocation || 0}
-                    className="mt-1 bg-gray-50"
-                    readOnly
-                    disabled
-                    data-testid="input-calculated-electrical-allocation"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Based on tenant SF %
-                  </p>
-                </div>
-                <div>
-                  <Label htmlFor="electricalAllocation">Override AMPS</Label>
-                  <Input
-                    id="electricalAllocation"
-                    type="number"
-                    min="0"
-                    value={budgetData.electricalAllocationOverride !== null ? budgetData.electricalAllocationOverride : ''}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      const parsedValue = value === '' ? null : parseInt(value) || 0;
-                      setBudgetData(prev => ({
-                        ...prev,
-                        electricalAllocationOverride: parsedValue,
-                        electricalAllocation: parsedValue !== null ? parsedValue : prev.calculatedElectricalAllocation
-                      }));
-                    }}
-                    className="mt-1"
-                    placeholder={String(budgetData.calculatedElectricalAllocation || 0)}
-                    readOnly={!premisesEditMode}
-                    disabled={!premisesEditMode}
-                    data-testid="input-evaluation-electrical-allocation"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Leave blank to use calculated
-                  </p>
-                </div>
-                <div className="flex flex-col justify-between">
-                  <div>
-                    <Label>Effective AMPS</Label>
-                    <p className="text-lg font-semibold mt-2" data-testid="text-effective-electrical-allocation">
-                      {(budgetData.electricalAllocation || 0).toLocaleString()} AMPS
-                    </p>
-                  </div>
-                  {premisesEditMode && budgetData.electricalAllocationOverride !== null && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setBudgetData(prev => ({
-                          ...prev,
-                          electricalAllocationOverride: null,
-                          electricalAllocation: prev.calculatedElectricalAllocation
-                        }));
-                      }}
-                      className="text-xs h-7"
-                    >
-                      Reset to Calculated
-                    </Button>
-                  )}
-                </div>
-              </div>
+              {(() => {
+                const activeProperty = rfp?.isMultiBuilding 
+                  ? (multiBuildingProperties?.[0] || propertyData)
+                  : propertyData;
+                const propertyTotalAllocation = (activeProperty as any)?.electricalAllocation || 0;
+                const minimumAllocation = (activeProperty as any)?.electricalAllocationIncrement || 200;
+                const effectiveAmps = budgetData.electricalAllocation || 0;
+                const exceedsCapacity = propertyTotalAllocation > 0 && effectiveAmps > propertyTotalAllocation;
+                const belowMinimum = effectiveAmps > 0 && effectiveAmps < minimumAllocation;
+                const noCapacityAvailable = propertyTotalAllocation === 0;
+                
+                return (
+                  <>
+                    <div className="flex items-center justify-between mb-3">
+                      <Label className="text-base font-medium flex items-center gap-2">
+                        <Zap className="h-4 w-4 text-yellow-500" />
+                        Electrical Allocation
+                      </Label>
+                      {propertyTotalAllocation > 0 && (
+                        <span className="text-xs text-gray-500">
+                          Property Total: {propertyTotalAllocation.toLocaleString()} AMPS available
+                        </span>
+                      )}
+                    </div>
+                    
+                    {/* Capacity Warnings */}
+                    {noCapacityAvailable && (
+                      <div className="mb-3 p-2 bg-orange-100 border border-orange-300 rounded-lg flex items-center gap-2">
+                        <AlertTriangle className="h-4 w-4 text-orange-600" />
+                        <p className="text-xs text-orange-700 font-medium">
+                          No electrical capacity configured for this property. Set up transformers in Property Management.
+                        </p>
+                      </div>
+                    )}
+                    {exceedsCapacity && (
+                      <div className="mb-3 p-2 bg-red-100 border border-red-300 rounded-lg flex items-center gap-2">
+                        <AlertTriangle className="h-4 w-4 text-red-600" />
+                        <p className="text-xs text-red-700 font-medium">
+                          Requested {effectiveAmps.toLocaleString()} AMPS exceeds available capacity of {propertyTotalAllocation.toLocaleString()} AMPS.
+                          Shortfall: {(effectiveAmps - propertyTotalAllocation).toLocaleString()} AMPS
+                        </p>
+                      </div>
+                    )}
+                    {belowMinimum && !exceedsCapacity && (
+                      <div className="mb-3 p-2 bg-orange-100 border border-orange-300 rounded-lg flex items-center gap-2">
+                        <AlertTriangle className="h-4 w-4 text-orange-600" />
+                        <p className="text-xs text-orange-700 font-medium">
+                          Allocation of {effectiveAmps.toLocaleString()} AMPS is below minimum of {minimumAllocation} AMPS.
+                        </p>
+                      </div>
+                    )}
+                    
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <Label htmlFor="calculatedElectrical">Calculated AMPS</Label>
+                        <Input
+                          id="calculatedElectrical"
+                          type="number"
+                          value={budgetData.calculatedElectricalAllocation || 0}
+                          className="mt-1 bg-gray-50"
+                          readOnly
+                          disabled
+                          data-testid="input-calculated-electrical-allocation"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          Based on tenant SF %
+                        </p>
+                      </div>
+                      <div>
+                        <Label htmlFor="electricalAllocation">Override AMPS</Label>
+                        <Input
+                          id="electricalAllocation"
+                          type="number"
+                          min="0"
+                          value={budgetData.electricalAllocationOverride !== null ? budgetData.electricalAllocationOverride : ''}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            const parsedValue = value === '' ? null : parseInt(value) || 0;
+                            setBudgetData(prev => ({
+                              ...prev,
+                              electricalAllocationOverride: parsedValue,
+                              electricalAllocation: parsedValue !== null ? parsedValue : prev.calculatedElectricalAllocation
+                            }));
+                          }}
+                          className={`mt-1 ${exceedsCapacity ? 'border-red-400 bg-red-50' : ''}`}
+                          placeholder={String(budgetData.calculatedElectricalAllocation || 0)}
+                          readOnly={!premisesEditMode}
+                          disabled={!premisesEditMode}
+                          data-testid="input-evaluation-electrical-allocation"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          Leave blank to use calculated
+                        </p>
+                      </div>
+                      <div className="flex flex-col justify-between">
+                        <div>
+                          <Label>Effective AMPS</Label>
+                          <p className={`text-lg font-semibold mt-2 ${exceedsCapacity ? 'text-red-600' : ''}`} data-testid="text-effective-electrical-allocation">
+                            {effectiveAmps.toLocaleString()} AMPS
+                            {exceedsCapacity && <AlertTriangle className="inline h-4 w-4 ml-1 text-red-600" />}
+                          </p>
+                        </div>
+                        {premisesEditMode && budgetData.electricalAllocationOverride !== null && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setBudgetData(prev => ({
+                                ...prev,
+                                electricalAllocationOverride: null,
+                                electricalAllocation: prev.calculatedElectricalAllocation
+                              }));
+                            }}
+                            className="text-xs h-7"
+                          >
+                            Reset to Calculated
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           </div>
         </CardContent>

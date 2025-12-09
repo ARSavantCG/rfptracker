@@ -497,7 +497,7 @@ export function ElectricalCapacityManagement({ propertyId, propertyName, propert
         </Card>
       </div>
 
-      {/* Tenant Allocation Settings */}
+      {/* Tenant Allocation Settings - Now connected to transformer capacity */}
       <Card className="border-2 border-cyan-200 bg-cyan-50/30">
         <CardContent className="p-3">
           <div className="flex items-center justify-between">
@@ -507,13 +507,41 @@ export function ElectricalCapacityManagement({ propertyId, propertyName, propert
               </div>
               <div>
                 <h3 className="font-semibold text-sm">Tenant Electrical Allocation</h3>
-                <p className="text-xs text-gray-500">Configure how tenant electrical allocations are calculated</p>
+                <p className="text-xs text-gray-500">Based on your transformer capacity - allocate to tenants by SF percentage</p>
               </div>
             </div>
           </div>
+          
+          {/* Infrastructure Connection */}
+          <div className="mt-3 p-2 bg-blue-50 rounded-lg border border-blue-100">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Zap className="h-4 w-4 text-blue-600" />
+                <div>
+                  <p className="text-xs font-medium text-blue-700">Transformer Capacity</p>
+                  <p className="text-lg font-bold text-blue-600">
+                    {kvaToAmps(capacityStats.total, "480").toLocaleString()} AMPS
+                  </p>
+                  <p className="text-xs text-blue-500">({capacityStats.total.toLocaleString()} kVA total from transformers)</p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setTenantAllocation(kvaToAmps(capacityStats.total, "480"))}
+                className="border-blue-300 text-blue-600 hover:bg-blue-100"
+                disabled={capacityStats.total === 0}
+                data-testid="button-use-transformer-capacity"
+              >
+                <Zap className="h-3 w-3 mr-1" />
+                Use This Value
+              </Button>
+            </div>
+          </div>
+          
           <div className="mt-3 grid grid-cols-3 gap-4 items-end">
             <div>
-              <Label htmlFor="totalAllocation" className="text-xs font-medium">Total Property Allocation (AMPS)</Label>
+              <Label htmlFor="totalAllocation" className="text-xs font-medium">Tenant Allocation Pool (AMPS)</Label>
               <Input
                 id="totalAllocation"
                 type="number"
@@ -524,7 +552,11 @@ export function ElectricalCapacityManagement({ propertyId, propertyName, propert
                 className="mt-1"
                 data-testid="input-total-electrical-allocation"
               />
-              <p className="text-xs text-gray-500 mt-1">Total electrical capacity available for tenants</p>
+              <p className="text-xs text-gray-500 mt-1">
+                {tenantAllocation !== kvaToAmps(capacityStats.total, "480") && capacityStats.total > 0 
+                  ? "Custom value (differs from transformer capacity)" 
+                  : "Total capacity available for tenant allocation"}
+              </p>
             </div>
             <div>
               <Label htmlFor="allocationIncrement" className="text-xs font-medium">Rounding Increment (AMPS)</Label>

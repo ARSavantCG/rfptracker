@@ -1906,6 +1906,8 @@ class ExtendedDatabaseStorage extends DatabaseStorage {
         transformerId: mainPanels.transformerId,
         panelName: mainPanels.panelName,
         maxCapacityKva: mainPanels.maxCapacityKva,
+        capacityAmps: mainPanels.capacityAmps,
+        voltage: mainPanels.voltage,
         panelLocation: mainPanels.panelLocation,
         isActive: mainPanels.isActive,
         createdAt: mainPanels.createdAt,

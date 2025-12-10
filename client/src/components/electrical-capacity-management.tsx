@@ -84,14 +84,16 @@ interface BayPanelAssignment {
 
 interface ElectricalReservation {
   id: number;
-  propertyId: number;
-  bayPanelAssignmentId: number;
-  reservedFor: string;
-  reservedCapacity: number;
-  startDate: string;
-  endDate?: string;
-  status: 'active' | 'pending' | 'expired';
-  notes?: string;
+  transformerId: number;
+  rfpId?: number | null;
+  tenantName: string;
+  reservedKva: number;
+  reservationType: 'hard_allocation' | 'soft_hold';
+  reservationDate: string;
+  releaseDate?: string | null;
+  isActive: boolean;
+  notes?: string | null;
+  createdBy: string;
 }
 
 // Active RFP electrical allocation
@@ -274,8 +276,8 @@ export function ElectricalCapacityManagement({ propertyId, propertyName, propert
   });
 
   const createReservationMutation = useMutation({
-    mutationFn: async (reservation: Omit<ElectricalReservation, 'id'>) =>
-      apiRequest(`/api/properties/${propertyId}/electrical-reservations`, 'POST', reservation),
+    mutationFn: async (reservation: { transformerId: number; tenantName: string; reservedKva: number; reservationType: string; notes?: string }) =>
+      apiRequest(`/api/electrical-reservations`, 'POST', reservation),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/properties/${propertyId}/electrical-reservations`] });
       setShowReservationDialog(false);
@@ -285,8 +287,8 @@ export function ElectricalCapacityManagement({ propertyId, propertyName, propert
   });
 
   const updateReservationMutation = useMutation({
-    mutationFn: async ({ id, ...reservation }: ElectricalReservation) =>
-      apiRequest(`/api/electrical-reservations/${id}`, 'PUT', reservation),
+    mutationFn: async ({ id, ...reservation }: { id: number; transformerId?: number; tenantName?: string; reservedKva?: number; reservationType?: string; notes?: string }) =>
+      apiRequest(`/api/electrical-reservations/${id}`, 'PATCH', reservation),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/properties/${propertyId}/electrical-reservations`] });
       setShowReservationDialog(false);
@@ -424,13 +426,10 @@ export function ElectricalCapacityManagement({ propertyId, propertyName, propert
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const reservation = {
-      propertyId,
-      bayPanelAssignmentId: parseInt(formData.get('bayPanelAssignmentId') as string),
-      reservedFor: formData.get('reservedFor') as string,
-      reservedCapacity: parseFloat(formData.get('reservedCapacity') as string),
-      startDate: formData.get('startDate') as string,
-      endDate: formData.get('endDate') as string || undefined,
-      status: formData.get('status') as 'active' | 'pending' | 'expired',
+      transformerId: parseInt(formData.get('transformerId') as string),
+      tenantName: formData.get('tenantName') as string,
+      reservedKva: parseInt(formData.get('reservedKva') as string),
+      reservationType: formData.get('reservationType') as 'hard_allocation' | 'soft_hold',
       notes: formData.get('notes') as string || undefined,
     };
 
@@ -777,22 +776,24 @@ export function ElectricalCapacityManagement({ propertyId, propertyName, propert
                       <Building2 className="h-4 w-4 text-gray-600" />
                       <h3 className="font-medium text-sm">Manual Reservations</h3>
                     </div>
-                    {reservations.filter((r: ElectricalReservation) => r.status === 'active').length === 0 ? (
+                    {reservations.filter((r: ElectricalReservation) => r.isActive).length === 0 ? (
                       <div className="text-center py-4 text-gray-400 border rounded-lg">
                         <p className="text-xs">No manual reservations</p>
                       </div>
                     ) : (
                       <div className="space-y-2">
                         {reservations
-                          .filter((r: ElectricalReservation) => r.status === 'active')
+                          .filter((r: ElectricalReservation) => r.isActive)
                           .map((reservation: ElectricalReservation) => (
                             <div key={reservation.id} className="p-2 border rounded-lg">
                               <div className="flex justify-between items-start">
                                 <div>
-                                  <p className="font-medium text-sm">{reservation.reservedFor}</p>
-                                  <p className="text-xs text-gray-500">{reservation.reservedCapacity.toLocaleString()} kVA</p>
+                                  <p className="font-medium text-sm">{reservation.tenantName}</p>
+                                  <p className="text-xs text-gray-500">{reservation.reservedKva.toLocaleString()} kVA</p>
                                 </div>
-                                <Badge variant="secondary" className="text-xs">{reservation.status}</Badge>
+                                <Badge variant={reservation.reservationType === 'hard_allocation' ? 'default' : 'secondary'} className="text-xs">
+                                  {reservation.reservationType === 'hard_allocation' ? 'Committed' : 'Hold'}
+                                </Badge>
                               </div>
                             </div>
                           ))}
@@ -821,7 +822,7 @@ export function ElectricalCapacityManagement({ propertyId, propertyName, propert
                       </div>
                       <div className="flex justify-between items-center p-2 bg-gray-50 rounded-lg text-sm">
                         <span>Manual Reservations</span>
-                        <span className="font-semibold">{reservations.filter((r: ElectricalReservation) => r.status === 'active').length}</span>
+                        <span className="font-semibold">{reservations.filter((r: ElectricalReservation) => r.isActive).length}</span>
                       </div>
                     </div>
                   </div>
@@ -979,9 +980,10 @@ export function ElectricalCapacityManagement({ propertyId, propertyName, propert
                 <h3 className="text-lg font-semibold">Electrical Reservations</h3>
                 <button 
                   onClick={() => { setEditingReservation(null); setShowReservationDialog(true); }}
-                  disabled={bayAssignments.length === 0}
+                  disabled={transformers.length === 0}
                   className="inline-flex items-center justify-center rounded-md bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{ fontSize: '10px', height: '20px', padding: '2px 6px', minHeight: '20px', lineHeight: '1' }}
+                  title={transformers.length === 0 ? "Add a transformer first" : ""}
                 >
                   <Plus style={{ width: '8px', height: '8px', marginRight: '3px' }} />
                   Create Reservation
@@ -992,29 +994,32 @@ export function ElectricalCapacityManagement({ propertyId, propertyName, propert
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Reserved For</TableHead>
-                      <TableHead>Bay Assignment</TableHead>
+                      <TableHead>Tenant</TableHead>
+                      <TableHead>Transformer</TableHead>
                       <TableHead>Capacity</TableHead>
-                      <TableHead>Start Date</TableHead>
-                      <TableHead>Status</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Type</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {reservations.map((reservation: ElectricalReservation) => {
-                      const assignment = bayAssignments.find((a: BayPanelAssignment) => a.id === reservation.bayPanelAssignmentId);
+                    {reservations.filter((r: ElectricalReservation) => r.isActive).map((reservation: ElectricalReservation) => {
+                      const transformer = transformers.find((t: Transformer) => t.id === reservation.transformerId);
                       return (
                         <TableRow key={reservation.id}>
-                          <TableCell className="font-medium">{reservation.reservedFor}</TableCell>
-                          <TableCell>{assignment?.bayConfiguration || 'N/A'}</TableCell>
-                          <TableCell>{reservation.reservedCapacity.toLocaleString()} kVA</TableCell>
-                          <TableCell>{formatDate(reservation.startDate)}</TableCell>
+                          <TableCell className="font-medium">{reservation.tenantName}</TableCell>
                           <TableCell>
-                            <Badge variant={
-                              reservation.status === 'active' ? 'default' : 
-                              reservation.status === 'pending' ? 'secondary' : 'destructive'
-                            }>
-                              {reservation.status}
+                            {transformer ? (
+                              <span className="text-xs text-blue-600">{transformer.transformerName}</span>
+                            ) : (
+                              <span className="text-xs text-gray-400">Unknown</span>
+                            )}
+                          </TableCell>
+                          <TableCell>{reservation.reservedKva.toLocaleString()} kVA</TableCell>
+                          <TableCell>{formatDate(reservation.reservationDate)}</TableCell>
+                          <TableCell>
+                            <Badge variant={reservation.reservationType === 'hard_allocation' ? 'default' : 'secondary'}>
+                              {reservation.reservationType === 'hard_allocation' ? 'Committed' : 'Hold'}
                             </Badge>
                           </TableCell>
                           <TableCell>
@@ -1339,44 +1344,44 @@ export function ElectricalCapacityManagement({ propertyId, propertyName, propert
       </Dialog>
 
       <Dialog open={showReservationDialog} onOpenChange={setShowReservationDialog}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>{editingReservation ? 'Edit Reservation' : 'Create New Reservation'}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleReservationSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="reservedFor">Reserved For *</Label>
+                <Label htmlFor="tenantName">Tenant Name *</Label>
                 <Input
-                  name="reservedFor"
-                  defaultValue={editingReservation?.reservedFor || ''}
+                  name="tenantName"
+                  defaultValue={editingReservation?.tenantName || ''}
                   placeholder="e.g., ABC Manufacturing Co."
                   required
                 />
               </div>
               <div>
-                <Label htmlFor="reservedCapacity">Reserved Capacity (kVA) *</Label>
+                <Label htmlFor="reservedKva">Reserved Capacity (kVA) *</Label>
                 <Input
-                  name="reservedCapacity"
+                  name="reservedKva"
                   type="number"
-                  defaultValue={editingReservation?.reservedCapacity || ''}
+                  defaultValue={editingReservation?.reservedKva || ''}
                   placeholder="e.g., 150"
                   required
                 />
               </div>
               <div>
-                <Label htmlFor="bayPanelAssignmentId">Bay Assignment *</Label>
+                <Label htmlFor="transformerId">Transformer *</Label>
                 <div className="relative">
                   <select
-                    name="bayPanelAssignmentId"
-                    defaultValue={editingReservation?.bayPanelAssignmentId?.toString() || ''}
+                    name="transformerId"
+                    defaultValue={editingReservation?.transformerId?.toString() || (transformers.length === 1 ? transformers[0].id.toString() : '')}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white pr-8"
                     required
                   >
-                    <option value="">Select bay assignment</option>
-                    {bayAssignments.map((assignment: BayPanelAssignment) => (
-                      <option key={assignment.id} value={assignment.id.toString()}>
-                        {assignment.bayConfiguration} ({assignment.capacity} kVA)
+                    <option value="">Select transformer</option>
+                    {transformers.map((t: Transformer) => (
+                      <option key={t.id} value={t.id.toString()}>
+                        {t.transformerName} ({t.totalCapacityKva.toLocaleString()} kVA)
                       </option>
                     ))}
                   </select>
@@ -1384,38 +1389,29 @@ export function ElectricalCapacityManagement({ propertyId, propertyName, propert
                 </div>
               </div>
               <div>
-                <Label htmlFor="status">Status *</Label>
+                <Label htmlFor="reservationType">Reservation Type *</Label>
                 <div className="relative">
                   <select
-                    name="status"
-                    defaultValue={editingReservation?.status || 'pending'}
+                    name="reservationType"
+                    defaultValue={editingReservation?.reservationType || 'soft_hold'}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white pr-8"
                     required
                   >
-                    <option value="pending">Pending</option>
-                    <option value="active">Active</option>
-                    <option value="expired">Expired</option>
+                    <option value="soft_hold">Hold (Pending RFP/Negotiation)</option>
+                    <option value="hard_allocation">Committed (Signed Lease)</option>
                   </select>
                   <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                 </div>
+                <p className="text-xs text-gray-500 mt-1">Hold = soft reservation; Committed = firm allocation</p>
               </div>
-              <div>
-                <Label htmlFor="startDate">Start Date *</Label>
-                <Input
-                  name="startDate"
-                  type="date"
-                  defaultValue={editingReservation?.startDate ? new Date(editingReservation.startDate).toISOString().split('T')[0] : ''}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="endDate">End Date</Label>
-                <Input
-                  name="endDate"
-                  type="date"
-                  defaultValue={editingReservation?.endDate ? new Date(editingReservation.endDate).toISOString().split('T')[0] : ''}
-                />
-              </div>
+            </div>
+            <div>
+              <Label htmlFor="notes">Notes (Optional)</Label>
+              <Input
+                name="notes"
+                defaultValue={editingReservation?.notes || ''}
+                placeholder="e.g., Pending RFP approval, expected Q2"
+              />
             </div>
             <div className="flex justify-end gap-2">
               <button 

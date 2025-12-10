@@ -971,6 +971,75 @@ export function ElectricalCapacityManagement({ propertyId, propertyName, propert
                   <p className="text-sm">Add main panels to distribute electrical capacity from transformers</p>
                 </div>
               )}
+
+              {/* Bay Panel Assignments Section */}
+              <div className="mt-6 pt-4 border-t">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-semibold">Bay Panel Assignments</h3>
+                  <button 
+                    onClick={() => { setEditingAssignment(null); setShowAssignmentDialog(true); }}
+                    disabled={mainPanels.length === 0}
+                    className="inline-flex items-center justify-center rounded-md bg-green-600 text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ fontSize: '10px', height: '20px', padding: '2px 6px', minHeight: '20px', lineHeight: '1' }}
+                    title={mainPanels.length === 0 ? "Add main panels first" : ""}
+                  >
+                    <Plus style={{ width: '8px', height: '8px', marginRight: '3px' }} />
+                    Add Bay Assignment
+                  </button>
+                </div>
+
+                {bayAssignments.length > 0 ? (
+                  <div className="border rounded-lg">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Bay Configuration</TableHead>
+                          <TableHead>Panel</TableHead>
+                          <TableHead>Capacity</TableHead>
+                          <TableHead>Notes</TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {bayAssignments.map((assignment: BayPanelAssignment) => {
+                          const panel = mainPanels.find((p: MainPanel) => p.id === assignment.mainPanelId);
+                          return (
+                            <TableRow key={assignment.id}>
+                              <TableCell className="font-medium">{assignment.bayConfiguration}</TableCell>
+                              <TableCell>{panel?.panelName || 'Unknown'}</TableCell>
+                              <TableCell>{assignment.capacity.toLocaleString()} kVA</TableCell>
+                              <TableCell className="text-xs text-gray-500">{assignment.notes || '-'}</TableCell>
+                              <TableCell>
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => { setEditingAssignment(assignment); setShowAssignmentDialog(true); }}
+                                    className="inline-flex items-center justify-center rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+                                    style={{ fontSize: '8px', height: '16px', padding: '1px 3px', minHeight: '16px' }}
+                                  >
+                                    <Edit style={{ width: '6px', height: '6px' }} />
+                                  </button>
+                                  <button
+                                    onClick={() => deleteBayAssignmentMutation.mutate(assignment.id)}
+                                    className="inline-flex items-center justify-center rounded bg-red-600 text-white hover:bg-red-700"
+                                    style={{ fontSize: '8px', height: '16px', padding: '1px 3px', minHeight: '16px' }}
+                                  >
+                                    <Trash2 style={{ width: '6px', height: '6px' }} />
+                                  </button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                ) : (
+                  <div className="text-center py-6 text-gray-400 border rounded-lg bg-gray-50">
+                    <p className="text-sm">No bay assignments configured</p>
+                    <p className="text-xs mt-1">Assign panels to specific bays to track electrical distribution</p>
+                  </div>
+                )}
+              </div>
               </div>
             )}
 

@@ -8533,6 +8533,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Active RFP Electrical Allocations for a property
+  app.get("/api/properties/:propertyId/active-electrical-allocations", async (req, res) => {
+    try {
+      const propertyId = parseInt(req.params.propertyId);
+      if (isNaN(propertyId)) {
+        return res.status(400).json({ message: "Invalid property ID" });
+      }
+
+      // Get all non-published RFPs for this property that have electrical allocations
+      const allRfps = await storage.getAllRfpRequests();
+      const propertyRfps = allRfps.filter((rfp: any) => {
+        // Check if RFP is for this property and not published/archived
+        const isForProperty = rfp.propertyId === propertyId || parseInt(rfp.property) === propertyId;
+        const isActive = rfp.status !== 'published' && rfp.status !== 'archived';
+        return isForProperty && isActive;
+      });
+
+      // Get evaluation budgets for these RFPs and extract electrical allocations
+      const allocations: Array<{
+        rfpId: number;
+        rfpNumber: string;
+        tenantName: string;
+        status: string;
+        allocations: Array<{ kva: number; voltage: string; amps: number }>;
+        totalKva: number;
+      }> = [];
+
+      for (const rfp of propertyRfps) {
+        const budget = await storage.getEvaluationBudget(rfp.id);
+        if (budget && budget.metadata) {
+          const metadata = budget.metadata as { electricalAllocations?: Array<{ kva: number; voltage: string }> };
+          if (metadata.electricalAllocations && metadata.electricalAllocations.length > 0) {
+            const totalKva = metadata.electricalAllocations.reduce((sum: number, alloc: { kva: number }) => sum + (alloc.kva || 0), 0);
+            
+            // Calculate AMPS for each allocation
+            const allocsWithAmps = metadata.electricalAllocations.map((alloc: { kva: number; voltage: string }) => {
+              const voltage = alloc.voltage || "208";
+              const multiplier = voltage === "480" ? 480 * Math.sqrt(3) : 208 * Math.sqrt(3);
+              const amps = Math.round((alloc.kva * 1000) / multiplier);
+              return { kva: alloc.kva, voltage, amps };
+            });
+
+            allocations.push({
+              rfpId: rfp.id,
+              rfpNumber: rfp.rfpNumber || `RFP-${rfp.id}`,
+              tenantName: rfp.tenantName || 'Unknown Tenant',
+              status: rfp.status || 'unknown',
+              allocations: allocsWithAmps,
+              totalKva
+            });
+          }
+        }
+      }
+
+      res.json(allocations);
+    } catch (error) {
+      console.error("Error fetching active electrical allocations:", error);
+      res.status(500).json({ message: "Failed to fetch active electrical allocations" });
+    }
+  });
+
   // Electrical Reservations endpoints
   app.get("/api/transformers/:transformerId/reservations", async (req, res) => {
     try {

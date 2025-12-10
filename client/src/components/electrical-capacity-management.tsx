@@ -94,6 +94,16 @@ interface ElectricalReservation {
   notes?: string;
 }
 
+// Active RFP electrical allocation
+interface ActiveRfpAllocation {
+  rfpId: number;
+  rfpNumber: string;
+  tenantName: string;
+  status: string;
+  allocations: Array<{ kva: number; voltage: string; amps: number }>;
+  totalKva: number;
+}
+
 interface ElectricalCapacityManagementProps {
   propertyId: number;
   propertyName: string;
@@ -133,6 +143,11 @@ export function ElectricalCapacityManagement({ propertyId, propertyName, propert
 
   const { data: reservations = [] } = useQuery<ElectricalReservation[]>({
     queryKey: [`/api/properties/${propertyId}/electrical-reservations`],
+  });
+
+  // Fetch active RFP electrical allocations for this property
+  const { data: activeRfpAllocations = [] } = useQuery<ActiveRfpAllocation[]>({
+    queryKey: [`/api/properties/${propertyId}/active-electrical-allocations`],
   });
 
   const { data: propertyData, refetch: refetchProperty } = useQuery({
@@ -708,59 +723,106 @@ export function ElectricalCapacityManagement({ propertyId, propertyName, propert
             </div>
 
             {activeTab === 'overview' && (
-              <div className="mt-3 grid grid-cols-2 gap-4">
-                {/* Active Reservations */}
-                <div>
-                  <div className="flex items-center gap-2 mb-4">
-                    <Building2 className="h-5 w-5 text-blue-600" />
-                    <h3 className="font-semibold">Active Reservations</h3>
+              <div className="mt-3 space-y-4">
+                {/* Active RFP Allocations - Real-time tracking */}
+                <div className="p-3 border-2 border-blue-200 rounded-lg bg-blue-50/30">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <Zap className="h-5 w-5 text-blue-600" />
+                      <h3 className="font-semibold">Active RFP Allocations</h3>
+                    </div>
+                    {activeRfpAllocations.length > 0 && (
+                      <Badge className="bg-blue-500">
+                        {activeRfpAllocations.reduce((sum, a) => sum + a.totalKva, 0).toLocaleString()} kVA allocated
+                      </Badge>
+                    )}
                   </div>
-                  {reservations.filter((r: ElectricalReservation) => r.status === 'active').length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">
-                      <p>No active reservations</p>
-                      <p className="text-sm mt-1">Create reservations to track electrical capacity usage</p>
+                  
+                  {activeRfpAllocations.length === 0 ? (
+                    <div className="text-center py-4 text-gray-500">
+                      <p className="text-sm">No active RFP electrical allocations</p>
+                      <p className="text-xs mt-1">Allocations from in-progress RFPs will appear here</p>
                     </div>
                   ) : (
-                    <div className="space-y-3">
-                      {reservations
-                        .filter((r: ElectricalReservation) => r.status === 'active')
-                        .map((reservation: ElectricalReservation) => (
-                          <div key={reservation.id} className="p-3 border rounded-lg">
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <p className="font-medium">{reservation.reservedFor}</p>
-                                <p className="text-sm text-gray-600">{reservation.reservedCapacity.toLocaleString()} kVA</p>
-                              </div>
-                              <Badge variant="secondary">{reservation.status}</Badge>
+                    <div className="space-y-2">
+                      {activeRfpAllocations.map((rfp) => (
+                        <div key={rfp.rfpId} className="p-2 bg-white border rounded-lg">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="font-medium text-sm">{rfp.tenantName}</p>
+                              <p className="text-xs text-gray-500">{rfp.rfpNumber}</p>
                             </div>
+                            <Badge variant="outline" className="text-xs">
+                              {rfp.status}
+                            </Badge>
                           </div>
-                        ))}
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {rfp.allocations.map((alloc, idx) => (
+                              <div key={idx} className="text-xs px-2 py-1 bg-blue-100 rounded">
+                                <span className="font-semibold">{alloc.kva}</span> kVA @ {alloc.voltage}V
+                                <span className="text-gray-500 ml-1">({alloc.amps} A)</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
 
-                {/* System Status */}
-                <div>
-                  <div className="flex items-center gap-2 mb-4">
-                    <Activity className="h-5 w-5 text-green-600" />
-                    <h3 className="font-semibold">System Status</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Manual Reservations */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <Building2 className="h-4 w-4 text-gray-600" />
+                      <h3 className="font-medium text-sm">Manual Reservations</h3>
+                    </div>
+                    {reservations.filter((r: ElectricalReservation) => r.status === 'active').length === 0 ? (
+                      <div className="text-center py-4 text-gray-400 border rounded-lg">
+                        <p className="text-xs">No manual reservations</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {reservations
+                          .filter((r: ElectricalReservation) => r.status === 'active')
+                          .map((reservation: ElectricalReservation) => (
+                            <div key={reservation.id} className="p-2 border rounded-lg">
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <p className="font-medium text-sm">{reservation.reservedFor}</p>
+                                  <p className="text-xs text-gray-500">{reservation.reservedCapacity.toLocaleString()} kVA</p>
+                                </div>
+                                <Badge variant="secondary" className="text-xs">{reservation.status}</Badge>
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    )}
                   </div>
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                      <span>Transformers</span>
-                      <span className="font-semibold">{transformers.length}</span>
+
+                  {/* System Status */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <Activity className="h-4 w-4 text-green-600" />
+                      <h3 className="font-medium text-sm">System Status</h3>
                     </div>
-                    <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                      <span>Main Panels</span>
-                      <span className="font-semibold">{mainPanels.length}</span>
-                    </div>
-                    <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                      <span>Bay Assignments</span>
-                      <span className="font-semibold">{bayAssignments.length}</span>
-                    </div>
-                    <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                      <span>Active Reservations</span>
-                      <span className="font-semibold">{reservations.filter((r: ElectricalReservation) => r.status === 'active').length}</span>
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center p-2 bg-gray-50 rounded-lg text-sm">
+                        <span>Transformers</span>
+                        <span className="font-semibold">{transformers.length}</span>
+                      </div>
+                      <div className="flex justify-between items-center p-2 bg-gray-50 rounded-lg text-sm">
+                        <span>Main Panels</span>
+                        <span className="font-semibold">{mainPanels.length}</span>
+                      </div>
+                      <div className="flex justify-between items-center p-2 bg-gray-50 rounded-lg text-sm">
+                        <span>Active RFP Allocations</span>
+                        <span className="font-semibold">{activeRfpAllocations.length}</span>
+                      </div>
+                      <div className="flex justify-between items-center p-2 bg-gray-50 rounded-lg text-sm">
+                        <span>Manual Reservations</span>
+                        <span className="font-semibold">{reservations.filter((r: ElectricalReservation) => r.status === 'active').length}</span>
+                      </div>
                     </div>
                   </div>
                 </div>

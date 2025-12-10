@@ -588,7 +588,7 @@ export function ElectricalCapacityManagement({ propertyId, propertyName, propert
                         </div>
                       </div>
                       <p className={`text-xs mt-1 ${isAtCapacity ? 'text-red-500' : isLowCapacity ? 'text-orange-500' : 'text-green-500'}`}>
-                        Remaining transformer capacity after house panels
+                        Remaining transformer capacity
                       </p>
                     </div>
                   </div>

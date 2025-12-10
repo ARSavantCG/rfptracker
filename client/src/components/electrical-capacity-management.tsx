@@ -33,18 +33,17 @@ interface MainPanel {
   panelName: string;
   maxCapacityKva: number;
   capacityAmps?: number; // Direct AMPS entry for panels
-  voltage?: string; // Voltage configuration: "480", "208", "240"
+  voltage?: string; // Voltage configuration: "480", "208"
   panelLocation?: string;
   isActive?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
 
-// Voltage options for panel configuration
+// Voltage options for panel configuration (3-phase only)
 const VOLTAGE_OPTIONS = [
   { value: "480", label: "480V (3-Phase)", multiplier: 480 * Math.sqrt(3) },
   { value: "208", label: "208/120V (3-Phase)", multiplier: 208 * Math.sqrt(3) },
-  { value: "240", label: "240V (3-Phase)", multiplier: 240 * Math.sqrt(3) },
 ] as const;
 
 // Get voltage multiplier for 3-phase systems

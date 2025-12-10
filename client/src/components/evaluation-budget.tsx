@@ -51,7 +51,7 @@ interface CustomAssembly {
 interface ElectricalAllocationEntry {
   id: string;
   kva: number;
-  voltage: string; // "480" | "208" | "240"
+  voltage: string; // "480" | "208"
 }
 
 interface EvaluationBudgetData {
@@ -85,7 +85,6 @@ interface EvaluationBudgetData {
 const VOLTAGE_OPTIONS = [
   { value: "480", label: "480V (3-Phase)", multiplier: 480 * Math.sqrt(3) },
   { value: "208", label: "208/120V (3-Phase)", multiplier: 208 * Math.sqrt(3) },
-  { value: "240", label: "240V (3-Phase)", multiplier: 240 * Math.sqrt(3) },
 ] as const;
 
 // Convert AMPS to kVA based on voltage
@@ -5082,7 +5081,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
                           <Zap className="h-4 w-4 text-blue-600" />
                           <div>
                             <p className="text-xs font-medium text-blue-700">Tenant Electrical Services</p>
-                            <p className="text-xs text-blue-500">Add multiple services at different voltages (e.g., 100 kVA @ 480V + 100 kVA @ 240V)</p>
+                            <p className="text-xs text-blue-500">Add multiple services at different voltages (e.g., 100 kVA @ 480V + 50 kVA @ 208V)</p>
                           </div>
                         </div>
                         {premisesEditMode && (

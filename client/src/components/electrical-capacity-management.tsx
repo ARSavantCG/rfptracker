@@ -496,14 +496,23 @@ export function ElectricalCapacityManagement({ propertyId, propertyName, propert
         </Card>
       </div>
 
-      {/* Tenant Allocation Settings - Now connected to Available capacity */}
+      {/* Tenant Allocation Pool - kVA-centric with dual-voltage AMPS display */}
       {(() => {
-        const availableAmps = kvaToAmps(capacityStats.available, "480");
-        const totalAmps = kvaToAmps(capacityStats.total, "480");
-        const minimumAllocation = 200; // Minimum AMPS per tenant
-        const isAtCapacity = availableAmps <= 0;
-        const isLowCapacity = availableAmps > 0 && availableAmps < minimumAllocation;
-        const hasCapacity = availableAmps >= minimumAllocation;
+        // Calculate available kVA and convert to AMPS at both voltages
+        const availableKva = capacityStats.available;
+        const availableAmps480 = kvaToAmps(availableKva, "480");
+        const availableAmps208 = kvaToAmps(availableKva, "208");
+        
+        // Pool is stored in kVA - convert current allocation from AMPS to kVA for comparison
+        const poolKva = ampsToKva(tenantAllocation, "480"); // Legacy: stored as AMPS @ 480V
+        const poolAmps480 = kvaToAmps(poolKva, "480");
+        const poolAmps208 = kvaToAmps(poolKva, "208");
+        
+        const minimumKva = 50; // ~60 AMPS @ 480V or ~139 AMPS @ 208V
+        const isAtCapacity = availableKva <= 0;
+        const isLowCapacity = availableKva > 0 && availableKva < minimumKva;
+        const hasCapacity = availableKva >= minimumKva;
+        const isOverAllocated = poolKva > availableKva && availableKva > 0;
         
         return (
           <Card className={`border-2 ${isAtCapacity ? 'border-red-300 bg-red-50/30' : isLowCapacity ? 'border-orange-300 bg-orange-50/30' : 'border-cyan-200 bg-cyan-50/30'}`}>
@@ -516,8 +525,8 @@ export function ElectricalCapacityManagement({ propertyId, propertyName, propert
                      <Users className="h-4 w-4 text-cyan-600" />}
                   </div>
                   <div>
-                    <h3 className="font-semibold text-sm">Tenant Electrical Allocation</h3>
-                    <p className="text-xs text-gray-500">Allocate remaining capacity to tenants by SF percentage</p>
+                    <h3 className="font-semibold text-sm">Tenant Allocation Pool</h3>
+                    <p className="text-xs text-gray-500">Available capacity for tenant electrical services</p>
                   </div>
                 </div>
                 {isAtCapacity && (
@@ -540,29 +549,40 @@ export function ElectricalCapacityManagement({ propertyId, propertyName, propert
                 )}
               </div>
               
-              {/* Capacity Status Box */}
-              <div className={`mt-3 p-2 rounded-lg border ${isAtCapacity ? 'bg-red-50 border-red-200' : isLowCapacity ? 'bg-orange-50 border-orange-200' : 'bg-green-50 border-green-200'}`}>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Zap className={`h-4 w-4 ${isAtCapacity ? 'text-red-600' : isLowCapacity ? 'text-orange-600' : 'text-green-600'}`} />
+              {/* Available Capacity - kVA with dual-voltage AMPS breakdown */}
+              <div className={`mt-3 p-3 rounded-lg border ${isAtCapacity ? 'bg-red-50 border-red-200' : isLowCapacity ? 'bg-orange-50 border-orange-200' : 'bg-green-50 border-green-200'}`}>
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start gap-3">
+                    <Zap className={`h-5 w-5 mt-0.5 ${isAtCapacity ? 'text-red-600' : isLowCapacity ? 'text-orange-600' : 'text-green-600'}`} />
                     <div>
                       <p className={`text-xs font-medium ${isAtCapacity ? 'text-red-700' : isLowCapacity ? 'text-orange-700' : 'text-green-700'}`}>
                         Available for Tenants
                       </p>
-                      <p className={`text-lg font-bold ${isAtCapacity ? 'text-red-600' : isLowCapacity ? 'text-orange-600' : 'text-green-600'}`}>
-                        {availableAmps.toLocaleString()} AMPS
+                      <p className={`text-xl font-bold ${isAtCapacity ? 'text-red-600' : isLowCapacity ? 'text-orange-600' : 'text-green-600'}`}>
+                        {availableKva.toLocaleString()} kVA
                       </p>
-                      <p className={`text-xs ${isAtCapacity ? 'text-red-500' : isLowCapacity ? 'text-orange-500' : 'text-green-500'}`}>
-                        ({capacityStats.available.toLocaleString()} kVA remaining of {capacityStats.total.toLocaleString()} kVA total)
+                      {/* Dual-voltage AMPS breakdown */}
+                      <div className="mt-1 flex gap-3">
+                        <div className={`text-xs px-2 py-1 rounded ${isAtCapacity ? 'bg-red-100' : isLowCapacity ? 'bg-orange-100' : 'bg-green-100'}`}>
+                          <span className="font-semibold">{availableAmps480.toLocaleString()}</span>
+                          <span className="text-gray-600"> AMPS @ 480V</span>
+                        </div>
+                        <div className={`text-xs px-2 py-1 rounded ${isAtCapacity ? 'bg-red-100' : isLowCapacity ? 'bg-orange-100' : 'bg-green-100'}`}>
+                          <span className="font-semibold">{availableAmps208.toLocaleString()}</span>
+                          <span className="text-gray-600"> AMPS @ 208V</span>
+                        </div>
+                      </div>
+                      <p className={`text-xs mt-1 ${isAtCapacity ? 'text-red-500' : isLowCapacity ? 'text-orange-500' : 'text-green-500'}`}>
+                        Remaining transformer capacity after house panels
                       </p>
                     </div>
                   </div>
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setTenantAllocation(availableAmps)}
+                    onClick={() => setTenantAllocation(availableAmps480)} // Set to equivalent AMPS @ 480V
                     className={`${isAtCapacity ? 'border-red-300 text-red-600 hover:bg-red-100' : isLowCapacity ? 'border-orange-300 text-orange-600 hover:bg-orange-100' : 'border-green-300 text-green-600 hover:bg-green-100'}`}
-                    disabled={availableAmps <= 0}
+                    disabled={availableKva <= 0}
                     data-testid="button-use-available-capacity"
                   >
                     <Zap className="h-3 w-3 mr-1" />
@@ -584,57 +604,68 @@ export function ElectricalCapacityManagement({ propertyId, propertyName, propert
                 <div className="mt-2 p-2 bg-orange-100 border border-orange-300 rounded-lg">
                   <p className="text-xs text-orange-700 font-medium flex items-center gap-1">
                     <AlertTriangle className="h-3 w-3" />
-                    Available capacity ({availableAmps} AMPS) is below minimum tenant allocation ({minimumAllocation} AMPS). May need infrastructure upgrade.
+                    Available capacity ({availableKva} kVA) is below minimum threshold. May need infrastructure upgrade.
                   </p>
                 </div>
               )}
               
-              <div className="mt-3 grid grid-cols-3 gap-4 items-end">
-                <div>
-                  <Label htmlFor="totalAllocation" className="text-xs font-medium">Tenant Allocation Pool (AMPS)</Label>
-                  <Input
-                    id="totalAllocation"
-                    type="number"
-                    min="0"
-                    step="100"
-                    value={tenantAllocation}
-                    onChange={(e) => setTenantAllocation(parseInt(e.target.value) || 0)}
-                    className={`mt-1 ${tenantAllocation > availableAmps && availableAmps > 0 ? 'border-orange-400 bg-orange-50' : ''}`}
-                    data-testid="input-total-electrical-allocation"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    {tenantAllocation > availableAmps && availableAmps > 0
-                      ? <span className="text-orange-600 font-medium">⚠️ Exceeds available capacity by {(tenantAllocation - availableAmps).toLocaleString()} AMPS</span>
-                      : "Total capacity pool for tenant allocation"}
-                  </p>
+              {/* Pool Settings with dual-voltage display */}
+              <div className="mt-3 p-3 bg-gray-50 border rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <Cable className="h-4 w-4 text-cyan-600" />
+                  <span className="text-sm font-medium">Tenant Pool Settings</span>
                 </div>
-                <div>
-                  <Label htmlFor="allocationIncrement" className="text-xs font-medium">Rounding Increment (AMPS)</Label>
-                  <Input
-                    id="allocationIncrement"
-                    type="number"
-                    min="50"
-                    step="50"
-                    value={allocationIncrement}
-                    onChange={(e) => setAllocationIncrement(parseInt(e.target.value) || 200)}
-                    className="mt-1"
-                    data-testid="input-allocation-increment"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Minimum allocation per tenant</p>
-                </div>
-                <div>
-                  <Button
-                    onClick={() => updateTenantAllocationMutation.mutate({ 
-                      electricalAllocation: tenantAllocation, 
-                      electricalAllocationIncrement: allocationIncrement 
-                    })}
-                    disabled={updateTenantAllocationMutation.isPending}
-                    className="bg-cyan-600 hover:bg-cyan-700"
-                    data-testid="button-save-allocation"
-                  >
-                    <Save className="h-4 w-4 mr-1" />
-                    {updateTenantAllocationMutation.isPending ? "Saving..." : "Save Settings"}
-                  </Button>
+                <div className="grid grid-cols-3 gap-4 items-end">
+                  <div>
+                    <Label htmlFor="totalAllocation" className="text-xs font-medium">Pool Size (AMPS @ 480V)</Label>
+                    <Input
+                      id="totalAllocation"
+                      type="number"
+                      min="0"
+                      step="100"
+                      value={tenantAllocation}
+                      onChange={(e) => setTenantAllocation(parseInt(e.target.value) || 0)}
+                      className={`mt-1 ${isOverAllocated ? 'border-orange-400 bg-orange-50' : ''}`}
+                      data-testid="input-total-electrical-allocation"
+                    />
+                    {/* Show equivalent at 208V */}
+                    <p className="text-xs text-gray-500 mt-1">
+                      = {poolAmps208.toLocaleString()} AMPS @ 208V ({poolKva.toLocaleString()} kVA)
+                    </p>
+                    {isOverAllocated && (
+                      <p className="text-xs text-orange-600 font-medium mt-1">
+                        ⚠️ Exceeds available by {(poolKva - availableKva).toLocaleString()} kVA
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <Label htmlFor="allocationIncrement" className="text-xs font-medium">Rounding Increment (AMPS)</Label>
+                    <Input
+                      id="allocationIncrement"
+                      type="number"
+                      min="50"
+                      step="50"
+                      value={allocationIncrement}
+                      onChange={(e) => setAllocationIncrement(parseInt(e.target.value) || 200)}
+                      className="mt-1"
+                      data-testid="input-allocation-increment"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Minimum allocation per tenant</p>
+                  </div>
+                  <div>
+                    <Button
+                      onClick={() => updateTenantAllocationMutation.mutate({ 
+                        electricalAllocation: tenantAllocation, 
+                        electricalAllocationIncrement: allocationIncrement 
+                      })}
+                      disabled={updateTenantAllocationMutation.isPending}
+                      className="bg-cyan-600 hover:bg-cyan-700"
+                      data-testid="button-save-allocation"
+                    >
+                      <Save className="h-4 w-4 mr-1" />
+                      {updateTenantAllocationMutation.isPending ? "Saving..." : "Save Settings"}
+                    </Button>
+                  </div>
                 </div>
               </div>
             </CardContent>

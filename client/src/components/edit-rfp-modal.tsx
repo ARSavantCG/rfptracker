@@ -713,13 +713,15 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
               onClick={async () => {
                 try {
                   const token = localStorage.getItem('auth-token');
-                  const response = await fetch(`/api/rfp-requests/${rfp.id}/summary-report`, {
-                    headers: { 'Authorization': `Bearer ${token}` },
+                  const cacheBuster = Date.now();
+                  const response = await fetch(`/api/rfp-requests/${rfp.id}/summary-report?t=${cacheBuster}`, {
+                    headers: { 'Authorization': `Bearer ${token}`, 'Cache-Control': 'no-cache' },
                   });
                   if (!response.ok) throw new Error('Failed to load report');
                   const html = await response.text();
-                  const newWindow = window.open('', '_blank');
+                  const newWindow = window.open('about:blank', '_blank');
                   if (newWindow) {
+                    newWindow.document.open();
                     newWindow.document.write(html);
                     newWindow.document.close();
                   }

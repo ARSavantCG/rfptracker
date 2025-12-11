@@ -1,11 +1,20 @@
 {
-  "version": "1.1.2",
-  "buildDate": "2025-09-04T18:44:04.875Z",
+  "version": "1.1.3",
+  "buildDate": "2025-12-11T00:00:00.000Z",
   "gitCommit": "local-build",
   "environment": "development",
   "changes": [
     {
-      "description": "General Bug Fixes"
+      "description": "Added Bay Panel Assignments section to Panels tab"
+    },
+    {
+      "description": "Transformer-level electrical reservations (no bay required)"
+    },
+    {
+      "description": "Active RFP Allocations panel in Overview tab"
+    },
+    {
+      "description": "Updated capacity label to 'Remaining transformer capacity'"
     }
   ]
 }

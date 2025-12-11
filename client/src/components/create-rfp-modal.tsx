@@ -35,7 +35,7 @@ const createRfpSchema = z.object({
   confidential: z.boolean().default(false),
   requestTypes: z.array(z.string()).min(1, "At least one request type is required"),
   anticipatedLeaseExecutionDate: z.string().min(1, "Anticipated lease execution date is required"),
-  anticipatedOccupancyDate: z.string().min(1, "Anticipated occupancy date is required"),
+  anticipatedOccupancyDate: z.string().optional(),
   notes: z.string().optional(),
   areaBreakdown: z.array(z.object({
     id: z.string(),
@@ -790,7 +790,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                   name="anticipatedOccupancyDate"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Anticipated Occupancy Date *</FormLabel>
+                      <FormLabel>Tenant Desired Occupancy Date</FormLabel>
                       <FormControl>
                         <Input 
                           type="date"
@@ -798,7 +798,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                         />
                       </FormControl>
                       <p className="text-sm text-muted-foreground">
-                        Expected tenant move-in date
+                        Tenant's preferred move-in date (optional)
                       </p>
                       <FormMessage />
                     </FormItem>

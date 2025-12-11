@@ -3400,9 +3400,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       </div>
 
       <!-- Project Area -->
-      <div style="background-color: #ecfdf5; border-left: 4px solid #10b981; padding: 16px; margin-bottom: 24px; border-radius: 0 4px 4px 0;">
-        <h3 style="margin: 0 0 8px 0; color: #065f46; font-size: 14px;">Project Area</h3>
-        <p style="margin: 0; color: #047857; font-size: 18px; font-weight: 600;">
+      <div style="border-left: 4px solid #10b981; padding: 16px; margin-bottom: 24px;">
+        <h3 style="margin: 0 0 8px 0; color: #374151; font-size: 14px;">Project Area</h3>
+        <p style="margin: 0; color: #1f2937; font-size: 18px; font-weight: 600;">
           ${bayCount} Bay${bayCount !== 1 ? 's' : ''} - ${totalRentableArea.toLocaleString()} SF Rentable Area
         </p>
       </div>
@@ -3438,8 +3438,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       <!-- Development Team Notes -->
       <div style="margin-bottom: 24px;">
         <h2 style="color: #1e3a5f; margin-bottom: 16px; font-size: 16px; border-bottom: 2px solid #f59e0b; padding-bottom: 8px;">Development Team Notes</h2>
-        <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 0 4px 4px 0;">
-          <p style="margin: 0; color: #78350f; white-space: pre-wrap; font-size: 14px;">${rfp.notes}</p>
+        <div style="border-left: 4px solid #f59e0b; padding: 16px;">
+          <p style="margin: 0; color: #374151; white-space: pre-wrap; font-size: 14px;">${rfp.notes}</p>
         </div>
       </div>
       ` : ''}
@@ -3448,8 +3448,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       <!-- Deal Metric Notes -->
       <div style="margin-bottom: 24px;">
         <h2 style="color: #1e3a5f; margin-bottom: 16px; font-size: 16px; border-bottom: 2px solid #3b82f6; padding-bottom: 8px;">Deal Metric Notes</h2>
-        <div style="background-color: #dbeafe; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 0 4px 4px 0;">
-          <p style="margin: 0; color: #1e40af; white-space: pre-wrap; font-size: 14px;">${rfp.dealMetricNotes}</p>
+        <div style="border-left: 4px solid #3b82f6; padding: 16px;">
+          <p style="margin: 0; color: #374151; white-space: pre-wrap; font-size: 14px;">${rfp.dealMetricNotes}</p>
         </div>
       </div>
       ` : ''}

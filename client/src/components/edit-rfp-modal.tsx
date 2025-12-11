@@ -701,7 +701,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
     <Dialog open={isOpen} onOpenChange={() => onClose()}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center justify-between pr-8">
             <DialogTitle className="flex items-center gap-2">
               <Edit className="h-5 w-5" />
               Edit RFP Request

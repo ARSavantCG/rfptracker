@@ -870,6 +870,9 @@ export const romScopeItems = pgTable("rom_scope_items", {
   minimumCost: text("minimum_cost"), // Minimum total cost regardless of quantity
   hasMinimumCost: boolean("has_minimum_cost").default(false), // Enable/disable minimum cost logic
   category: text("category").notNull(), // "office", "warehouse", "general", etc.
+  // CSI (Construction Specifications Institute) Division codes for grouping
+  csiDivision: text("csi_division"), // e.g., "16 - Electrical", "22 - Plumbing", "26 - Electrical (MasterFormat)"
+  csiCode: text("csi_code"), // User-assigned specific CSI code, e.g., "16-0001", "26 05 00"
   source: text("source"), // Who provided the price
   lastUpdated: timestamp("last_updated"), // When the price was last updated
   isActive: boolean("is_active").default(true),

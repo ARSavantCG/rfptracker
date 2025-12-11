@@ -36,7 +36,8 @@ const createRfpSchema = z.object({
   requestTypes: z.array(z.string()).min(1, "At least one request type is required"),
   anticipatedLeaseExecutionDate: z.string().min(1, "Anticipated lease execution date is required"),
   anticipatedOccupancyDate: z.string().optional(),
-  notes: z.string().optional(),
+  notes: z.string().optional(), // Development Team Notes
+  dealMetricNotes: z.string().optional(), // Deal Metric Notes
   areaBreakdown: z.array(z.object({
     id: z.string(),
     description: z.string(),
@@ -84,6 +85,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
       anticipatedLeaseExecutionDate: "",
       anticipatedOccupancyDate: "",
       notes: "",
+      dealMetricNotes: "",
       areaBreakdown: [],
     },
   });
@@ -811,14 +813,40 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                 name="notes"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Notes</FormLabel>
+                    <FormLabel>Development Team Notes</FormLabel>
                     <FormControl>
                       <Textarea 
-                        placeholder="Additional notes or requirements..."
+                        placeholder="Internal notes for the development team..."
                         className="min-h-[100px]"
                         {...field}
+                        data-testid="input-development-notes"
                       />
                     </FormControl>
+                    <p className="text-sm text-muted-foreground">
+                      Notes for internal use by the development team
+                    </p>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="dealMetricNotes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Deal Metric Notes</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Financial metrics, deal terms, and evaluation notes..."
+                        className="min-h-[100px]"
+                        {...field}
+                        data-testid="input-deal-metric-notes"
+                      />
+                    </FormControl>
+                    <p className="text-sm text-muted-foreground">
+                      Notes for the finance/metrics team (included in Step 1 email)
+                    </p>
                     <FormMessage />
                   </FormItem>
                 )}

@@ -15,7 +15,7 @@ import { HierarchicalPropertySelector } from "./hierarchical-property-selector";
 import { BaySelectionGrid } from "./bay-selection-grid";
 import { FileUpload } from "./file-upload";
 import { BayConfigurationModal } from "./bay-configuration-modal";
-import { Edit, Save, X, Download, Trash2, Grid3x3, ChevronDown } from "lucide-react";
+import { Edit, Save, X, Download, Trash2, Grid3x3, ChevronDown, Printer } from "lucide-react";
 import { formatDateForInput } from "@shared/date-utils";
 import type { RfpRequest, RfpFile, Property, BayConfiguration, Contact, BuildingCosts } from "@shared/schema";
 
@@ -701,10 +701,43 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
     <Dialog open={isOpen} onOpenChange={() => onClose()}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Edit className="h-5 w-5" />
-            Edit RFP Request
-          </DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle className="flex items-center gap-2">
+              <Edit className="h-5 w-5" />
+              Edit RFP Request
+            </DialogTitle>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                try {
+                  const token = localStorage.getItem('auth-token');
+                  const response = await fetch(`/api/rfp-requests/${rfp.id}/summary-pdf`, {
+                    headers: { 'Authorization': `Bearer ${token}` },
+                  });
+                  if (!response.ok) throw new Error('Failed to generate PDF');
+                  const blob = await response.blob();
+                  const url = window.URL.createObjectURL(blob);
+                  const link = document.createElement('a');
+                  link.href = url;
+                  link.download = `${rfp.rfpNumber}_Summary.pdf`;
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                  window.URL.revokeObjectURL(url);
+                  toast({ title: "Downloaded", description: "RFP Entry summary PDF downloaded" });
+                } catch (error) {
+                  toast({ title: "Error", description: "Could not generate PDF", variant: "destructive" });
+                }
+              }}
+              className="flex items-center gap-1.5"
+              data-testid="button-print-rfp-entry"
+            >
+              <Printer className="h-4 w-4" />
+              Print
+            </Button>
+          </div>
           <DialogDescription>
             Update the details for this RFP request. All fields are editable including the RFP number.
           </DialogDescription>

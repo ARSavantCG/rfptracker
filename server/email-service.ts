@@ -3,6 +3,7 @@ import { storage } from './storage';
 import { RfpRequest, Contact } from '@shared/schema';
 import path from 'path';
 import fs from 'fs';
+import puppeteer from 'puppeteer';
 
 async function getCredentials() {
   // First, check for environment variables (highest priority - user-provided secrets)
@@ -277,8 +278,15 @@ export function generateWorkflowCompletionHtml(
           
           ${rfp.notes ? `
           <div style="margin-top: 20px; padding: 16px; background-color: #f9fafb; border-radius: 4px;">
-            <h3 style="margin: 0 0 8px 0; font-size: 14px; color: #374151;">Notes</h3>
-            <p style="margin: 0; color: #6b7280; font-size: 14px;">${rfp.notes}</p>
+            <h3 style="margin: 0 0 8px 0; font-size: 14px; color: #374151;">Development Team Notes</h3>
+            <p style="margin: 0; color: #6b7280; font-size: 14px; white-space: pre-wrap;">${rfp.notes}</p>
+          </div>
+          ` : ''}
+          
+          ${(rfp as any).dealMetricNotes ? `
+          <div style="margin-top: 16px; padding: 16px; background-color: #eff6ff; border-radius: 4px; border-left: 4px solid #3b82f6;">
+            <h3 style="margin: 0 0 8px 0; font-size: 14px; color: #1e40af;">Deal Metric Notes</h3>
+            <p style="margin: 0; color: #1e3a5f; font-size: 14px; white-space: pre-wrap;">${(rfp as any).dealMetricNotes}</p>
           </div>
           ` : ''}
         </div>
@@ -293,10 +301,142 @@ export function generateWorkflowCompletionHtml(
   `;
 }
 
+function generateRfpSummaryHtml(rfp: RfpRequest): string {
+  const rfpData = rfp as any;
+  const today = new Date().toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+
+  const requestTypesDisplay = (rfp.requestTypes || []).join(', ') || 'None specified';
+  const selectedBays = rfp.selectedBayConfigurations || [];
+  const bayNames = selectedBays.map((bay: any) => bay.bayName || bay.bayNumber).join(', ') || 'None selected';
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <style>
+        body { font-family: Arial, sans-serif; margin: 40px; color: #333; }
+        h1 { color: #1e3a5f; border-bottom: 2px solid #1e3a5f; padding-bottom: 10px; }
+        h2 { color: #374151; margin-top: 30px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; }
+        .section { margin-bottom: 25px; }
+        .field { display: flex; margin-bottom: 10px; }
+        .label { font-weight: bold; width: 200px; color: #6b7280; }
+        .value { flex: 1; }
+        .notes-box { background: #f9fafb; padding: 15px; border-radius: 4px; margin-top: 10px; white-space: pre-wrap; }
+        .deal-metrics-box { background: #eff6ff; padding: 15px; border-radius: 4px; border-left: 4px solid #3b82f6; margin-top: 10px; white-space: pre-wrap; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .footer { text-align: center; color: #6b7280; font-size: 12px; margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <h1>RFP Summary Report</h1>
+        <p style="color: #6b7280;">Generated: ${today}</p>
+      </div>
+
+      <div class="section">
+        <h2>Project Information</h2>
+        <div class="field"><span class="label">RFP Number:</span><span class="value">${rfp.rfpNumber}</span></div>
+        <div class="field"><span class="label">Project Name:</span><span class="value">${rfp.projectName}</span></div>
+        <div class="field"><span class="label">Tenant Name:</span><span class="value">${rfp.tenantName}</span></div>
+        <div class="field"><span class="label">Property:</span><span class="value">${rfp.property}</span></div>
+        <div class="field"><span class="label">Request Types:</span><span class="value">${requestTypesDisplay}</span></div>
+        <div class="field"><span class="label">Confidential:</span><span class="value">${rfp.confidential ? 'Yes' : 'No'}</span></div>
+      </div>
+
+      <div class="section">
+        <h2>Key Dates</h2>
+        <div class="field"><span class="label">Received On:</span><span class="value">${formatDate(rfp.receivedOn)}</span></div>
+        <div class="field"><span class="label">Internal Due Date:</span><span class="value">${formatDate(rfp.internalDueDate)}</span></div>
+        <div class="field"><span class="label">Response to Broker Due:</span><span class="value">${formatDate(rfp.responseToBrokerDue)}</span></div>
+        <div class="field"><span class="label">Anticipated Lease Execution:</span><span class="value">${formatDate(rfp.anticipatedLeaseExecutionDate)}</span></div>
+        <div class="field"><span class="label">Tenant Desired Occupancy:</span><span class="value">${formatDate(rfp.anticipatedOccupancyDate)}</span></div>
+      </div>
+
+      <div class="section">
+        <h2>Project Details</h2>
+        <div class="field"><span class="label">Sent By:</span><span class="value">${rfp.sentBy}</span></div>
+        <div class="field"><span class="label">Project Area:</span><span class="value">${rfp.projectArea || 'N/A'} SF</span></div>
+        <div class="field"><span class="label">Selected Bays:</span><span class="value">${bayNames}</span></div>
+      </div>
+
+      ${rfp.notes ? `
+      <div class="section">
+        <h2>Development Team Notes</h2>
+        <div class="notes-box">${rfp.notes}</div>
+      </div>
+      ` : ''}
+
+      ${rfpData.dealMetricNotes ? `
+      <div class="section">
+        <h2>Deal Metric Notes</h2>
+        <div class="deal-metrics-box">${rfpData.dealMetricNotes}</div>
+      </div>
+      ` : ''}
+
+      ${(rfp.files || []).length > 0 ? `
+      <div class="section">
+        <h2>Attached Files</h2>
+        <ul>
+          ${(rfp.files || []).map((file: any) => `<li>${file.name}</li>`).join('')}
+        </ul>
+      </div>
+      ` : ''}
+
+      <div class="footer">
+        <p>RFP Tracker System - Bridge Industrial</p>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
+async function generateRfpSummaryPdf(rfp: RfpRequest): Promise<Buffer | null> {
+  try {
+    const html = generateRfpSummaryHtml(rfp);
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    });
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: 'networkidle0' });
+    const pdfBuffer = await page.pdf({
+      format: 'Letter',
+      margin: { top: '0.5in', right: '0.5in', bottom: '0.5in', left: '0.5in' },
+      printBackground: true
+    });
+    await browser.close();
+    return Buffer.from(pdfBuffer);
+  } catch (error) {
+    console.error('Failed to generate RFP summary PDF:', error);
+    return null;
+  }
+}
+
 async function getAttachmentsForRfp(rfp: RfpRequest, completionType: 'rfp-entry' | 'publish'): Promise<any[]> {
   const attachments: any[] = [];
   
   try {
+    // For Step 1 (rfp-entry) emails, generate and attach a PDF summary with all RFP info
+    if (completionType === 'rfp-entry') {
+      const summaryPdf = await generateRfpSummaryPdf(rfp);
+      if (summaryPdf) {
+        attachments.push({
+          content: summaryPdf.toString('base64'),
+          filename: `${rfp.rfpNumber}_Summary.pdf`,
+          type: 'application/pdf',
+          disposition: 'attachment'
+        });
+        console.log(`Generated RFP summary PDF for ${rfp.rfpNumber}`);
+      }
+    }
+
     const rfpFiles = rfp.files || [];
     
     for (const file of rfpFiles) {

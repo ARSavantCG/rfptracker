@@ -3283,6 +3283,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Generate RFP Summary PDF (same report as Step 1 email attachment)
+  app.get("/api/rfp-requests/:id/summary-pdf", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid ID" });
+      }
+
+      const rfp = await storage.getRfpRequest(id);
+      if (!rfp) {
+        return res.status(404).json({ message: "RFP request not found" });
+      }
+
+      const { generateRfpSummaryPdf } = await import("./email-service");
+      const pdfBuffer = await generateRfpSummaryPdf(rfp);
+      
+      if (!pdfBuffer) {
+        return res.status(500).json({ message: "Failed to generate PDF summary" });
+      }
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${rfp.rfpNumber}_Summary.pdf"`);
+      res.send(pdfBuffer);
+    } catch (error) {
+      console.error("RFP summary PDF generation error:", error);
+      res.status(500).json({ message: "Failed to generate RFP summary PDF" });
+    }
+  });
+
   app.post("/api/rfp-requests/:id/generate-pdf", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);

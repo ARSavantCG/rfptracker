@@ -268,6 +268,45 @@ export function RfpDetailModal({ isOpen, onClose, rfp, onRfpUpdated }: RfpDetail
     }
   };
 
+  const handleDownloadSummaryPdf = async (rfpId: number, rfpNumber: string) => {
+    try {
+      const token = localStorage.getItem('auth-token');
+      const response = await fetch(`/api/rfp-requests/${rfpId}/summary-pdf`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate summary PDF');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${rfpNumber}_Summary.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast({
+        title: "Download Complete",
+        description: `RFP Summary Report for ${rfpNumber} has been downloaded`,
+        duration: 5000,
+      });
+    } catch (error) {
+      console.error('Download summary PDF error:', error);
+      toast({
+        title: "Download Failed",
+        description: `Could not generate summary PDF for RFP ${rfpNumber}. Please try again.`,
+        variant: "destructive",
+        duration: 6000,
+      });
+    }
+  };
+
   // Define available workflow phases
   const workflowPhases = [
     { key: "rfp-entry", label: "RFP Entry" },
@@ -686,6 +725,15 @@ export function RfpDetailModal({ isOpen, onClose, rfp, onRfpUpdated }: RfpDetail
                         Update Status
                       </button>
                     )}
+                    <button
+                      onClick={() => handleDownloadSummaryPdf(rfp.id, rfp.rfpNumber)}
+                      className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                      title="Download RFP Summary Report PDF"
+                      data-testid="button-download-summary-pdf"
+                    >
+                      <i className="fas fa-file-pdf"></i>
+                      Print Summary
+                    </button>
                     <button
                       onClick={() => handleDownloadAllFiles(rfp.id, rfp.rfpNumber)}
                       className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 flex items-center gap-2"

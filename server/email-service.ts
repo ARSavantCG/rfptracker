@@ -397,7 +397,7 @@ function generateRfpSummaryHtml(rfp: RfpRequest): string {
   `;
 }
 
-async function generateRfpSummaryPdf(rfp: RfpRequest): Promise<Buffer | null> {
+export async function generateRfpSummaryPdf(rfp: RfpRequest): Promise<Buffer | null> {
   try {
     const html = generateRfpSummaryHtml(rfp);
     const browser = await puppeteer.launch({

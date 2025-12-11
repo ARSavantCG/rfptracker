@@ -3310,7 +3310,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const files = await storage.getRfpFiles(id);
       
       // Format dates
-      const formatDate = (date: any) => {
+      const formatDateReport = (date: any) => {
         if (!date) return 'N/A';
         const d = new Date(date);
         return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -3318,272 +3318,144 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Calculate totals from bay configurations
       const bayConfigs = rfp.selectedBayConfigurations || [];
+      const bayCount = bayConfigs.length;
       const totalRentableArea = bayConfigs.reduce((sum: number, bay: any) => sum + (bay.rentableSquareFootage || 0), 0);
+
+      const today = new Date().toLocaleDateString('en-US', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      });
 
       const html = `
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>RFP Entry Summary - ${rfp.rfpNumber}</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { 
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-      padding: 40px; 
-      max-width: 900px; 
-      margin: 0 auto;
-      color: #1a1a1a;
-      line-height: 1.5;
-    }
     @media print {
-      body { padding: 20px; }
       .no-print { display: none !important; }
-    }
-    .header { 
-      border-bottom: 3px solid #10b981; 
-      padding-bottom: 20px; 
-      margin-bottom: 30px; 
-    }
-    .header h1 { 
-      color: #10b981; 
-      font-size: 28px;
-      margin-bottom: 5px;
-    }
-    .header .rfp-number { 
-      color: #666; 
-      font-size: 16px;
-    }
-    .section { 
-      margin-bottom: 25px; 
-      background: #f9fafb;
-      border-radius: 8px;
-      padding: 20px;
-      border: 1px solid #e5e7eb;
-    }
-    .section h2 { 
-      color: #374151; 
-      font-size: 16px; 
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 15px;
-      padding-bottom: 8px;
-      border-bottom: 1px solid #d1d5db;
-    }
-    .grid { 
-      display: grid; 
-      grid-template-columns: repeat(2, 1fr); 
-      gap: 12px; 
-    }
-    .field { margin-bottom: 8px; }
-    .field-label { 
-      font-weight: 600; 
-      color: #6b7280;
-      font-size: 13px;
-      margin-bottom: 2px;
-    }
-    .field-value { 
-      color: #1f2937;
-      font-size: 15px;
-    }
-    .notes-section {
-      background: #fef3c7;
-      border-color: #f59e0b;
-    }
-    .notes-section.deal-metrics {
-      background: #dbeafe;
-      border-color: #3b82f6;
-    }
-    .notes-content {
-      white-space: pre-wrap;
-      font-size: 14px;
-      color: #374151;
-    }
-    .bay-table { 
-      width: 100%; 
-      border-collapse: collapse; 
-      margin-top: 10px;
-      font-size: 14px;
-    }
-    .bay-table th, .bay-table td { 
-      padding: 10px 12px; 
-      text-align: left; 
-      border-bottom: 1px solid #e5e7eb; 
-    }
-    .bay-table th { 
-      background: #f3f4f6; 
-      font-weight: 600;
-      color: #374151;
-    }
-    .bay-table tr:last-child td { border-bottom: none; }
-    .total-row { 
-      font-weight: 600; 
-      background: #ecfdf5 !important;
-      color: #065f46;
-    }
-    .file-list { list-style: none; padding: 0; }
-    .file-list li { 
-      padding: 8px 12px; 
-      background: #fff;
-      margin-bottom: 6px;
-      border-radius: 4px;
-      border: 1px solid #e5e7eb;
-      font-size: 14px;
-    }
-    .print-btn {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      background: #10b981;
-      color: white;
-      border: none;
-      padding: 12px 24px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 14px;
-      font-weight: 600;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-    }
-    .print-btn:hover { background: #059669; }
-    .timestamp {
-      text-align: center;
-      color: #9ca3af;
-      font-size: 12px;
-      margin-top: 30px;
-      padding-top: 20px;
-      border-top: 1px solid #e5e7eb;
+      body { padding: 0; background: white; }
+      .container { box-shadow: none; }
     }
   </style>
 </head>
-<body>
-  <button class="print-btn no-print" onclick="window.print()">Print Report</button>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f7fa; margin: 0; padding: 20px;">
+  <button class="no-print" onclick="window.print()" style="position: fixed; top: 20px; right: 20px; background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%); color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,0.15);">Print Report</button>
   
-  <div class="header">
-    <h1>RFP Entry Summary</h1>
-    <div class="rfp-number">${rfp.rfpNumber} - ${rfp.projectName}</div>
-  </div>
-
-  <div class="section">
-    <h2>Project Information</h2>
-    <div class="grid">
-      <div class="field">
-        <div class="field-label">Property</div>
-        <div class="field-value">${propertyDisplay}</div>
-      </div>
-      <div class="field">
-        <div class="field-label">Property Address</div>
-        <div class="field-value">${propertyAddress || 'N/A'}</div>
-      </div>
-      <div class="field">
-        <div class="field-label">Tenant Name</div>
-        <div class="field-value">${rfp.tenantName}</div>
-      </div>
-      <div class="field">
-        <div class="field-label">Project Name</div>
-        <div class="field-value">${rfp.projectName}</div>
-      </div>
-      <div class="field">
-        <div class="field-label">Sent By</div>
-        <div class="field-value">${rfp.sentBy || 'N/A'}</div>
-      </div>
-      <div class="field">
-        <div class="field-label">Development Contact</div>
-        <div class="field-value">${rfp.developmentContact || 'N/A'}</div>
-      </div>
-      <div class="field">
-        <div class="field-label">Confidential</div>
-        <div class="field-value">${rfp.confidential ? 'Yes' : 'No'}</div>
-      </div>
-      <div class="field">
-        <div class="field-label">Request Types</div>
-        <div class="field-value">${Array.isArray(rfp.requestTypes) ? rfp.requestTypes.join(', ') : rfp.requestTypes || 'N/A'}</div>
-      </div>
+  <div class="container" style="max-width: 800px; margin: 0 auto; background-color: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+    <div style="background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%); color: white; padding: 24px; border-radius: 8px 8px 0 0;">
+      <h1 style="margin: 0; font-size: 24px;">RFP Entry Summary</h1>
+      <p style="margin: 8px 0 0 0; opacity: 0.9;">${rfp.rfpNumber} - ${rfp.projectName}</p>
     </div>
-  </div>
-
-  <div class="section">
-    <h2>Key Dates</h2>
-    <div class="grid">
-      <div class="field">
-        <div class="field-label">Received On</div>
-        <div class="field-value">${formatDate(rfp.receivedOn)}</div>
-      </div>
-      <div class="field">
-        <div class="field-label">Internal Due Date</div>
-        <div class="field-value">${formatDate(rfp.internalDueDate)}</div>
-      </div>
-      <div class="field">
-        <div class="field-label">Response to Broker Due</div>
-        <div class="field-value">${formatDate(rfp.responseToBrokerDue)}</div>
-      </div>
-      <div class="field">
-        <div class="field-label">Anticipated Lease Execution</div>
-        <div class="field-value">${formatDate(rfp.anticipatedLeaseExecutionDate)}</div>
-      </div>
-      <div class="field">
-        <div class="field-label">Tenant Desired Occupancy</div>
-        <div class="field-value">${formatDate(rfp.anticipatedOccupancyDate)}</div>
-      </div>
-    </div>
-  </div>
-
-  ${bayConfigs.length > 0 ? `
-  <div class="section">
-    <h2>Bay Configurations (${bayConfigs.length} bays)</h2>
-    <table class="bay-table">
-      <thead>
-        <tr>
-          <th>Bay Name</th>
-          <th>Square Footage</th>
-          <th>Rentable SF</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${bayConfigs.map((bay: any) => `
+    
+    <div style="padding: 24px;">
+      <!-- Project Information -->
+      <div style="margin-bottom: 24px;">
+        <h2 style="color: #1e3a5f; margin-bottom: 16px; font-size: 16px; border-bottom: 2px solid #2563eb; padding-bottom: 8px;">Project Information</h2>
+        <table style="width: 100%; font-size: 14px;">
           <tr>
-            <td>${bay.bayName || 'N/A'}</td>
-            <td>${(bay.squareFootage || 0).toLocaleString()} SF</td>
-            <td>${(bay.rentableSquareFootage || 0).toLocaleString()} SF</td>
+            <td style="padding: 8px 16px 8px 0; color: #6b7280; font-weight: 600; width: 35%;">Property</td>
+            <td style="padding: 8px 0; color: #1f2937;">${propertyDisplay}</td>
           </tr>
-        `).join('')}
-        <tr class="total-row">
-          <td>Total</td>
-          <td>${bayConfigs.reduce((sum: number, bay: any) => sum + (bay.squareFootage || 0), 0).toLocaleString()} SF</td>
-          <td>${totalRentableArea.toLocaleString()} SF</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-  ` : ''}
+          <tr>
+            <td style="padding: 8px 16px 8px 0; color: #6b7280; font-weight: 600;">Address</td>
+            <td style="padding: 8px 0; color: #1f2937;">${propertyAddress || 'N/A'}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 16px 8px 0; color: #6b7280; font-weight: 600;">Tenant Name</td>
+            <td style="padding: 8px 0; color: #1f2937;">${rfp.tenantName}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 16px 8px 0; color: #6b7280; font-weight: 600;">Sent By</td>
+            <td style="padding: 8px 0; color: #1f2937;">${rfp.sentBy || 'N/A'}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 16px 8px 0; color: #6b7280; font-weight: 600;">Confidential</td>
+            <td style="padding: 8px 0; color: #1f2937;">${rfp.confidential ? 'Yes' : 'No'}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 16px 8px 0; color: #6b7280; font-weight: 600;">Request Types</td>
+            <td style="padding: 8px 0; color: #1f2937;">${Array.isArray(rfp.requestTypes) ? rfp.requestTypes.join(', ') : rfp.requestTypes || 'N/A'}</td>
+          </tr>
+        </table>
+      </div>
 
-  ${rfp.notes ? `
-  <div class="section notes-section">
-    <h2>Development Team Notes</h2>
-    <div class="notes-content">${rfp.notes}</div>
-  </div>
-  ` : ''}
+      <!-- Project Area -->
+      <div style="background-color: #ecfdf5; border-left: 4px solid #10b981; padding: 16px; margin-bottom: 24px; border-radius: 0 4px 4px 0;">
+        <h3 style="margin: 0 0 8px 0; color: #065f46; font-size: 14px;">Project Area</h3>
+        <p style="margin: 0; color: #047857; font-size: 18px; font-weight: 600;">
+          ${bayCount} Bay${bayCount !== 1 ? 's' : ''} - ${totalRentableArea.toLocaleString()} SF Rentable Area
+        </p>
+      </div>
 
-  ${rfp.dealMetricNotes ? `
-  <div class="section notes-section deal-metrics">
-    <h2>Deal Metric Notes</h2>
-    <div class="notes-content">${rfp.dealMetricNotes}</div>
-  </div>
-  ` : ''}
+      <!-- Key Dates -->
+      <div style="margin-bottom: 24px;">
+        <h2 style="color: #1e3a5f; margin-bottom: 16px; font-size: 16px; border-bottom: 2px solid #2563eb; padding-bottom: 8px;">Key Dates</h2>
+        <table style="width: 100%; font-size: 14px;">
+          <tr>
+            <td style="padding: 8px 16px 8px 0; color: #6b7280; font-weight: 600; width: 35%;">Received On</td>
+            <td style="padding: 8px 0; color: #1f2937;">${formatDateReport(rfp.receivedOn)}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 16px 8px 0; color: #6b7280; font-weight: 600;">Internal Due Date</td>
+            <td style="padding: 8px 0; color: #1f2937;">${formatDateReport(rfp.internalDueDate)}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 16px 8px 0; color: #6b7280; font-weight: 600;">Response to Broker Due</td>
+            <td style="padding: 8px 0; color: #1f2937;">${formatDateReport(rfp.responseToBrokerDue)}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 16px 8px 0; color: #6b7280; font-weight: 600;">Anticipated Lease Execution</td>
+            <td style="padding: 8px 0; color: #1f2937;">${formatDateReport(rfp.anticipatedLeaseExecutionDate)}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 16px 8px 0; color: #6b7280; font-weight: 600;">Tenant Desired Occupancy</td>
+            <td style="padding: 8px 0; color: #1f2937;">${formatDateReport(rfp.anticipatedOccupancyDate)}</td>
+          </tr>
+        </table>
+      </div>
 
-  ${files.length > 0 ? `
-  <div class="section">
-    <h2>Attached Files (${files.length})</h2>
-    <ul class="file-list">
-      ${files.map(f => `<li>${f.fileName}</li>`).join('')}
-    </ul>
-  </div>
-  ` : ''}
+      ${rfp.notes ? `
+      <!-- Development Team Notes -->
+      <div style="margin-bottom: 24px;">
+        <h2 style="color: #1e3a5f; margin-bottom: 16px; font-size: 16px; border-bottom: 2px solid #f59e0b; padding-bottom: 8px;">Development Team Notes</h2>
+        <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 0 4px 4px 0;">
+          <p style="margin: 0; color: #78350f; white-space: pre-wrap; font-size: 14px;">${rfp.notes}</p>
+        </div>
+      </div>
+      ` : ''}
 
-  <div class="timestamp">
-    Generated on ${new Date().toLocaleString('en-US', { 
-      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
-      hour: 'numeric', minute: '2-digit', hour12: true
-    })}
+      ${rfp.dealMetricNotes ? `
+      <!-- Deal Metric Notes -->
+      <div style="margin-bottom: 24px;">
+        <h2 style="color: #1e3a5f; margin-bottom: 16px; font-size: 16px; border-bottom: 2px solid #3b82f6; padding-bottom: 8px;">Deal Metric Notes</h2>
+        <div style="background-color: #dbeafe; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 0 4px 4px 0;">
+          <p style="margin: 0; color: #1e40af; white-space: pre-wrap; font-size: 14px;">${rfp.dealMetricNotes}</p>
+        </div>
+      </div>
+      ` : ''}
+
+      ${files.length > 0 ? `
+      <!-- Attached Files -->
+      <div style="margin-bottom: 24px;">
+        <h2 style="color: #1e3a5f; margin-bottom: 16px; font-size: 16px; border-bottom: 2px solid #2563eb; padding-bottom: 8px;">Attached Files (${files.length})</h2>
+        <ul style="list-style: none; padding: 0; margin: 0;">
+          ${files.map(f => `<li style="padding: 10px 12px; background: #f9fafb; margin-bottom: 6px; border-radius: 4px; border: 1px solid #e5e7eb; font-size: 14px; color: #374151;">${f.fileName}</li>`).join('')}
+        </ul>
+      </div>
+      ` : ''}
+    </div>
+    
+    <div style="background-color: #f9fafb; padding: 16px 24px; border-radius: 0 0 8px 8px; text-align: center; color: #6b7280; font-size: 12px;">
+      <p style="margin: 0;">Generated on ${today}</p>
+    </div>
   </div>
 </body>
 </html>`;

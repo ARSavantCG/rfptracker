@@ -3359,7 +3359,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   </style>
 </head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f7fa; margin: 0; padding: 20px;">
-  <button class="no-print" onclick="window.print()" style="position: fixed; top: 20px; right: 20px; background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%); color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,0.15);">Print Report</button>
+  <button class="no-print" onclick="window.print()" style="position: fixed; top: 80px; right: 40px; background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%); color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index: 1000;">Print Report</button>
   
   <div class="container" style="max-width: 800px; margin: 0 auto; background-color: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
     <div style="background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%); color: white; padding: 24px; border-radius: 8px 8px 0 0;">

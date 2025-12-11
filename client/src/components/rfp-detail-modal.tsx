@@ -379,10 +379,21 @@ export function RfpDetailModal({ isOpen, onClose, rfp, onRfpUpdated }: RfpDetail
               <div className="lg:col-span-2 space-y-6">
                 {/* Project Summary Section */}
                 <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                  <h4 className="font-medium text-blue-900 mb-3">
-                    Project Summary 
-                    {isAdmin && <span className="text-xs text-blue-600 ml-2">(Admin Mode)</span>}
-                  </h4>
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-medium text-blue-900">
+                      RFP Entry Summary
+                      {isAdmin && <span className="text-xs text-blue-600 ml-2">(Admin Mode)</span>}
+                    </h4>
+                    <button
+                      onClick={() => handleDownloadSummaryPdf(rfp.id, rfp.rfpNumber)}
+                      className="px-3 py-1.5 text-xs font-medium text-blue-700 bg-white border border-blue-300 rounded-md hover:bg-blue-100 flex items-center gap-1.5"
+                      title="Download RFP Entry Summary as PDF"
+                      data-testid="button-print-rfp-entry"
+                    >
+                      <i className="fas fa-print"></i>
+                      Print
+                    </button>
+                  </div>
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div className="flex items-start">
                       <span className="text-blue-700 font-medium">Property:</span>
@@ -725,15 +736,6 @@ export function RfpDetailModal({ isOpen, onClose, rfp, onRfpUpdated }: RfpDetail
                         Update Status
                       </button>
                     )}
-                    <button
-                      onClick={() => handleDownloadSummaryPdf(rfp.id, rfp.rfpNumber)}
-                      className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 flex items-center gap-2"
-                      title="Download RFP Summary Report PDF"
-                      data-testid="button-download-summary-pdf"
-                    >
-                      <i className="fas fa-file-pdf"></i>
-                      Print Summary
-                    </button>
                     <button
                       onClick={() => handleDownloadAllFiles(rfp.id, rfp.rfpNumber)}
                       className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 flex items-center gap-2"

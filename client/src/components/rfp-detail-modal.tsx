@@ -268,43 +268,8 @@ export function RfpDetailModal({ isOpen, onClose, rfp, onRfpUpdated }: RfpDetail
     }
   };
 
-  const handleDownloadSummaryPdf = async (rfpId: number, rfpNumber: string) => {
-    try {
-      const token = localStorage.getItem('auth-token');
-      const response = await fetch(`/api/rfp-requests/${rfpId}/summary-pdf`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to generate summary PDF');
-      }
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${rfpNumber}_Summary.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-
-      toast({
-        title: "Download Complete",
-        description: `RFP Summary Report for ${rfpNumber} has been downloaded`,
-        duration: 5000,
-      });
-    } catch (error) {
-      console.error('Download summary PDF error:', error);
-      toast({
-        title: "Download Failed",
-        description: `Could not generate summary PDF for RFP ${rfpNumber}. Please try again.`,
-        variant: "destructive",
-        duration: 6000,
-      });
-    }
+  const handleOpenSummaryReport = (rfpId: number) => {
+    window.open(`/api/rfp-requests/${rfpId}/summary-report`, '_blank');
   };
 
   // Define available workflow phases
@@ -385,9 +350,9 @@ export function RfpDetailModal({ isOpen, onClose, rfp, onRfpUpdated }: RfpDetail
                       {isAdmin && <span className="text-xs text-blue-600 ml-2">(Admin Mode)</span>}
                     </h4>
                     <button
-                      onClick={() => handleDownloadSummaryPdf(rfp.id, rfp.rfpNumber)}
+                      onClick={() => handleOpenSummaryReport(rfp.id)}
                       className="px-3 py-1.5 text-xs font-medium text-blue-700 bg-white border border-blue-300 rounded-md hover:bg-blue-100 flex items-center gap-1.5"
-                      title="Download RFP Entry Summary as PDF"
+                      title="View RFP Entry Summary Report"
                       data-testid="button-print-rfp-entry"
                     >
                       <i className="fas fa-print"></i>

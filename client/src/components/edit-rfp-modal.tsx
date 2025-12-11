@@ -710,26 +710,8 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
               type="button"
               variant="outline"
               size="sm"
-              onClick={async () => {
-                try {
-                  const token = localStorage.getItem('auth-token');
-                  const response = await fetch(`/api/rfp-requests/${rfp.id}/summary-pdf`, {
-                    headers: { 'Authorization': `Bearer ${token}` },
-                  });
-                  if (!response.ok) throw new Error('Failed to generate PDF');
-                  const blob = await response.blob();
-                  const url = window.URL.createObjectURL(blob);
-                  const link = document.createElement('a');
-                  link.href = url;
-                  link.download = `${rfp.rfpNumber}_Summary.pdf`;
-                  document.body.appendChild(link);
-                  link.click();
-                  document.body.removeChild(link);
-                  window.URL.revokeObjectURL(url);
-                  toast({ title: "Downloaded", description: "RFP Entry summary PDF downloaded" });
-                } catch (error) {
-                  toast({ title: "Error", description: "Could not generate PDF", variant: "destructive" });
-                }
+              onClick={() => {
+                window.open(`/api/rfp-requests/${rfp.id}/summary-report`, '_blank');
               }}
               className="flex items-center gap-1.5"
               data-testid="button-print-rfp-entry"

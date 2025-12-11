@@ -3283,8 +3283,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Generate RFP Summary PDF (same report as Step 1 email attachment)
-  app.get("/api/rfp-requests/:id/summary-pdf", requireAuth, async (req, res) => {
+  // Generate RFP Entry Summary Report (HTML view for printing)
+  app.get("/api/rfp-requests/:id/summary-report", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       
@@ -3297,19 +3297,302 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "RFP request not found" });
       }
 
-      const { generateRfpSummaryPdf } = await import("./email-service");
-      const pdfBuffer = await generateRfpSummaryPdf(rfp);
-      
-      if (!pdfBuffer) {
-        return res.status(500).json({ message: "Failed to generate PDF summary" });
-      }
+      // Get property details
+      const property = await storage.getProperty(parseInt(rfp.property));
+      const propertyDisplay = property 
+        ? (property.building ? `${property.propertyName} - Bldg. ${property.building}` : property.propertyName)
+        : rfp.property;
+      const propertyAddress = property 
+        ? `${property.streetAddress}, ${property.city}, ${property.state} ${property.zip}`
+        : '';
 
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="${rfp.rfpNumber}_Summary.pdf"`);
-      res.send(pdfBuffer);
+      // Get files
+      const files = await storage.getRfpFiles(id);
+      
+      // Format dates
+      const formatDate = (date: any) => {
+        if (!date) return 'N/A';
+        const d = new Date(date);
+        return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+      };
+
+      // Calculate totals from bay configurations
+      const bayConfigs = rfp.selectedBayConfigurations || [];
+      const totalRentableArea = bayConfigs.reduce((sum: number, bay: any) => sum + (bay.rentableSquareFootage || 0), 0);
+
+      const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>RFP Entry Summary - ${rfp.rfpNumber}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { 
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+      padding: 40px; 
+      max-width: 900px; 
+      margin: 0 auto;
+      color: #1a1a1a;
+      line-height: 1.5;
+    }
+    @media print {
+      body { padding: 20px; }
+      .no-print { display: none !important; }
+    }
+    .header { 
+      border-bottom: 3px solid #10b981; 
+      padding-bottom: 20px; 
+      margin-bottom: 30px; 
+    }
+    .header h1 { 
+      color: #10b981; 
+      font-size: 28px;
+      margin-bottom: 5px;
+    }
+    .header .rfp-number { 
+      color: #666; 
+      font-size: 16px;
+    }
+    .section { 
+      margin-bottom: 25px; 
+      background: #f9fafb;
+      border-radius: 8px;
+      padding: 20px;
+      border: 1px solid #e5e7eb;
+    }
+    .section h2 { 
+      color: #374151; 
+      font-size: 16px; 
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 15px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #d1d5db;
+    }
+    .grid { 
+      display: grid; 
+      grid-template-columns: repeat(2, 1fr); 
+      gap: 12px; 
+    }
+    .field { margin-bottom: 8px; }
+    .field-label { 
+      font-weight: 600; 
+      color: #6b7280;
+      font-size: 13px;
+      margin-bottom: 2px;
+    }
+    .field-value { 
+      color: #1f2937;
+      font-size: 15px;
+    }
+    .notes-section {
+      background: #fef3c7;
+      border-color: #f59e0b;
+    }
+    .notes-section.deal-metrics {
+      background: #dbeafe;
+      border-color: #3b82f6;
+    }
+    .notes-content {
+      white-space: pre-wrap;
+      font-size: 14px;
+      color: #374151;
+    }
+    .bay-table { 
+      width: 100%; 
+      border-collapse: collapse; 
+      margin-top: 10px;
+      font-size: 14px;
+    }
+    .bay-table th, .bay-table td { 
+      padding: 10px 12px; 
+      text-align: left; 
+      border-bottom: 1px solid #e5e7eb; 
+    }
+    .bay-table th { 
+      background: #f3f4f6; 
+      font-weight: 600;
+      color: #374151;
+    }
+    .bay-table tr:last-child td { border-bottom: none; }
+    .total-row { 
+      font-weight: 600; 
+      background: #ecfdf5 !important;
+      color: #065f46;
+    }
+    .file-list { list-style: none; padding: 0; }
+    .file-list li { 
+      padding: 8px 12px; 
+      background: #fff;
+      margin-bottom: 6px;
+      border-radius: 4px;
+      border: 1px solid #e5e7eb;
+      font-size: 14px;
+    }
+    .print-btn {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #10b981;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    .print-btn:hover { background: #059669; }
+    .timestamp {
+      text-align: center;
+      color: #9ca3af;
+      font-size: 12px;
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 1px solid #e5e7eb;
+    }
+  </style>
+</head>
+<body>
+  <button class="print-btn no-print" onclick="window.print()">Print Report</button>
+  
+  <div class="header">
+    <h1>RFP Entry Summary</h1>
+    <div class="rfp-number">${rfp.rfpNumber} - ${rfp.projectName}</div>
+  </div>
+
+  <div class="section">
+    <h2>Project Information</h2>
+    <div class="grid">
+      <div class="field">
+        <div class="field-label">Property</div>
+        <div class="field-value">${propertyDisplay}</div>
+      </div>
+      <div class="field">
+        <div class="field-label">Property Address</div>
+        <div class="field-value">${propertyAddress || 'N/A'}</div>
+      </div>
+      <div class="field">
+        <div class="field-label">Tenant Name</div>
+        <div class="field-value">${rfp.tenantName}</div>
+      </div>
+      <div class="field">
+        <div class="field-label">Project Name</div>
+        <div class="field-value">${rfp.projectName}</div>
+      </div>
+      <div class="field">
+        <div class="field-label">Sent By</div>
+        <div class="field-value">${rfp.sentBy || 'N/A'}</div>
+      </div>
+      <div class="field">
+        <div class="field-label">Development Contact</div>
+        <div class="field-value">${rfp.developmentContact || 'N/A'}</div>
+      </div>
+      <div class="field">
+        <div class="field-label">Confidential</div>
+        <div class="field-value">${rfp.confidential ? 'Yes' : 'No'}</div>
+      </div>
+      <div class="field">
+        <div class="field-label">Request Types</div>
+        <div class="field-value">${Array.isArray(rfp.requestTypes) ? rfp.requestTypes.join(', ') : rfp.requestTypes || 'N/A'}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Key Dates</h2>
+    <div class="grid">
+      <div class="field">
+        <div class="field-label">Received On</div>
+        <div class="field-value">${formatDate(rfp.receivedOn)}</div>
+      </div>
+      <div class="field">
+        <div class="field-label">Internal Due Date</div>
+        <div class="field-value">${formatDate(rfp.internalDueDate)}</div>
+      </div>
+      <div class="field">
+        <div class="field-label">Response to Broker Due</div>
+        <div class="field-value">${formatDate(rfp.responseToBrokerDue)}</div>
+      </div>
+      <div class="field">
+        <div class="field-label">Anticipated Lease Execution</div>
+        <div class="field-value">${formatDate(rfp.anticipatedLeaseExecutionDate)}</div>
+      </div>
+      <div class="field">
+        <div class="field-label">Tenant Desired Occupancy</div>
+        <div class="field-value">${formatDate(rfp.anticipatedOccupancyDate)}</div>
+      </div>
+    </div>
+  </div>
+
+  ${bayConfigs.length > 0 ? `
+  <div class="section">
+    <h2>Bay Configurations (${bayConfigs.length} bays)</h2>
+    <table class="bay-table">
+      <thead>
+        <tr>
+          <th>Bay Name</th>
+          <th>Square Footage</th>
+          <th>Rentable SF</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${bayConfigs.map((bay: any) => `
+          <tr>
+            <td>${bay.bayName || 'N/A'}</td>
+            <td>${(bay.squareFootage || 0).toLocaleString()} SF</td>
+            <td>${(bay.rentableSquareFootage || 0).toLocaleString()} SF</td>
+          </tr>
+        `).join('')}
+        <tr class="total-row">
+          <td>Total</td>
+          <td>${bayConfigs.reduce((sum: number, bay: any) => sum + (bay.squareFootage || 0), 0).toLocaleString()} SF</td>
+          <td>${totalRentableArea.toLocaleString()} SF</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  ` : ''}
+
+  ${rfp.notes ? `
+  <div class="section notes-section">
+    <h2>Development Team Notes</h2>
+    <div class="notes-content">${rfp.notes}</div>
+  </div>
+  ` : ''}
+
+  ${rfp.dealMetricNotes ? `
+  <div class="section notes-section deal-metrics">
+    <h2>Deal Metric Notes</h2>
+    <div class="notes-content">${rfp.dealMetricNotes}</div>
+  </div>
+  ` : ''}
+
+  ${files.length > 0 ? `
+  <div class="section">
+    <h2>Attached Files (${files.length})</h2>
+    <ul class="file-list">
+      ${files.map(f => `<li>${f.fileName}</li>`).join('')}
+    </ul>
+  </div>
+  ` : ''}
+
+  <div class="timestamp">
+    Generated on ${new Date().toLocaleString('en-US', { 
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+      hour: 'numeric', minute: '2-digit', hour12: true
+    })}
+  </div>
+</body>
+</html>`;
+
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.send(html);
     } catch (error) {
-      console.error("RFP summary PDF generation error:", error);
-      res.status(500).json({ message: "Failed to generate RFP summary PDF" });
+      console.error("RFP summary report generation error:", error);
+      res.status(500).json({ message: "Failed to generate RFP summary report" });
     }
   });
 

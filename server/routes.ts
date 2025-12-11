@@ -3321,6 +3321,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bayCount = bayConfigs.length;
       const totalRentableArea = bayConfigs.reduce((sum: number, bay: any) => sum + (bay.rentableSquareFootage || 0), 0);
 
+      // Format request types with proper capitalization
+      const formatRequestTypes = (types: any) => {
+        if (!types) return 'N/A';
+        const typeArray = Array.isArray(types) ? types : [types];
+        return typeArray.map((t: string) => {
+          // Handle hyphenated words like "space-plan" -> "Space Plan"
+          return t.split('-').map(word => 
+            word.charAt(0).toUpperCase() + word.slice(1)
+          ).join(' ');
+        }).join(', ');
+      };
+
       const today = new Date().toLocaleDateString('en-US', { 
         weekday: 'long', 
         year: 'numeric', 
@@ -3382,7 +3394,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           </tr>
           <tr>
             <td style="padding: 8px 16px 8px 0; color: #6b7280; font-weight: 600;">Request Types</td>
-            <td style="padding: 8px 0; color: #1f2937;">${Array.isArray(rfp.requestTypes) ? rfp.requestTypes.join(', ') : rfp.requestTypes || 'N/A'}</td>
+            <td style="padding: 8px 0; color: #1f2937;">${formatRequestTypes(rfp.requestTypes)}</td>
           </tr>
         </table>
       </div>

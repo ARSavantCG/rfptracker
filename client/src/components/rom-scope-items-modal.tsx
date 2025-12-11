@@ -27,6 +27,8 @@ interface RomScopeItem {
   unitPrice: string;
   minimumCost?: string | null;
   hasMinimumCost?: boolean | null;
+  csiDivision?: string | null; // CSI Division for grouping (e.g., "26 - Electrical")
+  csiCode?: string | null; // Specific CSI code (e.g., "26 05 00")
   source: string | null;
   lastUpdated: string | null;
   isActive: boolean;
@@ -73,6 +75,8 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
     unitPrice: "",
     minimumCost: "",
     hasMinimumCost: false,
+    csiDivision: "",
+    csiCode: "",
     source: "",
     lastUpdated: "",
     includeByDefault: false,
@@ -97,6 +101,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
   const [editingFileId, setEditingFileId] = useState<string | null>(null);
   const [editingFileName, setEditingFileName] = useState("");
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
+  const [collapsedCsiDivisions, setCollapsedCsiDivisions] = useState<Set<string>>(new Set());
   const [isAddingReferencePrice, setIsAddingReferencePrice] = useState(false);
   const [newReferencePrice, setNewReferencePrice] = useState({
     contractorName: "",
@@ -120,6 +125,31 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
   // Units for pricing
   const units = [
     "sf.", "lf.", "ls.", "ea.", "$", "%"
+  ];
+
+  // CSI MasterFormat 2020 Divisions (used for Tenant Improvements grouping)
+  const csiDivisions = [
+    "03 - Concrete",
+    "04 - Masonry",
+    "05 - Metals",
+    "06 - Wood, Plastics, and Composites",
+    "07 - Thermal and Moisture Protection",
+    "08 - Openings",
+    "09 - Finishes",
+    "10 - Specialties",
+    "11 - Equipment",
+    "12 - Furnishings",
+    "13 - Special Construction",
+    "14 - Conveying Equipment",
+    "21 - Fire Suppression",
+    "22 - Plumbing",
+    "23 - HVAC",
+    "26 - Electrical",
+    "27 - Communications",
+    "28 - Electronic Safety and Security",
+    "31 - Earthwork",
+    "32 - Exterior Improvements",
+    "33 - Utilities",
   ];
 
   // File handling functions
@@ -196,6 +226,40 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
       newCollapsed.add(category);
     }
     setCollapsedCategories(newCollapsed);
+  };
+
+  // CSI Division collapse helpers
+  const toggleCsiDivision = (division: string) => {
+    const newCollapsed = new Set(collapsedCsiDivisions);
+    if (newCollapsed.has(division)) {
+      newCollapsed.delete(division);
+    } else {
+      newCollapsed.add(division);
+    }
+    setCollapsedCsiDivisions(newCollapsed);
+  };
+
+  // Group Tenant Improvements by CSI Division
+  const groupItemsByCsiDivision = (items: RomScopeItem[]) => {
+    const grouped: Record<string, RomScopeItem[]> = {};
+    items.forEach(item => {
+      const division = item.csiDivision || "General (No CSI Division)";
+      if (!grouped[division]) {
+        grouped[division] = [];
+      }
+      grouped[division].push(item);
+    });
+    // Sort by CSI Division number (extract first number)
+    const sortedKeys = Object.keys(grouped).sort((a, b) => {
+      const numA = parseInt(a.match(/^\d+/)?.[0] || "999");
+      const numB = parseInt(b.match(/^\d+/)?.[0] || "999");
+      return numA - numB;
+    });
+    const sortedGrouped: Record<string, RomScopeItem[]> = {};
+    sortedKeys.forEach(key => {
+      sortedGrouped[key] = grouped[key].sort((a, b) => a.name.localeCompare(b.name));
+    });
+    return sortedGrouped;
   };
 
   // Reference pricing helpers
@@ -616,6 +680,8 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
       unitPrice: "",
       minimumCost: "",
       hasMinimumCost: false,
+      csiDivision: "",
+      csiCode: "",
       source: "",
       lastUpdated: "",
       includeByDefault: false,
@@ -687,6 +753,8 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
       unitPrice: item.unitPrice,
       minimumCost: item.minimumCost || "",
       hasMinimumCost: item.hasMinimumCost || false,
+      csiDivision: item.csiDivision || "",
+      csiCode: item.csiCode || "",
       source: item.source || "",
       lastUpdated: item.lastUpdated ? new Date(item.lastUpdated).toISOString().split('T')[0] : "",
       includeByDefault: (item as any).includeByDefault || false,
@@ -777,6 +845,40 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                     rows={2}
                   />
                 </div>
+
+                {/* CSI Division and Code - Only show for Tenant Improvements */}
+                {formData.category === "Tenant Improvements" && (
+                  <div className="grid grid-cols-2 gap-4 p-3 bg-blue-50 rounded-md border border-blue-200">
+                    <div className="space-y-2">
+                      <Label htmlFor="csiDivision">CSI Division</Label>
+                      <div className="relative">
+                        <select
+                          value={formData.csiDivision}
+                          onChange={(e) => setFormData({...formData, csiDivision: e.target.value})}
+                          className="w-full h-10 px-3 py-2 text-sm bg-background border border-input rounded-md appearance-none pr-8 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                        >
+                          <option value="">No Division (General)</option>
+                          {csiDivisions.map((div) => (
+                            <option key={div} value={div}>{div}</option>
+                          ))}
+                        </select>
+                        <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                      </div>
+                      <p className="text-xs text-gray-500">Group this item by CSI MasterFormat Division</p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="csiCode">CSI Code</Label>
+                      <Input
+                        id="csiCode"
+                        value={formData.csiCode}
+                        onChange={(e) => setFormData({...formData, csiCode: e.target.value})}
+                        placeholder="e.g., 26 05 00"
+                      />
+                      <p className="text-xs text-gray-500">Optional specific CSI code for this item</p>
+                    </div>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -1214,7 +1316,235 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                     
                     {!isCollapsed && (
                       <div className="divide-y">
-                    {items.map((item) => (
+                    {/* For Tenant Improvements, group by CSI Division */}
+                    {category === "Tenant Improvements" ? (
+                      Object.entries(groupItemsByCsiDivision(items)).map(([csiDivision, divisionItems]) => {
+                        const isDivisionCollapsed = collapsedCsiDivisions.has(csiDivision);
+                        return (
+                          <div key={csiDivision} className="border-t first:border-t-0">
+                            {/* CSI Division Header */}
+                            <div 
+                              className="bg-blue-50 px-4 py-2 cursor-pointer hover:bg-blue-100 transition-colors flex items-center justify-between"
+                              onClick={() => toggleCsiDivision(csiDivision)}
+                            >
+                              <div className="flex items-center gap-2">
+                                {isDivisionCollapsed ? (
+                                  <ChevronRight className="h-4 w-4 text-blue-600" />
+                                ) : (
+                                  <ChevronDown className="h-4 w-4 text-blue-600" />
+                                )}
+                                <span className="font-medium text-blue-800 text-sm">{csiDivision}</span>
+                                <span className="text-xs text-blue-600 bg-blue-100 px-2 py-0.5 rounded">
+                                  {divisionItems.length} item{divisionItems.length !== 1 ? 's' : ''}
+                                </span>
+                              </div>
+                            </div>
+                            {/* Division Items */}
+                            {!isDivisionCollapsed && divisionItems.map((item) => (
+                              <div key={item.id} className="pl-4 border-l-2 border-blue-200 ml-2">
+                                {/* Item Display Row */}
+                                <div className="p-3 flex justify-between items-center">
+                                  <div className="flex-1">
+                                    <div className="flex items-center space-x-3">
+                                      <h5 className="font-medium text-gray-900">{item.name}</h5>
+                                      {item.csiCode && (
+                                        <span className="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded font-mono">
+                                          {item.csiCode}
+                                        </span>
+                                      )}
+                                      <span className="text-sm text-gray-500 flex items-center space-x-1">
+                                        <span>
+                                          ${(() => {
+                                            const result = evaluateFormula(item.unitPrice);
+                                            const displayValue = result.value !== null ? result.value.toFixed(2) : parseFloat(item.unitPrice || "0").toFixed(2);
+                                            return parseFloat(displayValue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                                          })()} per {item.unit}
+                                          {item.unitPrice.startsWith('=') && (
+                                            <span className="ml-1 text-xs text-blue-600">📊</span>
+                                          )}
+                                        </span>
+                                        {item.hasMinimumCost && item.minimumCost && (
+                                          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                                            Min: ${parseFloat(item.minimumCost).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                          </span>
+                                        )}
+                                        {item.attachments && item.attachments.length > 0 && (
+                                          <button
+                                            onClick={() => handleDownloadFile(item.attachments[0].fileName, item.attachments[0].filePath)}
+                                            className="text-blue-600 hover:text-blue-800 transition-colors"
+                                            title={`Download ${item.attachments[0].fileName}`}
+                                          >
+                                            <FileText className="h-4 w-4" />
+                                          </button>
+                                        )}
+                                      </span>
+                                    </div>
+                                    {item.description && (
+                                      <p className="text-sm text-gray-600 mt-1">{item.description}</p>
+                                    )}
+                                  </div>
+                                  
+                                  <div className="flex space-x-2 ml-4">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => {
+                                        if (editingItem?.id === item.id) {
+                                          setEditingItem(null);
+                                          setShowAddForm(false);
+                                        } else {
+                                          handleEdit(item);
+                                        }
+                                      }}
+                                    >
+                                      {editingItem?.id === item.id ? (
+                                        <X className="h-4 w-4" />
+                                      ) : (
+                                        <Edit2 className="h-4 w-4" />
+                                      )}
+                                    </Button>
+                                    {canDeleteRomScope && (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleDelete(item.id)}
+                                        className="text-red-600 hover:text-red-700"
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Inline Edit Form for CSI grouped items */}
+                                {editingItem?.id === item.id && (
+                                  <div className="border-t border-l-4 border-l-blue-500 bg-blue-50 p-4 m-3 rounded-md">
+                                    <form onSubmit={handleSubmit} className="space-y-4">
+                                      <div className="flex items-center justify-between mb-3">
+                                        <h4 className="text-lg font-semibold text-gray-900">Edit: {item.name}</h4>
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => {
+                                            setEditingItem(null);
+                                            setShowAddForm(false);
+                                            resetForm();
+                                          }}
+                                        >
+                                          <X className="h-4 w-4" />
+                                        </Button>
+                                      </div>
+                                      {/* Use same form fields as the regular edit form - simplified version */}
+                                      <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                          <Label>Category *</Label>
+                                          <div className="relative">
+                                            <select
+                                              value={formData.category}
+                                              onChange={(e) => setFormData({...formData, category: e.target.value})}
+                                              className="w-full h-10 px-3 py-2 text-sm bg-background border border-input rounded-md appearance-none pr-8 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                                            >
+                                              <option value="">Select category</option>
+                                              {categories.map((cat) => (
+                                                <option key={cat} value={cat}>{cat}</option>
+                                              ))}
+                                            </select>
+                                            <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                                          </div>
+                                        </div>
+                                        <div className="space-y-2">
+                                          <Label>Name *</Label>
+                                          <Input
+                                            value={formData.name}
+                                            onChange={(e) => setFormData({...formData, name: e.target.value})}
+                                          />
+                                        </div>
+                                      </div>
+                                      {formData.category === "Tenant Improvements" && (
+                                        <div className="grid grid-cols-2 gap-4 p-3 bg-white rounded-md border border-blue-200">
+                                          <div className="space-y-2">
+                                            <Label>CSI Division</Label>
+                                            <div className="relative">
+                                              <select
+                                                value={formData.csiDivision}
+                                                onChange={(e) => setFormData({...formData, csiDivision: e.target.value})}
+                                                className="w-full h-10 px-3 py-2 text-sm bg-background border border-input rounded-md appearance-none pr-8 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                                              >
+                                                <option value="">No Division (General)</option>
+                                                {csiDivisions.map((div) => (
+                                                  <option key={div} value={div}>{div}</option>
+                                                ))}
+                                              </select>
+                                              <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                                            </div>
+                                          </div>
+                                          <div className="space-y-2">
+                                            <Label>CSI Code</Label>
+                                            <Input
+                                              value={formData.csiCode}
+                                              onChange={(e) => setFormData({...formData, csiCode: e.target.value})}
+                                              placeholder="e.g., 26 05 00"
+                                            />
+                                          </div>
+                                        </div>
+                                      )}
+                                      <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                          <Label>Unit *</Label>
+                                          <div className="relative">
+                                            <select
+                                              value={formData.unit}
+                                              onChange={(e) => setFormData({...formData, unit: e.target.value})}
+                                              className="w-full h-10 px-3 py-2 text-sm bg-background border border-input rounded-md appearance-none pr-8 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                                            >
+                                              <option value="">Select unit</option>
+                                              {units.map((unit) => (
+                                                <option key={unit} value={unit}>{unit}</option>
+                                              ))}
+                                            </select>
+                                            <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                                          </div>
+                                        </div>
+                                        <div className="space-y-2">
+                                          <Label>Unit Price *</Label>
+                                          <div className="relative">
+                                            <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 z-10" />
+                                            <FormulaInput
+                                              value={formData.unitPrice}
+                                              onChange={(rawValue) => {
+                                                setFormData({...formData, unitPrice: rawValue.toString()});
+                                              }}
+                                              className="pl-10"
+                                              decimalPlaces={2}
+                                              formatThousands={true}
+                                            />
+                                          </div>
+                                        </div>
+                                      </div>
+                                      <div className="flex justify-end space-x-3 pt-4 border-t">
+                                        <Button type="button" variant="outline" onClick={resetForm}>
+                                          Cancel
+                                        </Button>
+                                        <Button 
+                                          type="submit" 
+                                          disabled={updateMutation.isPending}
+                                          className="bg-green-600 hover:bg-green-700 text-white"
+                                        >
+                                          Update Item
+                                        </Button>
+                                      </div>
+                                    </form>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })
+                    ) : (
+                      /* Regular flat display for non-Tenant Improvements categories */
+                      items.map((item) => (
                       <div key={item.id}>
                         {/* Item Display Row */}
                         <div className="p-3 flex justify-between items-center">
@@ -1346,6 +1676,38 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                                   rows={2}
                                 />
                               </div>
+
+                              {/* CSI Division and Code - Only show for Tenant Improvements */}
+                              {formData.category === "Tenant Improvements" && (
+                                <div className="grid grid-cols-2 gap-4 p-3 bg-white rounded-md border border-blue-200">
+                                  <div className="space-y-2">
+                                    <Label htmlFor="csiDivision-edit">CSI Division</Label>
+                                    <div className="relative">
+                                      <select
+                                        value={formData.csiDivision}
+                                        onChange={(e) => setFormData({...formData, csiDivision: e.target.value})}
+                                        className="w-full h-10 px-3 py-2 text-sm bg-background border border-input rounded-md appearance-none pr-8 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                                      >
+                                        <option value="">No Division (General)</option>
+                                        {csiDivisions.map((div) => (
+                                          <option key={div} value={div}>{div}</option>
+                                        ))}
+                                      </select>
+                                      <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                                    </div>
+                                  </div>
+
+                                  <div className="space-y-2">
+                                    <Label htmlFor="csiCode-edit">CSI Code</Label>
+                                    <Input
+                                      id="csiCode-edit"
+                                      value={formData.csiCode}
+                                      onChange={(e) => setFormData({...formData, csiCode: e.target.value})}
+                                      placeholder="e.g., 26 05 00"
+                                    />
+                                  </div>
+                                </div>
+                              )}
 
                               <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
@@ -1829,7 +2191,8 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                           </div>
                         )}
                       </div>
-                    ))}
+                    ))
+                    )}
                       </div>
                     )}
                   </div>

@@ -268,8 +268,26 @@ export function RfpDetailModal({ isOpen, onClose, rfp, onRfpUpdated }: RfpDetail
     }
   };
 
-  const handleOpenSummaryReport = (rfpId: number) => {
-    window.open(`/api/rfp-requests/${rfpId}/summary-report`, '_blank');
+  const handleOpenSummaryReport = async (rfpId: number) => {
+    try {
+      const token = localStorage.getItem('auth-token');
+      const response = await fetch(`/api/rfp-requests/${rfpId}/summary-report`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!response.ok) throw new Error('Failed to load report');
+      const html = await response.text();
+      const newWindow = window.open('', '_blank');
+      if (newWindow) {
+        newWindow.document.write(html);
+        newWindow.document.close();
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Could not load report",
+        variant: "destructive",
+      });
+    }
   };
 
   // Define available workflow phases

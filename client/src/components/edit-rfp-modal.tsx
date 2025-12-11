@@ -710,8 +710,22 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => {
-                window.open(`/api/rfp-requests/${rfp.id}/summary-report`, '_blank');
+              onClick={async () => {
+                try {
+                  const token = localStorage.getItem('auth-token');
+                  const response = await fetch(`/api/rfp-requests/${rfp.id}/summary-report`, {
+                    headers: { 'Authorization': `Bearer ${token}` },
+                  });
+                  if (!response.ok) throw new Error('Failed to load report');
+                  const html = await response.text();
+                  const newWindow = window.open('', '_blank');
+                  if (newWindow) {
+                    newWindow.document.write(html);
+                    newWindow.document.close();
+                  }
+                } catch (error) {
+                  toast({ title: "Error", description: "Could not load report", variant: "destructive" });
+                }
               }}
               className="flex items-center gap-1.5"
               data-testid="button-print-rfp-entry"

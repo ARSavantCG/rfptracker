@@ -153,6 +153,73 @@ function getBayConfigurationSection(rfp: any): string {
   return '';
 }
 
+// Helper function to generate electrical allocation section for RFP/ITB documents
+function getElectricalAllocationSection(rfp: any): string {
+  const baseVoltage = rfp.tenantElectricalVoltage || '480';
+  const additionalVoltage = rfp.tenantElectricalAdditionalVoltage || baseVoltage;
+  const electricalNotes = rfp.tenantElectricalNotes;
+  
+  // Coerce values to numbers to avoid string concatenation
+  const baseAllocation = rfp.tenantElectricalAllocation ? Number(rfp.tenantElectricalAllocation) : null;
+  const additionalRequest = rfp.tenantElectricalAdditionalRequest ? Number(rfp.tenantElectricalAdditionalRequest) : null;
+  
+  // Only show section if there's any electrical allocation data
+  if (!baseAllocation && !additionalRequest) {
+    return '';
+  }
+  
+  // Calculate total electrical in AMPS (already coerced to numbers)
+  const baseAmps = baseAllocation || 0;
+  const additionalAmps = additionalRequest || 0;
+  const totalAmps = baseAmps + additionalAmps;
+  
+  // Format voltage display
+  const formatVoltage = (voltage: string) => voltage === '208' ? '208/120V (3-Phase)' : '480V (3-Phase)';
+  
+  // Calculate upgrade timing indicator if there's an additional request
+  let timingIndicator = '';
+  if (additionalRequest && additionalRequest > 0) {
+    // This is a simplified indicator - actual calculation would require property transformer data
+    timingIndicator = `
+      <tr>
+        <td class="label">Transformer Upgrade:</td>
+        <td style="font-weight: bold; color: #f59e0b;">To Be Determined Based on Property Capacity</td>
+      </tr>
+    `;
+  }
+  
+  return `
+    <div class="section">
+      <div class="section-title">ELECTRICAL ALLOCATION:</div>
+      <table class="info-table">
+        ${baseAllocation ? `
+        <tr>
+          <td class="label">Base Allocation:</td>
+          <td>${baseAllocation.toLocaleString()} AMPS @ ${formatVoltage(baseVoltage)}</td>
+        </tr>
+        ` : ''}
+        ${additionalRequest ? `
+        <tr>
+          <td class="label">Additional Request:</td>
+          <td>${additionalRequest.toLocaleString()} AMPS @ ${formatVoltage(additionalVoltage)}</td>
+        </tr>
+        ` : ''}
+        <tr>
+          <td class="label">Total Electrical:</td>
+          <td style="font-weight: bold;">${totalAmps.toLocaleString()} AMPS</td>
+        </tr>
+        ${timingIndicator}
+        ${electricalNotes ? `
+        <tr>
+          <td class="label">Electrical Notes:</td>
+          <td>${electricalNotes}</td>
+        </tr>
+        ` : ''}
+      </table>
+    </div>
+  `;
+}
+
 export interface PdfGenerationOptions {
   rfp: any;
   invitationToBid?: any;
@@ -742,6 +809,8 @@ async function generateContractorRfpHtml(options: PdfGenerationOptions, dates: a
       </div>
       ` : ''}
       
+      ${getElectricalAllocationSection(rfp)}
+      
       ${invitationToBid?.scopeOfWork && invitationToBid.scopeOfWork.length > 0 ? `
       <div class="section">
         <div class="section-title">SCOPE OF WORK:</div>
@@ -1042,6 +1111,8 @@ async function generateArchitectRfpHtml(options: PdfGenerationOptions, dates: an
         </div>
       </div>
       
+      ${getElectricalAllocationSection(rfp)}
+      
       ${invitationToBid?.scopeOfWork && invitationToBid.scopeOfWork.length > 0 ? `
       <div class="section">
         <div class="section-title">SCOPE OF WORK:</div>
@@ -1293,6 +1364,8 @@ async function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dat
       </div>
       ` : ''}
 
+      ${getElectricalAllocationSection(rfp)}
+
       ${invitationToBid?.scopeOfWork && invitationToBid.scopeOfWork.length > 0 ? `
       <div class="section">
         <div class="section-title">SCOPE OF WORK:</div>
@@ -1474,6 +1547,9 @@ async function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, da
     spaceRequirementsHtml = '<div class="section"><div class="section-title">Space Requirements</div><table style="border-collapse: collapse; width: 100%; table-layout: fixed;"><colgroup><col style="width: 30%;"><col style="width: 30%;"><col style="width: 40%;"></colgroup><tr><th style="border: 1px solid #e5e7eb; padding: 8px; text-align: left;">Space Type</th><th style="border: 1px solid #e5e7eb; padding: 8px; text-align: left;">Area (sq ft)</th><th style="border: 1px solid #e5e7eb; padding: 8px; text-align: left;">Notes</th></tr>' + spaceRows + '</table></div>';
   }
 
+  // Generate electrical allocation section for broker-contractor
+  const electricalAllocationHtml = getElectricalAllocationSection(rfp);
+
   return `
     <!DOCTYPE html>
     <html>
@@ -1548,6 +1624,8 @@ async function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, da
       </div>
 
       ${spaceRequirementsHtml}
+
+      ${electricalAllocationHtml}
 
       ${scopeOfWorkHtml}
 

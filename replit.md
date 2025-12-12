@@ -40,6 +40,14 @@ Key advanced systems and features include:
 - A comprehensive RFP Templates System for managing pre-configured cost item sets, stored in JSON, with secure API routes for CRUD operations, admin UI, and seamless integration into the evaluation import process. Templates now source items from a ROM Pilot catalog.
 - Building depth tracking per property for automatic demising wall quantity calculations. When importing templates or creating RFPs, demising wall line items automatically populate with the building's depth value for accurate pricing.
 - Auto-calculation system for Design (from rentable area), Builder's Risk Insurance (from TI total), Permit Fees (from TI total), Construction Management (from TI + all DSC including Design), and Contingency (5% of TI + all DSC including CM) with real-time updates.
+- **Step 2 Tenant Electrical Allocation Tracking**: The RFP Validation modal (Step 2) includes an Electrical Allocation section that displays:
+  - Property Electrical Summary: Building transformer capacity (kVA), standard tenant allocation (AMPS), and allocation increment
+  - Service Voltage selection (480V or 208V 3-phase)
+  - Base Allocation input (AMPS) for the tenant's standard electrical service
+  - Additional Request input (AMPS) for any extra electrical capacity the tenant requires beyond the base allocation
+  - Real-time Total Electrical calculation
+  - Electrical Notes for special requirements
+  This enables tracking when a tenant is allocated a standard amount (e.g., 200 AMPS) but requests additional capacity (e.g., +400 AMPS for server rooms).
 - **Automated Email Notification System**: Integrated with SendGrid via Replit connector for transactional emails.
   - **Scheduled Status Reports**: Mon/Wed/Fri at 8 AM automatically sends a status report showing all incomplete RFPs (any status other than "Published") to all contacts tagged as "Owner". Reports are grouped by workflow phase.
   - **Step 1 Completion Email**: When a new RFP is created (RFP Entry complete), an automatic email is sent to all Owner contacts with project details and all attached files.

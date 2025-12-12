@@ -521,7 +521,19 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
               {(() => {
                 const totalTransformerCapacity = transformers.reduce((sum: number, t: any) => sum + (t.totalCapacityKva || 0), 0);
                 const propertyAllocation = currentProperty?.electricalAllocation || 0;
-                const propertyIncrement = currentProperty?.electricalAllocationIncrement || 200;
+                const propertyIncrement = currentProperty?.electricalAllocationIncrement || 50;
+                
+                // Calculate tenant's share of building
+                const tenantSF = rfp?.selectedBayConfigurations?.reduce((sum: number, bay: any) => sum + (bay.squareFootage || 0), 0) || 0;
+                const propertySF = currentProperty?.bayConfigurations?.reduce((sum: number, bay: any) => sum + (bay.squareFootage || 0), 0) || 0;
+                const tenantSharePercent = propertySF > 0 ? (tenantSF / propertySF) * 100 : 0;
+                
+                // Calculate suggested allocation
+                const selectedVoltage = form.watch("tenantElectricalVoltage") || "480";
+                const tenantKvaShare = totalTransformerCapacity * (tenantSharePercent / 100);
+                const suggestedAmps = kvaToAmps(tenantKvaShare, selectedVoltage);
+                // Round DOWN to nearest 50 AMPS
+                const suggestedAmpsRounded = Math.floor(suggestedAmps / 50) * 50;
                 
                 return (
                   <div className="space-y-4">
@@ -543,6 +555,40 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                         </div>
                       </div>
                     </div>
+                    
+                    {/* Calculated Suggestion */}
+                    {totalTransformerCapacity > 0 && propertySF > 0 && (
+                      <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                        <h4 className="text-sm font-medium text-gray-900 mb-2">Calculated Allocation (Based on Tenant's Share)</h4>
+                        <div className="grid grid-cols-2 gap-4 text-sm mb-3">
+                          <div>
+                            <span className="text-gray-600">Tenant Area:</span>
+                            <span className="font-medium ml-2">{tenantSF.toLocaleString()} SF ({tenantSharePercent.toFixed(1)}%)</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">kVA Share:</span>
+                            <span className="font-medium ml-2">{tenantKvaShare.toFixed(1)} kVA</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <span className="text-gray-600">Suggested Allocation:</span>
+                            <span className="text-lg font-semibold text-green-700 ml-2">{suggestedAmpsRounded.toLocaleString()} AMPS</span>
+                            <span className="text-xs text-gray-500 ml-2">(rounded down to 50A)</span>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => form.setValue("tenantElectricalAllocation", suggestedAmpsRounded)}
+                            className="bg-green-100 hover:bg-green-200 border-green-300"
+                            data-testid="button-apply-suggested-allocation"
+                          >
+                            Apply Suggestion
+                          </Button>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Tenant allocation inputs */}
                     <div className="grid grid-cols-2 gap-4">

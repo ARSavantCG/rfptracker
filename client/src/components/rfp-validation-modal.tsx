@@ -65,6 +65,7 @@ const validationSchema = z.object({
   ),
   tenantElectricalVoltage: z.string().nullable().optional(),
   tenantElectricalAdditionalVoltage: z.string().nullable().optional(),
+  tenantElectricalUpgradeTiming: z.string().nullable().optional(),
   tenantElectricalNotes: z.string().nullable().optional(),
 });
 
@@ -95,6 +96,7 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
       tenantElectricalAdditionalRequest: null,
       tenantElectricalVoltage: null,
       tenantElectricalAdditionalVoltage: null,
+      tenantElectricalUpgradeTiming: null,
       tenantElectricalNotes: null,
     },
   });
@@ -171,6 +173,7 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
         tenantElectricalAdditionalRequest: rfp.tenantElectricalAdditionalRequest ?? null,
         tenantElectricalVoltage: rfp.tenantElectricalVoltage ?? null,
         tenantElectricalAdditionalVoltage: (rfp as any).tenantElectricalAdditionalVoltage ?? null,
+        tenantElectricalUpgradeTiming: (rfp as any).tenantElectricalUpgradeTiming ?? null,
         tenantElectricalNotes: rfp.tenantElectricalNotes ?? null,
       });
     }
@@ -717,7 +720,14 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                       const baseAllocation = form.watch("tenantElectricalAllocation") || 0;
                       const baseVoltage = form.watch("tenantElectricalVoltage") || "480";
                       
-                      if (additionalRequest <= 0) return null;
+                      if (additionalRequest <= 0) {
+                        // Clear timing if no additional request
+                        const currentTiming = form.getValues("tenantElectricalUpgradeTiming");
+                        if (currentTiming) {
+                          form.setValue("tenantElectricalUpgradeTiming", null);
+                        }
+                        return null;
+                      }
                       
                       // Convert allocations to kVA
                       const baseKva = ampsToKva(baseAllocation, baseVoltage);
@@ -730,6 +740,13 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                       // Determine if upgrade is needed NOW or can be LATER
                       const needsUpgradeNow = totalRequestedKva > remainingKvaForTenant;
                       const excessKva = totalRequestedKva - remainingKvaForTenant;
+                      
+                      // Auto-set the timing field for PDF generation
+                      const newTiming = needsUpgradeNow ? "immediate" : "future";
+                      const currentTiming = form.getValues("tenantElectricalUpgradeTiming");
+                      if (currentTiming !== newTiming) {
+                        form.setValue("tenantElectricalUpgradeTiming", newTiming);
+                      }
                       
                       return (
                         <div 

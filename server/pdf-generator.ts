@@ -176,16 +176,33 @@ function getElectricalAllocationSection(rfp: any): string {
   // Format voltage display
   const formatVoltage = (voltage: string) => voltage === '208' ? '208/120V (3-Phase)' : '480V (3-Phase)';
   
-  // Calculate upgrade timing indicator if there's an additional request
+  // Show transformer upgrade timing if there's an additional request
   let timingIndicator = '';
   if (additionalRequest && additionalRequest > 0) {
-    // This is a simplified indicator - actual calculation would require property transformer data
-    timingIndicator = `
-      <tr>
-        <td class="label">Transformer Upgrade:</td>
-        <td style="font-weight: bold; color: #f59e0b;">To Be Determined Based on Property Capacity</td>
-      </tr>
-    `;
+    const upgradeTiming = rfp.tenantElectricalUpgradeTiming;
+    if (upgradeTiming === 'immediate') {
+      timingIndicator = `
+        <tr>
+          <td class="label">Transformer Upgrade:</td>
+          <td style="font-weight: bold; color: #dc2626;">Immediate - Required before occupancy</td>
+        </tr>
+      `;
+    } else if (upgradeTiming === 'future') {
+      timingIndicator = `
+        <tr>
+          <td class="label">Transformer Upgrade:</td>
+          <td style="font-weight: bold; color: #2563eb;">Future - Can proceed with current capacity</td>
+        </tr>
+      `;
+    } else {
+      // Default if timing not yet set
+      timingIndicator = `
+        <tr>
+          <td class="label">Transformer Upgrade:</td>
+          <td style="font-weight: bold; color: #f59e0b;">Required - Timing to be confirmed</td>
+        </tr>
+      `;
+    }
   }
   
   return `

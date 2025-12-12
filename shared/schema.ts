@@ -90,6 +90,7 @@ export const rfpRequests = pgTable("rfp_requests", {
   tenantElectricalAdditionalRequest: integer("tenant_electrical_additional_request"), // Additional request in AMPS
   tenantElectricalVoltage: text("tenant_electrical_voltage"), // Voltage for base allocation: "480" or "208"
   tenantElectricalAdditionalVoltage: text("tenant_electrical_additional_voltage"), // Voltage for additional request: "480" or "208"
+  tenantElectricalUpgradeTiming: text("tenant_electrical_upgrade_timing"), // "immediate" or "future" - transformer upgrade timing
   tenantElectricalNotes: text("tenant_electrical_notes"), // Notes about electrical requirements
   
   // Completion tracking

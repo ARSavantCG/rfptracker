@@ -19,10 +19,22 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChevronDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, X, Save } from "lucide-react";
+import { Plus, X, Save, Zap } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import type { RfpRequest, Contact } from "@shared/schema";
 import { nanoid } from "nanoid";
+
+// Voltage options for electrical allocation
+const VOLTAGE_OPTIONS = [
+  { value: "480", label: "480V (3-Phase)" },
+  { value: "208", label: "208/120V (3-Phase)" },
+] as const;
+
+// Helper function to convert kVA to AMPS based on voltage
+const kvaToAmps = (kva: number, voltage: string = "480"): number => {
+  const multiplier = voltage === "208" ? 208 * Math.sqrt(3) : 480 * Math.sqrt(3);
+  return Math.round((kva * 1000) / multiplier);
+};
 
 const validationSchema = z.object({
   generalContractor: z.string().optional(),
@@ -37,6 +49,11 @@ const validationSchema = z.object({
     squareFootage: z.string(),
     notes: z.string().optional()
   })).optional().default([]),
+  // Electrical allocation fields
+  tenantElectricalAllocation: z.number().nullable().optional(),
+  tenantElectricalAdditionalRequest: z.number().nullable().optional(),
+  tenantElectricalVoltage: z.string().nullable().optional(),
+  tenantElectricalNotes: z.string().nullable().optional(),
 });
 
 type ValidationFormData = z.infer<typeof validationSchema>;
@@ -62,6 +79,10 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
       contactPerson: "",
       contactEmail: "",
       areaBreakdown: [],
+      tenantElectricalAllocation: null,
+      tenantElectricalAdditionalRequest: null,
+      tenantElectricalVoltage: null,
+      tenantElectricalNotes: null,
     },
   });
 
@@ -93,6 +114,17 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
     queryKey: ["/api/properties"],
   });
 
+  // Get the current property for transformer data
+  const currentProperty = properties?.find((p: any) => 
+    p.name === rfp?.property || p.id.toString() === rfp?.property
+  );
+
+  // Fetch transformers for the property
+  const { data: transformers = [] } = useQuery<any[]>({
+    queryKey: [`/api/properties/${currentProperty?.id}/transformers`],
+    enabled: !!currentProperty?.id,
+  });
+
   // Helper function to extract contact details from development contact
   const getDevelopmentContactDetails = (developmentContact: string) => {
     if (!developmentContact) return { name: "", email: "", phone: "" };
@@ -122,6 +154,10 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
         contactPerson: rfp.contactPerson || contactDetails.name || "",
         contactEmail: rfp.contactEmail || contactDetails.email || "",
         areaBreakdown: rfp.areaBreakdown || [],
+        tenantElectricalAllocation: rfp.tenantElectricalAllocation ?? null,
+        tenantElectricalAdditionalRequest: rfp.tenantElectricalAdditionalRequest ?? null,
+        tenantElectricalVoltage: rfp.tenantElectricalVoltage ?? null,
+        tenantElectricalNotes: rfp.tenantElectricalNotes ?? null,
       });
     }
   }, [rfp, isOpen, form, contacts]);
@@ -467,6 +503,147 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                   </div>
                 )}
               </div>
+            </div>
+
+            {/* Electrical Allocation */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium text-gray-900 border-b pb-2 flex items-center gap-2">
+                <Zap className="h-5 w-5 text-yellow-500" />
+                Electrical Allocation
+              </h3>
+              
+              {/* Property Electrical Info */}
+              {(() => {
+                const totalTransformerCapacity = transformers.reduce((sum: number, t: any) => sum + (t.totalCapacityKva || 0), 0);
+                const propertyAllocation = currentProperty?.electricalAllocation || 0;
+                const propertyIncrement = currentProperty?.electricalAllocationIncrement || 200;
+                
+                return (
+                  <div className="space-y-4">
+                    {/* Property electrical summary */}
+                    <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                      <h4 className="text-sm font-medium text-gray-900 mb-2">Property Electrical Summary</h4>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="text-gray-600">Building Transformer Capacity:</span>
+                          <span className="font-medium ml-2">{totalTransformerCapacity.toLocaleString()} kVA</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Standard Tenant Allocation:</span>
+                          <span className="font-medium ml-2">{propertyAllocation.toLocaleString()} AMPS</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Increment:</span>
+                          <span className="font-medium ml-2">{propertyIncrement.toLocaleString()} AMPS</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Tenant allocation inputs */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="tenantElectricalVoltage"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Service Voltage</FormLabel>
+                            <Select
+                              value={field.value || "480"}
+                              onValueChange={(value) => field.onChange(value)}
+                            >
+                              <FormControl>
+                                <SelectTrigger data-testid="select-electrical-voltage">
+                                  <SelectValue placeholder="Select voltage" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {VOLTAGE_OPTIONS.map((option) => (
+                                  <SelectItem key={option.value} value={option.value}>
+                                    {option.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="tenantElectricalAllocation"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Base Allocation (AMPS)</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                placeholder={`e.g., ${propertyAllocation || 200}`}
+                                value={field.value ?? ""}
+                                onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
+                                data-testid="input-electrical-allocation"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="tenantElectricalAdditionalRequest"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Additional Request (AMPS)</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                placeholder="e.g., 400"
+                                value={field.value ?? ""}
+                                onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
+                                data-testid="input-electrical-additional"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <div className="flex items-end">
+                        <div className="bg-gray-100 p-3 rounded-lg w-full">
+                          <span className="text-sm text-gray-600">Total Electrical:</span>
+                          <span className="text-lg font-semibold ml-2" data-testid="text-electrical-total">
+                            {((form.watch("tenantElectricalAllocation") || 0) + 
+                              (form.watch("tenantElectricalAdditionalRequest") || 0)).toLocaleString()} AMPS
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <FormField
+                      control={form.control}
+                      name="tenantElectricalNotes"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Electrical Notes</FormLabel>
+                          <FormControl>
+                            <Textarea
+                              placeholder="Notes about tenant electrical requirements..."
+                              value={field.value ?? ""}
+                              onChange={(e) => field.onChange(e.target.value)}
+                              className="min-h-[60px]"
+                              data-testid="textarea-electrical-notes"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Contact Information */}

@@ -88,7 +88,8 @@ export const rfpRequests = pgTable("rfp_requests", {
   // Tenant Electrical Allocation (populated during validation step)
   tenantElectricalAllocation: integer("tenant_electrical_allocation"), // Base allocation in AMPS
   tenantElectricalAdditionalRequest: integer("tenant_electrical_additional_request"), // Additional request in AMPS
-  tenantElectricalVoltage: text("tenant_electrical_voltage"), // Voltage: "480" or "208"
+  tenantElectricalVoltage: text("tenant_electrical_voltage"), // Voltage for base allocation: "480" or "208"
+  tenantElectricalAdditionalVoltage: text("tenant_electrical_additional_voltage"), // Voltage for additional request: "480" or "208"
   tenantElectricalNotes: text("tenant_electrical_notes"), // Notes about electrical requirements
   
   // Completion tracking

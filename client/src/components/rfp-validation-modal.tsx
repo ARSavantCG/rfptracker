@@ -58,6 +58,7 @@ const validationSchema = z.object({
     z.number().nullable().optional()
   ),
   tenantElectricalVoltage: z.string().nullable().optional(),
+  tenantElectricalAdditionalVoltage: z.string().nullable().optional(),
   tenantElectricalNotes: z.string().nullable().optional(),
 });
 
@@ -87,6 +88,7 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
       tenantElectricalAllocation: null,
       tenantElectricalAdditionalRequest: null,
       tenantElectricalVoltage: null,
+      tenantElectricalAdditionalVoltage: null,
       tenantElectricalNotes: null,
     },
   });
@@ -162,6 +164,7 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
         tenantElectricalAllocation: rfp.tenantElectricalAllocation ?? null,
         tenantElectricalAdditionalRequest: rfp.tenantElectricalAdditionalRequest ?? null,
         tenantElectricalVoltage: rfp.tenantElectricalVoltage ?? null,
+        tenantElectricalAdditionalVoltage: (rfp as any).tenantElectricalAdditionalVoltage ?? null,
         tenantElectricalNotes: rfp.tenantElectricalNotes ?? null,
       });
     }
@@ -641,7 +644,7 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                       />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-3 gap-4">
                       <FormField
                         control={form.control}
                         name="tenantElectricalAdditionalRequest"
@@ -656,6 +659,34 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                                 onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
                                 data-testid="input-electrical-additional"
                               />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="tenantElectricalAdditionalVoltage"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Additional Request Voltage</FormLabel>
+                            <FormControl>
+                              <div className="relative">
+                                <select
+                                  value={field.value || "480"}
+                                  onChange={(e) => field.onChange(e.target.value)}
+                                  className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none"
+                                  data-testid="select-electrical-additional-voltage"
+                                >
+                                  {VOLTAGE_OPTIONS.map((option) => (
+                                    <option key={option.value} value={option.value}>
+                                      {option.label}
+                                    </option>
+                                  ))}
+                                </select>
+                                <ChevronDown className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50" />
+                              </div>
                             </FormControl>
                             <FormMessage />
                           </FormItem>

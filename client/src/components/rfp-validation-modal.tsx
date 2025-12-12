@@ -50,8 +50,14 @@ const validationSchema = z.object({
     notes: z.string().optional()
   })).optional().default([]),
   // Electrical allocation fields
-  tenantElectricalAllocation: z.number().nullable().optional(),
-  tenantElectricalAdditionalRequest: z.number().nullable().optional(),
+  tenantElectricalAllocation: z.preprocess(
+    (val) => val === "" || val === null || val === undefined ? null : Number(val),
+    z.number().nullable().optional()
+  ),
+  tenantElectricalAdditionalRequest: z.preprocess(
+    (val) => val === "" || val === null || val === undefined ? null : Number(val),
+    z.number().nullable().optional()
+  ),
   tenantElectricalVoltage: z.string().nullable().optional(),
   tenantElectricalNotes: z.string().nullable().optional(),
 });

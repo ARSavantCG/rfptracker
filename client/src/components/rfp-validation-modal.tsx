@@ -35,6 +35,12 @@ const kvaToAmps = (kva: number, voltage: string = "480"): number => {
   return Math.round((kva * 1000) / multiplier);
 };
 
+// Helper function to convert AMPS to kVA based on voltage
+const ampsToKva = (amps: number, voltage: string = "480"): number => {
+  const multiplier = voltage === "208" ? 208 * Math.sqrt(3) : 480 * Math.sqrt(3);
+  return (amps * multiplier) / 1000;
+};
+
 const validationSchema = z.object({
   generalContractor: z.string().optional(),
   architect: z.string().optional(),
@@ -703,6 +709,62 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                         </div>
                       </div>
                     </div>
+
+                    {/* Transformer Upgrade Timing Indicator */}
+                    {(() => {
+                      const additionalRequest = form.watch("tenantElectricalAdditionalRequest") || 0;
+                      const additionalVoltage = form.watch("tenantElectricalAdditionalVoltage") || "480";
+                      const baseAllocation = form.watch("tenantElectricalAllocation") || 0;
+                      const baseVoltage = form.watch("tenantElectricalVoltage") || "480";
+                      
+                      if (additionalRequest <= 0) return null;
+                      
+                      // Convert allocations to kVA
+                      const baseKva = ampsToKva(baseAllocation, baseVoltage);
+                      const additionalKva = ampsToKva(additionalRequest, additionalVoltage);
+                      const totalRequestedKva = baseKva + additionalKva;
+                      
+                      // Tenant's proportional share of transformer capacity
+                      const remainingKvaForTenant = tenantKvaShare;
+                      
+                      // Determine if upgrade is needed NOW or can be LATER
+                      const needsUpgradeNow = totalRequestedKva > remainingKvaForTenant;
+                      const excessKva = totalRequestedKva - remainingKvaForTenant;
+                      
+                      return (
+                        <div 
+                          className={`p-4 rounded-lg border ${needsUpgradeNow ? 'bg-red-50 border-red-300' : 'bg-blue-50 border-blue-300'}`}
+                          data-testid="indicator-transformer-timing"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={`px-3 py-1.5 rounded-full font-bold text-sm ${needsUpgradeNow ? 'bg-red-600 text-white' : 'bg-blue-600 text-white'}`}>
+                              {needsUpgradeNow ? 'UPGRADE NOW' : 'UPGRADE LATER'}
+                            </div>
+                            <div className="flex-1">
+                              <div className="text-sm font-medium">
+                                {needsUpgradeNow 
+                                  ? `Additional request exceeds tenant's proportional capacity by ${excessKva.toFixed(1)} kVA`
+                                  : `Additional request is within tenant's proportional capacity (${remainingKvaForTenant.toFixed(1)} kVA available)`
+                                }
+                              </div>
+                              <div className="text-xs text-gray-600 mt-1">
+                                Requested: {totalRequestedKva.toFixed(1)} kVA total ({additionalKva.toFixed(1)} kVA additional @ {additionalVoltage}V)
+                              </div>
+                            </div>
+                          </div>
+                          {needsUpgradeNow && (
+                            <div className="mt-3 text-xs text-red-700">
+                              <strong>Recommendation:</strong> Include transformer upgrade scope in pricing request. Upgrade should be completed before tenant move-in.
+                            </div>
+                          )}
+                          {!needsUpgradeNow && (
+                            <div className="mt-3 text-xs text-blue-700">
+                              <strong>Note:</strong> Tenant's additional request can be accommodated with existing transformer capacity. Upgrade can be deferred if needed.
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
 
                     <FormField
                       control={form.control}

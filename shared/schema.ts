@@ -85,6 +85,12 @@ export const rfpRequests = pgTable("rfp_requests", {
   projectDescription: text("project_description"),
   documentsLink: text("documents_link"),
   
+  // Tenant Electrical Allocation (populated during validation step)
+  tenantElectricalAllocation: integer("tenant_electrical_allocation"), // Base allocation in AMPS
+  tenantElectricalAdditionalRequest: integer("tenant_electrical_additional_request"), // Additional request in AMPS
+  tenantElectricalVoltage: text("tenant_electrical_voltage"), // Voltage: "480" or "208"
+  tenantElectricalNotes: text("tenant_electrical_notes"), // Notes about electrical requirements
+  
   // Completion tracking
   completedDate: timestamp("completed_date"),
   publishedDate: timestamp("published_date"),

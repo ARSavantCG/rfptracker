@@ -194,6 +194,7 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
         description: "RFP validation details saved successfully",
         duration: 4000,
       });
+      handleClose();
     },
     onError: (error) => {
       toast({

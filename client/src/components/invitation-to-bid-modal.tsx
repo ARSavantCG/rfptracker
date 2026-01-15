@@ -24,6 +24,8 @@ const invitationFormSchema = z.object({
   generateBrokerContractorRfp: z.boolean().default(false),
   selectedContractor: z.string().optional(),
   selectedArchitect: z.string().optional(),
+  additionalContractors: z.array(z.string()).default([]),
+  additionalArchitects: z.array(z.string()).default([]),
   projectScope: z.string().min(1, "Project scope is required"),
   projectLocation: z.string().min(1, "Project location is required"),
   contractorDueDate: z.string().min(1, "Contractor due date is required"),
@@ -255,6 +257,8 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
       contractorMilestones: [],
       selectedContractor: "none",
       selectedArchitect: "none",
+      additionalContractors: [],
+      additionalArchitects: [],
     },
   });
 
@@ -399,6 +403,8 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
 
         selectedContractor: rfp.generalContractor || "none",
         selectedArchitect: rfp.architect || "none",
+        additionalContractors: (rfp as any).additionalContractors || [],
+        additionalArchitects: (rfp as any).additionalArchitects || [],
         projectScope: cleanProjectName(rfp.projectName),
         projectLocation: getPropertyAddress(rfp.property) || "",
         contractorDueDate: rfp.contractorDueDate ? new Date(rfp.contractorDueDate).toISOString().split('T')[0] : "",
@@ -417,6 +423,8 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
         ...defaultValues,
         selectedContractor: existingInvitation.selectedContractor || defaultValues.selectedContractor,
         selectedArchitect: existingInvitation.selectedArchitect || defaultValues.selectedArchitect,
+        additionalContractors: existingInvitation.additionalContractors || defaultValues.additionalContractors,
+        additionalArchitects: existingInvitation.additionalArchitects || defaultValues.additionalArchitects,
         contractorDueDate: existingInvitation.contractorDueDate ? 
           new Date(existingInvitation.contractorDueDate).toISOString().split('T')[0] : defaultValues.contractorDueDate,
         architectDueDate: existingInvitation.architectDueDate ? 
@@ -470,6 +478,8 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
         // Include contractor and architect selections
         selectedContractor: data.selectedContractor !== 'none' ? data.selectedContractor : null,
         selectedArchitect: data.selectedArchitect !== 'none' ? data.selectedArchitect : null,
+        additionalContractors: data.additionalContractors || [],
+        additionalArchitects: data.additionalArchitects || [],
         // Include additional areas from step 3
         additionalAreas: additionalAreas.filter(area => 
           area.description.trim() && area.squareFootage.trim()
@@ -535,19 +545,51 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
       
       setIsGeneratingPdfs(true);
       
-      const documentsToOpen = [];
+      const documentsToOpen: Array<{type: string, title: string, recipientName: string}> = [];
+      
+      // Get all contractors (primary + additional)
+      const allContractors = [
+        data.selectedContractor && data.selectedContractor !== "none" ? data.selectedContractor : null,
+        ...(data.additionalContractors || []).filter(c => c && c.trim())
+      ].filter(Boolean) as string[];
+      
+      // Get all architects (primary + additional)
+      const allArchitects = [
+        data.selectedArchitect && data.selectedArchitect !== "none" ? data.selectedArchitect : null,
+        ...(data.additionalArchitects || []).filter(a => a && a.trim())
+      ].filter(Boolean) as string[];
       
       if (data.generateArchitectRfp) {
-        documentsToOpen.push({ type: "architect", title: "Architect RFP" });
+        allArchitects.forEach(architect => {
+          documentsToOpen.push({ type: "architect", title: `Architect RFP - ${architect}`, recipientName: architect });
+        });
+        if (allArchitects.length === 0) {
+          documentsToOpen.push({ type: "architect", title: "Architect RFP", recipientName: "" });
+        }
       }
       if (data.generateContractorRfp) {
-        documentsToOpen.push({ type: "contractor", title: "Contractor RFP" });
+        allContractors.forEach(contractor => {
+          documentsToOpen.push({ type: "contractor", title: `Contractor RFP - ${contractor}`, recipientName: contractor });
+        });
+        if (allContractors.length === 0) {
+          documentsToOpen.push({ type: "contractor", title: "Contractor RFP", recipientName: "" });
+        }
       }
       if (data.generateBrokerArchitectRfp) {
-        documentsToOpen.push({ type: "broker-architect", title: "Broker Architect RFP" });
+        allArchitects.forEach(architect => {
+          documentsToOpen.push({ type: "broker-architect", title: `Broker Architect RFP - ${architect}`, recipientName: architect });
+        });
+        if (allArchitects.length === 0) {
+          documentsToOpen.push({ type: "broker-architect", title: "Broker Architect RFP", recipientName: "" });
+        }
       }
       if (data.generateBrokerContractorRfp) {
-        documentsToOpen.push({ type: "broker-contractor", title: "Broker Contractor RFP" });
+        allContractors.forEach(contractor => {
+          documentsToOpen.push({ type: "broker-contractor", title: `Broker Contractor RFP - ${contractor}`, recipientName: contractor });
+        });
+        if (allContractors.length === 0) {
+          documentsToOpen.push({ type: "broker-contractor", title: "Broker Contractor RFP", recipientName: "" });
+        }
       }
       
       // Save invitation data first
@@ -567,7 +609,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
             },
             body: JSON.stringify({
               recipientType: doc.type,
-              recipientName: "",
+              recipientName: doc.recipientName || "",
               recipientCompany: "",
               returnType: "html"
             })
@@ -634,19 +676,51 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
       
       setIsGeneratingPdfs(true);
       
-      const documentsToOpen = [];
+      const documentsToOpen: Array<{type: string, title: string, recipientName: string}> = [];
+      
+      // Get all contractors (primary + additional)
+      const allContractors = [
+        data.selectedContractor && data.selectedContractor !== "none" ? data.selectedContractor : null,
+        ...(data.additionalContractors || []).filter(c => c && c.trim())
+      ].filter(Boolean) as string[];
+      
+      // Get all architects (primary + additional)
+      const allArchitects = [
+        data.selectedArchitect && data.selectedArchitect !== "none" ? data.selectedArchitect : null,
+        ...(data.additionalArchitects || []).filter(a => a && a.trim())
+      ].filter(Boolean) as string[];
       
       if (data.generateArchitectRfp) {
-        documentsToOpen.push({ type: "architect", title: "Architect RFP" });
+        allArchitects.forEach(architect => {
+          documentsToOpen.push({ type: "architect", title: `Architect RFP - ${architect}`, recipientName: architect });
+        });
+        if (allArchitects.length === 0) {
+          documentsToOpen.push({ type: "architect", title: "Architect RFP", recipientName: "" });
+        }
       }
       if (data.generateContractorRfp) {
-        documentsToOpen.push({ type: "contractor", title: "Contractor RFP" });
+        allContractors.forEach(contractor => {
+          documentsToOpen.push({ type: "contractor", title: `Contractor RFP - ${contractor}`, recipientName: contractor });
+        });
+        if (allContractors.length === 0) {
+          documentsToOpen.push({ type: "contractor", title: "Contractor RFP", recipientName: "" });
+        }
       }
       if (data.generateBrokerArchitectRfp) {
-        documentsToOpen.push({ type: "broker-architect", title: "Broker Architect RFP" });
+        allArchitects.forEach(architect => {
+          documentsToOpen.push({ type: "broker-architect", title: `Broker Architect RFP - ${architect}`, recipientName: architect });
+        });
+        if (allArchitects.length === 0) {
+          documentsToOpen.push({ type: "broker-architect", title: "Broker Architect RFP", recipientName: "" });
+        }
       }
       if (data.generateBrokerContractorRfp) {
-        documentsToOpen.push({ type: "broker-contractor", title: "Broker Contractor RFP" });
+        allContractors.forEach(contractor => {
+          documentsToOpen.push({ type: "broker-contractor", title: `Broker Contractor RFP - ${contractor}`, recipientName: contractor });
+        });
+        if (allContractors.length === 0) {
+          documentsToOpen.push({ type: "broker-contractor", title: "Broker Contractor RFP", recipientName: "" });
+        }
       }
       
       // Save invitation data first
@@ -666,7 +740,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
             },
             body: JSON.stringify({
               recipientType: doc.type,
-              recipientName: "",
+              recipientName: doc.recipientName || "",
               recipientCompany: "",
               returnType: "html"
             })
@@ -942,21 +1016,53 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
             {/* Contractor and Architect Selection */}
             <div className="space-y-4">
               <h3 className="text-lg font-medium">Contractor and Architect Selection</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="selectedContractor"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>General Contractor</FormLabel>
-                      <div className="relative">
+              <div className="grid grid-cols-2 gap-6">
+                {/* Contractors Column */}
+                <div className="space-y-3">
+                  <FormField
+                    control={form.control}
+                    name="selectedContractor"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>General Contractor</FormLabel>
+                        <div className="relative">
+                          <select
+                            value={field.value || ""}
+                            onChange={(e) => field.onChange(e.target.value)}
+                            tabIndex={-1}
+                            className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background data-[placeholder]:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none"
+                          >
+                            <option value="">No contractor selected</option>
+                            {contacts
+                              .filter(contact => contact.type === 'contractor')
+                              .map(contact => (
+                                <option key={contact.id} value={contact.name}>
+                                  {contact.name} {contact.company && `(${contact.company})`}
+                                </option>
+                              ))}
+                          </select>
+                          <ChevronDown className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50" />
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  {/* Additional Contractors */}
+                  {form.watch("additionalContractors")?.map((contractor, index) => (
+                    <div key={index} className="flex items-center gap-2">
+                      <div className="relative flex-1">
                         <select
-                          value={field.value || ""}
-                          onChange={(e) => field.onChange(e.target.value)}
-                          tabIndex={-1}
-                          className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background data-[placeholder]:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none"
+                          value={contractor}
+                          onChange={(e) => {
+                            const current = form.getValues("additionalContractors") || [];
+                            const updated = [...current];
+                            updated[index] = e.target.value;
+                            form.setValue("additionalContractors", updated);
+                          }}
+                          className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 appearance-none"
                         >
-                          <option value="">No contractor selected</option>
+                          <option value="">Select contractor</option>
                           {contacts
                             .filter(contact => contact.type === 'contractor')
                             .map(contact => (
@@ -967,25 +1073,82 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
                         </select>
                         <ChevronDown className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50" />
                       </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          const current = form.getValues("additionalContractors") || [];
+                          form.setValue("additionalContractors", current.filter((_, i) => i !== index));
+                        }}
+                        className="h-10 w-10 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const current = form.getValues("additionalContractors") || [];
+                      form.setValue("additionalContractors", [...current, ""]);
+                    }}
+                    className="w-full"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Contractor
+                  </Button>
+                </div>
 
-                <FormField
-                  control={form.control}
-                  name="selectedArchitect"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Architect</FormLabel>
-                      <div className="relative">
+                {/* Architects Column */}
+                <div className="space-y-3">
+                  <FormField
+                    control={form.control}
+                    name="selectedArchitect"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Architect</FormLabel>
+                        <div className="relative">
+                          <select
+                            value={field.value || ""}
+                            onChange={(e) => field.onChange(e.target.value)}
+                            tabIndex={-1}
+                            className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background data-[placeholder]:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none"
+                          >
+                            <option value="">No architect selected</option>
+                            {contacts
+                              .filter(contact => contact.type === 'architect')
+                              .map(contact => (
+                                <option key={contact.id} value={contact.name}>
+                                  {contact.name} {contact.company && `(${contact.company})`}
+                                </option>
+                              ))}
+                          </select>
+                          <ChevronDown className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50" />
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  {/* Additional Architects */}
+                  {form.watch("additionalArchitects")?.map((architect, index) => (
+                    <div key={index} className="flex items-center gap-2">
+                      <div className="relative flex-1">
                         <select
-                          value={field.value || ""}
-                          onChange={(e) => field.onChange(e.target.value)}
-                          tabIndex={-1}
-                          className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background data-[placeholder]:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none"
+                          value={architect}
+                          onChange={(e) => {
+                            const current = form.getValues("additionalArchitects") || [];
+                            const updated = [...current];
+                            updated[index] = e.target.value;
+                            form.setValue("additionalArchitects", updated);
+                          }}
+                          className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 appearance-none"
                         >
-                          <option value="">No architect selected</option>
+                          <option value="">Select architect</option>
                           {contacts
                             .filter(contact => contact.type === 'architect')
                             .map(contact => (
@@ -996,10 +1159,35 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
                         </select>
                         <ChevronDown className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50" />
                       </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          const current = form.getValues("additionalArchitects") || [];
+                          form.setValue("additionalArchitects", current.filter((_, i) => i !== index));
+                        }}
+                        className="h-10 w-10 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const current = form.getValues("additionalArchitects") || [];
+                      form.setValue("additionalArchitects", [...current, ""]);
+                    }}
+                    className="w-full"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Architect
+                  </Button>
+                </div>
               </div>
             </div>
 

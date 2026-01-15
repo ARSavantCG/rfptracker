@@ -48,6 +48,7 @@ Key advanced systems and features include:
   - Real-time Total Electrical calculation
   - Electrical Notes for special requirements
   This enables tracking when a tenant is allocated a standard amount (e.g., 200 AMPS) but requests additional capacity (e.g., +400 AMPS for server rooms).
+- **Multiple Contractors/Architects Support**: The Invitation to Bid modal (Step 3) now supports assigning multiple contractors and/or architects to a single RFP. Users can click "Add Contractor" or "Add Architect" buttons to add additional recipients. Each recipient gets their own separate PDF invitation when generating documents. Additional entries can be removed with the trash icon button. Data is stored in `additionalContractors` and `additionalArchitects` JSON arrays in the database.
 - **Automated Email Notification System**: Integrated with SendGrid via Replit connector for transactional emails.
   - **Scheduled Status Reports**: Mon/Wed/Fri at 8 AM automatically sends a status report showing all incomplete RFPs (any status other than "Published") to all contacts tagged as "Owner". Reports are grouped by workflow phase.
   - **Step 1 Completion Email**: When a new RFP is created (RFP Entry complete), an automatic email is sent to all Owner contacts with project details and all attached files.

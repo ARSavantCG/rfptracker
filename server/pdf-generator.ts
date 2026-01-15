@@ -1313,23 +1313,24 @@ async function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dat
     <body>
       <div class="header">
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
-          <!-- Company logo -->
-          <img src="${getBridgeLogo()}" alt="Bridge Industrial" style="height: 30px; width: auto;" />
+          <img src="${getBridgeLogo()}" alt="Bridge Industrial" style="height: 25px; width: auto;" />
+          <div style="background: rgb(0,50,130); color: white; padding: 5px 10px; font-weight: bold; font-size: 12px; border-radius: 3px;">
+            REQUEST FOR PROPOSAL
+          </div>
         </div>
         <div class="company-info">
-          <div><strong>Development Team</strong></div>
-          <div>${contactPerson}</div>
+          <div><strong>${contactPerson}</strong></div>
           <div>Email: ${contactEmail}</div>
           <div>Date: ${today}</div>
         </div>
-        <div class="document-title">${templateContent.header}</div>
+        <div class="document-title">PRELIMINARY REQUEST FOR PROPOSAL</div>
         <div class="project-title">${projectName}</div>
         <div style="font-size: 14px; color: #666;">RFP Number: ${rfp.rfpNumber}</div>
       </div>
 
       <div class="preliminary-notice">
-        <strong>${templateContent.subtitle}</strong><br>
-        ${templateContent.introduction}
+        <strong style="font-size: 0.75em;">PRELIMINARY BROKER RESPONSE FOR ARCHITECTURAL SERVICES</strong><br>
+        <span style="font-size: 0.75em; font-weight: normal;">This is a preliminary request for conceptual drawings, pricing and scheduling to support broker discussions with a prospective tenant. This is not a formal project commitment.</span>
       </div>
 
       <div class="section">
@@ -1345,17 +1346,17 @@ async function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dat
           </div>
         </div>
 
+        ${invitationToBid?.documentsLink ? `
+        <div class="info-item" style="margin-top: 10px;">
+          <span class="label">Project Documents:</span>
+          <span class="value"><a href="${invitationToBid.documentsLink}" style="color: rgb(0,50,130);">${invitationToBid.documentsLink}</a></span>
+        </div>
+        ` : ''}
+
         ${invitationToBid?.projectDescription ? `
         <div class="project-description">
           <strong>Project Description:</strong><br>
           ${invitationToBid.projectDescription}
-        </div>
-        ` : ''}
-
-        ${invitationToBid?.documentsLink ? `
-        <div class="info-item" style="margin-top: 15px;">
-          <span class="label">Project Documents:</span>
-          <span class="value"><a href="${invitationToBid.documentsLink}" target="_blank">${invitationToBid.documentsLink}</a></span>
         </div>
         ` : ''}
       </div>
@@ -1412,19 +1413,6 @@ async function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dat
       </div>
       ` : ''}
 
-      ${rfp.requestTypes && rfp.requestTypes.length > 0 ? `
-      <div class="section">
-        <div class="section-title">Request Types</div>
-        <div class="description-box">
-          <p><strong>Please provide the following information in your proposal:</strong></p>
-          <ul class="requirements-list">
-            ${rfp.requestTypes.includes('pricing') ? '<li>✓ Pricing estimates and cost breakdown</li>' : ''}
-            ${rfp.requestTypes.includes('schedule') ? '<li>✓ Project schedule and timeline</li>' : ''}
-            ${rfp.requestTypes.includes('space-plan') ? '<li>✓ Space planning and design concepts</li>' : ''}
-          </ul>
-        </div>
-      </div>
-      ` : ''}
 
       <div class="section">
         <div class="section-title">Requested Deliverables</div>

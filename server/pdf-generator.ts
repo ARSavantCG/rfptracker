@@ -1698,6 +1698,26 @@ async function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, da
   `;
 }
 export function generatePdfFilename(rfp: any, recipientType: string): string {
+  // Format date as MM.DD.YYYY
+  const now = new Date();
+  const printDate = `${String(now.getMonth() + 1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')}.${now.getFullYear()}`;
+  
+  // Special format for broker-contractor: "Tenant Name @ Property Building_Broker Response RFP - General Contractor Services_Print Date"
+  if (recipientType === 'broker-contractor') {
+    const tenantName = rfp.tenantName || 'Unknown Tenant';
+    const propertyName = rfp.property || 'Unknown Property';
+    const filename = `${tenantName} @ ${propertyName}_Broker Response RFP - General Contractor Services_${printDate}.pdf`;
+    return filename;
+  }
+  
+  // Special format for broker-architect: "Tenant Name @ Property Building_Broker Response RFP - Architect Services_Print Date"
+  if (recipientType === 'broker-architect') {
+    const tenantName = rfp.tenantName || 'Unknown Tenant';
+    const propertyName = rfp.property || 'Unknown Property';
+    const filename = `${tenantName} @ ${propertyName}_Broker Response RFP - Architect Services_${printDate}.pdf`;
+    return filename;
+  }
+  
   // Use project name as primary identifier, fallback to tenant_property
   const projectName = rfp.projectName || (rfp.confidential ? `Confidential_${rfp.property}` : `${rfp.tenantName}_${rfp.property}`);
   const cleanProjectName = projectName
@@ -1712,10 +1732,6 @@ export function generatePdfFilename(rfp: any, recipientType: string): string {
   let prefix = 'RFP';
   if (recipientType === 'contractor') {
     prefix = 'ITB';
-  } else if (recipientType === 'broker-architect') {
-    prefix = 'Preliminary_Architect_RFP';
-  } else if (recipientType === 'broker-contractor') {
-    prefix = 'Preliminary_Contractor_RFP';
   }
   
   return `${prefix}_${cleanProjectName}_${timestamp}.pdf`;

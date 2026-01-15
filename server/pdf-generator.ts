@@ -1666,7 +1666,7 @@ async function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, da
           <li>Preliminary cost estimate</li>
           <li>Timeline estimate for construction phases</li>
           <li>Pricing proposal for full construction services</li>
-          <li style="list-style-type: '* ';">Any assumptions or exclusions</li>
+          <li>Any assumptions or exclusions</li>
         </ul>
       </div>
 
@@ -1679,7 +1679,7 @@ async function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, da
           <li>Unit cost guidance for common improvement types</li>
           <li>Preliminary construction scheduling</li>
           <li>Assessment of existing building systems and access requirements</li>
-          <li style="list-style-type: '* ';">Scope of work above is limited to tenant requirements only; additional work may be required.</li>
+          <li>Scope of work above is limited to tenant requirements only; additional work may be required.</li>
         </ul>
       </div>
 

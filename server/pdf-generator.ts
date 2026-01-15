@@ -1616,7 +1616,7 @@ async function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, da
       </div>
 
       <div class="preliminary-notice">
-        <strong style="font-size: 0.75em;">PRELIMINARY BROKER RESPONSE RFP</strong><br>
+        <strong style="font-size: 0.75em;">PRELIMINARY BROKER RESPONSE RFP FOR GC SERVICES</strong><br>
         <span style="font-size: 0.75em;">This is a preliminary request for conceptual pricing and scheduling to support broker discussions with a prospective tenant. This is not a formal project commitment.</span>
       </div>
 
@@ -1632,6 +1632,8 @@ async function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, da
             <div class="info-item"><span class="label">Project Type:</span><span class="value">Preliminary Assessment</span></div>
           </div>
         </div>
+        ${invitationToBid?.documentsLink ? `
+        <div class="info-item" style="margin-top: 10px;"><span class="label">Project Documents:</span><span class="value"><a href="${invitationToBid.documentsLink}" style="color: rgb(0,50,130);">${invitationToBid.documentsLink}</a></span></div>` : ''}
 
         ${invitationToBid?.projectDescription ? `
         <div class="project-description">
@@ -1648,16 +1650,14 @@ async function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, da
 
       <div class="section">
         <div class="section-title">Submission Requirements</div>
-        <div class="requirements">
-          <strong>Please include the following in your proposal submission:</strong>
-          <ul style="margin: 10px 0 0 20px;">
-            <li>Detailed pricing breakdown by scope item</li>
-            <li>Proposed project timeline with key milestones</li>
-            <li>Any assumptions or exclusions</li>
-            <li>Relevant experience and references for similar projects</li>
-            <li>Contact information for project manager/point of contact</li>
-          </ul>
-        </div>
+        <strong>Please include the following in your proposal submission:</strong>
+        <ul style="margin: 10px 0 0 20px;">
+          <li>Detailed pricing breakdown by scope item</li>
+          <li>Proposed project timeline with key milestones</li>
+          <li>Any assumptions or exclusions</li>
+          <li>Relevant experience and references for similar projects</li>
+          <li>Contact information for project manager/point of contact</li>
+        </ul>
       </div>
 
       <div class="section">
@@ -1666,6 +1666,7 @@ async function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, da
           <li>Preliminary cost estimate</li>
           <li>Timeline estimate for construction phases</li>
           <li>Pricing proposal for full construction services</li>
+          <li style="list-style-type: '* ';">Any assumptions or exclusions</li>
         </ul>
       </div>
 
@@ -1678,6 +1679,7 @@ async function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, da
           <li>Unit cost guidance for common improvement types</li>
           <li>Preliminary construction scheduling</li>
           <li>Assessment of existing building systems and access requirements</li>
+          <li style="list-style-type: '* ';">Scope of work above is limited to tenant requirements only; additional work may be required.</li>
         </ul>
       </div>
 

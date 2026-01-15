@@ -19,7 +19,7 @@ import { LegalCompliancePanel } from "@/components/legal-compliance-panel";
 import Navigation from "@/components/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Users, Building2, X, Settings, Crown, ChevronDown, ChevronLeft } from "lucide-react";
+import { Plus, Search, Users, Building2, X, Settings, Crown, ChevronDown, ChevronLeft, LayoutGrid } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { apiRequest } from "@/lib/queryClient";
@@ -49,6 +49,7 @@ export default function Dashboard() {
   const [validationRfp, setValidationRfp] = useState<RfpRequest | null>(null);
   const [detailRfp, setDetailRfp] = useState<RfpRequest | null>(null);
   const [isWorkflowCollapsed, setIsWorkflowCollapsed] = useState(false);
+  const [showMobileWorkflow, setShowMobileWorkflow] = useState(false);
 
   // Fetch all RFPs to keep selected RFP data fresh - include archived for selection tracking
   const { data: allRfps = [] } = useQuery<RfpRequest[]>({
@@ -448,9 +449,9 @@ export default function Dashboard() {
           )}
         </div>
         
-        {/* Floating workflow button when collapsed */}
+        {/* Floating workflow button when collapsed - desktop only */}
         {selectedRfp && isWorkflowCollapsed && (
-          <div className="fixed top-16 right-4 z-50">
+          <div className="fixed top-16 right-4 z-50 hidden lg:block">
             <Button
               variant="outline"
               size="sm"
@@ -461,6 +462,82 @@ export default function Dashboard() {
               <ChevronLeft className="h-4 w-4 mr-1" />
               Workflow
             </Button>
+          </div>
+        )}
+
+        {/* Mobile workflow button - shows on small screens when RFP is selected */}
+        {selectedRfp && (
+          <div className="fixed bottom-4 right-4 z-50 lg:hidden">
+            <Button
+              variant="default"
+              size="lg"
+              onClick={() => setShowMobileWorkflow(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg rounded-full h-14 w-14 p-0"
+              title="View workflow"
+            >
+              <LayoutGrid className="h-6 w-6" />
+            </Button>
+          </div>
+        )}
+
+        {/* Mobile workflow overlay */}
+        {showMobileWorkflow && selectedRfp && (
+          <div className="fixed inset-0 z-50 lg:hidden">
+            <div 
+              className="absolute inset-0 bg-black/50"
+              onClick={() => setShowMobileWorkflow(false)}
+            />
+            <div className="absolute inset-x-0 bottom-0 bg-white rounded-t-xl max-h-[85vh] overflow-y-auto animate-in slide-in-from-bottom duration-300">
+              <div className="sticky top-0 bg-white border-b p-4 flex items-center justify-between">
+                <h3 className="font-semibold text-lg">Workflow Status</h3>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowMobileWorkflow(false)}
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+              <div className="p-4">
+                <WorkflowStatus 
+                  rfp={selectedRfp}
+                  onAdvanceToInvitation={(rfp) => {
+                    setShowMobileWorkflow(false);
+                    handleAdvanceToInvitation(rfp);
+                  }}
+                  onEditRfp={(rfp) => {
+                    setShowMobileWorkflow(false);
+                    handleEditRfp(rfp);
+                  }}
+                  onValidateRfp={(rfp) => {
+                    setShowMobileWorkflow(false);
+                    handleValidateRfp(rfp);
+                  }}
+                  onOpenInvitationModal={(rfp) => {
+                    setShowMobileWorkflow(false);
+                    handleOpenInvitationModal(rfp);
+                  }}
+                  onOpenBidCollection={(rfp) => {
+                    setShowMobileWorkflow(false);
+                    handleOpenBidCollection(rfp);
+                  }}
+                  onOpenEvaluation={(rfp) => {
+                    setShowMobileWorkflow(false);
+                    handleOpenEvaluation(rfp);
+                  }}
+                  onOpenPublish={(rfp) => {
+                    setShowMobileWorkflow(false);
+                    handleOpenPublish(rfp);
+                  }}
+                  onViewDetails={(rfp) => {
+                    setShowMobileWorkflow(false);
+                    handleViewDetails(rfp);
+                  }}
+                  isCollapsed={false}
+                  onWorkflowToggle={() => {}}
+                />
+              </div>
+            </div>
           </div>
         )}
       </div>

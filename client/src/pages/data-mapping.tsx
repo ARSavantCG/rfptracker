@@ -362,8 +362,8 @@ function LineItemRow({
   formatCurrency: (value: string | null) => string;
   isPending: boolean;
 }) {
-  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
-  const [isCleanData, setIsCleanData] = useState(false);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(item.masterCategoryId);
+  const [isCleanData, setIsCleanData] = useState(item.isCleanData);
 
   const handleCategorySelect = (categoryId: number) => {
     setSelectedCategoryId(categoryId);

@@ -62,6 +62,16 @@ Key advanced systems and features include:
   - Search and filter functionality (all items, clean only, unclean only)
   - Bulk update with pending changes tracking and save confirmation
   - Displays project name, contractor, category, description, and pricing for each line item
+- **Data Scrubbing & Mapping System**: A dedicated page (`/data-mapping`) for assigning standardized master categories to bid line items. Features include:
+  - `master_categories` table with 20 pre-seeded construction categories (Concrete, Electrical, HVAC, etc.)
+  - `masterCategoryId` foreign key on bid_line_items for standardized categorization
+  - Table shows only unmapped items (masterCategoryId IS NULL) to track progress
+  - Master Category dropdown per row for category assignment
+  - Clean Data checkbox per row to mark reliable pricing
+  - Auto-save functionality: when both category and clean checkbox are set, the item saves and disappears from view
+  - Bulk update: select multiple rows, choose a category, and apply to all at once
+  - Notes popover icon shows item notes to help determine if pricing is clean (e.g., if electrical includes lighting)
+  - Progress card showing remaining items to map
 - **Project Report Generator**: A dynamic reporting page (`/project-report-generator`) that generates cost reports for selected projects. Features include:
   - Project dropdown to select any RFP from the database
   - Toggle switch between "Show All Data" and "Show Analytical Data Only" (filters by isCleanData)

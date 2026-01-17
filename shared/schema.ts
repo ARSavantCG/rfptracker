@@ -1102,10 +1102,11 @@ export const projectFiles = pgTable("project_files", {
   filePath: text("file_path").notNull(),
   fileName: text("file_name").notNull(),
   originalName: text("original_name").notNull(),
-  workflowStep: text("workflow_step").notNull(), // Step_1_Entry, Step_2_Validation, etc.
+  workflowStep: text("workflow_step").notNull(), // Step_1_Entry, Step_2_Validation, etc. or integer as string
   mimeType: text("mime_type"),
   fileSize: integer("file_size"),
   uploadedBy: text("uploaded_by"),
+  subfolder: text("subfolder"), // Optional subfolder like Architect_Docs, GC_Docs
   uploadedAt: timestamp("uploaded_at").defaultNow().notNull(),
 });
 

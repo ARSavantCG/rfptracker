@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator";
 // Removed Select import - using native HTML selects for consistency
 import { Plus, Edit, Trash2, Save, X, ArrowRight, Copy, FileDown, Upload, Package, Users, ChevronUp, ChevronDown, GripVertical, Check as CheckIcon, FileText, AlertTriangle, Zap } from "lucide-react";
 import { EvaluationAttachments } from "./evaluation-attachments";
+import { EvaluationLabeledUploads } from "./evaluation-labeled-uploads";
 import { EvaluationBudgetHistory } from "./evaluation-budget-history";
 import { FormulaInput } from "./formula-input";
 import { RfpImportDialog } from "./rfp-import-dialog";
@@ -5208,6 +5209,9 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
 
       {/* File Attachments */}
       <EvaluationAttachments rfpId={rfp?.id} />
+
+      {/* Labeled Upload Slots for Architect and GC Documents */}
+      <EvaluationLabeledUploads rfpId={rfp?.id} projectFolder={rfp?.projectFolder || undefined} />
 
       {/* Preview Report */}
       <Card>

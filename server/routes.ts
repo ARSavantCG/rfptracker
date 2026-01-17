@@ -9536,6 +9536,118 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Upload project files with optional subfolder
+  app.post("/api/project-files/upload", requireAuth, upload.array('files', 10), async (req, res) => {
+    try {
+      const rfpId = parseInt(req.body.rfpId);
+      const workflowStepRaw = req.body.workflowStep;
+      const subfolder = req.body.subfolder || '';
+      
+      // Accept workflowStep as either number or string
+      let workflowStep: number;
+      if (typeof workflowStepRaw === 'string' && workflowStepRaw.startsWith('Step_')) {
+        // Handle Step_1_Entry format - extract the number
+        const match = workflowStepRaw.match(/Step_(\d+)/);
+        workflowStep = match ? parseInt(match[1], 10) : NaN;
+      } else {
+        workflowStep = parseInt(workflowStepRaw, 10);
+      }
+      
+      if (isNaN(rfpId) || isNaN(workflowStep) || workflowStep < 1 || workflowStep > 6) {
+        return res.status(400).json({ message: "Invalid RFP ID or workflow step" });
+      }
+
+      const files = req.files as Express.Multer.File[];
+      if (!files || files.length === 0) {
+        return res.status(400).json({ message: "No files uploaded" });
+      }
+
+      const rfp = await storage.getRfpRequest(rfpId);
+      if (!rfp) {
+        return res.status(404).json({ message: "RFP not found" });
+      }
+
+      const projectFolder = rfp.projectFolder;
+      if (!projectFolder) {
+        return res.status(400).json({ message: "RFP does not have a project folder" });
+      }
+
+      const stepFolder = getWorkflowStepFolder(workflowStep);
+      let targetDir = path.join(process.cwd(), 'uploads', 'projects', projectFolder, stepFolder);
+      
+      if (subfolder) {
+        targetDir = path.join(targetDir, subfolder);
+      }
+
+      // Ensure target directory exists
+      if (!fs.existsSync(targetDir)) {
+        fs.mkdirSync(targetDir, { recursive: true });
+      }
+
+      const uploadedFiles = [];
+      for (const file of files) {
+        const sanitizedName = sanitizeFilename(file.originalname);
+        const targetPath = path.join(targetDir, sanitizedName);
+        
+        // Move file from temp location to target
+        fs.renameSync(file.path, targetPath);
+        
+        // Compute relative path for storage
+        const relativePath = path.join('uploads', 'projects', projectFolder, stepFolder, subfolder || '', sanitizedName);
+        
+        // Save to database
+        const projectFile = await storage.createProjectFile({
+          projectId: rfpId,
+          filePath: relativePath,
+          fileName: sanitizedName,
+          originalName: file.originalname,
+          workflowStep: String(workflowStep),
+          mimeType: file.mimetype,
+          fileSize: file.size,
+          subfolder: subfolder || null,
+        });
+        
+        uploadedFiles.push(projectFile);
+      }
+
+      res.json({
+        success: true,
+        message: `Uploaded ${uploadedFiles.length} file(s)`,
+        files: uploadedFiles
+      });
+    } catch (error) {
+      console.error("Error uploading project files:", error);
+      res.status(500).json({ message: "Failed to upload files" });
+    }
+  });
+
+  // Download a project file
+  app.get("/api/project-files/:fileId/download", requireAuth, async (req, res) => {
+    try {
+      const fileId = parseInt(req.params.fileId);
+      if (isNaN(fileId)) {
+        return res.status(400).json({ message: "Invalid file ID" });
+      }
+
+      const file = await storage.getProjectFile(fileId);
+      if (!file) {
+        return res.status(404).json({ message: "File not found" });
+      }
+
+      const fullPath = resolveSecureFilePath(file.filePath, process.cwd());
+      if (!fullPath || !fs.existsSync(fullPath)) {
+        return res.status(404).json({ message: "File not found on disk" });
+      }
+
+      res.setHeader('Content-Disposition', `attachment; filename="${file.originalName}"`);
+      res.setHeader('Content-Type', file.mimeType || 'application/octet-stream');
+      res.sendFile(fullPath);
+    } catch (error) {
+      console.error("Error downloading project file:", error);
+      res.status(500).json({ message: "Failed to download file" });
+    }
+  });
+
   // Delete a project file
   app.delete("/api/project-files/:fileId", requireAuth, async (req, res) => {
     try {

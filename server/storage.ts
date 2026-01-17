@@ -354,7 +354,7 @@ export interface IStorage {
 
   // Project Files management
   getProjectFiles(projectId: number): Promise<ProjectFile[]>;
-  getProjectFilesByStep(projectId: number, workflowStep: string): Promise<ProjectFile[]>;
+  getProjectFilesByStep(projectId: number, workflowStep: number | string): Promise<ProjectFile[]>;
   getProjectFile(id: number): Promise<ProjectFile | undefined>;
   createProjectFile(file: InsertProjectFile): Promise<ProjectFile>;
   deleteProjectFile(id: number): Promise<boolean>;
@@ -2342,13 +2342,14 @@ class ExtendedDatabaseStorage extends DatabaseStorage {
       .orderBy(desc(projectFiles.uploadedAt));
   }
 
-  async getProjectFilesByStep(projectId: number, workflowStep: string): Promise<ProjectFile[]> {
+  async getProjectFilesByStep(projectId: number, workflowStep: number | string): Promise<ProjectFile[]> {
+    const stepValue = typeof workflowStep === 'number' ? String(workflowStep) : workflowStep;
     return db
       .select()
       .from(projectFiles)
       .where(and(
         eq(projectFiles.projectId, projectId),
-        eq(projectFiles.workflowStep, workflowStep)
+        eq(projectFiles.workflowStep, stepValue)
       ))
       .orderBy(desc(projectFiles.uploadedAt));
   }

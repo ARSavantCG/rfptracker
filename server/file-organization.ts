@@ -108,3 +108,48 @@ export function ensureUploadsDirectory(): void {
     fs.mkdirSync(uploadsPath, { recursive: true });
   }
 }
+
+export function sanitizeFilename(filename: string): string {
+  if (!filename || typeof filename !== 'string') {
+    return `file_${Date.now()}`;
+  }
+  
+  return filename
+    .replace(/\.\./g, '_')
+    .replace(/[<>:"/\\|?*\x00-\x1f]/g, '_')
+    .replace(/^\.+/, '_')
+    .replace(/\.+$/, '_')
+    .substring(0, 255);
+}
+
+export function resolveSecureFilePath(filePath: string, baseDir: string): string | null {
+  if (!filePath || typeof filePath !== 'string') {
+    return null;
+  }
+  
+  const normalizedPath = path.normalize(filePath);
+  const absolutePath = path.isAbsolute(normalizedPath) 
+    ? normalizedPath 
+    : path.join(baseDir, normalizedPath);
+  
+  const resolvedPath = path.resolve(absolutePath);
+  const resolvedBase = path.resolve(baseDir);
+  
+  if (!resolvedPath.startsWith(resolvedBase + path.sep) && resolvedPath !== resolvedBase) {
+    console.warn(`Path traversal attempt detected: ${filePath}`);
+    return null;
+  }
+  
+  return resolvedPath;
+}
+
+export function getSecureDownloadPath(filePath: string): string | null {
+  const cwd = process.cwd();
+  const uploadsDir = path.join(cwd, "uploads");
+  
+  if (filePath.startsWith('uploads/projects/') || filePath.startsWith('uploads\\projects\\')) {
+    return resolveSecureFilePath(filePath, cwd);
+  }
+  
+  return resolveSecureFilePath(filePath, uploadsDir);
+}

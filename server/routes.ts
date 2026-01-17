@@ -71,7 +71,9 @@ import {
   getWorkflowStepFolder,
   getStepFolderPath,
   getRelativeFilePath,
-  ensureUploadsDirectory
+  ensureUploadsDirectory,
+  sanitizeFilename,
+  getSecureDownloadPath
 } from "./file-organization";
 
 // Helper function to clean invalid values like "$NaN", "NaN", etc.
@@ -2595,14 +2597,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "File not found" });
       }
 
-      // Handle both new project folder paths and legacy paths
-      let filePath: string;
-      if (file.path && file.path.startsWith('uploads/projects/')) {
-        // New project-organized files: path is relative to cwd
-        filePath = path.join(process.cwd(), file.path);
-      } else {
-        // Legacy files: path is relative to uploadsDir
-        filePath = path.join(uploadsDir, file.path || file.name);
+      // Use secure path resolver to prevent path traversal
+      const filePath = getSecureDownloadPath(file.path || file.name);
+      if (!filePath) {
+        return res.status(400).json({ message: "Invalid file path" });
       }
 
       if (!fs.existsSync(filePath)) {
@@ -2635,12 +2633,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "File not found" });
       }
 
-      // Handle both new project folder paths and legacy paths
-      let filePath: string;
-      if (file.path && file.path.startsWith('uploads/projects/')) {
-        filePath = path.join(process.cwd(), file.path);
-      } else {
-        filePath = path.join(uploadsDir, file.path || file.name);
+      // Use secure path resolver to prevent path traversal
+      const filePath = getSecureDownloadPath(file.path || file.name);
+      if (!filePath) {
+        return res.status(400).json({ message: "Invalid file path" });
       }
 
       if (fs.existsSync(filePath)) {

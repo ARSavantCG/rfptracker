@@ -378,6 +378,10 @@ export const bidCollections = pgTable("bid_collections", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// Cost bucket options for bid leveling: Office, Warehouse Office, Warehouse, Other
+export const costBucketEnum = ["Office", "Warehouse Office", "Warehouse", "Other"] as const;
+export type CostBucket = typeof costBucketEnum[number];
+
 export const bidLineItems = pgTable("bid_line_items", {
   id: serial("id").primaryKey(),
   bidCollectionId: integer("bid_collection_id").notNull().references(() => bidCollections.id),
@@ -391,6 +395,7 @@ export const bidLineItems = pgTable("bid_line_items", {
   sortOrder: integer("sort_order").notNull().default(0),
   isCleanData: boolean("is_clean_data").notNull().default(false), // Whether this line item has clean, reliable pricing for benchmarking
   masterCategoryId: integer("master_category_id").references(() => masterCategories.id), // Standardized category for analytics
+  costBucket: text("cost_bucket"), // Office, Warehouse Office, Warehouse, Other - for bid leveling
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -1117,4 +1122,48 @@ export const insertProjectFileSchema = createInsertSchema(projectFiles).omit({
 
 export type ProjectFile = typeof projectFiles.$inferSelect;
 export type InsertProjectFile = z.infer<typeof insertProjectFileSchema>;
+
+// Bid Leveling Adjustments - stores manual adjustments (plugs) per bucket per GC
+export const bidLevelingAdjustments = pgTable("bid_leveling_adjustments", {
+  id: serial("id").primaryKey(),
+  rfpId: integer("rfp_id").references(() => rfpRequests.id, { onDelete: "cascade" }).notNull(),
+  bidCollectionId: integer("bid_collection_id").references(() => bidCollections.id, { onDelete: "cascade" }).notNull(),
+  costBucket: text("cost_bucket").notNull(), // Office, Warehouse Office, Warehouse, Other
+  adjustmentAmount: integer("adjustment_amount").notNull().default(0), // Stored in cents for precision
+  adjustmentReason: text("adjustment_reason"), // Description of why adjustment was made (e.g., "Pit Levelers", "Fans")
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertBidLevelingAdjustmentSchema = createInsertSchema(bidLevelingAdjustments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type BidLevelingAdjustment = typeof bidLevelingAdjustments.$inferSelect;
+export type InsertBidLevelingAdjustment = z.infer<typeof insertBidLevelingAdjustmentSchema>;
+
+// Evaluation Bid Carry - stores selected bidder data for Step 5 with original/adjustment/carried prices
+export const evaluationBidCarry = pgTable("evaluation_bid_carry", {
+  id: serial("id").primaryKey(),
+  rfpId: integer("rfp_id").references(() => rfpRequests.id, { onDelete: "cascade" }).notNull(),
+  selectedBidCollectionId: integer("selected_bid_collection_id").references(() => bidCollections.id).notNull(),
+  costBucket: text("cost_bucket").notNull(), // Office, Warehouse Office, Warehouse, Other
+  originalTotal: integer("original_total").notNull().default(0), // GC's raw bid total in cents
+  adjustmentAmount: integer("adjustment_amount").notNull().default(0), // Plugs/adjustments in cents
+  carriedPrice: integer("carried_price").notNull().default(0), // Final price carried to Step 5 (can be overridden)
+  isOverridden: boolean("is_overridden").notNull().default(false), // Whether user manually overrode carried price
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertEvaluationBidCarrySchema = createInsertSchema(evaluationBidCarry).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type EvaluationBidCarry = typeof evaluationBidCarry.$inferSelect;
+export type InsertEvaluationBidCarry = z.infer<typeof insertEvaluationBidCarrySchema>;
 

@@ -65,6 +65,7 @@ import Templates from "./lib/rfp-templates";
 import { sendWorkflowCompletionEmail, sendTestStatusReportEmail } from "./email-service";
 import { startEmailScheduler, sendStatusReportNow } from "./email-scheduler";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
+import { parsePdfBuffer, applyMapping, type MappingConfig } from "./pdf-parser";
 import { 
   sanitizeProjectName, 
   createProjectFolderStructure, 
@@ -73,6 +74,7 @@ import {
   getRelativeFilePath,
   ensureUploadsDirectory,
   sanitizeFilename,
+  WORKFLOW_STEP_FOLDERS,
   getSecureDownloadPath
 } from "./file-organization";
 
@@ -972,6 +974,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register object storage routes for file uploads
   registerObjectStorageRoutes(app);
+  
+  // PDF Bid Import - Parse PDF and extract table data for mapping
+  app.post("/api/bid-import/parse-pdf", upload.single('file'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No PDF file uploaded" });
+      }
+      
+      if (req.file.mimetype !== 'application/pdf') {
+        return res.status(400).json({ message: "Only PDF files are supported" });
+      }
+      
+      const result = await parsePdfBuffer(req.file.buffer);
+      
+      if (!result.success) {
+        return res.status(400).json({ message: result.error || "Failed to parse PDF" });
+      }
+      
+      res.json({
+        success: true,
+        tables: result.tables,
+        pageCount: result.pageCount,
+        rawText: result.rawText.substring(0, 5000)
+      });
+    } catch (error) {
+      console.error("PDF parsing error:", error);
+      res.status(500).json({ message: "Failed to parse PDF file" });
+    }
+  });
+  
+  // Apply mapping to parsed PDF data and create bid line items
+  app.post("/api/bid-import/apply-mapping", async (req, res) => {
+    try {
+      const { bidCollectionId, tableData, mapping } = req.body;
+      
+      if (!bidCollectionId || !tableData || !mapping) {
+        return res.status(400).json({ message: "Missing required fields: bidCollectionId, tableData, mapping" });
+      }
+      
+      const mappingConfig: MappingConfig = {
+        description: mapping.description,
+        quantity: mapping.quantity,
+        unit: mapping.unit,
+        unitPrice: mapping.unitPrice,
+        totalPrice: mapping.totalPrice
+      };
+      
+      const mappedItems = applyMapping(tableData, mappingConfig);
+      
+      const createdItems = [];
+      for (const item of mappedItems) {
+        if (!item.description || item.description.trim() === '') continue;
+        
+        const lineItem = await storage.createBidLineItem({
+          bidCollectionId: parseInt(bidCollectionId),
+          category: "Imported",
+          description: item.description,
+          quantity: item.quantity || "1",
+          unit: item.unit || "LS",
+          unitPrice: item.unitPrice || "0",
+          totalPrice: item.totalPrice || "0",
+          notes: "Imported from PDF",
+          isCleanData: false
+        });
+        createdItems.push(lineItem);
+      }
+      
+      res.json({
+        success: true,
+        itemsCreated: createdItems.length,
+        items: createdItems
+      });
+    } catch (error) {
+      console.error("Mapping application error:", error);
+      res.status(500).json({ message: "Failed to apply mapping and create line items" });
+    }
+  });
   
   // Authentication routes - supports both admin users and contact emails
   app.post('/api/auth/login', async (req, res) => {

@@ -29,6 +29,9 @@ import {
   mainPanels,
   bayPanelAssignments,
   electricalReservations,
+  masterCategories,
+  type MasterCategory,
+  type InsertMasterCategory,
   type RfpRequest, 
   type InsertRfpRequest, 
   type UpdateRfpRequest,
@@ -335,6 +338,16 @@ export interface IStorage {
     currentSoftHolds: number;
     message: string;
   }>;
+
+  // Master Category management
+  getAllMasterCategories(): Promise<MasterCategory[]>;
+  getMasterCategory(id: number): Promise<MasterCategory | undefined>;
+  createMasterCategory(category: InsertMasterCategory): Promise<MasterCategory>;
+  
+  // Unmapped line items (for data scrubbing & mapping)
+  getUnmappedBidLineItems(): Promise<BidLineItem[]>;
+  updateBidLineItemMapping(id: number, masterCategoryId: number | null, isCleanData: boolean): Promise<BidLineItem | undefined>;
+  bulkUpdateBidLineItemMapping(updates: { id: number; masterCategoryId: number | null; isCleanData: boolean }[]): Promise<BidLineItem[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2267,6 +2280,46 @@ class ExtendedDatabaseStorage extends DatabaseStorage {
       currentSoftHolds,
       message,
     };
+  }
+
+  // Master Category management
+  async getAllMasterCategories(): Promise<MasterCategory[]> {
+    return db.select().from(masterCategories).orderBy(asc(masterCategories.sortOrder));
+  }
+
+  async getMasterCategory(id: number): Promise<MasterCategory | undefined> {
+    const [category] = await db.select().from(masterCategories).where(eq(masterCategories.id, id));
+    return category || undefined;
+  }
+
+  async createMasterCategory(category: InsertMasterCategory): Promise<MasterCategory> {
+    const [created] = await db.insert(masterCategories).values(category).returning();
+    return created;
+  }
+
+  // Unmapped line items (for data scrubbing & mapping)
+  async getUnmappedBidLineItems(): Promise<BidLineItem[]> {
+    return db.select().from(bidLineItems).where(sql`${bidLineItems.masterCategoryId} IS NULL`);
+  }
+
+  async updateBidLineItemMapping(id: number, masterCategoryId: number | null, isCleanData: boolean): Promise<BidLineItem | undefined> {
+    const [updated] = await db
+      .update(bidLineItems)
+      .set({ masterCategoryId, isCleanData, updatedAt: new Date() })
+      .where(eq(bidLineItems.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async bulkUpdateBidLineItemMapping(updates: { id: number; masterCategoryId: number | null; isCleanData: boolean }[]): Promise<BidLineItem[]> {
+    const results: BidLineItem[] = [];
+    for (const update of updates) {
+      const result = await this.updateBidLineItemMapping(update.id, update.masterCategoryId, update.isCleanData);
+      if (result) {
+        results.push(result);
+      }
+    }
+    return results;
   }
 }
 

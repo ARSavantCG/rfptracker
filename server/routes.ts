@@ -65,6 +65,14 @@ import Templates from "./lib/rfp-templates";
 import { sendWorkflowCompletionEmail, sendTestStatusReportEmail } from "./email-service";
 import { startEmailScheduler, sendStatusReportNow } from "./email-scheduler";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
+import { 
+  sanitizeProjectName, 
+  createProjectFolderStructure, 
+  getWorkflowStepFolder,
+  getStepFolderPath,
+  getRelativeFilePath,
+  ensureUploadsDirectory
+} from "./file-organization";
 
 // Helper function to clean invalid values like "$NaN", "NaN", etc.
 function cleanInvalidValue(value: any): string {
@@ -1745,12 +1753,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const newRequest = await storage.createRfpRequest(requestData);
       
+      // Create project folder structure for file organization
+      const projectFolder = sanitizeProjectName(newRequest.projectName, newRequest.rfpNumber);
+      await createProjectFolderStructure(projectFolder);
+      
       // Automatically advance workflow from "rfp-entry" to "rfp-validation" after creation
       // Step 1 (RFP Entry) is now complete, move to Step 2 (RFP Validation)
       // Keep status as "received" (purple) until validation team completes Step 2
       console.log('Auto-advancing RFP workflow from rfp-entry to rfp-validation');
       const advancedRequest = await storage.updateRfpRequest(newRequest.id, {
-        workflowPhase: "rfp-validation"
+        workflowPhase: "rfp-validation",
+        projectFolder: projectFolder
         // status remains "received" until Step 2 validation is completed
       });
       
@@ -1963,12 +1976,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const newRequest = await storage.createRfpRequest(requestWithFiles);
       
+      // Create project folder structure for file organization
+      const projectFolder = sanitizeProjectName(newRequest.projectName, newRequest.rfpNumber);
+      await createProjectFolderStructure(projectFolder);
+      
       // Automatically advance workflow from "rfp-entry" to "rfp-validation" after creation
       // Step 1 (RFP Entry) is now complete, move to Step 2 (RFP Validation)
       // Keep status as "received" (purple) until validation team completes Step 2
       console.log('Auto-advancing RFP workflow from rfp-entry to rfp-validation');
       const advancedRequest = await storage.updateRfpRequest(newRequest.id, {
-        workflowPhase: "rfp-validation"
+        workflowPhase: "rfp-validation",
+        projectFolder: projectFolder
         // status remains "received" until Step 2 validation is completed
       });
       
@@ -2436,7 +2454,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Upload additional files to existing RFP
+  // Upload additional files to existing RFP (with project folder organization)
   app.post("/api/rfp-requests/:id/files", upload.array("files"), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
@@ -2444,26 +2462,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid ID" });
       }
 
-      const uploadedFiles = (req.files as Express.Multer.File[] || []).map(file => ({
-        id: nanoid(),
-        name: file.originalname,
-        size: file.size,
-        type: file.mimetype,
-        uploadedAt: new Date().toISOString(),
-        path: file.filename,
-      }));
-
-      let updatedRequest = await storage.getRfpRequest(id);
-      if (!updatedRequest) {
+      const rfp = await storage.getRfpRequest(id);
+      if (!rfp) {
         return res.status(404).json({ message: "RFP request not found" });
       }
 
+      // Get or create project folder
+      let projectFolder = rfp.projectFolder;
+      if (!projectFolder) {
+        projectFolder = sanitizeProjectName(rfp.projectName, rfp.rfpNumber);
+        await createProjectFolderStructure(projectFolder);
+        await storage.updateRfpProjectFolder(id, projectFolder);
+      }
+
+      // Get the workflow step folder based on current phase
+      const workflowStep = getWorkflowStepFolder(rfp.workflowPhase);
+      const stepFolderPath = getStepFolderPath(projectFolder, rfp.workflowPhase);
+
+      // Ensure the step folder exists
+      if (!fs.existsSync(stepFolderPath)) {
+        fs.mkdirSync(stepFolderPath, { recursive: true });
+      }
+
+      const uploadedFiles = [];
+      const multerFiles = req.files as Express.Multer.File[] || [];
+
+      for (const file of multerFiles) {
+        // Move file from temp uploads to project step folder
+        const sourcePath = path.join(uploadsDir, file.filename);
+        const destFilename = `${Date.now()}_${file.originalname}`;
+        const destPath = path.join(stepFolderPath, destFilename);
+        
+        if (fs.existsSync(sourcePath)) {
+          fs.renameSync(sourcePath, destPath);
+        }
+
+        const relativePath = getRelativeFilePath(projectFolder, rfp.workflowPhase, destFilename);
+
+        // Record in project_files table
+        await storage.createProjectFile({
+          projectId: id,
+          filePath: relativePath,
+          fileName: destFilename,
+          originalName: file.originalname,
+          workflowStep: workflowStep,
+          mimeType: file.mimetype,
+          fileSize: file.size,
+          uploadedBy: (req as any).userId || null,
+        });
+
+        // Also add to legacy files array for backward compatibility
+        const uploadedFile = {
+          id: nanoid(),
+          name: file.originalname,
+          size: file.size,
+          type: file.mimetype,
+          uploadedAt: new Date().toISOString(),
+          path: relativePath,
+          workflowStep: workflowStep,
+        };
+        uploadedFiles.push(uploadedFile);
+      }
+
+      let updatedRequest = rfp;
       for (const file of uploadedFiles) {
-        updatedRequest = await storage.addFileToRfp(id, file);
+        updatedRequest = await storage.addFileToRfp(id, file) || updatedRequest;
       }
 
       res.json(updatedRequest);
     } catch (error) {
+      console.error('Upload error:', error);
       res.status(500).json({ message: "Failed to upload files" });
     }
   });
@@ -9301,6 +9369,105 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error sending test email:", error);
       res.status(500).json({ message: "Failed to send test email" });
+    }
+  });
+
+  // ============================================================================
+  // PROJECT FILES API ROUTES
+  // ============================================================================
+
+  // Get all files for a project
+  app.get("/api/rfp-requests/:id/project-files", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid ID" });
+      }
+      const files = await storage.getProjectFiles(id);
+      res.json(files);
+    } catch (error) {
+      console.error("Error fetching project files:", error);
+      res.status(500).json({ message: "Failed to fetch project files" });
+    }
+  });
+
+  // Get files for a specific workflow step
+  app.get("/api/rfp-requests/:id/project-files/:step", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const step = req.params.step;
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid ID" });
+      }
+      const files = await storage.getProjectFilesByStep(id, step);
+      res.json(files);
+    } catch (error) {
+      console.error("Error fetching project files by step:", error);
+      res.status(500).json({ message: "Failed to fetch project files" });
+    }
+  });
+
+  // Delete a project file
+  app.delete("/api/project-files/:fileId", requireAuth, async (req, res) => {
+    try {
+      const fileId = parseInt(req.params.fileId);
+      if (isNaN(fileId)) {
+        return res.status(400).json({ message: "Invalid file ID" });
+      }
+
+      const file = await storage.getProjectFile(fileId);
+      if (!file) {
+        return res.status(404).json({ message: "File not found" });
+      }
+
+      // Delete from filesystem
+      const fullPath = path.join(process.cwd(), file.filePath);
+      if (fs.existsSync(fullPath)) {
+        fs.unlinkSync(fullPath);
+      }
+
+      // Delete from database
+      await storage.deleteProjectFile(fileId);
+
+      res.json({ success: true, message: "File deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting project file:", error);
+      res.status(500).json({ message: "Failed to delete file" });
+    }
+  });
+
+  // Migration endpoint: Create folder structure for existing RFPs
+  app.post("/api/admin/migrate-project-folders", requireAuth, checkPermission('admin.access'), async (req, res) => {
+    try {
+      const allRfps = await storage.getAllRfpRequests();
+      const results = {
+        processed: 0,
+        foldersCreated: 0,
+        errors: [] as string[]
+      };
+
+      for (const rfp of allRfps) {
+        try {
+          if (!rfp.projectFolder) {
+            const projectFolder = sanitizeProjectName(rfp.projectName, rfp.rfpNumber);
+            await createProjectFolderStructure(projectFolder);
+            await storage.updateRfpProjectFolder(rfp.id, projectFolder);
+            results.foldersCreated++;
+          }
+          results.processed++;
+        } catch (err) {
+          results.errors.push(`RFP ${rfp.rfpNumber}: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        }
+      }
+
+      res.json({
+        success: true,
+        message: `Migration complete. Processed ${results.processed} RFPs, created ${results.foldersCreated} folder structures.`,
+        ...results
+      });
+    } catch (error) {
+      console.error("Error migrating project folders:", error);
+      res.status(500).json({ message: "Failed to migrate project folders" });
     }
   });
 

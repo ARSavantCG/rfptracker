@@ -79,6 +79,16 @@ Key advanced systems and features include:
   - Summary totals: Total Line Items, Total Project Cost, Cost per Sq Ft (based on project area)
   - Print-friendly layout with proper styling
 - **Report Styling Templates**: CSS templates stored in `/templates/report_style.css` for consistent styling across generated reports.
+- **Automated Project File Organization System**: Dynamic folder structure for organizing project files by workflow phase:
+  - When a new RFP is created, a project folder is automatically generated in `/uploads/projects/` using a sanitized project name (e.g., `Miami_Warehouse_Exp_RFP-2025-001`)
+  - Each project folder contains 6 subfolders: `Step_1_Entry`, `Step_2_Validation`, `Step_3_Bidding`, `Step_4_Evaluation`, `Step_5_Publishing`, `Step_6_Final`
+  - File uploads are automatically routed to the folder matching the RFP's current workflow phase
+  - The `project_files` database table tracks all files with: `projectId`, `filePath`, `fileName`, `originalName`, `workflowStep`, `mimeType`, `fileSize`, `uploadedBy`, `uploadedAt`
+  - The `projectFolder` column on `rfp_requests` stores the sanitized folder name for each project
+  - Migration endpoint available at `/api/admin/migrate-project-folders` to create folder structures for existing RFPs
+  - API endpoints: `GET /api/rfp-requests/:id/project-files` (all files), `GET /api/rfp-requests/:id/project-files/:step` (by step), `DELETE /api/project-files/:fileId`
+  - File organization utilities in `server/file-organization.ts`: sanitizeProjectName, createProjectFolderStructure, getWorkflowStepFolder, getStepFolderPath, getRelativeFilePath
+- **Replit Object Storage Integration**: Professional file handling using Replit App Storage with presigned URL upload flow for future document management capabilities.
 
 ### External Dependencies
 - **Database**: PostgreSQL (Neon serverless)

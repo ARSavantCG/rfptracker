@@ -1883,15 +1883,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         parsed.architectDueDate = convertFormDateToDbDate(parsed.architectDueDate);
       }
       
-      // Handle uploaded files
-      const uploadedFiles = (req.files as Express.Multer.File[] || []).map(file => ({
-        id: nanoid(),
-        name: file.originalname,
-        size: file.size,
-        type: file.mimetype,
-        uploadedAt: new Date().toISOString(),
-        path: file.filename,
-      }));
+      // Files will be processed after RFP creation to get the projectFolder
+      const multerFiles = req.files as Express.Multer.File[] || [];
 
       // Handle selected bay configurations
       let selectedBayConfigurations: any[] = [];
@@ -1959,13 +1952,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const requestWithFiles = {
         ...parsed,
-        files: uploadedFiles,
+        files: [],
         selectedBayConfigurations: selectedBayConfigurations,
         propertyId: propertyId,
         selectedBayIds: selectedBayIds,
         propertyIdsPerBuilding: propertyIdsPerBuilding,
         bayIdsPerBuilding: bayIdsPerBuilding,
-        dueDate: parsed.internalDueDate, // Map internalDueDate to dueDate for validation
+        dueDate: parsed.internalDueDate,
       };
 
       console.log('🔍 RFP Creation Debug:');
@@ -1980,15 +1973,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const projectFolder = sanitizeProjectName(newRequest.projectName, newRequest.rfpNumber);
       await createProjectFolderStructure(projectFolder);
       
+      // Move uploaded files to project folder (Step 1 Entry)
+      const workflowStep = "Step_1_Entry";
+      const stepFolderPath = getStepFolderPath(projectFolder, "rfp-entry");
+      
+      if (!fs.existsSync(stepFolderPath)) {
+        fs.mkdirSync(stepFolderPath, { recursive: true });
+      }
+      
+      const uploadedFiles = [];
+      for (const file of multerFiles) {
+        const sourcePath = path.join(uploadsDir, file.filename);
+        const sanitizedFilename = file.originalname.replace(/[<>:"/\\|?*]/g, '_').replace(/\.\./g, '_');
+        const destFilename = `${Date.now()}_${sanitizedFilename}`;
+        const destPath = path.join(stepFolderPath, destFilename);
+        
+        if (fs.existsSync(sourcePath)) {
+          fs.renameSync(sourcePath, destPath);
+        }
+        
+        const relativePath = getRelativeFilePath(projectFolder, "rfp-entry", destFilename);
+        
+        // Record in project_files table
+        await storage.createProjectFile({
+          projectId: newRequest.id,
+          filePath: relativePath,
+          fileName: destFilename,
+          originalName: file.originalname,
+          workflowStep: workflowStep,
+          mimeType: file.mimetype,
+          fileSize: file.size,
+          uploadedBy: (req as any).userId || null,
+        });
+        
+        uploadedFiles.push({
+          id: nanoid(),
+          name: file.originalname,
+          size: file.size,
+          type: file.mimetype,
+          uploadedAt: new Date().toISOString(),
+          path: relativePath,
+          workflowStep: workflowStep,
+        });
+      }
+      
       // Automatically advance workflow from "rfp-entry" to "rfp-validation" after creation
-      // Step 1 (RFP Entry) is now complete, move to Step 2 (RFP Validation)
-      // Keep status as "received" (purple) until validation team completes Step 2
       console.log('Auto-advancing RFP workflow from rfp-entry to rfp-validation');
-      const advancedRequest = await storage.updateRfpRequest(newRequest.id, {
+      let advancedRequest = await storage.updateRfpRequest(newRequest.id, {
         workflowPhase: "rfp-validation",
         projectFolder: projectFolder
-        // status remains "received" until Step 2 validation is completed
       });
+      
+      // Add files to the RFP for backward compatibility
+      for (const file of uploadedFiles) {
+        advancedRequest = await storage.addFileToRfp(newRequest.id, file) || advancedRequest;
+      }
       
       // Send Step 1 completion email (RFP Entry complete) with attachments
       try {
@@ -1996,7 +2035,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await sendWorkflowCompletionEmail(rfpForEmail, 'rfp-entry');
       } catch (emailError) {
         console.error('Failed to send RFP entry completion email:', emailError);
-        // Don't fail the request if email fails
       }
       
       res.status(201).json(advancedRequest || newRequest);
@@ -2490,7 +2528,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const file of multerFiles) {
         // Move file from temp uploads to project step folder
         const sourcePath = path.join(uploadsDir, file.filename);
-        const destFilename = `${Date.now()}_${file.originalname}`;
+        const sanitizedFilename = file.originalname.replace(/[<>:"/\\|?*]/g, '_').replace(/\.\./g, '_');
+        const destFilename = `${Date.now()}_${sanitizedFilename}`;
         const destPath = path.join(stepFolderPath, destFilename);
         
         if (fs.existsSync(sourcePath)) {
@@ -2556,7 +2595,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "File not found" });
       }
 
-      const filePath = path.join(uploadsDir, file.path || file.name);
+      // Handle both new project folder paths and legacy paths
+      let filePath: string;
+      if (file.path && file.path.startsWith('uploads/projects/')) {
+        // New project-organized files: path is relative to cwd
+        filePath = path.join(process.cwd(), file.path);
+      } else {
+        // Legacy files: path is relative to uploadsDir
+        filePath = path.join(uploadsDir, file.path || file.name);
+      }
+
       if (!fs.existsSync(filePath)) {
         return res.status(404).json({ message: "File not found on disk" });
       }
@@ -2587,8 +2635,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "File not found" });
       }
 
-      // Remove file from filesystem
-      const filePath = path.join(uploadsDir, file.path || file.name);
+      // Handle both new project folder paths and legacy paths
+      let filePath: string;
+      if (file.path && file.path.startsWith('uploads/projects/')) {
+        filePath = path.join(process.cwd(), file.path);
+      } else {
+        filePath = path.join(uploadsDir, file.path || file.name);
+      }
+
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
       }

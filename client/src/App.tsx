@@ -23,6 +23,8 @@ import Login from "@/pages/login";
 import ResetPassword from "@/pages/reset-password";
 import NotFound from "@/pages/not-found";
 import { PropertySummaryReport } from "@/pages/PropertySummaryReport";
+import DataScrubbing from "@/pages/data-scrubbing";
+import ProjectReportGenerator from "@/pages/project-report-generator";
 import { useAuth } from "@/hooks/useAuth";
 import { ErrorBoundary } from "@/components/error-boundary";
 import AuthCheck from "@/components/auth-check";
@@ -79,6 +81,8 @@ function Router() {
             <Route path="/properties" component={Properties} />
             <Route path="/rom-pilot" component={RomPilot} />
             <Route path="/reports" component={Reports} />
+            <Route path="/data-scrubbing" component={DataScrubbing} />
+            <Route path="/project-report-generator" component={ProjectReportGenerator} />
             <Route path="/admin" component={Admin} />
             <Route
               path="/admin/property-summary-report"

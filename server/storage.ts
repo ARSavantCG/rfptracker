@@ -146,6 +146,7 @@ export interface IStorage {
   deleteInvitation(id: number): Promise<boolean>;
 
   // Bid Collection management
+  getAllBidCollections(): Promise<BidCollection[]>;
   getBidCollectionsByRfp(rfpId: number): Promise<BidCollection[]>;
   getBidCollection(id: number): Promise<BidCollection | undefined>;
   createBidCollection(bidCollection: InsertBidCollection): Promise<BidCollection>;
@@ -154,8 +155,10 @@ export interface IStorage {
   
   // Bid Line Item management
   getBidLineItemsByBid(bidCollectionId: number): Promise<BidLineItem[]>;
+  getAllBidLineItems(): Promise<BidLineItem[]>;
   createBidLineItem(lineItem: InsertBidLineItem): Promise<BidLineItem>;
   updateBidLineItem(id: number, updates: Partial<UpdateBidLineItem>): Promise<BidLineItem | undefined>;
+  updateBidLineItemCleanData(id: number, isCleanData: boolean): Promise<BidLineItem | undefined>;
   deleteBidLineItem(id: number): Promise<boolean>;
   deleteBidLineItemsByBidCollection(bidCollectionId: number): Promise<boolean>;
 
@@ -834,6 +837,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Bid Collection methods
+  async getAllBidCollections(): Promise<BidCollection[]> {
+    return await db.select().from(bidCollections);
+  }
+
   async getBidCollectionsByRfp(rfpId: number): Promise<BidCollection[]> {
     return await db.select().from(bidCollections).where(eq(bidCollections.rfpId, rfpId));
   }
@@ -871,6 +878,10 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(bidLineItems).where(eq(bidLineItems.bidCollectionId, bidCollectionId));
   }
 
+  async getAllBidLineItems(): Promise<BidLineItem[]> {
+    return await db.select().from(bidLineItems);
+  }
+
   async createBidLineItem(lineItem: InsertBidLineItem): Promise<BidLineItem> {
     const [created] = await db.insert(bidLineItems).values(lineItem).returning();
     return created;
@@ -880,6 +891,15 @@ export class DatabaseStorage implements IStorage {
     const [updated] = await db
       .update(bidLineItems)
       .set({ ...updates, updatedAt: new Date() })
+      .where(eq(bidLineItems.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async updateBidLineItemCleanData(id: number, isCleanData: boolean): Promise<BidLineItem | undefined> {
+    const [updated] = await db
+      .update(bidLineItems)
+      .set({ isCleanData, updatedAt: new Date() })
       .where(eq(bidLineItems.id, id))
       .returning();
     return updated || undefined;

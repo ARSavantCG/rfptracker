@@ -3572,6 +3572,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Bid Collection routes
+  
+  // Get all bid collections (for data scrubbing and project report generator)
+  app.get("/api/bid-collections", async (req, res) => {
+    try {
+      const bidCollections = await storage.getAllBidCollections();
+      res.json(bidCollections);
+    } catch (error) {
+      console.error("Error fetching all bid collections:", error);
+      res.status(500).json({ message: "Failed to fetch bid collections" });
+    }
+  });
+
+  // Get all bid line items (for data scrubbing view)
+  app.get("/api/bid-line-items/all", async (req, res) => {
+    try {
+      const lineItems = await storage.getAllBidLineItems();
+      res.json(lineItems);
+    } catch (error) {
+      console.error("Error fetching all bid line items:", error);
+      res.status(500).json({ message: "Failed to fetch bid line items" });
+    }
+  });
+
+  // Bulk update isCleanData for line items
+  app.patch("/api/bid-line-items/bulk-update-clean-data", async (req, res) => {
+    try {
+      const { updates } = req.body;
+      if (!Array.isArray(updates)) {
+        return res.status(400).json({ message: "Updates must be an array" });
+      }
+
+      // Validate each update item
+      for (const update of updates) {
+        if (typeof update.id !== 'number' || typeof update.isCleanData !== 'boolean') {
+          return res.status(400).json({ message: "Each update must have a numeric id and boolean isCleanData" });
+        }
+      }
+
+      const results = await Promise.all(
+        updates.map(async (update: { id: number; isCleanData: boolean }) => {
+          return storage.updateBidLineItemCleanData(update.id, update.isCleanData);
+        })
+      );
+
+      res.json({ message: "Updates applied successfully", count: results.length });
+    } catch (error) {
+      console.error("Error updating bid line items:", error);
+      res.status(500).json({ message: "Failed to update bid line items" });
+    }
+  });
+
   app.get("/api/rfp-requests/:id/bid-collections", async (req, res) => {
     try {
       const id = parseInt(req.params.id);

@@ -56,6 +56,19 @@ Key advanced systems and features include:
   - **Admin Controls**: Manual status report trigger available via API endpoint `/api/admin/email/send-status-report` (admin access required).
   - Email service files: `server/email-service.ts` (templates and sending), `server/email-scheduler.ts` (scheduled job system).
   - The scheduler runs every minute to check if it's time to send (8 AM on Mon/Wed/Fri) and prevents duplicate sends per day.
+- **Data Scrubbing System**: A dedicated page (`/data-scrubbing`) for marking individual bid line items as "clean" data suitable for analytical reports and benchmarking. Features include:
+  - `isCleanData` boolean field on bid_line_items table for granular control
+  - Summary cards showing total, clean, and unclean item counts
+  - Search and filter functionality (all items, clean only, unclean only)
+  - Bulk update with pending changes tracking and save confirmation
+  - Displays project name, contractor, category, description, and pricing for each line item
+- **Project Report Generator**: A dynamic reporting page (`/project-report-generator`) that generates cost reports for selected projects. Features include:
+  - Project dropdown to select any RFP from the database
+  - Toggle switch between "Show All Data" and "Show Analytical Data Only" (filters by isCleanData)
+  - Cost table with consistent headers: Category, Contractor, Description, Unit Price, Total Cost
+  - Summary totals: Total Line Items, Total Project Cost, Cost per Sq Ft (based on project area)
+  - Print-friendly layout with proper styling
+- **Report Styling Templates**: CSS templates stored in `/templates/report_style.css` for consistent styling across generated reports.
 
 ### External Dependencies
 - **Database**: PostgreSQL (Neon serverless)

@@ -258,8 +258,8 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
       ...currentBreakdown,
       {
         id: nanoid(),
-        areaType: "Office Area",
-        description: "Office Area",
+        areaType: "Office",
+        description: "Office",
         squareFootage: "",
         notes: ""
       }
@@ -434,7 +434,7 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                       <div key={area.id} className="space-y-2 p-3 border rounded-md bg-gray-50">
                         <div className="grid grid-cols-12 gap-2 items-center">
                           <div className="col-span-3 relative">
-                            <label className="text-xs font-medium text-gray-600">Area Type</label>
+                            <label className="text-xs font-medium text-gray-600">Description</label>
                             <div className="relative area-type-dropdown">
                               <button
                                 type="button"
@@ -443,26 +443,21 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                                 }}
                                 className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                               >
-                                <span className={area.areaType ? "text-foreground" : "text-muted-foreground"}>
-                                  {area.areaType || "Select area type"}
+                                <span className={area.description ? "text-foreground" : "text-muted-foreground"}>
+                                  {area.description || "Select description"}
                                 </span>
                                 <ChevronDown className={`h-4 w-4 opacity-70 transition-transform ${openAreaTypeIndex === index ? "rotate-180" : ""}`} />
                               </button>
                               {openAreaTypeIndex === index && (
                                 <div className="absolute z-[9999] mt-1 w-full rounded-md border bg-popover shadow-lg">
                                   <div className="p-1">
-                                    {["Office Area", "Warehouse Office", "Miscellaneous"].map((option) => (
+                                    {["Office", "Warehouse Office", "Other"].map((option) => (
                                       <div
                                         key={option}
                                         className="px-3 py-2 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground rounded-sm"
                                         onClick={() => {
+                                          updateAreaBreakdown(index, "description", option);
                                           updateAreaBreakdown(index, "areaType", option);
-                                          // Auto-fill description for non-miscellaneous types
-                                          if (option !== "Miscellaneous") {
-                                            updateAreaBreakdown(index, "description", option);
-                                          } else {
-                                            updateAreaBreakdown(index, "description", "");
-                                          }
                                           setOpenAreaTypeIndex(null);
                                         }}
                                       >
@@ -474,17 +469,17 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                               )}
                             </div>
                           </div>
-                          {area.areaType === "Miscellaneous" && (
+                          {area.description === "Other" && (
                             <div className="col-span-3">
                               <label className="text-xs font-medium text-gray-600">Custom Name</label>
                               <Input
-                                value={area.description}
-                                onChange={(e) => updateAreaBreakdown(index, "description", e.target.value)}
+                                value={area.notes || ""}
+                                onChange={(e) => updateAreaBreakdown(index, "notes", e.target.value)}
                                 placeholder="Enter custom name"
                               />
                             </div>
                           )}
-                          <div className={area.areaType === "Miscellaneous" ? "col-span-2" : "col-span-3"}>
+                          <div className={area.description === "Other" ? "col-span-2" : "col-span-3"}>
                             <label className="text-xs font-medium text-gray-600">Area (sq ft)</label>
                             <Input
                               value={area.squareFootage ? parseInt(area.squareFootage.replace(/,/g, "")).toLocaleString() : ""}
@@ -497,7 +492,7 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                               placeholder="e.g., 5,000"
                             />
                           </div>
-                          <div className={area.areaType === "Miscellaneous" ? "col-span-3" : "col-span-5"}>
+                          <div className={area.description === "Other" ? "col-span-3" : "col-span-5"}>
                             <label className="text-xs font-medium text-gray-600">Notes</label>
                             <Input
                               value={area.notes || ""}

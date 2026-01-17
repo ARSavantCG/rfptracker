@@ -364,6 +364,7 @@ export const bidLineItems = pgTable("bid_line_items", {
   totalPrice: text("total_price").notNull(),
   notes: text("notes"),
   sortOrder: integer("sort_order").notNull().default(0),
+  isCleanData: boolean("is_clean_data").notNull().default(false), // Whether this line item has clean, reliable pricing for benchmarking
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

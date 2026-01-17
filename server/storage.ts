@@ -100,6 +100,9 @@ import {
   propertyAttachments,
   type PropertyAttachment as SchemaPropertyAttachment,
   type InsertPropertyAttachment as SchemaInsertPropertyAttachment,
+  projectFiles,
+  type ProjectFile,
+  type InsertProjectFile,
 } from "@shared/schema";
 
 // Use schema types for Property Attachments
@@ -348,6 +351,14 @@ export interface IStorage {
   getUnmappedBidLineItems(): Promise<BidLineItem[]>;
   updateBidLineItemMapping(id: number, masterCategoryId: number | null, isCleanData: boolean): Promise<BidLineItem | undefined>;
   bulkUpdateBidLineItemMapping(updates: { id: number; masterCategoryId: number | null; isCleanData: boolean }[]): Promise<BidLineItem[]>;
+
+  // Project Files management
+  getProjectFiles(projectId: number): Promise<ProjectFile[]>;
+  getProjectFilesByStep(projectId: number, workflowStep: string): Promise<ProjectFile[]>;
+  getProjectFile(id: number): Promise<ProjectFile | undefined>;
+  createProjectFile(file: InsertProjectFile): Promise<ProjectFile>;
+  deleteProjectFile(id: number): Promise<boolean>;
+  updateRfpProjectFolder(rfpId: number, projectFolder: string): Promise<RfpRequest | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2320,6 +2331,50 @@ class ExtendedDatabaseStorage extends DatabaseStorage {
       }
     }
     return results;
+  }
+
+  // Project Files management
+  async getProjectFiles(projectId: number): Promise<ProjectFile[]> {
+    return db
+      .select()
+      .from(projectFiles)
+      .where(eq(projectFiles.projectId, projectId))
+      .orderBy(desc(projectFiles.uploadedAt));
+  }
+
+  async getProjectFilesByStep(projectId: number, workflowStep: string): Promise<ProjectFile[]> {
+    return db
+      .select()
+      .from(projectFiles)
+      .where(and(
+        eq(projectFiles.projectId, projectId),
+        eq(projectFiles.workflowStep, workflowStep)
+      ))
+      .orderBy(desc(projectFiles.uploadedAt));
+  }
+
+  async getProjectFile(id: number): Promise<ProjectFile | undefined> {
+    const [file] = await db.select().from(projectFiles).where(eq(projectFiles.id, id));
+    return file || undefined;
+  }
+
+  async createProjectFile(file: InsertProjectFile): Promise<ProjectFile> {
+    const [created] = await db.insert(projectFiles).values(file).returning();
+    return created;
+  }
+
+  async deleteProjectFile(id: number): Promise<boolean> {
+    const result = await db.delete(projectFiles).where(eq(projectFiles.id, id));
+    return result.rowCount! > 0;
+  }
+
+  async updateRfpProjectFolder(rfpId: number, projectFolder: string): Promise<RfpRequest | undefined> {
+    const [updated] = await db
+      .update(rfpRequests)
+      .set({ projectFolder, updatedAt: new Date() })
+      .where(eq(rfpRequests.id, rfpId))
+      .returning();
+    return updated || undefined;
   }
 }
 

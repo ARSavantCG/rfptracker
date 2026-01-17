@@ -299,6 +299,19 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
       form.setValue('contractorName', bidder.name);
       form.setValue('contractorCompany', bidder.company || '');
       form.setValue('contractorEmail', bidder.email || '');
+      
+      // Auto-default Cost Category based on contact type/tags
+      const tags = (bidder.tags || []) as string[];
+      const isGeneralContractor = bidder.type === 'contractor' || 
+        tags.some(tag => tag.toLowerCase().includes('general contractor') || tag.toLowerCase().includes('gc'));
+      const isArchitect = bidder.type === 'architect' || 
+        tags.some(tag => tag.toLowerCase().includes('architect'));
+      
+      if (isArchitect) {
+        form.setValue('costCategory', 'architectural');
+      } else if (isGeneralContractor) {
+        form.setValue('costCategory', 'construction');
+      }
     }
   };
 

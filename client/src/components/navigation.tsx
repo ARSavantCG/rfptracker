@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Home, FileText, BarChart3, Users, Building, Calculator, Settings, LogOut, User, Key, ChevronDown, ClipboardCheck, FileBarChart } from "lucide-react";
+import { Home, FileText, BarChart3, Users, Building, Calculator, Settings, LogOut, User, Key, ChevronDown, ClipboardCheck, FileBarChart, Tags } from "lucide-react";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
@@ -66,6 +66,7 @@ export default function Navigation() {
     { path: "/properties", label: "Properties", icon: Building },
     { path: "/reports", label: "Reports", icon: BarChart3 },
     { path: "/data-scrubbing", label: "Data Scrubbing", icon: ClipboardCheck },
+    { path: "/data-mapping", label: "Data Mapping", icon: Tags },
     { path: "/project-report-generator", label: "Project Reports", icon: FileBarChart },
     { path: "/rom-pilot", label: "ROM Pilot", icon: Calculator },
   ];

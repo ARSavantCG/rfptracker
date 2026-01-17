@@ -64,6 +64,7 @@ import { deleteEntityFiles, cleanupOrphanedFiles, getCleanupStats, findOrphanedF
 import Templates from "./lib/rfp-templates";
 import { sendWorkflowCompletionEmail, sendTestStatusReportEmail } from "./email-service";
 import { startEmailScheduler, sendStatusReportNow } from "./email-scheduler";
+import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 
 // Helper function to clean invalid values like "$NaN", "NaN", etc.
 function cleanInvalidValue(value: any): string {
@@ -958,6 +959,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Setup session middleware
   setupSession(app);
+  
+  // Register object storage routes for file uploads
+  registerObjectStorageRoutes(app);
+  
   // Authentication routes - supports both admin users and contact emails
   app.post('/api/auth/login', async (req, res) => {
     try {

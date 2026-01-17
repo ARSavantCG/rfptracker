@@ -102,6 +102,9 @@ uploads/*
 test-*.pdf
 test-*.html
 
+# Attached assets (temporary files for chat context)
+attached_assets/
+
 # Replit specific
 .replit
 replit.nix

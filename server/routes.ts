@@ -3623,6 +3623,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Master Categories routes
+  app.get("/api/master-categories", async (req, res) => {
+    try {
+      const categories = await storage.getAllMasterCategories();
+      res.json(categories);
+    } catch (error) {
+      console.error("Error fetching master categories:", error);
+      res.status(500).json({ message: "Failed to fetch master categories" });
+    }
+  });
+
+  app.post("/api/master-categories", async (req, res) => {
+    try {
+      const { name, description, sortOrder } = req.body;
+      if (!name) {
+        return res.status(400).json({ message: "Name is required" });
+      }
+      const category = await storage.createMasterCategory({ name, description, sortOrder: sortOrder || 0 });
+      res.status(201).json(category);
+    } catch (error) {
+      console.error("Error creating master category:", error);
+      res.status(500).json({ message: "Failed to create master category" });
+    }
+  });
+
+  // Unmapped line items for data scrubbing & mapping
+  app.get("/api/bid-line-items/unmapped", async (req, res) => {
+    try {
+      const lineItems = await storage.getUnmappedBidLineItems();
+      res.json(lineItems);
+    } catch (error) {
+      console.error("Error fetching unmapped line items:", error);
+      res.status(500).json({ message: "Failed to fetch unmapped line items" });
+    }
+  });
+
+  // Update single line item mapping
+  app.patch("/api/bid-line-items/:id/mapping", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid line item ID" });
+      }
+      const { masterCategoryId, isCleanData } = req.body;
+      if (masterCategoryId !== null && typeof masterCategoryId !== 'number') {
+        return res.status(400).json({ message: "masterCategoryId must be a number or null" });
+      }
+      if (typeof isCleanData !== 'boolean') {
+        return res.status(400).json({ message: "isCleanData must be a boolean" });
+      }
+      const updated = await storage.updateBidLineItemMapping(id, masterCategoryId, isCleanData);
+      if (!updated) {
+        return res.status(404).json({ message: "Line item not found" });
+      }
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating line item mapping:", error);
+      res.status(500).json({ message: "Failed to update line item mapping" });
+    }
+  });
+
+  // Bulk update line item mappings
+  app.patch("/api/bid-line-items/bulk-mapping", async (req, res) => {
+    try {
+      const { updates } = req.body;
+      if (!Array.isArray(updates)) {
+        return res.status(400).json({ message: "Updates must be an array" });
+      }
+      for (const update of updates) {
+        if (typeof update.id !== 'number') {
+          return res.status(400).json({ message: "Each update must have a numeric id" });
+        }
+        if (update.masterCategoryId !== null && typeof update.masterCategoryId !== 'number') {
+          return res.status(400).json({ message: "masterCategoryId must be a number or null" });
+        }
+        if (typeof update.isCleanData !== 'boolean') {
+          return res.status(400).json({ message: "isCleanData must be a boolean" });
+        }
+      }
+      const results = await storage.bulkUpdateBidLineItemMapping(updates);
+      res.json({ message: "Bulk update successful", count: results.length, items: results });
+    } catch (error) {
+      console.error("Error bulk updating line item mappings:", error);
+      res.status(500).json({ message: "Failed to bulk update line item mappings" });
+    }
+  });
+
   app.get("/api/rfp-requests/:id/bid-collections", async (req, res) => {
     try {
       const id = parseInt(req.params.id);

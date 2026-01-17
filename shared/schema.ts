@@ -99,6 +99,9 @@ export const rfpRequests = pgTable("rfp_requests", {
   completedDate: timestamp("completed_date"),
   publishedDate: timestamp("published_date"),
   
+  // Project folder for file organization (auto-generated, sanitized from project name)
+  projectFolder: text("project_folder"),
+  
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -1092,5 +1095,25 @@ export const insertPropertyAttachmentSchema = createInsertSchema(propertyAttachm
 export type PropertyAttachment = typeof propertyAttachments.$inferSelect;
 export type InsertPropertyAttachment = z.infer<typeof insertPropertyAttachmentSchema>;
 
+// Project Files table for tracking files per workflow step
+export const projectFiles = pgTable("project_files", {
+  id: serial("id").primaryKey(),
+  projectId: integer("project_id").references(() => rfpRequests.id, { onDelete: "cascade" }).notNull(),
+  filePath: text("file_path").notNull(),
+  fileName: text("file_name").notNull(),
+  originalName: text("original_name").notNull(),
+  workflowStep: text("workflow_step").notNull(), // Step_1_Entry, Step_2_Validation, etc.
+  mimeType: text("mime_type"),
+  fileSize: integer("file_size"),
+  uploadedBy: text("uploaded_by"),
+  uploadedAt: timestamp("uploaded_at").defaultNow().notNull(),
+});
 
+export const insertProjectFileSchema = createInsertSchema(projectFiles).omit({
+  id: true,
+  uploadedAt: true,
+});
+
+export type ProjectFile = typeof projectFiles.$inferSelect;
+export type InsertProjectFile = z.infer<typeof insertProjectFileSchema>;
 

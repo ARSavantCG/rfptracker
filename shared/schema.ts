@@ -335,6 +335,28 @@ export type RfpFile = {
   path?: string; // For file system storage
 };
 
+// Master Categories for standardized cost classification
+export const masterCategories = pgTable("master_categories", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  description: text("description"),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertMasterCategorySchema = createInsertSchema(masterCategories).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const updateMasterCategorySchema = insertMasterCategorySchema.partial().extend({
+  id: z.number(),
+});
+
+export type MasterCategory = typeof masterCategories.$inferSelect;
+export type InsertMasterCategory = z.infer<typeof insertMasterCategorySchema>;
+export type UpdateMasterCategory = z.infer<typeof updateMasterCategorySchema>;
+
 // Bid Collection tables
 export const bidCollections = pgTable("bid_collections", {
   id: serial("id").primaryKey(),
@@ -356,7 +378,7 @@ export const bidCollections = pgTable("bid_collections", {
 export const bidLineItems = pgTable("bid_line_items", {
   id: serial("id").primaryKey(),
   bidCollectionId: integer("bid_collection_id").notNull().references(() => bidCollections.id),
-  category: text("category"), // e.g., "Labor", "Materials", "Equipment" - now optional
+  category: text("category"), // e.g., "Labor", "Materials", "Equipment" - now optional (raw category from contractor)
   description: text("description").notNull(),
   quantity: text("quantity"),
   unit: text("unit"), // e.g., "sq ft", "lf", "ea"
@@ -365,6 +387,7 @@ export const bidLineItems = pgTable("bid_line_items", {
   notes: text("notes"),
   sortOrder: integer("sort_order").notNull().default(0),
   isCleanData: boolean("is_clean_data").notNull().default(false), // Whether this line item has clean, reliable pricing for benchmarking
+  masterCategoryId: integer("master_category_id").references(() => masterCategories.id), // Standardized category for analytics
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

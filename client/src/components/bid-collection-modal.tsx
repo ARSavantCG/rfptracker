@@ -33,8 +33,11 @@ const bidCollectionSchema = z.object({
   notes: z.string().optional(),
 });
 
+const COST_BUCKETS = ["Office", "Warehouse Office", "Warehouse", "Other"] as const;
+
 const lineItemSchema = z.object({
   category: z.string().default("General"),
+  costBucket: z.enum(COST_BUCKETS).default("Other"),
   description: z.string().min(1, "Description is required"),
   quantity: z.string(),
   unit: z.string(),
@@ -131,6 +134,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
       if (existingLineItems && Array.isArray(existingLineItems)) {
         const formattedLineItems = existingLineItems.map((item: any) => ({
           category: item.category || "Labor",
+          costBucket: item.costBucket || "Other",
           description: item.description || "",
           quantity: item.quantity?.toString() || "",
           unit: item.unit || "",
@@ -319,6 +323,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
   const addLineItem = (count: number = 1) => {
     const newItems = Array(count).fill(null).map(() => ({
       category: "General",
+      costBucket: "Other" as const,
       description: "",
       quantity: "",
       unit: "",
@@ -564,6 +569,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
           
           importedItems.push({
             category: "General",
+            costBucket: "Other" as const,
             description,
             quantity,
             unit,
@@ -615,6 +621,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
     
     const scopeItems = (invitationToBid as any).scopeOfWork.map((item: any) => ({
       category: "General",
+      costBucket: "Other" as const,
       description: item.description || "",
       quantity: item.quantity?.toString() || "",
       unit: item.unit || "",
@@ -743,11 +750,26 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                     <Upload className="h-4 w-4 mr-2" />
                     Import Excel/CSV
                   </Button>
-                  <Button type="button" onClick={() => setShowPdfImport(true)} variant="outline" size="sm">
+                  <Button 
+                    type="button" 
+                    onClick={() => {
+                      if (!bidCollection) {
+                        toast({
+                          title: "Save bid first",
+                          description: "Please save the bid collection before importing from PDF. Fill in the respondent and save, then import.",
+                          variant: "destructive",
+                        });
+                        return;
+                      }
+                      setShowPdfImport(true);
+                    }} 
+                    variant="outline" 
+                    size="sm"
+                  >
                     <FileText className="h-4 w-4 mr-2" />
                     Import PDF
                   </Button>
-                  {invitationToBid && (invitationToBid as any)?.scopeOfWork?.length > 0 && (
+                  {Boolean(invitationToBid && (invitationToBid as any)?.scopeOfWork?.length > 0) && (
                     <Button type="button" onClick={importFromScopeOfWork} variant="outline" size="sm">
                       <Download className="h-4 w-4 mr-2" />
                       Import from Scope of Work
@@ -777,6 +799,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                     <TableHeader>
                       <TableRow className="text-xs">
                         <TableHead className="w-[70px] text-xs">Order</TableHead>
+                        <TableHead className="w-[120px] text-xs">Cost Bucket</TableHead>
                         <TableHead className="w-[200px] text-xs">Description</TableHead>
                         <TableHead className="w-[70px] text-xs">Qty</TableHead>
                         <TableHead className="w-[60px] text-xs">Unit</TableHead>
@@ -828,6 +851,20 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                                         <GripVertical className="h-4 w-4 text-gray-400" />
                                       </div>
                                     </div>
+                                  </TableCell>
+                                  <TableCell>
+                                    <select
+                                      value={item.costBucket || "Other"}
+                                      onChange={(e) => {
+                                        if (editingIndex === null) startEditing(index);
+                                        updateLineItem(index, 'costBucket', e.target.value);
+                                      }}
+                                      className="w-full h-8 px-2 py-1 text-xs bg-background border border-input rounded-md"
+                                    >
+                                      {COST_BUCKETS.map((bucket) => (
+                                        <option key={bucket} value={bucket}>{bucket}</option>
+                                      ))}
+                                    </select>
                                   </TableCell>
                                   <TableCell>
                                     <Input

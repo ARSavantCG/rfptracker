@@ -30,8 +30,14 @@ import {
   bayPanelAssignments,
   electricalReservations,
   masterCategories,
+  bidLevelingAdjustments,
+  evaluationBidCarry,
   type MasterCategory,
   type InsertMasterCategory,
+  type BidLevelingAdjustment,
+  type InsertBidLevelingAdjustment,
+  type EvaluationBidCarry,
+  type InsertEvaluationBidCarry,
   type RfpRequest, 
   type InsertRfpRequest, 
   type UpdateRfpRequest,
@@ -359,6 +365,22 @@ export interface IStorage {
   createProjectFile(file: InsertProjectFile): Promise<ProjectFile>;
   deleteProjectFile(id: number): Promise<boolean>;
   updateRfpProjectFolder(rfpId: number, projectFolder: string): Promise<RfpRequest | undefined>;
+
+  // Bid Leveling - adjustments
+  getBidLevelingAdjustments(rfpId: number): Promise<BidLevelingAdjustment[]>;
+  getBidLevelingAdjustmentsByBidCollection(bidCollectionId: number): Promise<BidLevelingAdjustment[]>;
+  upsertBidLevelingAdjustment(adjustment: InsertBidLevelingAdjustment): Promise<BidLevelingAdjustment>;
+  deleteBidLevelingAdjustment(id: number): Promise<boolean>;
+
+  // Bid Leveling - evaluation carry
+  getEvaluationBidCarry(rfpId: number): Promise<EvaluationBidCarry[]>;
+  upsertEvaluationBidCarry(carry: InsertEvaluationBidCarry): Promise<EvaluationBidCarry>;
+  updateCarriedPrice(id: number, carriedPrice: number): Promise<EvaluationBidCarry | undefined>;
+  deleteEvaluationBidCarry(rfpId: number): Promise<boolean>;
+
+  // Bid Leveling - aggregation
+  getBucketTotalsForBid(bidCollectionId: number): Promise<{ bucket: string; total: number }[]>;
+  updateLineItemCostBucket(lineItemId: number, costBucket: string | null): Promise<BidLineItem | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2374,6 +2396,122 @@ class ExtendedDatabaseStorage extends DatabaseStorage {
       .update(rfpRequests)
       .set({ projectFolder, updatedAt: new Date() })
       .where(eq(rfpRequests.id, rfpId))
+      .returning();
+    return updated || undefined;
+  }
+
+  // Bid Leveling - adjustments
+  async getBidLevelingAdjustments(rfpId: number): Promise<BidLevelingAdjustment[]> {
+    return db.select().from(bidLevelingAdjustments).where(eq(bidLevelingAdjustments.rfpId, rfpId));
+  }
+
+  async getBidLevelingAdjustmentsByBidCollection(bidCollectionId: number): Promise<BidLevelingAdjustment[]> {
+    return db.select().from(bidLevelingAdjustments).where(eq(bidLevelingAdjustments.bidCollectionId, bidCollectionId));
+  }
+
+  async upsertBidLevelingAdjustment(adjustment: InsertBidLevelingAdjustment): Promise<BidLevelingAdjustment> {
+    // Check if adjustment already exists for this bid collection and bucket
+    const [existing] = await db.select().from(bidLevelingAdjustments)
+      .where(and(
+        eq(bidLevelingAdjustments.bidCollectionId, adjustment.bidCollectionId),
+        eq(bidLevelingAdjustments.costBucket, adjustment.costBucket)
+      ));
+    
+    if (existing) {
+      const [updated] = await db.update(bidLevelingAdjustments)
+        .set({ 
+          adjustmentAmount: adjustment.adjustmentAmount,
+          adjustmentReason: adjustment.adjustmentReason,
+          updatedAt: new Date()
+        })
+        .where(eq(bidLevelingAdjustments.id, existing.id))
+        .returning();
+      return updated;
+    }
+    
+    const [created] = await db.insert(bidLevelingAdjustments).values(adjustment).returning();
+    return created;
+  }
+
+  async deleteBidLevelingAdjustment(id: number): Promise<boolean> {
+    const result = await db.delete(bidLevelingAdjustments).where(eq(bidLevelingAdjustments.id, id));
+    return result.rowCount! > 0;
+  }
+
+  // Bid Leveling - evaluation carry
+  async getEvaluationBidCarry(rfpId: number): Promise<EvaluationBidCarry[]> {
+    return db.select().from(evaluationBidCarry).where(eq(evaluationBidCarry.rfpId, rfpId));
+  }
+
+  async upsertEvaluationBidCarry(carry: InsertEvaluationBidCarry): Promise<EvaluationBidCarry> {
+    // Check if carry already exists for this RFP and bucket
+    const [existing] = await db.select().from(evaluationBidCarry)
+      .where(and(
+        eq(evaluationBidCarry.rfpId, carry.rfpId),
+        eq(evaluationBidCarry.costBucket, carry.costBucket)
+      ));
+    
+    if (existing) {
+      const [updated] = await db.update(evaluationBidCarry)
+        .set({ 
+          selectedBidCollectionId: carry.selectedBidCollectionId,
+          originalTotal: carry.originalTotal,
+          adjustmentAmount: carry.adjustmentAmount,
+          carriedPrice: carry.carriedPrice,
+          isOverridden: carry.isOverridden,
+          updatedAt: new Date()
+        })
+        .where(eq(evaluationBidCarry.id, existing.id))
+        .returning();
+      return updated;
+    }
+    
+    const [created] = await db.insert(evaluationBidCarry).values(carry).returning();
+    return created;
+  }
+
+  async updateCarriedPrice(id: number, carriedPrice: number): Promise<EvaluationBidCarry | undefined> {
+    const [updated] = await db.update(evaluationBidCarry)
+      .set({ carriedPrice, isOverridden: true, updatedAt: new Date() })
+      .where(eq(evaluationBidCarry.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteEvaluationBidCarry(rfpId: number): Promise<boolean> {
+    const result = await db.delete(evaluationBidCarry).where(eq(evaluationBidCarry.rfpId, rfpId));
+    return result.rowCount! > 0;
+  }
+
+  // Bid Leveling - aggregation
+  async getBucketTotalsForBid(bidCollectionId: number): Promise<{ bucket: string; total: number }[]> {
+    const lineItems = await db.select().from(bidLineItems)
+      .where(eq(bidLineItems.bidCollectionId, bidCollectionId));
+    
+    const bucketTotals: Record<string, number> = {
+      'Office': 0,
+      'Warehouse Office': 0,
+      'Warehouse': 0,
+      'Other': 0
+    };
+    
+    for (const item of lineItems) {
+      const bucket = item.costBucket || 'Other';
+      const price = parseFloat(item.totalPrice?.replace(/[^0-9.-]/g, '') || '0') || 0;
+      if (bucketTotals[bucket] !== undefined) {
+        bucketTotals[bucket] += Math.round(price * 100); // Convert to cents
+      } else {
+        bucketTotals['Other'] += Math.round(price * 100);
+      }
+    }
+    
+    return Object.entries(bucketTotals).map(([bucket, total]) => ({ bucket, total }));
+  }
+
+  async updateLineItemCostBucket(lineItemId: number, costBucket: string | null): Promise<BidLineItem | undefined> {
+    const [updated] = await db.update(bidLineItems)
+      .set({ costBucket, updatedAt: new Date() })
+      .where(eq(bidLineItems.id, lineItemId))
       .returning();
     return updated || undefined;
   }

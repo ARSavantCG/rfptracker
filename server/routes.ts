@@ -9712,6 +9712,179 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============================================================================
+  // BID LEVELING API ROUTES
+  // ============================================================================
+
+  // Get bucket totals for all bids in an RFP (for comparison view)
+  app.get("/api/rfp-requests/:id/bid-leveling", requireAuth, async (req, res) => {
+    try {
+      const rfpId = parseInt(req.params.id);
+      if (isNaN(rfpId)) {
+        return res.status(400).json({ message: "Invalid RFP ID" });
+      }
+
+      // Get all bid collections for this RFP
+      const bidCollections = await storage.getBidCollections(rfpId);
+      
+      // Get bucket totals and adjustments for each bid
+      const bidData = await Promise.all(bidCollections.map(async (bid) => {
+        const bucketTotals = await storage.getBucketTotalsForBid(bid.id);
+        const adjustments = await storage.getBidLevelingAdjustmentsByBidCollection(bid.id);
+        
+        return {
+          bidCollectionId: bid.id,
+          contractorName: bid.contractorName,
+          contractorCompany: bid.contractorCompany,
+          buckets: bucketTotals.map(bt => {
+            const adjustment = adjustments.find(a => a.costBucket === bt.bucket);
+            return {
+              bucket: bt.bucket,
+              originalTotal: bt.total, // in cents
+              adjustmentAmount: adjustment?.adjustmentAmount || 0,
+              adjustmentReason: adjustment?.adjustmentReason || null,
+              adjustedTotal: bt.total + (adjustment?.adjustmentAmount || 0)
+            };
+          })
+        };
+      }));
+
+      res.json(bidData);
+    } catch (error) {
+      console.error("Error fetching bid leveling data:", error);
+      res.status(500).json({ message: "Failed to fetch bid leveling data" });
+    }
+  });
+
+  // Save adjustment for a bucket
+  app.post("/api/bid-leveling/adjustments", requireAuth, async (req, res) => {
+    try {
+      const { rfpId, bidCollectionId, costBucket, adjustmentAmount, adjustmentReason } = req.body;
+      
+      if (!rfpId || !bidCollectionId || !costBucket) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      const adjustment = await storage.upsertBidLevelingAdjustment({
+        rfpId,
+        bidCollectionId,
+        costBucket,
+        adjustmentAmount: adjustmentAmount || 0,
+        adjustmentReason: adjustmentReason || null
+      });
+
+      res.json(adjustment);
+    } catch (error) {
+      console.error("Error saving bid leveling adjustment:", error);
+      res.status(500).json({ message: "Failed to save adjustment" });
+    }
+  });
+
+  // Select primary bidder and port to Step 5
+  app.post("/api/rfp-requests/:id/select-primary-bidder", requireAuth, async (req, res) => {
+    try {
+      const rfpId = parseInt(req.params.id);
+      const { bidCollectionId } = req.body;
+      
+      if (isNaN(rfpId) || !bidCollectionId) {
+        return res.status(400).json({ message: "Invalid RFP ID or bid collection ID" });
+      }
+
+      // Get bucket totals and adjustments for the selected bid
+      const bucketTotals = await storage.getBucketTotalsForBid(bidCollectionId);
+      const adjustments = await storage.getBidLevelingAdjustmentsByBidCollection(bidCollectionId);
+
+      // Delete any existing evaluation carry for this RFP
+      await storage.deleteEvaluationBidCarry(rfpId);
+
+      // Create evaluation carry records for each bucket
+      const carryRecords = await Promise.all(bucketTotals.map(async (bt) => {
+        const adjustment = adjustments.find(a => a.costBucket === bt.bucket);
+        const adjustmentAmount = adjustment?.adjustmentAmount || 0;
+        const carriedPrice = bt.total + adjustmentAmount;
+
+        return storage.upsertEvaluationBidCarry({
+          rfpId,
+          selectedBidCollectionId: bidCollectionId,
+          costBucket: bt.bucket,
+          originalTotal: bt.total,
+          adjustmentAmount,
+          carriedPrice,
+          isOverridden: false
+        });
+      }));
+
+      res.json({
+        success: true,
+        message: "Primary bidder selected successfully",
+        carryRecords
+      });
+    } catch (error) {
+      console.error("Error selecting primary bidder:", error);
+      res.status(500).json({ message: "Failed to select primary bidder" });
+    }
+  });
+
+  // Get evaluation carry data for Step 5
+  app.get("/api/rfp-requests/:id/evaluation-carry", requireAuth, async (req, res) => {
+    try {
+      const rfpId = parseInt(req.params.id);
+      if (isNaN(rfpId)) {
+        return res.status(400).json({ message: "Invalid RFP ID" });
+      }
+
+      const carryData = await storage.getEvaluationBidCarry(rfpId);
+      res.json(carryData);
+    } catch (error) {
+      console.error("Error fetching evaluation carry data:", error);
+      res.status(500).json({ message: "Failed to fetch evaluation carry data" });
+    }
+  });
+
+  // Update carried price (override) in Step 5
+  app.patch("/api/evaluation-carry/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { carriedPrice } = req.body;
+      
+      if (isNaN(id) || carriedPrice === undefined) {
+        return res.status(400).json({ message: "Invalid ID or carried price" });
+      }
+
+      const updated = await storage.updateCarriedPrice(id, carriedPrice);
+      if (!updated) {
+        return res.status(404).json({ message: "Evaluation carry record not found" });
+      }
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating carried price:", error);
+      res.status(500).json({ message: "Failed to update carried price" });
+    }
+  });
+
+  // Update line item cost bucket
+  app.patch("/api/bid-line-items/:id/cost-bucket", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { costBucket } = req.body;
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid line item ID" });
+      }
+
+      const updated = await storage.updateLineItemCostBucket(id, costBucket || null);
+      if (!updated) {
+        return res.status(404).json({ message: "Line item not found" });
+      }
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating line item cost bucket:", error);
+      res.status(500).json({ message: "Failed to update cost bucket" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

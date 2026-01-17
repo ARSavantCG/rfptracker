@@ -15,6 +15,8 @@ export const WORKFLOW_STEP_FOLDERS = [
   "Step_2_Validation",
   "Step_3_Bidding",
   "Step_4_Evaluation",
+  "Step_4_Evaluation/Architect_Docs",
+  "Step_4_Evaluation/GC_Docs",
   "Step_5_Publishing",
   "Step_6_Final",
 ];

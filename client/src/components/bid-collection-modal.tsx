@@ -7,13 +7,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-// Removed Select import - using native HTML selects for consistency
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Trash2, Upload, FileText, Save, X, Download, ChevronUp, ChevronDown, GripVertical } from "lucide-react";
 import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
 import { FileUpload } from "./file-upload";
 import { FormulaInput } from "./formula-input";
+import { PdfBidImportModal } from "./pdf-bid-import-modal";
 import { evaluateFormula } from "@shared/formula-utils";
 import { useToast } from "@/hooks/use-toast";
 import { formatDate } from "@/lib/utils";
@@ -71,6 +71,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
   const [originalLineItem, setOriginalLineItem] = useState<LineItemFormData | null>(null);
   const [editingAlternateIndex, setEditingAlternateIndex] = useState<number | null>(null);
   const [originalAlternate, setOriginalAlternate] = useState<AlternateFormData | null>(null);
+  const [showPdfImport, setShowPdfImport] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<BidCollectionFormData>({
@@ -740,7 +741,11 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                 <div className="flex gap-2">
                   <Button type="button" onClick={importFromExcelOrCSV} variant="outline" size="sm">
                     <Upload className="h-4 w-4 mr-2" />
-                    Import from Excel/CSV
+                    Import Excel/CSV
+                  </Button>
+                  <Button type="button" onClick={() => setShowPdfImport(true)} variant="outline" size="sm">
+                    <FileText className="h-4 w-4 mr-2" />
+                    Import PDF
                   </Button>
                   {invitationToBid && (invitationToBid as any)?.scopeOfWork?.length > 0 && (
                     <Button type="button" onClick={importFromScopeOfWork} variant="outline" size="sm">
@@ -1256,6 +1261,16 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
         onChange={handleFileImport}
         style={{ display: 'none' }}
       />
+      
+      {/* PDF Bid Import Modal */}
+      {bidCollection && (
+        <PdfBidImportModal
+          isOpen={showPdfImport}
+          onClose={() => setShowPdfImport(false)}
+          bidCollectionId={bidCollection.id}
+          rfpId={rfp?.id || 0}
+        />
+      )}
     </Dialog>
   );
 }

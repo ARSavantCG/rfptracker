@@ -1,6 +1,8 @@
-import pdf from 'pdf-parse';
+import * as pdfParse from 'pdf-parse';
 import fs from 'fs';
 import path from 'path';
+
+const pdf = (pdfParse as any).default || pdfParse;
 
 export interface ParsedRow {
   cells: string[];

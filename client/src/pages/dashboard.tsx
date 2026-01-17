@@ -12,6 +12,7 @@ import { RfpValidationModal } from "@/components/rfp-validation-modal";
 import { RfpDetailModal } from "@/components/rfp-detail-modal";
 import { BidCollectionTable } from "@/components/bid-collection-table";
 import { EvaluationBudget } from "@/components/evaluation-budget";
+import { BidLevelingView } from "@/components/bid-leveling-view";
 import { FinancialSummary } from "@/components/financial-summary";
 import { PublishSummary } from "@/components/publish-summary";
 import { QuickActionsSidebar } from "@/components/quick-actions-sidebar";
@@ -373,15 +374,23 @@ export default function Dashboard() {
                     ← Back to RFP List
                   </Button>
                 </div>
-                <EvaluationBudget 
-                  rfp={selectedRfp} 
-                  isWorkflowCollapsed={isWorkflowCollapsed}
-                  onComplete={() => {
-                    // Auto-advance: Open Publish after Evaluation completes
-                    setShowEvaluation(false);
-                    setShowPublish(true);
-                  }}
-                />
+                <div className="space-y-6">
+                  <BidLevelingView 
+                    rfpId={selectedRfp.id}
+                    onSelectPrimaryBidder={() => {
+                      // Refresh evaluation data when primary bidder is selected
+                    }}
+                  />
+                  <EvaluationBudget 
+                    rfp={selectedRfp} 
+                    isWorkflowCollapsed={isWorkflowCollapsed}
+                    onComplete={() => {
+                      // Auto-advance: Open Publish after Evaluation completes
+                      setShowEvaluation(false);
+                      setShowPublish(true);
+                    }}
+                  />
+                </div>
               </div>
             ) : showPublish && selectedRfp ? (
               <div className="space-y-4">

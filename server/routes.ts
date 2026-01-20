@@ -871,6 +871,21 @@ const upload = multer({
   },
 });
 
+// Memory-based multer for PDF parsing (needs buffer access)
+const pdfUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === "application/pdf") {
+      cb(null, true);
+    } else {
+      cb(new Error("Only PDF files are supported"));
+    }
+  },
+});
+
 // No session middleware - pure token-based authentication
 function setupSession(app: Express) {
   app.set('trust proxy', 1);
@@ -976,7 +991,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerObjectStorageRoutes(app);
   
   // PDF Bid Import - Parse PDF and extract table data for mapping
-  app.post("/api/bid-import/parse-pdf", upload.single('file'), async (req, res) => {
+  app.post("/api/bid-import/parse-pdf", pdfUpload.single('file'), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No PDF file uploaded" });

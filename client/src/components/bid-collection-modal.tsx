@@ -1306,6 +1306,8 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
           onClose={() => setShowPdfImport(false)}
           bidCollectionId={bidCollection.id}
           rfpId={rfp?.id || 0}
+          contractorId={bidCollection.contractorId}
+          contractorName={availableContractors.find(c => c.id === bidCollection.contractorId)?.name}
         />
       )}
     </Dialog>

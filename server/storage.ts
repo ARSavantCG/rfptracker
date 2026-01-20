@@ -109,6 +109,9 @@ import {
   projectFiles,
   type ProjectFile,
   type InsertProjectFile,
+  pdfMappingTemplates,
+  type PdfMappingTemplate,
+  type InsertPdfMappingTemplate,
 } from "@shared/schema";
 
 // Use schema types for Property Attachments
@@ -381,6 +384,15 @@ export interface IStorage {
   // Bid Leveling - aggregation
   getBucketTotalsForBid(bidCollectionId: number): Promise<{ bucket: string; total: number }[]>;
   updateLineItemCostBucket(lineItemId: number, costBucket: string | null): Promise<BidLineItem | undefined>;
+
+  // PDF Mapping Templates
+  getPdfMappingTemplates(): Promise<PdfMappingTemplate[]>;
+  getPdfMappingTemplatesByContractor(contractorId: number): Promise<PdfMappingTemplate[]>;
+  getPdfMappingTemplateBySignature(signature: string): Promise<PdfMappingTemplate | undefined>;
+  createPdfMappingTemplate(template: InsertPdfMappingTemplate): Promise<PdfMappingTemplate>;
+  updatePdfMappingTemplate(id: number, updates: Partial<PdfMappingTemplate>): Promise<PdfMappingTemplate | undefined>;
+  deletePdfMappingTemplate(id: number): Promise<boolean>;
+  incrementTemplateUsage(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2514,6 +2526,48 @@ class ExtendedDatabaseStorage extends DatabaseStorage {
       .where(eq(bidLineItems.id, lineItemId))
       .returning();
     return updated || undefined;
+  }
+
+  // PDF Mapping Templates
+  async getPdfMappingTemplates(): Promise<PdfMappingTemplate[]> {
+    return await db.select().from(pdfMappingTemplates).orderBy(desc(pdfMappingTemplates.usageCount));
+  }
+
+  async getPdfMappingTemplatesByContractor(contractorId: number): Promise<PdfMappingTemplate[]> {
+    return await db.select().from(pdfMappingTemplates)
+      .where(eq(pdfMappingTemplates.contractorId, contractorId))
+      .orderBy(desc(pdfMappingTemplates.usageCount));
+  }
+
+  async getPdfMappingTemplateBySignature(signature: string): Promise<PdfMappingTemplate | undefined> {
+    const [template] = await db.select().from(pdfMappingTemplates)
+      .where(eq(pdfMappingTemplates.headerSignature, signature))
+      .limit(1);
+    return template || undefined;
+  }
+
+  async createPdfMappingTemplate(template: InsertPdfMappingTemplate): Promise<PdfMappingTemplate> {
+    const [created] = await db.insert(pdfMappingTemplates).values(template).returning();
+    return created;
+  }
+
+  async updatePdfMappingTemplate(id: number, updates: Partial<PdfMappingTemplate>): Promise<PdfMappingTemplate | undefined> {
+    const [updated] = await db.update(pdfMappingTemplates)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(pdfMappingTemplates.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deletePdfMappingTemplate(id: number): Promise<boolean> {
+    const result = await db.delete(pdfMappingTemplates).where(eq(pdfMappingTemplates.id, id));
+    return result.rowCount! > 0;
+  }
+
+  async incrementTemplateUsage(id: number): Promise<void> {
+    await db.update(pdfMappingTemplates)
+      .set({ usageCount: sql`${pdfMappingTemplates.usageCount} + 1`, updatedAt: new Date() })
+      .where(eq(pdfMappingTemplates.id, id));
   }
 }
 

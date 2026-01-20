@@ -1167,3 +1167,34 @@ export const insertEvaluationBidCarrySchema = createInsertSchema(evaluationBidCa
 export type EvaluationBidCarry = typeof evaluationBidCarry.$inferSelect;
 export type InsertEvaluationBidCarry = z.infer<typeof insertEvaluationBidCarrySchema>;
 
+// PDF Mapping Templates - stores learned contractor-specific PDF column mappings
+export const pdfMappingTemplates = pgTable("pdf_mapping_templates", {
+  id: serial("id").primaryKey(),
+  contractorId: integer("contractor_id").references(() => contacts.id, { onDelete: "cascade" }),
+  templateName: text("template_name").notNull(),
+  headerSignature: text("header_signature"), // Normalized header string for auto-matching
+  columnCount: integer("column_count"),
+  sampleHeaders: json("sample_headers").$type<string[]>(), // Original headers from PDF
+  mapping: json("mapping").$type<{
+    description?: number;
+    quantity?: number;
+    unit?: number;
+    unitPrice?: number;
+    totalPrice?: number;
+  }>().notNull(),
+  isDefault: boolean("is_default").default(false), // If true, use as fallback when no match found
+  usageCount: integer("usage_count").default(0), // Track how often this template is used
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertPdfMappingTemplateSchema = createInsertSchema(pdfMappingTemplates).omit({
+  id: true,
+  usageCount: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type PdfMappingTemplate = typeof pdfMappingTemplates.$inferSelect;
+export type InsertPdfMappingTemplate = z.infer<typeof insertPdfMappingTemplateSchema>;
+

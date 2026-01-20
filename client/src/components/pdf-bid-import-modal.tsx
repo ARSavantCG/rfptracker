@@ -3,20 +3,36 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { Upload, FileText, ArrowRight, Check, X, ChevronDown } from "lucide-react";
+import { Upload, FileText, ArrowRight, Check, X, ChevronDown, Save, Trash2, Edit2, AlertTriangle } from "lucide-react";
 
 interface ParsedRow {
   cells: string[];
   rowIndex: number;
+  confidence?: number;
 }
 
 interface ParsedTable {
   headers: string[];
   rows: ParsedRow[];
   rawText: string;
+  headerSignature?: string;
+  suggestedMapping?: ColumnMapping;
+}
+
+interface PdfMappingTemplate {
+  id: number;
+  contractorId: number | null;
+  templateName: string;
+  headerSignature: string | null;
+  columnCount: number | null;
+  sampleHeaders: string[] | null;
+  mapping: ColumnMapping;
+  isDefault: boolean;
+  usageCount: number;
 }
 
 interface PdfBidImportModalProps {
@@ -24,6 +40,8 @@ interface PdfBidImportModalProps {
   onClose: () => void;
   bidCollectionId: number;
   rfpId: number;
+  contractorId?: number;
+  contractorName?: string;
 }
 
 type ColumnMapping = {
@@ -34,6 +52,16 @@ type ColumnMapping = {
   totalPrice?: number;
 };
 
+interface PreviewRow {
+  description: string;
+  quantity: string;
+  unit: string;
+  unitPrice: string;
+  totalPrice: string;
+  included: boolean;
+  confidence: number;
+}
+
 const MAPPING_FIELDS = [
   { key: "description", label: "Description", required: true },
   { key: "quantity", label: "Qty", required: false },
@@ -42,7 +70,7 @@ const MAPPING_FIELDS = [
   { key: "totalPrice", label: "Total Price", required: false },
 ] as const;
 
-export function PdfBidImportModal({ isOpen, onClose, bidCollectionId, rfpId }: PdfBidImportModalProps) {
+export function PdfBidImportModal({ isOpen, onClose, bidCollectionId, rfpId, contractorId, contractorName }: PdfBidImportModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -51,6 +79,26 @@ export function PdfBidImportModal({ isOpen, onClose, bidCollectionId, rfpId }: P
   const [parsedData, setParsedData] = useState<ParsedTable | null>(null);
   const [mapping, setMapping] = useState<ColumnMapping>({});
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [previewRows, setPreviewRows] = useState<PreviewRow[]>([]);
+  const [saveTemplate, setSaveTemplate] = useState(false);
+  const [templateName, setTemplateName] = useState("");
+  const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
+  const [editingRowIndex, setEditingRowIndex] = useState<number | null>(null);
+
+  const { data: contractorTemplates } = useQuery<PdfMappingTemplate[]>({
+    queryKey: ['/api/pdf-mapping-templates/contractor', contractorId],
+    queryFn: async () => {
+      const response = await fetch(`/api/pdf-mapping-templates/contractor/${contractorId}`);
+      if (!response.ok) throw new Error('Failed to fetch templates');
+      return response.json();
+    },
+    enabled: isOpen && !!contractorId,
+  });
+
+  const { data: allTemplates } = useQuery<PdfMappingTemplate[]>({
+    queryKey: ['/api/pdf-mapping-templates'],
+    enabled: isOpen,
+  });
   
   const parseMutation = useMutation({
     mutationFn: async (file: File) => {
@@ -69,33 +117,60 @@ export function PdfBidImportModal({ isOpen, onClose, bidCollectionId, rfpId }: P
       
       return response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       if (data.tables && data.tables.length > 0) {
-        setParsedData(data.tables[0]);
+        const table = data.tables[0] as ParsedTable;
+        setParsedData(table);
+        
+        let appliedMapping: ColumnMapping = {};
+        let matchedTemplate: PdfMappingTemplate | null = null;
+        
+        if (table.headerSignature && contractorTemplates?.length) {
+          matchedTemplate = contractorTemplates.find(t => t.headerSignature === table.headerSignature) || null;
+        }
+        
+        if (!matchedTemplate && table.headerSignature && allTemplates?.length) {
+          matchedTemplate = allTemplates.find(t => t.headerSignature === table.headerSignature) || null;
+        }
+        
+        if (matchedTemplate) {
+          appliedMapping = matchedTemplate.mapping;
+          setSelectedTemplateId(matchedTemplate.id);
+          toast({
+            title: "Template Matched",
+            description: `Using saved template: "${matchedTemplate.templateName}"`,
+          });
+          
+          await fetch(`/api/pdf-mapping-templates/${matchedTemplate.id}/use`, { method: 'POST' });
+        } else if (table.suggestedMapping) {
+          appliedMapping = table.suggestedMapping;
+        } else {
+          const headers = table.headers.map((h: string) => h.toLowerCase());
+          headers.forEach((header: string, index: number) => {
+            if (header.includes("desc") || header.includes("item") || header.includes("scope")) {
+              if (appliedMapping.description === undefined) appliedMapping.description = index;
+            } else if (header.includes("qty") || header.includes("quant")) {
+              if (appliedMapping.quantity === undefined) appliedMapping.quantity = index;
+            } else if (header === "unit" || header.includes("uom") || header.includes("u/m")) {
+              if (appliedMapping.unit === undefined) appliedMapping.unit = index;
+            } else if ((header.includes("unit") && header.includes("price")) || header.includes("rate")) {
+              if (appliedMapping.unitPrice === undefined) appliedMapping.unitPrice = index;
+            } else if (header.includes("total") || header.includes("amount") || header.includes("ext")) {
+              if (appliedMapping.totalPrice === undefined) appliedMapping.totalPrice = index;
+            }
+          });
+        }
+        
+        setMapping(appliedMapping);
         setStep("mapping");
         
-        const headers = data.tables[0].headers.map((h: string) => h.toLowerCase());
-        const autoMapping: ColumnMapping = {};
-        
-        headers.forEach((header: string, index: number) => {
-          if (header.includes("desc") || header.includes("item")) {
-            autoMapping.description = index;
-          } else if (header.includes("qty") || header.includes("quant")) {
-            autoMapping.quantity = index;
-          } else if (header === "unit" || header.includes("uom")) {
-            autoMapping.unit = index;
-          } else if (header.includes("unit") && header.includes("price")) {
-            autoMapping.unitPrice = index;
-          } else if (header.includes("total") || header.includes("amount") || header.includes("ext")) {
-            autoMapping.totalPrice = index;
-          }
-        });
-        
-        setMapping(autoMapping);
+        if (contractorName) {
+          setTemplateName(`${contractorName} - Standard Format`);
+        }
       } else {
         toast({
           title: "No tables found",
-          description: "Could not detect any table data in the PDF",
+          description: "Could not detect any table data in the PDF. Try a different PDF format.",
           variant: "destructive",
         });
       }
@@ -108,20 +183,63 @@ export function PdfBidImportModal({ isOpen, onClose, bidCollectionId, rfpId }: P
       });
     },
   });
+
+  const saveTemplateMutation = useMutation({
+    mutationFn: async (template: { templateName: string; contractorId?: number; headerSignature?: string; columnCount?: number; sampleHeaders?: string[]; mapping: ColumnMapping }) => {
+      return await apiRequest("/api/pdf-mapping-templates", "POST", template);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/pdf-mapping-templates'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/pdf-mapping-templates/contractor', contractorId] });
+      toast({
+        title: "Template Saved",
+        description: "This mapping will be automatically applied to similar PDFs in the future.",
+      });
+    },
+  });
   
   const importMutation = useMutation({
     mutationFn: async () => {
+      const itemsToImport = previewRows.filter(row => row.included);
+      
+      if (itemsToImport.length === 0) {
+        throw new Error("No items selected for import");
+      }
+
       const response = await apiRequest("/api/bid-import/apply-mapping", "POST", {
         bidCollectionId,
-        tableData: parsedData,
-        mapping,
+        tableData: {
+          headers: parsedData?.headers || [],
+          rows: itemsToImport.map((row, idx) => ({
+            cells: [row.description, row.quantity, row.unit, row.unitPrice, row.totalPrice],
+            rowIndex: idx,
+          })),
+        },
+        mapping: {
+          description: 0,
+          quantity: 1,
+          unit: 2,
+          unitPrice: 3,
+          totalPrice: 4,
+        },
       });
-      return response;
+      return { ...response, importedCount: itemsToImport.length };
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
+      if (saveTemplate && templateName && parsedData) {
+        await saveTemplateMutation.mutateAsync({
+          templateName,
+          contractorId: contractorId || undefined,
+          headerSignature: parsedData.headerSignature || undefined,
+          columnCount: parsedData.headers.length,
+          sampleHeaders: parsedData.headers,
+          mapping,
+        });
+      }
+      
       toast({
         title: "Import Successful",
-        description: `Imported ${data.itemsCreated} line items from PDF`,
+        description: `Imported ${data.importedCount} line items from PDF`,
       });
       queryClient.invalidateQueries({ queryKey: [`/api/bid-collections/${bidCollectionId}/line-items`] });
       queryClient.invalidateQueries({ queryKey: [`/api/rfp-requests/${rfpId}/bid-collections`] });
@@ -162,6 +280,11 @@ export function PdfBidImportModal({ isOpen, onClose, bidCollectionId, rfpId }: P
     setFile(null);
     setParsedData(null);
     setMapping({});
+    setPreviewRows([]);
+    setSaveTemplate(false);
+    setTemplateName("");
+    setSelectedTemplateId(null);
+    setEditingRowIndex(null);
     onClose();
   };
   
@@ -171,32 +294,69 @@ export function PdfBidImportModal({ isOpen, onClose, bidCollectionId, rfpId }: P
       [field]: columnIndex,
     }));
     setOpenDropdown(null);
+    setSelectedTemplateId(null);
   };
-  
-  const getMappedPreview = () => {
-    if (!parsedData) return [];
+
+  const handleProceedToPreview = () => {
+    if (!parsedData) return;
     
-    return parsedData.rows.slice(0, 5).map(row => ({
-      description: mapping.description !== undefined ? row.cells[mapping.description] || "" : "",
-      quantity: mapping.quantity !== undefined ? row.cells[mapping.quantity] || "" : "",
-      unit: mapping.unit !== undefined ? row.cells[mapping.unit] || "" : "",
-      unitPrice: mapping.unitPrice !== undefined ? row.cells[mapping.unitPrice] || "" : "",
-      totalPrice: mapping.totalPrice !== undefined ? row.cells[mapping.totalPrice] || "" : "",
-    }));
+    const rows: PreviewRow[] = parsedData.rows.map(row => {
+      const desc = mapping.description !== undefined ? row.cells[mapping.description] || "" : "";
+      const qty = mapping.quantity !== undefined ? row.cells[mapping.quantity] || "" : "";
+      const unit = mapping.unit !== undefined ? row.cells[mapping.unit] || "" : "";
+      const unitPrice = mapping.unitPrice !== undefined ? row.cells[mapping.unitPrice] || "" : "";
+      const totalPrice = mapping.totalPrice !== undefined ? row.cells[mapping.totalPrice] || "" : "";
+      
+      const hasDescription = desc.trim().length > 0;
+      const hasPrice = unitPrice.trim().length > 0 || totalPrice.trim().length > 0;
+      
+      return {
+        description: desc,
+        quantity: qty,
+        unit: unit,
+        unitPrice: unitPrice,
+        totalPrice: totalPrice,
+        included: hasDescription && (hasPrice || qty.trim().length > 0),
+        confidence: row.confidence || (hasDescription && hasPrice ? 0.9 : hasDescription ? 0.6 : 0.3),
+      };
+    });
+    
+    setPreviewRows(rows);
+    setStep("preview");
   };
+
+  const toggleRowInclusion = (index: number) => {
+    setPreviewRows(prev => prev.map((row, i) => 
+      i === index ? { ...row, included: !row.included } : row
+    ));
+  };
+
+  const updatePreviewRow = (index: number, field: keyof PreviewRow, value: string) => {
+    setPreviewRows(prev => prev.map((row, i) => 
+      i === index ? { ...row, [field]: value } : row
+    ));
+  };
+
+  const removeRow = (index: number) => {
+    setPreviewRows(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const includedCount = previewRows.filter(r => r.included).length;
+  const lowConfidenceCount = previewRows.filter(r => r.included && r.confidence < 0.7).length;
   
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
             Import Bid from PDF
+            {contractorName && <span className="text-sm font-normal text-gray-500">- {contractorName}</span>}
           </DialogTitle>
           <DialogDescription>
             {step === "upload" && "Upload a PDF file containing bid pricing data"}
             {step === "mapping" && "Map the PDF columns to your pricing fields"}
-            {step === "preview" && "Review the data before importing"}
+            {step === "preview" && "Review and edit the data before importing"}
           </DialogDescription>
         </DialogHeader>
         
@@ -236,14 +396,30 @@ export function PdfBidImportModal({ isOpen, onClose, bidCollectionId, rfpId }: P
                 </Button>
               </div>
             )}
+
+            {contractorTemplates && contractorTemplates.length > 0 && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                <p className="text-sm text-green-800">
+                  <Check className="inline h-4 w-4 mr-1" />
+                  {contractorTemplates.length} saved template(s) available for this contractor
+                </p>
+              </div>
+            )}
           </div>
         )}
         
         {step === "mapping" && parsedData && (
           <div className="space-y-4">
-            <div className="bg-blue-50 p-3 rounded-lg text-sm">
-              <p><strong>Detected {parsedData.rows.length} rows</strong> with {parsedData.headers.length} columns</p>
-              <p className="text-gray-600">Map each column to the appropriate field below</p>
+            <div className="bg-blue-50 p-3 rounded-lg text-sm flex justify-between items-center">
+              <div>
+                <p><strong>Detected {parsedData.rows.length} rows</strong> with {parsedData.headers.length} columns</p>
+                <p className="text-gray-600">Map each column to the appropriate field below</p>
+              </div>
+              {selectedTemplateId && (
+                <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">
+                  Using saved template
+                </span>
+              )}
             </div>
             
             <div className="grid grid-cols-5 gap-3">
@@ -306,13 +482,13 @@ export function PdfBidImportModal({ isOpen, onClose, bidCollectionId, rfpId }: P
                     </tr>
                   </thead>
                   <tbody>
-                    {getMappedPreview().map((row, idx) => (
+                    {parsedData.rows.slice(0, 5).map((row, idx) => (
                       <tr key={idx} className="border-t">
-                        <td className="px-3 py-2">{row.description || <span className="text-gray-300">—</span>}</td>
-                        <td className="px-3 py-2">{row.quantity || <span className="text-gray-300">—</span>}</td>
-                        <td className="px-3 py-2">{row.unit || <span className="text-gray-300">—</span>}</td>
-                        <td className="px-3 py-2">{row.unitPrice || <span className="text-gray-300">—</span>}</td>
-                        <td className="px-3 py-2">{row.totalPrice || <span className="text-gray-300">—</span>}</td>
+                        <td className="px-3 py-2">{mapping.description !== undefined ? row.cells[mapping.description] || <span className="text-gray-300">—</span> : <span className="text-gray-300">—</span>}</td>
+                        <td className="px-3 py-2">{mapping.quantity !== undefined ? row.cells[mapping.quantity] || <span className="text-gray-300">—</span> : <span className="text-gray-300">—</span>}</td>
+                        <td className="px-3 py-2">{mapping.unit !== undefined ? row.cells[mapping.unit] || <span className="text-gray-300">—</span> : <span className="text-gray-300">—</span>}</td>
+                        <td className="px-3 py-2">{mapping.unitPrice !== undefined ? row.cells[mapping.unitPrice] || <span className="text-gray-300">—</span> : <span className="text-gray-300">—</span>}</td>
+                        <td className="px-3 py-2">{mapping.totalPrice !== undefined ? row.cells[mapping.totalPrice] || <span className="text-gray-300">—</span> : <span className="text-gray-300">—</span>}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -320,15 +496,182 @@ export function PdfBidImportModal({ isOpen, onClose, bidCollectionId, rfpId }: P
               </div>
             </div>
             
-            <div className="flex justify-between">
+            <div className="flex justify-between items-center">
               <Button variant="outline" onClick={() => setStep("upload")}>
                 Back
               </Button>
               <Button
-                onClick={() => importMutation.mutate()}
-                disabled={mapping.description === undefined || importMutation.isPending}
+                onClick={handleProceedToPreview}
+                disabled={mapping.description === undefined}
               >
-                {importMutation.isPending ? "Importing..." : `Import ${parsedData.rows.length} Items`}
+                Review All Items
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {step === "preview" && (
+          <div className="space-y-4">
+            <div className="flex gap-3">
+              <div className="bg-blue-50 p-3 rounded-lg text-sm flex-1">
+                <p><strong>{includedCount}</strong> of {previewRows.length} items selected for import</p>
+              </div>
+              {lowConfidenceCount > 0 && (
+                <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg text-sm flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                  <span className="text-yellow-800">{lowConfidenceCount} items may need review</span>
+                </div>
+              )}
+            </div>
+
+            <div className="border rounded-lg overflow-hidden max-h-[400px] overflow-y-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 sticky top-0">
+                  <tr>
+                    <th className="px-2 py-2 text-left w-10">
+                      <Checkbox
+                        checked={previewRows.every(r => r.included)}
+                        onCheckedChange={(checked) => {
+                          setPreviewRows(prev => prev.map(row => ({ ...row, included: !!checked })));
+                        }}
+                      />
+                    </th>
+                    <th className="px-2 py-2 text-left">Description</th>
+                    <th className="px-2 py-2 text-left w-20">Qty</th>
+                    <th className="px-2 py-2 text-left w-16">Unit</th>
+                    <th className="px-2 py-2 text-left w-24">Unit Price</th>
+                    <th className="px-2 py-2 text-left w-24">Total</th>
+                    <th className="px-2 py-2 text-left w-16">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {previewRows.map((row, idx) => (
+                    <tr key={idx} className={`border-t ${!row.included ? 'opacity-50 bg-gray-50' : ''} ${row.confidence < 0.7 ? 'bg-yellow-50' : ''}`}>
+                      <td className="px-2 py-1">
+                        <Checkbox
+                          checked={row.included}
+                          onCheckedChange={() => toggleRowInclusion(idx)}
+                        />
+                      </td>
+                      <td className="px-2 py-1">
+                        {editingRowIndex === idx ? (
+                          <Input
+                            value={row.description}
+                            onChange={(e) => updatePreviewRow(idx, 'description', e.target.value)}
+                            className="h-7 text-xs"
+                          />
+                        ) : (
+                          <span className={row.description ? '' : 'text-gray-300'}>{row.description || '—'}</span>
+                        )}
+                      </td>
+                      <td className="px-2 py-1">
+                        {editingRowIndex === idx ? (
+                          <Input
+                            value={row.quantity}
+                            onChange={(e) => updatePreviewRow(idx, 'quantity', e.target.value)}
+                            className="h-7 text-xs w-16"
+                          />
+                        ) : (
+                          <span className={row.quantity ? '' : 'text-gray-300'}>{row.quantity || '—'}</span>
+                        )}
+                      </td>
+                      <td className="px-2 py-1">
+                        {editingRowIndex === idx ? (
+                          <Input
+                            value={row.unit}
+                            onChange={(e) => updatePreviewRow(idx, 'unit', e.target.value)}
+                            className="h-7 text-xs w-14"
+                          />
+                        ) : (
+                          <span className={row.unit ? '' : 'text-gray-300'}>{row.unit || '—'}</span>
+                        )}
+                      </td>
+                      <td className="px-2 py-1">
+                        {editingRowIndex === idx ? (
+                          <Input
+                            value={row.unitPrice}
+                            onChange={(e) => updatePreviewRow(idx, 'unitPrice', e.target.value)}
+                            className="h-7 text-xs w-20"
+                          />
+                        ) : (
+                          <span className={row.unitPrice ? '' : 'text-gray-300'}>{row.unitPrice || '—'}</span>
+                        )}
+                      </td>
+                      <td className="px-2 py-1">
+                        {editingRowIndex === idx ? (
+                          <Input
+                            value={row.totalPrice}
+                            onChange={(e) => updatePreviewRow(idx, 'totalPrice', e.target.value)}
+                            className="h-7 text-xs w-20"
+                          />
+                        ) : (
+                          <span className={row.totalPrice ? '' : 'text-gray-300'}>{row.totalPrice || '—'}</span>
+                        )}
+                      </td>
+                      <td className="px-2 py-1">
+                        <div className="flex gap-1">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0"
+                            onClick={() => setEditingRowIndex(editingRowIndex === idx ? null : idx)}
+                          >
+                            <Edit2 className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                            onClick={() => removeRow(idx)}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {!selectedTemplateId && (
+              <div className="border rounded-lg p-3 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="save-template"
+                    checked={saveTemplate}
+                    onCheckedChange={(checked) => setSaveTemplate(!!checked)}
+                  />
+                  <Label htmlFor="save-template" className="text-sm cursor-pointer">
+                    Save this mapping as a template for future imports
+                  </Label>
+                </div>
+                {saveTemplate && (
+                  <div className="flex gap-2 items-center pl-6">
+                    <Label className="text-sm text-gray-600 whitespace-nowrap">Template name:</Label>
+                    <Input
+                      value={templateName}
+                      onChange={(e) => setTemplateName(e.target.value)}
+                      placeholder="e.g., ABC Contractors - Standard Bid Format"
+                      className="h-8 text-sm"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+            
+            <div className="flex justify-between items-center">
+              <Button variant="outline" onClick={() => setStep("mapping")}>
+                Back to Mapping
+              </Button>
+              <Button
+                onClick={() => importMutation.mutate()}
+                disabled={includedCount === 0 || importMutation.isPending || (saveTemplate && !templateName)}
+              >
+                {importMutation.isPending ? "Importing..." : `Import ${includedCount} Items`}
                 <Check className="ml-2 h-4 w-4" />
               </Button>
             </div>

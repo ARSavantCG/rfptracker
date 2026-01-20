@@ -1066,6 +1066,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to apply mapping and create line items" });
     }
   });
+
+  // PDF Mapping Templates - Get all templates
+  app.get("/api/pdf-mapping-templates", async (req, res) => {
+    try {
+      const templates = await storage.getPdfMappingTemplates();
+      res.json(templates);
+    } catch (error) {
+      console.error("Error fetching PDF mapping templates:", error);
+      res.status(500).json({ message: "Failed to fetch templates" });
+    }
+  });
+
+  // PDF Mapping Templates - Get templates by contractor
+  app.get("/api/pdf-mapping-templates/contractor/:contractorId", async (req, res) => {
+    try {
+      const contractorId = parseInt(req.params.contractorId);
+      const templates = await storage.getPdfMappingTemplatesByContractor(contractorId);
+      res.json(templates);
+    } catch (error) {
+      console.error("Error fetching contractor templates:", error);
+      res.status(500).json({ message: "Failed to fetch contractor templates" });
+    }
+  });
+
+  // PDF Mapping Templates - Get template by header signature (for auto-matching)
+  app.get("/api/pdf-mapping-templates/signature/:signature", async (req, res) => {
+    try {
+      const signature = decodeURIComponent(req.params.signature);
+      const template = await storage.getPdfMappingTemplateBySignature(signature);
+      res.json(template || null);
+    } catch (error) {
+      console.error("Error fetching template by signature:", error);
+      res.status(500).json({ message: "Failed to fetch template" });
+    }
+  });
+
+  // PDF Mapping Templates - Create new template
+  app.post("/api/pdf-mapping-templates", async (req, res) => {
+    try {
+      const template = await storage.createPdfMappingTemplate(req.body);
+      res.json(template);
+    } catch (error) {
+      console.error("Error creating PDF mapping template:", error);
+      res.status(500).json({ message: "Failed to create template" });
+    }
+  });
+
+  // PDF Mapping Templates - Update template
+  app.patch("/api/pdf-mapping-templates/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updated = await storage.updatePdfMappingTemplate(id, req.body);
+      if (!updated) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating PDF mapping template:", error);
+      res.status(500).json({ message: "Failed to update template" });
+    }
+  });
+
+  // PDF Mapping Templates - Delete template
+  app.delete("/api/pdf-mapping-templates/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const deleted = await storage.deletePdfMappingTemplate(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting PDF mapping template:", error);
+      res.status(500).json({ message: "Failed to delete template" });
+    }
+  });
+
+  // PDF Mapping Templates - Increment usage count
+  app.post("/api/pdf-mapping-templates/:id/use", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.incrementTemplateUsage(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error incrementing template usage:", error);
+      res.status(500).json({ message: "Failed to update template usage" });
+    }
+  });
   
   // Authentication routes - supports both admin users and contact emails
   app.post('/api/auth/login', async (req, res) => {

@@ -1,8 +1,6 @@
-import * as pdfParse from 'pdf-parse';
+import { PDFParse } from 'pdf-parse';
 import fs from 'fs';
 import path from 'path';
-
-const pdf = (pdfParse as any).default || pdfParse;
 
 export interface ParsedRow {
   cells: string[];
@@ -102,15 +100,22 @@ export async function parsePdfFile(filePath: string): Promise<ParsedPdfResult> {
     }
     
     const dataBuffer = fs.readFileSync(filePath);
-    const data = await pdf(dataBuffer);
+    const parser = new PDFParse({ data: dataBuffer });
     
-    const tables = detectTables(data.text);
+    const info = await parser.getInfo({ parsePageInfo: true });
+    const textResult = await parser.getText();
+    await parser.destroy();
+    
+    const text = typeof textResult === 'string' ? textResult : (textResult as any).text || '';
+    const pageCount = info?.total || 1;
+    
+    const tables = detectTables(text);
     
     return {
       success: true,
       tables,
-      rawText: data.text,
-      pageCount: data.numpages
+      rawText: text,
+      pageCount
     };
   } catch (error) {
     return {
@@ -125,14 +130,22 @@ export async function parsePdfFile(filePath: string): Promise<ParsedPdfResult> {
 
 export async function parsePdfBuffer(buffer: Buffer): Promise<ParsedPdfResult> {
   try {
-    const data = await pdf(buffer);
-    const tables = detectTables(data.text);
+    const parser = new PDFParse({ data: buffer });
+    
+    const info = await parser.getInfo({ parsePageInfo: true });
+    const textResult = await parser.getText();
+    await parser.destroy();
+    
+    const text = typeof textResult === 'string' ? textResult : (textResult as any).text || '';
+    const pageCount = info?.total || 1;
+    
+    const tables = detectTables(text);
     
     return {
       success: true,
       tables,
-      rawText: data.text,
-      pageCount: data.numpages
+      rawText: text,
+      pageCount
     };
   } catch (error) {
     return {

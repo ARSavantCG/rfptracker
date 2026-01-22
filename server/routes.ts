@@ -9828,7 +9828,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get all bid collections for this RFP
-      const bidCollections = await storage.getBidCollections(rfpId);
+      const bidCollections = await storage.getBidCollectionsByRfp(rfpId);
       
       // Get bucket totals and adjustments for each bid
       const bidData = await Promise.all(bidCollections.map(async (bid) => {

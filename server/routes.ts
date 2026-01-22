@@ -9839,6 +9839,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           bidCollectionId: bid.id,
           contractorName: bid.contractorName,
           contractorCompany: bid.contractorCompany,
+          costCategory: bid.costCategory || 'construction',
           buckets: bucketTotals.map(bt => {
             const adjustment = adjustments.find(a => a.costBucket === bt.bucket);
             return {

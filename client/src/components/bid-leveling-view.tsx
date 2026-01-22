@@ -22,10 +22,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Check, Edit2, Plus, Trophy } from "lucide-react";
+import { Check, Edit2, Plus, Trophy, ChevronDown, ChevronRight, HardHat, Ruler } from "lucide-react";
 
 const COST_BUCKETS = ["Office", "Warehouse Office", "Warehouse", "Other"] as const;
 
@@ -41,6 +46,7 @@ interface BidLevelingData {
   bidCollectionId: number;
   contractorName: string;
   contractorCompany: string;
+  costCategory: string;
   buckets: BucketData[];
 }
 
@@ -51,6 +57,8 @@ interface BidLevelingViewProps {
 
 export function BidLevelingView({ rfpId, onSelectPrimaryBidder }: BidLevelingViewProps) {
   const { toast } = useToast();
+  const [isGCExpanded, setIsGCExpanded] = useState(false);
+  const [isArchitectExpanded, setIsArchitectExpanded] = useState(false);
   const [adjustmentDialog, setAdjustmentDialog] = useState<{
     open: boolean;
     bidCollectionId: number;
@@ -141,7 +149,7 @@ export function BidLevelingView({ rfpId, onSelectPrimaryBidder }: BidLevelingVie
           <CardTitle>Bid Leveling / Comparison View</CardTitle>
         </CardHeader>
         <CardContent>
-          <Skeleton className="h-64 w-full" />
+          <Skeleton className="h-16 w-full" />
         </CardContent>
       </Card>
     );
@@ -151,10 +159,13 @@ export function BidLevelingView({ rfpId, onSelectPrimaryBidder }: BidLevelingVie
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Bid Leveling / Comparison View</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Trophy className="h-5 w-5 text-yellow-500" />
+            Bid Leveling / Comparison View
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-muted-foreground text-center py-8">
+          <p className="text-muted-foreground text-center py-4">
             No bids have been collected yet. Add bids in the Bid Collection step to compare them here.
           </p>
         </CardContent>
@@ -162,9 +173,13 @@ export function BidLevelingView({ rfpId, onSelectPrimaryBidder }: BidLevelingVie
     );
   }
 
-  const getLowestBidForBucket = (bucket: string): number => {
+  // Separate GCs from Architects
+  const gcBids = bidLevelingData.filter(bid => bid.costCategory === 'construction');
+  const architectBids = bidLevelingData.filter(bid => bid.costCategory === 'architectural');
+
+  const getLowestBidForBucket = (bids: BidLevelingData[], bucket: string): number => {
     let lowest = Infinity;
-    bidLevelingData.forEach((bid) => {
+    bids.forEach((bid) => {
       const bucketData = bid.buckets.find((b) => b.bucket === bucket);
       if (bucketData && bucketData.adjustedTotal > 0 && bucketData.adjustedTotal < lowest) {
         lowest = bucketData.adjustedTotal;
@@ -177,9 +192,9 @@ export function BidLevelingView({ rfpId, onSelectPrimaryBidder }: BidLevelingVie
     return bid.buckets.reduce((sum, b) => sum + b.adjustedTotal, 0);
   };
 
-  const getLowestGrandTotal = (): number => {
+  const getLowestGrandTotal = (bids: BidLevelingData[]): number => {
     let lowest = Infinity;
-    bidLevelingData.forEach((bid) => {
+    bids.forEach((bid) => {
       const total = calculateGrandTotal(bid);
       if (total > 0 && total < lowest) {
         lowest = total;
@@ -188,147 +203,204 @@ export function BidLevelingView({ rfpId, onSelectPrimaryBidder }: BidLevelingVie
     return lowest === Infinity ? 0 : lowest;
   };
 
-  return (
-    <>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <Trophy className="h-5 w-5 text-yellow-500" />
-            Bid Leveling / Comparison View
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-48 sticky left-0 bg-background">Cost Bucket</TableHead>
-                  {bidLevelingData.map((bid) => (
-                    <TableHead key={bid.bidCollectionId} className="min-w-48 text-center">
-                      <div className="flex flex-col items-center gap-1">
-                        <span className="font-semibold">{bid.contractorCompany}</span>
-                        <span className="text-xs text-muted-foreground">{bid.contractorName}</span>
-                      </div>
-                    </TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {COST_BUCKETS.map((bucket) => {
-                  const lowestForBucket = getLowestBidForBucket(bucket);
-                  return (
-                    <TableRow key={bucket}>
-                      <TableCell className="font-medium sticky left-0 bg-background">
-                        {bucket}
-                      </TableCell>
-                      {bidLevelingData.map((bid) => {
-                        const bucketData = bid.buckets.find((b) => b.bucket === bucket);
-                        const isLowest =
-                          bucketData?.adjustedTotal === lowestForBucket && lowestForBucket > 0;
+  const renderComparisonTable = (bids: BidLevelingData[], categoryLabel: string) => {
+    if (bids.length === 0) {
+      return (
+        <p className="text-muted-foreground text-center py-4">
+          No {categoryLabel.toLowerCase()} bids collected yet.
+        </p>
+      );
+    }
 
-                        return (
-                          <TableCell
-                            key={`${bid.bidCollectionId}-${bucket}`}
-                            className="text-center"
-                          >
-                            <div className="flex flex-col gap-1">
-                              <div className="text-xs text-muted-foreground">
-                                Original: {formatCurrency(bucketData?.originalTotal || 0)}
-                              </div>
-                              {(bucketData?.adjustmentAmount || 0) !== 0 && (
-                                <div className="text-xs text-orange-600">
-                                  Plug: {formatCurrency(bucketData?.adjustmentAmount || 0)}
-                                  {bucketData?.adjustmentReason && (
-                                    <span className="block text-muted-foreground">
-                                      ({bucketData.adjustmentReason})
-                                    </span>
-                                  )}
-                                </div>
-                              )}
-                              <div className="flex items-center justify-center gap-2">
-                                <span className={`font-medium ${isLowest ? "text-green-600 font-bold" : ""}`}>
-                                  {formatCurrency(bucketData?.adjustedTotal || 0)}
-                                </span>
-                                {isLowest && (
-                                  <Badge variant="outline" className="bg-green-50 text-green-700 text-xs">
-                                    Lowest
-                                  </Badge>
-                                )}
-                              </div>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 text-xs"
-                                onClick={() =>
-                                  setAdjustmentDialog({
-                                    open: true,
-                                    bidCollectionId: bid.bidCollectionId,
-                                    contractorName: bid.contractorCompany,
-                                    bucket,
-                                    currentAmount: (bucketData?.adjustmentAmount || 0) / 100,
-                                    currentReason: bucketData?.adjustmentReason || "",
-                                  })
-                                }
-                              >
-                                {(bucketData?.adjustmentAmount || 0) !== 0 ? (
-                                  <>
-                                    <Edit2 className="h-3 w-3 mr-1" /> Edit
-                                  </>
-                                ) : (
-                                  <>
-                                    <Plus className="h-3 w-3 mr-1" /> Add Plug
-                                  </>
-                                )}
-                              </Button>
-                            </div>
-                          </TableCell>
-                        );
-                      })}
-                    </TableRow>
-                  );
-                })}
-                <TableRow className="bg-muted/50 font-bold">
-                  <TableCell className="sticky left-0 bg-muted/50">Grand Total</TableCell>
-                  {bidLevelingData.map((bid) => {
-                    const grandTotal = calculateGrandTotal(bid);
-                    const lowestTotal = getLowestGrandTotal();
-                    const isLowest = grandTotal === lowestTotal && lowestTotal > 0;
+    return (
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-48 sticky left-0 bg-background">Cost Bucket</TableHead>
+              {bids.map((bid) => (
+                <TableHead key={bid.bidCollectionId} className="min-w-48 text-center">
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="font-semibold">{bid.contractorCompany}</span>
+                    <span className="text-xs text-muted-foreground">{bid.contractorName}</span>
+                  </div>
+                </TableHead>
+              ))}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {COST_BUCKETS.map((bucket) => {
+              const lowestForBucket = getLowestBidForBucket(bids, bucket);
+              return (
+                <TableRow key={bucket}>
+                  <TableCell className="font-medium sticky left-0 bg-background">
+                    {bucket}
+                  </TableCell>
+                  {bids.map((bid) => {
+                    const bucketData = bid.buckets.find((b) => b.bucket === bucket);
+                    const isLowest =
+                      bucketData?.adjustedTotal === lowestForBucket && lowestForBucket > 0;
 
                     return (
                       <TableCell
-                        key={`${bid.bidCollectionId}-total`}
+                        key={`${bid.bidCollectionId}-${bucket}`}
                         className="text-center"
                       >
-                        <div className="flex items-center justify-center gap-2">
-                          <span className={isLowest ? "text-green-600" : ""}>
-                            {formatCurrency(grandTotal)}
-                          </span>
-                          {isLowest && (
-                            <Badge className="bg-green-600">Best Price</Badge>
+                        <div className="flex flex-col gap-1">
+                          <div className="text-xs text-muted-foreground">
+                            Original: {formatCurrency(bucketData?.originalTotal || 0)}
+                          </div>
+                          {(bucketData?.adjustmentAmount || 0) !== 0 && (
+                            <div className="text-xs text-orange-600">
+                              Plug: {formatCurrency(bucketData?.adjustmentAmount || 0)}
+                              {bucketData?.adjustmentReason && (
+                                <span className="block text-muted-foreground">
+                                  ({bucketData.adjustmentReason})
+                                </span>
+                              )}
+                            </div>
                           )}
+                          <div className="flex items-center justify-center gap-2">
+                            <span className={`font-medium ${isLowest ? "text-green-600 font-bold" : ""}`}>
+                              {formatCurrency(bucketData?.adjustedTotal || 0)}
+                            </span>
+                            {isLowest && (
+                              <Badge variant="outline" className="bg-green-50 text-green-700 text-xs">
+                                Lowest
+                              </Badge>
+                            )}
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 text-xs"
+                            onClick={() =>
+                              setAdjustmentDialog({
+                                open: true,
+                                bidCollectionId: bid.bidCollectionId,
+                                contractorName: bid.contractorCompany,
+                                bucket,
+                                currentAmount: (bucketData?.adjustmentAmount || 0) / 100,
+                                currentReason: bucketData?.adjustmentReason || "",
+                              })
+                            }
+                          >
+                            {(bucketData?.adjustmentAmount || 0) !== 0 ? (
+                              <>
+                                <Edit2 className="h-3 w-3 mr-1" /> Edit
+                              </>
+                            ) : (
+                              <>
+                                <Plus className="h-3 w-3 mr-1" /> Add Plug
+                              </>
+                            )}
+                          </Button>
                         </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="mt-2"
-                          onClick={() =>
-                            setSelectBidderDialog({
-                              open: true,
-                              bidCollectionId: bid.bidCollectionId,
-                              contractorName: bid.contractorCompany,
-                            })
-                          }
-                        >
-                          <Check className="h-4 w-4 mr-1" />
-                          Select as Primary
-                        </Button>
                       </TableCell>
                     );
                   })}
                 </TableRow>
-              </TableBody>
-            </Table>
-          </div>
+              );
+            })}
+            <TableRow className="bg-muted/50 font-bold">
+              <TableCell className="sticky left-0 bg-muted/50">Grand Total</TableCell>
+              {bids.map((bid) => {
+                const grandTotal = calculateGrandTotal(bid);
+                const lowestTotal = getLowestGrandTotal(bids);
+                const isLowest = grandTotal === lowestTotal && lowestTotal > 0;
+
+                return (
+                  <TableCell
+                    key={`${bid.bidCollectionId}-total`}
+                    className="text-center"
+                  >
+                    <div className="flex items-center justify-center gap-2">
+                      <span className={isLowest ? "text-green-600" : ""}>
+                        {formatCurrency(grandTotal)}
+                      </span>
+                      {isLowest && (
+                        <Badge className="bg-green-600">Best Price</Badge>
+                      )}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-2"
+                      onClick={() =>
+                        setSelectBidderDialog({
+                          open: true,
+                          bidCollectionId: bid.bidCollectionId,
+                          contractorName: bid.contractorCompany,
+                        })
+                      }
+                    >
+                      <Check className="h-4 w-4 mr-1" />
+                      Select as Primary
+                    </Button>
+                  </TableCell>
+                );
+              })}
+            </TableRow>
+          </TableBody>
+        </Table>
+      </div>
+    );
+  };
+
+  return (
+    <>
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2">
+            <Trophy className="h-5 w-5 text-yellow-500" />
+            Bid Leveling / Comparison View
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Compare bids from contractors and architects separately
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* General Contractors Section */}
+          <Collapsible open={isGCExpanded} onOpenChange={setIsGCExpanded}>
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" className="w-full justify-between p-4 h-auto border rounded-lg hover:bg-muted/50">
+                <div className="flex items-center gap-2">
+                  <HardHat className="h-5 w-5 text-orange-600" />
+                  <span className="font-semibold">General Contractors</span>
+                  <Badge variant="outline" className="ml-2">{gcBids.length} bid{gcBids.length !== 1 ? 's' : ''}</Badge>
+                </div>
+                {isGCExpanded ? (
+                  <ChevronDown className="h-5 w-5" />
+                ) : (
+                  <ChevronRight className="h-5 w-5" />
+                )}
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-4">
+              {renderComparisonTable(gcBids, "General Contractor")}
+            </CollapsibleContent>
+          </Collapsible>
+
+          {/* Architects Section */}
+          <Collapsible open={isArchitectExpanded} onOpenChange={setIsArchitectExpanded}>
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" className="w-full justify-between p-4 h-auto border rounded-lg hover:bg-muted/50">
+                <div className="flex items-center gap-2">
+                  <Ruler className="h-5 w-5 text-blue-600" />
+                  <span className="font-semibold">Architects</span>
+                  <Badge variant="outline" className="ml-2">{architectBids.length} bid{architectBids.length !== 1 ? 's' : ''}</Badge>
+                </div>
+                {isArchitectExpanded ? (
+                  <ChevronDown className="h-5 w-5" />
+                ) : (
+                  <ChevronRight className="h-5 w-5" />
+                )}
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-4">
+              {renderComparisonTable(architectBids, "Architect")}
+            </CollapsibleContent>
+          </Collapsible>
         </CardContent>
       </Card>
 

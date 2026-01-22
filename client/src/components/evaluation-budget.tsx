@@ -88,17 +88,19 @@ const VOLTAGE_OPTIONS = [
   { value: "208", label: "208/120V (3-Phase)", multiplier: 208 * Math.sqrt(3) },
 ] as const;
 
-// Convert AMPS to kVA based on voltage
+// Convert AMPS to kVA based on voltage (store with precision to avoid rounding errors)
 const ampsToKva = (amps: number, voltage: string = "480"): number => {
   const option = VOLTAGE_OPTIONS.find(v => v.value === voltage);
   const multiplier = option ? option.multiplier : 480 * Math.sqrt(3);
-  return Math.round((amps * multiplier) / 1000);
+  // Use 2 decimal places to preserve precision for round-trip conversion
+  return Math.round(((amps * multiplier) / 1000) * 100) / 100;
 };
 
 // Convert kVA to AMPS based on voltage
 const kvaToAmps = (kva: number, voltage: string = "480"): number => {
   const option = VOLTAGE_OPTIONS.find(v => v.value === voltage);
   const multiplier = option ? option.multiplier : 480 * Math.sqrt(3);
+  // Round to nearest integer for display
   return Math.round((kva * 1000) / multiplier);
 };
 

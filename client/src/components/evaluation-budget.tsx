@@ -51,7 +51,8 @@ interface CustomAssembly {
 // Multi-voltage electrical allocation entry
 interface ElectricalAllocationEntry {
   id: string;
-  kva: number;
+  kva: number; // Kept for backward compatibility, but amps is the source of truth
+  amps: number; // Primary value - stored directly to avoid conversion rounding
   voltage: string; // "480" | "208"
 }
 
@@ -1620,26 +1621,35 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       const savedElectricalAllocations = (existingBudget as any).metadata?.electricalAllocations || [];
       
       // If no saved electrical allocations, try to initialize from Step 2 data
-      let electricalAllocationsToUse = savedElectricalAllocations;
+      // Also migrate legacy entries that only have kva (no amps field)
+      let electricalAllocationsToUse = savedElectricalAllocations.map((alloc: any) => ({
+        ...alloc,
+        amps: alloc.amps ?? kvaToAmps(alloc.kva, alloc.voltage) // Migrate legacy entries
+      }));
+      
       if (electricalAllocationsToUse.length === 0 && rfp) {
         const initialAllocations: ElectricalAllocationEntry[] = [];
         
-        // Add base allocation from Step 2 if set
+        // Add base allocation from Step 2 if set - store AMPS directly
         if (rfp.tenantElectricalAllocation && rfp.tenantElectricalAllocation > 0) {
           const baseVoltage = rfp.tenantElectricalVoltage || "480";
+          const baseAmps = rfp.tenantElectricalAllocation;
           initialAllocations.push({
             id: `step2-base-${Date.now()}`,
-            kva: ampsToKva(rfp.tenantElectricalAllocation, baseVoltage),
+            amps: baseAmps,
+            kva: ampsToKva(baseAmps, baseVoltage),
             voltage: baseVoltage
           });
         }
         
-        // Add additional request from Step 2 if set
+        // Add additional request from Step 2 if set - store AMPS directly
         if (rfp.tenantElectricalAdditionalRequest && rfp.tenantElectricalAdditionalRequest > 0) {
           const additionalVoltage = rfp.tenantElectricalAdditionalVoltage || rfp.tenantElectricalVoltage || "480";
+          const additionalAmps = rfp.tenantElectricalAdditionalRequest;
           initialAllocations.push({
             id: `step2-additional-${Date.now() + 1}`,
-            kva: ampsToKva(rfp.tenantElectricalAdditionalRequest, additionalVoltage),
+            amps: additionalAmps,
+            kva: ampsToKva(additionalAmps, additionalVoltage),
             voltage: additionalVoltage
           });
         }
@@ -1692,15 +1702,17 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       const parkingCounts = calculateParkingCounts();
       const calculatedElectrical = calculateElectricalAllocation();
       
-      // Initialize electrical allocations from Step 2 data if available
+      // Initialize electrical allocations from Step 2 data if available - store AMPS directly
       const initialElectricalAllocations: ElectricalAllocationEntry[] = [];
       if (rfp) {
         // Add base allocation from Step 2 if set
         if (rfp.tenantElectricalAllocation && rfp.tenantElectricalAllocation > 0) {
           const baseVoltage = rfp.tenantElectricalVoltage || "480";
+          const baseAmps = rfp.tenantElectricalAllocation;
           initialElectricalAllocations.push({
             id: `step2-base-${Date.now()}`,
-            kva: ampsToKva(rfp.tenantElectricalAllocation, baseVoltage),
+            amps: baseAmps,
+            kva: ampsToKva(baseAmps, baseVoltage),
             voltage: baseVoltage
           });
         }
@@ -1708,9 +1720,11 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         // Add additional request from Step 2 if set
         if (rfp.tenantElectricalAdditionalRequest && rfp.tenantElectricalAdditionalRequest > 0) {
           const additionalVoltage = rfp.tenantElectricalAdditionalVoltage || rfp.tenantElectricalVoltage || "480";
+          const additionalAmps = rfp.tenantElectricalAdditionalRequest;
           initialElectricalAllocations.push({
             id: `step2-additional-${Date.now() + 1}`,
-            kva: ampsToKva(rfp.tenantElectricalAdditionalRequest, additionalVoltage),
+            amps: additionalAmps,
+            kva: ampsToKva(additionalAmps, additionalVoltage),
             voltage: additionalVoltage
           });
         }
@@ -3247,18 +3261,10 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
                     <p style="margin: 4px 0; font-size: 13px;"><strong>Vehicular Parking:</strong> ${budgetData.vehicularParking || 0} spaces</p>
                     <p style="margin: 4px 0; font-size: 13px;"><strong>Trailer Parking:</strong> ${budgetData.trailerParking || 0} spaces</p>
                     <p style="margin: 4px 0; font-size: 13px;"><strong>Electrical Allocation:</strong> ${(() => {
-                      // Use original AMPS from Step 2 if available (more accurate than kVA conversion)
-                      const step2BaseAmps = rfp?.tenantElectricalAllocation || 0;
-                      const step2AdditionalAmps = rfp?.tenantElectricalAdditionalRequest || 0;
-                      const step2TotalAmps = step2BaseAmps + step2AdditionalAmps;
-                      
-                      if (step2TotalAmps > 0) {
-                        return step2TotalAmps.toLocaleString();
-                      }
-                      
-                      // Fallback to kVA conversion if no Step 2 data
+                      // Use AMPS from evaluation budget (allows editing in Step 5)
                       const totalAmps = budgetData.electricalAllocations.reduce((sum, alloc) => {
-                        return sum + kvaToAmps(alloc.kva, alloc.voltage);
+                        // Use stored amps if available, otherwise calculate from kVA (legacy data)
+                        return sum + (alloc.amps ?? kvaToAmps(alloc.kva, alloc.voltage));
                       }, 0);
                       return totalAmps.toLocaleString();
                     })()} AMPS</p>
@@ -5082,12 +5088,15 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
                 const exceedsCapacity = availableKva > 0 && totalAllocatedKva > availableKva;
                 const noCapacityAvailable = !propertyElectricalCapacity.hasCapacity;
                 
-                // Helper to add a new allocation entry
+                // Helper to add a new allocation entry - store AMPS as primary value
                 const addAllocation = () => {
+                  const defaultAmps = 200; // Default to 200 AMPS
+                  const defaultVoltage = "480";
                   const newEntry: ElectricalAllocationEntry = {
                     id: `alloc-${Date.now()}`,
-                    kva: 100,
-                    voltage: "480"
+                    amps: defaultAmps,
+                    kva: ampsToKva(defaultAmps, defaultVoltage),
+                    voltage: defaultVoltage
                   };
                   setBudgetData(prev => ({
                     ...prev,
@@ -5178,7 +5187,9 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
                       ) : (
                         <div className="space-y-2">
                           {budgetData.electricalAllocations.map((alloc, index) => {
-                            const amps = kvaToAmps(alloc.kva, alloc.voltage);
+                            // Use stored amps if available, otherwise calculate from kVA (legacy data)
+                            const displayAmps = alloc.amps ?? kvaToAmps(alloc.kva, alloc.voltage);
+                            const displayKva = alloc.kva ?? ampsToKva(displayAmps, alloc.voltage);
                             const voltageLabel = VOLTAGE_OPTIONS.find(v => v.value === alloc.voltage)?.label || alloc.voltage + "V";
                             
                             return (
@@ -5189,23 +5200,35 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
                               >
                                 <div className="flex-1 grid grid-cols-4 gap-3 items-center">
                                   <div>
-                                    <Label className="text-xs text-gray-500">kVA</Label>
+                                    <Label className="text-xs text-gray-500">AMPS</Label>
                                     <Input
                                       type="number"
                                       min="0"
-                                      step="10"
-                                      value={alloc.kva}
-                                      onChange={(e) => updateAllocation(alloc.id, { kva: parseInt(e.target.value) || 0 })}
+                                      step="50"
+                                      value={displayAmps}
+                                      onChange={(e) => {
+                                        const newAmps = parseInt(e.target.value) || 0;
+                                        updateAllocation(alloc.id, { 
+                                          amps: newAmps,
+                                          kva: ampsToKva(newAmps, alloc.voltage)
+                                        });
+                                      }}
                                       className="h-8 text-sm"
                                       disabled={!premisesEditMode}
-                                      data-testid={`input-allocation-kva-${index}`}
+                                      data-testid={`input-allocation-amps-${index}`}
                                     />
                                   </div>
                                   <div>
                                     <Label className="text-xs text-gray-500">Voltage</Label>
                                     <select
                                       value={alloc.voltage}
-                                      onChange={(e) => updateAllocation(alloc.id, { voltage: e.target.value })}
+                                      onChange={(e) => {
+                                        const newVoltage = e.target.value;
+                                        updateAllocation(alloc.id, { 
+                                          voltage: newVoltage,
+                                          kva: ampsToKva(displayAmps, newVoltage)
+                                        });
+                                      }}
                                       disabled={!premisesEditMode}
                                       className="w-full h-8 rounded-md border border-gray-300 bg-white px-2 text-sm"
                                       data-testid={`select-allocation-voltage-${index}`}
@@ -5217,15 +5240,15 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
                                   </div>
                                   <div>
                                     <Label className="text-xs text-gray-500">Equivalent</Label>
-                                    <p className="text-sm font-medium mt-1" data-testid={`text-allocation-amps-${index}`}>
-                                      {amps.toLocaleString()} AMPS
+                                    <p className="text-sm font-medium mt-1" data-testid={`text-allocation-kva-${index}`}>
+                                      {displayKva.toLocaleString()} kVA
                                     </p>
                                   </div>
                                   <div className="flex items-center justify-between">
                                     <div>
                                       <Label className="text-xs text-gray-500">Service</Label>
                                       <p className="text-xs text-gray-600 mt-1">
-                                        {alloc.kva} kVA @ {voltageLabel}
+                                        {displayAmps.toLocaleString()} AMPS @ {voltageLabel}
                                       </p>
                                     </div>
                                     {premisesEditMode && (

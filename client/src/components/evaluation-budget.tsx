@@ -3244,7 +3244,13 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
                 <div>
                     <p style="margin: 4px 0; font-size: 13px;"><strong>Vehicular Parking:</strong> ${budgetData.vehicularParking || 0} spaces</p>
                     <p style="margin: 4px 0; font-size: 13px;"><strong>Trailer Parking:</strong> ${budgetData.trailerParking || 0} spaces</p>
-                    <p style="margin: 4px 0; font-size: 13px;"><strong>Electrical Allocation:</strong> ${budgetData.electricalAllocation || 0} AMPS</p>
+                    <p style="margin: 4px 0; font-size: 13px;"><strong>Electrical Allocation:</strong> ${(() => {
+                      // Calculate total AMPS from all electrical allocations
+                      const totalAmps = budgetData.electricalAllocations.reduce((sum, alloc) => {
+                        return sum + kvaToAmps(alloc.kva, alloc.voltage);
+                      }, 0);
+                      return totalAmps.toLocaleString();
+                    })()} AMPS</p>
                 </div>
             </div>
         </div>

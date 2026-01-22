@@ -1617,6 +1617,34 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       const savedTenantVoltage = (existingBudget as any).metadata?.tenantVoltage;
       const savedElectricalAllocations = (existingBudget as any).metadata?.electricalAllocations || [];
       
+      // If no saved electrical allocations, try to initialize from Step 2 data
+      let electricalAllocationsToUse = savedElectricalAllocations;
+      if (electricalAllocationsToUse.length === 0 && rfp) {
+        const initialAllocations: ElectricalAllocationEntry[] = [];
+        
+        // Add base allocation from Step 2 if set
+        if (rfp.tenantElectricalAllocation && rfp.tenantElectricalAllocation > 0) {
+          const baseVoltage = rfp.tenantElectricalVoltage || "480";
+          initialAllocations.push({
+            id: `step2-base-${Date.now()}`,
+            kva: ampsToKva(rfp.tenantElectricalAllocation, baseVoltage),
+            voltage: baseVoltage
+          });
+        }
+        
+        // Add additional request from Step 2 if set
+        if (rfp.tenantElectricalAdditionalRequest && rfp.tenantElectricalAdditionalRequest > 0) {
+          const additionalVoltage = rfp.tenantElectricalAdditionalVoltage || rfp.tenantElectricalVoltage || "480";
+          initialAllocations.push({
+            id: `step2-additional-${Date.now() + 1}`,
+            kva: ampsToKva(rfp.tenantElectricalAdditionalRequest, additionalVoltage),
+            voltage: additionalVoltage
+          });
+        }
+        
+        electricalAllocationsToUse = initialAllocations;
+      }
+      
       // Calculate current electrical allocation based on tenant SF percentage
       const currentCalculatedElectrical = calculateElectricalAllocation();
       
@@ -1655,12 +1683,37 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         calculatedElectricalAllocation: currentCalculatedElectrical,
         electricalAllocationOverride: effectiveElectricalOverride,
         tenantVoltage: savedTenantVoltage || "480",
-        electricalAllocations: savedElectricalAllocations,
+        electricalAllocations: electricalAllocationsToUse,
       });
     } else {
       // Initialize with door counts and existing improvements even if no other data
       const parkingCounts = calculateParkingCounts();
       const calculatedElectrical = calculateElectricalAllocation();
+      
+      // Initialize electrical allocations from Step 2 data if available
+      const initialElectricalAllocations: ElectricalAllocationEntry[] = [];
+      if (rfp) {
+        // Add base allocation from Step 2 if set
+        if (rfp.tenantElectricalAllocation && rfp.tenantElectricalAllocation > 0) {
+          const baseVoltage = rfp.tenantElectricalVoltage || "480";
+          initialElectricalAllocations.push({
+            id: `step2-base-${Date.now()}`,
+            kva: ampsToKva(rfp.tenantElectricalAllocation, baseVoltage),
+            voltage: baseVoltage
+          });
+        }
+        
+        // Add additional request from Step 2 if set
+        if (rfp.tenantElectricalAdditionalRequest && rfp.tenantElectricalAdditionalRequest > 0) {
+          const additionalVoltage = rfp.tenantElectricalAdditionalVoltage || rfp.tenantElectricalVoltage || "480";
+          initialElectricalAllocations.push({
+            id: `step2-additional-${Date.now() + 1}`,
+            kva: ampsToKva(rfp.tenantElectricalAdditionalRequest, additionalVoltage),
+            voltage: additionalVoltage
+          });
+        }
+      }
+      
       setBudgetData(prev => ({
         ...prev,
         existingImprovements: existingImprovementsFromProperty,
@@ -1672,9 +1725,10 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         electricalAllocation: calculatedElectrical,
         calculatedElectricalAllocation: calculatedElectrical,
         electricalAllocationOverride: null,
+        electricalAllocations: initialElectricalAllocations,
       }));
     }
-  }, [existingBudget, allBidLineItems, bidCollections, rfp?.selectedBayConfigurations, propertyImprovements, propertyData]);
+  }, [existingBudget, allBidLineItems, bidCollections, rfp?.selectedBayConfigurations, propertyImprovements, propertyData, rfp?.tenantElectricalAllocation, rfp?.tenantElectricalAdditionalRequest]);
 
   const formatCurrency = (amount: string | number) => {
     const num = typeof amount === 'string' ? parseFloat(amount) : amount;

@@ -68,7 +68,12 @@ export function BidLevelingView({ rfpId, onSelectPrimaryBidder }: BidLevelingVie
   const { data: bidLevelingData, isLoading } = useQuery<BidLevelingData[]>({
     queryKey: ["/api/rfp-requests", rfpId, "bid-leveling"],
     queryFn: async () => {
-      const response = await fetch(`/api/rfp-requests/${rfpId}/bid-leveling`);
+      const token = localStorage.getItem('auth-token');
+      const response = await fetch(`/api/rfp-requests/${rfpId}/bid-leveling`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (!response.ok) throw new Error("Failed to fetch bid leveling data");
       return response.json();
     },

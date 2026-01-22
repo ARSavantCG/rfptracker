@@ -960,7 +960,17 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                                         
                                         // Auto-calculate total if we have an evaluated value and quantity
                                         if (evaluatedValue !== null && evaluatedValue !== undefined && !isNaN(evaluatedValue) && updated[index].quantity) {
-                                          const quantity = parseFloat(updated[index].quantity);
+                                          let quantity: number;
+                                          const qtyStr = updated[index].quantity;
+                                          
+                                          // Check if quantity is a formula
+                                          if (qtyStr.startsWith('=')) {
+                                            const qtyResult = evaluateFormula(qtyStr);
+                                            quantity = qtyResult.value || 0;
+                                          } else {
+                                            quantity = parseFloat(qtyStr.replace(/,/g, ''));
+                                          }
+                                          
                                           if (!isNaN(quantity) && quantity > 0) {
                                             const total = (quantity * evaluatedValue).toFixed(2);
                                             updated[index].totalPrice = total;

@@ -3247,7 +3247,16 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
                     <p style="margin: 4px 0; font-size: 13px;"><strong>Vehicular Parking:</strong> ${budgetData.vehicularParking || 0} spaces</p>
                     <p style="margin: 4px 0; font-size: 13px;"><strong>Trailer Parking:</strong> ${budgetData.trailerParking || 0} spaces</p>
                     <p style="margin: 4px 0; font-size: 13px;"><strong>Electrical Allocation:</strong> ${(() => {
-                      // Calculate total AMPS from all electrical allocations
+                      // Use original AMPS from Step 2 if available (more accurate than kVA conversion)
+                      const step2BaseAmps = rfp?.tenantElectricalAllocation || 0;
+                      const step2AdditionalAmps = rfp?.tenantElectricalAdditionalRequest || 0;
+                      const step2TotalAmps = step2BaseAmps + step2AdditionalAmps;
+                      
+                      if (step2TotalAmps > 0) {
+                        return step2TotalAmps.toLocaleString();
+                      }
+                      
+                      // Fallback to kVA conversion if no Step 2 data
                       const totalAmps = budgetData.electricalAllocations.reduce((sum, alloc) => {
                         return sum + kvaToAmps(alloc.kva, alloc.voltage);
                       }, 0);

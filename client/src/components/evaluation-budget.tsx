@@ -1620,12 +1620,47 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       const savedTenantVoltage = (existingBudget as any).metadata?.tenantVoltage;
       const savedElectricalAllocations = (existingBudget as any).metadata?.electricalAllocations || [];
       
-      // If no saved electrical allocations, try to initialize from Step 2 data
-      // Also migrate legacy entries that only have kva (no amps field)
-      let electricalAllocationsToUse = savedElectricalAllocations.map((alloc: any) => ({
-        ...alloc,
-        amps: alloc.amps ?? kvaToAmps(alloc.kva, alloc.voltage) // Migrate legacy entries
-      }));
+      // Check if saved allocations have the new amps field (not legacy kVA-only data)
+      const hasLegacyData = savedElectricalAllocations.length > 0 && 
+        savedElectricalAllocations.some((alloc: any) => alloc.amps === undefined);
+      
+      // If we have legacy data (kVA only) and Step 2 has AMPS data, prefer Step 2 for accuracy
+      const step2HasData = rfp && (
+        (rfp.tenantElectricalAllocation && rfp.tenantElectricalAllocation > 0) ||
+        (rfp.tenantElectricalAdditionalRequest && rfp.tenantElectricalAdditionalRequest > 0)
+      );
+      
+      let electricalAllocationsToUse: ElectricalAllocationEntry[] = [];
+      
+      if (hasLegacyData && step2HasData) {
+        // Re-initialize from Step 2 data for accuracy (legacy kVA data has rounding issues)
+        if (rfp.tenantElectricalAllocation && rfp.tenantElectricalAllocation > 0) {
+          const baseVoltage = rfp.tenantElectricalVoltage || "480";
+          const baseAmps = rfp.tenantElectricalAllocation;
+          electricalAllocationsToUse.push({
+            id: `step2-base-${Date.now()}`,
+            amps: baseAmps,
+            kva: ampsToKva(baseAmps, baseVoltage),
+            voltage: baseVoltage
+          });
+        }
+        if (rfp.tenantElectricalAdditionalRequest && rfp.tenantElectricalAdditionalRequest > 0) {
+          const additionalVoltage = rfp.tenantElectricalAdditionalVoltage || rfp.tenantElectricalVoltage || "480";
+          const additionalAmps = rfp.tenantElectricalAdditionalRequest;
+          electricalAllocationsToUse.push({
+            id: `step2-additional-${Date.now() + 1}`,
+            amps: additionalAmps,
+            kva: ampsToKva(additionalAmps, additionalVoltage),
+            voltage: additionalVoltage
+          });
+        }
+      } else if (savedElectricalAllocations.length > 0) {
+        // Use saved allocations (with amps field intact)
+        electricalAllocationsToUse = savedElectricalAllocations.map((alloc: any) => ({
+          ...alloc,
+          amps: alloc.amps ?? kvaToAmps(alloc.kva, alloc.voltage)
+        }));
+      }
       
       if (electricalAllocationsToUse.length === 0 && rfp) {
         const initialAllocations: ElectricalAllocationEntry[] = [];

@@ -1707,10 +1707,36 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       const effectiveElectricalOverride = savedElectricalOverride !== undefined ? savedElectricalOverride : null;
       const effectiveElectrical = effectiveElectricalOverride !== null ? effectiveElectricalOverride : currentCalculatedElectrical;
       
+      // Load saved data
+      const savedTI = (existingBudget as any).tenantImprovements || [];
+      const savedDSC = (existingBudget as any).designSoftCosts || [];
+      const savedEI = existingImprovementsToUse.length > 0 ? existingImprovementsToUse : existingImprovementsFromProperty;
+      const savedAssemblies = (existingBudget as any).customAssemblies || [];
+      
+      // Clean up orphaned assembly items - clear assemblyId if the header doesn't exist
+      const allItems = [...savedTI, ...savedDSC, ...savedEI];
+      const validAssemblyIds = new Set([
+        ...savedAssemblies.map((a: any) => a.id),
+        ...allItems.map((item: any) => item.id) // Headers are also valid
+      ]);
+      
+      const cleanOrphanedAssemblyItems = (items: EvaluationLineItem[]): EvaluationLineItem[] => 
+        items.map(item => {
+          if (item.assemblyId && !allItems.some(other => other.id === item.assemblyId)) {
+            // This item references an assembly that no longer exists - release it
+            return { ...item, assemblyId: undefined };
+          }
+          return item;
+        });
+      
+      const cleanedTI = cleanOrphanedAssemblyItems(savedTI);
+      const cleanedDSC = cleanOrphanedAssemblyItems(savedDSC);
+      const cleanedEI = cleanOrphanedAssemblyItems(savedEI);
+      
       setBudgetData({
-        tenantImprovements: (existingBudget as any).tenantImprovements || [],
-        designSoftCosts: (existingBudget as any).designSoftCosts || [],
-        existingImprovements: existingImprovementsToUse.length > 0 ? existingImprovementsToUse : existingImprovementsFromProperty,
+        tenantImprovements: cleanedTI,
+        designSoftCosts: cleanedDSC,
+        existingImprovements: cleanedEI,
         hasExistingImprovements: (existingBudget as any).hasExistingImprovements || existingImprovementsFromProperty.length > 0,
         includeExistingInTotal: (existingBudget as any).includeExistingInTotal || false,
         separateDesignCosts: (existingBudget as any).separateDesignCosts !== undefined ? (existingBudget as any).separateDesignCosts : false,
@@ -1720,7 +1746,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         grandTotal: (existingBudget as any).grandTotal || "0.00",
         notes: (existingBudget as any).notes || "",
         lineItemRollups: (existingBudget as any).lineItemRollups || {},
-        customAssemblies: (existingBudget as any).customAssemblies || [],
+        customAssemblies: savedAssemblies,
         assemblies: (existingBudget as any).assemblies || {},
         oversizedDoors: doorCounts.oversized,
         regularDoors: doorCounts.regular,
@@ -3664,10 +3690,49 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
   };
 
   const deleteItem = (category: 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', itemId: string) => {
-    setBudgetData(prev => ({
-      ...prev,
-      [category]: prev[category].filter(item => item.id !== itemId),
-    }));
+    setBudgetData(prev => {
+      // Check if this item is an assembly header (other items reference it as their assemblyId)
+      const isAssemblyHeader = [
+        ...prev.tenantImprovements,
+        ...prev.designSoftCosts,
+        ...prev.existingImprovements,
+      ].some(item => item.assemblyId === itemId);
+      
+      // Function to release items from this assembly if deleting the header
+      const releaseFromAssembly = (items: EvaluationLineItem[]) => 
+        items.map(item => 
+          item.assemblyId === itemId 
+            ? { ...item, assemblyId: undefined }
+            : item
+        );
+      
+      // Filter out the deleted item and release any orphaned assembly items
+      const updatedItems = releaseFromAssembly(prev[category]).filter(item => item.id !== itemId);
+      
+      // Also release items from other categories if this was an assembly header
+      const updatedTI = category === 'tenantImprovements' 
+        ? updatedItems 
+        : (isAssemblyHeader ? releaseFromAssembly(prev.tenantImprovements) : prev.tenantImprovements);
+      const updatedDSC = category === 'designSoftCosts' 
+        ? updatedItems 
+        : (isAssemblyHeader ? releaseFromAssembly(prev.designSoftCosts) : prev.designSoftCosts);
+      const updatedEI = category === 'existingImprovements' 
+        ? updatedItems 
+        : (isAssemblyHeader ? releaseFromAssembly(prev.existingImprovements) : prev.existingImprovements);
+      
+      // Remove from custom assemblies if this was an assembly header
+      const updatedAssemblies = isAssemblyHeader 
+        ? prev.customAssemblies.filter(a => a.id !== itemId)
+        : prev.customAssemblies;
+      
+      return {
+        ...prev,
+        tenantImprovements: updatedTI,
+        designSoftCosts: updatedDSC,
+        existingImprovements: updatedEI,
+        customAssemblies: updatedAssemblies,
+      };
+    });
   };
 
   // Clean up orphaned assembly items

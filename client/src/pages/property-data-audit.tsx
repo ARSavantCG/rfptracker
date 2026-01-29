@@ -1,13 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, AlertTriangle, CheckCircle, Building2, Printer, DollarSign } from "lucide-react";
+import { Loader2, AlertTriangle, CheckCircle, Building2, Printer, DollarSign, Zap, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { Property, Transformer, MainPanel, PropertyExistingImprovement, BayConfiguration } from "@shared/schema";
-
-interface PropertyWithImprovements extends Property {
-  existingImprovements?: PropertyExistingImprovement[];
-}
+import type { Property, Transformer, MainPanel, PropertyExistingImprovement, BayConfiguration, ExecutedLease } from "@shared/schema";
 
 export default function PropertyDataAudit() {
   const { data: properties, isLoading: propertiesLoading } = useQuery<Property[]>({
@@ -32,6 +28,72 @@ export default function PropertyDataAudit() {
         })
       );
       return improvementsMap;
+    },
+    enabled: !!properties && properties.length > 0,
+  });
+
+  const { data: allTransformers } = useQuery<Record<number, Transformer[]>>({
+    queryKey: ["/api/all-property-transformers"],
+    queryFn: async () => {
+      if (!properties) return {};
+      const transformersMap: Record<number, Transformer[]> = {};
+      await Promise.all(
+        properties.map(async (p) => {
+          try {
+            const res = await fetch(`/api/properties/${p.id}/transformers`);
+            if (res.ok) {
+              transformersMap[p.id] = await res.json();
+            }
+          } catch (e) {
+            transformersMap[p.id] = [];
+          }
+        })
+      );
+      return transformersMap;
+    },
+    enabled: !!properties && properties.length > 0,
+  });
+
+  const { data: allPanels } = useQuery<Record<number, MainPanel[]>>({
+    queryKey: ["/api/all-property-panels"],
+    queryFn: async () => {
+      if (!properties) return {};
+      const panelsMap: Record<number, MainPanel[]> = {};
+      await Promise.all(
+        properties.map(async (p) => {
+          try {
+            const res = await fetch(`/api/properties/${p.id}/main-panels`);
+            if (res.ok) {
+              panelsMap[p.id] = await res.json();
+            }
+          } catch (e) {
+            panelsMap[p.id] = [];
+          }
+        })
+      );
+      return panelsMap;
+    },
+    enabled: !!properties && properties.length > 0,
+  });
+
+  const { data: allLeases } = useQuery<Record<number, ExecutedLease[]>>({
+    queryKey: ["/api/all-property-leases"],
+    queryFn: async () => {
+      if (!properties) return {};
+      const leasesMap: Record<number, ExecutedLease[]> = {};
+      await Promise.all(
+        properties.map(async (p) => {
+          try {
+            const res = await fetch(`/api/properties/${p.id}/executed-leases`);
+            if (res.ok) {
+              leasesMap[p.id] = await res.json();
+            }
+          } catch (e) {
+            leasesMap[p.id] = [];
+          }
+        })
+      );
+      return leasesMap;
     },
     enabled: !!properties && properties.length > 0,
   });
@@ -190,6 +252,10 @@ export default function PropertyDataAudit() {
             const actualsCost = imp.actualsCost || 0;
             return sum + forecastCost + committedCost + actualsCost;
           }, 0);
+          const transformers = allTransformers?.[property.id] || [];
+          const panels = allPanels?.[property.id] || [];
+          const leases = allLeases?.[property.id] || [];
+          const totalTransformerKva = transformers.reduce((sum, t) => sum + (t.totalCapacityKva || 0), 0);
           
           return (
             <Card key={property.id} className="print:break-inside-avoid">
@@ -302,6 +368,73 @@ export default function PropertyDataAudit() {
                     </div>
                   </div>
                 )}
+
+                {/* Electrical Infrastructure Details */}
+                <div className="mt-4 border rounded-lg p-3 print:p-2 bg-amber-50/50">
+                  <h4 className="font-semibold text-sm mb-2 text-primary flex items-center gap-1">
+                    <Zap className="h-4 w-4" />
+                    Electrical Infrastructure
+                  </h4>
+                  {transformers.length > 0 ? (
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm font-medium border-b pb-1">
+                        <span>Total Transformer Capacity:</span>
+                        <span className="text-amber-700">{totalTransformerKva.toLocaleString()} kVA</span>
+                      </div>
+                      {transformers.map((transformer) => {
+                        const transformerPanels = panels.filter(p => p.transformerId === transformer.id);
+                        return (
+                          <div key={transformer.id} className="border-l-2 border-amber-300 pl-2 space-y-1">
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">{transformer.transformerName}</span>
+                              <span className="font-medium">{transformer.totalCapacityKva?.toLocaleString() || 0} kVA</span>
+                            </div>
+                            {transformerPanels.length > 0 && (
+                              <div className="pl-3 text-xs space-y-1">
+                                {transformerPanels.map((panel) => (
+                                  <div key={panel.id} className="flex justify-between text-muted-foreground">
+                                    <span>{panel.panelName} ({panel.voltage}V)</span>
+                                    <span>{panel.capacityAmps?.toLocaleString() || 0} AMPS</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground italic">No transformers/panels recorded</p>
+                  )}
+                </div>
+
+                {/* Existing Leases */}
+                <div className="mt-4 border rounded-lg p-3 print:p-2 bg-blue-50/50">
+                  <h4 className="font-semibold text-sm mb-2 text-primary flex items-center gap-1">
+                    <FileText className="h-4 w-4" />
+                    Existing Leases
+                  </h4>
+                  {leases.length > 0 ? (
+                    <div className="space-y-1">
+                      {leases.map((lease) => (
+                        <div key={lease.id} className="flex justify-between text-sm border-b border-dashed pb-1">
+                          <span className="text-muted-foreground">
+                            {lease.tenantName || 'Unknown Tenant'} - {lease.bayNumbers || 'N/A'}
+                          </span>
+                          <span className="font-medium">
+                            {lease.rentableSquareFootage?.toLocaleString() || 0} SF
+                          </span>
+                        </div>
+                      ))}
+                      <div className="flex justify-between text-sm pt-2 border-t font-semibold">
+                        <span>Total Leased:</span>
+                        <span>{leases.reduce((sum, l) => sum + (l.rentableSquareFootage || 0), 0).toLocaleString()} SF</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground italic">No existing leases recorded</p>
+                  )}
+                </div>
 
                 {/* Existing Improvements / Costs in Place */}
                 <div className="mt-4 border rounded-lg p-3 print:p-2 bg-emerald-50/50">

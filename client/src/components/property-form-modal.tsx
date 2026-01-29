@@ -34,6 +34,10 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
     trailerParking: property?.trailerParking || 0,
     electricalAllocation: property?.electricalAllocation || 0,
     electricalAllocationIncrement: property?.electricalAllocationIncrement || 200,
+    isLandLease: property?.isLandLease || false,
+    beneficialOccupancyDate: property?.beneficialOccupancyDate || null,
+    leaseExpirationDate: property?.leaseExpirationDate || null,
+    leaseExtensions: property?.leaseExtensions || "",
   });
 
   // Calculate parking ratio
@@ -147,6 +151,10 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
       trailerParking: 0,
       electricalAllocation: 0,
       electricalAllocationIncrement: 200,
+      isLandLease: false,
+      beneficialOccupancyDate: null,
+      leaseExpirationDate: null,
+      leaseExtensions: "",
     });
   };
 
@@ -180,6 +188,10 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
       trailerParking: formData.trailerParking || 0,
       electricalAllocation: formData.electricalAllocation || 0,
       electricalAllocationIncrement: formData.electricalAllocationIncrement || 200,
+      isLandLease: formData.isLandLease || false,
+      beneficialOccupancyDate: formData.beneficialOccupancyDate || null,
+      leaseExpirationDate: formData.leaseExpirationDate || null,
+      leaseExtensions: formData.leaseExtensions || null,
     };
 
     if (isEdit) {
@@ -399,6 +411,64 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
                   (excludes trailer parking)
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Land Lease Information */}
+          <div className="space-y-4">
+            <div className="border-t pt-4">
+              <h4 className="text-sm font-medium text-gray-900 mb-3">Land Lease Information</h4>
+              
+              <div className="flex items-center space-x-2 mb-4">
+                <Checkbox
+                  id="isLandLease"
+                  checked={formData.isLandLease || false}
+                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isLandLease: checked === true }))}
+                />
+                <Label htmlFor="isLandLease" className="text-sm font-medium cursor-pointer">
+                  Property is on a Land Lease
+                </Label>
+              </div>
+              
+              {formData.isLandLease && (
+                <div className="grid grid-cols-3 gap-4 pl-6 border-l-2 border-blue-200 ml-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="beneficialOccupancyDate">Beneficial Occupancy</Label>
+                    <Input
+                      id="beneficialOccupancyDate"
+                      type="date"
+                      value={formData.beneficialOccupancyDate ? new Date(formData.beneficialOccupancyDate).toISOString().split('T')[0] : ''}
+                      onChange={(e) => setFormData(prev => ({ ...prev, beneficialOccupancyDate: e.target.value ? new Date(e.target.value) : null }))}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="leaseExpirationDate">Lease Expiration</Label>
+                    <Input
+                      id="leaseExpirationDate"
+                      type="date"
+                      value={formData.leaseExpirationDate ? new Date(formData.leaseExpirationDate).toISOString().split('T')[0] : ''}
+                      onChange={(e) => setFormData(prev => ({ ...prev, leaseExpirationDate: e.target.value ? new Date(e.target.value) : null }))}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="leaseExtensions">Extension Options</Label>
+                    <Input
+                      id="leaseExtensions"
+                      value={formData.leaseExtensions || ''}
+                      onChange={(e) => setFormData(prev => ({ ...prev, leaseExtensions: e.target.value }))}
+                      placeholder="e.g., 2 x 10-year options"
+                    />
+                  </div>
+                </div>
+              )}
+              
+              {!formData.isLandLease && (
+                <div className="text-sm text-gray-500 italic pl-6">
+                  Outright ownership - no land lease dates applicable
+                </div>
+              )}
             </div>
           </div>
 

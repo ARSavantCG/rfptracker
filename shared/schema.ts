@@ -537,6 +537,12 @@ export const properties = pgTable("properties", {
   // Display ordering for alphabetical organization
   displayOrder: integer("display_order"),
   
+  // Land Lease Information
+  isLandLease: boolean("is_land_lease").default(false), // Whether property is on a land lease vs outright ownership
+  beneficialOccupancyDate: timestamp("beneficial_occupancy_date"), // Date of beneficial occupancy for land lease
+  leaseExpirationDate: timestamp("lease_expiration_date"), // Land lease expiration date
+  leaseExtensions: text("lease_extensions"), // Description of lease extension options, e.g., "2 x 10-year options"
+  
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

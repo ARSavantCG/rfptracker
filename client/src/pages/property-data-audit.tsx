@@ -150,6 +150,7 @@ export default function PropertyDataAudit() {
       "Electrical": ["electricalAllocation", "electricalAllocationIncrement"],
       "Bay Configuration": ["bayConfigurations", "mechanicalRoomSquareFootage", "firstBayDirection", "bayProgressionDirection"],
       "Building Specifications": ["buildingDepth", "slabThickness", "clearHeight", "floorFlatness", "truckApronSlab", "rampCapacity", "roofRValue", "firePumpInfo", "fireSprinklerInfo"],
+      "Land Lease": ["isLandLease", "beneficialOccupancyDate", "leaseExpirationDate", "leaseExtensions"],
       "Metadata": ["id", "createdAt", "updatedAt"],
     };
     
@@ -184,6 +185,10 @@ export default function PropertyDataAudit() {
   const formatFieldName = (fieldName: string): string => {
     const customLabels: Record<string, string> = {
       isSingleBuilding: "Single Building",
+      isLandLease: "Land Lease",
+      beneficialOccupancyDate: "Beneficial Occupancy",
+      leaseExpirationDate: "Lease Expiration",
+      leaseExtensions: "Extension Options",
     };
     if (customLabels[fieldName]) return customLabels[fieldName];
     return fieldName
@@ -250,6 +255,8 @@ export default function PropertyDataAudit() {
             .flat()
             .filter(f => {
               if (f.field === "building" && property.isSingleBuilding) return false;
+              const isLandLeaseOnlyField = ["beneficialOccupancyDate", "leaseExpirationDate", "leaseExtensions"].includes(f.field);
+              if (isLandLeaseOnlyField && !property.isLandLease) return false;
               return f.missing || (f.zero && !["id", "displayOrder", "mechanicalRoomSquareFootage"].includes(f.field));
             });
           const improvements = allImprovements?.[property.id] || [];
@@ -326,10 +333,21 @@ export default function PropertyDataAudit() {
                         <div className="space-y-1">
                           {fields.map(({ field, value, missing, zero }) => {
                             const isBuildingFieldOnSingleBuilding = field === "building" && property.isSingleBuilding;
-                            const displayValue = isBuildingFieldOnSingleBuilding ? "N/A" : (
-                              field === "bayConfigurations" ? `${(value as BayConfiguration[])?.length || 0} bays configured` : formatValue(value)
-                            );
-                            const showMissing = missing && !isBuildingFieldOnSingleBuilding;
+                            const isLandLeaseOnlyField = ["beneficialOccupancyDate", "leaseExpirationDate", "leaseExtensions"].includes(field);
+                            const isNotApplicable = isBuildingFieldOnSingleBuilding || (isLandLeaseOnlyField && !property.isLandLease);
+                            
+                            let displayValue: string;
+                            if (isNotApplicable) {
+                              displayValue = "N/A";
+                            } else if (field === "bayConfigurations") {
+                              displayValue = `${(value as BayConfiguration[])?.length || 0} bays configured`;
+                            } else if (["beneficialOccupancyDate", "leaseExpirationDate"].includes(field) && value) {
+                              displayValue = new Date(value as string).toLocaleDateString();
+                            } else {
+                              displayValue = formatValue(value);
+                            }
+                            
+                            const showMissing = missing && !isNotApplicable && !(isLandLeaseOnlyField && !property.isLandLease);
                             return (
                               <div key={field} className="flex justify-between text-sm">
                                 <span className="text-muted-foreground">{formatFieldName(field)}:</span>

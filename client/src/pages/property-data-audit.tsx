@@ -329,6 +329,72 @@ export default function PropertyDataAudit() {
                               </span>
                             </div>
                           ))}
+                          {/* Embed Electrical Infrastructure in Electrical category */}
+                          {category === "Electrical" && transformers.length > 0 && (() => {
+                            const totalPanelKva = panels.reduce((sum, p) => sum + (p.maxCapacityKva || 0), 0);
+                            const availableKva = totalTransformerKva - totalPanelKva;
+                            const usagePercent = totalTransformerKva > 0 ? Math.round((totalPanelKva / totalTransformerKva) * 100) : 0;
+                            return (
+                              <div className="mt-3 pt-2 border-t space-y-2">
+                                <div className="text-xs font-semibold text-primary flex items-center gap-1">
+                                  <Zap className="h-3 w-3" />
+                                  Transformer Infrastructure
+                                </div>
+                                <div className="grid grid-cols-4 gap-1 text-xs">
+                                  <div className="text-center">
+                                    <div className="font-semibold">{totalTransformerKva.toLocaleString()}</div>
+                                    <div className="text-muted-foreground">Total kVA</div>
+                                  </div>
+                                  <div className="text-center">
+                                    <div className="font-semibold">{totalPanelKva.toLocaleString()}</div>
+                                    <div className="text-muted-foreground">Allocated</div>
+                                  </div>
+                                  <div className="text-center">
+                                    <div className={`font-semibold ${availableKva < 0 ? 'text-red-600' : 'text-emerald-700'}`}>
+                                      {availableKva.toLocaleString()}
+                                    </div>
+                                    <div className="text-muted-foreground">Available</div>
+                                  </div>
+                                  <div className="text-center">
+                                    <div className={`font-semibold ${usagePercent > 90 ? 'text-red-600' : usagePercent > 75 ? 'text-amber-600' : 'text-emerald-700'}`}>
+                                      {usagePercent}%
+                                    </div>
+                                    <div className="text-muted-foreground">Used</div>
+                                  </div>
+                                </div>
+                                {transformers.map((transformer) => {
+                                  const transformerPanels = panels.filter(p => p.transformerId === transformer.id);
+                                  const transformerAllocated = transformerPanels.reduce((sum, p) => sum + (p.maxCapacityKva || 0), 0);
+                                  const transformerAvailable = (transformer.totalCapacityKva || 0) - transformerAllocated;
+                                  return (
+                                    <div key={transformer.id} className="border-l-2 border-amber-300 pl-2 text-xs">
+                                      <div className="flex justify-between">
+                                        <span>{transformer.transformerName}</span>
+                                        <span>
+                                          {transformer.totalCapacityKva?.toLocaleString() || 0} kVA
+                                          <span className={`ml-1 ${transformerAvailable < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                                            ({transformerAvailable >= 0 ? '+' : ''}{transformerAvailable})
+                                          </span>
+                                        </span>
+                                      </div>
+                                      {transformer.fplId && <div className="text-muted-foreground">FPL: {transformer.fplId}</div>}
+                                      {transformerPanels.map((panel) => (
+                                        <div key={panel.id} className="flex justify-between text-muted-foreground pl-2">
+                                          <span>{panel.panelName} ({panel.voltage}V)</span>
+                                          <span>{panel.maxCapacityKva || 0} kVA / {panel.capacityAmps || 0}A</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            );
+                          })()}
+                          {category === "Electrical" && transformers.length === 0 && (
+                            <div className="mt-2 pt-2 border-t text-xs text-muted-foreground italic">
+                              No transformers/panels recorded
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -368,80 +434,6 @@ export default function PropertyDataAudit() {
                     </div>
                   </div>
                 )}
-
-                {/* Electrical Infrastructure Details */}
-                <div className="mt-4 border rounded-lg p-3 print:p-2 bg-amber-50/50">
-                  <h4 className="font-semibold text-sm mb-2 text-primary flex items-center gap-1">
-                    <Zap className="h-4 w-4" />
-                    Electrical Infrastructure
-                  </h4>
-                  {transformers.length > 0 ? (
-                    (() => {
-                      const totalPanelKva = panels.reduce((sum, p) => sum + (p.maxCapacityKva || 0), 0);
-                      const availableKva = totalTransformerKva - totalPanelKva;
-                      const usagePercent = totalTransformerKva > 0 ? Math.round((totalPanelKva / totalTransformerKva) * 100) : 0;
-                      return (
-                        <div className="space-y-2">
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm border-b pb-2 mb-2">
-                            <div className="text-center">
-                              <div className="font-semibold text-amber-700">{totalTransformerKva.toLocaleString()}</div>
-                              <div className="text-xs text-muted-foreground">Total kVA</div>
-                            </div>
-                            <div className="text-center">
-                              <div className="font-semibold text-blue-700">{totalPanelKva.toLocaleString()}</div>
-                              <div className="text-xs text-muted-foreground">Allocated kVA</div>
-                            </div>
-                            <div className="text-center">
-                              <div className={`font-semibold ${availableKva < 0 ? 'text-red-600' : 'text-emerald-700'}`}>
-                                {availableKva.toLocaleString()}
-                              </div>
-                              <div className="text-xs text-muted-foreground">Available kVA</div>
-                            </div>
-                            <div className="text-center">
-                              <div className={`font-semibold ${usagePercent > 90 ? 'text-red-600' : usagePercent > 75 ? 'text-amber-600' : 'text-emerald-700'}`}>
-                                {usagePercent}%
-                              </div>
-                              <div className="text-xs text-muted-foreground">Utilization</div>
-                            </div>
-                          </div>
-                          {transformers.map((transformer) => {
-                            const transformerPanels = panels.filter(p => p.transformerId === transformer.id);
-                            const transformerAllocated = transformerPanels.reduce((sum, p) => sum + (p.maxCapacityKva || 0), 0);
-                            const transformerAvailable = (transformer.totalCapacityKva || 0) - transformerAllocated;
-                            return (
-                              <div key={transformer.id} className="border-l-2 border-amber-300 pl-2 space-y-1">
-                                <div className="flex justify-between text-sm">
-                                  <span className="font-medium">{transformer.transformerName}</span>
-                                  <span className="text-muted-foreground">
-                                    {transformer.totalCapacityKva?.toLocaleString() || 0} kVA 
-                                    <span className={`ml-2 ${transformerAvailable < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
-                                      ({transformerAvailable >= 0 ? '+' : ''}{transformerAvailable.toLocaleString()} avail)
-                                    </span>
-                                  </span>
-                                </div>
-                                {transformer.fplId && (
-                                  <div className="text-xs text-muted-foreground">FPL ID: {transformer.fplId}</div>
-                                )}
-                                {transformerPanels.length > 0 && (
-                                  <div className="pl-3 text-xs space-y-1 mt-1">
-                                    {transformerPanels.map((panel) => (
-                                      <div key={panel.id} className="flex justify-between text-muted-foreground">
-                                        <span>{panel.panelName} ({panel.voltage}V)</span>
-                                        <span>{panel.maxCapacityKva?.toLocaleString() || 0} kVA / {panel.capacityAmps?.toLocaleString() || 0} AMPS</span>
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      );
-                    })()
-                  ) : (
-                    <p className="text-sm text-muted-foreground italic">No transformers/panels recorded</p>
-                  )}
-                </div>
 
                 {/* Existing Leases */}
                 <div className="mt-4 border rounded-lg p-3 print:p-2 bg-blue-50/50">

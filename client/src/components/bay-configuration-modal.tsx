@@ -151,11 +151,17 @@ export function BayConfigurationModal({
 
   // Handle area changes from the bay selection grid
   const handleAreaChange = useCallback((selectedBays: BayConfiguration[], totalSquareFootage: number, selectedBaysPerBuilding?: {[propertyName: string]: BayConfiguration[]}, costsPerBuilding?: {[propertyName: string]: BuildingCosts}) => {
+    console.log('🔧 MODAL handleAreaChange called:', {
+      selectedBaysCount: selectedBays.length,
+      selectedBayNames: selectedBays.map(b => b.bayName).join(', '),
+      totalSquareFootage,
+      isMultiBuilding
+    });
     setCurrentArea(totalSquareFootage);
     setCurrentBays(selectedBays);
     setCurrentSelectedBaysPerBuilding(selectedBaysPerBuilding || {});
     setCurrentCostsPerBuilding(costsPerBuilding || {});
-  }, []);
+  }, [isMultiBuilding]);
 
   // Calculate aggregate totals for multi-building mode
   const getTotalSelections = () => {
@@ -182,6 +188,7 @@ export function BayConfigurationModal({
       currentArea,
       totalArea,
       currentBaysLength: currentBays.length,
+      currentBayNames: currentBays.map(b => b.bayName).join(', '),
       totalBays,
       currentSelectedBaysPerBuilding,
       currentCostsPerBuilding,
@@ -191,6 +198,12 @@ export function BayConfigurationModal({
     // Use aggregated totals for multi-building mode
     const finalArea = isMultiBuilding ? totalArea : currentArea;
     const finalBays = isMultiBuilding ? Object.values(currentSelectedBaysPerBuilding).flat() : currentBays;
+    
+    console.log('🔧 BayConfigurationModal CONFIRMING with finalBays:', {
+      finalBaysCount: finalBays.length,
+      finalBayNames: finalBays.map(b => b.bayName).join(', '),
+      finalArea
+    });
     
     onConfirm(finalArea, finalBays, currentOverride, currentSelectedBaysPerBuilding, currentCostsPerBuilding);
     onClose();

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
@@ -59,11 +59,19 @@ export function BayConfigurationModal({
   
   // Master-detail interface state for multi-building mode
   const [currentBuildingKey, setCurrentBuildingKey] = useState<string | null>(null);
+  
+  // Track previous open state to detect modal open transition
+  const wasOpenRef = useRef(false);
 
-  // Reset internal state when modal opens with new initial values
+  // Reset internal state ONLY when modal transitions from closed to open
+  // This prevents resetting state during re-renders while the modal is open
   useEffect(() => {
-    if (isOpen) {
-      console.log('🔧 BayConfigurationModal: Syncing state on open', {
+    const wasOpen = wasOpenRef.current;
+    wasOpenRef.current = isOpen;
+    
+    // Only sync on open transition (not on every re-render while open)
+    if (isOpen && !wasOpen) {
+      console.log('🔧 BayConfigurationModal: Syncing state on OPEN TRANSITION', {
         initialSelectedBays: initialSelectedBays?.length,
         initialSelectedBaysPerBuilding: Object.keys(initialSelectedBaysPerBuilding || {}).length,
         initialOverrideArea

@@ -3020,6 +3020,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           formData.selectedBayConfigurations = [];
         }
       }
+      
+      // CRITICAL: Sync selectedBayIds with selectedBayConfigurations to prevent hydration mismatch
+      // When bay configurations are saved, extract their IDs to keep the fields in sync
+      if (formData.selectedBayConfigurations && Array.isArray(formData.selectedBayConfigurations) && formData.selectedBayConfigurations.length > 0) {
+        formData.selectedBayIds = formData.selectedBayConfigurations.map((bay: any) => bay.id);
+        console.log('🔧 Synced selectedBayIds with selectedBayConfigurations:', formData.selectedBayIds.length, 'IDs');
+      }
 
       // Handle multi-building JSON fields - properties
       if (formData.properties && typeof formData.properties === 'string') {

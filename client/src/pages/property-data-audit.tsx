@@ -376,33 +376,68 @@ export default function PropertyDataAudit() {
                     Electrical Infrastructure
                   </h4>
                   {transformers.length > 0 ? (
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm font-medium border-b pb-1">
-                        <span>Total Transformer Capacity:</span>
-                        <span className="text-amber-700">{totalTransformerKva.toLocaleString()} kVA</span>
-                      </div>
-                      {transformers.map((transformer) => {
-                        const transformerPanels = panels.filter(p => p.transformerId === transformer.id);
-                        return (
-                          <div key={transformer.id} className="border-l-2 border-amber-300 pl-2 space-y-1">
-                            <div className="flex justify-between text-sm">
-                              <span className="text-muted-foreground">{transformer.transformerName}</span>
-                              <span className="font-medium">{transformer.totalCapacityKva?.toLocaleString() || 0} kVA</span>
+                    (() => {
+                      const totalPanelKva = panels.reduce((sum, p) => sum + (p.maxCapacityKva || 0), 0);
+                      const availableKva = totalTransformerKva - totalPanelKva;
+                      const usagePercent = totalTransformerKva > 0 ? Math.round((totalPanelKva / totalTransformerKva) * 100) : 0;
+                      return (
+                        <div className="space-y-2">
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm border-b pb-2 mb-2">
+                            <div className="text-center">
+                              <div className="font-semibold text-amber-700">{totalTransformerKva.toLocaleString()}</div>
+                              <div className="text-xs text-muted-foreground">Total kVA</div>
                             </div>
-                            {transformerPanels.length > 0 && (
-                              <div className="pl-3 text-xs space-y-1">
-                                {transformerPanels.map((panel) => (
-                                  <div key={panel.id} className="flex justify-between text-muted-foreground">
-                                    <span>{panel.panelName} ({panel.voltage}V)</span>
-                                    <span>{panel.capacityAmps?.toLocaleString() || 0} AMPS</span>
-                                  </div>
-                                ))}
+                            <div className="text-center">
+                              <div className="font-semibold text-blue-700">{totalPanelKva.toLocaleString()}</div>
+                              <div className="text-xs text-muted-foreground">Allocated kVA</div>
+                            </div>
+                            <div className="text-center">
+                              <div className={`font-semibold ${availableKva < 0 ? 'text-red-600' : 'text-emerald-700'}`}>
+                                {availableKva.toLocaleString()}
                               </div>
-                            )}
+                              <div className="text-xs text-muted-foreground">Available kVA</div>
+                            </div>
+                            <div className="text-center">
+                              <div className={`font-semibold ${usagePercent > 90 ? 'text-red-600' : usagePercent > 75 ? 'text-amber-600' : 'text-emerald-700'}`}>
+                                {usagePercent}%
+                              </div>
+                              <div className="text-xs text-muted-foreground">Utilization</div>
+                            </div>
                           </div>
-                        );
-                      })}
-                    </div>
+                          {transformers.map((transformer) => {
+                            const transformerPanels = panels.filter(p => p.transformerId === transformer.id);
+                            const transformerAllocated = transformerPanels.reduce((sum, p) => sum + (p.maxCapacityKva || 0), 0);
+                            const transformerAvailable = (transformer.totalCapacityKva || 0) - transformerAllocated;
+                            return (
+                              <div key={transformer.id} className="border-l-2 border-amber-300 pl-2 space-y-1">
+                                <div className="flex justify-between text-sm">
+                                  <span className="font-medium">{transformer.transformerName}</span>
+                                  <span className="text-muted-foreground">
+                                    {transformer.totalCapacityKva?.toLocaleString() || 0} kVA 
+                                    <span className={`ml-2 ${transformerAvailable < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                                      ({transformerAvailable >= 0 ? '+' : ''}{transformerAvailable.toLocaleString()} avail)
+                                    </span>
+                                  </span>
+                                </div>
+                                {transformer.fplId && (
+                                  <div className="text-xs text-muted-foreground">FPL ID: {transformer.fplId}</div>
+                                )}
+                                {transformerPanels.length > 0 && (
+                                  <div className="pl-3 text-xs space-y-1 mt-1">
+                                    {transformerPanels.map((panel) => (
+                                      <div key={panel.id} className="flex justify-between text-muted-foreground">
+                                        <span>{panel.panelName} ({panel.voltage}V)</span>
+                                        <span>{panel.maxCapacityKva?.toLocaleString() || 0} kVA / {panel.capacityAmps?.toLocaleString() || 0} AMPS</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()
                   ) : (
                     <p className="text-sm text-muted-foreground italic">No transformers/panels recorded</p>
                   )}

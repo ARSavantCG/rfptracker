@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
@@ -59,6 +59,32 @@ export function BayConfigurationModal({
   
   // Master-detail interface state for multi-building mode
   const [currentBuildingKey, setCurrentBuildingKey] = useState<string | null>(null);
+
+  // Reset internal state when modal opens with new initial values
+  useEffect(() => {
+    if (isOpen) {
+      console.log('🔧 BayConfigurationModal: Syncing state on open', {
+        initialSelectedBays: initialSelectedBays?.length,
+        initialSelectedBaysPerBuilding: Object.keys(initialSelectedBaysPerBuilding || {}).length,
+        initialOverrideArea
+      });
+      setCurrentBays(initialSelectedBays || []);
+      setCurrentOverride(initialOverrideArea);
+      setCurrentSelectedBaysPerBuilding(initialSelectedBaysPerBuilding || {});
+      setCurrentCostsPerBuilding(initialCostsPerBuilding || {});
+      setCurrentBuildingKey(null);
+      
+      // Calculate initial area from initial bays
+      if (initialSelectedBays && initialSelectedBays.length > 0) {
+        const totalArea = initialSelectedBays.reduce((sum, bay) => 
+          sum + (bay.rentableSquareFootage || bay.squareFootage || 0), 0
+        );
+        setCurrentArea(totalArea);
+      } else {
+        setCurrentArea(0);
+      }
+    }
+  }, [isOpen, initialSelectedBays, initialOverrideArea, initialSelectedBaysPerBuilding, initialCostsPerBuilding]);
 
   // Fetch full property data with bay configurations when modal is open (single building mode)
   const { data: fullProperty, isLoading: isSinglePropertyLoading } = useQuery<Property>({

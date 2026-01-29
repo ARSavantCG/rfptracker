@@ -2905,6 +2905,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid ID" });
       }
 
+      // DEBUG: Log what we receive
+      console.log('🔧 BACKEND DEBUG - update-with-files received:', {
+        id,
+        hasSelectedBayConfigurations: !!req.body.selectedBayConfigurations,
+        selectedBayConfigurationsLength: req.body.selectedBayConfigurations ? 
+          (typeof req.body.selectedBayConfigurations === 'string' ? 
+            JSON.parse(req.body.selectedBayConfigurations).length : 
+            req.body.selectedBayConfigurations.length) : 0,
+        selectedBayConfigurationsRaw: req.body.selectedBayConfigurations ? 
+          req.body.selectedBayConfigurations.substring(0, 200) + '...' : 'none'
+      });
+
       // Parse form data properly
       const formData = { ...req.body };
       

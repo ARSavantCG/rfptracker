@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, AlertTriangle, CheckCircle, Building2, Printer, Zap, Wrench } from "lucide-react";
+import { Loader2, AlertTriangle, CheckCircle, Building2, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Property, Transformer, MainPanel, PropertyExistingImprovement, BayConfiguration } from "@shared/schema";
 
@@ -119,65 +119,28 @@ export default function PropertyDataAudit() {
   };
 
   return (
-    <div className="container mx-auto py-8 print:py-2">
-      <div className="flex justify-between items-center mb-6 print:hidden">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Building2 className="h-8 w-8" />
-            Property Data Audit Report
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Complete source of truth for all property data with missing field identification
-          </p>
+    <div className="min-h-screen">
+      {/* Teal Header Bar - Matches report branding */}
+      <div className="bg-gradient-to-r from-teal-600 to-cyan-600 text-white py-4 px-6 print:py-2 print:px-4">
+        <div className="container mx-auto flex justify-between items-center">
+          <div className="flex items-center gap-4">
+            <img src="/api/bridge-logo" alt="Bridge Industrial" className="h-8 bg-white rounded px-2 py-1" />
+            <div>
+              <h1 className="text-2xl font-bold">Property Data Audit Report</h1>
+              <p className="text-teal-100 text-sm">Complete source of truth for all property data</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-4 print:hidden">
+            <span className="text-sm text-teal-100">Generated: {new Date().toLocaleDateString()}</span>
+            <Button onClick={handlePrint} variant="secondary" className="gap-2">
+              <Printer className="h-4 w-4" />
+              Print Report
+            </Button>
+          </div>
         </div>
-        <Button onClick={handlePrint} className="gap-2">
-          <Printer className="h-4 w-4" />
-          Print Report
-        </Button>
       </div>
-
-      <div className="print:block hidden mb-4">
-        <h1 className="text-2xl font-bold">Property Data Audit Report</h1>
-        <p className="text-sm text-gray-600">Generated: {new Date().toLocaleDateString()}</p>
-      </div>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 print:grid-cols-4 print:gap-2 print:mb-4">
-        <Card>
-          <CardContent className="pt-4">
-            <div className="text-2xl font-bold">{properties?.length || 0}</div>
-            <div className="text-sm text-muted-foreground">Total Properties</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4">
-            <div className="text-2xl font-bold">
-              {properties?.reduce((sum, p) => sum + (p.bayConfigurations?.length || 0), 0) || 0}
-            </div>
-            <div className="text-sm text-muted-foreground">Total Bays</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4">
-            <div className="text-2xl font-bold text-green-600">
-              {properties?.filter(p => 
-                p.buildingDepth && p.clearHeight && p.slabThickness
-              ).length || 0}
-            </div>
-            <div className="text-sm text-muted-foreground">Complete Specs</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4">
-            <div className="text-2xl font-bold text-amber-600">
-              {properties?.filter(p => 
-                !p.buildingDepth || !p.clearHeight || !p.slabThickness
-              ).length || 0}
-            </div>
-            <div className="text-sm text-muted-foreground">Missing Specs</div>
-          </CardContent>
-        </Card>
-      </div>
+      
+      <div className="container mx-auto py-6 print:py-2 px-4">
 
       {/* Property Details */}
       <div className="space-y-8 print:space-y-4">
@@ -328,6 +291,7 @@ export default function PropertyDataAudit() {
       <div className="mt-8 text-center text-sm text-muted-foreground print:mt-4">
         <p>Report generated on {new Date().toLocaleString()}</p>
         <p>Total Properties Audited: {properties?.length || 0}</p>
+      </div>
       </div>
     </div>
   );

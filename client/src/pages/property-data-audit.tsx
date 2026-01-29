@@ -145,7 +145,7 @@ export default function PropertyDataAudit() {
 
   const getFieldCategory = (fieldName: string): string => {
     const categories: Record<string, string[]> = {
-      "Location & Identity": ["propertyName", "building", "isSingleBuilding", "streetAddress", "city", "state", "zip", "displayName", "displayOrder"],
+      "Location & Identity": ["propertyName", "building", "isSingleBuilding", "displayOrder"],
       "Parking": ["standardParking", "accessibleParking", "evParking", "trailerParking"],
       "Electrical": ["electricalAllocation", "electricalAllocationIncrement"],
       "Bay Configuration": ["bayConfigurations", "mechanicalRoomSquareFootage", "firstBayDirection", "bayProgressionDirection"],

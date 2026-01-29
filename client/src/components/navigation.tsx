@@ -9,6 +9,14 @@ import { useState, useRef, useEffect } from "react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import ChangePasswordModal from "./change-password-modal";
+import type { LucideIcon } from "lucide-react";
+
+interface NavItem {
+  path: string;
+  label: string;
+  icon: LucideIcon;
+  openInNewTab?: boolean;
+}
 
 export default function Navigation() {
   const [location] = useLocation();
@@ -60,7 +68,7 @@ export default function Navigation() {
   }, []);
 
   // Base navigation items
-  const baseNavItems = [
+  const baseNavItems: NavItem[] = [
     { path: "/", label: "Dashboard", icon: Home },
     { path: "/contacts", label: "Contacts", icon: Users },
     { path: "/properties", label: "Properties", icon: Building },
@@ -68,13 +76,13 @@ export default function Navigation() {
     { path: "/data-scrubbing", label: "Data Scrubbing", icon: ClipboardCheck },
     { path: "/data-mapping", label: "Data Mapping", icon: Tags },
     { path: "/project-report-generator", label: "Project Reports", icon: FileBarChart },
-    { path: "/property-data-audit", label: "Property Audit", icon: ClipboardList },
+    { path: "/property-data-audit", label: "Property Audit", icon: ClipboardList, openInNewTab: true },
     { path: "/rom-pilot", label: "ROM Pilot", icon: Calculator },
   ];
 
   // Add admin item if user is admin
-  const adminItems = isAdmin() ? [{ path: "/admin", label: "Admin Panel", icon: Settings }] : [];
-  const navItems = [...baseNavItems, ...adminItems];
+  const adminItems: NavItem[] = isAdmin() ? [{ path: "/admin", label: "Admin Panel", icon: Settings }] : [];
+  const navItems: NavItem[] = [...baseNavItems, ...adminItems];
 
   return (
     <nav className="bg-white border-b border-gray-200 px-6 py-3">
@@ -88,6 +96,21 @@ export default function Navigation() {
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = location === item.path;
+            
+            // Handle items that should open in a new tab (like reports)
+            if (item.openInNewTab) {
+              return (
+                <Button
+                  key={item.path}
+                  variant="ghost"
+                  className="flex items-center space-x-2"
+                  onClick={() => window.open(item.path, '_blank')}
+                >
+                  <Icon className="h-4 w-4" />
+                  <span>{item.label}</span>
+                </Button>
+              );
+            }
             
             return (
               <Link key={item.path} href={item.path}>

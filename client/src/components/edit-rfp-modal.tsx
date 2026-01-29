@@ -537,12 +537,21 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
       });
       
       // Add bay configurations (single or multi-building)
+      console.log('🔧 SAVE DEBUG - Bay configurations:', {
+        isMultiBuilding,
+        selectedBayConfigurationsCount: selectedBayConfigurations.length,
+        selectedBaysPerBuildingKeys: Object.keys(selectedBaysPerBuilding),
+        selectedBayConfigurations: selectedBayConfigurations.map(b => b.bayName)
+      });
+      
       if (isMultiBuilding) {
         formData.append('isMultiBuilding', 'true');
         formData.append('selectedBaysPerBuilding', JSON.stringify(selectedBaysPerBuilding));
         formData.append('properties', JSON.stringify(selectedProperties));
       } else if (selectedBayConfigurations.length > 0) {
         formData.append('selectedBayConfigurations', JSON.stringify(selectedBayConfigurations));
+      } else {
+        console.warn('⚠️ SAVE WARNING: No bay configurations to save!');
       }
       
       // Append new files

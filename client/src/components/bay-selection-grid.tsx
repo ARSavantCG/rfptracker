@@ -64,13 +64,16 @@ export function BaySelectionGrid({
   const leasedBayIds = (allExecutedLeases || []).flatMap(lease => lease.assignedBays || []);
 
   // Initialize single-building mode with previous selections
+  // Use JSON stringified IDs to detect when actual bay selections change (not just count)
+  const initialBayIdsKey = initialSelectedBays.map(bay => bay.id).sort().join(',');
+  
   useEffect(() => {
-    if (!multiBuildingMode && initialSelectedBays.length > 0) {
-      console.debug('🔧 Initializing single-building mode with previous selections:', initialSelectedBays.length, 'bays');
+    if (!multiBuildingMode) {
+      console.debug('🔧 BaySelectionGrid: Syncing with initial selected bays:', initialSelectedBays.length, 'bays, ids:', initialBayIdsKey);
       const initialBayIds = new Set(initialSelectedBays.map(bay => bay.id));
       setSelectedBayIds(initialBayIds);
     }
-  }, [initialSelectedBays.length, multiBuildingMode]);
+  }, [initialBayIdsKey, multiBuildingMode]);
 
   // Initialize building selections for multi-building mode
   useEffect(() => {

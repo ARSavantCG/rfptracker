@@ -139,7 +139,20 @@ export default function PropertyDataAudit() {
   };
 
   return (
-    <div className="min-h-screen">
+    <>
+      <style>{`
+        @media print {
+          @page {
+            size: portrait;
+            margin: 0.5in;
+          }
+          body {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+        }
+      `}</style>
+      <div className="min-h-screen">
       {/* Bridge Blue Header Bar - Matches report branding */}
       <div style={{ background: 'rgb(0, 50, 130)' }} className="text-white py-4 px-6 print:py-2 print:px-4">
         <div className="container mx-auto flex justify-between items-center">
@@ -291,51 +304,33 @@ export default function PropertyDataAudit() {
                 )}
 
                 {/* Existing Improvements / Costs in Place */}
-                <div className="mt-4 border rounded-lg p-3 print:p-2" style={{ borderColor: 'rgb(0, 50, 130)', borderLeftWidth: '4px' }}>
-                  <h4 className="font-semibold text-sm mb-2 flex items-center gap-1" style={{ color: 'rgb(0, 50, 130)' }}>
+                <div className="mt-4 border rounded-lg p-3 print:p-2 bg-emerald-50/50">
+                  <h4 className="font-semibold text-sm mb-2 text-primary flex items-center gap-1">
                     <DollarSign className="h-4 w-4" />
-                    EXISTING IMPROVEMENTS (Costs in Place)
+                    Existing Improvements (Costs in Place)
                   </h4>
                   {improvements.length > 0 ? (
-                    <>
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-xs">
-                          <thead>
-                            <tr className="border-b">
-                              <th className="text-left py-1">Category</th>
-                              <th className="text-left py-1">Description</th>
-                              <th className="text-right py-1">Budget</th>
-                              <th className="text-right py-1">Committed</th>
-                              <th className="text-right py-1">Paid</th>
-                              <th className="text-right py-1">Total</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {improvements.map((imp) => {
-                              const total = (imp.forecastCost || 0) + (imp.committedCost || 0) + (imp.actualsCost || 0);
-                              return (
-                                <tr key={imp.id} className="border-b border-dashed">
-                                  <td className="py-1">{imp.category || '-'}</td>
-                                  <td className="py-1">{imp.description || '-'}</td>
-                                  <td className="text-right py-1">${((imp.forecastCost || 0) / 100).toLocaleString()}</td>
-                                  <td className="text-right py-1">${((imp.committedCost || 0) / 100).toLocaleString()}</td>
-                                  <td className="text-right py-1">${((imp.actualsCost || 0) / 100).toLocaleString()}</td>
-                                  <td className="text-right py-1 font-medium">${(total / 100).toLocaleString()}</td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                          <tfoot>
-                            <tr className="border-t-2 font-semibold">
-                              <td colSpan={5} className="py-1 text-right">Total Costs in Place:</td>
-                              <td className="text-right py-1">${(totalCostsInPlace / 100).toLocaleString()}</td>
-                            </tr>
-                          </tfoot>
-                        </table>
+                    <div className="space-y-1">
+                      {improvements.map((imp) => {
+                        const total = (imp.forecastCost || 0) + (imp.committedCost || 0) + (imp.actualsCost || 0);
+                        return (
+                          <div key={imp.id} className="flex justify-between text-sm border-b border-dashed pb-1">
+                            <span className="text-muted-foreground">
+                              {imp.category || 'Uncategorized'}: {imp.description || '-'}
+                            </span>
+                            <span className="font-medium text-emerald-700">
+                              ${(total / 100).toLocaleString()}
+                            </span>
+                          </div>
+                        );
+                      })}
+                      <div className="flex justify-between text-sm pt-2 border-t font-semibold">
+                        <span>Total Costs in Place:</span>
+                        <span className="text-emerald-700">${(totalCostsInPlace / 100).toLocaleString()}</span>
                       </div>
-                    </>
+                    </div>
                   ) : (
-                    <p className="text-sm text-muted-foreground italic">No existing improvements recorded for this property.</p>
+                    <p className="text-sm text-muted-foreground italic">No existing improvements recorded</p>
                   )}
                 </div>
 
@@ -370,5 +365,6 @@ export default function PropertyDataAudit() {
       </div>
       </div>
     </div>
+    </>
   );
 }

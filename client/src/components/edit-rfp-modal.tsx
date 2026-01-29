@@ -272,24 +272,25 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
       if (rfp.selectedBayConfigurations && rfp.selectedBayConfigurations.length > 0) {
         setSelectedBayConfigurations(rfp.selectedBayConfigurations);
         
-        // Calculate total using proportional method for display (only for single-building)
+        // Calculate total from stored rentableSquareFootage (already includes mechanical allocation)
+        // Don't recalculate - the stored values are authoritative
         if (!isMultiBuildingRfp) {
-          const selectedBaySquareFootage = rfp.selectedBayConfigurations.reduce((sum: number, bay: any) => sum + (bay.squareFootage || 0), 0);
-          const property = properties.find(p => p.id.toString() === rfp.property);
-          const mechanicalRoomSF = property?.mechanicalRoomSquareFootage || 0;
+          const totalRentableArea = rfp.selectedBayConfigurations.reduce((sum: number, bay: any) => 
+            sum + (bay.rentableSquareFootage || bay.squareFootage || 0), 0
+          );
+          setCalculatedFloorArea(Math.round(totalRentableArea));
           
-          if (property?.bayConfigurations) {
-            const totalPropertyBaysSF = property.bayConfigurations.reduce((sum: number, bay: any) => sum + (bay.squareFootage || 0), 0);
-            const proportionalMechanical = totalPropertyBaysSF > 0 ? (selectedBaySquareFootage / totalPropertyBaysSF) * mechanicalRoomSF : 0;
-            const totalRentableArea = selectedBaySquareFootage + proportionalMechanical;
-            setCalculatedFloorArea(Math.round(totalRentableArea));
-          }
+          console.log('🔧 EDIT MODAL: Loading stored bay configs', {
+            bayCount: rfp.selectedBayConfigurations.length,
+            bayNames: rfp.selectedBayConfigurations.map((b: any) => b.bayName).join(', '),
+            totalRentableArea
+          });
         }
       } else if (isMultiBuildingRfp && rfp.selectedBaysPerBuilding) {
-        // Calculate total area for multi-building RFPs
+        // Calculate total area for multi-building RFPs using rentableSquareFootage (already includes mechanical)
         let totalArea = 0;
         Object.values(rfp.selectedBaysPerBuilding).forEach(bays => {
-          totalArea += bays.reduce((sum: number, bay: any) => sum + (bay.squareFootage || 0), 0);
+          totalArea += bays.reduce((sum: number, bay: any) => sum + (bay.rentableSquareFootage || bay.squareFootage || 0), 0);
         });
         setCalculatedFloorArea(totalArea);
       } else {

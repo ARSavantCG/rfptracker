@@ -90,6 +90,11 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
     selectedBaysPerBuilding?: {[propertyName: string]: BayConfiguration[]},
     costsPerBuilding?: {[propertyName: string]: BuildingCosts}
   ) => {
+    console.log('🔧 EDIT MODAL handleFloorAreaChange called:', {
+      area,
+      bayConfigsCount: bayConfigs.length,
+      bayConfigsNames: bayConfigs.map(b => b.bayName).join(', ')
+    });
     
     // Use the area calculated by the Bay Configuration Selector (already includes proportional mechanical allocation)
     setCalculatedFloorArea(area);

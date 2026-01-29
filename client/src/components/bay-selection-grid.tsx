@@ -266,6 +266,8 @@ export function BaySelectionGrid({
 
   // Toggle bay selection for single building mode
   const toggleBaySelection = (bayId: string) => {
+    console.log('🔧 GRID toggleBaySelection called:', { bayId, currentSelectedCount: selectedBayIds.size });
+    
     const newSelectedBayIds = new Set(selectedBayIds);
     
     if (newSelectedBayIds.has(bayId)) {
@@ -275,6 +277,7 @@ export function BaySelectionGrid({
     }
     
     setSelectedBayIds(newSelectedBayIds);
+    console.log('🔧 GRID new selection:', { newCount: newSelectedBayIds.size, ids: Array.from(newSelectedBayIds).join(', ') });
     
     // Generate individual bays (with split support) to match against selection
     const individualBays = generateIndividualBays(property?.bayConfigurations || []);
@@ -299,6 +302,12 @@ export function BaySelectionGrid({
     const totalSquareFootage = selectedBayConfigs.reduce((total, bay) => 
       total + (bay.rentableSquareFootage || bay.squareFootage), 0);
     
+    console.log('🔧 GRID calling onSelectionChange:', { 
+      selectedBayConfigsCount: selectedBayConfigs.length, 
+      bayNames: selectedBayConfigs.map(b => b.bayName).join(', '),
+      totalSquareFootage,
+      hasCallback: !!onSelectionChange
+    });
     onSelectionChange?.(selectedBayConfigs, totalSquareFootage);
   };
 

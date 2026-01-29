@@ -182,6 +182,10 @@ export default function PropertyDataAudit() {
   };
 
   const formatFieldName = (fieldName: string): string => {
+    const customLabels: Record<string, string> = {
+      isSingleBuilding: "Single Building",
+    };
+    if (customLabels[fieldName]) return customLabels[fieldName];
     return fieldName
       .replace(/([A-Z])/g, " $1")
       .replace(/^./, (str) => str.toUpperCase())
@@ -244,7 +248,10 @@ export default function PropertyDataAudit() {
           const totals = calculateTotals(property);
           const missingFields = Object.values(grouped)
             .flat()
-            .filter(f => f.missing || (f.zero && !["id", "displayOrder", "mechanicalRoomSquareFootage"].includes(f.field)));
+            .filter(f => {
+              if (f.field === "building" && property.isSingleBuilding) return false;
+              return f.missing || (f.zero && !["id", "displayOrder", "mechanicalRoomSquareFootage"].includes(f.field));
+            });
           const improvements = allImprovements?.[property.id] || [];
           const totalCostsInPlace = improvements.reduce((sum, imp) => {
             const forecastCost = imp.forecastCost || 0;
@@ -262,7 +269,7 @@ export default function PropertyDataAudit() {
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center justify-between">
                   <span className="text-xl">
-                    {property.propertyName} - Building {property.building}
+                    {property.propertyName}{property.isSingleBuilding ? "" : ` - Building ${property.building}`}
                   </span>
                   {missingFields.length === 0 ? (
                     <Badge className="bg-green-100 text-green-800 gap-1">
@@ -317,18 +324,21 @@ export default function PropertyDataAudit() {
                       <div key={category} className="border rounded-lg p-3 print:p-2">
                         <h4 className="font-semibold text-sm mb-2 text-primary">{category}</h4>
                         <div className="space-y-1">
-                          {fields.map(({ field, value, missing, zero }) => (
-                            <div key={field} className="flex justify-between text-sm">
-                              <span className="text-muted-foreground">{formatFieldName(field)}:</span>
-                              <span className={`font-medium ${missing ? 'text-red-600' : zero ? 'text-amber-600' : ''}`}>
-                                {field === "bayConfigurations" ? (
-                                  <span>{(value as BayConfiguration[])?.length || 0} bays configured</span>
-                                ) : (
-                                  formatValue(value)
-                                )}
-                              </span>
-                            </div>
-                          ))}
+                          {fields.map(({ field, value, missing, zero }) => {
+                            const isBuildingFieldOnSingleBuilding = field === "building" && property.isSingleBuilding;
+                            const displayValue = isBuildingFieldOnSingleBuilding ? "N/A" : (
+                              field === "bayConfigurations" ? `${(value as BayConfiguration[])?.length || 0} bays configured` : formatValue(value)
+                            );
+                            const showMissing = missing && !isBuildingFieldOnSingleBuilding;
+                            return (
+                              <div key={field} className="flex justify-between text-sm">
+                                <span className="text-muted-foreground">{formatFieldName(field)}:</span>
+                                <span className={`font-medium ${showMissing ? 'text-red-600' : zero ? 'text-amber-600' : ''}`}>
+                                  {displayValue}
+                                </span>
+                              </div>
+                            );
+                          })}
                           {/* Embed Electrical Infrastructure in Electrical category */}
                           {category === "Electrical" && transformers.length > 0 && (() => {
                             const totalPanelKva = panels.reduce((sum, p) => sum + (p.maxCapacityKva || 0), 0);

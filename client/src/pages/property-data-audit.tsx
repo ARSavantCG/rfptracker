@@ -1,19 +1,39 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, AlertTriangle, CheckCircle, Building2, Printer } from "lucide-react";
+import { Loader2, AlertTriangle, CheckCircle, Building2, Printer, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Property, Transformer, MainPanel, PropertyExistingImprovement, BayConfiguration } from "@shared/schema";
 
-interface PropertyWithRelations extends Property {
-  transformers?: Transformer[];
-  panels?: MainPanel[];
+interface PropertyWithImprovements extends Property {
   existingImprovements?: PropertyExistingImprovement[];
 }
 
 export default function PropertyDataAudit() {
   const { data: properties, isLoading: propertiesLoading } = useQuery<Property[]>({
     queryKey: ["/api/properties"],
+  });
+
+  const { data: allImprovements } = useQuery<Record<number, PropertyExistingImprovement[]>>({
+    queryKey: ["/api/all-property-improvements"],
+    queryFn: async () => {
+      if (!properties) return {};
+      const improvementsMap: Record<number, PropertyExistingImprovement[]> = {};
+      await Promise.all(
+        properties.map(async (p) => {
+          try {
+            const res = await fetch(`/api/properties/${p.id}/existing-improvements`);
+            if (res.ok) {
+              improvementsMap[p.id] = await res.json();
+            }
+          } catch (e) {
+            improvementsMap[p.id] = [];
+          }
+        })
+      );
+      return improvementsMap;
+    },
+    enabled: !!properties && properties.length > 0,
   });
 
   const handlePrint = () => {
@@ -120,18 +140,18 @@ export default function PropertyDataAudit() {
 
   return (
     <div className="min-h-screen">
-      {/* Teal Header Bar - Matches report branding */}
-      <div className="bg-gradient-to-r from-teal-600 to-cyan-600 text-white py-4 px-6 print:py-2 print:px-4">
+      {/* Bridge Blue Header Bar - Matches report branding */}
+      <div style={{ background: 'rgb(0, 50, 130)' }} className="text-white py-4 px-6 print:py-2 print:px-4">
         <div className="container mx-auto flex justify-between items-center">
           <div className="flex items-center gap-4">
             <img src="/api/bridge-logo" alt="Bridge Industrial" className="h-8 bg-white rounded px-2 py-1" />
             <div>
               <h1 className="text-2xl font-bold">Property Data Audit Report</h1>
-              <p className="text-teal-100 text-sm">Complete source of truth for all property data</p>
+              <p className="text-blue-200 text-sm">Complete source of truth for all property data</p>
             </div>
           </div>
           <div className="flex items-center gap-4 print:hidden">
-            <span className="text-sm text-teal-100">Generated: {new Date().toLocaleDateString()}</span>
+            <span className="text-sm text-blue-200">Generated: {new Date().toLocaleDateString()}</span>
             <Button onClick={handlePrint} variant="secondary" className="gap-2">
               <Printer className="h-4 w-4" />
               Print Report
@@ -150,6 +170,13 @@ export default function PropertyDataAudit() {
           const missingFields = Object.values(grouped)
             .flat()
             .filter(f => f.missing || (f.zero && !["id", "displayOrder", "mechanicalRoomSquareFootage"].includes(f.field)));
+          const improvements = allImprovements?.[property.id] || [];
+          const totalCostsInPlace = improvements.reduce((sum, imp) => {
+            const forecastCost = imp.forecastCost || 0;
+            const committedCost = imp.committedCost || 0;
+            const actualsCost = imp.actualsCost || 0;
+            return sum + forecastCost + committedCost + actualsCost;
+          }, 0);
           
           return (
             <Card key={property.id} className="print:break-inside-avoid">
@@ -262,6 +289,55 @@ export default function PropertyDataAudit() {
                     </div>
                   </div>
                 )}
+
+                {/* Existing Improvements / Costs in Place */}
+                <div className="mt-4 border rounded-lg p-3 print:p-2" style={{ borderColor: 'rgb(0, 50, 130)', borderLeftWidth: '4px' }}>
+                  <h4 className="font-semibold text-sm mb-2 flex items-center gap-1" style={{ color: 'rgb(0, 50, 130)' }}>
+                    <DollarSign className="h-4 w-4" />
+                    EXISTING IMPROVEMENTS (Costs in Place)
+                  </h4>
+                  {improvements.length > 0 ? (
+                    <>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-xs">
+                          <thead>
+                            <tr className="border-b">
+                              <th className="text-left py-1">Category</th>
+                              <th className="text-left py-1">Description</th>
+                              <th className="text-right py-1">Budget</th>
+                              <th className="text-right py-1">Committed</th>
+                              <th className="text-right py-1">Paid</th>
+                              <th className="text-right py-1">Total</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {improvements.map((imp) => {
+                              const total = (imp.forecastCost || 0) + (imp.committedCost || 0) + (imp.actualsCost || 0);
+                              return (
+                                <tr key={imp.id} className="border-b border-dashed">
+                                  <td className="py-1">{imp.category || '-'}</td>
+                                  <td className="py-1">{imp.description || '-'}</td>
+                                  <td className="text-right py-1">${((imp.forecastCost || 0) / 100).toLocaleString()}</td>
+                                  <td className="text-right py-1">${((imp.committedCost || 0) / 100).toLocaleString()}</td>
+                                  <td className="text-right py-1">${((imp.actualsCost || 0) / 100).toLocaleString()}</td>
+                                  <td className="text-right py-1 font-medium">${(total / 100).toLocaleString()}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                          <tfoot>
+                            <tr className="border-t-2 font-semibold">
+                              <td colSpan={5} className="py-1 text-right">Total Costs in Place:</td>
+                              <td className="text-right py-1">${(totalCostsInPlace / 100).toLocaleString()}</td>
+                            </tr>
+                          </tfoot>
+                        </table>
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-sm text-muted-foreground italic">No existing improvements recorded for this property.</p>
+                  )}
+                </div>
 
                 {/* Missing/Required Data Section */}
                 {missingFields.length > 0 && (

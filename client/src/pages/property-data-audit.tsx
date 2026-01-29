@@ -319,7 +319,7 @@ export default function PropertyDataAudit() {
                 {/* Categorized Fields */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 print:grid-cols-2 print:gap-2">
                   {Object.entries(grouped)
-                    .filter(([category]) => category !== "Metadata")
+                    .filter(([category]) => category !== "Metadata" && category !== "Location & Identity" && category !== "Other")
                     .map(([category, fields]) => (
                       <div key={category} className="border rounded-lg p-3 print:p-2">
                         <h4 className="font-semibold text-sm mb-2 text-primary">{category}</h4>

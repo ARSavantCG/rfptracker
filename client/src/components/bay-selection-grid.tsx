@@ -267,6 +267,7 @@ export function BaySelectionGrid({
   // Toggle bay selection for single building mode
   const toggleBaySelection = (bayId: string) => {
     console.log('🔧 GRID toggleBaySelection called:', { bayId, currentSelectedCount: selectedBayIds.size });
+    console.warn('BAY CLICKED:', bayId); // Use warn for better visibility in console
     
     const newSelectedBayIds = new Set(selectedBayIds);
     
@@ -875,7 +876,14 @@ export function BaySelectionGrid({
                             return (
                               <div key={bay.id} className="flex-shrink-0">
                                 <button
-                                  onClick={() => !isLeased && toggleBaySelection(bay.id)}
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    if (!isLeased) {
+                                      toggleBaySelection(bay.id);
+                                    }
+                                  }}
                                   disabled={isLeased}
                                   className={`
                                     ${isSplitBay ? 'w-12 h-[72px]' : 'w-12 h-36'} p-0.5 rounded border-2 transition-all duration-200

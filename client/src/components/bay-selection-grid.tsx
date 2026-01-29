@@ -830,6 +830,14 @@ export function BaySelectionGrid({
                 {(() => {
                   // Generate individual bays with split support
                   const individualBays = generateIndividualBays(property?.bayConfigurations || []);
+                  console.log('🔧 GRID RENDER - Single building mode:', {
+                    propertyId: property?.id,
+                    propertyName: property?.propertyName,
+                    bayConfigurationsCount: property?.bayConfigurations?.length || 0,
+                    individualBaysCount: individualBays.length,
+                    selectedBayIdsCount: selectedBayIds.size,
+                    leasedBayIdsCount: leasedBayIds.length
+                  });
                   
                   // Group bays by bay number to stack split bays vertically
                   const bayGroups = new Map<number, typeof individualBays>();

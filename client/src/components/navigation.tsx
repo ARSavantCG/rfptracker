@@ -16,6 +16,7 @@ interface NavItem {
   label: string;
   icon: LucideIcon;
   openInNewTab?: boolean;
+  hasSubmenu?: boolean;
 }
 
 export default function Navigation() {
@@ -26,8 +27,10 @@ export default function Navigation() {
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isReportsOpen, setIsReportsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
+  const reportsRef = useRef<HTMLDivElement>(null);
   
   const { data: currentUser } = useQuery({
     queryKey: ["/api/auth/user"],
@@ -64,6 +67,9 @@ export default function Navigation() {
       if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target as Node)) {
         setIsMobileMenuOpen(false);
       }
+      if (reportsRef.current && !reportsRef.current.contains(event.target as Node)) {
+        setIsReportsOpen(false);
+      }
     }
 
     document.addEventListener('mousedown', handleClickOutside);
@@ -87,17 +93,20 @@ export default function Navigation() {
     setIsMobileMenuOpen(false);
   };
 
-  // Base navigation items
+  // Base navigation items (simplified - Data Scrubbing/Mapping moved to Admin, Reports consolidated)
   const baseNavItems: NavItem[] = [
     { path: "/", label: "Dashboard", icon: Home },
     { path: "/contacts", label: "Contacts", icon: Users },
     { path: "/properties", label: "Properties", icon: Building },
-    { path: "/reports", label: "Reports", icon: BarChart3 },
-    { path: "/data-scrubbing", label: "Data Scrubbing", icon: ClipboardCheck },
-    { path: "/data-mapping", label: "Data Mapping", icon: Tags },
-    { path: "/project-report-generator", label: "Project Reports", icon: FileBarChart },
-    { path: "/property-data-audit", label: "Property Audit", icon: ClipboardList, openInNewTab: true },
+    { path: "/reports", label: "Reports", icon: BarChart3, hasSubmenu: true },
     { path: "/rom-pilot", label: "ROM Pilot", icon: Calculator },
+  ];
+  
+  // Reports submenu items
+  const reportsSubmenu: NavItem[] = [
+    { path: "/reports", label: "Vendor Workload", icon: BarChart3 },
+    { path: "/project-report-generator", label: "Project Reports", icon: FileBarChart, openInNewTab: true },
+    { path: "/property-data-audit", label: "Property Audit", icon: ClipboardList, openInNewTab: true },
   ];
 
   // Add admin item if user is admin
@@ -135,7 +144,63 @@ export default function Navigation() {
           <div className="hidden lg:flex items-center space-x-1 ml-8">
             {navItems.map((item) => {
               const Icon = item.icon;
-              const isActive = location === item.path;
+              const isActive = location === item.path || (item.hasSubmenu && reportsSubmenu.some(sub => location === sub.path));
+              
+              // Handle Reports dropdown
+              if (item.hasSubmenu) {
+                return (
+                  <div key={item.path} className="relative" ref={reportsRef}>
+                    <Button
+                      variant={isActive ? "default" : "ghost"}
+                      className={cn(
+                        "flex items-center space-x-2",
+                        isActive && "bg-blue-600 text-white hover:bg-blue-700"
+                      )}
+                      onClick={() => setIsReportsOpen(!isReportsOpen)}
+                    >
+                      <Icon className="h-4 w-4" />
+                      <span>{item.label}</span>
+                      <ChevronDown className={cn("h-3 w-3 transition-transform", isReportsOpen && "rotate-180")} />
+                    </Button>
+                    
+                    {isReportsOpen && (
+                      <div className="absolute left-0 mt-2 w-56 bg-white border border-gray-200 rounded-md shadow-lg z-50">
+                        <div className="py-1">
+                          {reportsSubmenu.map((subItem) => {
+                            const SubIcon = subItem.icon;
+                            const isSubActive = location === subItem.path;
+                            return (
+                              <button
+                                key={subItem.path}
+                                onClick={() => {
+                                  if (subItem.openInNewTab) {
+                                    window.open(subItem.path, '_blank');
+                                  } else {
+                                    setLocation(subItem.path);
+                                  }
+                                  setIsReportsOpen(false);
+                                }}
+                                className={cn(
+                                  "flex items-center w-full px-4 py-2 text-sm transition-colors",
+                                  isSubActive 
+                                    ? "bg-blue-50 text-blue-700" 
+                                    : "text-gray-700 hover:bg-gray-100"
+                                )}
+                              >
+                                <SubIcon className={cn("h-4 w-4 mr-3", isSubActive ? "text-blue-600" : "text-gray-500")} />
+                                {subItem.label}
+                                {subItem.openInNewTab && (
+                                  <span className="ml-auto text-xs text-gray-400">↗</span>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              }
               
               if (item.openInNewTab) {
                 return (
@@ -255,10 +320,43 @@ export default function Navigation() {
             </div>
 
             {/* Navigation items */}
-            <div className="py-2">
+            <div className="py-2 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 200px)' }}>
               {navItems.map((item) => {
                 const Icon = item.icon;
-                const isActive = location === item.path;
+                const isActive = location === item.path || (item.hasSubmenu && reportsSubmenu.some(sub => location === sub.path));
+                
+                // Handle Reports section with submenu
+                if (item.hasSubmenu) {
+                  return (
+                    <div key={item.path}>
+                      <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider bg-gray-50">
+                        Reports
+                      </div>
+                      {reportsSubmenu.map((subItem) => {
+                        const SubIcon = subItem.icon;
+                        const isSubActive = location === subItem.path;
+                        return (
+                          <button
+                            key={subItem.path}
+                            onClick={() => handleNavClick(subItem)}
+                            className={cn(
+                              "flex items-center w-full px-4 py-3 text-left transition-colors",
+                              isSubActive 
+                                ? "bg-blue-50 text-blue-700 border-l-4 border-blue-600" 
+                                : "text-gray-700 hover:bg-gray-100 border-l-4 border-transparent"
+                            )}
+                          >
+                            <SubIcon className={cn("h-5 w-5 mr-3", isSubActive ? "text-blue-600" : "text-gray-500")} />
+                            <span className="font-medium">{subItem.label}</span>
+                            {subItem.openInNewTab && (
+                              <span className="ml-auto text-xs text-gray-400">↗</span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  );
+                }
                 
                 return (
                   <button
@@ -274,7 +372,7 @@ export default function Navigation() {
                     <Icon className={cn("h-5 w-5 mr-3", isActive ? "text-blue-600" : "text-gray-500")} />
                     <span className="font-medium">{item.label}</span>
                     {item.openInNewTab && (
-                      <span className="ml-auto text-xs text-gray-400">Opens new tab</span>
+                      <span className="ml-auto text-xs text-gray-400">↗</span>
                     )}
                   </button>
                 );

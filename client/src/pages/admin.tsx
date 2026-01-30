@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Shield, Users, Settings, Edit, Trash2, CheckCircle, XCircle, User as UserIcon, KeyRound, FileText, HardDrive, Layout, Clock, Scale, ChevronDown, Hash, BarChart, ExternalLink, Mail } from "lucide-react";
+import { Shield, Users, Settings, Edit, Trash2, CheckCircle, XCircle, User as UserIcon, KeyRound, FileText, HardDrive, Layout, Clock, Scale, ChevronDown, Hash, BarChart, ExternalLink, Mail, ClipboardCheck, Tags } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
@@ -1045,6 +1045,11 @@ export default function Admin() {
               <span className="hidden sm:inline">Email Testing</span>
               <span className="sm:hidden">Email</span>
             </TabsTrigger>
+            <TabsTrigger value="data-quality" className="flex items-center gap-2 flex-shrink-0">
+              <ClipboardCheck className="h-4 w-4" />
+              <span className="hidden sm:inline">Data Quality</span>
+              <span className="sm:hidden">Data</span>
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="users" className="mt-6">
@@ -1172,6 +1177,79 @@ export default function Admin() {
 
           <TabsContent value="email" className="mt-6">
             <EmailTestPanel />
+          </TabsContent>
+
+          <TabsContent value="data-quality" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <ClipboardCheck className="h-5 w-5" />
+                  <span>Data Quality Tools</span>
+                </CardTitle>
+                <CardDescription>
+                  Clean and categorize bid data for accurate cost benchmarking and analytics
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid md:grid-cols-2 gap-6">
+                  {/* Data Scrubbing */}
+                  <div className="p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                        <ClipboardCheck className="h-4 w-4 text-green-600" />
+                        Data Scrubbing
+                      </h3>
+                      <ExternalLink className="h-4 w-4 text-gray-400" />
+                    </div>
+                    <p className="text-sm text-gray-600 mb-4">
+                      Mark individual bid line items as "clean" data suitable for analytical 
+                      reports and cost benchmarking. Filter and bulk update capabilities.
+                    </p>
+                    <Button 
+                      size="sm" 
+                      onClick={() => window.open('/data-scrubbing', '_blank')}
+                      className="w-full"
+                    >
+                      <ClipboardCheck className="h-3 w-3 mr-1" />
+                      Open Data Scrubbing
+                    </Button>
+                  </div>
+
+                  {/* Data Mapping */}
+                  <div className="p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                        <Tags className="h-4 w-4 text-blue-600" />
+                        Data Mapping
+                      </h3>
+                      <ExternalLink className="h-4 w-4 text-gray-400" />
+                    </div>
+                    <p className="text-sm text-gray-600 mb-4">
+                      Assign standardized master categories to bid line items for consistent 
+                      cost categorization across all projects.
+                    </p>
+                    <Button 
+                      size="sm" 
+                      onClick={() => window.open('/data-mapping', '_blank')}
+                      className="w-full"
+                      variant="outline"
+                    >
+                      <Tags className="h-3 w-3 mr-1" />
+                      Open Data Mapping
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="bg-amber-50 p-4 rounded-lg border border-amber-200">
+                  <h4 className="font-medium text-amber-900 mb-2">Data Quality Workflow:</h4>
+                  <ol className="text-sm text-amber-800 space-y-1 list-decimal list-inside">
+                    <li>Use <strong>Data Mapping</strong> to assign master categories to unmapped line items</li>
+                    <li>Use <strong>Data Scrubbing</strong> to mark reliable pricing data as "clean"</li>
+                    <li>Generate reports using only clean, categorized data for accurate benchmarking</li>
+                  </ol>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>

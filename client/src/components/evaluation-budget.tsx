@@ -1620,6 +1620,13 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       const savedTenantVoltage = (existingBudget as any).metadata?.tenantVoltage;
       const savedElectricalAllocations = (existingBudget as any).metadata?.electricalAllocations || [];
       
+      // Restore manual overrides from saved metadata - this prevents auto-population from overwriting user changes
+      const savedManualOverrides = (existingBudget as any).metadata?.manualOverrides || [];
+      if (savedManualOverrides.length > 0) {
+        console.log(`📂 Loading ${savedManualOverrides.length} saved manual overrides:`, savedManualOverrides);
+        setManualOverrides(new Set(savedManualOverrides));
+      }
+      
       // Check if saved allocations have the new amps field (not legacy kVA-only data)
       const hasLegacyData = savedElectricalAllocations.length > 0 && 
         savedElectricalAllocations.some((alloc: any) => alloc.amps === undefined);
@@ -3647,8 +3654,9 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
   };
 
   const updateItem = (category: 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', itemId: string, updates: Partial<EvaluationLineItem>) => {
-    // Track manual override for auto-calculated items when quantity is manually changed
-    if (updates.quantity !== undefined && category === 'designSoftCosts') {
+    // Track manual override for auto-calculated items when quantity, unit, or unitPrice is changed
+    // This prevents auto-population from overwriting user changes
+    if ((updates.quantity !== undefined || updates.unit !== undefined || updates.unitPrice !== undefined) && category === 'designSoftCosts') {
       setBudgetData(prev => {
         const item = prev[category].find(i => i.id === itemId);
         if (item) {
@@ -3659,9 +3667,32 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
             (desc.includes("builder") && desc.includes("risk")) ||
             (desc.includes("permit") && desc.includes("fee")) ||
             (desc.includes("construction") && desc.includes("management")) ||
-            desc.includes("contingency");
+            desc.includes("contingency") ||
+            desc.includes("demising wall");
           
           if (isAutoCalcItem) {
+            console.log(`🔒 Marking item as manually overridden: ${item.description} (${itemId})`);
+            setManualOverrides(prev => new Set(prev).add(itemId));
+          }
+        }
+        return prev;
+      });
+    }
+    
+    // Also track manual overrides for TI items (like Demising Wall that gets auto-populated)
+    if ((updates.quantity !== undefined || updates.unit !== undefined || updates.unitPrice !== undefined) && category === 'tenantImprovements') {
+      setBudgetData(prev => {
+        const item = prev[category].find(i => i.id === itemId);
+        if (item) {
+          const desc = (item.description || "").toLowerCase();
+          // Check if this is an auto-populated item
+          const isAutoPopulatedItem = 
+            desc.includes("demising wall") ||
+            desc.includes("office area") ||
+            desc.includes("warehouse office");
+          
+          if (isAutoPopulatedItem) {
+            console.log(`🔒 Marking TI item as manually overridden: ${item.description} (${itemId})`);
             setManualOverrides(prev => new Set(prev).add(itemId));
           }
         }
@@ -3795,9 +3826,13 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
           calculatedElectricalAllocation: budgetData.calculatedElectricalAllocation,
           electricalAllocationOverride: budgetData.electricalAllocationOverride,
           tenantVoltage: budgetData.tenantVoltage,
-          electricalAllocations: budgetData.electricalAllocations
+          electricalAllocations: budgetData.electricalAllocations,
+          // Persist manual overrides to prevent auto-population from overwriting user changes
+          manualOverrides: Array.from(manualOverrides)
         },
       };
+
+      console.log(`💾 Saving budget with ${manualOverrides.size} manual overrides:`, Array.from(manualOverrides));
 
       await fetch(`/api/rfp-requests/${rfp.id}/evaluation-budget`, {
         method: 'POST',
@@ -3871,9 +3906,13 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
           calculatedElectricalAllocation: budgetData.calculatedElectricalAllocation,
           electricalAllocationOverride: budgetData.electricalAllocationOverride,
           tenantVoltage: budgetData.tenantVoltage,
-          electricalAllocations: budgetData.electricalAllocations
+          electricalAllocations: budgetData.electricalAllocations,
+          // Persist manual overrides to prevent auto-population from overwriting user changes
+          manualOverrides: Array.from(manualOverrides)
         },
       };
+
+      console.log(`💾 Saving & advancing with ${manualOverrides.size} manual overrides:`, Array.from(manualOverrides));
 
       await fetch(`/api/rfp-requests/${rfp.id}/evaluation-budget`, {
         method: 'POST',

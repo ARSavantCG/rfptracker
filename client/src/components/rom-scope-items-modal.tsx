@@ -16,7 +16,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
 import { FormulaInput } from "@/components/formula-input";
 import { evaluateFormula } from "@shared/formula-utils";
-import { Plus, Edit2, Trash2, Package, DollarSign, ChevronDown, ChevronRight, Upload, FileText, X, Edit3, Check, Printer } from "lucide-react";
+import { Plus, Edit2, Trash2, Package, DollarSign, ChevronDown, ChevronRight, Upload, FileText, X, Edit3, Check, Printer, Download } from "lucide-react";
 
 interface RomScopeItem {
   id: number;
@@ -1522,6 +1522,172 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                                           </div>
                                         </div>
                                       </div>
+                                      {/* File Attachments Section - Inline Edit */}
+                                      <div className="space-y-4 pt-4 border-t">
+                                        <div className="space-y-2">
+                                          <Label>Attachments</Label>
+                                          <div 
+                                            className={`border-2 border-dashed rounded-lg p-4 transition-colors ${
+                                              isDragging 
+                                                ? 'border-blue-500 bg-blue-50' 
+                                                : 'border-gray-300 hover:border-gray-400'
+                                            }`}
+                                            onDragOver={handleDragOver}
+                                            onDragLeave={handleDragLeave}
+                                            onDrop={handleDrop}
+                                          >
+                                            <div className="text-center">
+                                              <Upload className={`h-8 w-8 mx-auto mb-2 ${isDragging ? 'text-blue-500' : 'text-gray-400'}`} />
+                                              <input
+                                                type="file"
+                                                multiple
+                                                onChange={(e) => handleFileSelect(e.target.files)}
+                                                className="hidden"
+                                                id="file-upload-csi-inline"
+                                                accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.jpg,.jpeg,.png"
+                                              />
+                                              <Label 
+                                                htmlFor="file-upload-csi-inline" 
+                                                className="cursor-pointer text-sm text-blue-600 hover:text-blue-700"
+                                              >
+                                                Choose files or drag and drop
+                                              </Label>
+                                              <p className="text-xs text-gray-500 mt-1">
+                                                Specifications, drawings, or related documents
+                                              </p>
+                                            </div>
+                                          </div>
+                                        </div>
+
+                                        {/* New file uploads */}
+                                        {fileUploadInputs.length > 0 && (
+                                          <div className="space-y-2">
+                                            <p className="text-sm font-medium">Files to upload:</p>
+                                            {fileUploadInputs.map((file, index) => (
+                                              <div key={index} className="flex items-center justify-between bg-blue-50 p-2 rounded">
+                                                <div className="flex items-center space-x-2 flex-1">
+                                                  <FileText className="h-4 w-4 text-blue-600" />
+                                                  <input
+                                                    type="text"
+                                                    value={file.name}
+                                                    onChange={(e) => {
+                                                      const newFiles = [...fileUploadInputs];
+                                                      const newFile = new File([file], e.target.value, { type: file.type });
+                                                      newFiles[index] = newFile;
+                                                      setFileUploadInputs(newFiles);
+                                                    }}
+                                                    className="text-sm bg-transparent border-none outline-none flex-1"
+                                                    placeholder="Enter file name"
+                                                  />
+                                                  <span className="text-xs text-gray-500">
+                                                    ({(file.size / 1024).toFixed(1)} KB)
+                                                  </span>
+                                                </div>
+                                                <Button
+                                                  type="button"
+                                                  variant="ghost"
+                                                  size="sm"
+                                                  onClick={() => removeFileInput(index)}
+                                                >
+                                                  <X className="h-4 w-4" />
+                                                </Button>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        )}
+
+                                        {/* Existing attachments */}
+                                        {formData.attachments.length > 0 && (
+                                          <div className="space-y-2">
+                                            <p className="text-sm font-medium">Current attachments:</p>
+                                            {formData.attachments.map((file) => (
+                                              <div key={file.id} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                                                <div className="flex items-center space-x-2 flex-1">
+                                                  <FileText className="h-4 w-4 text-gray-600" />
+                                                  
+                                                  {editingFileId === file.id ? (
+                                                    <div className="flex items-center space-x-2 flex-1">
+                                                      <input
+                                                        type="text"
+                                                        value={editingFileName}
+                                                        onChange={(e) => setEditingFileName(e.target.value)}
+                                                        className="text-sm bg-white border border-blue-300 rounded px-2 py-1 flex-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                        placeholder="Enter file name"
+                                                        autoFocus
+                                                        onKeyDown={(e) => {
+                                                          if (e.key === 'Enter') saveFileRename();
+                                                          if (e.key === 'Escape') cancelFileRename();
+                                                        }}
+                                                      />
+                                                      <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={saveFileRename}
+                                                        className="text-green-600 hover:text-green-700"
+                                                        title="Save"
+                                                      >
+                                                        <Check className="h-4 w-4" />
+                                                      </Button>
+                                                      <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={cancelFileRename}
+                                                        className="text-gray-500 hover:text-gray-700"
+                                                        title="Cancel"
+                                                      >
+                                                        <X className="h-4 w-4" />
+                                                      </Button>
+                                                    </div>
+                                                  ) : (
+                                                    <div className="flex items-center space-x-2 flex-1">
+                                                      <span className="text-sm flex-1">{file.fileName}</span>
+                                                      <span className="text-xs text-gray-500">
+                                                        (uploaded {new Date(file.uploadedAt).toLocaleDateString()})
+                                                      </span>
+                                                      <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => startEditingFile(file.id, file.fileName)}
+                                                        className="text-blue-600 hover:text-blue-700"
+                                                        title="Rename file"
+                                                      >
+                                                        <Edit3 className="h-4 w-4" />
+                                                      </Button>
+                                                    </div>
+                                                  )}
+                                                </div>
+                                                
+                                                {editingFileId !== file.id && (
+                                                  <div className="flex items-center space-x-1">
+                                                    <Button
+                                                      type="button"
+                                                      variant="ghost"
+                                                      size="sm"
+                                                      onClick={() => handleDownloadFile(file.fileName, file.filePath)}
+                                                      title="Download file"
+                                                    >
+                                                      <Download className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button
+                                                      type="button"
+                                                      variant="ghost"
+                                                      size="sm"
+                                                      onClick={() => removeExistingFile(file.id)}
+                                                      title="Delete file"
+                                                    >
+                                                      <X className="h-4 w-4" />
+                                                    </Button>
+                                                  </div>
+                                                )}
+                                              </div>
+                                            ))}
+                                          </div>
+                                        )}
+                                      </div>
+
                                       <div className="flex justify-end space-x-3 pt-4 border-t">
                                         <Button type="button" variant="outline" onClick={resetForm}>
                                           Cancel

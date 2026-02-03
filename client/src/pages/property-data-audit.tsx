@@ -272,7 +272,7 @@ export default function PropertyDataAudit() {
           const totalTransformerKva = transformers.reduce((sum, t) => sum + (t.totalCapacityKva || 0), 0);
           
           return (
-            <Card key={property.id} className="print:break-inside-avoid">
+            <Card key={property.id}>
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center justify-between">
                   <span className="text-xl">

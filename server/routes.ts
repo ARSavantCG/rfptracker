@@ -458,7 +458,7 @@ function generateAllBidCollectionsHtml(rfp: any, allBidsData: any[]) {
         .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #e5e7eb; padding-bottom: 20px; }
         .header h1 { font-size: 24px; margin: 0; color: #1f2937; }
         .header .subtitle { font-size: 14px; color: #6b7280; margin: 10px 0; }
-        .section { margin-bottom: 30px; page-break-inside: avoid; }
+        .section { margin-bottom: 30px; }
         .section-title { font-size: 18px; font-weight: 600; color: #1f2937; margin-bottom: 15px; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px; }
         .subsection-title { font-size: 16px; font-weight: 600; color: #1f2937; margin: 20px 0 10px 0; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; }
         .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }

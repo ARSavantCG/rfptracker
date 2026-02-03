@@ -16,7 +16,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
 import { FormulaInput } from "@/components/formula-input";
 import { evaluateFormula } from "@shared/formula-utils";
-import { Plus, Edit2, Trash2, Package, DollarSign, ChevronDown, ChevronRight, Upload, FileText, X, Edit3, Check, Printer, Download } from "lucide-react";
+import { Plus, Edit2, Trash2, Package, DollarSign, ChevronDown, ChevronRight, Upload, FileText, X, Edit3, Check, Printer, Download, Eye, Paperclip } from "lucide-react";
 
 interface RomScopeItem {
   id: number;
@@ -546,6 +546,11 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  // View file in new tab (opens without forcing download)
+  const handleViewFile = (fileName: string, filePath: string) => {
+    window.open(`/api/rom-scope-items/view/${encodeURIComponent(fileName)}?path=${encodeURIComponent(filePath)}`, '_blank');
   };
 
   // Create/Update mutations
@@ -1369,13 +1374,29 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                                           </span>
                                         )}
                                         {item.attachments && item.attachments.length > 0 && (
-                                          <button
-                                            onClick={() => handleDownloadFile(item.attachments[0].fileName, item.attachments[0].filePath)}
-                                            className="text-blue-600 hover:text-blue-800 transition-colors"
-                                            title={`Download ${item.attachments[0].fileName}`}
-                                          >
-                                            <FileText className="h-4 w-4" />
-                                          </button>
+                                          <span className="flex items-center space-x-1 ml-2">
+                                            <Paperclip className="h-3.5 w-3.5 text-gray-400" />
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleViewFile(item.attachments[0].fileName, item.attachments[0].filePath);
+                                              }}
+                                              className="text-blue-600 hover:text-blue-800 transition-colors p-0.5"
+                                              title={`View ${item.attachments[0].fileName}`}
+                                            >
+                                              <Eye className="h-4 w-4" />
+                                            </button>
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleDownloadFile(item.attachments[0].fileName, item.attachments[0].filePath);
+                                              }}
+                                              className="text-green-600 hover:text-green-800 transition-colors p-0.5"
+                                              title={`Download ${item.attachments[0].fileName}`}
+                                            >
+                                              <Download className="h-4 w-4" />
+                                            </button>
+                                          </span>
                                         )}
                                       </span>
                                     </div>
@@ -1734,13 +1755,29 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                                   </span>
                                 )}
                                 {item.attachments && item.attachments.length > 0 && (
-                                  <button
-                                    onClick={() => handleDownloadFile(item.attachments[0].fileName, item.attachments[0].filePath)}
-                                    className="text-blue-600 hover:text-blue-800 transition-colors"
-                                    title={`Download ${item.attachments[0].fileName}`}
-                                  >
-                                    <FileText className="h-4 w-4" />
-                                  </button>
+                                  <span className="flex items-center space-x-1 ml-2">
+                                    <Paperclip className="h-3.5 w-3.5 text-gray-400" />
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleViewFile(item.attachments[0].fileName, item.attachments[0].filePath);
+                                      }}
+                                      className="text-blue-600 hover:text-blue-800 transition-colors p-0.5"
+                                      title={`View ${item.attachments[0].fileName}`}
+                                    >
+                                      <Eye className="h-4 w-4" />
+                                    </button>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDownloadFile(item.attachments[0].fileName, item.attachments[0].filePath);
+                                      }}
+                                      className="text-green-600 hover:text-green-800 transition-colors p-0.5"
+                                      title={`Download ${item.attachments[0].fileName}`}
+                                    >
+                                      <Download className="h-4 w-4" />
+                                    </button>
+                                  </span>
                                 )}
                               </span>
                             </div>

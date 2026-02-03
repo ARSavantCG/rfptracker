@@ -6109,6 +6109,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ROM Scope Items file view endpoint (opens in browser without forcing download)
+  app.get("/api/rom-scope-items/view/:fileName", async (req, res) => {
+    try {
+      const { fileName } = req.params;
+      const { path: filePath } = req.query;
+      
+      console.log("ROM view request:", { fileName, filePath });
+      
+      if (!fileName || !filePath) {
+        console.log("Missing fileName or filePath");
+        return res.status(400).json({ message: "File name and path are required" });
+      }
+
+      // Construct the full path - files are stored in uploads directory
+      const fullPath = path.join(process.cwd(), 'uploads', filePath as string);
+      
+      console.log("Looking for file at:", fullPath);
+      
+      // Check if file exists
+      if (!fs.existsSync(fullPath)) {
+        console.log("File not found at:", fullPath);
+        return res.status(404).json({ message: "File not found" });
+      }
+
+      // Determine content type based on file extension
+      const ext = path.extname(fileName).toLowerCase();
+      const mimeTypes: Record<string, string> = {
+        '.pdf': 'application/pdf',
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.png': 'image/png',
+        '.gif': 'image/gif',
+        '.txt': 'text/plain',
+        '.doc': 'application/msword',
+        '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        '.xls': 'application/vnd.ms-excel',
+        '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      };
+      
+      const contentType = mimeTypes[ext] || 'application/octet-stream';
+      
+      // Set headers for inline viewing (not download)
+      res.setHeader('Content-Disposition', `inline; filename="${decodeURIComponent(fileName)}"`);
+      res.setHeader('Content-Type', contentType);
+      
+      // Stream the file
+      const fileStream = fs.createReadStream(fullPath);
+      fileStream.on('error', (error) => {
+        console.error("File stream error:", error);
+        if (!res.headersSent) {
+          res.status(500).json({ message: "Error streaming file" });
+        }
+      });
+      fileStream.pipe(res);
+      
+    } catch (error) {
+      console.error("ROM scope items file view error:", error);
+      res.status(500).json({ message: "Failed to view file" });
+    }
+  });
+
   // ROM Pilot Line Items endpoints
   app.get("/api/rom-pilots/:id/line-items", async (req, res) => {
     try {

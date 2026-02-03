@@ -702,7 +702,6 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
           <div class="document-title">${isContractorReport ? 'CONTRACTOR PRICING SHEET' : 'ROM PILOT SCOPE ITEMS LIBRARY'}</div>
           <div class="project-title">Bridge Industrial - Construction Cost Management</div>
           <div class="project-title">Generated on ${currentDate}</div>
-          ${isContractorReport ? '' : filterText}
         </div>
         
         <!-- Other Categories (Design / Soft Costs, etc.) -->

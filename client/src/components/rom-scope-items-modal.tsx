@@ -564,8 +564,8 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
           
           .header {
             border-bottom: 3px solid rgb(0,50,130);
-            padding-bottom: 20px;
-            margin-bottom: 30px;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
           }
           
           .document-title {
@@ -587,8 +587,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
           }
           
           .category-section {
-            margin-bottom: 25px;
-            break-inside: avoid;
+            margin-bottom: 20px;
           }
           
           .category-header {

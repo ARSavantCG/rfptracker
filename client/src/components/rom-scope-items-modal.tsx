@@ -114,9 +114,11 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
   const [printFilters, setPrintFilters] = useState({
     categories: [] as string[],
     csiDivisions: [] as string[],
+    excludedItemIds: [] as number[],  // Track specific items to exclude
     showWithFiles: 'all' as 'all' | 'withFiles' | 'withoutFiles',
     reportType: 'internal' as 'internal' | 'contractor',
   });
+  const [expandedDivisions, setExpandedDivisions] = useState<string[]>([]);
 
   // Fetch scope items
   const { data: scopeItems = [], isLoading } = useQuery<RomScopeItem[]>({
@@ -430,9 +432,11 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
     setPrintFilters({
       categories: [],
       csiDivisions: [],
+      excludedItemIds: [],
       showWithFiles: 'all',
       reportType: 'internal',
     });
+    setExpandedDivisions([]);
     setShowPrintDialog(true);
   };
 
@@ -453,6 +457,11 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
         const itemDivision = item.csiDivision || "No Division (General)";
         return printFilters.csiDivisions.includes(itemDivision);
       });
+    }
+    
+    // Filter out specifically excluded items
+    if (printFilters.excludedItemIds.length > 0) {
+      filteredItems = filteredItems.filter(item => !printFilters.excludedItemIds.includes(item.id));
     }
     
     // Filter by file attachment status
@@ -2744,10 +2753,13 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                   <div className="flex space-x-2">
                     <button
                       type="button"
-                      onClick={() => setPrintFilters(prev => ({
-                        ...prev,
-                        csiDivisions: [...csiDivisions, "No Division (General)"]
-                      }))}
+                      onClick={() => {
+                        setPrintFilters(prev => ({
+                          ...prev,
+                          csiDivisions: [...csiDivisions, "No Division (General)"],
+                          excludedItemIds: []
+                        }));
+                      }}
                       className="text-xs text-blue-600 hover:text-blue-800"
                     >
                       Select All
@@ -2755,64 +2767,212 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                     <span className="text-gray-300">|</span>
                     <button
                       type="button"
-                      onClick={() => setPrintFilters(prev => ({
-                        ...prev,
-                        csiDivisions: []
-                      }))}
+                      onClick={() => {
+                        setPrintFilters(prev => ({
+                          ...prev,
+                          csiDivisions: [],
+                          excludedItemIds: []
+                        }));
+                      }}
                       className="text-xs text-blue-600 hover:text-blue-800"
                     >
                       Deselect All
                     </button>
                   </div>
                 </div>
-                <div className="max-h-40 overflow-y-auto space-y-1 border rounded-md p-2">
-                  {/* Uncategorized option */}
-                  <label className="flex items-center space-x-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={printFilters.csiDivisions.includes("No Division (General)")}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setPrintFilters(prev => ({
-                            ...prev,
-                            csiDivisions: [...prev.csiDivisions, "No Division (General)"]
-                          }));
-                        } else {
-                          setPrintFilters(prev => ({
-                            ...prev,
-                            csiDivisions: prev.csiDivisions.filter(d => d !== "No Division (General)")
-                          }));
-                        }
-                      }}
-                      className="h-3 w-3 text-blue-600 border-gray-300 rounded"
-                    />
-                    <span className="text-xs italic text-gray-600">No Division (General)</span>
-                  </label>
-                  {csiDivisions.map(division => (
-                    <label key={division} className="flex items-center space-x-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={printFilters.csiDivisions.includes(division)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setPrintFilters(prev => ({
-                              ...prev,
-                              csiDivisions: [...prev.csiDivisions, division]
-                            }));
-                          } else {
-                            setPrintFilters(prev => ({
-                              ...prev,
-                              csiDivisions: prev.csiDivisions.filter(d => d !== division)
-                            }));
-                          }
-                        }}
-                        className="h-3 w-3 text-blue-600 border-gray-300 rounded"
-                      />
-                      <span className="text-xs">{division}</span>
-                    </label>
-                  ))}
+                <div className="max-h-60 overflow-y-auto space-y-1 border rounded-md p-2">
+                  {/* No Division (General) option */}
+                  {(() => {
+                    const divisionName = "No Division (General)";
+                    const divisionItems = scopeItems.filter(item => 
+                      item.category === "Tenant Improvements" && !item.csiDivision
+                    );
+                    const isExpanded = expandedDivisions.includes(divisionName);
+                    const isDivisionSelected = printFilters.csiDivisions.includes(divisionName);
+                    const excludedInDivision = divisionItems.filter(item => 
+                      printFilters.excludedItemIds.includes(item.id)
+                    ).length;
+                    const hasPartialSelection = isDivisionSelected && excludedInDivision > 0;
+                    
+                    return divisionItems.length > 0 ? (
+                      <div key={divisionName} className="border-b border-gray-100 pb-1 mb-1">
+                        <div className="flex items-center justify-between">
+                          <label className="flex items-center space-x-2 cursor-pointer flex-1">
+                            <input
+                              type="checkbox"
+                              checked={isDivisionSelected}
+                              ref={(el) => { if (el) el.indeterminate = hasPartialSelection; }}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setPrintFilters(prev => ({
+                                    ...prev,
+                                    csiDivisions: [...prev.csiDivisions, divisionName],
+                                    excludedItemIds: prev.excludedItemIds.filter(id => 
+                                      !divisionItems.find(item => item.id === id)
+                                    )
+                                  }));
+                                } else {
+                                  setPrintFilters(prev => ({
+                                    ...prev,
+                                    csiDivisions: prev.csiDivisions.filter(d => d !== divisionName),
+                                    excludedItemIds: prev.excludedItemIds.filter(id => 
+                                      !divisionItems.find(item => item.id === id)
+                                    )
+                                  }));
+                                }
+                              }}
+                              className="h-3 w-3 text-blue-600 border-gray-300 rounded"
+                            />
+                            <span className="text-xs italic text-gray-600">
+                              {divisionName} ({divisionItems.length - excludedInDivision}/{divisionItems.length})
+                            </span>
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => setExpandedDivisions(prev => 
+                              prev.includes(divisionName) 
+                                ? prev.filter(d => d !== divisionName) 
+                                : [...prev, divisionName]
+                            )}
+                            className="text-xs text-gray-500 hover:text-gray-700 px-1"
+                          >
+                            {isExpanded ? '▼' : '▶'}
+                          </button>
+                        </div>
+                        {isExpanded && (
+                          <div className="ml-5 mt-1 space-y-1 border-l-2 border-gray-200 pl-2">
+                            {divisionItems.map(item => {
+                              const isExcluded = printFilters.excludedItemIds.includes(item.id);
+                              const isItemIncluded = isDivisionSelected && !isExcluded;
+                              return (
+                                <label key={item.id} className="flex items-center space-x-2 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={isItemIncluded}
+                                    onChange={(e) => {
+                                      if (e.target.checked) {
+                                        setPrintFilters(prev => ({
+                                          ...prev,
+                                          csiDivisions: prev.csiDivisions.includes(divisionName) 
+                                            ? prev.csiDivisions 
+                                            : [...prev.csiDivisions, divisionName],
+                                          excludedItemIds: prev.excludedItemIds.filter(id => id !== item.id)
+                                        }));
+                                      } else {
+                                        setPrintFilters(prev => ({
+                                          ...prev,
+                                          excludedItemIds: [...prev.excludedItemIds, item.id]
+                                        }));
+                                      }
+                                    }}
+                                    className="h-3 w-3 text-blue-600 border-gray-300 rounded"
+                                  />
+                                  <span className="text-xs text-gray-600">{item.name}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    ) : null;
+                  })()}
+                  
+                  {/* Regular CSI Divisions */}
+                  {csiDivisions.map(division => {
+                    const divisionItems = scopeItems.filter(item => 
+                      item.category === "Tenant Improvements" && item.csiDivision === division
+                    );
+                    const isExpanded = expandedDivisions.includes(division);
+                    const isDivisionSelected = printFilters.csiDivisions.includes(division);
+                    const excludedInDivision = divisionItems.filter(item => 
+                      printFilters.excludedItemIds.includes(item.id)
+                    ).length;
+                    const hasPartialSelection = isDivisionSelected && excludedInDivision > 0;
+                    
+                    return (
+                      <div key={division} className="border-b border-gray-100 pb-1 mb-1 last:border-b-0">
+                        <div className="flex items-center justify-between">
+                          <label className="flex items-center space-x-2 cursor-pointer flex-1">
+                            <input
+                              type="checkbox"
+                              checked={isDivisionSelected}
+                              ref={(el) => { if (el) el.indeterminate = hasPartialSelection; }}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setPrintFilters(prev => ({
+                                    ...prev,
+                                    csiDivisions: [...prev.csiDivisions, division],
+                                    excludedItemIds: prev.excludedItemIds.filter(id => 
+                                      !divisionItems.find(item => item.id === id)
+                                    )
+                                  }));
+                                } else {
+                                  setPrintFilters(prev => ({
+                                    ...prev,
+                                    csiDivisions: prev.csiDivisions.filter(d => d !== division),
+                                    excludedItemIds: prev.excludedItemIds.filter(id => 
+                                      !divisionItems.find(item => item.id === id)
+                                    )
+                                  }));
+                                }
+                              }}
+                              className="h-3 w-3 text-blue-600 border-gray-300 rounded"
+                            />
+                            <span className="text-xs">
+                              {division} ({divisionItems.length - excludedInDivision}/{divisionItems.length})
+                            </span>
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => setExpandedDivisions(prev => 
+                              prev.includes(division) 
+                                ? prev.filter(d => d !== division) 
+                                : [...prev, division]
+                            )}
+                            className="text-xs text-gray-500 hover:text-gray-700 px-1"
+                          >
+                            {isExpanded ? '▼' : '▶'}
+                          </button>
+                        </div>
+                        {isExpanded && (
+                          <div className="ml-5 mt-1 space-y-1 border-l-2 border-gray-200 pl-2">
+                            {divisionItems.map(item => {
+                              const isExcluded = printFilters.excludedItemIds.includes(item.id);
+                              const isItemIncluded = isDivisionSelected && !isExcluded;
+                              return (
+                                <label key={item.id} className="flex items-center space-x-2 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={isItemIncluded}
+                                    onChange={(e) => {
+                                      if (e.target.checked) {
+                                        setPrintFilters(prev => ({
+                                          ...prev,
+                                          csiDivisions: prev.csiDivisions.includes(division) 
+                                            ? prev.csiDivisions 
+                                            : [...prev.csiDivisions, division],
+                                          excludedItemIds: prev.excludedItemIds.filter(id => id !== item.id)
+                                        }));
+                                      } else {
+                                        setPrintFilters(prev => ({
+                                          ...prev,
+                                          excludedItemIds: [...prev.excludedItemIds, item.id]
+                                        }));
+                                      }
+                                    }}
+                                    className="h-3 w-3 text-blue-600 border-gray-300 rounded"
+                                  />
+                                  <span className="text-xs text-gray-600">{item.name}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-                <p className="text-xs text-gray-500">Leave unchecked to include all divisions</p>
+                <p className="text-xs text-gray-500">Leave unchecked to include all. Click ▶ to expand and select specific items.</p>
               </div>
             )}
 

@@ -1,20 +1,23 @@
 {
-  "version": "1.1.3",
-  "buildDate": "2025-12-11T00:00:00.000Z",
+  "version": "1.1.4",
+  "buildDate": "2026-02-03T00:00:00.000Z",
   "gitCommit": "local-build",
   "environment": "development",
   "changes": [
     {
-      "description": "Added Bay Panel Assignments section to Panels tab"
+      "description": "ROM Scope Items file attachment system (upload, view, download, rename, delete)"
     },
     {
-      "description": "Transformer-level electrical reservations (no bay required)"
+      "description": "Print reports organized by CSI Division with blue headers"
     },
     {
-      "description": "Active RFP Allocations panel in Overview tab"
+      "description": "Print filter dialog with category, CSI Division, and file attachment filtering"
     },
     {
-      "description": "Updated capacity label to 'Remaining transformer capacity'"
+      "description": "Contractor Pricing Sheet report type with blank prices for contractor quotes"
+    },
+    {
+      "description": "CSI Code badges displayed next to item names in list view"
     }
   ]
 }

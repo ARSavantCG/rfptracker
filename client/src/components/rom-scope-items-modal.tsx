@@ -583,7 +583,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
             font-size: 14px;
             color: #666;
             text-align: center;
-            margin-bottom: 20px;
+            margin-bottom: 5px;
           }
           
           .category-section {
@@ -689,15 +689,12 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
           }
           
           .footer {
-            position: fixed;
-            bottom: 0.5in;
-            left: 0.5in;
-            right: 0.5in;
             text-align: center;
             font-size: 8px;
             color: #6b7280;
             border-top: 1px solid #e5e7eb;
             padding-top: 10px;
+            margin-top: 30px;
           }
         </style>
       </head>

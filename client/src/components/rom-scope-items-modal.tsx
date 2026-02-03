@@ -363,8 +363,8 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
               <td style="font-family: monospace; font-size: 8px;">${item.csiCode || '—'}</td>
               <td class="item-name">${item.name}</td>
               <td style="text-align: center;">${item.unit}</td>
-              <td style="text-align: center; border-bottom: 1px solid #000; min-width: 80px;">$___________</td>
-              <td style="border-bottom: 1px solid #ccc;"></td>
+              <td style="text-align: center;"></td>
+              <td></td>
             </tr>
           `;
         });
@@ -702,21 +702,12 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
         </style>
       </head>
       <body>
-        <div class="header">
+        <div class="header" style="${isContractorReport ? 'margin-bottom: 10px; padding-bottom: 10px;' : ''}">
           <div class="document-title">${isContractorReport ? 'CONTRACTOR PRICING SHEET' : 'ROM PILOT SCOPE ITEMS LIBRARY'}</div>
           <div class="project-title">Bridge Industrial - Construction Cost Management</div>
           <div class="project-title">Generated on ${currentDate}</div>
-          ${isContractorReport ? '<div class="project-title" style="color: #dc2626; font-weight: bold;">Please complete pricing and return by: _______________</div>' : ''}
-          ${filterText}
+          ${isContractorReport ? '' : filterText}
         </div>
-        
-        ${isContractorReport ? `
-          <div style="margin-bottom: 20px; padding: 15px; background: #fef3c7; border: 1px solid #f59e0b; border-radius: 5px;">
-            <p style="margin: 0 0 8px 0; font-weight: bold;">Contractor Information:</p>
-            <p style="margin: 0;">Company Name: _________________________________ Contact: _________________________________</p>
-            <p style="margin: 8px 0 0 0;">Phone: _________________________________ Email: _________________________________</p>
-          </div>
-        ` : ''}
         
         <!-- Other Categories (Design / Soft Costs, etc.) -->
         ${Object.entries(otherByCategory).map(([category, categoryItems]) => {
@@ -740,8 +731,8 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                       <tr>
                         <td class="item-name">${item.name}</td>
                         <td style="text-align: center;">${item.unit}</td>
-                        <td style="text-align: center; border-bottom: 1px solid #000; min-width: 80px;">$___________</td>
-                        <td style="border-bottom: 1px solid #ccc;"></td>
+                        <td style="text-align: center;"></td>
+                        <td></td>
                       </tr>
                     `).join('')}
                   </tbody>

@@ -2836,7 +2836,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                             )}
                             className="text-xs text-gray-500 hover:text-gray-700 px-1"
                           >
-                            {isExpanded ? '▼' : '▶'}
+                            {isExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
                           </button>
                         </div>
                         {isExpanded && (
@@ -2931,7 +2931,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                             )}
                             className="text-xs text-gray-500 hover:text-gray-700 px-1"
                           >
-                            {isExpanded ? '▼' : '▶'}
+                            {isExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
                           </button>
                         </div>
                         {isExpanded && (
@@ -2972,7 +2972,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                     );
                   })}
                 </div>
-                <p className="text-xs text-gray-500">Leave unchecked to include all. Click ▶ to expand and select specific items.</p>
+                <p className="text-xs text-gray-500">Leave unchecked to include all. Click the arrow to expand and select specific items.</p>
               </div>
             )}
 

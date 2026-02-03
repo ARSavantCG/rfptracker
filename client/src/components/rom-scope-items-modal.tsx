@@ -410,10 +410,12 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
     
     // Filter by CSI divisions (only applies to Tenant Improvements)
     if (printFilters.csiDivisions.length > 0) {
-      filteredItems = filteredItems.filter(item => 
-        item.category !== "Tenant Improvements" || 
-        printFilters.csiDivisions.includes(item.csiDivision || "")
-      );
+      filteredItems = filteredItems.filter(item => {
+        if (item.category !== "Tenant Improvements") return true;
+        // Map empty/null csiDivision to "No Division (General)"
+        const itemDivision = item.csiDivision || "No Division (General)";
+        return printFilters.csiDivisions.includes(itemDivision);
+      });
     }
     
     // Filter by file attachment status
@@ -1925,6 +1927,11 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                           <div className="flex-1">
                             <div className="flex items-center space-x-3">
                               <h5 className="font-medium text-gray-900">{item.name}</h5>
+                              {item.csiCode && (
+                                <span className="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded font-mono">
+                                  {item.csiCode}
+                                </span>
+                              )}
                               <span className="text-sm text-gray-500 flex items-center space-x-1">
                                 <span>
                                   ${(() => {
@@ -2634,8 +2641,55 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
             {/* CSI Division Filter (only shown if TI is selected or no category filter) */}
             {(printFilters.categories.length === 0 || printFilters.categories.includes("Tenant Improvements")) && (
               <div className="space-y-3">
-                <Label className="text-sm font-medium">CSI Divisions (Tenant Improvements only)</Label>
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-medium">CSI Divisions (Tenant Improvements only)</Label>
+                  <div className="flex space-x-2">
+                    <button
+                      type="button"
+                      onClick={() => setPrintFilters(prev => ({
+                        ...prev,
+                        csiDivisions: [...csiDivisions, "No Division (General)"]
+                      }))}
+                      className="text-xs text-blue-600 hover:text-blue-800"
+                    >
+                      Select All
+                    </button>
+                    <span className="text-gray-300">|</span>
+                    <button
+                      type="button"
+                      onClick={() => setPrintFilters(prev => ({
+                        ...prev,
+                        csiDivisions: []
+                      }))}
+                      className="text-xs text-blue-600 hover:text-blue-800"
+                    >
+                      Deselect All
+                    </button>
+                  </div>
+                </div>
                 <div className="max-h-40 overflow-y-auto space-y-1 border rounded-md p-2">
+                  {/* Uncategorized option */}
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={printFilters.csiDivisions.includes("No Division (General)")}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setPrintFilters(prev => ({
+                            ...prev,
+                            csiDivisions: [...prev.csiDivisions, "No Division (General)"]
+                          }));
+                        } else {
+                          setPrintFilters(prev => ({
+                            ...prev,
+                            csiDivisions: prev.csiDivisions.filter(d => d !== "No Division (General)")
+                          }));
+                        }
+                      }}
+                      className="h-3 w-3 text-blue-600 border-gray-300 rounded"
+                    />
+                    <span className="text-xs italic text-gray-600">No Division (General)</span>
+                  </label>
                   {csiDivisions.map(division => (
                     <label key={division} className="flex items-center space-x-2 cursor-pointer">
                       <input

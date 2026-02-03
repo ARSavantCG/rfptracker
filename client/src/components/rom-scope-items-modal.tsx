@@ -109,6 +109,14 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
     date: new Date().toISOString().split('T')[0],
   });
 
+  // Print filter state
+  const [showPrintDialog, setShowPrintDialog] = useState(false);
+  const [printFilters, setPrintFilters] = useState({
+    categories: [] as string[],
+    csiDivisions: [] as string[],
+    showWithFiles: 'all' as 'all' | 'withFiles' | 'withoutFiles',
+  });
+
   // Fetch scope items
   const { data: scopeItems = [], isLoading } = useQuery<RomScopeItem[]>({
     queryKey: ["/api/rom-scope-items"],
@@ -312,28 +320,161 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
     }));
   };
 
+  // Helper function to generate Tenant Improvements section with CSI Division grouping
+  const generateTenantImprovementsSection = (
+    items: RomScopeItem[], 
+    divisions: string[], 
+    byDivision: Record<string, RomScopeItem[]>
+  ): string => {
+    let html = `
+      <div class="category-section">
+        <div class="category-header">
+          Tenant Improvements (${items.length} item${items.length !== 1 ? 's' : ''})
+        </div>
+    `;
+
+    divisions.forEach(division => {
+      const divisionItems = byDivision[division];
+      html += `
+        <div class="csi-division-header">
+          ${division} (${divisionItems.length} item${divisionItems.length !== 1 ? 's' : ''})
+        </div>
+        <table class="category-table">
+          <thead>
+            <tr>
+              <th style="width: 8%; text-align: left;">CSI Code</th>
+              <th style="width: 25%; text-align: left;">Item Name</th>
+              <th style="width: 15%; text-align: center;">Cost per Unit</th>
+              <th style="width: 12%; text-align: center;">Last Updated</th>
+              <th style="width: 8%; text-align: center;">File(s)</th>
+              <th style="width: 12%; text-align: center;">Source</th>
+              <th style="width: 20%; text-align: center;">Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+      
+      divisionItems.forEach(item => {
+        const result = evaluateFormula(item.unitPrice);
+        const displayValue = result.value !== null ? result.value.toFixed(2) : parseFloat(item.unitPrice || "0").toFixed(2);
+        const formattedPrice = parseFloat(displayValue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const lastUpdated = item.lastUpdated ? 
+          new Date(item.lastUpdated).toLocaleDateString() : 
+          new Date(item.createdAt).toLocaleDateString();
+        const hasFiles = item.attachments && item.attachments.length > 0;
+        
+        html += `
+          <tr>
+            <td style="font-family: monospace; font-size: 8px;">${item.csiCode || '—'}</td>
+            <td class="item-name">${item.name}</td>
+            <td class="item-price" style="text-align: center;">$${formattedPrice} per ${item.unit}</td>
+            <td class="item-date" style="text-align: center;">${lastUpdated}</td>
+            <td class="${hasFiles ? 'has-file' : 'no-file'}" style="text-align: center;">
+              ${hasFiles ? 'Yes' : 'No'}
+            </td>
+            <td style="text-align: center;">${item.source || '—'}</td>
+            <td style="text-align: center;">${item.description || '—'}</td>
+          </tr>
+        `;
+      });
+      
+      html += `
+          </tbody>
+        </table>
+      `;
+    });
+
+    html += `</div>`;
+    return html;
+  };
+
   // Print function - opens in new tab like other reports
   const handlePrint = () => {
-    const printContent = generateScopeItemsPrintHtml(scopeItems);
+    // Reset filters and show dialog
+    setPrintFilters({
+      categories: [],
+      csiDivisions: [],
+      showWithFiles: 'all',
+    });
+    setShowPrintDialog(true);
+  };
+
+  const executePrint = () => {
+    // Apply filters
+    let filteredItems = [...scopeItems];
+    
+    // Filter by categories
+    if (printFilters.categories.length > 0) {
+      filteredItems = filteredItems.filter(item => printFilters.categories.includes(item.category));
+    }
+    
+    // Filter by CSI divisions (only applies to Tenant Improvements)
+    if (printFilters.csiDivisions.length > 0) {
+      filteredItems = filteredItems.filter(item => 
+        item.category !== "Tenant Improvements" || 
+        printFilters.csiDivisions.includes(item.csiDivision || "")
+      );
+    }
+    
+    // Filter by file attachment status
+    if (printFilters.showWithFiles === 'withFiles') {
+      filteredItems = filteredItems.filter(item => item.attachments && item.attachments.length > 0);
+    } else if (printFilters.showWithFiles === 'withoutFiles') {
+      filteredItems = filteredItems.filter(item => !item.attachments || item.attachments.length === 0);
+    }
+
+    const printContent = generateScopeItemsPrintHtml(filteredItems);
     const printWindow = window.open('', '_blank');
     if (printWindow) {
       printWindow.document.write(printContent);
       printWindow.document.close();
       printWindow.focus();
     }
+    setShowPrintDialog(false);
   };
 
-  // Generate print HTML with Bridge Industrial styling
+  // Generate print HTML with Bridge Industrial styling - organized by CSI Division for Tenant Improvements
   const generateScopeItemsPrintHtml = (items: RomScopeItem[]) => {
-    const itemsByCategory = items.reduce((acc, item) => {
+    // Separate Tenant Improvements from other categories
+    const tenantImprovements = items.filter(item => item.category === "Tenant Improvements");
+    const otherItems = items.filter(item => item.category !== "Tenant Improvements");
+
+    // Group Tenant Improvements by CSI Division, then by CSI Code
+    const tiByDivision = tenantImprovements.reduce((acc, item) => {
+      const division = item.csiDivision || "No Division (General)";
+      if (!acc[division]) acc[division] = [];
+      acc[division].push(item);
+      return acc;
+    }, {} as Record<string, RomScopeItem[]>);
+
+    // Sort divisions and items within each division by CSI Code, then name
+    const sortedDivisions = Object.keys(tiByDivision).sort((a, b) => {
+      // Extract division numbers for sorting (e.g., "03 - Concrete" -> 3)
+      const numA = parseInt(a.split(' ')[0]) || 999;
+      const numB = parseInt(b.split(' ')[0]) || 999;
+      return numA - numB;
+    });
+
+    sortedDivisions.forEach(division => {
+      tiByDivision[division].sort((a, b) => {
+        // Sort by CSI code first, then by name
+        const codeA = a.csiCode || 'zzz';
+        const codeB = b.csiCode || 'zzz';
+        if (codeA !== codeB) return codeA.localeCompare(codeB);
+        return a.name.localeCompare(b.name);
+      });
+    });
+
+    // Group other items by category
+    const otherByCategory = otherItems.reduce((acc, item) => {
       if (!acc[item.category]) acc[item.category] = [];
       acc[item.category].push(item);
       return acc;
     }, {} as Record<string, RomScopeItem[]>);
 
     // Sort items alphabetically within each category
-    Object.keys(itemsByCategory).forEach(category => {
-      itemsByCategory[category].sort((a, b) => a.name.localeCompare(b.name));
+    Object.keys(otherByCategory).forEach(category => {
+      otherByCategory[category].sort((a, b) => a.name.localeCompare(b.name));
     });
 
     const currentDate = new Date().toLocaleDateString('en-US', { 
@@ -342,6 +483,19 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
       month: 'long', 
       day: 'numeric'
     });
+
+    // Generate filter description for header
+    const filterDescriptions: string[] = [];
+    if (printFilters.categories.length > 0) {
+      filterDescriptions.push(`Categories: ${printFilters.categories.join(', ')}`);
+    }
+    if (printFilters.csiDivisions.length > 0) {
+      filterDescriptions.push(`CSI Divisions: ${printFilters.csiDivisions.join(', ')}`);
+    }
+    if (printFilters.showWithFiles !== 'all') {
+      filterDescriptions.push(printFilters.showWithFiles === 'withFiles' ? 'With Attachments Only' : 'Without Attachments');
+    }
+    const filterText = filterDescriptions.length > 0 ? `<div class="filter-info">Filtered: ${filterDescriptions.join(' | ')}</div>` : '';
 
     return `
       <!DOCTYPE html>
@@ -463,6 +617,37 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
             text-align: center;
           }
           
+          .filter-info {
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-size: 10px;
+            color: #92400e;
+            margin-bottom: 20px;
+          }
+          
+          .csi-division-header {
+            background: #dbeafe;
+            border: 1px solid #3b82f6;
+            padding: 10px 12px;
+            font-weight: bold;
+            color: #1e40af;
+            border-radius: 5px 5px 0 0;
+            font-size: 12px;
+            margin-top: 15px;
+          }
+          
+          .csi-code-badge {
+            background: #e0e7ff;
+            color: #3730a3;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 8px;
+            font-family: monospace;
+            margin-left: 8px;
+          }
+          
           .footer {
             position: fixed;
             bottom: 0.5in;
@@ -481,9 +666,11 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
           <div class="document-title">ROM PILOT SCOPE ITEMS LIBRARY</div>
           <div class="project-title">Bridge Industrial - Construction Cost Management</div>
           <div class="project-title">Generated on ${currentDate}</div>
+          ${filterText}
         </div>
         
-        ${Object.entries(itemsByCategory).map(([category, categoryItems]) => `
+        <!-- Other Categories (Design / Soft Costs, etc.) -->
+        ${Object.entries(otherByCategory).map(([category, categoryItems]) => `
           <div class="category-section">
             <div class="category-header">
               ${category} (${categoryItems.length} item${categoryItems.length !== 1 ? 's' : ''})
@@ -504,12 +691,9 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                   const result = evaluateFormula(item.unitPrice);
                   const displayValue = result.value !== null ? result.value.toFixed(2) : parseFloat(item.unitPrice || "0").toFixed(2);
                   const formattedPrice = parseFloat(displayValue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                  
-                  // Use created date if no lastUpdated, otherwise use lastUpdated
                   const lastUpdated = item.lastUpdated ? 
                     new Date(item.lastUpdated).toLocaleDateString() : 
                     new Date(item.createdAt).toLocaleDateString();
-                  
                   const hasFiles = item.attachments && item.attachments.length > 0;
                   
                   return `
@@ -529,6 +713,9 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
             </table>
           </div>
         `).join('')}
+        
+        <!-- Tenant Improvements - Organized by CSI Division -->
+        ${tenantImprovements.length > 0 ? generateTenantImprovementsSection(tenantImprovements, sortedDivisions, tiByDivision) : ''}
         
         <div class="footer">
           © ${new Date().getFullYear()} Bridge Industrial - ROM Scope Items Library
@@ -2405,6 +2592,130 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
           )}
         </div>
       </DialogContent>
+
+      {/* Print Filter Dialog */}
+      <Dialog open={showPrintDialog} onOpenChange={setShowPrintDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Print Options</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6 py-4">
+            {/* Category Filter */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">Categories</Label>
+              <div className="space-y-2">
+                {categories.map(category => (
+                  <label key={category} className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={printFilters.categories.includes(category)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setPrintFilters(prev => ({
+                            ...prev,
+                            categories: [...prev.categories, category]
+                          }));
+                        } else {
+                          setPrintFilters(prev => ({
+                            ...prev,
+                            categories: prev.categories.filter(c => c !== category)
+                          }));
+                        }
+                      }}
+                      className="h-4 w-4 text-blue-600 border-gray-300 rounded"
+                    />
+                    <span className="text-sm">{category}</span>
+                  </label>
+                ))}
+              </div>
+              <p className="text-xs text-gray-500">Leave unchecked to include all categories</p>
+            </div>
+
+            {/* CSI Division Filter (only shown if TI is selected or no category filter) */}
+            {(printFilters.categories.length === 0 || printFilters.categories.includes("Tenant Improvements")) && (
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">CSI Divisions (Tenant Improvements only)</Label>
+                <div className="max-h-40 overflow-y-auto space-y-1 border rounded-md p-2">
+                  {csiDivisions.map(division => (
+                    <label key={division} className="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={printFilters.csiDivisions.includes(division)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setPrintFilters(prev => ({
+                              ...prev,
+                              csiDivisions: [...prev.csiDivisions, division]
+                            }));
+                          } else {
+                            setPrintFilters(prev => ({
+                              ...prev,
+                              csiDivisions: prev.csiDivisions.filter(d => d !== division)
+                            }));
+                          }
+                        }}
+                        className="h-3 w-3 text-blue-600 border-gray-300 rounded"
+                      />
+                      <span className="text-xs">{division}</span>
+                    </label>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-500">Leave unchecked to include all divisions</p>
+              </div>
+            )}
+
+            {/* File Attachment Filter */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">File Attachments</Label>
+              <div className="space-y-2">
+                <label className="flex items-center space-x-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="fileFilter"
+                    checked={printFilters.showWithFiles === 'all'}
+                    onChange={() => setPrintFilters(prev => ({ ...prev, showWithFiles: 'all' }))}
+                    className="h-4 w-4 text-blue-600 border-gray-300"
+                  />
+                  <span className="text-sm">Show all items</span>
+                </label>
+                <label className="flex items-center space-x-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="fileFilter"
+                    checked={printFilters.showWithFiles === 'withFiles'}
+                    onChange={() => setPrintFilters(prev => ({ ...prev, showWithFiles: 'withFiles' }))}
+                    className="h-4 w-4 text-blue-600 border-gray-300"
+                  />
+                  <span className="text-sm">Only items with attachments</span>
+                </label>
+                <label className="flex items-center space-x-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="fileFilter"
+                    checked={printFilters.showWithFiles === 'withoutFiles'}
+                    onChange={() => setPrintFilters(prev => ({ ...prev, showWithFiles: 'withoutFiles' }))}
+                    className="h-4 w-4 text-blue-600 border-gray-300"
+                  />
+                  <span className="text-sm">Only items without attachments</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end space-x-3 pt-4 border-t">
+            <Button variant="outline" onClick={() => setShowPrintDialog(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={executePrint}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              <Printer className="h-4 w-4 mr-2" />
+              Generate Report
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }

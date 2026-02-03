@@ -115,6 +115,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
     categories: [] as string[],
     csiDivisions: [] as string[],
     showWithFiles: 'all' as 'all' | 'withFiles' | 'withoutFiles',
+    reportType: 'internal' as 'internal' | 'contractor',
   });
 
   // Fetch scope items
@@ -324,7 +325,8 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
   const generateTenantImprovementsSection = (
     items: RomScopeItem[], 
     divisions: string[], 
-    byDivision: Record<string, RomScopeItem[]>
+    byDivision: Record<string, RomScopeItem[]>,
+    isContractorReport: boolean = false
   ): string => {
     let html = `
       <div class="category-section">
@@ -335,48 +337,82 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
 
     divisions.forEach(division => {
       const divisionItems = byDivision[division];
-      html += `
-        <div class="csi-division-header">
-          ${division} (${divisionItems.length} item${divisionItems.length !== 1 ? 's' : ''})
-        </div>
-        <table class="category-table">
-          <thead>
-            <tr>
-              <th style="width: 8%; text-align: left;">CSI Code</th>
-              <th style="width: 25%; text-align: left;">Item Name</th>
-              <th style="width: 15%; text-align: center;">Cost per Unit</th>
-              <th style="width: 12%; text-align: center;">Last Updated</th>
-              <th style="width: 8%; text-align: center;">File(s)</th>
-              <th style="width: 12%; text-align: center;">Source</th>
-              <th style="width: 20%; text-align: center;">Notes</th>
-            </tr>
-          </thead>
-          <tbody>
-      `;
       
-      divisionItems.forEach(item => {
-        const result = evaluateFormula(item.unitPrice);
-        const displayValue = result.value !== null ? result.value.toFixed(2) : parseFloat(item.unitPrice || "0").toFixed(2);
-        const formattedPrice = parseFloat(displayValue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        const lastUpdated = item.lastUpdated ? 
-          new Date(item.lastUpdated).toLocaleDateString() : 
-          new Date(item.createdAt).toLocaleDateString();
-        const hasFiles = item.attachments && item.attachments.length > 0;
-        
+      if (isContractorReport) {
+        // Contractor pricing sheet - blank prices for them to fill in
         html += `
-          <tr>
-            <td style="font-family: monospace; font-size: 8px;">${item.csiCode || '—'}</td>
-            <td class="item-name">${item.name}</td>
-            <td class="item-price" style="text-align: center;">$${formattedPrice} per ${item.unit}</td>
-            <td class="item-date" style="text-align: center;">${lastUpdated}</td>
-            <td class="${hasFiles ? 'has-file' : 'no-file'}" style="text-align: center;">
-              ${hasFiles ? 'Yes' : 'No'}
-            </td>
-            <td style="text-align: center;">${item.source || '—'}</td>
-            <td style="text-align: center;">${item.description || '—'}</td>
-          </tr>
+          <div class="csi-division-header">
+            ${division} (${divisionItems.length} item${divisionItems.length !== 1 ? 's' : ''})
+          </div>
+          <table class="category-table">
+            <thead>
+              <tr>
+                <th style="width: 10%; text-align: left;">CSI Code</th>
+                <th style="width: 35%; text-align: left;">Item Name</th>
+                <th style="width: 10%; text-align: center;">Unit</th>
+                <th style="width: 20%; text-align: center;">Your Unit Price</th>
+                <th style="width: 25%; text-align: left;">Notes</th>
+              </tr>
+            </thead>
+            <tbody>
         `;
-      });
+        
+        divisionItems.forEach(item => {
+          html += `
+            <tr>
+              <td style="font-family: monospace; font-size: 8px;">${item.csiCode || '—'}</td>
+              <td class="item-name">${item.name}</td>
+              <td style="text-align: center;">${item.unit}</td>
+              <td style="text-align: center; border-bottom: 1px solid #000; min-width: 80px;">$___________</td>
+              <td style="border-bottom: 1px solid #ccc;"></td>
+            </tr>
+          `;
+        });
+      } else {
+        // Internal report - full details
+        html += `
+          <div class="csi-division-header">
+            ${division} (${divisionItems.length} item${divisionItems.length !== 1 ? 's' : ''})
+          </div>
+          <table class="category-table">
+            <thead>
+              <tr>
+                <th style="width: 8%; text-align: left;">CSI Code</th>
+                <th style="width: 25%; text-align: left;">Item Name</th>
+                <th style="width: 15%; text-align: center;">Cost per Unit</th>
+                <th style="width: 12%; text-align: center;">Last Updated</th>
+                <th style="width: 8%; text-align: center;">File(s)</th>
+                <th style="width: 12%; text-align: center;">Source</th>
+                <th style="width: 20%; text-align: center;">Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+        
+        divisionItems.forEach(item => {
+          const result = evaluateFormula(item.unitPrice);
+          const displayValue = result.value !== null ? result.value.toFixed(2) : parseFloat(item.unitPrice || "0").toFixed(2);
+          const formattedPrice = parseFloat(displayValue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+          const lastUpdated = item.lastUpdated ? 
+            new Date(item.lastUpdated).toLocaleDateString() : 
+            new Date(item.createdAt).toLocaleDateString();
+          const hasFiles = item.attachments && item.attachments.length > 0;
+          
+          html += `
+            <tr>
+              <td style="font-family: monospace; font-size: 8px;">${item.csiCode || '—'}</td>
+              <td class="item-name">${item.name}</td>
+              <td class="item-price" style="text-align: center;">$${formattedPrice} per ${item.unit}</td>
+              <td class="item-date" style="text-align: center;">${lastUpdated}</td>
+              <td class="${hasFiles ? 'has-file' : 'no-file'}" style="text-align: center;">
+                ${hasFiles ? 'Yes' : 'No'}
+              </td>
+              <td style="text-align: center;">${item.source || '—'}</td>
+              <td style="text-align: center;">${item.description || '—'}</td>
+            </tr>
+          `;
+        });
+      }
       
       html += `
           </tbody>
@@ -395,6 +431,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
       categories: [],
       csiDivisions: [],
       showWithFiles: 'all',
+      reportType: 'internal',
     });
     setShowPrintDialog(true);
   };
@@ -425,7 +462,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
       filteredItems = filteredItems.filter(item => !item.attachments || item.attachments.length === 0);
     }
 
-    const printContent = generateScopeItemsPrintHtml(filteredItems);
+    const printContent = generateScopeItemsPrintHtml(filteredItems, printFilters.reportType);
     const printWindow = window.open('', '_blank');
     if (printWindow) {
       printWindow.document.write(printContent);
@@ -436,7 +473,8 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
   };
 
   // Generate print HTML with Bridge Industrial styling - organized by CSI Division for Tenant Improvements
-  const generateScopeItemsPrintHtml = (items: RomScopeItem[]) => {
+  const generateScopeItemsPrintHtml = (items: RomScopeItem[], reportType: 'internal' | 'contractor' = 'internal') => {
+    const isContractorReport = reportType === 'contractor';
     // Separate Tenant Improvements from other categories
     const tenantImprovements = items.filter(item => item.category === "Tenant Improvements");
     const otherItems = items.filter(item => item.category !== "Tenant Improvements");
@@ -665,59 +703,100 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
       </head>
       <body>
         <div class="header">
-          <div class="document-title">ROM PILOT SCOPE ITEMS LIBRARY</div>
+          <div class="document-title">${isContractorReport ? 'CONTRACTOR PRICING SHEET' : 'ROM PILOT SCOPE ITEMS LIBRARY'}</div>
           <div class="project-title">Bridge Industrial - Construction Cost Management</div>
           <div class="project-title">Generated on ${currentDate}</div>
+          ${isContractorReport ? '<div class="project-title" style="color: #dc2626; font-weight: bold;">Please complete pricing and return by: _______________</div>' : ''}
           ${filterText}
         </div>
         
-        <!-- Other Categories (Design / Soft Costs, etc.) -->
-        ${Object.entries(otherByCategory).map(([category, categoryItems]) => `
-          <div class="category-section">
-            <div class="category-header">
-              ${category} (${categoryItems.length} item${categoryItems.length !== 1 ? 's' : ''})
-            </div>
-            <table class="category-table">
-              <thead>
-                <tr>
-                  <th style="width: 30%; text-align: left;">Item Name</th>
-                  <th style="width: 15%; text-align: center;">Cost per Unit</th>
-                  <th style="width: 12%; text-align: center;">Last Updated</th>
-                  <th style="width: 8%; text-align: center;">File(s)</th>
-                  <th style="width: 15%; text-align: center;">Source</th>
-                  <th style="width: 20%; text-align: center;">Notes</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${categoryItems.map(item => {
-                  const result = evaluateFormula(item.unitPrice);
-                  const displayValue = result.value !== null ? result.value.toFixed(2) : parseFloat(item.unitPrice || "0").toFixed(2);
-                  const formattedPrice = parseFloat(displayValue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                  const lastUpdated = item.lastUpdated ? 
-                    new Date(item.lastUpdated).toLocaleDateString() : 
-                    new Date(item.createdAt).toLocaleDateString();
-                  const hasFiles = item.attachments && item.attachments.length > 0;
-                  
-                  return `
-                    <tr>
-                      <td class="item-name">${item.name}</td>
-                      <td class="item-price" style="text-align: center;">$${formattedPrice} per ${item.unit}</td>
-                      <td class="item-date" style="text-align: center;">${lastUpdated}</td>
-                      <td class="${hasFiles ? 'has-file' : 'no-file'}" style="text-align: center;">
-                        ${hasFiles ? 'Yes' : 'No'}
-                      </td>
-                      <td style="text-align: center;">${item.source || '—'}</td>
-                      <td style="text-align: center;">${item.description || '—'}</td>
-                    </tr>
-                  `;
-                }).join('')}
-              </tbody>
-            </table>
+        ${isContractorReport ? `
+          <div style="margin-bottom: 20px; padding: 15px; background: #fef3c7; border: 1px solid #f59e0b; border-radius: 5px;">
+            <p style="margin: 0 0 8px 0; font-weight: bold;">Contractor Information:</p>
+            <p style="margin: 0;">Company Name: _________________________________ Contact: _________________________________</p>
+            <p style="margin: 8px 0 0 0;">Phone: _________________________________ Email: _________________________________</p>
           </div>
-        `).join('')}
+        ` : ''}
+        
+        <!-- Other Categories (Design / Soft Costs, etc.) -->
+        ${Object.entries(otherByCategory).map(([category, categoryItems]) => {
+          if (isContractorReport) {
+            return `
+              <div class="category-section">
+                <div class="category-header">
+                  ${category} (${categoryItems.length} item${categoryItems.length !== 1 ? 's' : ''})
+                </div>
+                <table class="category-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 40%; text-align: left;">Item Name</th>
+                      <th style="width: 15%; text-align: center;">Unit</th>
+                      <th style="width: 20%; text-align: center;">Your Unit Price</th>
+                      <th style="width: 25%; text-align: left;">Notes</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${categoryItems.map(item => `
+                      <tr>
+                        <td class="item-name">${item.name}</td>
+                        <td style="text-align: center;">${item.unit}</td>
+                        <td style="text-align: center; border-bottom: 1px solid #000; min-width: 80px;">$___________</td>
+                        <td style="border-bottom: 1px solid #ccc;"></td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            `;
+          } else {
+            return `
+              <div class="category-section">
+                <div class="category-header">
+                  ${category} (${categoryItems.length} item${categoryItems.length !== 1 ? 's' : ''})
+                </div>
+                <table class="category-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 30%; text-align: left;">Item Name</th>
+                      <th style="width: 15%; text-align: center;">Cost per Unit</th>
+                      <th style="width: 12%; text-align: center;">Last Updated</th>
+                      <th style="width: 8%; text-align: center;">File(s)</th>
+                      <th style="width: 15%; text-align: center;">Source</th>
+                      <th style="width: 20%; text-align: center;">Notes</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${categoryItems.map(item => {
+                      const result = evaluateFormula(item.unitPrice);
+                      const displayValue = result.value !== null ? result.value.toFixed(2) : parseFloat(item.unitPrice || "0").toFixed(2);
+                      const formattedPrice = parseFloat(displayValue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                      const lastUpdated = item.lastUpdated ? 
+                        new Date(item.lastUpdated).toLocaleDateString() : 
+                        new Date(item.createdAt).toLocaleDateString();
+                      const hasFiles = item.attachments && item.attachments.length > 0;
+                      
+                      return `
+                        <tr>
+                          <td class="item-name">${item.name}</td>
+                          <td class="item-price" style="text-align: center;">$${formattedPrice} per ${item.unit}</td>
+                          <td class="item-date" style="text-align: center;">${lastUpdated}</td>
+                          <td class="${hasFiles ? 'has-file' : 'no-file'}" style="text-align: center;">
+                            ${hasFiles ? 'Yes' : 'No'}
+                          </td>
+                          <td style="text-align: center;">${item.source || '—'}</td>
+                          <td style="text-align: center;">${item.description || '—'}</td>
+                        </tr>
+                      `;
+                    }).join('')}
+                  </tbody>
+                </table>
+              </div>
+            `;
+          }
+        }).join('')}
         
         <!-- Tenant Improvements - Organized by CSI Division -->
-        ${tenantImprovements.length > 0 ? generateTenantImprovementsSection(tenantImprovements, sortedDivisions, tiByDivision) : ''}
+        ${tenantImprovements.length > 0 ? generateTenantImprovementsSection(tenantImprovements, sortedDivisions, tiByDivision, isContractorReport) : ''}
         
         <div class="footer">
           © ${new Date().getFullYear()} Bridge Industrial - ROM Scope Items Library
@@ -2607,6 +2686,39 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
             <DialogTitle>Print Options</DialogTitle>
           </DialogHeader>
           <div className="space-y-6 py-4">
+            {/* Report Type Selection */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">Report Type</Label>
+              <div className="space-y-2">
+                <label className="flex items-center space-x-2 cursor-pointer p-2 rounded border border-gray-200 hover:bg-gray-50">
+                  <input
+                    type="radio"
+                    name="reportType"
+                    checked={printFilters.reportType === 'internal'}
+                    onChange={() => setPrintFilters(prev => ({ ...prev, reportType: 'internal' }))}
+                    className="h-4 w-4 text-blue-600 border-gray-300"
+                  />
+                  <div>
+                    <span className="text-sm font-medium">Internal Report</span>
+                    <p className="text-xs text-gray-500">Full details with pricing, dates, sources, and notes</p>
+                  </div>
+                </label>
+                <label className="flex items-center space-x-2 cursor-pointer p-2 rounded border border-gray-200 hover:bg-gray-50">
+                  <input
+                    type="radio"
+                    name="reportType"
+                    checked={printFilters.reportType === 'contractor'}
+                    onChange={() => setPrintFilters(prev => ({ ...prev, reportType: 'contractor' }))}
+                    className="h-4 w-4 text-blue-600 border-gray-300"
+                  />
+                  <div>
+                    <span className="text-sm font-medium">Contractor Pricing Sheet</span>
+                    <p className="text-xs text-gray-500">Blank prices for contractors to fill in and return</p>
+                  </div>
+                </label>
+              </div>
+            </div>
+
             {/* Category Filter */}
             <div className="space-y-3">
               <Label className="text-sm font-medium">Categories</Label>

@@ -1745,6 +1745,15 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                                           />
                                         </div>
                                       </div>
+                                      <div className="space-y-2">
+                                        <Label>Description / Notes</Label>
+                                        <Textarea
+                                          value={formData.description}
+                                          onChange={(e) => setFormData({...formData, description: e.target.value})}
+                                          placeholder="e.g., 1 Fixture Per / 625 squarefeet, footcandles requirements, etc."
+                                          rows={2}
+                                        />
+                                      </div>
                                       {formData.category === "Tenant Improvements" && (
                                         <div className="grid grid-cols-2 gap-4 p-3 bg-white rounded-md border border-blue-200">
                                           <div className="space-y-2">

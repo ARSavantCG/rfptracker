@@ -75,6 +75,8 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
   const [isGeneratingPdfs, setIsGeneratingPdfs] = useState(false);
   const [keyDates, setKeyDates] = useState<Array<{label: string, date: string}>>([]);
   const [additionalAreas, setAdditionalAreas] = useState<Array<{id: string, description: string, squareFootage: string, notes: string}>>([]);
+  const [editingAreaId, setEditingAreaId] = useState<string | null>(null);
+  const [editingAreaData, setEditingAreaData] = useState<{description: string, squareFootage: string, notes: string}>({description: '', squareFootage: '', notes: ''});
   const modalRef = useRef<HTMLDivElement>(null);
   
   // Custom refs for scope of work navigation
@@ -379,8 +381,52 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
   useEffect(() => {
     if (!isOpen) {
       setAdditionalAreas([]);
+      setEditingAreaId(null);
     }
   }, [isOpen]);
+
+  const updateAreaBreakdownMutation = useMutation({
+    mutationFn: async (updatedAreas: any[]) => {
+      if (!rfp) throw new Error("No RFP selected");
+      return await apiRequest(`/api/rfp-requests/${rfp.id}`, "PATCH", { areaBreakdown: updatedAreas });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
+      setEditingAreaId(null);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update areas",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDeleteArea = (areaId: string) => {
+    if (!rfp?.areaBreakdown) return;
+    const updatedAreas = rfp.areaBreakdown.filter(a => a.id !== areaId);
+    updateAreaBreakdownMutation.mutate(updatedAreas);
+  };
+
+  const handleEditArea = (area: any) => {
+    setEditingAreaId(area.id);
+    setEditingAreaData({
+      description: area.description || '',
+      squareFootage: area.squareFootage || '',
+      notes: area.notes || '',
+    });
+  };
+
+  const handleSaveEditArea = () => {
+    if (!rfp?.areaBreakdown || !editingAreaId) return;
+    const updatedAreas = rfp.areaBreakdown.map(a => 
+      a.id === editingAreaId 
+        ? { ...a, description: editingAreaData.description, squareFootage: editingAreaData.squareFootage, notes: editingAreaData.notes }
+        : a
+    );
+    updateAreaBreakdownMutation.mutate(updatedAreas);
+  };
 
   // Pre-populate form with existing data
   useEffect(() => {
@@ -1406,11 +1452,52 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
                 {/* Saved Area Items (both from Step 2 and newly added) */}
                 {rfp?.areaBreakdown && rfp.areaBreakdown.map((area, index) => (
                   <div key={area.id || index} className="grid grid-cols-5 gap-4 items-center py-2 border-b border-gray-100 bg-green-50">
-                    <div className="text-sm font-medium text-green-800">{area.description}</div>
-                    <div className="text-sm font-medium text-green-800">{parseInt(area.squareFootage || '0').toLocaleString()} SF</div>
-                    <div className="text-sm text-green-600">{area.notes || '—'}</div>
-                    <div className="text-xs text-green-700 bg-green-100 px-2 py-1 rounded font-medium">✓ Saved</div>
-                    <div></div>
+                    {editingAreaId === area.id ? (
+                      <>
+                        <Input
+                          value={editingAreaData.description}
+                          onChange={(e) => setEditingAreaData({...editingAreaData, description: e.target.value})}
+                          placeholder="Area description"
+                          className="h-8 text-sm"
+                        />
+                        <Input
+                          value={editingAreaData.squareFootage}
+                          onChange={(e) => setEditingAreaData({...editingAreaData, squareFootage: e.target.value.replace(/,/g, '')})}
+                          placeholder="Square footage"
+                          className="h-8 text-sm"
+                        />
+                        <Input
+                          value={editingAreaData.notes}
+                          onChange={(e) => setEditingAreaData({...editingAreaData, notes: e.target.value})}
+                          placeholder="Notes"
+                          className="h-8 text-sm"
+                        />
+                        <div className="flex gap-1">
+                          <Button type="button" variant="ghost" size="sm" onClick={handleSaveEditArea} className="h-8 w-8 p-0 text-green-600 hover:text-green-800">
+                            <CheckCircle className="h-4 w-4" />
+                          </Button>
+                          <Button type="button" variant="ghost" size="sm" onClick={() => setEditingAreaId(null)} className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700">
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <div></div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="text-sm font-medium text-green-800">{area.description}</div>
+                        <div className="text-sm font-medium text-green-800">{parseInt(area.squareFootage || '0').toLocaleString()} SF</div>
+                        <div className="text-sm text-green-600">{area.notes || '—'}</div>
+                        <div className="flex gap-1">
+                          <Button type="button" variant="ghost" size="sm" onClick={() => handleEditArea(area)} className="h-8 w-8 p-0 text-blue-500 hover:text-blue-700" title="Edit area">
+                            <FileText className="h-4 w-4" />
+                          </Button>
+                          <Button type="button" variant="ghost" size="sm" onClick={() => handleDeleteArea(area.id)} className="h-8 w-8 p-0 text-red-500 hover:text-red-700" title="Delete area">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <div></div>
+                      </>
+                    )}
                   </div>
                 ))}
                 

@@ -75,6 +75,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
   const [isGeneratingPdfs, setIsGeneratingPdfs] = useState(false);
   const [keyDates, setKeyDates] = useState<Array<{label: string, date: string}>>([]);
   const [additionalAreas, setAdditionalAreas] = useState<Array<{id: string, description: string, squareFootage: string, notes: string}>>([]);
+  const [savedAreas, setSavedAreas] = useState<any[]>([]);
   const [editingAreaId, setEditingAreaId] = useState<string | null>(null);
   const [editingAreaData, setEditingAreaData] = useState<{description: string, squareFootage: string, notes: string}>({description: '', squareFootage: '', notes: ''});
   const modalRef = useRef<HTMLDivElement>(null);
@@ -377,10 +378,18 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
     enabled: !!rfp?.id && isOpen,
   });
 
+  // Sync savedAreas from rfp.areaBreakdown
+  useEffect(() => {
+    if (isOpen && rfp?.areaBreakdown) {
+      setSavedAreas(rfp.areaBreakdown);
+    }
+  }, [isOpen, rfp?.areaBreakdown]);
+
   // Reset additional areas when modal closes
   useEffect(() => {
     if (!isOpen) {
       setAdditionalAreas([]);
+      setSavedAreas([]);
       setEditingAreaId(null);
     }
   }, [isOpen]);
@@ -404,8 +413,8 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
   });
 
   const handleDeleteArea = (areaId: string) => {
-    if (!rfp?.areaBreakdown) return;
-    const updatedAreas = rfp.areaBreakdown.filter(a => a.id !== areaId);
+    const updatedAreas = savedAreas.filter(a => a.id !== areaId);
+    setSavedAreas(updatedAreas);
     updateAreaBreakdownMutation.mutate(updatedAreas);
   };
 
@@ -419,12 +428,13 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
   };
 
   const handleSaveEditArea = () => {
-    if (!rfp?.areaBreakdown || !editingAreaId) return;
-    const updatedAreas = rfp.areaBreakdown.map(a => 
+    if (!editingAreaId) return;
+    const updatedAreas = savedAreas.map(a => 
       a.id === editingAreaId 
         ? { ...a, description: editingAreaData.description, squareFootage: editingAreaData.squareFootage, notes: editingAreaData.notes }
         : a
     );
+    setSavedAreas(updatedAreas);
     updateAreaBreakdownMutation.mutate(updatedAreas);
   };
 
@@ -1450,7 +1460,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
                 </div>
                 
                 {/* Saved Area Items (both from Step 2 and newly added) */}
-                {rfp?.areaBreakdown && rfp.areaBreakdown.map((area, index) => (
+                {savedAreas.map((area, index) => (
                   <div key={area.id || index} className="grid grid-cols-5 gap-4 items-center py-2 border-b border-gray-100 bg-green-50">
                     {editingAreaId === area.id ? (
                       <>
@@ -1504,13 +1514,13 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
                 {/* Pure DOM Container for Additional Areas */}
                 <div id="additional-areas-container"></div>
                 
-                {!rfp?.areaBreakdown?.length && (
+                {!savedAreas.length && !additionalAreas.length && (
                   <div className="text-center text-gray-500 py-4 border border-dashed border-gray-300 rounded-lg">
                     No area breakdown defined. Areas can be defined during RFP validation phase or added here.
                   </div>
                 )}
                 
-                {rfp?.areaBreakdown && rfp.areaBreakdown.length > 0 && (
+                {savedAreas.length > 0 && (
                   <div className="text-sm text-gray-500 italic">
                     Area breakdown defined during RFP validation phase
                   </div>

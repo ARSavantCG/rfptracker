@@ -718,6 +718,7 @@ export function BaySelectionGrid({
                                   return (
                                     <div key={bay.id} className="flex-shrink-0">
                                       <button
+                                        tabIndex={-1}
                                         onClick={() => !isLeased && toggleMultiBuildingBaySelection(`${prop.propertyName} - Building ${prop.building}`, bay.id, bay)}
                                         disabled={isLeased}
                                         className={`
@@ -877,6 +878,7 @@ export function BaySelectionGrid({
                               <div key={bay.id} className="flex-shrink-0">
                                 <button
                                   type="button"
+                                  tabIndex={-1}
                                   onClick={(e) => {
                                     e.preventDefault();
                                     e.stopPropagation();

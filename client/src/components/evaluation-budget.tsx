@@ -2172,7 +2172,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
     // Calculate rentable area using legally compliant totals
     // ALWAYS calculate from LIVE bay configurations (Properties is single source of truth)
     let rentableArea = 0;
-    if (rfp?.selectedBayConfigurations && Array.isArray(rfp.selectedBayConfigurations)) {
+    if (rfp?.selectedBayConfigurations && Array.isArray(rfp.selectedBayConfigurations) && rfp.selectedBayConfigurations.length > 0) {
       // Use legal compliance totals based on property
       const propertyLegalTotals: Record<string, number> = {
         'Bridge Point Gratigny': 409189,
@@ -2183,7 +2183,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       
       // Get legally compliant total for this property
       const legalTotal = propertyLegalTotals[rfp.property];
-      if (legalTotal && rfp.selectedBayConfigurations.length > 0) {
+      if (legalTotal) {
         // Use legal total if we have all bays selected or close to full property
         const rawTotal = rfp.selectedBayConfigurations.reduce((total, bay) => total + (bay.rentableSquareFootage || 0), 0);
         // If raw total is close to legal total (within 100 SF), use legal total for accuracy
@@ -2380,7 +2380,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
     // Calculate rentable area using legally compliant totals
     // ALWAYS calculate from LIVE bay configurations (Properties is single source of truth)
     let rentableArea = 0;
-    if (rfp?.selectedBayConfigurations && Array.isArray(rfp.selectedBayConfigurations)) {
+    if (rfp?.selectedBayConfigurations && Array.isArray(rfp.selectedBayConfigurations) && rfp.selectedBayConfigurations.length > 0) {
       // Use legal compliance totals based on property
       const propertyLegalTotals: Record<string, number> = {
         'Bridge Point Gratigny': 409189,
@@ -2391,7 +2391,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       
       // Get legally compliant total for this property
       const legalTotal = propertyLegalTotals[rfp.property];
-      if (legalTotal && rfp.selectedBayConfigurations.length > 0) {
+      if (legalTotal) {
         // Use legal total if we have all bays selected or close to full property
         const rawTotal = rfp.selectedBayConfigurations.reduce((total, bay) => total + (bay.rentableSquareFootage || 0), 0);
         // If raw total is close to legal total (within 100 SF), use legal total for accuracy
@@ -2729,7 +2729,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
     // Use legally compliant totals to ensure accurate reporting
     // ALWAYS calculate from LIVE bay configurations (Properties is single source of truth)
     let rentableArea = 0;
-    if (rfp?.selectedBayConfigurations && Array.isArray(rfp.selectedBayConfigurations)) {
+    if (rfp?.selectedBayConfigurations && Array.isArray(rfp.selectedBayConfigurations) && rfp.selectedBayConfigurations.length > 0) {
       // Use legal compliance totals based on property
       const propertyLegalTotals: Record<string, number> = {
         'Bridge Point Gratigny': 409189,
@@ -2740,7 +2740,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       
       // Get legally compliant total for this property
       const legalTotal = propertyLegalTotals[rfp.property];
-      if (legalTotal && rfp.selectedBayConfigurations.length > 0) {
+      if (legalTotal) {
         // Use legal total if we have all bays selected or close to full property
         const rawTotal = rfp.selectedBayConfigurations.reduce((total, bay) => total + (bay.rentableSquareFootage || 0), 0);
         // If raw total is close to legal total (within 100 SF), use legal total for accuracy

@@ -212,6 +212,28 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
   
 
 
+  // Load invitation-to-bid data to get scope of work items
+  const { data: invitationToBidData } = useQuery<any>({
+    queryKey: ['/api/rfp-requests', rfp?.id, 'invitation-to-bid'],
+    queryFn: async () => {
+      if (!rfp?.id) return null;
+      const response = await fetch(`/api/rfp-requests/${rfp.id}/invitation-to-bid`);
+      if (!response.ok) return null;
+      return response.json();
+    },
+    enabled: !!rfp?.id,
+  });
+
+  const scopeOfWorkItems = useMemo(() => {
+    if (invitationToBidData?.scopeOfWork && Array.isArray(invitationToBidData.scopeOfWork)) {
+      return invitationToBidData.scopeOfWork;
+    }
+    if (rfp?.scopeOfWork && Array.isArray(rfp.scopeOfWork)) {
+      return rfp.scopeOfWork;
+    }
+    return [];
+  }, [invitationToBidData, rfp]);
+
   // Load property existing improvements to auto-populate when relevant
   const { data: propertyImprovements, isLoading: isLoadingImprovements } = useQuery({
     queryKey: [`/api/properties/${rfp?.property}/existing-improvements`],
@@ -486,10 +508,10 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
 
   // Open scope of work import modal
   const openScopeImportModal = () => {
-    if (!rfp?.scopeOfWork || !Array.isArray(rfp.scopeOfWork) || rfp.scopeOfWork.length === 0) {
+    if (scopeOfWorkItems.length === 0) {
       toast({
         title: "No Scope of Work Available",
-        description: "No scope of work items found to import.",
+        description: "No scope of work items found. Add scope items in the Invitation to Bid phase first.",
         variant: "destructive",
         duration: 6000,
       });
@@ -501,20 +523,20 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
 
   // Import selected scope of work items
   const importSelectedScopeItems = () => {
-    if (!rfp?.scopeOfWork || selectedScopeItems.size === 0) return;
+    if (scopeOfWorkItems.length === 0 || selectedScopeItems.size === 0) return;
 
-    const itemsToImport = rfp.scopeOfWork.filter((item: any, index: number) => 
+    const itemsToImport = scopeOfWorkItems.filter((_: any, index: number) => 
       selectedScopeItems.has(index.toString())
     );
 
     const importedItems = itemsToImport.map((item: any, index: number) => ({
       id: `scope-${Date.now()}-${index}`,
       description: item.description || item.item || item,
-      quantity: 1,
-      unit: "ea",
+      quantity: typeof item.quantity === 'number' && item.quantity > 0 ? item.quantity : 1,
+      unit: item.unit || "ea",
       unitPrice: "0.00",
       totalPrice: "0.00",
-      tenantShare: 100, // Default to 100% tenant responsibility
+      tenantShare: 100,
     })) as EvaluationLineItem[];
 
     setBudgetData(prev => ({
@@ -4177,7 +4199,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
                     variant="outline"
                     onClick={openScopeImportModal}
                     className="h-8"
-                    disabled={!rfp?.scopeOfWork || !Array.isArray(rfp.scopeOfWork) || rfp.scopeOfWork.length === 0}
+                    disabled={scopeOfWorkItems.length === 0}
                   >
                     <FileText className="h-4 w-4 mr-1" />
                     Import Scope
@@ -5703,27 +5725,67 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
 
       {/* Scope of Work Import Modal */}
       <Dialog open={showScopeImportModal} onOpenChange={setShowScopeImportModal}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden">
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle>Select Scope of Work Items to Import</DialogTitle>
+            <DialogTitle>Import Scope of Work Items</DialogTitle>
             <DialogDescription>
-              Choose which scope of work items from the RFP you want to import into Tenant Improvements.
+              Select which scope items from the Invitation to Bid phase to import into Tenant Improvements.
             </DialogDescription>
           </DialogHeader>
+          <div className="flex items-center justify-between border-b pb-2">
+            <div className="text-sm text-gray-600">
+              {selectedScopeItems.size} of {scopeOfWorkItems.length} item{scopeOfWorkItems.length !== 1 ? 's' : ''} selected
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const allKeys = scopeOfWorkItems.map((_: any, index: number) => index.toString());
+                  setSelectedScopeItems(new Set(allKeys));
+                }}
+              >
+                <CheckIcon className="h-3 w-3 mr-1" />
+                Select All
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSelectedScopeItems(new Set())}
+              >
+                <X className="h-3 w-3 mr-1" />
+                Deselect All
+              </Button>
+            </div>
+          </div>
           <div className="flex-1 overflow-y-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-12">Select</TableHead>
+                  <TableHead className="w-12"></TableHead>
                   <TableHead>Description</TableHead>
+                  <TableHead className="w-20 text-right">Qty</TableHead>
+                  <TableHead className="w-20">Unit</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {rfp?.scopeOfWork && Array.isArray(rfp.scopeOfWork) && rfp.scopeOfWork.map((item: any, index: number) => {
+                {scopeOfWorkItems.map((item: any, index: number) => {
                   const itemKey = index.toString();
                   const description = item.description || item.item || item;
                   return (
-                    <TableRow key={itemKey}>
+                    <TableRow 
+                      key={itemKey} 
+                      className={`cursor-pointer ${selectedScopeItems.has(itemKey) ? 'bg-green-50' : ''}`}
+                      onClick={() => {
+                        const newSelected = new Set(selectedScopeItems);
+                        if (newSelected.has(itemKey)) {
+                          newSelected.delete(itemKey);
+                        } else {
+                          newSelected.add(itemKey);
+                        }
+                        setSelectedScopeItems(newSelected);
+                      }}
+                    >
                       <TableCell>
                         <Checkbox
                           checked={selectedScopeItems.has(itemKey)}
@@ -5738,45 +5800,32 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
                           }}
                         />
                       </TableCell>
-                      <TableCell>{description}</TableCell>
+                      <TableCell className="font-medium">{description}</TableCell>
+                      <TableCell className="text-right">{item.quantity || '—'}</TableCell>
+                      <TableCell>{item.unit || '—'}</TableCell>
                     </TableRow>
                   );
                 })}
               </TableBody>
             </Table>
           </div>
-          <DialogFooter className="flex justify-between items-center">
-            <div className="text-sm text-gray-600">
-              {selectedScopeItems.size} item{selectedScopeItems.size !== 1 ? 's' : ''} selected
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowScopeImportModal(false);
-                  setSelectedScopeItems(new Set());
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  if (rfp?.scopeOfWork && Array.isArray(rfp.scopeOfWork)) {
-                    const allKeys = rfp.scopeOfWork.map((_, index) => index.toString());
-                    setSelectedScopeItems(new Set(allKeys));
-                  }
-                }}
-              >
-                Select All
-              </Button>
-              <Button
-                onClick={importSelectedScopeItems}
-                disabled={selectedScopeItems.size === 0}
-              >
-                Import Selected ({selectedScopeItems.size})
-              </Button>
-            </div>
+          <DialogFooter className="flex justify-between items-center pt-2 border-t">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowScopeImportModal(false);
+                setSelectedScopeItems(new Set());
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={importSelectedScopeItems}
+              disabled={selectedScopeItems.size === 0}
+            >
+              <Package className="h-4 w-4 mr-1" />
+              Import Selected ({selectedScopeItems.size})
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

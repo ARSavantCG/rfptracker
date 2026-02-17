@@ -5047,6 +5047,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Template not found" });
       }
 
+      // Fetch all live ROM scope items to refresh template data
+      const allRomItems = await storage.getAllRomScopeItems();
+      const romItemsMap = new Map(allRomItems.map(item => [item.id, item]));
+
       // Convert template items to evaluation line item format
       const evaluationItems = {
         tenantImprovements: [] as any[],
@@ -5055,9 +5059,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       template.items.forEach((item: any, index: number) => {
+        // Refresh from live ROM scope item if available
+        let liveLabel = item.label;
+        let liveUnitCost = item.unit_cost;
+        let liveUnit = item.snapshot?.unit || item.unit || "ea.";
+        let liveCategory = item.snapshot?.category || "";
+        let liveSnapshot = item.snapshot;
+
+        if (item.romScopeItemId) {
+          const liveRomItem = romItemsMap.get(item.romScopeItemId);
+          if (liveRomItem) {
+            liveLabel = liveRomItem.name;
+            liveUnitCost = typeof liveRomItem.unitPrice === 'string' ? parseFloat(liveRomItem.unitPrice) : liveRomItem.unitPrice;
+            liveUnit = liveRomItem.unit || liveUnit;
+            liveCategory = liveRomItem.category || liveCategory;
+            liveSnapshot = {
+              ...item.snapshot,
+              label: liveRomItem.name,
+              unitPrice: liveUnitCost,
+              unit: liveUnit,
+              category: liveCategory,
+              source: liveRomItem.source || item.snapshot?.source,
+              itemGroup: liveRomItem.itemGroup || item.snapshot?.itemGroup,
+              minSquareFootage: liveRomItem.minSquareFootage || item.snapshot?.minSquareFootage,
+              maxSquareFootage: liveRomItem.maxSquareFootage || item.snapshot?.maxSquareFootage,
+            };
+          }
+        }
+
         // Normalize unit format: lowercase with period
-        // IMPORTANT: Prioritize snapshot.unit (from ROM pilot) over template.unit for consistency
-        let normalizedUnit = item.snapshot?.unit || item.unit || "ea.";
+        let normalizedUnit = liveUnit;
         normalizedUnit = normalizedUnit.toLowerCase();
         if (!normalizedUnit.endsWith('.')) {
           normalizedUnit = normalizedUnit + '.';
@@ -5065,27 +5096,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         const lineItem = {
           id: `template-${template.id}-${index}`,
-          description: item.label,
+          description: liveLabel,
           quantity: item.qty || 1,
           unit: normalizedUnit,
-          unitPrice: item.unit_cost ? item.unit_cost.toString() : "0",
-          totalPrice: item.unit_cost && item.qty ? (item.unit_cost * item.qty).toString() : "0",
+          unitPrice: liveUnitCost ? liveUnitCost.toString() : "0",
+          totalPrice: liveUnitCost && item.qty ? (liveUnitCost * item.qty).toString() : "0",
           tenantShare: item.percent || 100,
           notes: item.notes || "",
-          // Add ROM snapshot for tiered pricing logic
-          romSnapshot: item.snapshot ? {
-            ...item.snapshot,
-            itemGroup: item.snapshot.itemGroup,
-            minSquareFootage: item.snapshot.minSquareFootage,
-            maxSquareFootage: item.snapshot.maxSquareFootage,
+          romSnapshot: liveSnapshot ? {
+            ...liveSnapshot,
+            itemGroup: liveSnapshot.itemGroup,
+            minSquareFootage: liveSnapshot.minSquareFootage,
+            maxSquareFootage: liveSnapshot.maxSquareFootage,
           } : undefined,
         };
 
-        // Categorize based on snapshot.category, tags, or type
-        const category = item.snapshot?.category || "";
+        // Categorize based on live category, snapshot category, tags, or type
+        const category = liveCategory;
         const tags = item.tags || [];
         
-        // Check snapshot category first (most reliable)
+        // Check category first (most reliable)
         if (category.toLowerCase().includes("design") || 
             category.toLowerCase().includes("soft cost") ||
             category.toLowerCase().includes("other fees")) {

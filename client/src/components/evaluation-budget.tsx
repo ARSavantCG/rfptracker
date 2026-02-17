@@ -1028,7 +1028,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
 
   // Helper function to calculate rentable area from selected bays
   const calculateRentableArea = (): number => {
-    if (rfp?.selectedBayConfigurations && Array.isArray(rfp.selectedBayConfigurations)) {
+    if (rfp?.selectedBayConfigurations && Array.isArray(rfp.selectedBayConfigurations) && rfp.selectedBayConfigurations.length > 0) {
       return Math.round(rfp.selectedBayConfigurations.reduce((total, bay) => {
         return total + (bay.rentableSquareFootage || 0);
       }, 0));

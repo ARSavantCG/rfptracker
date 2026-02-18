@@ -993,44 +993,6 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="generateArchitectRfp"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                          tabIndex={-1}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel>Architect RFP</FormLabel>
-                      </div>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="generateContractorRfp"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                          tabIndex={-1}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel>Contractor RFP</FormLabel>
-                      </div>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
                   name="generateBrokerArchitectRfp"
                   render={({ field }) => (
                     <FormItem className="flex flex-row items-start space-x-3 space-y-0">
@@ -1042,7 +1004,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
                         />
                       </FormControl>
                       <div className="space-y-1 leading-none">
-                        <FormLabel>Broker Architect RFP</FormLabel>
+                        <FormLabel>Architect RFP (Broker Response)</FormLabel>
                       </div>
                     </FormItem>
                   )}
@@ -1061,7 +1023,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
                         />
                       </FormControl>
                       <div className="space-y-1 leading-none">
-                        <FormLabel>Broker Contractor RFP</FormLabel>
+                        <FormLabel>GC RFP (Broker Response)</FormLabel>
                       </div>
                     </FormItem>
                   )}

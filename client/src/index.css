@@ -2,38 +2,36 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Bay Configuration Scrollbars - Always Visible and Functional */
+/* Bay Configuration Scrollbars - Thin, minimal, always visible */
 .bay-scroll {
-  /* Force scrollbars to always be visible and functional */
   overflow-x: auto !important;
   overflow-y: hidden !important;
-  scrollbar-width: auto; /* Firefox - use default width for better visibility */
-  scrollbar-color: #6b7280 #e5e7eb; /* Firefox - darker thumb for better visibility */
+  scrollbar-width: thin;
+  scrollbar-color: #9ca3af #f3f4f6;
 }
 
 .bay-scroll::-webkit-scrollbar {
-  height: 16px; /* Larger for better clickability */
-  width: 16px;
+  height: 6px;
+  width: 6px;
 }
 
 .bay-scroll::-webkit-scrollbar-track {
-  background: #e5e7eb;
-  border-radius: 0; /* Remove border-radius for cleaner look */
+  background: #f3f4f6;
+  border-radius: 3px;
 }
 
 .bay-scroll::-webkit-scrollbar-thumb {
-  background: #6b7280;
-  border-radius: 0;
-  border: none; /* Remove border for better contrast */
-  min-width: 30px; /* Ensure minimum thumb size for dragging */
+  background: #9ca3af;
+  border-radius: 3px;
+  min-width: 40px;
 }
 
 .bay-scroll::-webkit-scrollbar-thumb:hover {
-  background: #374151;
+  background: #6b7280;
 }
 
 .bay-scroll::-webkit-scrollbar-thumb:active {
-  background: #1f2937;
+  background: #4b5563;
 }
 
 /* TARGETED TOAST NOTIFICATIONS FIX */

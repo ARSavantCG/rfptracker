@@ -234,7 +234,7 @@ export function BayConfigurationModal({
         </DialogHeader>
         
         {/* Content Area */}
-        <div className="flex-1 overflow-auto">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden">
           {isLoading ? (
             <div className="text-center py-8 text-gray-500">
               <div className="animate-spin h-8 w-8 border-4 border-orange-600 border-t-transparent rounded-full mx-auto mb-4"></div>

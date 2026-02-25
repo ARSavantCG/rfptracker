@@ -590,9 +590,9 @@ export default function BayConfigurationSelector({
 
           
           {/* Bay Grid with Position Indicators */}
-          <div className="relative">
+          <div className="relative overflow-x-hidden">
             {/* Single scrolling container for both bays and position indicators */}
-            <div className="bay-scroll pb-4">
+            <div className="bay-scroll pb-2">
               {/* Group bays by their bay number for stacking split bays */}
               <div className={`flex gap-0.5 justify-start ${
                 property.bayProgressionDirection === 'west' ? 'flex-row-reverse' : ''

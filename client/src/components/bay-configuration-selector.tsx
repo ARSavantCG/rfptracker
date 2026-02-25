@@ -1,10 +1,10 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Calculator, Grid3x3, Compass, Navigation, Edit3, RotateCcw, Car, Truck, Check } from "lucide-react";
+import { Calculator, Grid3x3, Compass, Navigation, Edit3, RotateCcw, Car, Truck, Check, ChevronLeft, ChevronRight } from "lucide-react";
 import type { Property, BayConfiguration, ExecutedLease } from "@shared/schema";
 
 interface BayConfigurationSelectorProps {
@@ -25,6 +25,10 @@ export default function BayConfigurationSelector({
   );
   const [isOverrideMode, setIsOverrideMode] = useState<boolean>(initialOverrideArea !== undefined);
   const [overrideArea, setOverrideArea] = useState<string>(initialOverrideArea?.toString() || "");
+  const bayScrollRef = useRef<HTMLDivElement>(null);
+  const scrollBays = (dir: 'left' | 'right') => {
+    bayScrollRef.current?.scrollBy({ left: dir === 'left' ? -250 : 250, behavior: 'smooth' });
+  };
   
   // Parking tracking states
   const [vehicularParkingOverride, setVehicularParkingOverride] = useState<string>("");
@@ -591,8 +595,26 @@ export default function BayConfigurationSelector({
           
           {/* Bay Grid with Position Indicators */}
           <div className="relative" style={{ width: '100%' }}>
+            {/* Scroll navigation buttons */}
+            <div className="flex items-center justify-between mb-1">
+              <button
+                type="button"
+                onClick={() => scrollBays('left')}
+                className="flex items-center gap-1 px-2 py-1 text-xs bg-white border border-gray-300 rounded shadow-sm hover:bg-gray-50 text-gray-600"
+              >
+                <ChevronLeft className="h-3 w-3" /> Scroll Left
+              </button>
+              <span className="text-[9px] text-gray-400">scroll to see all bays</span>
+              <button
+                type="button"
+                onClick={() => scrollBays('right')}
+                className="flex items-center gap-1 px-2 py-1 text-xs bg-white border border-gray-300 rounded shadow-sm hover:bg-gray-50 text-gray-600"
+              >
+                Scroll Right <ChevronRight className="h-3 w-3" />
+              </button>
+            </div>
             {/* Single scrolling container for both bays and position indicators */}
-            <div className="bay-scroll pb-2" style={{ width: '100%' }}>
+            <div ref={bayScrollRef} className="bay-scroll pb-2" style={{ width: '100%' }}>
               {/* Group bays by their bay number for stacking split bays */}
               <div className={`flex gap-0.5 justify-start ${
                 property.bayProgressionDirection === 'west' ? 'flex-row-reverse' : ''

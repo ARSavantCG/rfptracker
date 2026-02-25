@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Grid, Calculator, RotateCcw, Building, Building2 } from "lucide-react";
+import { Grid, Calculator, RotateCcw, Building, Building2, ChevronLeft, ChevronRight } from "lucide-react";
 import type { Property, BayConfiguration, BuildingCosts, ExecutedLease } from "@shared/schema";
 
 interface BaySelectionGridProps {
@@ -39,6 +39,10 @@ export function BaySelectionGrid({
   const [selectedBaysPerBuilding, setSelectedBaysPerBuilding] = useState<{[propertyName: string]: BayConfiguration[]}>(initialSelectedBaysPerBuilding);
   const [costsPerBuilding, setCostsPerBuilding] = useState<{[propertyName: string]: BuildingCosts}>(initialCostsPerBuilding);
   const [selectedBuildingIds, setSelectedBuildingIds] = useState<{[propertyName: string]: Set<string>}>({});
+  const bayScrollRef = useRef<HTMLDivElement>(null);
+  const scrollBays = (dir: 'left' | 'right') => {
+    bayScrollRef.current?.scrollBy({ left: dir === 'left' ? -250 : 250, behavior: 'smooth' });
+  };
 
   // Fetch executed leases to exclude leased bays from selection
   const { data: executedLeasesForProperty = [] } = useQuery<ExecutedLease[]>({
@@ -827,7 +831,24 @@ export function BaySelectionGrid({
                 </div>
               </div>
             )}
-            <div className="overflow-x-auto pb-4">
+            <div className="flex items-center justify-between mb-1">
+              <button
+                type="button"
+                onClick={() => scrollBays('left')}
+                className="flex items-center gap-1 px-2 py-1 text-xs bg-white border border-gray-300 rounded shadow-sm hover:bg-gray-50 text-gray-600"
+              >
+                <ChevronLeft className="h-3 w-3" /> Scroll Left
+              </button>
+              <span className="text-[9px] text-gray-400">scroll to see all bays</span>
+              <button
+                type="button"
+                onClick={() => scrollBays('right')}
+                className="flex items-center gap-1 px-2 py-1 text-xs bg-white border border-gray-300 rounded shadow-sm hover:bg-gray-50 text-gray-600"
+              >
+                Scroll Right <ChevronRight className="h-3 w-3" />
+              </button>
+            </div>
+            <div ref={bayScrollRef} className="overflow-x-auto pb-2">
               <div className="flex gap-0.5 justify-center" style={{ minWidth: 'max-content' }}>
                 {(() => {
                   // Generate individual bays with split support

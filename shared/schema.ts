@@ -403,6 +403,7 @@ export const bidLineItems = pgTable("bid_line_items", {
 export const bidAlternates = pgTable("bid_alternates", {
   id: serial("id").primaryKey(),
   bidCollectionId: integer("bid_collection_id").notNull().references(() => bidCollections.id),
+  title: text("title").notNull().default(""),
   description: text("description").notNull(),
   cost: text("cost").notNull(),
   includeInEvaluation: boolean("include_in_evaluation").notNull().default(false),

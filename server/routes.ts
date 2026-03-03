@@ -4137,6 +4137,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         for (const alternate of alternates) {
           await storage.createBidAlternate({
             ...alternate,
+            title: alternate.title || alternate.description || "",
             bidCollectionId: bidCollection.id
           });
         }
@@ -4255,6 +4256,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         for (const alternate of alternates) {
           await storage.createBidAlternate({
             ...alternate,
+            title: alternate.title || alternate.description || "",
             bidCollectionId: id
           });
         }

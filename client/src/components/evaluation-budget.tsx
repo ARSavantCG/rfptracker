@@ -1761,9 +1761,26 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       const cleanedTI = cleanOrphanedAssemblyItems(savedTI);
       const cleanedDSC = cleanOrphanedAssemblyItems(savedDSC);
       const cleanedEI = cleanOrphanedAssemblyItems(savedEI);
+
+      // Apply building depth to demising wall items inline during load so the two
+      // effects don't race each other (property data loading re-triggers this effect).
+      const finalTI = cleanedTI.map((item: EvaluationLineItem) => {
+        const desc = (item.description || "").toLowerCase();
+        if (desc.includes("demising wall") && propertyData?.buildingDepth && !savedManualOverrides.includes(item.id)) {
+          const buildingDepth = propertyData.buildingDepth;
+          const unitPx = parseFloat(item.unitPrice || "0");
+          return {
+            ...item,
+            quantity: buildingDepth,
+            unit: "ft.",
+            totalPrice: (buildingDepth * unitPx).toString(),
+          };
+        }
+        return item;
+      });
       
       setBudgetData({
-        tenantImprovements: cleanedTI,
+        tenantImprovements: finalTI,
         designSoftCosts: cleanedDSC,
         existingImprovements: cleanedEI,
         hasExistingImprovements: (existingBudget as any).hasExistingImprovements || existingImprovementsFromProperty.length > 0,

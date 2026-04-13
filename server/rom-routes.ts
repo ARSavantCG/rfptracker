@@ -33,6 +33,7 @@ async function generateRomReportHtml(romPilot: any, lineItems: any[], scopeItems
   // Get property details if property ID is provided
   let propertyDetails = null;
   let bayCount = 0;
+  let bayCountDisplay = '';
   let doorConfig = 'N/A';
   let vehicularParking = 'N/A';
   let trailerParking = 'N/A';
@@ -49,11 +50,15 @@ async function generateRomReportHtml(romPilot: any, lineItems: any[], scopeItems
         propertyDisplayName = `${propertyDetails.propertyName}${buildingInfo}`;
         
         // Calculate door configuration from selected bays
-        if (romPilot.selectedBayConfigurations && Array.isArray(romPilot.selectedBayConfigurations)) {
+        if (romPilot.selectedBayConfigurations && Array.isArray(romPilot.selectedBayConfigurations) && romPilot.selectedBayConfigurations.length > 0) {
           bayCount = romPilot.selectedBayConfigurations.length;
+          bayCountDisplay = `${bayCount} Bays (Modified Configuration)`;
           const totalStandardDoors = romPilot.selectedBayConfigurations.reduce((sum, bay) => sum + (bay.standardDockDoors || 0), 0);
           const totalOversizedDoors = romPilot.selectedBayConfigurations.reduce((sum, bay) => sum + (bay.oversizedDockDoors || 0), 0);
           doorConfig = `${totalStandardDoors + totalOversizedDoors} doors total (${totalOversizedDoors} oversized, ${totalStandardDoors} regular)`;
+        } else if (!bayCount && romPilot.selectedBayIds && Array.isArray(romPilot.selectedBayIds) && romPilot.selectedBayIds.length > 0) {
+          bayCount = romPilot.selectedBayIds.length;
+          bayCountDisplay = `${bayCount} Bays (Modified Configuration)`;
         }
         
         // Get parking info
@@ -375,7 +380,7 @@ async function generateRomReportHtml(romPilot: any, lineItems: any[], scopeItems
         <div class="property-details">
           <div class="property-left">
             <div><strong>Rentable Area:</strong> ${totalSquareFootage > 0 ? new Intl.NumberFormat('en-US').format(totalSquareFootage) + ' sf' : 'N/A'}</div>
-            <div><strong>Bay Count:</strong> ${bayCount || (romPilot.selectedBayConfigurations ? romPilot.selectedBayConfigurations.length : 0)} bays</div>
+            <div><strong>Bay Count:</strong> ${bayCountDisplay || `${bayCount || (romPilot.selectedBayConfigurations ? romPilot.selectedBayConfigurations.length : 0)} bays`}</div>
             <div><strong>Door Configuration:</strong> ${doorConfig}</div>
           </div>
           <div class="property-right">

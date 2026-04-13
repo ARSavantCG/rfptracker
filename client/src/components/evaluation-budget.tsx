@@ -1309,12 +1309,21 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       selectedBays: rfp.selectedBayConfigurations.length
     });
     
-    // If tenant area is 0, fall back to selectedBayIds matched against property bayConfigurations
+    // Fallback 1: if tenant area is 0, match selectedBayIds against property bayConfigurations
     let effectiveTenantArea = tenantRentableArea;
     if (effectiveTenantArea === 0 && rfp.selectedBayIds && Array.isArray(rfp.selectedBayIds) && rfp.selectedBayIds.length > 0 && property.bayConfigurations) {
       const matchedBays = property.bayConfigurations.filter((bay: any) => rfp.selectedBayIds!.includes(bay.id));
       effectiveTenantArea = matchedBays.reduce((total: number, bay: any) => total + (bay.rentableSquareFootage || bay.squareFootage || 0), 0) + (rfp.mechanicalRoomArea || 0);
     }
+    // Fallback 2: use rfp.projectArea if still 0
+    if (effectiveTenantArea === 0 && (rfp as any).projectArea) {
+      effectiveTenantArea = (rfp as any).projectArea;
+    }
+    // Fallback 3: sum selectedBaysPerBuilding if still 0
+    if (effectiveTenantArea === 0 && (rfp as any).selectedBaysPerBuilding && Array.isArray((rfp as any).selectedBaysPerBuilding)) {
+      effectiveTenantArea = (rfp as any).selectedBaysPerBuilding.reduce((total: number, b: any) => total + (b.rentableSquareFootage || b.squareFootage || 0), 0);
+    }
+    console.log('Tenant area after fallbacks:', effectiveTenantArea);
 
     if (totalPropertyArea === 0 || effectiveTenantArea === 0) {
       console.log('Parking Calc Debug - Zero areas detected');

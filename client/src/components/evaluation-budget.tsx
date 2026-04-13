@@ -195,6 +195,11 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
     enabled: !!rfp?.property,
   });
 
+  const { data: propertyByIdData } = useQuery({
+    queryKey: [`/api/properties/${rfp?.propertyId}`],
+    enabled: !!rfp?.propertyId,
+  });
+
   // For multi-building RFPs, also load all selected properties if they exist
   const { data: multiBuildingProperties } = useQuery({
     queryKey: [`/api/properties`],

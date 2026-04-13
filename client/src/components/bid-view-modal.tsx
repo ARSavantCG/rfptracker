@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -5,8 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/utils";
 import { evaluateFormula } from "@shared/formula-utils";
-import { Printer, FileText } from "lucide-react";
+import { Printer, FileText, Loader2, Sparkles, AlertTriangle, CheckCircle } from "lucide-react";
 import type { BidCollection, BidLineItem } from "@shared/schema";
+import { useToast } from "@/hooks/use-toast";
 
 interface BidViewModalProps {
   isOpen: boolean;
@@ -14,14 +16,33 @@ interface BidViewModalProps {
   bid: BidCollection | null;
 }
 
+interface AiAnomaly {
+  lineItemDescription: string;
+  issue: string;
+  severity: "low" | "medium" | "high";
+}
+
+interface AiMissingItem {
+  description: string;
+  reason: string;
+}
+
+interface AiAnalysis {
+  anomalies: AiAnomaly[];
+  missing: AiMissingItem[];
+  summary: string;
+}
+
 export function BidViewModal({ isOpen, onClose, bid }: BidViewModalProps) {
+  const { toast } = useToast();
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiAnalysis, setAiAnalysis] = useState<AiAnalysis | null>(null);
+
   // Fetch line items for this bid
   const { data: lineItems } = useQuery({
     queryKey: [`/api/bid-collections/${bid?.id}/line-items`],
     enabled: isOpen && !!bid?.id,
   });
-
-
 
   const formatCurrency = (amount: string | null) => {
     if (!amount) return "TBD";
@@ -68,7 +89,49 @@ export function BidViewModal({ isOpen, onClose, bid }: BidViewModalProps) {
     );
   };
 
+  const handleAnalyze = async () => {
+    if (!bid?.id) return;
+    const token = localStorage.getItem('auth-token');
+    if (!token) {
+      toast({ title: "Not authenticated", description: "Please log in again.", variant: "destructive" });
+      return;
+    }
+    setAiLoading(true);
+    setAiAnalysis(null);
+    try {
+      const response = await fetch(`/api/ai/analyze-bid/${bid.id}`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.message || `HTTP ${response.status}`);
+      }
+      const data: AiAnalysis = await response.json();
+      setAiAnalysis(data);
+    } catch (error: any) {
+      toast({
+        title: "Analysis failed",
+        description: error.message || "An unexpected error occurred.",
+        variant: "destructive",
+      });
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const getSeverityBadge = (severity: AiAnomaly["severity"]) => {
+    if (severity === "high") return <Badge className="bg-red-100 text-red-800 border-red-200">High</Badge>;
+    if (severity === "medium") return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">Medium</Badge>;
+    return <Badge className="bg-gray-100 text-gray-700 border-gray-200">Low</Badge>;
+  };
+
   if (!bid) return null;
+
+  const hasIssues = aiAnalysis && (aiAnalysis.anomalies.length > 0 || aiAnalysis.missing.length > 0);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -77,7 +140,27 @@ export function BidViewModal({ isOpen, onClose, bid }: BidViewModalProps) {
           <DialogTitle>Bid Details - {bid.contractorCompany}</DialogTitle>
         </DialogHeader>
         
-        <div className="flex justify-end mb-4">
+        <div className="flex justify-end gap-2 mb-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleAnalyze}
+            disabled={aiLoading}
+            className="flex items-center gap-2"
+          >
+            {aiLoading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Analyzing...
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-4 w-4" />
+                Analyze with AI
+              </>
+            )}
+          </Button>
+
           <Button
             variant="outline"
             size="sm"
@@ -118,6 +201,73 @@ export function BidViewModal({ isOpen, onClose, bid }: BidViewModalProps) {
             Print/PDF
           </Button>
         </div>
+
+        {/* AI Analysis Results Panel */}
+        {aiAnalysis && (
+          <div className="mb-4 border rounded-lg overflow-hidden">
+            <div className="bg-slate-50 border-b px-4 py-2 flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-slate-600" />
+              <span className="font-semibold text-sm text-slate-700">AI Bid Analysis</span>
+            </div>
+
+            {!hasIssues ? (
+              <div className="flex items-center gap-2 px-4 py-3 bg-green-50 text-green-800">
+                <CheckCircle className="h-5 w-5 flex-shrink-0" />
+                <span className="text-sm font-medium">Bid looks clean — no issues detected.</span>
+              </div>
+            ) : (
+              <div className="divide-y">
+                {/* Summary */}
+                <div className="px-4 py-3 bg-blue-50">
+                  <p className="text-sm text-blue-800">{aiAnalysis.summary}</p>
+                </div>
+
+                {/* Anomalies */}
+                {aiAnalysis.anomalies.length > 0 && (
+                  <div className="px-4 py-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <AlertTriangle className="h-4 w-4 text-amber-500" />
+                      <span className="text-sm font-semibold text-slate-700">
+                        Anomalies ({aiAnalysis.anomalies.length})
+                      </span>
+                    </div>
+                    <div className="space-y-2">
+                      {aiAnalysis.anomalies.map((a, i) => (
+                        <div key={i} className="flex items-start gap-3 text-sm bg-white border rounded p-2">
+                          <div className="flex-1 min-w-0">
+                            <span className="font-medium text-slate-800">{a.lineItemDescription}</span>
+                            <p className="text-slate-600 mt-0.5">{a.issue}</p>
+                          </div>
+                          <div className="flex-shrink-0">{getSeverityBadge(a.severity)}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Missing Items */}
+                {aiAnalysis.missing.length > 0 && (
+                  <div className="px-4 py-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <AlertTriangle className="h-4 w-4 text-slate-500" />
+                      <span className="text-sm font-semibold text-slate-700">
+                        Missing Items ({aiAnalysis.missing.length})
+                      </span>
+                    </div>
+                    <div className="space-y-2">
+                      {aiAnalysis.missing.map((m, i) => (
+                        <div key={i} className="text-sm bg-white border rounded p-2">
+                          <span className="font-medium text-slate-800">{m.description}</span>
+                          <p className="text-slate-600 mt-0.5">{m.reason}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="space-y-6">
           {/* Company Information */}

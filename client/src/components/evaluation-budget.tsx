@@ -1235,10 +1235,18 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
   const calculateDoorCounts = () => {
     if (!rfp?.selectedBayConfigurations) return { oversized: 0, regular: 0 };
     
-    const oversizedTotal = rfp.selectedBayConfigurations.reduce((sum, bay) => sum + (bay.oversizedDockDoors || 0), 0);
-    const regularTotal = rfp.selectedBayConfigurations.reduce((sum, bay) => sum + (bay.standardDockDoors || 0), 0);
-    
-    // If door counts are 0, fall back to proportional share from property-level bay configurations
+    let oversizedTotal = rfp.selectedBayConfigurations.reduce((sum, bay) => sum + ((bay as any).oversizedDockDoors || 0), 0);
+    let regularTotal = rfp.selectedBayConfigurations.reduce((sum, bay) => sum + ((bay as any).standardDockDoors || 0), 0);
+
+    // First fallback: check split door fields on each bay
+    if (oversizedTotal === 0 && regularTotal === 0) {
+      oversizedTotal = rfp.selectedBayConfigurations.reduce((sum, bay: any) =>
+        sum + (bay.splitNorthOversizedDoors || 0) + (bay.splitSouthOversizedDoors || 0), 0);
+      regularTotal = rfp.selectedBayConfigurations.reduce((sum, bay: any) =>
+        sum + (bay.splitNorthDockDoors || 0) + (bay.splitSouthDockDoors || 0), 0);
+    }
+
+    // Second fallback: proportional share from property-level bay configurations
     if (oversizedTotal === 0 && regularTotal === 0) {
       const activePropertyData = rfp?.isMultiBuilding
         ? (multiBuildingProperties?.[0] || propertyData)
@@ -1265,9 +1273,10 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
   // Calculate parking counts based on tenant's allocated area
   const calculateParkingCounts = () => {
     // For multi-building RFPs, get property data from primary property or multi-building data
+    // Fall back to propertyByIdData (fetched by integer propertyId) if property-name query returns nothing
     const activePropertyData = rfp?.isMultiBuilding 
       ? (multiBuildingProperties?.[0] || propertyData)
-      : propertyData;
+      : (propertyData || propertyByIdData);
 
     if (!activePropertyData || !rfp?.selectedBayConfigurations) {
       console.log('Parking Calc Debug - Missing data:', { 

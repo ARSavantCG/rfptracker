@@ -179,13 +179,13 @@ function generateRfpPreviewHtml(documentType: string, formatSettings: any): stri
 
 // Generate HTML for bid collection PDF
 function generateBidCollectionHtml(bidCollection: any, rfp: any, lineItems: any[]) {
+  const { evaluateFormula } = require('../shared/formula-utils');
   const totalAmount = lineItems.reduce((sum, item) => {
     if (!item.totalPrice) return sum;
     let value = item.totalPrice;
     // If it's a formula, evaluate it
     if (typeof value === 'string' && value.startsWith('=')) {
       try {
-        const { evaluateFormula } = require('../shared/formula-utils');
         const result = evaluateFormula(value);
         if (result.success) {
           value = result.value;
@@ -333,8 +333,6 @@ function generateBidCollectionHtml(bidCollection: any, rfp: any, lineItems: any[
                   // If it's a formula, evaluate it
                   if (typeof value === 'string' && value.startsWith('=')) {
                     try {
-                      // Import and use the evaluateFormula function
-                      const { evaluateFormula } = require('../shared/formula-utils');
                       const result = evaluateFormula(value);
                       if (result.value !== null && !result.error) {
                         value = result.value;
@@ -354,7 +352,6 @@ function generateBidCollectionHtml(bidCollection: any, rfp: any, lineItems: any[
                   // If it's a formula, evaluate it
                   if (typeof value === 'string' && value.startsWith('=')) {
                     try {
-                      const { evaluateFormula } = require('../shared/formula-utils');
                       const result = evaluateFormula(value);
                       if (result.value !== null && !result.error) {
                         value = result.value;
@@ -1907,7 +1904,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create new RFP request
-  app.post("/api/rfp-requests", upload.array("files"), async (req, res) => {
+  app.post("/api/rfp-requests", upload.array("files"), requireAuth, async (req, res) => {
     try {
       
       const formData = { ...req.body };
@@ -2231,7 +2228,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update RFP request
-  app.patch("/api/rfp-requests/:id", async (req, res) => {
+  app.patch("/api/rfp-requests/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -3126,7 +3123,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/contacts", async (req, res) => {
+  app.post("/api/contacts", requireAuth, async (req, res) => {
     try {
       const parsed = insertContactSchema.parse(req.body);
       const contact = await storage.createContact(parsed);
@@ -3136,7 +3133,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/contacts/:id", async (req, res) => {
+  app.patch("/api/contacts/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -3331,7 +3328,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Invitation to Bid routes
-  app.post("/api/invitation-to-bid", async (req, res) => {
+  app.post("/api/invitation-to-bid", requireAuth, async (req, res) => {
     try {
       console.log('Invitation to bid request body:', JSON.stringify(req.body, null, 2));
       const parsed = insertInvitationToBidSchema.parse(req.body);
@@ -3420,7 +3417,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/rfp-requests/:id/invitation-to-bid", async (req, res) => {
+  app.patch("/api/rfp-requests/:id/invitation-to-bid", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -4066,7 +4063,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/rfp-requests/:id/bid-collections", upload.any(), async (req, res) => {
+  app.post("/api/rfp-requests/:id/bid-collections", upload.any(), requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -4150,7 +4147,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/rfp-requests/:rfpId/bid-collections/:id", async (req, res) => {
+  app.patch("/api/rfp-requests/:rfpId/bid-collections/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -4178,7 +4175,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/rfp-requests/:rfpId/bid-collections/:id", upload.any(), async (req, res) => {
+  app.put("/api/rfp-requests/:rfpId/bid-collections/:id", upload.any(), requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -4390,102 +4387,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.setHeader('Pragma', 'no-cache');
       res.setHeader('Expires', '0');
       res.setHeader('ETag', `"${Date.now()}"`);
-      
-      
-      // Debug log the total warehouse area for property 1
-      const property1 = properties.find(p => p.id === 1);
-      if (property1) {
-        const totalWarehouseSF = property1.bayConfigurations?.reduce((sum: number, bay: any) => sum + (bay.rentableSquareFootage || bay.squareFootage || 0), 0) || 0;
-        console.log(`🔍 DEBUG Properties API - Property 1 warehouse total: ${totalWarehouseSF} SF`);
-        
-        // Debug the bay configurations structure
-        console.log('🔍 DEBUG - Bay configurations count:', property1.bayConfigurations?.length);
-        
-        // Show ALL bay values being sent to frontend
-        console.log('🏗️ ALL BAYS BEING SENT TO FRONTEND:');
-        property1.bayConfigurations?.forEach((bay: any) => {
-          const displaySF = bay.rentableSquareFootage || bay.squareFootage || 0;
-          console.log(`  ${bay.bayName || bay.bayNumber}: ${displaySF} SF`);
-        });
-        
-        // Verify legal compliance rounding system is working correctly
-        const bay45 = property1.bayConfigurations?.find((bay: any) => bay.bayName === 'Bay 4-5');
-        const bay56 = property1.bayConfigurations?.find((bay: any) => bay.bayName === 'Bay 5-6');
-        
-        if (bay45) {
-          const bay45Rentable = bay45.rentableSquareFootage || bay45.squareFootage || 0;
-          console.log(`✅ Bay 4-5 Rentable SF: ${bay45Rentable} SF (includes mechanical room allocation)`);
-        }
-        if (bay56) {
-          const bay56Rentable = bay56.rentableSquareFootage || bay56.squareFootage || 0;
-          console.log(`✅ Bay 5-6 Rentable SF: ${bay56Rentable} SF (includes mechanical room allocation)`);
-        }
-        
-        // Verify legal compliance total (exact requirement: 409,189 SF)
-        const legalRequirementTotal = 409189;
-        if (totalWarehouseSF === legalRequirementTotal) {
-          console.log(`✅ LEGAL COMPLIANCE: Total matches exact requirement: ${totalWarehouseSF} SF`);
-        } else {
-          console.log(`🚨 LEGAL COMPLIANCE VIOLATION: Total is ${totalWarehouseSF} SF, Required ${legalRequirementTotal} SF (Difference: ${totalWarehouseSF - legalRequirementTotal} SF)`);
-        }
-        
-        // Check for missing squareFootage values
-        const missingBays = property1.bayConfigurations?.filter((bay: any) => !bay.squareFootage) || [];
-        if (missingBays.length > 0) {
-          console.log('🚨 DEBUG - Bays missing squareFootage:', missingBays.map((bay: any) => bay.bayName));
-        }
-      }
-      
-      // Debug Bridge Point Port Everglades (Property 2) 
-      const property2 = properties.find(p => p.id === 2);
-      if (property2) {
-        const totalWarehouseSF2 = property2.bayConfigurations?.reduce((sum: number, bay: any) => sum + (bay.rentableSquareFootage || bay.squareFootage || 0), 0) || 0;
-        console.log(`🔍 DEBUG Properties API - Property 2 warehouse total: ${totalWarehouseSF2} SF`);
-        
-        // Verify legal compliance total (exact requirement: 290,307 SF)
-        const legalRequirementTotal2 = 290307;
-        if (totalWarehouseSF2 === legalRequirementTotal2) {
-          console.log(`✅ PORT EVERGLADES LEGAL COMPLIANCE: Total matches exact requirement: ${totalWarehouseSF2} SF`);
-        } else {
-          console.log(`🚨 PORT EVERGLADES LEGAL COMPLIANCE VIOLATION: Total is ${totalWarehouseSF2} SF, Required ${legalRequirementTotal2} SF (Difference: ${totalWarehouseSF2 - legalRequirementTotal2} SF)`);
-        }
-        
-        // Verify the 5 adjusted bays have correct values after rounding
-        const adjustedBays = [
-          {name: 'Bay 3-4', expected: 15762}, 
-          {name: 'Bay 16-17', expected: 15762},
-          {name: 'Bay 11-12', expected: 15792}, 
-          {name: 'Bay 12-13', expected: 15792}, 
-          {name: 'Bay 15-16', expected: 15792}
-        ];
-        
-        adjustedBays.forEach(({name, expected}) => {
-          const bay = property2.bayConfigurations?.find((bay: any) => bay.bayName === name);
-          if (bay) {
-            const actual = bay.rentableSquareFootage || bay.squareFootage || 0;
-            if (actual === expected) {
-              console.log(`✅ ${name}: ${actual} SF (correctly adjusted)`);
-            } else {
-              console.log(`❌ ${name}: ${actual} SF (expected ${expected} SF after legal rounding)`);
-            }
-          }
-        });
-      }
-      
-      // Debug Bridge Point Port Everglades (Property 4)
-      const property4 = properties.find(p => p.id === 4);
-      if (property4) {
-        const totalWarehouseSF4 = property4.bayConfigurations?.reduce((sum: number, bay: any) => sum + (bay.rentableSquareFootage || bay.squareFootage || 0), 0) || 0;
-        console.log(`🔍 DEBUG Properties API - Property 4 warehouse total: ${totalWarehouseSF4} SF`);
-        
-        // Verify legal compliance total (exact requirement: 171,983 SF)
-        const legalRequirementTotal4 = 171983;
-        if (totalWarehouseSF4 === legalRequirementTotal4) {
-          console.log(`✅ PORT EVERGLADES LEGAL COMPLIANCE: Total matches exact requirement: ${totalWarehouseSF4} SF`);
-        } else {
-          console.log(`🚨 PORT EVERGLADES LEGAL COMPLIANCE VIOLATION: Total is ${totalWarehouseSF4} SF, Required ${legalRequirementTotal4} SF (Difference: ${totalWarehouseSF4 - legalRequirementTotal4} SF)`);
-        }
-      }
       
       res.json(properties);
     } catch (error) {

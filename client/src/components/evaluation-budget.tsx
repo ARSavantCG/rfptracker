@@ -1317,9 +1317,12 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       const matchedBays = property.bayConfigurations.filter((bay: any) => rfp.selectedBayIds!.includes(bay.id));
       effectiveTenantArea = matchedBays.reduce((total: number, bay: any) => total + (bay.rentableSquareFootage || bay.squareFootage || 0), 0) + (rfp.mechanicalRoomArea || 0);
     }
-    // Fallback 2: use rfp.projectArea if still 0
+    // Fallback 2: use rfp.projectArea if still 0 (parse string like "258,447 SF (...)" to plain number)
     if (effectiveTenantArea === 0 && (rfp as any).projectArea) {
-      effectiveTenantArea = (rfp as any).projectArea;
+      const rawProjectArea = (rfp as any).projectArea;
+      effectiveTenantArea = typeof rawProjectArea === 'number'
+        ? rawProjectArea
+        : parseFloat(String(rawProjectArea).replace(/[^0-9.]/g, '')) || 0;
     }
     // Fallback 3: sum selectedBaysPerBuilding if still 0
     if (effectiveTenantArea === 0 && (rfp as any).selectedBaysPerBuilding && Array.isArray((rfp as any).selectedBaysPerBuilding)) {

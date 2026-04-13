@@ -1020,6 +1020,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(updatedRequest);
     } catch (error) {
+      console.error('RFP update error for ID', id, ':', error instanceof Error ? error.message : String(error), 'Body received:', JSON.stringify(req.body, null, 2));
       res.status(400).json({ 
         message: error instanceof Error ? error.message : "Invalid update data" 
       });

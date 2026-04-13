@@ -52,9 +52,9 @@ export function registerAiRoutes(app: Express): void {
       const text = response.content[0].type === 'text' ? response.content[0].text : '';
       const analysis = JSON.parse(text);
       res.json(analysis);
-    } catch (error) {
-      console.error('AI analysis error:', error);
-      res.status(500).json({ message: "Analysis failed", error: error instanceof Error ? error.message : String(error) });
+    } catch (error: any) {
+      console.error("AI bid analysis error:", error);
+      res.status(500).json({ message: "Analysis failed", error: error.message });
     }
   });
 }

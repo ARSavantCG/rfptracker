@@ -1292,7 +1292,9 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
     
     // Calculate tenant's rentable area from selected bays
     const tenantRentableArea = rfp.selectedBayConfigurations.reduce((total, bay) => {
-      return total + (bay.rentableSquareFootage || 0);
+      const raw = bay.rentableSquareFootage;
+      const numeric = typeof raw === 'number' ? raw : parseFloat(String(raw ?? '').replace(/[^0-9.]/g, '')) || 0;
+      return total + numeric;
     }, 0) + (rfp.mechanicalRoomArea || 0);
     
     // Get total property rentable area - calculate from bay configurations

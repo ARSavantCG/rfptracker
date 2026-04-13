@@ -1362,15 +1362,6 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
         // Don't filter or compute parkProperties - let the modal handle filtering
         // This prevents timing issues where properties haven't loaded yet
 
-        // Enhanced debug output
-        console.log('🔍 COMPREHENSIVE PROPERTY DEBUG:', {
-          isMultiBuilding,
-          anchorProperty: !!anchorProperty,
-          anchorPropertyName: anchorProperty?.propertyName,
-          totalPropertiesAvailable: properties.length,
-          allPropertiesArray: properties.map((p: Property) => `${p.propertyName} - Building ${p.building}`)
-        });
-        
         // Debug logging (one-time)
         if (bayConfigModalOpen) {
           console.log('🔧 MODAL OPENED - Bay Configuration Debug');

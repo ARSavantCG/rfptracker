@@ -1011,7 +1011,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid ID" });
       }
 
-      const updates = updateRfpRequestSchema.parse({ ...req.body, id });
+      let updates;
+      try {
+        updates = updateRfpRequestSchema.parse({ ...req.body, id });
+      } catch (error) {
+        console.error('RFP 400 parse error:', error instanceof Error ? error.message : String(error));
+        return res.status(400).json({ message: error instanceof Error ? error.message : String(error) });
+      }
       const updatedRequest = await storage.updateRfpRequest(id, updates);
       
       if (!updatedRequest) {

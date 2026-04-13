@@ -38,7 +38,7 @@ export function registerAiRoutes(app: Express): void {
       const totalAmount = lineItems.reduce((sum: number, item: any) => sum + (Number(item.totalPrice) || 0), 0);
 
       const response = await client.messages.create({
-        model: "claude-opus-4-5",
+        model: "claude-sonnet-4-5",
         max_tokens: 1024,
         system: "You are a commercial construction cost analyst specializing in tenant improvement projects for industrial real estate. You review contractor bid line items and identify anomalies, red flags, and missing items. Always respond with valid JSON only — no markdown, no explanation outside the JSON.",
         messages: [

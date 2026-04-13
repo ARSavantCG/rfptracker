@@ -38,6 +38,7 @@ import { generateBidCollectionHtml, generateAllBidCollectionsHtml, generateRfpPr
 import { registerAuthRoutes } from './auth-routes';
 import { registerRomRoutes } from './rom-routes';
 import { registerPropertyRoutes } from './property-routes';
+import { registerAiRoutes } from './ai-routes';
 
 // Helper function to clean invalid values like "$NaN", "NaN", etc.
 function cleanInvalidValue(value: any): string {
@@ -54,6 +55,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerAuthRoutes(app);
   registerRomRoutes(app);
   registerPropertyRoutes(app);
+  registerAiRoutes(app);
 
   // Auto-enforce legal compliance on startup for ALL properties
   // Temporarily disabled to fix database connection issue during startup

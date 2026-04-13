@@ -5,10 +5,10 @@
 import type { Express } from 'express';
 import { storage } from './storage';
 import Anthropic from '@anthropic-ai/sdk';
-import { requireAuth } from './middleware';
+import { requireAuth, checkPermission } from './middleware';
 
 export function registerAiRoutes(app: Express): void {
-  app.post("/api/ai/analyze-bid/:bidCollectionId", requireAuth, async (req, res) => {
+  app.post("/api/ai/analyze-bid/:bidCollectionId", requireAuth, checkPermission('admin.access'), async (req, res) => {
     try {
       const bidCollectionId = parseInt(req.params.bidCollectionId);
       if (isNaN(bidCollectionId)) {

@@ -8,75 +8,31 @@
 
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import session from "express-session";
-import connectPgSimple from "connect-pg-simple";
-import fs, { readFileSync } from "fs";
+import fs from "fs";
 import path from "path";
 import { storage } from "./storage";
 import { db } from "./db";
-import jwt from "jsonwebtoken";
-import { 
-  insertRfpRequestSchema, 
-  updateRfpRequestSchema,
-  insertContactSchema,
-  updateContactSchema,
-  insertInvitationSchema,
-  updateInvitationSchema,
-  insertInvitationToBidSchema,
-  updateInvitationToBidSchema,
-  insertBidCollectionSchema,
-  updateBidCollectionSchema,
-  insertBidLineItemSchema,
-  updateBidLineItemSchema,
-  insertPropertySchema,
-  updatePropertySchema,
-  insertRomScopeItemSchema,
-  updateRomScopeItemSchema,
-  insertPdfTemplateSchema,
-  insertTransformerSchema,
-  updateTransformerSchema,
-  insertMainPanelSchema,
-  updateMainPanelSchema,
-  insertBayPanelAssignmentSchema,
-  insertElectricalReservationSchema,
-  updateElectricalReservationSchema
-} from "@shared/schema";
-import { convertFormDateToDbDate } from "@shared/date-utils";
-import { properties, rfpRequests } from "@shared/schema";
-import { validateRfpForProgression, canAdvanceToPhase } from "./validation";
-import { AuthService } from "./auth";
 import { users, contacts } from "@shared/schema";
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { tokenStore } from "./token-auth";
-import bcrypt from "bcryptjs";
 import { nanoid } from "nanoid";
-import { generateRfpPdf, generatePdfFilename } from "./pdf-generator";
-import { 
-  enforceAllPropertiesLegalCompliance, 
-  enforcePropertyLegalCompliance,
-  autoEnforceLegalComplianceMiddleware,
-  LEGAL_PROPERTY_TOTALS,
-  fixBIALeaseTotal,
-  applySymmetricalLegalCompliance
-} from "./property-legal-compliance";
-import { applyLegalRounding, validateLegalCompliance, LEGAL_TOTALS } from "./legal-rounding-system";
-import { deleteEntityFiles, cleanupOrphanedFiles, getCleanupStats, findOrphanedFiles } from "./file-cleanup";
+import { generateRfpPdf } from "./pdf-generator";
+import { enforceAllPropertiesLegalCompliance } from "./property-legal-compliance";
 import Templates from "./lib/rfp-templates";
 import { sendWorkflowCompletionEmail, sendTestStatusReportEmail } from "./email-service";
-import { startEmailScheduler, sendStatusReportNow } from "./email-scheduler";
+import { sendStatusReportNow } from "./email-scheduler";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 import { parsePdfBuffer, applyMapping, type MappingConfig } from "./pdf-parser";
-import { 
-  sanitizeProjectName, 
-  createProjectFolderStructure, 
+import {
+  sanitizeProjectName,
+  createProjectFolderStructure,
   getWorkflowStepFolder,
   getStepFolderPath,
   getRelativeFilePath,
-  ensureUploadsDirectory,
   sanitizeFilename,
-  WORKFLOW_STEP_FOLDERS,
   getSecureDownloadPath
 } from "./file-organization";
+import { validateRfpForProgression, canAdvanceToPhase } from "./validation";
 import { checkPermission, upload, pdfUpload, uploadsDir, setupSession, requireAuth, requireAdmin } from './middleware';
 import { generateBidCollectionHtml, generateAllBidCollectionsHtml, generateRfpPreviewHtml } from './html-generators';
 import { registerAuthRoutes } from './auth-routes';
@@ -92,15 +48,6 @@ function cleanInvalidValue(value: any): string {
   }
   return strValue;
 }
-
-
-import { generateDetailedReportPdf, generateReportFilename } from "./pdf-reports";
-import { generateHistoricalPricingPdf, generateHistoricalPricingFilename } from "./historical-pricing-reports";
-import multer from "multer";
-
-// Get Bridge Industrial logo as base64
-
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-here';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Register extracted route modules

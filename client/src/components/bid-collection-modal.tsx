@@ -238,7 +238,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
           method: 'PUT',
           body: formData,
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+            'Authorization': `Bearer ${localStorage.getItem('auth-token')}`
           }
         });
       } else {
@@ -246,7 +246,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
           method: 'POST',
           body: formData,
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+            'Authorization': `Bearer ${localStorage.getItem('auth-token')}`
           }
         });
       }

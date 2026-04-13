@@ -1233,6 +1233,27 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
     const oversizedTotal = rfp.selectedBayConfigurations.reduce((sum, bay) => sum + (bay.oversizedDockDoors || 0), 0);
     const regularTotal = rfp.selectedBayConfigurations.reduce((sum, bay) => sum + (bay.standardDockDoors || 0), 0);
     
+    // If door counts are 0, fall back to proportional share from property-level bay configurations
+    if (oversizedTotal === 0 && regularTotal === 0) {
+      const activePropertyData = rfp?.isMultiBuilding
+        ? (multiBuildingProperties?.[0] || propertyData)
+        : propertyData;
+      const property = activePropertyData as any;
+      if (property?.bayConfigurations && property.bayConfigurations.length > 0) {
+        const tenantSF = rfp.selectedBayConfigurations.reduce((sum, bay) => sum + (bay.rentableSquareFootage || 0), 0);
+        const totalPropertySF = property.bayConfigurations.reduce((total: number, bay: any) => total + (bay.rentableSquareFootage || bay.squareFootage || 0), 0);
+        if (totalPropertySF > 0 && tenantSF > 0) {
+          const proportion = tenantSF / totalPropertySF;
+          const totalOversized = property.bayConfigurations.reduce((sum: number, bay: any) => sum + (bay.oversizedDockDoors || 0), 0);
+          const totalRegular = property.bayConfigurations.reduce((sum: number, bay: any) => sum + (bay.standardDockDoors || 0), 0);
+          return {
+            oversized: Math.round(totalOversized * proportion),
+            regular: Math.round(totalRegular * proportion),
+          };
+        }
+      }
+    }
+    
     return { oversized: oversizedTotal, regular: regularTotal };
   };
 
@@ -1274,13 +1295,20 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       selectedBays: rfp.selectedBayConfigurations.length
     });
     
-    if (totalPropertyArea === 0 || tenantRentableArea === 0) {
+    // If tenant area is 0, fall back to selectedBayIds matched against property bayConfigurations
+    let effectiveTenantArea = tenantRentableArea;
+    if (effectiveTenantArea === 0 && rfp.selectedBayIds && Array.isArray(rfp.selectedBayIds) && rfp.selectedBayIds.length > 0 && property.bayConfigurations) {
+      const matchedBays = property.bayConfigurations.filter((bay: any) => rfp.selectedBayIds!.includes(bay.id));
+      effectiveTenantArea = matchedBays.reduce((total: number, bay: any) => total + (bay.rentableSquareFootage || bay.squareFootage || 0), 0) + (rfp.mechanicalRoomArea || 0);
+    }
+
+    if (totalPropertyArea === 0 || effectiveTenantArea === 0) {
       console.log('Parking Calc Debug - Zero areas detected');
       return { vehicular: 0, trailer: 0 };
     }
     
     // Calculate tenant's percentage of the property
-    const tenantPercentage = tenantRentableArea / totalPropertyArea;
+    const tenantPercentage = effectiveTenantArea / totalPropertyArea;
     
     // Calculate proportional parking allocation
     const totalVehicularParking = (property.standardParking || 0) + (property.accessibleParking || 0) + (property.evParking || 0);

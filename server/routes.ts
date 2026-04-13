@@ -1026,9 +1026,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(updatedRequest);
     } catch (error) {
-      res.status(400).json({ 
-        message: error instanceof Error ? error.message : "Invalid update data" 
-      });
+      res.status(500).json({ message: error instanceof Error ? error.message : String(error) });
     }
   });
 

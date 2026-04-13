@@ -1322,6 +1322,12 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
     }
     
     // Calculate tenant's percentage of the property
+    console.log('Parking Calc Pre-Calculation:', {
+      propertyData,
+      propertyByIdData,
+      tenantRentableSF: effectiveTenantArea,
+      totalPropertyRentableSF: totalPropertyArea,
+    });
     const tenantPercentage = effectiveTenantArea / totalPropertyArea;
     
     // Calculate proportional parking allocation

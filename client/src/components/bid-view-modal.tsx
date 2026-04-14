@@ -7,10 +7,12 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatDate } from "@/lib/utils";
 import { evaluateFormula } from "@shared/formula-utils";
-import { Printer, FileText, Loader2, Sparkles, AlertTriangle, CheckCircle } from "lucide-react";
+import { Printer, FileText, Loader2, Sparkles, AlertTriangle, CheckCircle, Tag } from "lucide-react";
 import type { BidCollection, BidLineItem } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { BidTaggingModal } from "./bid-tagging-modal";
+import type { PrePopulatedLineItem } from "./bid-tagging-modal";
 
 interface MasterCategory {
   id: number;
@@ -54,6 +56,7 @@ export function BidViewModal({ isOpen, onClose, bid }: BidViewModalProps) {
   const { toast } = useToast();
   const [aiLoading, setAiLoading] = useState(false);
   const [aiAnalysis, setAiAnalysis] = useState<AiAnalysis | null>(null);
+  const [showTagging, setShowTagging] = useState(false);
   // itemId → suggested masterCategoryId (pre-populated, not yet saved)
   const [suggestions, setSuggestions] = useState<Map<number, number>>(new Map());
 
@@ -188,6 +191,7 @@ export function BidViewModal({ isOpen, onClose, bid }: BidViewModalProps) {
   const hasIssues = aiAnalysis && (aiAnalysis.anomalies.length > 0 || aiAnalysis.missing.length > 0);
 
   return (
+    <>
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
@@ -195,6 +199,16 @@ export function BidViewModal({ isOpen, onClose, bid }: BidViewModalProps) {
         </DialogHeader>
         
         <div className="flex justify-end gap-2 mb-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowTagging(true)}
+            className="flex items-center gap-2"
+          >
+            <Tag className="h-4 w-4" />
+            Tag Prices
+          </Button>
+
           <Button
             variant="outline"
             size="sm"
@@ -482,5 +496,25 @@ export function BidViewModal({ isOpen, onClose, bid }: BidViewModalProps) {
         </div>
       </DialogContent>
     </Dialog>
+
+    {bid && (
+      <BidTaggingModal
+        isOpen={showTagging}
+        onClose={() => setShowTagging(false)}
+        bidCollectionId={bid.id}
+        contractorName={bid.contractorCompany}
+        projectName={bid.contractorName}
+        submissionDate={bid.submissionDate}
+        attachments={bid.attachments ?? []}
+        prePopulatedLineItems={(Array.isArray(lineItems) ? lineItems as BidLineItem[] : []).map((item): PrePopulatedLineItem => ({
+          description: item.description,
+          totalPrice: item.totalPrice,
+          unitPrice: item.unitPrice ?? "",
+          quantity: item.quantity ?? "",
+          unit: item.unit ?? "sf",
+        }))}
+      />
+    )}
+  </>
   );
 }

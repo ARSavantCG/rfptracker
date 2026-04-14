@@ -28,6 +28,7 @@ import DataMapping from "@/pages/data-mapping";
 import ProjectReportGenerator from "@/pages/project-report-generator";
 import PropertyDataAudit from "@/pages/property-data-audit";
 import HistoricalImport from "@/pages/historical-import";
+import ProposalsLibrary from "@/pages/proposals-library";
 import { useAuth } from "@/hooks/useAuth";
 import { ErrorBoundary } from "@/components/error-boundary";
 import AuthCheck from "@/components/auth-check";
@@ -89,6 +90,7 @@ function Router() {
             <Route path="/project-report-generator" component={ProjectReportGenerator} />
             <Route path="/property-data-audit" component={PropertyDataAudit} />
             <Route path="/historical-import" component={HistoricalImport} />
+            <Route path="/proposals-library" component={ProposalsLibrary} />
             <Route path="/admin" component={Admin} />
             <Route
               path="/admin/property-summary-report"

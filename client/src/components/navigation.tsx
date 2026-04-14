@@ -99,6 +99,7 @@ export default function Navigation() {
     { path: "/contacts", label: "Contacts", icon: Users },
     { path: "/properties", label: "Properties", icon: Building },
     { path: "/reports", label: "Reports", icon: BarChart3, hasSubmenu: true },
+    { path: "/proposals-library", label: "Proposals", icon: FileText },
     { path: "/rom-pilot", label: "ROM Pilot", icon: Calculator },
   ];
   

@@ -40,6 +40,7 @@ import { registerRomRoutes } from './rom-routes';
 import { registerActualsRoutes } from './actuals-routes';
 import { registerPropertyRoutes } from './property-routes';
 import { registerAiRoutes } from './ai-routes';
+import { registerProposalsRoutes } from './proposals-routes';
 
 // Helper function to clean invalid values like "$NaN", "NaN", etc.
 function cleanInvalidValue(value: any): string {
@@ -58,6 +59,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerActualsRoutes(app);
   registerPropertyRoutes(app);
   registerAiRoutes(app);
+  registerProposalsRoutes(app);
 
   // Auto-enforce legal compliance on startup for ALL properties
   // Temporarily disabled to fix database connection issue during startup

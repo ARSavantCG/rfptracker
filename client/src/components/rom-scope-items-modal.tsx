@@ -16,7 +16,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
 import { FormulaInput } from "@/components/formula-input";
 import { evaluateFormula } from "@shared/formula-utils";
-import { Plus, Edit2, Trash2, Package, DollarSign, ChevronDown, ChevronRight, Upload, FileText, X, Edit3, Check, Printer, Download, Eye, Paperclip } from "lucide-react";
+import { Plus, Edit2, Trash2, Package, DollarSign, ChevronDown, ChevronRight, Upload, FileText, X, Edit3, Check, Printer, Download, Eye, Paperclip, BarChart2 } from "lucide-react";
+import { QuarterlyPricingPanel } from "@/components/quarterly-pricing-panel";
 
 interface RomScopeItem {
   id: number;
@@ -65,6 +66,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
   
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingItem, setEditingItem] = useState<RomScopeItem | null>(null);
+  const [expandedPricingItemId, setExpandedPricingItemId] = useState<number | null>(null);
   
   // Form state
   const [formData, setFormData] = useState({
@@ -1672,6 +1674,15 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                                     <Button
                                       variant="outline"
                                       size="sm"
+                                      title="Quarterly Pricing"
+                                      onClick={() => setExpandedPricingItemId(expandedPricingItemId === item.id ? null : item.id)}
+                                      className={expandedPricingItemId === item.id ? "text-amber-700 border-amber-400 bg-amber-50" : "text-gray-500"}
+                                    >
+                                      <BarChart2 className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
                                       onClick={() => {
                                         if (editingItem?.id === item.id) {
                                           setEditingItem(null);
@@ -1699,6 +1710,19 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                                     )}
                                   </div>
                                 </div>
+
+                                {/* Quarterly Pricing Panel */}
+                                {expandedPricingItemId === item.id && (
+                                  <QuarterlyPricingPanel
+                                    scopeItemId={item.id}
+                                    scopeItemUnit={item.unit}
+                                    pricingMode={(item as any).pricingMode}
+                                    selectedContractorName={(item as any).selectedContractorName}
+                                    manualOverridePrice={(item as any).manualOverridePrice}
+                                    manualOverrideReason={(item as any).manualOverrideReason}
+                                    activePrice={(item as any).activePrice}
+                                  />
+                                )}
 
                                 {/* Inline Edit Form for CSI grouped items */}
                                 {editingItem?.id === item.id && (
@@ -2067,6 +2091,15 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                             <Button
                               variant="outline"
                               size="sm"
+                              title="Quarterly Pricing"
+                              onClick={() => setExpandedPricingItemId(expandedPricingItemId === item.id ? null : item.id)}
+                              className={expandedPricingItemId === item.id ? "text-amber-700 border-amber-400 bg-amber-50" : "text-gray-500"}
+                            >
+                              <BarChart2 className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
                               onClick={() => {
                                 if (editingItem?.id === item.id) {
                                   // Cancel editing
@@ -2096,6 +2129,19 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                             )}
                           </div>
                         </div>
+
+                        {/* Quarterly Pricing Panel */}
+                        {expandedPricingItemId === item.id && (
+                          <QuarterlyPricingPanel
+                            scopeItemId={item.id}
+                            scopeItemUnit={item.unit}
+                            pricingMode={(item as any).pricingMode}
+                            selectedContractorName={(item as any).selectedContractorName}
+                            manualOverridePrice={(item as any).manualOverridePrice}
+                            manualOverrideReason={(item as any).manualOverrideReason}
+                            activePrice={(item as any).activePrice}
+                          />
+                        )}
 
                         {/* Inline Edit Form - appears right below the item when editing */}
                         {editingItem?.id === item.id && (

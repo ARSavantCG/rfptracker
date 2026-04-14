@@ -4,11 +4,14 @@
  */
 import type { Express } from 'express';
 import { storage } from './storage';
+import { db } from './db';
 import { readFileSync } from 'fs';
 import fs from 'fs';
 import path from 'path';
 import { nanoid } from 'nanoid';
 import { requireAuth, checkPermission } from './middleware';
+import { scopeItemContractorPricing, romScopeItems } from '@shared/schema';
+import { eq, desc, and } from 'drizzle-orm';
 
 
 // Helper function to generate ROM report HTML
@@ -119,7 +122,9 @@ async function generateRomReportHtml(romPilot: any, lineItems: any[], scopeItems
     }
     
     // Recalculate total price with actual quantity
-    const unitPrice = parseFloat(item.unitPrice) || 0;
+    // Use activePrice from scope item if set, otherwise fall back to line item unitPrice
+    const scopeItemForPrice = scopeItems.find((si: any) => si.id === item.scopeItemId);
+    const unitPrice = (scopeItemForPrice?.activePrice ? parseFloat(scopeItemForPrice.activePrice) : null) ?? parseFloat(item.unitPrice) ?? 0;
     const newTotalPrice = actualQuantity * unitPrice;
     
     return {
@@ -205,13 +210,15 @@ async function generateRomReportHtml(romPilot: any, lineItems: any[], scopeItems
               const scopeItem = scopeItems.find(si => si.id === item.scopeItemId);
               const itemTotal = parseFloat(item.totalPrice) || 0;
               const perSF = totalSquareFootage > 0 ? itemTotal / totalSquareFootage : 0;
+              // Use activePrice from scope item if set (quarterly pricing intelligence)
+              const effectiveUnitPrice = (scopeItem?.activePrice ? parseFloat(scopeItem.activePrice) : null) ?? parseFloat(item.unitPrice) ?? 0;
               
               return `
                 <tr>
                   <td style="border: 1px solid #e5e7eb; padding: 6px;">${scopeItem?.name || 'Custom Item'}</td>
                   <td style="border: 1px solid #e5e7eb; padding: 6px; text-align: center;">${new Intl.NumberFormat('en-US').format(item.actualQuantity || parseFloat(item.quantity) || 0)}</td>
                   <td style="border: 1px solid #e5e7eb; padding: 6px; text-align: center;">${scopeItem?.unit || 'ea'}</td>
-                  <td style="border: 1px solid #e5e7eb; padding: 6px; text-align: center;">${formatCurrency(parseFloat(item.unitPrice) || 0)}</td>
+                  <td style="border: 1px solid #e5e7eb; padding: 6px; text-align: center;">${formatCurrency(effectiveUnitPrice)}</td>
                   <td style="border: 1px solid #e5e7eb; padding: 6px; text-align: center;">${formatCurrency(itemTotal)}</td>
                   <td style="border: 1px solid #e5e7eb; padding: 6px; text-align: center;">${formatPerSF(itemTotal, totalSquareFootage)}</td>
                 </tr>
@@ -854,6 +861,128 @@ export function registerRomRoutes(app: Express): void {
     } catch (error) {
       console.error("ROM report generation error:", error);
       res.status(500).json({ message: "Failed to generate ROM report" });
+    }
+  });
+
+  // ── Quarterly Contractor Pricing Routes ──────────────────────────────────
+
+  // GET /api/scope-items/:id/contractor-pricing
+  app.get("/api/scope-items/:id/contractor-pricing", requireAuth, async (req, res) => {
+    try {
+      const scopeItemId = parseInt(req.params.id);
+      if (isNaN(scopeItemId)) return res.status(400).json({ message: "Invalid scope item ID" });
+      const records = await db
+        .select()
+        .from(scopeItemContractorPricing)
+        .where(eq(scopeItemContractorPricing.scopeItemId, scopeItemId))
+        .orderBy(desc(scopeItemContractorPricing.quotedDate));
+      res.json(records);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch contractor pricing" });
+    }
+  });
+
+  // POST /api/scope-items/:id/contractor-pricing
+  app.post("/api/scope-items/:id/contractor-pricing", requireAuth, async (req, res) => {
+    try {
+      const scopeItemId = parseInt(req.params.id);
+      if (isNaN(scopeItemId)) return res.status(400).json({ message: "Invalid scope item ID" });
+      const { contractorName, contractorId, price, unit, quotedDate, quarter, notes } = req.body;
+      if (!contractorName || !price || !unit || !quarter) {
+        return res.status(400).json({ message: "contractorName, price, unit, and quarter are required" });
+      }
+      const [record] = await db
+        .insert(scopeItemContractorPricing)
+        .values({
+          scopeItemId,
+          contractorId: contractorId ? parseInt(contractorId) : null,
+          contractorName,
+          price: String(price),
+          unit,
+          quotedDate: quotedDate ? new Date(quotedDate) : new Date(),
+          quarter,
+          notes: notes || null,
+          isActive: true,
+        })
+        .returning();
+      res.json(record);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to create contractor pricing record" });
+    }
+  });
+
+  // DELETE /api/scope-items/:scopeItemId/contractor-pricing/:id
+  app.delete("/api/scope-items/:scopeItemId/contractor-pricing/:id", requireAuth, async (req, res) => {
+    try {
+      const pricingId = parseInt(req.params.id);
+      if (isNaN(pricingId)) return res.status(400).json({ message: "Invalid pricing record ID" });
+      await db.delete(scopeItemContractorPricing).where(eq(scopeItemContractorPricing.id, pricingId));
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete contractor pricing record" });
+    }
+  });
+
+  // PATCH /api/scope-items/:id/pricing-mode — update mode and recalculate activePrice
+  app.patch("/api/scope-items/:id/pricing-mode", requireAuth, async (req, res) => {
+    try {
+      const scopeItemId = parseInt(req.params.id);
+      if (isNaN(scopeItemId)) return res.status(400).json({ message: "Invalid scope item ID" });
+      const { pricingMode, selectedContractorName, manualOverridePrice, manualOverrideReason } = req.body;
+
+      // Fetch all active quotes for this item
+      const quotes = await db
+        .select()
+        .from(scopeItemContractorPricing)
+        .where(and(eq(scopeItemContractorPricing.scopeItemId, scopeItemId), eq(scopeItemContractorPricing.isActive, true)));
+
+      const prices = quotes.map(q => parseFloat(q.price)).filter(n => !isNaN(n));
+
+      // Calculate activePrice based on mode
+      let activePrice: string | null = null;
+      if (pricingMode === 'average' && prices.length > 0) {
+        activePrice = (prices.reduce((a, b) => a + b, 0) / prices.length).toFixed(2);
+      } else if (pricingMode === 'contractor' && selectedContractorName) {
+        const contractorQuotes = quotes
+          .filter(q => q.contractorName === selectedContractorName)
+          .sort((a, b) => new Date(b.quotedDate).getTime() - new Date(a.quotedDate).getTime());
+        if (contractorQuotes.length > 0) {
+          activePrice = contractorQuotes[0].price;
+        }
+      } else if (pricingMode === 'manual' && manualOverridePrice) {
+        activePrice = String(manualOverridePrice);
+      }
+
+      // Calculate price spread
+      let priceSpreadPercent: string | null = null;
+      if (prices.length >= 2) {
+        const avg = prices.reduce((a, b) => a + b, 0) / prices.length;
+        const min = Math.min(...prices);
+        const max = Math.max(...prices);
+        if (avg > 0) {
+          priceSpreadPercent = (((max - min) / avg) * 100).toFixed(1);
+        }
+      }
+
+      const [updated] = await db
+        .update(romScopeItems)
+        .set({
+          pricingMode: pricingMode || 'average',
+          selectedContractorName: selectedContractorName || null,
+          manualOverridePrice: manualOverridePrice || null,
+          manualOverrideReason: manualOverrideReason || null,
+          activePrice,
+          priceSpreadPercent,
+          lastQuarterlyUpdate: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(romScopeItems.id, scopeItemId))
+        .returning();
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Pricing mode update error:", error);
+      res.status(500).json({ message: "Failed to update pricing mode" });
     }
   });
 }

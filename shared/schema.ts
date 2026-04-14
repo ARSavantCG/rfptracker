@@ -934,8 +934,30 @@ export const romScopeItems = pgTable("rom_scope_items", {
   itemGroup: text("item_group"), // e.g., "Office Area", "Warehouse Office" - groups related tiers together
   minSquareFootage: integer("min_square_footage"), // Minimum square footage for this tier (null = no minimum)
   maxSquareFootage: integer("max_square_footage"), // Maximum square footage for this tier (null = no maximum)
+  // Quarterly pricing intelligence fields
+  pricingMode: text("pricing_mode").default('average'), // 'average' | 'contractor' | 'manual'
+  selectedContractorName: text("selected_contractor_name"), // which contractor's price to use when mode is 'contractor'
+  manualOverridePrice: text("manual_override_price"), // manual price when mode is 'manual'
+  manualOverrideReason: text("manual_override_reason"), // why override was set
+  activePrice: text("active_price"), // computed price used in ROMs (average, contractor, or manual)
+  priceSpreadPercent: text("price_spread_percent"), // spread % across contractor quotes
+  lastQuarterlyUpdate: timestamp("last_quarterly_update"), // when pricing was last refreshed
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const scopeItemContractorPricing = pgTable("scope_item_contractor_pricing", {
+  id: serial("id").primaryKey(),
+  scopeItemId: integer("scope_item_id").notNull().references(() => romScopeItems.id),
+  contractorId: integer("contractor_id").references(() => contacts.id),
+  contractorName: text("contractor_name").notNull(),
+  price: text("price").notNull(),
+  unit: text("unit").notNull(),
+  quotedDate: timestamp("quoted_date").notNull(),
+  quarter: text("quarter").notNull(), // e.g. 'Q1 2026'
+  notes: text("notes"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const romPilotLineItems = pgTable("rom_pilot_line_items", {
@@ -981,6 +1003,18 @@ export const insertRomScopeItemSchema = createInsertSchema(romScopeItems).omit({
 export const updateRomScopeItemSchema = insertRomScopeItemSchema.partial().extend({
   id: z.number(),
 });
+
+export const insertScopeItemContractorPricingSchema = createInsertSchema(scopeItemContractorPricing).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const updateScopeItemContractorPricingSchema = insertScopeItemContractorPricingSchema.partial().extend({
+  id: z.number(),
+});
+
+export type ScopeItemContractorPricing = typeof scopeItemContractorPricing.$inferSelect;
+export type InsertScopeItemContractorPricing = z.infer<typeof insertScopeItemContractorPricingSchema>;
 
 export const insertRomPilotLineItemSchema = createInsertSchema(romPilotLineItems).omit({
   id: true,

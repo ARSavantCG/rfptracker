@@ -72,6 +72,14 @@ Brenda Gonzalez — view only, no AI
 - ROM Pilot Benchmarks tab added alongside existing estimates list
 - Record Project Actuals section at the bottom of every Evaluation Budget view — pre-populated from RFP + budget data, Save / Skip options, success state with Benchmarks link
 
+✅ **Proposals Library & Bid Tagging System** (complete)
+- Proposals Library page (`/proposals-library`): card grid of all bid collections with PDF attachments, search/filter by contractor/year, summary stats bar
+- Shared `BidTaggingModal` component: split-panel with PDF iframe on left, dynamic tagging table on right (Description, Total $, Unit $, Qty, Unit, Scope Item dropdown grouped by category, Quarter, Notes)
+- Quarter auto-populated from bid submission date; scope item dropdown pulls all ROM scope items
+- "Tag Prices" button added to bid view modal header — pre-populated from existing bid line items for fast one-click categorization
+- Backend: `server/proposals-routes.ts` with GET /api/proposals, GET /api/proposals/by-contractor/:id, GET /api/proposals/search, POST /api/proposals/:id/tag-line-items
+- "Proposals" nav link added between "Reports" and "ROM Pilot"
+
 ---
 
 Known issues / next session fix list:
@@ -90,10 +98,11 @@ Known issues / next session fix list:
 5. Bulk-confirm all keyword suggestions in bid view modal (one-click "Accept All" button)
 
 ## Next Session Priority
-1. Test quarterly pricing panel end to end with real Excel Construction quotes
-2. Enter first historical project actuals via manual entry
-3. Verify benchmarks dashboard populates correctly
-4. Begin bid line item tagging feature
+1. Open Proposals Library and tag prices from 3–4 existing contractor proposals
+2. Verify quotes appear in ROM Pilot scope items quarterly pricing panel
+3. Enter 2–3 historical projects via Historical Import page
+4. Check Benchmarks dashboard populates with real data
+5. Begin bid line item tagging feature for evaluation rollup
 
 How to start next session:
 Paste this into Claude:

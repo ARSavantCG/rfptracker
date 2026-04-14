@@ -86,6 +86,8 @@ Known issues / next session fix list:
 🔧 Bug Fixes:
 
 1. MG Westside Bldg B split bays need dock door counts added to bay records
+4. File Storage Migration (Phase 1 — immediate): Migrate file uploads to Replit Object Storage so files persist across redeploys. Prompt already written and ready to run.
+5. File Storage Migration (Phase 2 — future): Migrate to Dropbox/S3/cloud storage like Savant Portal setup for proper enterprise file management with folder structure, sharing links, and version history.
 2. ✅ RESOLVED — AI bid analysis debugging logs now live in production (API key presence, bid collection ID, Claude raw response first 500 chars). Ready to reproduce and diagnose "Analysis failed" in next desktop session.
 3. ✅ RESOLVED — /api/version route already had try/catch fallback in place; confirmed no longer 500ing.
 10. Fix GitHub CI/CD Pipeline — update .github/workflows so security scan and tests pass after routes refactoring, or simplify if automated testing is not a current priority

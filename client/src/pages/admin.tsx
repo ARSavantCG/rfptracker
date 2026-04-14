@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Shield, Users, Settings, Edit, Trash2, CheckCircle, XCircle, User as UserIcon, KeyRound, FileText, HardDrive, Layout, Clock, Scale, ChevronDown, Hash, BarChart, ExternalLink, Mail, ClipboardCheck, Tags, Database } from "lucide-react";
+import { Shield, Users, Settings, Edit, Trash2, CheckCircle, XCircle, User as UserIcon, KeyRound, FileText, HardDrive, Layout, Clock, Scale, ChevronDown, Hash, BarChart, ExternalLink, Mail, ClipboardCheck, Tags, Database, Wrench, CloudUpload, AlertCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
@@ -970,6 +970,40 @@ function EmailTestPanel() {
 
 export default function Admin() {
   const { isAdmin } = usePermissions();
+  const { toast } = useToast();
+  const [migrationState, setMigrationState] = useState<'idle' | 'running' | 'done' | 'error'>('idle');
+  const [migrationResult, setMigrationResult] = useState<{
+    total: number;
+    succeeded: number;
+    failed: number;
+    failures: { file: string; error: string }[];
+  } | null>(null);
+
+  const handleMigrateUploads = async () => {
+    setMigrationState('running');
+    setMigrationResult(null);
+    try {
+      const token = localStorage.getItem('auth-token');
+      const res = await fetch('/api/admin/migrate-uploads', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.message || `Request failed (${res.status})`);
+      }
+      const data = await res.json();
+      setMigrationResult(data);
+      setMigrationState('done');
+    } catch (err: any) {
+      setMigrationState('error');
+      toast({
+        title: 'Migration failed',
+        description: err.message || 'Unknown error',
+        variant: 'destructive',
+        duration: 6000,
+      });
+    }
+  };
 
   if (!isAdmin()) {
     return (
@@ -1049,6 +1083,11 @@ export default function Admin() {
               <ClipboardCheck className="h-4 w-4" />
               <span className="hidden sm:inline">Data Quality</span>
               <span className="sm:hidden">Data</span>
+            </TabsTrigger>
+            <TabsTrigger value="maintenance" className="flex items-center gap-2 flex-shrink-0">
+              <Wrench className="h-4 w-4" />
+              <span className="hidden sm:inline">System Maintenance</span>
+              <span className="sm:hidden">Maintenance</span>
             </TabsTrigger>
           </TabsList>
 
@@ -1271,6 +1310,78 @@ export default function Admin() {
                     <li>Use <strong>Data Scrubbing</strong> to mark reliable pricing data as "clean"</li>
                     <li>Generate reports using only clean, categorized data for accurate benchmarking</li>
                   </ol>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="maintenance" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Wrench className="h-5 w-5 text-gray-600" />
+                  System Maintenance
+                </CardTitle>
+                <CardDescription>
+                  One-time administrative operations for system upkeep and data migrations.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="border rounded-lg p-5 space-y-4">
+                  <div className="flex items-start gap-3">
+                    <CloudUpload className="h-5 w-5 text-blue-600 mt-0.5 shrink-0" />
+                    <div>
+                      <h3 className="font-medium text-gray-900">Migrate Files to Object Storage</h3>
+                      <p className="text-sm text-gray-500 mt-1">
+                        Backs up all files currently in the local <code className="bg-gray-100 px-1 rounded text-xs">uploads/</code> directory to Replit Object Storage so they persist across redeploys. Safe to run more than once — existing files are simply overwritten.
+                      </p>
+                    </div>
+                  </div>
+
+                  <Button
+                    onClick={handleMigrateUploads}
+                    disabled={migrationState === 'running'}
+                    className="w-full sm:w-auto"
+                  >
+                    {migrationState === 'running' ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                        Migrating...
+                      </>
+                    ) : (
+                      <>
+                        <CloudUpload className="h-4 w-4 mr-2" />
+                        Migrate Files to Object Storage
+                      </>
+                    )}
+                  </Button>
+
+                  {migrationState === 'done' && migrationResult && (
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 text-green-700 bg-green-50 border border-green-200 rounded-lg px-4 py-3">
+                        <CheckCircle className="h-5 w-5 shrink-0" />
+                        <span className="font-medium">
+                          Migration complete — {migrationResult.succeeded} of {migrationResult.total} file{migrationResult.total !== 1 ? 's' : ''} backed up successfully
+                        </span>
+                      </div>
+                      {migrationResult.failures.length > 0 && (
+                        <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 space-y-2">
+                          <div className="flex items-center gap-2 text-red-700 font-medium">
+                            <AlertCircle className="h-4 w-4 shrink-0" />
+                            {migrationResult.failed} file{migrationResult.failed !== 1 ? 's' : ''} failed:
+                          </div>
+                          <ul className="text-sm text-red-600 space-y-1 pl-6 list-disc">
+                            {migrationResult.failures.map((f, i) => (
+                              <li key={i}>
+                                <span className="font-mono">{f.file}</span>
+                                {f.error && <span className="text-red-400 ml-2">— {f.error}</span>}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

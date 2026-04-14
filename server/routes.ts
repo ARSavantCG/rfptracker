@@ -5737,6 +5737,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // One-time migration: back up all existing uploads/ files to Object Storage
+  app.get("/api/admin/migrate-uploads", requireAuth, checkPermission('admin.access'), async (req, res) => {
+    try {
+      const { runUploadsMigration } = await import('./scripts/migrate-uploads-to-object-storage');
+      const result = await runUploadsMigration();
+      res.json({ success: true, ...result });
+    } catch (error) {
+      console.error("Error running uploads migration:", error);
+      res.status(500).json({ message: "Migration failed", error: String(error) });
+    }
+  });
+
   // ============================================================================
   // BID LEVELING API ROUTES
   // ============================================================================

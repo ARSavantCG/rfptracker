@@ -13,6 +13,7 @@ import fs from 'fs';
 import path from 'path';
 import multer from 'multer';
 import { nanoid } from 'nanoid';
+import { backupToObjectStorage } from './storage-backup';
 
 // Permission checking middleware
 const checkPermission = (permission: string) => {
@@ -30,19 +31,29 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-// Configure multer for file uploads
-const storage_multer = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadsDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueName = `${nanoid()}-${file.originalname}`;
-    cb(null, uniqueName);
-  },
-});
+// Custom storage engine: saves to disk then asynchronously backs up to Object Storage
+class DiskWithBackupStorage implements multer.StorageEngine {
+  _handleFile(req: any, file: Express.Multer.File, cb: (error?: any, info?: Partial<Express.Multer.File>) => void) {
+    const filename = `${nanoid()}-${file.originalname}`;
+    const dest = path.join(uploadsDir, filename);
+    const outStream = fs.createWriteStream(dest);
+    file.stream.pipe(outStream);
+    outStream.on('error', cb);
+    outStream.on('finish', () => {
+      cb(null, { destination: uploadsDir, filename, path: dest, size: outStream.bytesWritten });
+      // Fire-and-forget backup — does not block the upload response
+      backupToObjectStorage(dest, filename).catch(err =>
+        console.error('[OS Backup] Failed to back up file:', filename, err)
+      );
+    });
+  }
+  _removeFile(req: any, file: Express.Multer.File, cb: (error: Error | null) => void) {
+    fs.unlink(file.path, cb);
+  }
+}
 
 const upload = multer({
-  storage: storage_multer,
+  storage: new DiskWithBackupStorage(),
   limits: {
     fileSize: 10 * 1024 * 1024, // 10MB limit
   },

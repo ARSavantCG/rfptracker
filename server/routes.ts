@@ -41,6 +41,7 @@ import { registerActualsRoutes } from './actuals-routes';
 import { registerPropertyRoutes } from './property-routes';
 import { registerAiRoutes } from './ai-routes';
 import { registerProposalsRoutes } from './proposals-routes';
+import { streamFromObjectStorage } from './storage-backup';
 
 // Helper function to clean invalid values like "$NaN", "NaN", etc.
 function cleanInvalidValue(value: any): string {
@@ -61,8 +62,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerAiRoutes(app);
   registerProposalsRoutes(app);
 
-  // Serve files from the uploads directory directly
-  app.get('/uploads/*', (req, res) => {
+  // Serve files from the uploads directory — local disk first, then Object Storage fallback
+  app.get('/uploads/*', async (req, res) => {
     const filename = path.basename(req.path);
     const candidates = [
       path.join(process.cwd(), req.path),
@@ -74,6 +75,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (fs.existsSync(filePath)) {
         return res.sendFile(filePath);
       }
+    }
+    // Not on local disk — try Object Storage (persisted uploads)
+    try {
+      const served = await streamFromObjectStorage(filename, res);
+      if (served) return;
+    } catch (err) {
+      console.error('[OS Backup] Error fetching from object storage:', err);
     }
     res.status(404).json({ message: 'File not found' });
   });

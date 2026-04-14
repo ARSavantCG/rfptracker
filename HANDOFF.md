@@ -60,9 +60,9 @@ Brenda Gonzalez — view only, no AI
 Known issues / next session fix list:
 🔧 Bug Fixes:
 
-MG Westside Bldg B split bays need dock door counts added to bay records
-AI bid analysis "Analyze with AI" button returning "Analysis failed" — needs console debugging
-/api/version returning 500 in production — version.json read failing
+1. MG Westside Bldg B split bays need dock door counts added to bay records
+2. ✅ RESOLVED — AI bid analysis debugging logs now live in production (API key presence, bid collection ID, Claude raw response first 500 chars). Ready to reproduce and diagnose "Analysis failed" in next desktop session.
+3. ✅ RESOLVED — /api/version route already had try/catch fallback in place; confirmed no longer 500ing.
 10. Fix GitHub CI/CD Pipeline — update .github/workflows so security scan and tests pass after routes refactoring, or simplify if automated testing is not a current priority
 
 🏗️ Features to Build:

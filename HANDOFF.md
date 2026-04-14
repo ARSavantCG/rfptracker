@@ -63,6 +63,7 @@ Known issues / next session fix list:
 MG Westside Bldg B split bays need dock door counts added to bay records
 AI bid analysis "Analyze with AI" button returning "Analysis failed" — needs console debugging
 /api/version returning 500 in production — version.json read failing
+10. Fix GitHub CI/CD Pipeline — update .github/workflows so security scan and tests pass after routes refactoring, or simplify if automated testing is not a current priority
 
 🏗️ Features to Build:
 1. Master Cost Library — unified pricing database replacing ROM Scope Items

@@ -1,14 +1,21 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatDate } from "@/lib/utils";
 import { evaluateFormula } from "@shared/formula-utils";
 import { Printer, FileText, Loader2, Sparkles, AlertTriangle, CheckCircle } from "lucide-react";
 import type { BidCollection, BidLineItem } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+
+interface MasterCategory {
+  id: number;
+  name: string;
+}
 
 interface BidViewModalProps {
   isOpen: boolean;
@@ -42,6 +49,24 @@ export function BidViewModal({ isOpen, onClose, bid }: BidViewModalProps) {
   const { data: lineItems } = useQuery({
     queryKey: [`/api/bid-collections/${bid?.id}/line-items`],
     enabled: isOpen && !!bid?.id,
+  });
+
+  // Fetch master categories for the dropdown
+  const { data: masterCategories } = useQuery<MasterCategory[]>({
+    queryKey: ['/api/master-categories'],
+    enabled: isOpen,
+  });
+
+  // Mutation to save masterCategoryId on a line item
+  const categoryMutation = useMutation({
+    mutationFn: ({ itemId, masterCategoryId, isCleanData }: { itemId: number; masterCategoryId: number | null; isCleanData: boolean }) =>
+      apiRequest('PATCH', `/api/bid-line-items/${itemId}/mapping`, { masterCategoryId, isCleanData }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/bid-collections/${bid?.id}/line-items`] });
+    },
+    onError: () => {
+      toast({ title: "Failed to save category", variant: "destructive" });
+    },
   });
 
   const formatCurrency = (amount: string | null) => {
@@ -313,20 +338,54 @@ export function BidViewModal({ isOpen, onClose, bid }: BidViewModalProps) {
                       <TableHead>Unit</TableHead>
                       <TableHead>Unit Price</TableHead>
                       <TableHead className="text-right">Total</TableHead>
+                      <TableHead style={{ width: 168 }}>Category</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {(lineItems as BidLineItem[]).map((item, index) => (
-                      <TableRow key={index}>
-                        <TableCell className="font-medium">{item.description}</TableCell>
-                        <TableCell>{item.quantity ? parseFloat(item.quantity).toLocaleString('en-US') : ''}</TableCell>
-                        <TableCell>{item.unit || ''}</TableCell>
-                        <TableCell>{formatCurrency(item.unitPrice)}</TableCell>
-                        <TableCell className="text-right font-medium">
-                          {formatCurrency(item.totalPrice)}
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {(lineItems as BidLineItem[]).map((item, index) => {
+                      const taggedCategory = masterCategories?.find(c => c.id === item.masterCategoryId);
+                      return (
+                        <TableRow key={index}>
+                          <TableCell className="font-medium">{item.description}</TableCell>
+                          <TableCell>{item.quantity ? parseFloat(item.quantity).toLocaleString('en-US') : ''}</TableCell>
+                          <TableCell>{item.unit || ''}</TableCell>
+                          <TableCell>{formatCurrency(item.unitPrice)}</TableCell>
+                          <TableCell className="text-right font-medium">
+                            {formatCurrency(item.totalPrice)}
+                          </TableCell>
+                          <TableCell style={{ width: 168, padding: '6px 8px' }}>
+                            {taggedCategory ? (
+                              <div className="flex items-center gap-1">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 truncate max-w-[120px]" title={taggedCategory.name}>
+                                  {taggedCategory.name}
+                                </span>
+                                <button
+                                  className="text-gray-300 hover:text-gray-500 flex-shrink-0"
+                                  title="Clear category"
+                                  onClick={() => categoryMutation.mutate({ itemId: item.id, masterCategoryId: null, isCleanData: item.isCleanData ?? false })}
+                                >×</button>
+                              </div>
+                            ) : (
+                              <Select
+                                value=""
+                                onValueChange={(val) => categoryMutation.mutate({ itemId: item.id, masterCategoryId: parseInt(val), isCleanData: item.isCleanData ?? false })}
+                              >
+                                <SelectTrigger style={{ width: 160, height: 28, fontSize: 12 }} className="text-gray-400 border-gray-200">
+                                  <SelectValue placeholder="Untagged" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {(masterCategories ?? []).map(cat => (
+                                    <SelectItem key={cat.id} value={String(cat.id)} className="text-sm">
+                                      {cat.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>

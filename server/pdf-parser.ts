@@ -152,6 +152,78 @@ function createHeaderSignature(headers: string[]): string {
   return headers.map(h => h.toLowerCase().replace(/[^a-z]/g, '')).join('|');
 }
 
+// Patterns for cells that should never be treated as a valid description
+const JUNK_DESC_PATTERNS = [
+  /^\s*$/,                  // blank / whitespace only
+  /^[\d,.\s]+$/,            // only digits, commas, dots, spaces (pure number)
+  /^[\(\)\[\]\{\}\s]+$/,    // only parentheses / brackets
+  /^\$[\d,.\s]+$/,          // dollar amount with no text (e.g. "$1,200")
+];
+
+// Exact (case-insensitive) phrases that are headers, not data
+const JUNK_DESC_PHRASES = new Set([
+  'qty unit', 'qty', 'quantity', 'unit', 'price', 'unit price',
+  'shell area', 'other area', 'total area',
+  'description', 'desc', 'item', 'scope',
+  'total', 'subtotal', 'extended price', 'ext price',
+  'labor', 'material', 'materials',
+]);
+
+function isJunkDescriptionCell(text: string): boolean {
+  const t = text.trim();
+  if (JUNK_DESC_PATTERNS.some(p => p.test(t))) return true;
+  const lower = t.toLowerCase();
+  if (JUNK_DESC_PHRASES.has(lower)) return true;
+  // Multi-word header phrases (starts-with match for combos like "qty unit price total")
+  for (const phrase of JUNK_DESC_PHRASES) {
+    if (phrase.includes(' ') && lower.startsWith(phrase)) return true;
+  }
+  return false;
+}
+
+/** Returns true if the row should be discarded before showing the review screen */
+function isJunkRow(cells: string[]): boolean {
+  const desc = cells[0]?.trim() ?? '';
+  return isJunkDescriptionCell(desc);
+}
+
+/** A "clean data row" has a real text description in cell[0] and at least one price-like cell */
+function isCleanDataRow(cells: string[]): boolean {
+  const desc = cells[0]?.trim() ?? '';
+  if (!desc || isJunkDescriptionCell(desc)) return false;
+  // Needs at least one other cell that looks numeric / price
+  return cells.slice(1).some(c => isLikelyPrice(c) || isLikelyQuantity(c));
+}
+
+/**
+ * Find the index (exclusive) at which the first contiguous clean block ends.
+ * Once 3 consecutive non-clean rows appear after the block starts, we cut there.
+ */
+function findCleanBlockEnd(rows: string[][]): number {
+  // Locate where the clean block begins
+  let cleanStart = -1;
+  for (let i = 0; i < rows.length; i++) {
+    if (isCleanDataRow(rows[i])) { cleanStart = i; break; }
+  }
+  if (cleanStart === -1) return rows.length; // nothing clean → keep all (no-op)
+
+  let consecutiveNonClean = 0;
+  let lastClean = cleanStart;
+
+  for (let i = cleanStart; i < rows.length; i++) {
+    if (isCleanDataRow(rows[i])) {
+      consecutiveNonClean = 0;
+      lastClean = i;
+    } else {
+      consecutiveNonClean++;
+      if (consecutiveNonClean >= 3) {
+        return lastClean + 1; // cut after the last confirmed clean row
+      }
+    }
+  }
+  return rows.length; // clean block runs to the end
+}
+
 function detectTableRows(text: string): { rows: ParsedRow[], headers: string[], signature: string } {
   const lines = text.split('\n').filter(line => line.trim().length > 0);
   const allRows: string[][] = [];
@@ -214,8 +286,15 @@ function detectTableRows(text: string): { rows: ParsedRow[], headers: string[], 
   }
   
   const signature = createHeaderSignature(headers);
-  
-  return { rows: dataRows, headers, signature };
+
+  // --- Step 1: drop junk rows (blank desc, pure numbers, header phrases, only brackets) ---
+  const noJunk = dataRows.filter(row => !isJunkRow(row.cells));
+
+  // --- Step 2: "first clean table only" — cut at end of first contiguous block ---
+  const blockEnd = findCleanBlockEnd(noJunk.map(r => r.cells));
+  const finalRows = noJunk.slice(0, blockEnd);
+
+  return { rows: finalRows, headers, signature };
 }
 
 function detectTables(text: string): ParsedTable[] {

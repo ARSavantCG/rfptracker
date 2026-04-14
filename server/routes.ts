@@ -61,6 +61,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerAiRoutes(app);
   registerProposalsRoutes(app);
 
+  // Serve files from the uploads directory directly
+  app.get('/uploads/*', (req, res) => {
+    const filePath = path.join(process.cwd(), req.path);
+    if (fs.existsSync(filePath)) {
+      res.sendFile(filePath);
+    } else {
+      res.status(404).json({ message: 'File not found' });
+    }
+  });
+
   // Auto-enforce legal compliance on startup for ALL properties
   // Temporarily disabled to fix database connection issue during startup
   console.log('🏛️ STARTUP: Skipping legal compliance enforcement to allow server startup...');

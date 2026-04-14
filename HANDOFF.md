@@ -1,3 +1,10 @@
+## End of Session Checklist
+- [ ] Republish the app (Republish button)
+- [ ] Push to GitHub (Git tab → Push button)
+- [ ] Update HANDOFF.md with what was accomplished and what's next
+
+---
+
 RFP Tracker — Savant Portal Integration
 Project Handoff Document
 Session Date: April 13, 2026

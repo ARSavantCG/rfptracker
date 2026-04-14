@@ -24,6 +24,11 @@ import { nanoid } from "nanoid";
 import * as XLSX from "xlsx";
 import type { RfpRequest, BidCollection, BidLineItem } from "@shared/schema";
 
+interface MasterCategory {
+  id: number;
+  name: string;
+}
+
 interface EvaluationLineItem {
   id: string;
   description: string;
@@ -484,26 +489,62 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       selectedImportItems.has(`${item.bidCollectionId}-${item.id}`)
     );
 
-    const importedItems = itemsToImport.map((item: BidLineItem & { bidCollectionId: number }) => ({
+    // Split into tagged (have masterCategoryId) and untagged
+    const tagged = itemsToImport.filter((item: any) => item.masterCategoryId);
+    const untagged = itemsToImport.filter((item: any) => !item.masterCategoryId);
+
+    // Group tagged items by masterCategoryId and sum their totals
+    const categoryGroups = new Map<number, { categoryName: string; total: number; firstBidCollectionId: number }>();
+    for (const item of tagged as any[]) {
+      const catId = item.masterCategoryId as number;
+      const catName = masterCategories?.find((c: MasterCategory) => c.id === catId)?.name ?? `Category ${catId}`;
+      const price = parseFloat(String(item.totalPrice || '0').replace(/[^0-9.-]/g, '')) || 0;
+      if (!categoryGroups.has(catId)) {
+        categoryGroups.set(catId, { categoryName: catName, total: 0, firstBidCollectionId: item.bidCollectionId });
+      }
+      categoryGroups.get(catId)!.total += price;
+    }
+
+    // One rollup evaluation line item per tagged category
+    const taggedItems: EvaluationLineItem[] = Array.from(categoryGroups.entries()).map(([catId, g]) => ({
+      id: `imported-cat-${Date.now()}-${catId}`,
+      description: g.categoryName,
+      quantity: 1,
+      unit: "ls",
+      unitPrice: g.total.toFixed(2),
+      totalPrice: g.total.toFixed(2),
+      tenantShare: 100,
+      bidCollectionId: g.firstBidCollectionId,
+      bidLineItemId: undefined,
+    }));
+
+    // Untagged items transfer individually, unchanged
+    const untaggedItems: EvaluationLineItem[] = (untagged as (BidLineItem & { bidCollectionId: number })[]).map((item) => ({
       id: `imported-${Date.now()}-${item.id}`,
       description: item.description,
       quantity: typeof item.quantity === 'string' ? parseInt(item.quantity) || 1 : item.quantity || 1,
       unit: item.unit || "ea",
       unitPrice: item.unitPrice?.toString() || "0.00",
       totalPrice: item.totalPrice?.toString() || "0.00",
-      tenantShare: 100, // Default to 100% tenant responsibility
+      tenantShare: 100,
       bidCollectionId: item.bidCollectionId,
       bidLineItemId: item.id,
-    })) as EvaluationLineItem[];
+    }));
+
+    const importedItems = [...taggedItems, ...untaggedItems];
 
     setBudgetData(prev => ({
       ...prev,
       tenantImprovements: [...prev.tenantImprovements, ...importedItems],
     }));
 
+    const rollupMsg = taggedItems.length > 0 ? `${taggedItems.length} category rollup${taggedItems.length > 1 ? 's' : ''}` : '';
+    const individualMsg = untaggedItems.length > 0 ? `${untaggedItems.length} individual item${untaggedItems.length > 1 ? 's' : ''}` : '';
+    const description = [rollupMsg, individualMsg].filter(Boolean).join(' and ');
+
     toast({
       title: "Pricing Imported",
-      description: `Successfully imported ${importedItems.length} selected line items from contractor/architect pricing.`,
+      description: `Successfully imported ${description}.`,
       duration: 4000,
     });
 
@@ -994,6 +1035,11 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       return results.flat();
     },
     enabled: !!bidCollections && Array.isArray(bidCollections) && bidCollections.length > 0,
+  });
+
+  // Fetch master categories for grouped import rollups
+  const { data: masterCategories } = useQuery<MasterCategory[]>({
+    queryKey: ['/api/master-categories'],
   });
 
   // Filter only design/architectural costs for design import

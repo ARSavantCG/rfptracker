@@ -15,6 +15,9 @@ export function registerAiRoutes(app: Express): void {
         return res.status(400).json({ message: "Invalid bid collection ID" });
       }
 
+      console.log('Anthropic API key present:', !!process.env.ANTHROPIC_API_KEY);
+      console.log('Bid collection ID requested:', bidCollectionId);
+
       const bidCollection = await storage.getBidCollection(bidCollectionId);
       if (!bidCollection) {
         return res.status(404).json({ message: "Bid collection not found" });

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -40,10 +40,22 @@ interface AiAnalysis {
   summary: string;
 }
 
+// Keyword → master category name mapping for auto-suggestions
+const KEYWORD_CATEGORY_HINTS: { keywords: RegExp; categoryName: string }[] = [
+  { keywords: /general\s+conditions?/i, categoryName: "General Conditions" },
+  { keywords: /overhead|profit|oh&p|o&p/i, categoryName: "Contractor Fee/OH&P" },
+  { keywords: /insurance/i, categoryName: "Insurance & Bond" },
+  { keywords: /bond/i, categoryName: "Insurance & Bond" },
+  { keywords: /permit/i, categoryName: "Permits & Fees" },
+  { keywords: /\bfee\b/i, categoryName: "Permits & Fees" },
+];
+
 export function BidViewModal({ isOpen, onClose, bid }: BidViewModalProps) {
   const { toast } = useToast();
   const [aiLoading, setAiLoading] = useState(false);
   const [aiAnalysis, setAiAnalysis] = useState<AiAnalysis | null>(null);
+  // itemId → suggested masterCategoryId (pre-populated, not yet saved)
+  const [suggestions, setSuggestions] = useState<Map<number, number>>(new Map());
 
   // Fetch line items for this bid
   const { data: lineItems } = useQuery({
@@ -68,6 +80,23 @@ export function BidViewModal({ isOpen, onClose, bid }: BidViewModalProps) {
       toast({ title: "Failed to save category", variant: "destructive" });
     },
   });
+
+  // Auto-suggest categories based on keywords in the description (untagged items only)
+  useEffect(() => {
+    if (!lineItems || !masterCategories) return;
+    const newSuggestions = new Map<number, number>();
+    for (const item of lineItems as BidLineItem[]) {
+      if (item.masterCategoryId) continue; // already tagged — skip
+      const desc = item.description ?? '';
+      for (const hint of KEYWORD_CATEGORY_HINTS) {
+        if (hint.keywords.test(desc)) {
+          const cat = masterCategories.find(c => c.name === hint.categoryName);
+          if (cat) { newSuggestions.set(item.id, cat.id); break; }
+        }
+      }
+    }
+    setSuggestions(newSuggestions);
+  }, [lineItems, masterCategories]);
 
   const formatCurrency = (amount: string | null) => {
     if (!amount) return "TBD";
@@ -365,23 +394,46 @@ export function BidViewModal({ isOpen, onClose, bid }: BidViewModalProps) {
                                   onClick={() => categoryMutation.mutate({ itemId: item.id, masterCategoryId: null, isCleanData: item.isCleanData ?? false })}
                                 >×</button>
                               </div>
-                            ) : (
-                              <Select
-                                value=""
-                                onValueChange={(val) => categoryMutation.mutate({ itemId: item.id, masterCategoryId: parseInt(val), isCleanData: item.isCleanData ?? false })}
-                              >
-                                <SelectTrigger style={{ width: 160, height: 28, fontSize: 12 }} className="text-gray-400 border-gray-200">
-                                  <SelectValue placeholder="Untagged" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {(masterCategories ?? []).map(cat => (
-                                    <SelectItem key={cat.id} value={String(cat.id)} className="text-sm">
-                                      {cat.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            )}
+                            ) : (() => {
+                              const suggestedId = suggestions.get(item.id);
+                              const suggestedName = suggestedId ? masterCategories?.find(c => c.id === suggestedId)?.name : undefined;
+                              return (
+                                <div className="flex items-center gap-1">
+                                  <Select
+                                    value={suggestedId ? String(suggestedId) : ""}
+                                    onValueChange={(val) => {
+                                      setSuggestions(prev => { const m = new Map(prev); m.delete(item.id); return m; });
+                                      categoryMutation.mutate({ itemId: item.id, masterCategoryId: parseInt(val), isCleanData: item.isCleanData ?? false });
+                                    }}
+                                  >
+                                    <SelectTrigger
+                                      style={{ width: 140, height: 28, fontSize: 12 }}
+                                      className={suggestedId ? "border-amber-400 text-amber-700 bg-amber-50" : "text-gray-400 border-gray-200"}
+                                      title={suggestedId ? `Suggested: ${suggestedName}` : undefined}
+                                    >
+                                      <SelectValue placeholder="Untagged" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {(masterCategories ?? []).map(cat => (
+                                        <SelectItem key={cat.id} value={String(cat.id)} className="text-sm">
+                                          {cat.name}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  {suggestedId && (
+                                    <button
+                                      className="text-amber-500 hover:text-green-600 flex-shrink-0 font-bold text-sm"
+                                      title={`Confirm: ${suggestedName}`}
+                                      onClick={() => {
+                                        setSuggestions(prev => { const m = new Map(prev); m.delete(item.id); return m; });
+                                        categoryMutation.mutate({ itemId: item.id, masterCategoryId: suggestedId, isCleanData: item.isCleanData ?? false });
+                                      }}
+                                    >✓</button>
+                                  )}
+                                </div>
+                              );
+                            })()}
                           </TableCell>
                         </TableRow>
                       );

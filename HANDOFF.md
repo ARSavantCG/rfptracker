@@ -7,7 +7,7 @@
 
 RFP Tracker — Savant Portal Integration
 Project Handoff Document
-Session Date: April 13, 2026
+Session Date: April 14, 2026
 
 What this project is:
 A commercial real estate RFP management system built for Bridge Industrial, hosted at rfptracker.app on Replit with a Neon PostgreSQL database. The codebase is TypeScript full-stack — React/Vite frontend, Express backend, Drizzle ORM.
@@ -15,20 +15,12 @@ GitHub: https://github.com/ARSavantCG/rfptracker
 
 What was accomplished this session:
 
-✅ Fixed split bay SF calculation for MG Westside Building B
-✅ Refactored routes.ts from 10,008 lines to 5,886 lines across 5 feature files
-✅ Removed 22 dead imports
-✅ Stripped all production debug logging
-✅ Added requireAuth to 9 previously unauthenticated routes
-✅ Fixed require() inside loop in generateBidCollectionHtml
-✅ Created server/ai-routes.ts with AI bid analysis endpoint
-✅ Fixed auth-token vs auth_token localStorage key mismatch
-✅ Fixed updateRfpRequestSchema missing import causing 400 errors
-✅ Fixed insertInvitationToBidSchema missing import
-✅ Fixed double response body read in frontend
-✅ Got Gordon Foods @ MG Westside Bldg B through Steps 1-4
-✅ Fixed parking auto-calculation for split bay RFPs
-✅ Locked AI features to admin-only via checkPermission('admin.access')
+✅ Seeded master_categories table to 32 categories (added Dock Equipment, Flooring & Wall Finishes, Office Build-out, Warehouse Lighting, Permits & Fees, Insurance & Bond, Contractor Fee/OH&P, Contingency, Interior Storefront/Glazed Partitions, Cabinetry, Solid Surface Countertops, Remote Restroom(s))
+✅ Category dropdown on bid line items — compact 160px dropdown per untagged row in bid-view-modal.tsx; tagged rows show blue pill + clear button; selection PATCHes /api/bid-line-items/:id/mapping
+✅ Keyword auto-suggest on bid modal load — keywords (general conditions, overhead/profit, insurance, bond, permit, fee) match description text and pre-populate dropdown with amber styling + ✓ confirm button; user must confirm before saving
+✅ Grouped import rollup in evaluation-budget.tsx — tagged items grouped by masterCategoryId (summed totals, category name as description, unit "ls"); untagged items pass through individually
+✅ PDF bid import "first clean table only" detection — server/pdf-parser.ts now drops junk rows (blank, pure-number, parentheses-only, header phrases like "QTY UNIT", "PRICE", "SHELL AREA", "OTHER AREA", "TOTAL AREA") and truncates at end of first contiguous clean block (3 consecutive non-clean rows triggers cutoff)
+✅ Stripped all 55 debug console.log statements from evaluation-budget.tsx (105 lines removed including multi-line objects for parking calc, electrical calc, tiered pricing, auto-calculations, drag operations)
 
 
 Current file structure:
@@ -39,7 +31,14 @@ server/
 ├── rom-routes.ts      (854 lines — ROM Pilot + report generator)
 ├── property-routes.ts (2,064 lines — properties, electrical, bays)
 ├── html-generators.ts (713 lines — bid/report HTML generators)
-└── ai-routes.ts       (new — AI bid analysis)
+├── pdf-parser.ts      (491 lines — PDF table extraction + clean-block filter)
+└── ai-routes.ts       (AI bid analysis)
+
+Key components:
+client/src/components/
+├── bid-view-modal.tsx      — category dropdown + keyword auto-suggest
+├── evaluation-budget.tsx   — grouped import rollup, parking/electrical calc (debug-clean)
+└── pdf-bid-import-modal.tsx — PDF import flow (column mapping + review screens)
 
 Environment secrets (Replit):
 
@@ -63,15 +62,14 @@ Known issues / next session fix list:
 
 MG Westside Bldg B split bays need dock door counts added to bay records
 AI bid analysis "Analyze with AI" button returning "Analysis failed" — needs console debugging
-Remove debug console.logs from parking calculation (Parking Calc Debug, Tenant area after fallbacks, Parking Calc Pre-Calculation, Door counts calculated)
 /api/version returning 500 in production — version.json read failing
 
 🏗️ Features to Build:
-5. Master Cost Library — unified pricing database replacing ROM Scope Items
-6. Bid line item tagging → rollup transfer to evaluation Step 5
-7. Workletter/broker PDF parser — Claude extracts scope checklist at Step 1
-8. Email/notes parser — Claude captures construction requirements from team emails
-9. Historical cost benchmarking — $/SF by category from clean bid data
+1. Master Cost Library — unified pricing database replacing ROM Scope Items
+2. Workletter/broker PDF parser — Claude extracts scope checklist at Step 1
+3. Email/notes parser — Claude captures construction requirements from team emails
+4. Historical cost benchmarking — $/SF by category from clean bid data
+5. Bulk-confirm all keyword suggestions in bid view modal (one-click "Accept All" button)
 
 How to start next session:
 Paste this into Claude:
@@ -83,4 +81,7 @@ Token auth only — no sessions (stored as auth-token with hyphen in localStorag
 AI features locked to admin.access permission only
 Split bays use rentableSquareFootage field, not squareFootage
 Property parking is proportional: (tenantSF / totalPropertySF) * propertyParking
+PATCH /api/bid-line-items/:id/mapping requires BOTH masterCategoryId and isCleanData — always pass item.isCleanData ?? false
+master_categories table: 32 rows; columns: id, name, description, sort_order, created_at
 Cost amounts stored inconsistently — some as text strings, some as integer cents (future cleanup needed)
+PDF parser clean-block cutoff: 3 consecutive non-clean rows after first clean block starts = end of table

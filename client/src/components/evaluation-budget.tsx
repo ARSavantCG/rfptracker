@@ -699,17 +699,12 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       // Helper function to match tiered items and select correct tier
       const applyTieredPricing = (item: any) => {
         const snapshot = item.romSnapshot;
-        console.log('🎯 applyTieredPricing - Item:', item);
-        console.log('🎯 Snapshot:', snapshot);
         
         if (!snapshot || !snapshot.itemGroup) {
-          console.log('❌ No snapshot or itemGroup');
           return item; // No tiered pricing metadata
         }
 
         const areaBreakdown = rfp?.areaBreakdown || [];
-        console.log('📋 Area Breakdown:', areaBreakdown);
-        console.log('🏷️ Looking for itemGroup:', snapshot.itemGroup);
         
         // Find matching area by itemGroup (e.g., "Office Area")
         const matchedArea = areaBreakdown.find((area: any) => 
@@ -717,24 +712,19 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
           area.description?.includes(snapshot.itemGroup)
         );
 
-        console.log('📍 Matched Area:', matchedArea);
 
         if (!matchedArea || !matchedArea.squareFootage) {
-          console.log('❌ No matching area or square footage');
           return item; // No matching area breakdown
         }
 
         const sqft = parseInt(matchedArea.squareFootage.replace(/,/g, ""));
-        console.log('📏 Square Footage:', sqft);
         
         // Find all ROM items with the same itemGroup
         const tieredItems = romItems.filter((romItem: any) => 
           romItem.itemGroup === snapshot.itemGroup && romItem.isActive
         );
 
-        console.log('📦 Tiered Items Found:', tieredItems.length);
         tieredItems.forEach((t: any) => {
-          console.log(`  - ${t.name}: ${t.minSquareFootage || 0} to ${t.maxSquareFootage || 'Infinity'}, $${t.unitPrice}`);
         });
 
         // Find the tier that matches this square footage
@@ -742,11 +732,9 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
           const minSf = tier.minSquareFootage ?? -Infinity;
           const maxSf = tier.maxSquareFootage ?? Infinity;
           const matches = sqft >= minSf && sqft <= maxSf;
-          console.log(`  Checking ${tier.name}: ${minSf} <= ${sqft} <= ${maxSf}? ${matches}`);
           return matches;
         });
 
-        console.log('✅ Matching Tier:', matchingTier);
 
         if (matchingTier) {
           // Replace with the correct tier's pricing
@@ -755,7 +743,6 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
             ? matchingTier.unitPrice 
             : matchingTier.unitPrice.toString();
           
-          console.log('💰 Setting unitPrice to:', tierUnitPrice);
           
           const result = {
             ...item,
@@ -771,11 +758,9 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
             },
           };
           
-          console.log('✅ Final Item:', result);
           return result;
         }
 
-        console.log('❌ No matching tier found');
         return item;
       };
 
@@ -793,14 +778,12 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         if (description.includes("demising wall") && propertyData?.buildingDepth) {
           quantity = propertyData.buildingDepth;
           unit = "ft.";
-          console.log(`🧱 Matched Demising Wall: ${quantity} ft (from building depth)`);
         }
         // Match Office Area items
         else if (description.includes("office area") || description.includes("office space")) {
           const matchedArea = areaBreakdown.find((area: any) => area.areaType === "Office Area");
           if (matchedArea && matchedArea.squareFootage) {
             quantity = parseInt(matchedArea.squareFootage.replace(/,/g, ""));
-            console.log(`📍 Matched Office Area: ${quantity} sf`);
           }
         }
         // Match Warehouse Office items
@@ -808,7 +791,6 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
           const matchedArea = areaBreakdown.find((area: any) => area.areaType === "Warehouse Office");
           if (matchedArea && matchedArea.squareFootage) {
             quantity = parseInt(matchedArea.squareFootage.replace(/,/g, ""));
-            console.log(`📍 Matched Warehouse Office: ${quantity} sf`);
           }
         }
         // Set default quantity for Design (will be overridden in real-time)
@@ -884,7 +866,6 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       const autoPopulateContingency = (item: any) => {
         const description = (item.description || "").toLowerCase();
         if (description.includes("contingency")) {
-          console.log('🎲 Setting up contingency for dynamic calculation');
           return {
             ...item,
             unitPrice: "0.05", // 5% rate
@@ -901,7 +882,6 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         const unitPx = parseFloat(item.unitPrice) || 0;
         const totalPx = qty * unitPx;
         
-        console.log(`💵 Recalculating ${item.description}: ${qty} × ${unitPx} = ${totalPx}`);
         
         return {
           ...item,
@@ -1147,7 +1127,6 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         
         // Only update if different
         if (item.quantity !== newQty || item.totalPrice !== newTotal) {
-          console.log(`🏗️ Auto-calc Design: ${newQty} sf @ $${unitPx} = $${newTotal}`);
           return {
             ...item,
             quantity: newQty,
@@ -1163,7 +1142,6 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         const newTotal = (newQty * unitPx).toString();
         
         if (item.quantity !== newQty || item.totalPrice !== newTotal) {
-          console.log(`🏢 Auto-calc Builder's Risk: ${newQty} @ $${unitPx} = $${newTotal}`);
           return {
             ...item,
             quantity: newQty,
@@ -1179,7 +1157,6 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         const newTotal = (newQty * unitPx).toString();
         
         if (item.quantity !== newQty || item.totalPrice !== newTotal) {
-          console.log(`💳 Auto-calc Permit Fees: ${newQty} @ $${unitPx} = $${newTotal}`);
           return {
             ...item,
             quantity: newQty,
@@ -1195,7 +1172,6 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         const newTotal = (newQty * unitPx).toString();
         
         if (item.quantity !== newQty || item.totalPrice !== newTotal) {
-          console.log(`👷 Auto-calc Construction Management: ${newQty} @ $${unitPx} = $${newTotal}`);
           return {
             ...item,
             quantity: newQty,
@@ -1244,7 +1220,6 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         const newTotal = (newQty * unitPx).toString();
         
         if (item.quantity !== newQty || item.totalPrice !== newTotal) {
-          console.log(`🎲 Auto-calc Contingency: ${newQty} @ $${unitPx} = $${newTotal} (includes CM)`);
           return {
             ...item,
             quantity: newQty,
@@ -1260,7 +1235,6 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
     const hasChanges = JSON.stringify(updatedDesignSoftCosts) !== JSON.stringify(budgetData.designSoftCosts);
     
     if (hasChanges) {
-      console.log('📊 Updating budget with auto-calculations');
       setBudgetData(prev => ({
         ...prev,
         designSoftCosts: updatedDesignSoftCosts,
@@ -1325,12 +1299,6 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       : (propertyData || propertyByIdData);
 
     if (!activePropertyData || !rfp?.selectedBayConfigurations) {
-      console.log('Parking Calc Debug - Missing data:', { 
-        hasProperty: !!activePropertyData, 
-        hasBays: !!rfp?.selectedBayConfigurations,
-        isMultiBuilding: rfp?.isMultiBuilding,
-        propertyId: rfp?.property
-      });
       return { vehicular: 0, trailer: 0 };
     }
     
@@ -1350,12 +1318,6 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         }, 0)
       : 0;
     
-    console.log('Parking Calc Debug - Areas:', { 
-      tenantArea: tenantRentableArea, 
-      totalArea: totalPropertyArea,
-      mechanicalRoom: rfp.mechanicalRoomArea || 0,
-      selectedBays: rfp.selectedBayConfigurations.length
-    });
     
     // Fallback 1: if tenant area is 0, match selectedBayIds against property bayConfigurations
     let effectiveTenantArea = tenantRentableArea;
@@ -1374,20 +1336,12 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
     if (effectiveTenantArea === 0 && (rfp as any).selectedBaysPerBuilding && Array.isArray((rfp as any).selectedBaysPerBuilding)) {
       effectiveTenantArea = (rfp as any).selectedBaysPerBuilding.reduce((total: number, b: any) => total + (b.rentableSquareFootage || b.squareFootage || 0), 0);
     }
-    console.log('Tenant area after fallbacks:', effectiveTenantArea);
 
     if (totalPropertyArea === 0 || effectiveTenantArea === 0) {
-      console.log('Parking Calc Debug - Zero areas detected');
       return { vehicular: 0, trailer: 0 };
     }
     
     // Calculate tenant's percentage of the property
-    console.log('Parking Calc Pre-Calculation:', {
-      propertyData,
-      propertyByIdData,
-      tenantRentableSF: effectiveTenantArea,
-      totalPropertyRentableSF: totalPropertyArea,
-    });
     const tenantPercentage = effectiveTenantArea / totalPropertyArea;
     
     // Calculate proportional parking allocation
@@ -1397,13 +1351,6 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
     const allocatedVehicular = Math.round(totalVehicularParking * tenantPercentage);
     const allocatedTrailer = Math.round(totalTrailerParking * tenantPercentage);
     
-    console.log('Parking Calc Debug - Results:', { 
-      percentage: tenantPercentage,
-      totalVehicular: totalVehicularParking,
-      totalTrailer: totalTrailerParking,
-      allocatedVehicular,
-      allocatedTrailer
-    });
     
     return { vehicular: allocatedVehicular, trailer: allocatedTrailer };
   };
@@ -1415,10 +1362,6 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       : propertyData;
 
     if (!activePropertyData || !rfp?.selectedBayConfigurations) {
-      console.log('Electrical Calc Debug - Missing data:', { 
-        hasProperty: !!activePropertyData, 
-        hasBays: !!rfp?.selectedBayConfigurations
-      });
       return 0;
     }
     
@@ -1437,7 +1380,6 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       : 0;
     
     if (totalPropertyArea === 0 || tenantRentableArea === 0) {
-      console.log('Electrical Calc Debug - Zero areas detected');
       return 0;
     }
     
@@ -1458,15 +1400,6 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       ? Math.ceil(rawAllocation / increment) * increment 
       : Math.round(rawAllocation);
     
-    console.log('⚡ Electrical Calc Debug:', { 
-      tenantArea: tenantRentableArea,
-      totalArea: totalPropertyArea,
-      percentage: (tenantPercentage * 100).toFixed(1) + '%',
-      totalElectrical: totalElectricalAllocation,
-      increment: increment,
-      rawAllocation: rawAllocation.toFixed(0),
-      allocatedElectrical
-    });
     
     return allocatedElectrical;
   };
@@ -1495,7 +1428,6 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         
         // Only update if different
         if (item.quantity !== newQty || item.totalPrice !== newTotal) {
-          console.log(`🧱 Auto-calc Demising Wall: ${newQty} ft @ $${unitPx} = $${newTotal}`);
           return {
             ...item,
             quantity: newQty,
@@ -1512,7 +1444,6 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
     const hasChanges = JSON.stringify(updatedTenantImprovements) !== JSON.stringify(budgetData.tenantImprovements);
     
     if (hasChanges) {
-      console.log('🧱 Updating tenant improvements with demising wall auto-calculations');
       setBudgetData(prev => ({
         ...prev,
         tenantImprovements: updatedTenantImprovements,
@@ -1528,13 +1459,10 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
   // This must run AFTER initial load to override any saved door counts with current calculation
   useEffect(() => {
     if (rfp && rfp.selectedBayConfigurations) {
-      console.log('🔄 Updating door counts from current bay selection...');
       const doorCounts = calculateDoorCounts();
       const parkingCounts = calculateParkingCounts();
       const calculatedElectrical = calculateElectricalAllocation();
       
-      console.log('🚪 Door counts calculated:', { oversized: doorCounts.oversized, regular: doorCounts.regular });
-      console.log('⚡ Calculated electrical allocation:', calculatedElectrical, 'AMPS');
       
       setBudgetData(prev => {
         // Preserve existing override if set, otherwise use calculated value
@@ -1561,12 +1489,6 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
     }
 
     // 🔍 DEBUG: Log property improvements data from API
-    console.log('🔍 populateExistingImprovements - Raw API Data:', propertyImprovements.map((imp: any) => ({
-      id: imp.id,
-      description: imp.description,
-      bucket: imp.bucket,
-      hasBucketField: 'bucket' in imp
-    })));
 
     const selectedBayIds = rfp.selectedBayConfigurations.map(bay => bay.id);
     
@@ -1753,7 +1675,6 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       // Restore manual overrides from saved metadata - this prevents auto-population from overwriting user changes
       const savedManualOverrides = (existingBudget as any).metadata?.manualOverrides || [];
       if (savedManualOverrides.length > 0) {
-        console.log(`📂 Loading ${savedManualOverrides.length} saved manual overrides:`, savedManualOverrides);
         setManualOverrides(new Set(savedManualOverrides));
       }
       
@@ -2835,13 +2756,6 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
     if (!rfp) return;
     
     // 🔍 DEBUG: Log existing improvements bucket data BEFORE PDF generation
-    console.log('🔍 PRE-PDF DEBUG: Existing Improvements Count:', budgetData.existingImprovements.length);
-    console.log('🔍 PRE-PDF DEBUG: Existing Improvements Details:', budgetData.existingImprovements.map(item => ({
-      id: item.id,
-      description: item.description,
-      bucket: item.bucket,
-      totalPrice: item.totalPrice
-    })));
     
     const currentDate = new Date().toLocaleDateString('en-US', {
       year: 'numeric',
@@ -3065,17 +2979,11 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
 
     const renderExistingImprovementsSection = () => {
       // DEBUG: Log existing improvements data
-      console.log('🔍 DEBUG Existing Improvements:', budgetData.existingImprovements.map(item => ({
-        description: item.description,
-        bucket: item.bucket,
-        id: item.id
-      })));
       
       // Separate improvements by bucket
       const actualsItems = budgetData.existingImprovements.filter((item: any) => item.bucket === 'ACTUALS');
       const pipelineItems = budgetData.existingImprovements.filter((item: any) => item.bucket === 'PIPELINE');
       
-      console.log('🔍 DEBUG Actuals count:', actualsItems.length, 'Pipeline count:', pipelineItems.length);
       
       const actualsTotal = calculateCategoryTotal(actualsItems);
       const pipelineTotal = calculateCategoryTotal(pipelineItems);
@@ -3818,7 +3726,6 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
             desc.includes("demising wall");
           
           if (isAutoCalcItem) {
-            console.log(`🔒 Marking item as manually overridden: ${item.description} (${itemId})`);
             setManualOverrides(prev => new Set(prev).add(itemId));
           }
         }
@@ -3839,7 +3746,6 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
             desc.includes("warehouse office");
           
           if (isAutoPopulatedItem) {
-            console.log(`🔒 Marking TI item as manually overridden: ${item.description} (${itemId})`);
             setManualOverrides(prev => new Set(prev).add(itemId));
           }
         }
@@ -3979,7 +3885,6 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         },
       };
 
-      console.log(`💾 Saving budget with ${manualOverrides.size} manual overrides:`, Array.from(manualOverrides));
 
       await fetch(`/api/rfp-requests/${rfp.id}/evaluation-budget`, {
         method: 'POST',
@@ -4059,7 +3964,6 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         },
       };
 
-      console.log(`💾 Saving & advancing with ${manualOverrides.size} manual overrides:`, Array.from(manualOverrides));
 
       await fetch(`/api/rfp-requests/${rfp.id}/evaluation-budget`, {
         method: 'POST',
@@ -4211,11 +4115,6 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       if (!draggedItem) return prev;
 
       // Debug logging
-      console.log('Drag operation:', {
-        draggableId,
-        draggedItem,
-        allItems: items.map(item => ({ id: item.id, description: item.description, assemblyId: item.assemblyId }))
-      });
 
       // Check if dragged item is an assembly component (has assemblyId)
       const draggedIsComponent = !!draggedItem.assemblyId;
@@ -4223,20 +4122,17 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       // Check if dragged item is an assembly header (other items reference it)
       const draggedIsHeader = items.some(item => item.assemblyId === draggableId);
 
-      console.log('Assembly check:', { draggedIsComponent, draggedIsHeader });
 
       if (draggedIsComponent || draggedIsHeader) {
         // Determine the assembly header ID
         const assemblyHeaderId = draggedIsComponent ? draggedItem.assemblyId! : draggableId;
         
-        console.log('Assembly header ID:', assemblyHeaderId);
         
         // Find ALL items that belong to this assembly (header + all components)
         const assemblyGroupItems = items.filter(item => 
           item.id === assemblyHeaderId || item.assemblyId === assemblyHeaderId
         );
         
-        console.log('Assembly group items:', assemblyGroupItems.map(item => ({ id: item.id, description: item.description })));
         
         if (assemblyGroupItems.length > 1) {
           // Get original indices and sort by position
@@ -4265,7 +4161,6 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
           const result = [...nonAssemblyItems];
           result.splice(adjustedIndex, 0, ...sortedAssemblyItems);
           
-          console.log('Move complete - final order:', result.map(item => ({ id: item.id, description: item.description })));
           
           return { ...prev, [sourceCategory]: result };
         }

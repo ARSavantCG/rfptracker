@@ -63,12 +63,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Serve files from the uploads directory directly
   app.get('/uploads/*', (req, res) => {
-    const filePath = path.join(process.cwd(), req.path);
-    if (fs.existsSync(filePath)) {
-      res.sendFile(filePath);
-    } else {
-      res.status(404).json({ message: 'File not found' });
+    const filename = path.basename(req.path);
+    const candidates = [
+      path.join(process.cwd(), req.path),
+      path.join(process.cwd(), 'uploads', filename),
+      path.join(process.cwd(), 'uploads', 'projects', filename),
+    ];
+    for (const filePath of candidates) {
+      console.log('Looking for file at:', filePath, 'Exists:', fs.existsSync(filePath));
+      if (fs.existsSync(filePath)) {
+        return res.sendFile(filePath);
+      }
     }
+    res.status(404).json({ message: 'File not found' });
   });
 
   // Auto-enforce legal compliance on startup for ALL properties

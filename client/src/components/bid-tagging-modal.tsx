@@ -49,6 +49,13 @@ interface BidTaggingModalProps {
   prePopulatedLineItems?: PrePopulatedLineItem[];
 }
 
+function buildPdfUrl(p?: string): string {
+  if (!p) return "";
+  if (p.startsWith("/uploads/")) return p;
+  if (p.startsWith("uploads/")) return `/${p}`;
+  return `/uploads/${p}`;
+}
+
 function getQuarterFromDate(date?: string | Date): string {
   const d = date ? new Date(date) : new Date();
   const month = d.getMonth() + 1;
@@ -95,7 +102,7 @@ export function BidTaggingModal({
     // Set first PDF attachment as active
     const firstPdf = attachments.find(a => a.type === "application/pdf" || a.name?.endsWith(".pdf"));
     if (firstPdf?.path) {
-      setActivePdfUrl(`/${firstPdf.path}`);
+      setActivePdfUrl(buildPdfUrl(firstPdf.path));
     } else {
       setActivePdfUrl("");
     }
@@ -234,9 +241,9 @@ export function BidTaggingModal({
                     .map(a => (
                       <button
                         key={a.id}
-                        onClick={() => setActivePdfUrl(`/${a.path}`)}
+                        onClick={() => setActivePdfUrl(buildPdfUrl(a.path))}
                         className={`text-xs px-2 py-1 rounded border truncate max-w-[200px] ${
-                          activePdfUrl === `/${a.path}`
+                          activePdfUrl === buildPdfUrl(a.path)
                             ? "bg-blue-600 text-white border-blue-600"
                             : "bg-white text-gray-700 border-gray-300 hover:border-blue-400"
                         }`}

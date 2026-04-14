@@ -124,9 +124,16 @@ export default function ProposalsLibrary() {
       : `${fmt(min)} – ${fmt(max)}`;
   }, [proposals]);
 
+  function buildPdfUrl(attachment: RfpFile): string {
+    const p = attachment.path || "";
+    if (!p) return "#";
+    if (p.startsWith("/uploads/")) return p;
+    if (p.startsWith("uploads/")) return `/${p}`;
+    return `/uploads/${p}`;
+  }
+
   function openPdf(attachment: RfpFile) {
-    const url = attachment.path ? `/${attachment.path}` : "#";
-    window.open(url, "_blank");
+    window.open(buildPdfUrl(attachment), "_blank");
   }
 
   return (

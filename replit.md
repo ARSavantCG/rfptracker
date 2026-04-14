@@ -89,6 +89,14 @@ Key advanced systems and features include:
   - API endpoints: `GET /api/rfp-requests/:id/project-files` (all files), `GET /api/rfp-requests/:id/project-files/:step` (by step), `DELETE /api/project-files/:fileId`
   - File organization utilities in `server/file-organization.ts`: sanitizeProjectName, createProjectFolderStructure, getWorkflowStepFolder, getStepFolderPath, getRelativeFilePath
 - **Replit Object Storage Integration**: Professional file handling using Replit App Storage with presigned URL upload flow for future document management capabilities.
+- **Phase 2 — Project Actuals & Historical Intelligence**: Full pipeline for recording, importing, and benchmarking historical project costs.
+  - `project_actuals` and `project_actual_line_items` database tables with full CRUD API (`server/actuals-routes.ts`)
+  - **Historical Import Page** (`/historical-import`): Manual entry form (one project at a time with dynamic cost breakdown rows by category/area type) and CSV import tab with preview, confirmation, and downloadable template
+  - **Benchmarks Dashboard** (`cost-benchmarks.tsx`): Category × area type table showing Low / Avg / High $/SF, spread % (color-coded), vs. ROM price comparison with trend arrows, and "Update ROM Price" button per row that calls the pricing-mode PATCH route
+  - **ROM Pilot Benchmarks Tab**: Added to the ROM Pilot page alongside the existing estimates list
+  - **Record Project Actuals Section** (`record-project-actuals.tsx`): Appears at the bottom of every Evaluation Budget view, pre-populated from the RFP (name, tenant, property) and budget data (grand total, line items by category). Has Save / Skip for now options. Shows success state with link to Benchmarks after saving.
+  - **Admin Panel Link**: Historical Import accessible from Admin → Data Quality tab
+  - GET `/api/project-actuals/benchmarks` intelligence endpoint aggregates $/SF by category and area type across all historical projects
 
 ### External Dependencies
 - **Database**: PostgreSQL (Neon serverless)

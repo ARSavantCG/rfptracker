@@ -2,11 +2,13 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Calculator, Edit, Trash2, FileText, ListChecks, Download, Save, Archive } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Plus, Calculator, Edit, Trash2, FileText, ListChecks, Download, Save, Archive, BarChart2 } from "lucide-react";
 import Navigation from "@/components/navigation";
 import { CreateRomPilotModal } from "@/components/create-rom-pilot-modal";
 import { RomPilotScopeModal } from "@/components/rom-pilot-scope-modal-new";
 import { RomScopeItemsModal } from "@/components/rom-scope-items-modal";
+import { CostBenchmarks } from "@/components/cost-benchmarks";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 
@@ -192,36 +194,51 @@ export default function RomPilotPage() {
       <Navigation />
       
       <div className="max-w-7xl mx-auto p-6">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 flex items-center space-x-2">
-              <Calculator className="h-8 w-8 text-blue-600" />
-              <span>ROM Pilot</span>
-            </h1>
-            <p className="text-gray-600 mt-1">
-              Create rough order of magnitude estimates for tenant improvement projects
-            </p>
-          </div>
-          
-          <div className="flex space-x-3">
-            <Button 
-              variant="outline"
-              onClick={() => setScopeItemsModalOpen(true)}
-              className="flex items-center space-x-2"
-            >
-              <ListChecks className="h-4 w-4" />
-              <span>Manage Scope Items</span>
-            </Button>
-            <Button 
-              onClick={() => setCreateModalOpen(true)}
-              className="flex items-center space-x-2"
-            >
-              <Plus className="h-4 w-4" />
-              <span>New ROM</span>
-            </Button>
-          </div>
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-gray-900 flex items-center space-x-2">
+            <Calculator className="h-8 w-8 text-blue-600" />
+            <span>ROM Pilot</span>
+          </h1>
+          <p className="text-gray-600 mt-1">
+            Create rough order of magnitude estimates for tenant improvement projects
+          </p>
         </div>
 
+        <Tabs defaultValue="estimates">
+          <div className="flex items-center justify-between mb-4">
+            <TabsList>
+              <TabsTrigger value="estimates" className="flex items-center gap-1">
+                <Calculator className="h-3.5 w-3.5" /> ROM Estimates
+              </TabsTrigger>
+              <TabsTrigger value="benchmarks" className="flex items-center gap-1">
+                <BarChart2 className="h-3.5 w-3.5" /> Benchmarks
+              </TabsTrigger>
+            </TabsList>
+
+            <div className="flex space-x-3">
+              <Button
+                variant="outline"
+                onClick={() => setScopeItemsModalOpen(true)}
+                className="flex items-center space-x-2"
+              >
+                <ListChecks className="h-4 w-4" />
+                <span>Manage Scope Items</span>
+              </Button>
+              <Button
+                onClick={() => setCreateModalOpen(true)}
+                className="flex items-center space-x-2"
+              >
+                <Plus className="h-4 w-4" />
+                <span>New ROM</span>
+              </Button>
+            </div>
+          </div>
+
+          <TabsContent value="benchmarks">
+            <CostBenchmarks />
+          </TabsContent>
+
+          <TabsContent value="estimates">
         {/* ROM Pilots Table */}
         <div className="bg-white rounded-lg shadow">
           <div className="overflow-x-auto">
@@ -361,6 +378,8 @@ export default function RomPilotPage() {
           )}
           </div>
         </div>
+          </TabsContent>
+        </Tabs>
       </div>
 
       <CreateRomPilotModal

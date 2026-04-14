@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Shield, Users, Settings, Edit, Trash2, CheckCircle, XCircle, User as UserIcon, KeyRound, FileText, HardDrive, Layout, Clock, Scale, ChevronDown, Hash, BarChart, ExternalLink, Mail, ClipboardCheck, Tags } from "lucide-react";
+import { Shield, Users, Settings, Edit, Trash2, CheckCircle, XCircle, User as UserIcon, KeyRound, FileText, HardDrive, Layout, Clock, Scale, ChevronDown, Hash, BarChart, ExternalLink, Mail, ClipboardCheck, Tags, Database } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
@@ -1236,6 +1236,30 @@ export default function Admin() {
                     >
                       <Tags className="h-3 w-3 mr-1" />
                       Open Data Mapping
+                    </Button>
+                  </div>
+
+                  {/* Historical Import */}
+                  <div className="p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                        <Database className="h-4 w-4 text-green-600" />
+                        Historical Project Import
+                      </h3>
+                      <ExternalLink className="h-4 w-4 text-gray-400" />
+                    </div>
+                    <p className="text-sm text-gray-600 mb-4">
+                      Import historical project actuals (manual entry or CSV) to build cost 
+                      intelligence benchmarks and train the ROM pricing system.
+                    </p>
+                    <Button 
+                      size="sm" 
+                      onClick={() => window.open('/historical-import', '_blank')}
+                      className="w-full"
+                      variant="outline"
+                    >
+                      <Database className="h-3 w-3 mr-1" />
+                      Open Historical Import
                     </Button>
                   </div>
                 </div>

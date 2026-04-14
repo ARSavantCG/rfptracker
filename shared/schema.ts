@@ -1239,3 +1239,60 @@ export const insertPdfMappingTemplateSchema = createInsertSchema(pdfMappingTempl
 export type PdfMappingTemplate = typeof pdfMappingTemplates.$inferSelect;
 export type InsertPdfMappingTemplate = z.infer<typeof insertPdfMappingTemplateSchema>;
 
+// ── Project Actuals & Historical Intelligence ────────────────────────────────
+
+export const projectActuals = pgTable("project_actuals", {
+  id: serial("id").primaryKey(),
+  rfpId: integer("rfp_id").references(() => rfpRequests.id),
+  projectName: text("project_name").notNull(),
+  tenantName: text("tenant_name").notNull(),
+  propertyName: text("property_name").notNull(),
+  completedDate: timestamp("completed_date").notNull(),
+  officeAreaSf: integer("office_area_sf").default(0),
+  warehouseAreaSf: integer("warehouse_area_sf").default(0),
+  totalAreaSf: integer("total_area_sf").default(0),
+  totalActualCost: integer("total_actual_cost").notNull(),
+  costPerSf: text("cost_per_sf"),
+  source: text("source").notNull().default("historical_import"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const projectActualLineItems = pgTable("project_actual_line_items", {
+  id: serial("id").primaryKey(),
+  projectActualId: integer("project_actual_id").notNull().references(() => projectActuals.id),
+  category: text("category").notNull(),
+  description: text("description"),
+  totalCost: integer("total_cost").notNull(),
+  areaType: text("area_type").default("combined"),
+  areaSf: integer("area_sf"),
+  costPerSf: text("cost_per_sf"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertProjectActualSchema = createInsertSchema(projectActuals).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateProjectActualSchema = insertProjectActualSchema.partial().extend({
+  id: z.number(),
+});
+
+export const insertProjectActualLineItemSchema = createInsertSchema(projectActualLineItems).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const updateProjectActualLineItemSchema = insertProjectActualLineItemSchema.partial().extend({
+  id: z.number(),
+});
+
+export type ProjectActual = typeof projectActuals.$inferSelect;
+export type InsertProjectActual = z.infer<typeof insertProjectActualSchema>;
+export type ProjectActualLineItem = typeof projectActualLineItems.$inferSelect;
+export type InsertProjectActualLineItem = z.infer<typeof insertProjectActualLineItemSchema>;
+

@@ -27,6 +27,7 @@ import DataScrubbing from "@/pages/data-scrubbing";
 import DataMapping from "@/pages/data-mapping";
 import ProjectReportGenerator from "@/pages/project-report-generator";
 import PropertyDataAudit from "@/pages/property-data-audit";
+import HistoricalImport from "@/pages/historical-import";
 import { useAuth } from "@/hooks/useAuth";
 import { ErrorBoundary } from "@/components/error-boundary";
 import AuthCheck from "@/components/auth-check";
@@ -87,6 +88,7 @@ function Router() {
             <Route path="/data-mapping" component={DataMapping} />
             <Route path="/project-report-generator" component={ProjectReportGenerator} />
             <Route path="/property-data-audit" component={PropertyDataAudit} />
+            <Route path="/historical-import" component={HistoricalImport} />
             <Route path="/admin" component={Admin} />
             <Route
               path="/admin/property-summary-report"

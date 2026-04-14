@@ -15,6 +15,7 @@ import { Plus, Edit, Trash2, Save, X, ArrowRight, Copy, FileDown, Upload, Packag
 import { EvaluationAttachments } from "./evaluation-attachments";
 import { EvaluationLabeledUploads } from "./evaluation-labeled-uploads";
 import { EvaluationBudgetHistory } from "./evaluation-budget-history";
+import { RecordProjectActuals } from "./record-project-actuals";
 import { FormulaInput } from "./formula-input";
 import { RfpImportDialog } from "./rfp-import-dialog";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
@@ -5573,6 +5574,30 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
           </div>
         </CardContent>
       </Card>
+
+      {/* Record Project Actuals — optional section after workflow actions */}
+      {rfp && (
+        <RecordProjectActuals
+          rfpId={rfp.id}
+          projectName={rfp.projectName}
+          tenantName={rfp.tenantName}
+          propertyName={rfp.property}
+          totalCostDollars={parseFloat(budgetData.grandTotal || "0")}
+          rentableAreaSf={calculateRentableArea()}
+          prePopulatedLineItems={(() => {
+            const byCategory: Record<string, number> = {};
+            const allItems = [...(budgetData.tenantImprovements || []), ...(budgetData.designSoftCosts || [])];
+            for (const item of allItems) {
+              const cat = item.category || "TI";
+              const cost = parseFloat((item.totalPrice ?? "0").toString()) * 100;
+              byCategory[cat] = (byCategory[cat] || 0) + cost;
+            }
+            return Object.entries(byCategory)
+              .filter(([, cost]) => cost > 0)
+              .map(([category, totalCost]) => ({ category, totalCost }));
+          })()}
+        />
+      )}
 
       {/* Assembly Creation Dialog */}
       <Dialog open={showAssemblyCreator} onOpenChange={setShowAssemblyCreator}>

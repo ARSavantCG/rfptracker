@@ -37,6 +37,7 @@ import { checkPermission, upload, pdfUpload, uploadsDir, setupSession, requireAu
 import { generateBidCollectionHtml, generateAllBidCollectionsHtml, generateRfpPreviewHtml } from './html-generators';
 import { registerAuthRoutes } from './auth-routes';
 import { registerRomRoutes } from './rom-routes';
+import { registerActualsRoutes } from './actuals-routes';
 import { registerPropertyRoutes } from './property-routes';
 import { registerAiRoutes } from './ai-routes';
 
@@ -54,6 +55,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register extracted route modules
   registerAuthRoutes(app);
   registerRomRoutes(app);
+  registerActualsRoutes(app);
   registerPropertyRoutes(app);
   registerAiRoutes(app);
 

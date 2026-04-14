@@ -41,7 +41,7 @@ import { registerActualsRoutes } from './actuals-routes';
 import { registerPropertyRoutes } from './property-routes';
 import { registerAiRoutes } from './ai-routes';
 import { registerProposalsRoutes } from './proposals-routes';
-import { streamFromObjectStorage } from './storage-backup';
+import { streamFromObjectStorage, listObjectStorageFiles } from './storage-backup';
 
 // Helper function to clean invalid values like "$NaN", "NaN", etc.
 function cleanInvalidValue(value: any): string {
@@ -5734,6 +5734,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error migrating project folders:", error);
       res.status(500).json({ message: "Failed to migrate project folders" });
+    }
+  });
+
+  // List all files currently stored in Object Storage
+  app.get("/api/admin/list-storage-files", requireAuth, checkPermission('admin.access'), async (req, res) => {
+    try {
+      const files = await listObjectStorageFiles();
+      res.json({ count: files.length, files });
+    } catch (error) {
+      console.error("Error listing object storage files:", error);
+      res.status(500).json({ message: "Failed to list storage files", error: String(error) });
     }
   });
 

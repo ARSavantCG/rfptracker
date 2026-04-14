@@ -22,6 +22,23 @@ export async function backupToObjectStorage(localFilePath: string, filename: str
   console.log(`[OS Backup] Uploaded ${filename} to object storage`);
 }
 
+export async function listObjectStorageFiles(): Promise<{ name: string; key: string }[]> {
+  const privateDir = process.env.PRIVATE_OBJECT_DIR;
+  if (!privateDir) return [];
+  const { bucketName, objectName: prefix } = parseOSPath(`${privateDir}/uploads/`);
+  try {
+    const bucket = objectStorageClient.bucket(bucketName);
+    const [files] = await bucket.getFiles({ prefix });
+    return files.map(f => ({
+      key: f.name,
+      name: f.name.replace(prefix, ''),
+    }));
+  } catch (err) {
+    console.error('[OS Backup] Failed to list object storage files:', err);
+    throw err;
+  }
+}
+
 export async function streamFromObjectStorage(filename: string, res: Response): Promise<boolean> {
   const key = getOSKey(filename);
   if (!key) return false;

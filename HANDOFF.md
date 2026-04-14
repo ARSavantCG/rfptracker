@@ -57,6 +57,23 @@ John Mejia — view + user management, no AI
 Brenda Gonzalez — view only, no AI
 
 
+## Recently Completed
+
+✅ **Phase 1 — Quarterly Pricing Intelligence** (complete)
+- `QuarterlyPricingPanel` component: quote table, add-quote form, price intelligence summary cards, active price mode selector
+- Integrated into ROM scope items modal with BarChart2 toggle button on every TI and non-TI row
+- ROM calculator uses `activePrice` (catalog / contractor / manual override) in both calculations and HTML export
+- PATCH `/api/scope-items/:id/pricing-mode` route with `selectedContractorName` and `manualOverridePrice` fields
+
+✅ **Phase 2 — Project Actuals & Historical Intelligence** (complete)
+- `project_actuals` and `project_actual_line_items` database tables (full CRUD + benchmarks intelligence endpoint)
+- Historical Import page (`/historical-import`): manual entry tab + CSV import tab with downloadable template
+- Benchmarks Dashboard (`cost-benchmarks.tsx`): Low/Avg/High $/SF by category × area type, spread % color coding, ROM diff comparison, one-click "Update ROM Price"
+- ROM Pilot Benchmarks tab added alongside existing estimates list
+- Record Project Actuals section at the bottom of every Evaluation Budget view — pre-populated from RFP + budget data, Save / Skip options, success state with Benchmarks link
+
+---
+
 Known issues / next session fix list:
 🔧 Bug Fixes:
 
@@ -69,8 +86,14 @@ Known issues / next session fix list:
 1. Master Cost Library — unified pricing database replacing ROM Scope Items
 2. Workletter/broker PDF parser — Claude extracts scope checklist at Step 1
 3. Email/notes parser — Claude captures construction requirements from team emails
-4. Historical cost benchmarking — $/SF by category from clean bid data
+4. ✅ COMPLETE — Historical cost benchmarking — $/SF by category from clean bid data (Phase 2)
 5. Bulk-confirm all keyword suggestions in bid view modal (one-click "Accept All" button)
+
+## Next Session Priority
+1. Test quarterly pricing panel end to end with real Excel Construction quotes
+2. Enter first historical project actuals via manual entry
+3. Verify benchmarks dashboard populates correctly
+4. Begin bid line item tagging feature
 
 How to start next session:
 Paste this into Claude:

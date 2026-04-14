@@ -53,7 +53,14 @@ export function registerAiRoutes(app: Express): void {
       });
 
       const text = response.content[0].type === 'text' ? response.content[0].text : '';
-      const analysis = JSON.parse(text);
+      let analysis;
+      try {
+        console.log('Claude raw response:', text.substring(0, 500));
+        analysis = JSON.parse(text);
+      } catch (parseError: any) {
+        console.error('Failed to parse Claude response as JSON:', parseError.message);
+        return res.status(500).json({ message: "Analysis failed", error: "Claude returned non-JSON response" });
+      }
       res.json(analysis);
     } catch (error: any) {
       console.error("AI bid analysis error:", error);

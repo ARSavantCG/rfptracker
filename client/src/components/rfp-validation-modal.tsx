@@ -341,7 +341,7 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                           
                           // Priority: warehouseAreaOverride > calculated area from bays > warehouseArea > projectArea
                           const totalArea = calculatedArea > 0 ? calculatedArea : (warehouseArea || projectArea);
-                          return totalArea ? parseInt(totalArea.toString()).toLocaleString() : 0;
+                          return totalArea ? parseFloat(totalArea.toString().replace(/[^0-9.]/g, '')).toLocaleString() : 0;
                         })()} SF
                       </span>
                     </div>
@@ -398,7 +398,7 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                             }
                             
                             // Priority: calculated area from bays > warehouseArea > projectArea
-                            totalArea = calculatedArea > 0 ? calculatedArea : parseInt((warehouseArea || projectArea || 0).toString());
+                            totalArea = calculatedArea > 0 ? calculatedArea : parseFloat((warehouseArea || projectArea || 0).toString().replace(/[^0-9.]/g, ''));
                           }
                           
                           const additionalAreas = form.watch("areaBreakdown").reduce((sum, area) => 

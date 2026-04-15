@@ -7,7 +7,7 @@
 
 RFP Tracker — Savant Portal Integration
 Project Handoff Document
-Session Date: April 14, 2026
+Session Date: April 15, 2026
 
 What this project is:
 A commercial real estate RFP management system built for Bridge Industrial, hosted at rfptracker.app on Replit with a Neon PostgreSQL database. The codebase is TypeScript full-stack — React/Vite frontend, Express backend, Drizzle ORM.
@@ -80,6 +80,20 @@ Brenda Gonzalez — view only, no AI
 - Backend: `server/proposals-routes.ts` with GET /api/proposals, GET /api/proposals/by-contractor/:id, GET /api/proposals/search, POST /api/proposals/:id/tag-line-items
 - "Proposals" nav link added between "Reports" and "ROM Pilot"
 
+✅ **Area Parsing Fixes — parseInt → parseFloat (April 15, 2026)**
+- 8 occurrences of `parseInt` on `rfp.warehouseArea`, `rfp.projectArea`, and `rfp.warehouseAreaOverride` replaced with `parseFloat(value.toString().replace(/[^0-9.]/g, ''))` to correctly handle formatted strings like "397,164 SF (calculated from selected bay configurations)"
+- Files changed: `rfp-validation-modal.tsx` (4 fixes), `evaluation-budget.tsx` (5 fixes), `rfp-detail-modal.tsx` (1 fix)
+
+✅ **Object Storage Integration (April 15, 2026)**
+- `server/storage-backup.ts`: fire-and-forget backup on upload, presigned-URL fallback serving, migration helper
+- `server/middleware.ts`: custom `DiskWithBackupStorage` multer engine writes to disk and backs up to Object Storage
+- `/uploads/*` route updated with Object Storage key fallback (`.private/uploads/<basename>`)
+- Admin System Maintenance tab: migration button to backfill all existing uploads to Object Storage
+- Admin routes: `GET /api/admin/migrate-uploads`, `GET /api/admin/list-storage-files`
+
+✅ **Missing Schema Imports Fixed (April 15, 2026)**
+- Added 6 previously missing insert/update schema exports to `shared/schema.ts` and imported them in `server/routes.ts`: `insertContactSchema`, `updateContactSchema`, `insertInvitationSchema`, `updateInvitationSchema`, `updateInvitationToBidSchema`, `insertPdfTemplateSchema`
+
 ---
 
 Known issues / next session fix list:
@@ -100,11 +114,10 @@ Known issues / next session fix list:
 5. Bulk-confirm all keyword suggestions in bid view modal (one-click "Accept All" button)
 
 ## Next Session Priority
-1. Open Proposals Library and tag prices from 3–4 existing contractor proposals
-2. Verify quotes appear in ROM Pilot scope items quarterly pricing panel
-3. Enter 2–3 historical projects via Historical Import page
-4. Check Benchmarks dashboard populates with real data
-5. Begin bid line item tagging feature for evaluation rollup
+1. Finish PDF viewer in Proposals Library — Object Storage key path fix pending (PDF iframe not loading from `.private/uploads/` key)
+2. Tag prices from existing proposals into ROM scope items via Proposals Library → Tag Prices flow
+3. Enter first historical project actuals via Historical Import page
+4. Test Benchmarks dashboard with real data — verify Low/Avg/High $/SF populates correctly
 
 How to start next session:
 Paste this into Claude:

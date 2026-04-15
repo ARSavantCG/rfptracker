@@ -19,7 +19,7 @@ export async function backupToObjectStorage(localFilePath: string, filename: str
   const { bucketName, objectName } = key;
   const bucket = objectStorageClient.bucket(bucketName);
   await bucket.upload(localFilePath, { destination: objectName });
-  console.log(`[OS Backup] Uploaded ${filename} to object storage`);
+  console.log(`[OS Backup] Uploaded ${filename} → bucket: ${bucketName}, key: ${objectName}`);
 }
 
 export async function listObjectStorageFiles(): Promise<{ name: string; key: string }[]> {
@@ -39,20 +39,43 @@ export async function listObjectStorageFiles(): Promise<{ name: string; key: str
   }
 }
 
-export async function streamFromObjectStorage(filename: string, res: Response): Promise<boolean> {
-  const key = getOSKey(filename);
-  if (!key) return false;
-  const { bucketName, objectName } = key;
-  try {
-    const file = objectStorageClient.bucket(bucketName).file(objectName);
-    const [exists] = await file.exists();
-    if (!exists) return false;
-    const [metadata] = await file.getMetadata();
-    res.set('Content-Type', (metadata.contentType as string) || 'application/octet-stream');
-    file.createReadStream().pipe(res);
-    return true;
-  } catch (err) {
-    console.error('[OS Backup] Failed to stream from object storage:', err);
-    return false;
+export async function streamFromObjectStorage(filename: string, res: Response, urlPath?: string): Promise<boolean> {
+  const privateDir = process.env.PRIVATE_OBJECT_DIR;
+  if (!privateDir) return false;
+
+  const { bucketName, objectName: dirPrefix } = parseOSPath(privateDir);
+  // dirPrefix is the path within the bucket, e.g. ".private"
+
+  // Build ordered list of candidate object keys to try
+  const candidates: string[] = [
+    `${dirPrefix}/uploads/${filename}`,  // 1. .private/uploads/<filename>
+  ];
+
+  if (urlPath) {
+    const cleanPath = urlPath.startsWith('/') ? urlPath.slice(1) : urlPath;
+    // 2. .private/<full URL path>  e.g. .private/uploads/Y4GE82CM...pdf
+    const candidate2 = `${dirPrefix}/${cleanPath}`;
+    if (candidate2 !== candidates[0]) candidates.push(candidate2);
+    // 3. full URL path as-is  e.g. uploads/Y4GE82CM...pdf
+    if (cleanPath !== candidates[0] && cleanPath !== candidate2) candidates.push(cleanPath);
   }
+
+  const bucket = objectStorageClient.bucket(bucketName);
+  for (const objectName of candidates) {
+    try {
+      const file = bucket.file(objectName);
+      const [exists] = await file.exists();
+      if (exists) {
+        const [metadata] = await file.getMetadata();
+        res.set('Content-Type', (metadata.contentType as string) || 'application/octet-stream');
+        file.createReadStream().pipe(res);
+        console.log(`[OS Backup] Serving ${filename} from key: ${objectName}`);
+        return true;
+      }
+      console.log(`[OS Backup] Key not found: ${objectName}`);
+    } catch (err) {
+      console.error(`[OS Backup] Error checking key ${objectName}:`, err);
+    }
+  }
+  return false;
 }

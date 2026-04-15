@@ -76,9 +76,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.sendFile(filePath);
       }
     }
-    // Not on local disk — try Object Storage (persisted uploads)
+    // Not on local disk — try Object Storage (persisted uploads), checking multiple key formats
     try {
-      const served = await streamFromObjectStorage(filename, res);
+      const served = await streamFromObjectStorage(filename, res, req.path);
       if (served) return;
     } catch (err) {
       console.error('[OS Backup] Error fetching from object storage:', err);

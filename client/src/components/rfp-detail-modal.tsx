@@ -406,7 +406,7 @@ export function RfpDetailModal({ isOpen, onClose, rfp, onRfpUpdated }: RfpDetail
                           
                           // Fallback to stored warehouseArea only if no bay configurations available
                           if (rfp.warehouseArea) {
-                            return `${parseInt(rfp.warehouseArea).toLocaleString()} SF`;
+                            return `${parseFloat(rfp.warehouseArea.toString().replace(/[^0-9.]/g, '')).toLocaleString()} SF`;
                           }
                           
                           return 'Not specified';

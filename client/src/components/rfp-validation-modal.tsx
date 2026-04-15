@@ -306,7 +306,7 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                         {(() => {
                           // Check for override area first (highest priority)
                           if (rfp.warehouseAreaOverride) {
-                            return parseInt(rfp.warehouseAreaOverride).toLocaleString();
+                            return parseFloat(rfp.warehouseAreaOverride.toString().replace(/[^0-9.]/g, '')).toLocaleString();
                           }
                           
                           // Check multiple possible area fields
@@ -365,7 +365,7 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                           // Check for override area first (highest priority)
                           let totalArea = 0;
                           if (rfp.warehouseAreaOverride) {
-                            totalArea = parseInt(rfp.warehouseAreaOverride);
+                            totalArea = parseFloat(rfp.warehouseAreaOverride.toString().replace(/[^0-9.]/g, ''));
                           } else {
                             // Use same logic as above for consistency
                             const warehouseArea = rfp.warehouseArea;

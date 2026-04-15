@@ -1065,7 +1065,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         return total + (bay.rentableSquareFootage || 0);
       }, 0));
     } else if (rfp?.warehouseArea) {
-      return parseInt(rfp.warehouseArea);
+      return parseFloat(rfp.warehouseArea.toString().replace(/[^0-9.]/g, ''));
     }
     return 0;
   };
@@ -1524,7 +1524,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       }
     } else if (rfp?.warehouseArea) {
       // Final fallback to stored warehouseArea only if no bay configurations
-      totalSelectedArea = parseInt(rfp.warehouseArea);
+      totalSelectedArea = parseFloat(rfp.warehouseArea.toString().replace(/[^0-9.]/g, ''));
     }
     
     return propertyImprovements
@@ -2248,7 +2248,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       }
     } else if (rfp?.warehouseArea) {
       // Final fallback to stored warehouseArea only if no bay configurations
-      rentableArea = parseInt(rfp.warehouseArea);
+      rentableArea = parseFloat(rfp.warehouseArea.toString().replace(/[^0-9.]/g, ''));
     }
 
     // Helper function to prepare line items for export
@@ -2456,7 +2456,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       }
     } else if (rfp?.warehouseArea) {
       // Final fallback to stored warehouseArea only if no bay configurations
-      rentableArea = parseInt(rfp.warehouseArea);
+      rentableArea = parseFloat(rfp.warehouseArea.toString().replace(/[^0-9.]/g, ''));
     }
 
     // Helper function to prepare ALL line items exactly as entered
@@ -2798,7 +2798,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       }
     } else if (rfp?.warehouseArea) {
       // Final fallback to stored warehouseArea only if no bay configurations
-      rentableArea = parseInt(rfp.warehouseArea);
+      rentableArea = parseFloat(rfp.warehouseArea.toString().replace(/[^0-9.]/g, ''));
     }
     const standardParking = (propertyData as any)?.standardParking || 0;
     const accessibleParking = (propertyData as any)?.accessibleParking || 0;

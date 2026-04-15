@@ -12,7 +12,7 @@ import fs from "fs";
 import path from "path";
 import { storage } from "./storage";
 import { db } from "./db";
-import { users, contacts, insertRfpRequestSchema, updateRfpRequestSchema, insertInvitationToBidSchema } from "@shared/schema";
+import { users, contacts, insertRfpRequestSchema, updateRfpRequestSchema, insertContactSchema, updateContactSchema, insertInvitationSchema, updateInvitationSchema, insertInvitationToBidSchema, updateInvitationToBidSchema, insertPdfTemplateSchema } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { tokenStore } from "./token-auth";
 import { nanoid } from "nanoid";

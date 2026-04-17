@@ -2232,7 +2232,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       const legalTotal = propertyLegalTotals[rfp.property];
       if (legalTotal) {
         // Use legal total if we have all bays selected or close to full property
-        const rawTotal = rfp.selectedBayConfigurations.reduce((total, bay) => total + (bay.rentableSquareFootage || 0), 0);
+        const rawTotal = rfp.selectedBayConfigurations.reduce((total, bay) => total + (bay.rentableSquareFootage || bay.squareFootage || 0), 0);
         // If raw total is close to legal total (within 100 SF), use legal total for accuracy
         if (Math.abs(rawTotal - legalTotal) <= 100) {
           rentableArea = legalTotal;
@@ -2243,7 +2243,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       } else {
         // Fallback to calculated total if no legal total available
         rentableArea = Math.round(rfp.selectedBayConfigurations.reduce((total, bay) => {
-          return total + (bay.rentableSquareFootage || 0);
+          return total + (bay.rentableSquareFootage || bay.squareFootage || 0);
         }, 0));
       }
     } else if (rfp?.warehouseArea) {
@@ -2440,7 +2440,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       const legalTotal = propertyLegalTotals[rfp.property];
       if (legalTotal) {
         // Use legal total if we have all bays selected or close to full property
-        const rawTotal = rfp.selectedBayConfigurations.reduce((total, bay) => total + (bay.rentableSquareFootage || 0), 0);
+        const rawTotal = rfp.selectedBayConfigurations.reduce((total, bay) => total + (bay.rentableSquareFootage || bay.squareFootage || 0), 0);
         // If raw total is close to legal total (within 100 SF), use legal total for accuracy
         if (Math.abs(rawTotal - legalTotal) <= 100) {
           rentableArea = legalTotal;
@@ -2451,7 +2451,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       } else {
         // Fallback to calculated total if no legal total available
         rentableArea = Math.round(rfp.selectedBayConfigurations.reduce((total, bay) => {
-          return total + (bay.rentableSquareFootage || 0);
+          return total + (bay.rentableSquareFootage || bay.squareFootage || 0);
         }, 0));
       }
     } else if (rfp?.warehouseArea) {
@@ -2782,7 +2782,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       const legalTotal = propertyLegalTotals[rfp.property];
       if (legalTotal) {
         // Use legal total if we have all bays selected or close to full property
-        const rawTotal = rfp.selectedBayConfigurations.reduce((total, bay) => total + (bay.rentableSquareFootage || 0), 0);
+        const rawTotal = rfp.selectedBayConfigurations.reduce((total, bay) => total + (bay.rentableSquareFootage || bay.squareFootage || 0), 0);
         // If raw total is close to legal total (within 100 SF), use legal total for accuracy
         if (Math.abs(rawTotal - legalTotal) <= 100) {
           rentableArea = legalTotal;
@@ -2793,7 +2793,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       } else {
         // Fallback to calculated total if no legal total available
         rentableArea = Math.round(rfp.selectedBayConfigurations.reduce((total, bay) => {
-          return total + (bay.rentableSquareFootage || 0);
+          return total + (bay.rentableSquareFootage || bay.squareFootage || 0);
         }, 0));
       }
     } else if (rfp?.warehouseArea) {
@@ -3376,6 +3376,9 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
                     <p style="margin: 4px 0; font-size: 13px;"><strong>Bay Count:</strong> ${(() => {
                       if (rfp?.selectedBayConfigurations && rfp.selectedBayConfigurations.length > 0) {
                         return rfp.selectedBayConfigurations.length + ' bays';
+                      }
+                      if (rfp?.selectedBayIds && Array.isArray(rfp.selectedBayIds) && rfp.selectedBayIds.length > 0) {
+                        return rfp.selectedBayIds.length + ' bays';
                       }
                       return 'Not specified';
                     })()}</p>

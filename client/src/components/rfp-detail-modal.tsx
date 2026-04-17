@@ -399,7 +399,7 @@ export function RfpDetailModal({ isOpen, onClose, rfp, onRfpUpdated }: RfpDetail
                           // ALWAYS calculate from LIVE bay configurations (Properties is single source of truth)
                           if (displayRfp?.selectedBayConfigurations && displayRfp.selectedBayConfigurations.length > 0) {
                             const totalRentable = displayRfp.selectedBayConfigurations.reduce((sum: number, bay: any) => {
-                              return sum + (bay.rentableSquareFootage || 0);
+                              return sum + (bay.rentableSquareFootage || bay.squareFootage || 0);
                             }, 0);
                             return totalRentable > 0 ? `${Math.round(totalRentable).toLocaleString()} SF` : 'Not specified';
                           }
@@ -416,7 +416,11 @@ export function RfpDetailModal({ isOpen, onClose, rfp, onRfpUpdated }: RfpDetail
                     <div className="flex items-start">
                       <span className="text-blue-700 font-medium">Bay Count:</span>
                       <span className="ml-2 text-blue-900">
-                        {displayRfp?.selectedBayConfigurations ? `${displayRfp.selectedBayConfigurations.length} bays` : 'Not specified'}
+                        {displayRfp?.selectedBayConfigurations && displayRfp.selectedBayConfigurations.length > 0
+                          ? `${displayRfp.selectedBayConfigurations.length} bays`
+                          : (displayRfp?.selectedBayIds && Array.isArray(displayRfp.selectedBayIds) && displayRfp.selectedBayIds.length > 0
+                            ? `${displayRfp.selectedBayIds.length} bays`
+                            : 'Not specified')}
                       </span>
                     </div>
                     <div className="flex items-start">

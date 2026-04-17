@@ -54,10 +54,13 @@ async function generateRomReportHtml(romPilot: any, lineItems: any[], scopeItems
         
         // Calculate door configuration from selected bays
         if (romPilot.selectedBayConfigurations && Array.isArray(romPilot.selectedBayConfigurations) && romPilot.selectedBayConfigurations.length > 0) {
+          console.log('[ROM doorConfig] selectedBayConfigurations count:', romPilot.selectedBayConfigurations.length);
+          console.log('[ROM doorConfig] first bay raw data:', JSON.stringify(romPilot.selectedBayConfigurations[0], null, 2));
           bayCount = romPilot.selectedBayConfigurations.length;
           bayCountDisplay = `${bayCount} Bays (Modified Configuration)`;
           const totalStandardDoors = romPilot.selectedBayConfigurations.reduce((sum, bay) => sum + (bay.standardDockDoors || 0), 0);
           const totalOversizedDoors = romPilot.selectedBayConfigurations.reduce((sum, bay) => sum + (bay.oversizedDockDoors || 0), 0);
+          console.log('[ROM doorConfig] totalStandardDoors:', totalStandardDoors, '| totalOversizedDoors:', totalOversizedDoors);
           doorConfig = `${totalStandardDoors + totalOversizedDoors} doors total (${totalOversizedDoors} oversized, ${totalStandardDoors} regular)`;
         } else if (!bayCount && romPilot.selectedBayIds && Array.isArray(romPilot.selectedBayIds) && romPilot.selectedBayIds.length > 0) {
           bayCount = romPilot.selectedBayIds.length;
@@ -173,13 +176,16 @@ async function generateRomReportHtml(romPilot: any, lineItems: any[], scopeItems
   console.log('Total square footage:', totalSquareFootage);
   
   if (romPilot.selectedBayConfigurations && Array.isArray(romPilot.selectedBayConfigurations)) {
+    console.log('[ROM totalSF] selectedBayConfigurations count:', romPilot.selectedBayConfigurations.length);
+    console.log('[ROM totalSF] first bay raw data:', JSON.stringify(romPilot.selectedBayConfigurations[0], null, 2));
     const calculatedSF = romPilot.selectedBayConfigurations.reduce((sum: number, bay: any) => {
+      console.log('[ROM totalSF] bay id:', bay.id, '| rentableSquareFootage:', bay.rentableSquareFootage, '| squareFootage:', bay.squareFootage);
       return sum + (bay.rentableSquareFootage || bay.squareFootage || 0);
     }, 0);
     if (calculatedSF > 0) {
       totalSquareFootage = calculatedSF;
     }
-    console.log('Calculated SF from bays:', calculatedSF);
+    console.log('[ROM totalSF] calculatedSF:', calculatedSF, '| final totalSquareFootage:', totalSquareFootage);
   }
   
   const renderCategorySection = (title: string, items: any[], categoryTotal: number) => {

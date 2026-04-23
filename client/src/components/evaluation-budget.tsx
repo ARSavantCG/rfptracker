@@ -1561,7 +1561,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       totalSelectedArea = parseFloat(rfp.warehouseArea.toString().replace(/[^0-9.]/g, ''));
     }
     
-    return propertyImprovements
+    const result = propertyImprovements
       .filter((improvement: any) => {
         console.log('Processing improvement:', improvement.description, 'type:', improvement.allocationType);
         // Include improvement if it's active and relevant to selected bays
@@ -1574,7 +1574,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         if (improvement.allocationType === 'bay-specific') {
           // Include if any applicable bays are in our selection (normalize IDs to strip _north/_south suffixes)
           console.log('Spec office applicable bays:', improvement.applicableBays, 'Match found:', improvement.applicableBays?.some((bayId: any) => normalizedSelectedBayIds.includes(String(bayId))));
-          return improvement.applicableBays?.some((bayId: any) => {
+          const matchFound = improvement.applicableBays?.some((bayId: any) => {
             const rawId = String(bayId);
             const strippedId = rawId.replace(/_north$/i, '').replace(/_south$/i, '');
             console.log('Comparing:', JSON.stringify(strippedId), 'against first normalized ID:', JSON.stringify(normalizedSelectedBayIds[0]), 'equal:', strippedId === normalizedSelectedBayIds[0]);
@@ -1583,6 +1583,8 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
               normalizedSelectedBayIds.includes(rawId) ||
               normalizedSelectedBayIds.includes(strippedId);
           });
+          console.log('Bay-specific match result for', improvement.description, ':', matchFound);
+          return matchFound;
         }
         
         if (improvement.allocationType === 'prorated') {
@@ -1699,6 +1701,8 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         } as EvaluationLineItem;
       })
       .filter(item => item !== null);
+    console.log('Final improvements count:', result.length);
+    return result;
   };
 
   // Initialize budget with saved data or bid line items data

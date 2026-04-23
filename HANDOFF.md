@@ -94,6 +94,12 @@ Brenda Gonzalez — view only, no AI
 ✅ **Missing Schema Imports Fixed (April 15, 2026)**
 - Added 6 previously missing insert/update schema exports to `shared/schema.ts` and imported them in `server/routes.ts`: `insertContactSchema`, `updateContactSchema`, `insertInvitationSchema`, `updateInvitationSchema`, `updateInvitationToBidSchema`, `insertPdfTemplateSchema`
 
+✅ **Split-Bay Fixes (April 23, 2026)**
+- Door calculation in `calculateDoorCounts` now handles `_north`/`_south` suffixed bay IDs: strips the suffix, finds the base bay in `propertyByIdData.bayConfigurations`, and reads `splitNorthDockDoors`/`splitNorthOversizedDoors` or `splitSouthDockDoors`/`splitSouthOversizedDoors` as appropriate; whole-bay IDs fall back to `standardDockDoors`/`oversizedDockDoors`
+- `populateExistingImprovements` guard removed the `!rfp?.selectedBayConfigurations` block — improvements now load regardless of whether bay configurations are populated; `selectedBayIds` used as fallback for bay ID matching when `selectedBayConfigurations` is empty
+- Area parsing fixed across 8 occurrences (`rfp-validation-modal.tsx`, `evaluation-budget.tsx`, `rfp-detail-modal.tsx`): `parseInt` → `parseFloat(value.toString().replace(/[^0-9.]/g, ''))` to handle formatted strings like "397,164 SF (calculated from selected bay configurations)"
+- 6 missing schema imports added: `insertContactSchema`, `updateContactSchema`, `insertInvitationSchema`, `updateInvitationSchema`, `updateInvitationToBidSchema`, `insertPdfTemplateSchema`
+
 ---
 
 Known issues / next session fix list:
@@ -114,10 +120,10 @@ Known issues / next session fix list:
 5. Bulk-confirm all keyword suggestions in bid view modal (one-click "Accept All" button)
 
 ## Next Session Priority
-1. Finish PDF viewer in Proposals Library — Object Storage key path fix pending (PDF iframe not loading from `.private/uploads/` key)
-2. Tag prices from existing proposals into ROM scope items via Proposals Library → Tag Prices flow
-3. Enter first historical project actuals via Historical Import page
-4. Test Benchmarks dashboard with real data — verify Low/Avg/High $/SF populates correctly
+1. PDF viewer in Proposals Library — Object Storage key path still pending (PDF iframe not loading from `.private/uploads/` key)
+2. Tag prices from existing proposals into ROM scope items
+3. Enter historical project actuals via Historical Import page
+4. Test Benchmarks dashboard with real data
 
 How to start next session:
 Paste this into Claude:

@@ -1486,13 +1486,15 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
 
   // Function to auto-populate existing improvements based on selected bays
   const populateExistingImprovements = () => {
-    if (!propertyImprovements || !rfp?.selectedBayConfigurations) {
+    if (!propertyImprovements) {
       return [];
     }
 
     // 🔍 DEBUG: Log property improvements data from API
 
-    const selectedBayIds = rfp.selectedBayConfigurations.map(bay => bay.id);
+    const selectedBayIds = (rfp.selectedBayConfigurations?.length > 0
+      ? rfp.selectedBayConfigurations.map(bay => bay.id)
+      : rfp.selectedBayIds) || [];
     
     // Calculate tenant area using legally compliant totals
     // ALWAYS calculate from LIVE bay configurations (Properties is single source of truth)

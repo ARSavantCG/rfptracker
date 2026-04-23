@@ -1573,7 +1573,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         if (improvement.allocationType === 'bay-specific') {
           // Include if any applicable bays are in our selection (normalize IDs to strip _north/_south suffixes)
           console.log('Spec office applicable bays:', improvement.applicableBays, 'Match found:', improvement.applicableBays?.some((bayId: any) => normalizedSelectedBayIds.includes(String(bayId))));
-          return improvement.applicableBays?.some((bayId: string) => normalizedSelectedBayIds.includes(String(bayId)));
+          return improvement.applicableBays?.some((bayId: any) => selectedBayIds.includes(String(bayId)) || normalizedSelectedBayIds.includes(String(bayId).replace(/_north$|_south$/i, '')));
         }
         
         if (improvement.allocationType === 'prorated') {

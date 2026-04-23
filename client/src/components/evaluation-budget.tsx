@@ -1254,6 +1254,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
 
   // Calculate door counts from bay configuration data
   const calculateDoorCounts = () => {
+    console.log('Selected bays door data:', rfp.selectedBayConfigurations?.map(b => ({ name: (b as any).bayName, standard: (b as any).standardDockDoors, oversized: (b as any).oversizedDockDoors, sf: (b as any).rentableSquareFootage || (b as any).squareFootage })));
     if (!rfp?.selectedBayConfigurations) return { oversized: 0, regular: 0 };
     
     let oversizedTotal = rfp.selectedBayConfigurations.reduce((sum, bay) => sum + ((bay as any).oversizedDockDoors || 0), 0);

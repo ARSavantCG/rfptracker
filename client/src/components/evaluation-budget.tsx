@@ -1563,6 +1563,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
     
     return propertyImprovements
       .filter((improvement: any) => {
+        console.log('Processing improvement:', improvement.description, 'type:', improvement.allocationType);
         // Include improvement if it's active and relevant to selected bays
         if (!improvement.isActive) return false;
         

@@ -1525,6 +1525,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       ? rfp.selectedBayConfigurations.map(bay => bay.id)
       : rfp.selectedBayIds) || [];
     const normalizedSelectedBayIds = selectedBayIds.map((id: any) => String(id).replace(/_north$|_south$/i, ''));
+    console.log('Normalized selected bay IDs:', normalizedSelectedBayIds);
     
     // Calculate tenant area using legally compliant totals
     // ALWAYS calculate from LIVE bay configurations (Properties is single source of truth)
@@ -1571,6 +1572,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         
         if (improvement.allocationType === 'bay-specific') {
           // Include if any applicable bays are in our selection (normalize IDs to strip _north/_south suffixes)
+          console.log('Spec office applicable bays:', improvement.applicableBays, 'Match found:', improvement.applicableBays?.some((bayId: any) => normalizedSelectedBayIds.includes(String(bayId))));
           return improvement.applicableBays?.some((bayId: string) => normalizedSelectedBayIds.includes(String(bayId)));
         }
         

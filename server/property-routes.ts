@@ -559,6 +559,8 @@ export function registerPropertyRoutes(app: Express): void {
         bucket: imp.bucket
       })));
       
+      console.log('Existing improvement applicableBays:', improvements.map(i => ({ desc: i.description, bays: i.applicableBays })));
+      
       // CRITICAL: No-cache headers to ensure bucket field is always fresh (cost lifecycle tracking)
       res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
       res.set('Pragma', 'no-cache');

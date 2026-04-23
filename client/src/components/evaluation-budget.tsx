@@ -1524,6 +1524,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
     const selectedBayIds = (rfp.selectedBayConfigurations?.length > 0
       ? rfp.selectedBayConfigurations.map(bay => bay.id)
       : rfp.selectedBayIds) || [];
+    const normalizedSelectedBayIds = selectedBayIds.map((id: any) => String(id).replace(/_north$|_south$/i, ''));
     
     // Calculate tenant area using legally compliant totals
     // ALWAYS calculate from LIVE bay configurations (Properties is single source of truth)
@@ -1569,8 +1570,8 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         }
         
         if (improvement.allocationType === 'bay-specific') {
-          // Include if any applicable bays are in our selection
-          return improvement.applicableBays?.some((bayId: string) => selectedBayIds.includes(bayId));
+          // Include if any applicable bays are in our selection (normalize IDs to strip _north/_south suffixes)
+          return improvement.applicableBays?.some((bayId: string) => normalizedSelectedBayIds.includes(String(bayId)));
         }
         
         if (improvement.allocationType === 'prorated') {
@@ -1581,8 +1582,8 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
           // Include demising wall if either the left or right bay is in our selection
           const demisingData = improvement.demisingWallData;
           if (demisingData) {
-            const hasLeftBay = demisingData.leftBayId && selectedBayIds.includes(demisingData.leftBayId);
-            const hasRightBay = demisingData.rightBayId && selectedBayIds.includes(demisingData.rightBayId);
+            const hasLeftBay = demisingData.leftBayId && normalizedSelectedBayIds.includes(String(demisingData.leftBayId));
+            const hasRightBay = demisingData.rightBayId && normalizedSelectedBayIds.includes(String(demisingData.rightBayId));
             return hasLeftBay || hasRightBay;
           }
           return false;
@@ -1634,8 +1635,8 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
 
           }
         } else if (improvement.allocationType === 'bay-specific') {
-          // For bay-specific, only include cost for applicable selected bays
-          const applicableBayIds = improvement.applicableBays?.filter((bayId: string) => selectedBayIds.includes(bayId)) || [];
+          // For bay-specific, only include cost for applicable selected bays (normalize IDs to strip _north/_south suffixes)
+          const applicableBayIds = improvement.applicableBays?.filter((bayId: string) => normalizedSelectedBayIds.includes(String(bayId))) || [];
           const applicableBayCount = applicableBayIds.length;
           const totalApplicableBays = improvement.applicableBays?.length || 1;
           
@@ -1652,8 +1653,8 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
           // For demising walls, calculate cost based on which bay(s) are selected
           const demisingData = improvement.demisingWallData;
           if (demisingData) {
-            const hasLeftBay = demisingData.leftBayId && selectedBayIds.includes(demisingData.leftBayId);
-            const hasRightBay = demisingData.rightBayId && selectedBayIds.includes(demisingData.rightBayId);
+            const hasLeftBay = demisingData.leftBayId && normalizedSelectedBayIds.includes(String(demisingData.leftBayId));
+            const hasRightBay = demisingData.rightBayId && normalizedSelectedBayIds.includes(String(demisingData.rightBayId));
             
             // Calculate percentage of cost to include based on selected bays
             let percentageToInclude = 0;

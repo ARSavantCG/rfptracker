@@ -1288,7 +1288,14 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         }
       }
     }
-    
+
+    // Third fallback: match selectedBayIds against propertyByIdData bay configurations (split-bay RFPs)
+    if (oversizedTotal === 0 && regularTotal === 0 && rfp.selectedBayIds && Array.isArray(rfp.selectedBayIds) && rfp.selectedBayIds.length > 0 && (propertyByIdData as any)?.bayConfigurations) {
+      const matchedBays = (propertyByIdData as any).bayConfigurations.filter((bay: any) => rfp.selectedBayIds!.includes(bay.id));
+      oversizedTotal = matchedBays.reduce((sum: number, bay: any) => sum + (bay.oversizedDockDoors || 0), 0);
+      regularTotal = matchedBays.reduce((sum: number, bay: any) => sum + (bay.standardDockDoors || 0), 0);
+    }
+
     return { oversized: oversizedTotal, regular: regularTotal };
   };
 

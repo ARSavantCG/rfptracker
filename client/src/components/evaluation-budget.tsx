@@ -1292,10 +1292,33 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
     }
 
     // Third fallback: match selectedBayIds against propertyByIdData bay configurations (split-bay RFPs)
+    // Handles _north/_south suffixed IDs by reading split-specific door fields
     if (oversizedTotal === 0 && regularTotal === 0 && rfp.selectedBayIds && Array.isArray(rfp.selectedBayIds) && rfp.selectedBayIds.length > 0 && (propertyByIdData as any)?.bayConfigurations) {
-      const matchedBays = (propertyByIdData as any).bayConfigurations.filter((bay: any) => rfp.selectedBayIds!.includes(bay.id));
-      oversizedTotal = matchedBays.reduce((sum: number, bay: any) => sum + (bay.oversizedDockDoors || 0), 0);
-      regularTotal = matchedBays.reduce((sum: number, bay: any) => sum + (bay.standardDockDoors || 0), 0);
+      const allPropertyBays = (propertyByIdData as any).bayConfigurations;
+      for (const selectedId of rfp.selectedBayIds) {
+        const idStr = String(selectedId);
+        const isNorth = idStr.endsWith('_north');
+        const isSouth = idStr.endsWith('_south');
+        if (isNorth || isSouth) {
+          const baseId = idStr.replace(/_north$|_south$/, '');
+          const bay = allPropertyBays.find((b: any) => String(b.id) === baseId);
+          if (bay) {
+            if (isNorth) {
+              regularTotal += bay.splitNorthDockDoors || 0;
+              oversizedTotal += bay.splitNorthOversizedDoors || 0;
+            } else {
+              regularTotal += bay.splitSouthDockDoors || 0;
+              oversizedTotal += bay.splitSouthOversizedDoors || 0;
+            }
+          }
+        } else {
+          const bay = allPropertyBays.find((b: any) => String(b.id) === idStr);
+          if (bay) {
+            regularTotal += bay.standardDockDoors || 0;
+            oversizedTotal += bay.oversizedDockDoors || 0;
+          }
+        }
+      }
     }
 
     return { oversized: oversizedTotal, regular: regularTotal };

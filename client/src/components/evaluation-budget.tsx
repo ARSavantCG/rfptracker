@@ -1576,6 +1576,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
           return improvement.applicableBays?.some((bayId: any) => {
             const rawId = String(bayId);
             const strippedId = rawId.replace(/_north$/i, '').replace(/_south$/i, '');
+            console.log('Comparing:', JSON.stringify(strippedId), 'against first normalized ID:', JSON.stringify(normalizedSelectedBayIds[0]), 'equal:', strippedId === normalizedSelectedBayIds[0]);
             return selectedBayIds.map(String).includes(rawId) ||
               selectedBayIds.map(String).includes(strippedId) ||
               normalizedSelectedBayIds.includes(rawId) ||

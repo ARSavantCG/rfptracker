@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { StatsCards } from "@/components/stats-cards";
 import AttentionRequired from "@/components/attention-required";
+import DashboardPipeline from "@/components/dashboard-pipeline";
 import { RfpTable } from "@/components/rfp-table";
 import { CreateRfpModal } from "@/components/create-rfp-modal";
 import { EditRfpModal } from "@/components/edit-rfp-modal";
@@ -250,6 +251,9 @@ export default function Dashboard() {
 
         {/* Attention Required */}
         <AttentionRequired onRfpClick={handleOpenRfpById} />
+
+        {/* Pipeline */}
+        <DashboardPipeline onRfpClick={handleOpenRfpById} />
 
         {/* Stats Cards */}
         <StatsCards onStatusFilter={setStatusFilter} />

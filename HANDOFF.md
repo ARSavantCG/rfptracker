@@ -13,7 +13,7 @@ Prospect → LOI → Lease Execution → TI Design → Construction → Occupanc
 
 ### Build Phases
 
-**Phase 1 — Dashboard Redesign (NEXT)**
+**Phase 1 — Dashboard Redesign (COMPLETE)**
 - Attention Required cards (overdue RFPs, bids awaiting evaluation, upcoming deadlines)
 - Pipeline value tracking (total active TI value by property)
 - Portfolio intelligence summary (avg $/SF, trends, most active property)
@@ -199,3 +199,34 @@ PATCH /api/bid-line-items/:id/mapping requires BOTH masterCategoryId and isClean
 master_categories table: 32 rows; columns: id, name, description, sort_order, created_at
 Cost amounts stored inconsistently — some as text strings, some as integer cents (future cleanup needed)
 PDF parser clean-block cutoff: 3 consecutive non-clean rows after first clean block starts = end of table
+
+---
+
+## Session: April 24, 2026 — Phase 1 Dashboard Redesign
+
+### Recently Completed
+
+✅ **Phase 1 Dashboard Redesign (complete)**
+- New backend endpoint: `GET /api/dashboard/metrics` (`server/dashboard-routes.ts`) — returns `attentionRequired`, `pipeline`, and `portfolioIntelligence` blocks in a single authenticated call; registered via `registerDashboardRoutes(app)` in `server/routes.ts`
+- **`attention-required.tsx`**: Three side-by-side cards (grid-cols-3 on md+) — Overdue RFPs (red AlertCircle, daysOverdue in red-600), Bids Awaiting Evaluation (amber Clock, daysWaiting in amber-600), Upcoming Deadlines 7 days (blue Calendar, urgency-color coded: red ≤2d, amber ≤5d). Each row clickable via `handleOpenRfpById` which looks up the full RfpRequest from `allRfps` and calls the existing `handleSelectRfp`. Top 5 shown + "+N more" row. Green CheckCircle2 empty states.
+- **`dashboard-pipeline.tsx`**: Single Card with three subsections — (A) two-stat summary row: Total Active TI Value (formatCurrency helper: M/K/raw) + Largest Active Deal (clickable, opens RFP); (B) horizontal bar visualization by property, bars scale proportionally to max TI value using `bg-primary`, top 8 shown + overflow count; (C) Most Active Property highlight with TrendingUp icon (omitted entirely when null).
+- **`dashboard-portfolio-intelligence.tsx`**: Two-column grid — (A) Avg TI Cost per SF with YoY delta pill (red + TrendingUp if cost rose, green + TrendingDown if cost fell, muted "Flat" if 0, plain text if no prior year data) + "Add historical data →" link to `/historical-import` (wouter Link); (B) Avg RFP Cycle Time from velocity data with sample size + "Not enough recent data" italic empty state + verbatim `note` string from API as footnote.
+- **StatsCards demoted to filter row**: Moved below the three intelligence sections, preceded by "Filter by status" `<h2>` heading (text-sm font-medium text-muted-foreground) with conditional "Clear filter" `<button>` (X icon + text, clears with `setStatusFilter("")`); mt-8 spacer separates it from intelligence sections above. Section titles ("Status", "Distribution", "Overview") removed from stats-cards.tsx; icons reduced from w-5 h-5 to w-4 h-4.
+- All three dashboard components share `queryKey: ['/api/dashboard/metrics']` with `staleTime: 60_000` — single network request serves all three via react-query deduplication.
+- `handleOpenRfpById(id: number)` helper added to dashboard.tsx: looks up `allRfps.find(r => r.id === rfpId)` and calls existing `handleSelectRfp`, identical path to table row click.
+
+### Known Issues / Next Session Fix List
+
+🔧 **Pipeline TI values render as $0** — `rfpRequests.estimatedValue` is blank for most active RFPs. Follow-up: backend fallback — if `estimatedValue` is blank, use the highest bid collection total or the evaluation budget grand total for that RFP.
+
+🔧 **Portfolio Intelligence shows empty states** — `avgCostPerSfCurrentYear`, `avgCostPerSfPriorYear`, `yoyDeltaPct`, and velocity are all null/0 until `project_actuals` data is populated via `/historical-import`. Not a bug — data capture task.
+
+🔧 **Velocity metric uses a proxy** — `completedDate − receivedOn` used as cycle time since no dedicated `evaluationCompleteDate` timestamp exists. Future: record timestamp on workflowPhase transition out of `'evaluation'` for a true velocity metric.
+
+### Next Session Priority
+
+1. **Phase 2 — Lease Lifecycle Tracking**: Add LOI stage before RFP received, lease execution details (TI allowance, term, commencement date), lease expiration tracking with 18/12/6 month alerts
+2. Pipeline TI value backend fallback (use bid collection total or evaluation budget grand total when `estimatedValue` is blank)
+3. Enter historical project actuals via `/historical-import` to populate Portfolio Intelligence cards with real data
+4. PDF viewer fix in Proposals Library (Object Storage key path still pending)
+5. Remove residual debug log `Existing improvement applicableBays:` in `server/property-routes.ts` ~line 565

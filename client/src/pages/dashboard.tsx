@@ -259,7 +259,21 @@ export default function Dashboard() {
         {/* Portfolio Intelligence */}
         <DashboardPortfolioIntelligence />
 
-        {/* Stats Cards */}
+        {/* Filter by status heading */}
+        <div className="flex items-center justify-between mt-8 mb-2">
+          <h2 className="text-sm font-medium text-muted-foreground">Filter by status</h2>
+          {statusFilter && (
+            <button
+              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-muted transition-colors"
+              onClick={() => setStatusFilter("")}
+            >
+              <X className="h-3 w-3" />
+              Clear filter
+            </button>
+          )}
+        </div>
+
+        {/* Stats Cards — demoted to filter row */}
         <StatsCards onStatusFilter={setStatusFilter} />
 
         {/* Compact Filters */}

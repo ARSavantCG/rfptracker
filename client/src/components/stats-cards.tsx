@@ -179,7 +179,6 @@ export function StatsCards({ onStatusFilter, onRfpClick }: StatsCardsProps) {
         
         {/* Project Status - Compact */}
         <div className="bg-white p-2 rounded-lg shadow-sm border border-gray-200">
-          <h3 className="text-xs font-semibold text-gray-900 mb-3" style={{ fontSize: '10px' }}>Status</h3>
           <div className="space-y-2">
             {cards.map((card, index) => (
               <div 
@@ -188,8 +187,8 @@ export function StatsCards({ onStatusFilter, onRfpClick }: StatsCardsProps) {
                 onClick={() => handleCardClick(card.title)}
               >
                 <div className="flex items-center space-x-2">
-                  <div className={`w-5 h-5 ${card.bgColor} rounded flex items-center justify-center flex-shrink-0`}>
-                    <i className={`${card.icon} ${card.iconColor} text-sm`}></i>
+                  <div className={`w-4 h-4 ${card.bgColor} rounded flex items-center justify-center flex-shrink-0`}>
+                    <i className={`${card.icon} ${card.iconColor} text-xs`}></i>
                   </div>
                   <span className="text-xs font-medium text-gray-700 truncate" style={{ fontSize: '10px' }}>{card.title}</span>
                 </div>
@@ -202,10 +201,6 @@ export function StatsCards({ onStatusFilter, onRfpClick }: StatsCardsProps) {
         {/* Status Distribution - Compact */}
         {stats.total > 0 && (
           <div className="bg-white p-2 rounded-lg shadow-sm border border-gray-200">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-xs font-semibold text-gray-900" style={{ fontSize: '10px' }}>Distribution</h3>
-            </div>
-            
             <div className="h-20">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -259,10 +254,6 @@ export function StatsCards({ onStatusFilter, onRfpClick }: StatsCardsProps) {
         {/* Status Overview - Compact */}
         {stats.total > 0 && (
           <div className="bg-white p-2 rounded-lg shadow-sm border border-gray-200">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-xs font-semibold text-gray-900" style={{ fontSize: '10px' }}>Overview</h3>
-            </div>
-            
             <div className="h-32">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart

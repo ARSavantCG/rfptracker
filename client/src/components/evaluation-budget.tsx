@@ -1525,7 +1525,6 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       ? rfp.selectedBayConfigurations.map(bay => bay.id)
       : rfp.selectedBayIds) || [];
     const normalizedSelectedBayIds = selectedBayIds.map((id: any) => String(id).replace(/_north$|_south$/i, ''));
-    console.log('Normalized selected bay IDs:', normalizedSelectedBayIds);
     
     // Calculate tenant area using legally compliant totals
     // ALWAYS calculate from LIVE bay configurations (Properties is single source of truth)
@@ -1564,7 +1563,6 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
     const seenIds = new Set<number>();
     const result = propertyImprovements
       .filter((improvement: any) => {
-        console.log('Processing improvement:', improvement.description, 'type:', improvement.allocationType);
         // Include improvement if it's active and relevant to selected bays
         if (!improvement.isActive) return false;
         
@@ -1574,17 +1572,14 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         
         if (improvement.allocationType === 'bay-specific') {
           // Include if any applicable bays are in our selection (normalize IDs to strip _north/_south suffixes)
-          console.log('Spec office applicable bays:', improvement.applicableBays, 'Match found:', improvement.applicableBays?.some((bayId: any) => normalizedSelectedBayIds.includes(String(bayId))));
           const matchFound = improvement.applicableBays?.some((bayId: any) => {
             const rawId = String(bayId);
             const strippedId = rawId.replace(/_north$/i, '').replace(/_south$/i, '');
-            console.log('Comparing:', JSON.stringify(strippedId), 'against first normalized ID:', JSON.stringify(normalizedSelectedBayIds[0]), 'equal:', strippedId === normalizedSelectedBayIds[0]);
             return selectedBayIds.map(String).includes(rawId) ||
               selectedBayIds.map(String).includes(strippedId) ||
               normalizedSelectedBayIds.includes(rawId) ||
               normalizedSelectedBayIds.includes(strippedId);
           });
-          console.log('Bay-specific match result for', improvement.description, ':', matchFound);
           if (matchFound && seenIds.has(improvement.id)) return false;
           if (matchFound) seenIds.add(improvement.id);
           return matchFound;
@@ -1695,7 +1690,6 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         } as EvaluationLineItem;
       })
       .filter(item => item !== null);
-    console.log('Final improvements count:', result.length);
     return result;
   };
 

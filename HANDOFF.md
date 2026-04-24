@@ -1,3 +1,61 @@
+## Product Vision — Phase 2 Platform Expansion
+
+### Strategic Goal
+Transform RFP Tracker from a TI project management tool into a full lease pipeline intelligence platform used by Development Managers, Leasing Teams, and Executive Leadership.
+
+### Three User Tiers
+1. **Admin/Development Manager (Adolfo)** — full access, all features
+2. **Leasing Team** — pipeline view, ROM generator, no contractor/pricing data
+3. **Executive Team** — read-only portfolio dashboard, high-level metrics only
+
+### Lease Lifecycle to Track
+Prospect → LOI → Lease Execution → TI Design → Construction → Occupancy
+
+### Build Phases
+
+**Phase 1 — Dashboard Redesign (NEXT)**
+- Attention Required cards (overdue RFPs, bids awaiting evaluation, upcoming deadlines)
+- Pipeline value tracking (total active TI value by property)
+- Portfolio intelligence summary (avg $/SF, trends, most active property)
+- Action-oriented layout replacing current status count layout
+
+**Phase 2 — Lease Lifecycle Tracking**
+- Add LOI stage before RFP received
+- Track lease execution details (TI allowance, term, commencement date)
+- Connect lease data to existing RFP workflow
+- Lease expiration tracking with 18/12/6 month alerts
+
+**Phase 3 — Executive Dashboard**
+- Separate read-only view for ownership/leadership
+- Portfolio-wide TI spend by property and quarter
+- Active deal count and total pipeline value
+- Export to PDF for board meetings
+
+**Phase 4 — Leasing Team Access**
+- Simplified pipeline view
+- ROM generator access for prospect conversations
+- No access to contractor bids, pricing intelligence, or financials
+
+**Phase 5 — Lease Expiration Intelligence**
+- Track all active leases across portfolio
+- Auto-alert when leases are 18/12/6 months from expiration
+- Auto-generate renewal RFP workflow
+
+### Key Dashboard Metrics to Show
+- RFPs past internal due date (attention required)
+- Total active pipeline TI value ($)
+- Pipeline by property
+- Average TI cost/SF current year vs prior year
+- Days from RFP received to evaluation complete (velocity)
+- Largest active deal
+- Leases expiring in next 12 months
+
+### Design Principle
+The dashboard should answer: "What needs my attention TODAY and how is my portfolio performing?"
+Not: "How many RFPs are in each status bucket?"
+
+---
+
 ## End of Session Checklist
 - [ ] Republish the app (Republish button)
 - [ ] Push to GitHub (Git tab → Push button)

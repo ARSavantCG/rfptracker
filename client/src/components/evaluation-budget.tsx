@@ -1561,6 +1561,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       totalSelectedArea = parseFloat(rfp.warehouseArea.toString().replace(/[^0-9.]/g, ''));
     }
     
+    const seenIds = new Set<number>();
     const result = propertyImprovements
       .filter((improvement: any) => {
         console.log('Processing improvement:', improvement.description, 'type:', improvement.allocationType);
@@ -1584,6 +1585,8 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
               normalizedSelectedBayIds.includes(strippedId);
           });
           console.log('Bay-specific match result for', improvement.description, ':', matchFound);
+          if (matchFound && seenIds.has(improvement.id)) return false;
+          if (matchFound) seenIds.add(improvement.id);
           return matchFound;
         }
         
@@ -1648,20 +1651,11 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
 
           }
         } else if (improvement.allocationType === 'bay-specific') {
-          // For bay-specific, only include cost for applicable selected bays (normalize IDs to strip _north/_south suffixes)
-          const applicableBayIds = improvement.applicableBays?.filter((bayId: string) => normalizedSelectedBayIds.includes(String(bayId))) || [];
-          const applicableBayCount = applicableBayIds.length;
-          const totalApplicableBays = improvement.applicableBays?.length || 1;
-          
-          if (applicableBayCount > 0) {
-            quantity = applicableBayCount;
-            unit = 'bay';
-            allocatedCost = (allocatedCost * applicableBayCount) / totalApplicableBays;
-            unitPrice = allocatedCost / quantity;
-          } else {
-            // No applicable bays selected, skip this improvement
-            return null;
-          }
+          // For bay-specific, always use 100% of improvement.totalCost — never proportional
+          quantity = 1;
+          unit = 'ea';
+          // allocatedCost already set to improvement.totalCost / 100 at the top of this callback
+          unitPrice = allocatedCost;
         } else if (improvement.allocationType === 'demising-wall') {
           // For demising walls, calculate cost based on which bay(s) are selected
           const demisingData = improvement.demisingWallData;

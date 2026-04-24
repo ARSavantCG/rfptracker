@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { StatsCards } from "@/components/stats-cards";
+import AttentionRequired from "@/components/attention-required";
 import { RfpTable } from "@/components/rfp-table";
 import { CreateRfpModal } from "@/components/create-rfp-modal";
 import { EditRfpModal } from "@/components/edit-rfp-modal";
@@ -164,6 +165,11 @@ export default function Dashboard() {
     }
   };
 
+  const handleOpenRfpById = (rfpId: number) => {
+    const rfp = allRfps.find((r) => r.id === rfpId) ?? null;
+    handleSelectRfp(rfp);
+  };
+
   const handleAdvanceToInvitation = (rfp: RfpRequest) => {
     setWorkflowRfp(rfp);
     setIsInvitationModalOpen(true);
@@ -241,6 +247,9 @@ export default function Dashboard() {
 
               </div>
             </div>
+
+        {/* Attention Required */}
+        <AttentionRequired onRfpClick={handleOpenRfpById} />
 
         {/* Stats Cards */}
         <StatsCards onStatusFilter={setStatusFilter} />

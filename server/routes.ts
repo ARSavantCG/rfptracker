@@ -41,6 +41,7 @@ import { registerActualsRoutes } from './actuals-routes';
 import { registerPropertyRoutes } from './property-routes';
 import { registerAiRoutes } from './ai-routes';
 import { registerProposalsRoutes } from './proposals-routes';
+import { registerDashboardRoutes } from './dashboard-routes';
 import { streamFromObjectStorage, listObjectStorageFiles } from './storage-backup';
 
 // Helper function to clean invalid values like "$NaN", "NaN", etc.
@@ -61,6 +62,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerPropertyRoutes(app);
   registerAiRoutes(app);
   registerProposalsRoutes(app);
+  registerDashboardRoutes(app);
 
   // Serve files from the uploads directory — local disk first, then Object Storage fallback
   app.get('/uploads/*', async (req, res) => {

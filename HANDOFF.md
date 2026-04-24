@@ -99,6 +99,7 @@ Brenda Gonzalez — view only, no AI
 - `populateExistingImprovements` guard removed the `!rfp?.selectedBayConfigurations` block — improvements now load regardless of whether bay configurations are populated; `selectedBayIds` used as fallback for bay ID matching when `selectedBayConfigurations` is empty
 - Area parsing fixed across 8 occurrences (`rfp-validation-modal.tsx`, `evaluation-budget.tsx`, `rfp-detail-modal.tsx`): `parseInt` → `parseFloat(value.toString().replace(/[^0-9.]/g, ''))` to handle formatted strings like "397,164 SF (calculated from selected bay configurations)"
 - 6 missing schema imports added: `insertContactSchema`, `updateContactSchema`, `insertInvitationSchema`, `updateInvitationSchema`, `updateInvitationToBidSchema`, `insertPdfTemplateSchema`
+- Bay-specific existing improvements now match using four-way normalized ID comparison (`rawId` and `strippedId` checked against both raw and normalized selected bay ID lists); deduplication via `seenIds` Set prevents double-counting when both a full bay and a split half are selected; cost is always 100% of `improvement.totalCost` (no proportional division); confirmed spec office shows full $1,200,654.74 for Mercado Libre; all debug logs removed
 
 ---
 
@@ -124,6 +125,7 @@ Known issues / next session fix list:
 2. Tag prices from existing proposals into ROM scope items
 3. Enter historical project actuals via Historical Import page
 4. Test Benchmarks dashboard with real data
+5. Remove debug logs added to server-side routes during earlier sessions (e.g. `Existing improvement applicableBays:` log in `server/property-routes.ts`)
 
 How to start next session:
 Paste this into Claude:

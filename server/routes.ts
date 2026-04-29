@@ -1762,6 +1762,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Convert date strings to Date objects for database using centralized utility
       // Handle receivedOn date
+      // TODO: This catch swallows ReferenceError/TypeError as if they were data errors. Should distinguish code bugs (rethrow) from invalid input (null + warn). See HANDOFF for context.
       if (formData.receivedOn && typeof formData.receivedOn === 'string' && formData.receivedOn.trim() !== '') {
         try {
           formData.receivedOn = convertFormDateToDbDate(formData.receivedOn);
@@ -1774,6 +1775,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Handle internalDueDate date
+      // TODO: This catch swallows ReferenceError/TypeError as if they were data errors. Should distinguish code bugs (rethrow) from invalid input (null + warn). See HANDOFF for context.
       if (formData.internalDueDate && typeof formData.internalDueDate === 'string' && formData.internalDueDate.trim() !== '') {
         try {
           formData.internalDueDate = convertFormDateToDbDate(formData.internalDueDate);
@@ -1786,6 +1788,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Handle responseToBrokerDue date
+      // TODO: This catch swallows ReferenceError/TypeError as if they were data errors. Should distinguish code bugs (rethrow) from invalid input (null + warn). See HANDOFF for context.
       if (formData.responseToBrokerDue && typeof formData.responseToBrokerDue === 'string' && formData.responseToBrokerDue.trim() !== '') {
         try {
           formData.responseToBrokerDue = convertFormDateToDbDate(formData.responseToBrokerDue);
@@ -1798,6 +1801,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Handle contractorDueDate date
+      // TODO: This catch swallows ReferenceError/TypeError as if they were data errors. Should distinguish code bugs (rethrow) from invalid input (null + warn). See HANDOFF for context.
       if (formData.contractorDueDate && typeof formData.contractorDueDate === 'string' && formData.contractorDueDate.trim() !== '') {
         try {
           formData.contractorDueDate = convertFormDateToDbDate(formData.contractorDueDate);
@@ -1810,6 +1814,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Handle architectDueDate date
+      // TODO: This catch swallows ReferenceError/TypeError as if they were data errors. Should distinguish code bugs (rethrow) from invalid input (null + warn). See HANDOFF for context.
       if (formData.architectDueDate && typeof formData.architectDueDate === 'string' && formData.architectDueDate.trim() !== '') {
         try {
           formData.architectDueDate = convertFormDateToDbDate(formData.architectDueDate);

@@ -256,3 +256,40 @@ PDF parser clean-block cutoff: 3 consecutive non-clean rows after first clean bl
 - `server/routes.ts` — Fix 1: one import line added (line 19)
 - `client/src/components/rfp-detail-modal.tsx` — Fix 2: rentable area fallback logic (lines 401-421)
 - `client/src/components/evaluation-budget.tsx` — Fix 3: rentable area display in Card header (lines 4794-4802)
+
+---
+
+## Session: April 29, 2026 (continued) — Punch List A & B
+
+### Punch List A — Data Audit Results
+
+Ran the following read-only query against production (Neon):
+```sql
+SELECT id, rfp_number, tenant_name, received_on, internal_due_date,
+       created_at, updated_at
+FROM rfp_requests
+WHERE received_on IS NULL OR internal_due_date IS NULL
+ORDER BY updated_at DESC
+```
+**Result: ZERO rows returned.** No RFPs have a null `received_on` or `internal_due_date`. Interpretation: either (a) the broken import window was short enough that no edits were attempted via the PATCH route before Fix 1 was deployed, or (b) all edits during the window left both date fields blank intentionally (both null from creation, updatedAt ≈ createdAt). No manual data repair is required. Adolfo to confirm.
+
+### Punch List B — Silent-Failure TODO Comments
+
+Added `// TODO: This catch swallows ReferenceError/TypeError as if they were data errors. Should distinguish code bugs (rethrow) from invalid input (null + warn). See HANDOFF for context.` above each of the 5 try-catch blocks in the PATCH route (`/api/rfp-requests/:id/update-with-files`):
+1. `receivedOn` block (line 1768)
+2. `internalDueDate` block (line 1781)
+3. `responseToBrokerDue` block (line 1794)
+4. `contractorDueDate` block (line 1807)
+5. `architectDueDate` block (line 1820)
+
+The POST route (`/api/rfp-requests/create-with-files`) does **not** use try-catch around its date conversions (lines 863-874) — bare `if` guards only — so no TODO needed there.
+
+Runtime behavior was not changed. TODO comments only.
+
+### Open Follow-Ups (backlog)
+
+- **Silent-failure try-catch pattern**: The 5 TODO-marked catch blocks in `server/routes.ts` PATCH route conflate code-level bugs (ReferenceError, TypeError) with bad-input scenarios. Future fix: wrap only the input-parsing portion, let code errors propagate.
+- **Split-bay ID mismatch (server-side)**: The live-fetch endpoint (`GET /api/rfp-requests/:id`) filters bay configs using `selectedBayIds.includes(bay.id)`. Split-bay suffixed IDs (`_south`, `_north`) never match un-suffixed property bay IDs, so `selectedBayConfigurations` is always empty for split-bay RFPs. Frontend workaround (Fix 2) is in place; a proper server-side fix would strip suffixes before filtering.
+
+### Files Changed (Punch List)
+- `server/routes.ts` — 5 TODO comments added above try-catch blocks (lines 1768, 1781, 1794, 1807, 1820); no runtime changes

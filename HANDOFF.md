@@ -230,3 +230,29 @@ PDF parser clean-block cutoff: 3 consecutive non-clean rows after first clean bl
 3. Enter historical project actuals via `/historical-import` to populate Portfolio Intelligence cards with real data
 4. PDF viewer fix in Proposals Library (Object Storage key path still pending)
 5. Remove residual debug log `Existing improvement applicableBays:` in `server/property-routes.ts` ~line 565
+
+---
+
+## Session: April 29, 2026 — Three Bug Fixes
+
+### Recently Completed
+
+✅ **Fix 1 — Missing import causing PATCH /api/rfp-requests/:id/update-with-files to fail (April 29, 2026)**
+- Root cause: `convertFormDateToDbDate` (exported from `shared/date-utils.ts` line 131) was called 9 times in `server/routes.ts` but never imported. The PATCH route's per-field try-catches swallowed the `ReferenceError`, set all dates to null, then the downstream DB write failed — returning "Failed to update RFP request" to the client.
+- Fix: one import line added at `server/routes.ts` line 19: `import { convertFormDateToDbDate } from "@shared/date-utils";`
+- The POST (create) route was not visibly broken because Drizzle-zod's `.parse()` coerces date strings to `Date` objects before the guarded call sites, so the function was never actually reached during creates.
+
+✅ **Fix 2 — RFP Details modal "Rentable Area: Not specified" (April 29, 2026)**
+- Root cause: `rfp-detail-modal.tsx` fetches a live RFP via `GET /api/rfp-requests/:id`, which uses `selectedBayIds` to filter live bay data from the property. For RFPs with split-bay IDs (`_south`/`_north` suffixed), the server-side filter `property.bayConfigurations.filter(bay => rfp.selectedBayIds.includes(bay.id))` returns empty because property bay IDs are unsuffixed — causing `liveRfp.selectedBayConfigurations = []`. The modal then showed "Not specified" because the empty live array masked the correct prop data.
+- Fix: in `rfp-detail-modal.tsx` lines 401-421, added fallback so if `displayRfp.selectedBayConfigurations` is empty, it falls through to `rfp?.selectedBayConfigurations` (the prop) before falling back to `warehouseArea` and finally "Not specified". Same `reduce` logic (using `rentableSquareFootage || squareFootage`) unchanged.
+
+✅ **Fix 3 — Rentable Area on evaluation page header (April 29, 2026)**
+- Added a `<p className="text-sm text-muted-foreground mt-1">` line in the evaluation-budget.tsx Card header immediately below the `<CardTitle>`, showing "Rentable Area: {N} SF" formatted with thousands separator.
+- Uses the existing `calculateRentableArea()` helper already defined in the file (line 1062) — no reimplementation.
+- Hidden entirely (returns null) when the helper returns 0 or falsy — no "Not specified" on the evaluation page.
+- Re-runs on bay configuration changes since `calculateRentableArea()` reads live `rfp.selectedBayConfigurations` inline.
+
+### Files Changed
+- `server/routes.ts` — Fix 1: one import line added (line 19)
+- `client/src/components/rfp-detail-modal.tsx` — Fix 2: rentable area fallback logic (lines 401-421)
+- `client/src/components/evaluation-budget.tsx` — Fix 3: rentable area display in Card header (lines 4794-4802)

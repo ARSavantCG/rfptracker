@@ -396,19 +396,24 @@ export function RfpDetailModal({ isOpen, onClose, rfp, onRfpUpdated }: RfpDetail
                       <span className="text-blue-700 font-medium">Rentable Area:</span>
                       <span className="ml-2 text-blue-900">
                         {(() => {
-                          // ALWAYS calculate from LIVE bay configurations (Properties is single source of truth)
-                          if (displayRfp?.selectedBayConfigurations && displayRfp.selectedBayConfigurations.length > 0) {
-                            const totalRentable = displayRfp.selectedBayConfigurations.reduce((sum: number, bay: any) => {
+                          // Use live-fetched bay configs; fall back to prop rfp bay configs (handles split-bay ID mismatch in live fetch)
+                          const bays =
+                            displayRfp?.selectedBayConfigurations && displayRfp.selectedBayConfigurations.length > 0
+                              ? displayRfp.selectedBayConfigurations
+                              : rfp?.selectedBayConfigurations;
+
+                          if (bays && bays.length > 0) {
+                            const totalRentable = bays.reduce((sum: number, bay: any) => {
                               return sum + (bay.rentableSquareFootage || bay.squareFootage || 0);
                             }, 0);
                             return totalRentable > 0 ? `${Math.round(totalRentable).toLocaleString()} SF` : 'Not specified';
                           }
-                          
+
                           // Fallback to stored warehouseArea only if no bay configurations available
-                          if (rfp.warehouseArea) {
+                          if (rfp?.warehouseArea) {
                             return `${parseFloat(rfp.warehouseArea.toString().replace(/[^0-9.]/g, '')).toLocaleString()} SF`;
                           }
-                          
+
                           return 'Not specified';
                         })()}
                       </span>

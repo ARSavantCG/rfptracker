@@ -4788,6 +4788,15 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       <Card>
         <CardHeader>
           <CardTitle>Budget Evaluation - {rfp?.projectName || 'Project'}</CardTitle>
+          {(() => {
+            const area = calculateRentableArea();
+            if (!area) return null;
+            return (
+              <p className="text-sm text-muted-foreground mt-1">
+                Rentable Area: {area.toLocaleString()} SF
+              </p>
+            );
+          })()}
         </CardHeader>
       </Card>
 

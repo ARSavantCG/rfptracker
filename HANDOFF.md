@@ -289,7 +289,44 @@ Runtime behavior was not changed. TODO comments only.
 ### Open Follow-Ups (backlog)
 
 - **Silent-failure try-catch pattern**: The 5 TODO-marked catch blocks in `server/routes.ts` PATCH route conflate code-level bugs (ReferenceError, TypeError) with bad-input scenarios. Future fix: wrap only the input-parsing portion, let code errors propagate.
-- **Split-bay ID mismatch (server-side)**: The live-fetch endpoint (`GET /api/rfp-requests/:id`) filters bay configs using `selectedBayIds.includes(bay.id)`. Split-bay suffixed IDs (`_south`, `_north`) never match un-suffixed property bay IDs, so `selectedBayConfigurations` is always empty for split-bay RFPs. Frontend workaround (Fix 2) is in place; a proper server-side fix would strip suffixes before filtering.
+- **Split-bay ID mismatch (server-side)**: ✅ RESOLVED — see below.
 
 ### Files Changed (Punch List)
 - `server/routes.ts` — 5 TODO comments added above try-catch blocks (lines 1768, 1781, 1794, 1807, 1820); no runtime changes
+
+---
+
+## Session: April 29, 2026 (continued) — Split-Bay ID Mismatch Fix
+
+### Root Cause
+The bay-hydration logic in `server/routes.ts` rebuilds `selectedBayConfigurations` from live property data using:
+```js
+property.bayConfigurations.filter(bay => selectedBayIds.includes(bay.id))
+```
+For split-bay RFPs, `selectedBayIds` contains suffixed IDs like `"1754328007840_south"` while property bay configs store unsuffixed IDs like `"1754328007840"`. The `includes()` check always fails → `selectedBayConfigurations = []` for every split-bay RFP from every affected endpoint.
+
+This silently broke every API consumer of `selectedBayConfigurations` for split-bay RFPs (rentable area in Details modal, evaluation header, PDF generation, electrical allocation, leasable area totals). Fix 2 (session earlier today) only added a frontend fallback for the Details modal; the underlying server bug was still present.
+
+### Fix
+
+Added `resolveSelectedBays(selectedBayIds, liveBayConfigs, snapshotBays)` helper at `server/routes.ts` (lines 312–343). It:
+1. Tries exact ID match (handles full/non-split bays, no behavior change)
+2. If no match, strips `_south`/`_north` suffix → finds the base bay in live property data
+3. Merges: takes live bay's current properties (address, parking, etc.) but overrides `id`, `bayName`, `rentableSquareFootage`, and `squareFootage` from the stored snapshot entry — preserving the half's actual SF
+4. If still not found (bay deleted from property), falls back to the stored snapshot entry
+
+### Sites Updated
+All 4 filter call sites replaced with `resolveSelectedBays()`:
+1. `GET /api/rfp-requests` — single-building path (line 474)
+2. `GET /api/rfp-requests` — multi-building path (line 485)
+3. `GET /api/rfp-requests/:id` — single-building path (line 699)
+4. `GET /api/rfp-requests/:id` — multi-building path (line 710)
+5. `hydrateLiveBayConfigurations` helper — single-building path (line 354)
+6. `hydrateLiveBayConfigurations` helper — multi-building path (line 373)
+
+### After This Fix
+- The Details modal fallback (Fix 2) now becomes redundant safety — the GET response's `selectedBayConfigurations` will be correctly populated for split-bay RFPs. The fallback is harmless and left in place.
+- All server-side consumers (PDF generation, electrical allocation, leasable area totals) now receive correct split-bay SF.
+
+### Files Changed
+- `server/routes.ts` — `resolveSelectedBays` helper added + 6 filter call sites replaced

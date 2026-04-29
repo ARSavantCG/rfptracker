@@ -306,6 +306,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Helper: resolve selected bay IDs against live property bay configs.
+  // Handles split-bay IDs (e.g. "1754328007840_south") that carry a _south/_north suffix
+  // not present in the property's stored bayConfigurations. For those, the base bay is found
+  // by stripping the suffix, and the split half's SF/name is preserved from the stored snapshot.
+  const resolveSelectedBays = (selectedBayIds: string[], liveBayConfigs: any[], snapshotBays: any[]): any[] => {
+    return selectedBayIds.map(selectedId => {
+      // Exact match (full bays)
+      const exactMatch = liveBayConfigs.find((bay: any) => bay.id === selectedId);
+      if (exactMatch) return exactMatch;
+
+      // Split-bay match: strip _south / _north suffix
+      const suffix = selectedId.endsWith('_south') ? '_south' : selectedId.endsWith('_north') ? '_north' : null;
+      if (suffix) {
+        const baseId = selectedId.slice(0, selectedId.length - suffix.length);
+        const baseBay = liveBayConfigs.find((bay: any) => bay.id === baseId);
+        if (baseBay) {
+          const snapshotBay = snapshotBays?.find((b: any) => b.id === selectedId);
+          return {
+            ...baseBay,
+            id: selectedId,
+            bayName: snapshotBay?.bayName ?? `${baseBay.bayName} (${suffix.slice(1)})`,
+            rentableSquareFootage: snapshotBay?.rentableSquareFootage ?? baseBay.rentableSquareFootage,
+            squareFootage: snapshotBay?.squareFootage ?? baseBay.squareFootage,
+          };
+        }
+      }
+
+      // Not found in live data — fall back to snapshot entry
+      const snapshotFallback = snapshotBays?.find((b: any) => b.id === selectedId);
+      return snapshotFallback ?? null;
+    }).filter(Boolean);
+  };
+
   // Helper function to hydrate live bay configurations from properties
   const hydrateLiveBayConfigurations = async (rfp: any) => {
     console.log(`🔍 Hydration called for RFP ${rfp.rfpNumber}: propertyId=${rfp.propertyId}, selectedBayIds=${rfp.selectedBayIds}, property=${rfp.property}, bayConfigsLength=${rfp.selectedBayConfigurations?.length}`);
@@ -315,9 +348,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (rfp.propertyId && rfp.selectedBayIds && rfp.selectedBayIds.length > 0) {
         const property = await storage.getProperty(rfp.propertyId);
         if (property && property.bayConfigurations) {
-          const liveBays = property.bayConfigurations.filter((bay: any) => 
-            rfp.selectedBayIds.includes(bay.id)
-          );
+          const liveBays = resolveSelectedBays(rfp.selectedBayIds, property.bayConfigurations, rfp.selectedBayConfigurations || []);
           return {
             ...rfp,
             selectedBayConfigurations: liveBays,
@@ -335,9 +366,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const bayIds = rfp.bayIdsPerBuilding[propertyName];
           
           if (property && property.bayConfigurations && bayIds) {
-            const liveBays = property.bayConfigurations.filter((bay: any) => 
-              bayIds.includes(bay.id)
-            );
+            const snapshotForBuilding = (rfp.selectedBaysPerBuilding?.[propertyName] || rfp.selectedBayConfigurations || []);
+            const liveBays = resolveSelectedBays(bayIds, property.bayConfigurations, snapshotForBuilding);
             selectedBaysPerBuilding[propertyName] = liveBays;
           }
         }
@@ -438,9 +468,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (rfp.propertyId && rfp.selectedBayIds && rfp.selectedBayIds.length > 0) {
             const property = await storage.getProperty(rfp.propertyId);
             if (property?.bayConfigurations) {
-              rfp.selectedBayConfigurations = property.bayConfigurations.filter((bay: any) => 
-                rfp.selectedBayIds!.includes(bay.id)
-              );
+              rfp.selectedBayConfigurations = resolveSelectedBays(rfp.selectedBayIds!, property.bayConfigurations, rfp.selectedBayConfigurations || []);
             }
           }
           // Multi-building with bay IDs per building
@@ -450,9 +478,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const propId = parseInt(propertyIdStr);
               const property = await storage.getProperty(propId);
               if (property?.bayConfigurations) {
-                const baysForProperty = property.bayConfigurations.filter((bay: any) => 
-                  bayIds.includes(bay.id)
-                );
+                const snapshotForBuilding = rfp.selectedBayConfigurations || [];
+                const baysForProperty = resolveSelectedBays(bayIds as string[], property.bayConfigurations, snapshotForBuilding);
                 allLiveBays.push(...baysForProperty);
               }
             }
@@ -666,10 +693,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (rfp.propertyId && rfp.selectedBayIds && rfp.selectedBayIds.length > 0) {
         const property = await storage.getProperty(rfp.propertyId);
         if (property?.bayConfigurations) {
-          const liveBays = property.bayConfigurations.filter((bay: any) => 
-            rfp.selectedBayIds!.includes(bay.id)
-          );
-          rfp.selectedBayConfigurations = liveBays;
+          rfp.selectedBayConfigurations = resolveSelectedBays(rfp.selectedBayIds!, property.bayConfigurations, rfp.selectedBayConfigurations || []);
         }
       }
       // Multi-building with bay IDs per building
@@ -679,9 +703,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const propId = parseInt(propertyIdStr);
           const property = await storage.getProperty(propId);
           if (property?.bayConfigurations) {
-            const baysForProperty = property.bayConfigurations.filter((bay: any) => 
-              bayIds.includes(bay.id)
-            );
+            const snapshotForBuilding = rfp.selectedBayConfigurations || [];
+            const baysForProperty = resolveSelectedBays(bayIds as string[], property.bayConfigurations, snapshotForBuilding);
             allLiveBays.push(...baysForProperty);
           }
         }

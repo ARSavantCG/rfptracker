@@ -451,3 +451,35 @@ Handles both legacy "- Bridge Industrial" suffixes in existing contact records A
 2. Rename `getBridgeLogo()` → `getCompanyLogo()` — requires updating all 7 server files that define it
 3. Rename `/api/bridge-logo` → `/api/company-logo` — requires updating all client-side `src="/api/bridge-logo"` references (3 files)
 4. Update `rom_scope_items` DB rows + `data/templates.json` `source` field together in one atomic operation
+
+---
+
+## Logo Fix: Multi-line base64 broken data URI (May 7 2026)
+
+### Root cause
+The logo has been broken in all PDF, HTML, and email output for an unknown extended period — possibly since the logo file was first created. The Linux `base64` CLI wraps output at 76 characters per line by default, producing 81 lines (79 internal newlines) instead of a single contiguous string. The `getBridgeLogo()` function called `.trim()`, which strips leading/trailing whitespace only — all 79 internal newlines survived into the data URI. Browsers and Puppeteer silently reject `data:image/png;base64,...` URIs with embedded whitespace, showing a broken-image icon instead.
+
+**Why it went undetected**: The broken image rendered as an empty slot with alt text `"Bridge Industrial"` — indistinguishable from normal body text to anyone not specifically looking for the logo. The Kurv rebrand changed the alt text to `"Kurv Industrial"`, making the broken image obvious for the first time.
+
+### Verification (pre-fix)
+- `bridge_logo_new_base64.txt` (old): 6165 chars, 81 lines, 79 internal newlines
+- Data URI produced: `data:image/png;base64,iVBORw0K...\n...Bx1F\n...YII=` — **invalid**
+
+### Fixes applied (defense in depth)
+
+**Primary (Option A)** — Regenerated `bridge_logo_new_base64.txt` with `base64 -w 0`:
+- New file: 6084 chars, **0 lines, 0 internal newlines**, ends with `=` padding, no trailing newline
+- All 7 `getBridgeLogo()` implementations pick it up automatically
+
+**Defensive (Option B)** — Updated all 7 `getBridgeLogo()` implementations from `.trim()` to `.replace(/\s+/g, '')`:
+- Guards against future accidental regeneration with line-wrapped base64
+- Files updated: `server/pdf-generator.ts`, `server/routes.ts`, `server/historical-pricing-reports.ts`, `server/property-routes.ts`, `server/rom-routes.ts`, `server/vendor-workload-report.ts`, `server/pdf-reports.ts`
+
+### Verification (post-fix)
+- Node.js confirmed: raw file = 6084 chars, 0 newlines; after `.replace(/\s+/g, '')` = 6084 chars, 0 newlines (no-op, as intended)
+- Data URI produced: `data:image/png;base64,iVBORw0K...VORK5CYII=` — **valid, single line**
+- Base64 payload passes strict `/^[A-Za-z0-9+/]+=*$/` regex: **YES**
+- `/api/bridge-logo` endpoint returns binary PNG to authenticated browsers (curl without auth returns 14-byte auth error — expected)
+
+### Lesson logged
+Visual outputs (PDFs, HTML reports, emails) require actual visual verification in QA — not just "file exists" or "valid base64" checks. Future hardening: add a smoke-test script that generates one of each output type and asserts that the logo image node has nonzero rendered dimensions.

@@ -226,7 +226,7 @@ export async function generateVendorWorkloadData(options: {
  */
 function getBridgeLogo(): string {
   try {
-    return readFileSync('./bridge_logo_new_base64.txt', 'utf8').trim();
+    return readFileSync('./bridge_logo_new_base64.txt', 'utf8').replace(/\s+/g, '');
   } catch (error) {
     console.error('Error loading Bridge logo:', error);
     return '';

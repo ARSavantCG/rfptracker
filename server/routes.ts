@@ -4967,7 +4967,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Bridge Industrial logo endpoint for evaluation reports
   app.get('/api/bridge-logo', (req, res) => {
     try {
-      const logoBase64 = readFileSync('./bridge_logo_new_base64.txt', 'utf8').trim();
+      const logoBase64 = readFileSync('./bridge_logo_new_base64.txt', 'utf8').replace(/\s+/g, '');
       res.setHeader('Content-Type', 'image/png');
       res.send(Buffer.from(logoBase64, 'base64'));
     } catch (error) {

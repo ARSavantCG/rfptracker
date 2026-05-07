@@ -34,7 +34,7 @@ import {
 
 function getBridgeLogo(): string {
   try {
-    const logoBase64 = readFileSync('./bridge_logo_new_base64.txt', 'utf8').trim();
+    const logoBase64 = readFileSync('./bridge_logo_new_base64.txt', 'utf8').replace(/\s+/g, '');
     return `data:image/png;base64,${logoBase64}`;
   } catch (error) {
     console.error('Error reading Bridge logo:', error);

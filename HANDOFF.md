@@ -511,3 +511,38 @@ Changed `readFileSync(` → `fs.readFileSync(` at `server/routes.ts:4973`. One c
 
 ### Lesson logged
 Two distinct bugs produced identical symptoms. The full chain was: (1) base64 line-wrapping → malformed data URI in server-side PDFs; (2) `readFileSync` not defined → endpoint throws → 404 in all HTTP logo requests. Both were masked by the same alt-text-as-body-copy effect. Future similar-symptom debugging must enumerate ALL code paths before declaring root cause.
+
+---
+
+## ⚠️ NEXT SESSION PRIORITY: Silent-failure try/catch audit
+
+### Why this is now urgent
+
+This session surfaced **three** missing-import bugs in `server/routes.ts`, all masked by try/catch blocks that swallowed `ReferenceError` as if it were a routine data/runtime error:
+
+| # | Missing import | Symptom | How it hid |
+|---|---|---|---|
+| 1 | `convertFormDateToDbDate` | PATCH returned 400, dates silently nulled | Caught, generic error returned |
+| 2 | `readFileSync` (logo endpoint) | `/api/bridge-logo` returned 404 "Logo not found" | Caught, catch-block response indistinguishable from missing file |
+| 3 | TBD — likely more remain | Unknown | Same pattern |
+
+This is no longer "a pattern worth cleaning up someday." It is **the active mechanism by which code bugs reach production undetected** and present as data or network errors.
+
+### Work to do next session
+
+1. **Audit ALL try/catch blocks** in `server/routes.ts` and all extracted route modules (`auth-routes.ts`, `rom-routes.ts`, `actuals-routes.ts`, `property-routes.ts`, `ai-routes.ts`, `proposals-routes.ts`, `dashboard-routes.ts`) that swallow errors and return generic failure responses.
+
+2. **Triage each catch site**: distinguish "rethrow — this is a code bug" from "handle — this is bad user input":
+   - `ReferenceError`, `TypeError`, `SyntaxError` → almost always indicates a code bug → **rethrow or log prominently and return 500**
+   - Validation/parsing errors on user-supplied data → legitimate to handle gracefully → keep the pattern but log the actual error type and message
+
+3. **Add explicit error-type logging** at every catch site: even when the user-facing response is generic, the server log should emit `error.constructor.name` and `error.message` so bugs surface immediately in logs instead of silently producing wrong behavior.
+
+4. **One-time missing-import grep**: compare all identifiers used in each server file against that file's import list. Catch any remaining missing-import bugs proactively before they appear as user reports. Focus on files that use named destructured imports from `fs`, `path`, and shared modules alongside a default `fs` import.
+
+### Files to prioritize
+- `server/routes.ts` (5991 lines — highest risk, most catch blocks)
+- `server/pdf-generator.ts`
+- `server/property-routes.ts`
+- `server/rom-routes.ts`
+- All other extracted route modules

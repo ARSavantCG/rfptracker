@@ -370,3 +370,13 @@ When adding per-half override logic to one field in `resolveSelectedBays`, audit
 
 ### Files Changed
 - `server/routes.ts` — `resolveSelectedBays` now overrides `standardDockDoors`, `oversizedDockDoors`, `hasStorefrontEntry`, `hasSpeculativeOffice`, `hasRestroom` for split-bay IDs
+
+### Additional notes (Adolfo, May 7 2026)
+
+- `resolveSelectedBays` now overrides 5 additional per-half fields: `standardDockDoors`, `oversizedDockDoors`, `hasStorefrontEntry`, `hasSpeculativeOffice`, `hasRestroom`. Previously only SF fields were overridden. The earlier rentable-area fix had silently broken dock door counts (showed 74/2 instead of 37/1) by enabling Step 1 of `calculateDoorCounts()` to return non-zero values from the un-overridden full-bay data, bypassing Step 3 which had been the only path that handled split halves. All five fixes use `??` to preserve `false`/`0` per-half values. Step 3 of `calculateDoorCounts()` left in place as harmless redundancy.
+
+- **Lesson logged**: when adding split-aware logic to one field on a multi-field record, audit the entire record for other split-aware pairs in the same change. Two related bugs canceling each other out is the hardest failure mode to detect.
+
+### Future hardening (not blocking)
+
+- Add unit tests for `resolveSelectedBays` covering: full bays, south halves, north halves, mixed selections, and missing per-half data fallback to full-bay values. This function is now the single source of truth for split-bay correctness, so it deserves explicit coverage. Estimate: 30 min.

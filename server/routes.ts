@@ -5279,7 +5279,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Version endpoint
   app.get("/api/version", async (req, res) => {
     try {
-      const versionData = JSON.parse(readFileSync(path.join(process.cwd(), 'version.json'), 'utf-8'));
+      const versionData = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'version.json'), 'utf-8'));
       
       // Add runtime information
       const runtimeInfo = {

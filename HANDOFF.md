@@ -61,6 +61,19 @@ Not: "How many RFPs are in each status bucket?"
 - [ ] Push to GitHub (Git tab → Push button)
 - [ ] Update HANDOFF.md with what was accomplished and what's next
 
+### May 7 2026 close-out status
+| Item | Status |
+|---|---|
+| Logo rendering — server-side PDFs (getBridgeLogo data URI) | ✅ Fixed — base64 line-wrap resolved |
+| Logo rendering — /api/bridge-logo HTTP endpoint | ✅ Fixed — `fs.readFileSync` (routes.ts:4973) |
+| Logo rendering — email attachments / HTML reports | ✅ Fixed — same getBridgeLogo fix covers all 7 call sites |
+| /api/version returning real version (1.1.4) | ✅ Fixed — `fs.readFileSync` (routes.ts:5285) |
+| Dock door counts for RFP-2026-014 (37/1) | ✅ Fixed — resolveSelectedBays split-field audit |
+| Rebrand Bridge → Kurv Industrial (39 occurrences, 17 files) | ✅ Complete |
+| Missing-import audit (all server route files) | ✅ Clean — 3 bugs found and fixed, no others |
+| Republish | ⬜ Manual step — user action required |
+| Push to GitHub | ⬜ Manual step — user action required |
+
 ---
 
 RFP Tracker — Savant Portal Integration
@@ -168,7 +181,7 @@ Known issues / next session fix list:
 4. File Storage Migration (Phase 1 — immediate): Migrate file uploads to Replit Object Storage so files persist across redeploys. Prompt already written and ready to run.
 5. File Storage Migration (Phase 2 — future): Migrate to Dropbox/S3/cloud storage like Savant Portal setup for proper enterprise file management with folder structure, sharing links, and version history.
 2. ✅ RESOLVED — AI bid analysis debugging logs now live in production (API key presence, bid collection ID, Claude raw response first 500 chars). Ready to reproduce and diagnose "Analysis failed" in next desktop session.
-3. ✅ RESOLVED — /api/version route already had try/catch fallback in place; confirmed no longer 500ing.
+3. ✅ RESOLVED (fully, May 7 2026) — `/api/version` 500 history: a prior session added a try/catch fallback which stopped the 500, but the underlying missing `readFileSync` import was never fixed — the endpoint silently returned hardcoded `version: "1.0.0"` on every request. Root cause found and fixed this session (`readFileSync` → `fs.readFileSync` at routes.ts:5285). Now returns real data from `version.json` (version `1.1.4`). See "Version Fix" section.
 10. Fix GitHub CI/CD Pipeline — update .github/workflows so security scan and tests pass after routes refactoring, or simplify if automated testing is not a current priority
 
 🏗️ Features to Build:
@@ -514,19 +527,53 @@ Two distinct bugs produced identical symptoms. The full chain was: (1) base64 li
 
 ---
 
+## Version Fix: /api/version silent wrong-data bug (May 7 2026)
+
+### Prior history
+A previous session added a try/catch around the `/api/version` endpoint to stop a production 500, then marked the bug "✅ RESOLVED — no longer 500ing." That entry was accurate in the narrow sense: the 500 was stopped. But the underlying cause — `readFileSync` called bare in `routes.ts` which only has `import fs from "fs"` (default) and no named `readFileSync` import — was never fixed. The catch block returned `{ version: "1.0.0", environment: "production" }` as a plausible-looking fallback on every single request, so the bug was completely invisible.
+
+### Discovery
+Found by the proactive missing-import grep at session close (same grep that confirmed the logo fixes were complete). Identified as the same one-character pattern as the logo endpoint fix.
+
+### Discrepancy: "500 in production" vs "200 fallback" — resolved
+Both were true at different points in time:
+- **Pre-try/catch**: endpoint threw `ReferenceError` uncaught → Express default error handler → **500**
+- **Post-try/catch (until today)**: `ReferenceError` thrown → caught → `res.json({ version: "1.0.0" })` → **200 with stale fallback data**
+
+The prior HANDOFF.md "RESOLVED" note captured the 200 state accurately. The production 500 was real when reported, then masked (not fixed) by the try/catch.
+
+### Fix
+`server/routes.ts:5285` — `readFileSync(` → `fs.readFileSync(`. Same one-character change as the logo fix.
+
+### Verified
+```
+curl http://localhost:5000/api/version
+→ {"version":"1.1.4","buildDate":"2026-02-03T00:00:00.000Z","gitCommit":"local-build",
+   "changes":[...5 entries...],"nodeVersion":"v20.20.0","uptime":11,...}
+```
+Returns real `version.json` data (681 bytes, version `1.1.4`). Not the fallback `"1.0.0"`. ✓
+
+---
+
 ## ⚠️ NEXT SESSION PRIORITY: Silent-failure try/catch audit
 
-### Why this is now urgent
+### Missing-import audit — COMPLETE. All three bugs found and fixed this session.
 
-This session surfaced **three** missing-import bugs in `server/routes.ts`, all masked by try/catch blocks that swallowed `ReferenceError` as if it were a routine data/runtime error:
+A proactive grep at session close found the full population of missing-import bugs in `server/routes.ts`. All three were masked by try/catch blocks that swallowed `ReferenceError` as if it were a routine data/runtime error:
 
-| # | Missing import | Symptom | How it hid |
-|---|---|---|---|
-| 1 | `convertFormDateToDbDate` | PATCH returned 400, dates silently nulled | Caught, generic error returned |
-| 2 | `readFileSync` (logo endpoint) | `/api/bridge-logo` returned 404 "Logo not found" | Caught, catch-block response indistinguishable from missing file |
-| 3 | TBD — likely more remain | Unknown | Same pattern |
+| # | Missing import | Symptom | How it hid | Status |
+|---|---|---|---|---|
+| 1 | `convertFormDateToDbDate` | PATCH returned 400, dates silently nulled | Caught, generic error returned | ✅ Fixed this session |
+| 2 | `readFileSync` (logo endpoint) | `/api/bridge-logo` returned 404 "Logo not found" | Caught, catch-block response indistinguishable from missing file | ✅ Fixed this session |
+| 3 | `readFileSync` (version endpoint) | `/api/version` silently returned hardcoded `version: "1.0.0"` | Caught, plausible-looking fallback masked the error completely | ✅ Fixed this session |
 
-This is no longer "a pattern worth cleaning up someday." It is **the active mechanism by which code bugs reach production undetected** and present as data or network errors.
+All other server route files checked — no additional missing-import bugs found. See full audit log above.
+
+**Lesson confirmed**: when a class of bug is found once, audit for the entire class before closing the session. The proactive grep cost ~10 minutes and closed a long-standing known issue (version endpoint) as a free side effect.
+
+### Remaining work for next session: broader try/catch audit
+
+The missing-import audit is done, but a related problem remains: the recurring pattern of catch blocks that swallow **any** error type — including code bugs — and return misleading fallback responses or status codes. This is the active mechanism by which code bugs reach production undetected.
 
 ### Work to do next session
 

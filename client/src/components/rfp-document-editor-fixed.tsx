@@ -7,6 +7,7 @@
  */
 
 import { useState, useEffect } from "react";
+import { COMPANY_RFP_INTRO } from "@shared/constants";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -65,7 +66,7 @@ export function RfpDocumentEditor() {
     const baseContent = {
       header: getTemplateContent('header', selectedDocumentType) || 'REQUEST FOR PROPOSAL',
       subtitle: getTemplateContent('subtitle', selectedDocumentType) || `${selectedDocumentType.toUpperCase().replace('-', ' ')} SERVICES`,
-      introduction: getTemplateContent('introduction', 'common') || 'Bridge Industrial is seeking qualified professionals to provide services for the following project. Please review the project details and requirements below.',
+      introduction: getTemplateContent('introduction', 'common') || COMPANY_RFP_INTRO,
       project_description: getTemplateContent('project_description', selectedDocumentType) || 'Project description will be provided based on the specific requirements and scope of work.',
       scope_of_work: getTemplateContent('scope_of_work', selectedDocumentType) || `Based on the project requirements, we are requesting proposals for:\n\n• Project planning and design\n• Timeline development\n• Cost estimation\n• Quality assurance\n• Project coordination`,
       space_requirements_intro: getTemplateContent('space_requirements_intro', 'common') || 'The project includes the following space requirements:',

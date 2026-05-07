@@ -375,7 +375,7 @@ async function generateRomReportHtml(romPilot: any, lineItems: any[], scopeItems
       </div>
       
       <div class="header">
-        <img src="${getBridgeLogo()}" alt="Bridge Industrial" class="logo" />
+        <img src="${getBridgeLogo()}" alt="Kurv Industrial" class="logo" />
         <div class="generated-info">
           Generated: ${currentDate}
         </div>

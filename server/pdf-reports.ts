@@ -267,7 +267,7 @@ export function generateExecutiveReportHtml(data: ReportData): string {
       <div class="header">
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
           <!-- Company logo -->
-          <img src="${getBridgeLogo()}" alt="Bridge Industrial" style="height: 30px; width: auto;" />
+          <img src="${getBridgeLogo()}" alt="Kurv Industrial" style="height: 30px; width: auto;" />
           <!-- Development Contact -->
           <div class="company-info">
             <div style="font-weight: bold; color: rgb(0,50,130); margin-bottom: 2px;">Development Contact</div>

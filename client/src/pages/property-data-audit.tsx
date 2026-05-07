@@ -228,7 +228,7 @@ export default function PropertyDataAudit() {
       <div style={{ background: 'rgb(0, 50, 130)' }} className="text-white py-4 px-6 print:py-2 print:px-4">
         <div className="container mx-auto flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <img src="/api/bridge-logo" alt="Bridge Industrial" className="h-8 bg-white rounded px-2 py-1" />
+            <img src="/api/bridge-logo" alt="Kurv Industrial" className="h-8 bg-white rounded px-2 py-1" />
             <div>
               <h1 className="text-2xl font-bold">Property Data Audit Report</h1>
               <p className="text-blue-200 text-sm">Complete source of truth for all property data</p>

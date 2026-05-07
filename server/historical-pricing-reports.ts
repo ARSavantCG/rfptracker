@@ -466,7 +466,7 @@ function generateHistoricalPricingHtml(data: HistoricalPricingData): string {
       <div class="header">
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
           <!-- Company logo -->
-          <img src="${getBridgeLogo()}" alt="Bridge Industrial" style="height: 30px; width: auto;" />
+          <img src="${getBridgeLogo()}" alt="Kurv Industrial" style="height: 30px; width: auto;" />
         </div>
         <div class="document-title">Historical Pricing Report</div>
         <div class="subtitle">Completed RFP Projects - Pricing Analysis</div>

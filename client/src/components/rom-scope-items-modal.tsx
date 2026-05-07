@@ -711,7 +711,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
       <body>
         <div class="header" style="${isContractorReport ? 'margin-bottom: 10px; padding-bottom: 10px;' : ''}">
           <div class="document-title">${isContractorReport ? 'CONTRACTOR PRICING SHEET' : 'ROM PILOT SCOPE ITEMS LIBRARY'}</div>
-          <div class="project-title">Bridge Industrial - Construction Cost Management</div>
+          <div class="project-title">Kurv Industrial - Construction Cost Management</div>
           <div class="project-title">Generated on ${currentDate}</div>
         </div>
         
@@ -796,7 +796,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
         ${tenantImprovements.length > 0 ? generateTenantImprovementsSection(tenantImprovements, sortedDivisions, tiByDivision, isContractorReport) : ''}
         
         <div class="footer">
-          © ${new Date().getFullYear()} Bridge Industrial - ROM Scope Items Library
+          © ${new Date().getFullYear()} Kurv Industrial - ROM Scope Items Library
         </div>
       </body>
       </html>

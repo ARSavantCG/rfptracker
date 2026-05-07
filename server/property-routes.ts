@@ -130,7 +130,7 @@ function generatePropertyPrintHtml(property: any, executedLeases: any[], propert
 <div class="header">
   <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
     <!-- Company logo -->
-    <img src="${getBridgeLogo()}" alt="Bridge Industrial" style="height: 30px; width: auto;" />
+    <img src="${getBridgeLogo()}" alt="Kurv Industrial" style="height: 30px; width: auto;" />
   </div>
   <div class="document-title">${property.propertyName}</div>
   <div class="subtitle">Property Report - Generated on ${new Date().toLocaleDateString()}</div>
@@ -825,7 +825,7 @@ export function registerPropertyRoutes(app: Express): void {
           <div class="header">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
               <!-- Company logo -->
-              <img src="${getBridgeLogo()}" alt="Bridge Industrial" style="height: 30px; width: auto;" />
+              <img src="${getBridgeLogo()}" alt="Kurv Industrial" style="height: 30px; width: auto;" />
             </div>
             <div class="document-title">Bay Configurations Report</div>
             <div class="property-name">${property.propertyName}</div>
@@ -910,7 +910,7 @@ export function registerPropertyRoutes(app: Express): void {
           <div class="header">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
               <!-- Company logo -->
-              <img src="${getBridgeLogo()}" alt="Bridge Industrial" style="height: 30px; width: auto;" />
+              <img src="${getBridgeLogo()}" alt="Kurv Industrial" style="height: 30px; width: auto;" />
             </div>
             <div class="document-title">Executed Leases Report</div>
             <div class="property-name">${property.propertyName}</div>
@@ -997,7 +997,7 @@ export function registerPropertyRoutes(app: Express): void {
           <div class="header">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
               <!-- Company logo -->
-              <img src="${getBridgeLogo()}" alt="Bridge Industrial" style="height: 30px; width: auto;" />
+              <img src="${getBridgeLogo()}" alt="Kurv Industrial" style="height: 30px; width: auto;" />
             </div>
             <div class="document-title">Building Specifications</div>
             <div class="property-name">${property.propertyName}</div>
@@ -1105,7 +1105,7 @@ export function registerPropertyRoutes(app: Express): void {
           <div class="header">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
               <!-- Company logo -->
-              <img src="${getBridgeLogo()}" alt="Bridge Industrial" style="height: 30px; width: auto;" />
+              <img src="${getBridgeLogo()}" alt="Kurv Industrial" style="height: 30px; width: auto;" />
             </div>
             <div class="document-title">Existing Improvements Report</div>
             <div class="property-name">${property.propertyName}</div>
@@ -1219,7 +1219,7 @@ export function registerPropertyRoutes(app: Express): void {
           <div class="header">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
               <!-- Company logo -->
-              <img src="${getBridgeLogo()}" alt="Bridge Industrial" style="height: 30px; width: auto;" />
+              <img src="${getBridgeLogo()}" alt="Kurv Industrial" style="height: 30px; width: auto;" />
             </div>
             <div class="document-title">Electrical Capacity Management Report</div>
             <div class="property-name">${property.propertyName}</div>

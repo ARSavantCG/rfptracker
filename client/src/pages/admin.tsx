@@ -1185,7 +1185,7 @@ export default function Admin() {
                   <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">Report Notes:</h4>
                   <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
                     <li>• All reports use real-time data from your database</li>
-                    <li>• Reports include Bridge Industrial branding and logos</li>
+                    <li>• Reports include Kurv Industrial branding and logos</li>
                     <li>• Property Summary includes legal compliance totals</li>
                     <li>• Reports can be viewed in browser or exported as HTML/PDF</li>
                   </ul>

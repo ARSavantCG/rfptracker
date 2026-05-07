@@ -3,6 +3,7 @@ import { promisify } from "util";
 import { readFileSync } from "fs";
 import { storage } from "./storage";
 import { evaluateFormula } from "@shared/formula-utils";
+import { COMPANY_RFP_INTRO } from "@shared/constants";
 import { format } from "date-fns";
 
 // Get Bridge Industrial logo as base64
@@ -38,7 +39,7 @@ async function getTemplateContent(recipientType: string): Promise<any> {
     const result = {
       header: templateMap.header || 'REQUEST FOR PROPOSAL',
       subtitle: templateMap.subtitle || 'ARCHITECT SERVICES',
-      introduction: templateMap.introduction || 'Bridge Industrial is seeking qualified professionals to provide services for the following project. Please review the project details and requirements below.',
+      introduction: templateMap.introduction || COMPANY_RFP_INTRO,
       scopeOfWork: templateMap.scope_of_work || 'Please provide pricing and timeline for the following scope of work items.',
       submissionRequirements: templateMap.submission_requirements || 'Please include the following in your proposal submission.',
       evaluationCriteria: templateMap.evaluation_criteria || 'Proposals will be evaluated based on the following criteria.'
@@ -52,7 +53,7 @@ async function getTemplateContent(recipientType: string): Promise<any> {
     return {
       header: 'REQUEST FOR PROPOSAL',
       subtitle: recipientType.includes('architect') ? 'ARCHITECT SERVICES' : 'CONTRACTOR SERVICES',
-      introduction: 'Bridge Industrial is seeking qualified professionals to provide services for the following project. Please review the project details and requirements below.',
+      introduction: COMPANY_RFP_INTRO,
       scopeOfWork: 'Please provide pricing and timeline for the following scope of work items.',
       submissionRequirements: 'Please include the following in your proposal submission.',
       evaluationCriteria: 'Proposals will be evaluated based on the following criteria.'
@@ -476,7 +477,7 @@ function generateFinancialSummaryHtml(options: PdfGenerationOptions, dates: any)
     <body>
       <div class="header">
         <div class="logo-container">
-          <img src="${getBridgeLogo()}" alt="Bridge Industrial" style="height: 25px; width: auto;" />
+          <img src="${getBridgeLogo()}" alt="Kurv Industrial" style="height: 25px; width: auto;" />
         </div>
         <div class="company-info">
           <div><strong>Financial Summary Report</strong></div>
@@ -1313,7 +1314,7 @@ async function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dat
     <body>
       <div class="header">
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
-          <img src="${getBridgeLogo()}" alt="Bridge Industrial" style="height: 25px; width: auto;" />
+          <img src="${getBridgeLogo()}" alt="Kurv Industrial" style="height: 25px; width: auto;" />
           <div style="background: rgb(0,50,130); color: white; padding: 5px 10px; font-weight: bold; font-size: 12px; border-radius: 3px;">
             REQUEST FOR PROPOSAL
           </div>
@@ -1588,7 +1589,7 @@ async function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, da
     <body>
       <div class="header">
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
-          <img src="${getBridgeLogo()}" alt="Bridge Industrial" style="height: 25px; width: auto;" />
+          <img src="${getBridgeLogo()}" alt="Kurv Industrial" style="height: 25px; width: auto;" />
           <div style="background: rgb(0,50,130); color: white; padding: 5px 10px; font-weight: bold; font-size: 12px; border-radius: 3px;">
             REQUEST FOR PROPOSAL
           </div>

@@ -380,3 +380,74 @@ When adding per-half override logic to one field in `resolveSelectedBays`, audit
 ### Future hardening (not blocking)
 
 - Add unit tests for `resolveSelectedBays` covering: full bays, south halves, north halves, mixed selections, and missing per-half data fallback to full-bay values. This function is now the single source of truth for split-bay correctness, so it deserves explicit coverage. Estimate: 30 min.
+
+---
+
+## Rebrand: Bridge Industrial → Kurv Industrial (May 7 2026)
+
+### Scope
+Mechanical rebrand of all user-visible UI copy, PDF/HTML output, and the logo asset. No property names, variable names, function names, file names, route paths, table names, column names, or dev comments were changed.
+
+### Logo
+- Downloaded Kurv logo from `https://kurvindustrial.com/wp-content/uploads/2026/01/Kurv-Logo-2x-Color.png` (601×113 PNG, 4562 bytes)
+- Encoded as base64 and overwrote `./bridge_logo_new_base64.txt` in place
+- All 7 `getBridgeLogo()` implementations across server files automatically pick up the new logo with zero code changes
+- File was NOT renamed (future cleanup item — see below)
+
+### User-visible strings changed (39 individual occurrences across 17 files)
+| File | Change |
+|---|---|
+| `client/src/pages/admin.tsx` | "Bridge Industrial" → "Kurv Industrial" (report notes bullet) |
+| `client/src/pages/PropertySummaryReport.tsx` | "Bridge Industrial" → "Kurv Industrial" (branding bullet) |
+| `client/src/pages/property-data-audit.tsx` | alt text on logo img |
+| `client/src/components/rfp-document-editor.tsx` | intro text → `COMPANY_RFP_INTRO` constant |
+| `client/src/components/rfp-document-editor-fixed.tsx` | intro text → `COMPANY_RFP_INTRO` constant |
+| `client/src/components/rom-scope-items-modal.tsx` | PDF title + PDF footer |
+| `client/src/components/evaluation-budget.tsx` | alt text on logo img in generated PDF HTML |
+| `server/routes.ts` | alt text (2×) + contact-name regex updated to match both Bridge and Kurv |
+| `server/pdf-generator.ts` | intro text (2×, default + fallback) → `COMPANY_RFP_INTRO`; alt text (3×) |
+| `server/property-routes.ts` | alt text (6×, replace_all) |
+| `server/pdf-reports.ts` | alt text |
+| `server/rom-routes.ts` | alt text |
+| `server/historical-pricing-reports.ts` | alt text |
+| `server/vendor-workload-report.ts` | alt text |
+| `server/property-summary-report.ts` | PDF footer — "© 2025 Bridge Industrial" → "© 2026 Kurv Industrial" |
+| `server/email-service.ts` | email footer |
+| `shared/constants.ts` | **NEW FILE** — `COMPANY_NAME` and `COMPANY_RFP_INTRO` exports |
+
+### Shared constant extraction
+- Created `shared/constants.ts` with `COMPANY_RFP_INTRO` and `COMPANY_NAME`
+- 4 sites (2 client, 2 server) now import and use `COMPANY_RFP_INTRO` instead of inline strings
+- Future copy edits to the intro text require changing only one file
+
+### Stale-year audit
+- Only ONE user-visible stale year found: `server/property-summary-report.ts:942` — updated from 2025 → 2026
+- Other `© 2025` occurrences are Savant Consulting file-header comments (dev-facing) — left untouched per guardrails
+- `ROM-2025-001` default value in `server/rom-routes.ts` is a data format, not a copyright year — left untouched
+
+### Templates.json — NOT updated (paused per instruction)
+- `data/templates.json` has 6 entries with `"source": "Bridge Industrial"`
+- DB query confirmed 6 rows in `rom_scope_items` table already have `source = 'Bridge Industrial'`
+- Since live DB rows reference this string, updating templates.json alone would create an inconsistency between existing rows and new template-seeded rows
+- **Recommendation for a future session**: run a DB UPDATE on `rom_scope_items` to set `source = 'Kurv Industrial'` WHERE `source = 'Bridge Industrial'`, THEN update templates.json — do both atomically
+
+### Property names preserved (confirmed)
+Property names in DB and hardcoded lookup tables are untouched:
+- "Bridge Point Gratigny", "Bridge 595", "Bridge Point Doral - Building X", "Bridge Point Miami Station - Bldg. X", "Bridge Point Port Everglades" — all remain exactly as-is
+
+### Contact-name regex (functional fix, not rebrand)
+`server/routes.ts:3933` — regex updated from:
+```js
+contactName.replace(/\s*-\s*Bridge\s*Industrial/i, '').trim()
+```
+to:
+```js
+contactName.replace(/\s*-\s*(Bridge|Kurv)\s*Industrial/i, '').trim()
+```
+Handles both legacy "- Bridge Industrial" suffixes in existing contact records AND any future "- Kurv Industrial" suffixes.
+
+### Future cleanup (deferred, non-blocking)
+1. Rename `bridge_logo_new_base64.txt` → `kurv_logo_base64.txt` — requires updating 7+ `readFileSync` call sites and the `/api/bridge-logo` endpoint
+2. Rename `getBridgeLogo()` → `getCompanyLogo()` — requires updating all 7 server files that define it
+3. Rename `/api/bridge-logo` → `/api/company-logo` — requires updating all client-side `src="/api/bridge-logo"` references (3 files)
+4. Update `rom_scope_items` DB rows + `data/templates.json` `source` field together in one atomic operation

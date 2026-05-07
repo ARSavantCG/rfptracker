@@ -390,7 +390,7 @@ function generateRfpSummaryHtml(rfp: RfpRequest): string {
       ` : ''}
 
       <div class="footer">
-        <p>RFP Tracker System - Bridge Industrial</p>
+        <p>RFP Tracker System - Kurv Industrial</p>
       </div>
     </body>
     </html>

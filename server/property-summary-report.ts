@@ -939,7 +939,7 @@ function generatePropertySummaryHTML(data: PropertySummaryData): string {
   html += `
     <div class="footer">
         <p>Property Portfolio Summary Report | Generated: ${data.generatedAt}</p>
-        <p>© 2025 Bridge Industrial | All Rights Reserved</p>
+        <p>© 2026 Kurv Industrial | All Rights Reserved</p>
     </div>
 </body>
 </html>

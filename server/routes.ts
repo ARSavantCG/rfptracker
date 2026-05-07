@@ -3793,7 +3793,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           <div class="header">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
               <!-- Company logo -->
-              <img src="${getBridgeLogo()}" alt="Bridge Industrial" style="height: 30px; width: auto;" />
+              <img src="${getBridgeLogo()}" alt="Kurv Industrial" style="height: 30px; width: auto;" />
             </div>
             <div class="document-title">Executive Summary Report</div>
             <div class="subtitle">RFP Status Overview - Generated on ${new Date().toLocaleDateString()}</div>
@@ -3927,7 +3927,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 if (rfp.developmentContact) {
                   let contactName = rfp.developmentContact;
                   // Remove "Bridge Industrial" or similar company references
-                  contactName = contactName.replace(/\s*-\s*Bridge\s*Industrial/i, '').trim();
+                  contactName = contactName.replace(/\s*-\s*(Bridge|Kurv)\s*Industrial/i, '').trim();
                   
                   // Try to shorten to "First L." format if possible
                   const nameParts = contactName.split(' ');
@@ -4087,7 +4087,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           <div class="header">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
               <!-- Company logo -->
-              <img src="${getBridgeLogo()}" alt="Bridge Industrial" style="height: 30px; width: auto;" />
+              <img src="${getBridgeLogo()}" alt="Kurv Industrial" style="height: 30px; width: auto;" />
             </div>
             <div class="document-title">${title}</div>
             <div class="subtitle">Generated on ${new Date().toLocaleDateString()} • ${rfpData.length} records</div>

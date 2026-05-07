@@ -3386,7 +3386,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
     <div class="header">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
             <div style="flex: 1;">
-                <img src="/api/bridge-logo" alt="Bridge Industrial" style="height: 30px; max-width: 200px;" />
+                <img src="/api/bridge-logo" alt="Kurv Industrial" style="height: 30px; max-width: 200px;" />
             </div>
             <div style="flex: 1; text-align: right; font-size: 10px; color: #666;">
                 <p style="margin: 0;">Generated: ${currentDate}</p>

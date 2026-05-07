@@ -84,7 +84,7 @@ export function PropertySummaryReport() {
               <div className="space-y-2">
                 <h3 className="font-semibold text-gray-900 dark:text-white">Report Details:</h3>
                 <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                  <li>• Professional Bridge Industrial branding</li>
+                  <li>• Professional Kurv Industrial branding</li>
                   <li>• Organized by property with clear sections</li>
                   <li>• Formatted tables for easy reading</li>
                   <li>• Print-friendly layout</li>

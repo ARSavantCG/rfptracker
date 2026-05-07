@@ -454,7 +454,7 @@ export function generateVendorWorkloadHtml(data: WorkloadReportData): string {
       <div class="header">
         <div class="logo-container">
           <div style="flex: 1;">
-            ${logoBase64 ? `<img src="data:image/png;base64,${logoBase64}" alt="Bridge Industrial" style="height: 30px; max-width: 200px;" />` : ''}
+            ${logoBase64 ? `<img src="data:image/png;base64,${logoBase64}" alt="Kurv Industrial" style="height: 30px; max-width: 200px;" />` : ''}
           </div>
           <div style="flex: 1; text-align: right; font-size: 10px; color: #666;">
             <p style="margin: 0;">Generated: ${data.generatedAt}</p>

@@ -483,3 +483,31 @@ The logo has been broken in all PDF, HTML, and email output for an unknown exten
 
 ### Lesson logged
 Visual outputs (PDFs, HTML reports, emails) require actual visual verification in QA — not just "file exists" or "valid base64" checks. Future hardening: add a smoke-test script that generates one of each output type and asserts that the logo image node has nonzero rendered dimensions.
+
+---
+
+## Logo Fix 3: /api/bridge-logo endpoint ReferenceError (May 7 2026)
+
+### Context
+After Fix 1 (line-wrap) and Fix 2 (about:blank auth investigation), the `/api/bridge-logo` endpoint was still returning 404 "Logo not found" for all callers — including the authenticated browser rendering `property-data-audit.tsx`.
+
+### Root cause
+`server/routes.ts` line 4970 called `readFileSync(...)` bare. Unlike the other 6 `getBridgeLogo()` implementations (each in their own file with their own `import { readFileSync } from "fs"`), `routes.ts` already imports `fs` as a default import (`import fs from "fs"` at line 11) and has no named `readFileSync` import. The call threw `ReferenceError: readFileSync is not defined` on every request, was caught silently, and returned the 404 catch-block response "Logo not found". This bug predates the rebrand.
+
+### Investigation finding: no auth gate exists
+Contrary to the initial hypothesis (Option 2 — remove auth gate), the `/api/bridge-logo` endpoint had **no auth requirement** — neither blanket middleware nor explicit `requireAuth`. The endpoint was always public. The 14-byte "Logo not found" response was the catch block, not an auth rejection.
+
+### Fix
+Changed `readFileSync(` → `fs.readFileSync(` at `server/routes.ts:4973`. One character change.
+
+### Verified
+`curl http://localhost:5000/api/bridge-logo` → PNG image data, 601×113, 4562 bytes ✓ (no auth required, unauthenticated request succeeds)
+
+### Spot-check: all client-side `/api/bridge-logo` usages
+| File | Context | Now works? |
+|---|---|---|
+| `client/src/pages/property-data-audit.tsx:234` | Authenticated page, inline `<img src="/api/bridge-logo">` | ✓ |
+| `client/src/components/evaluation-budget.tsx:3389` | Client-side HTML written to `about:blank` via `document.write` | ✓ (endpoint is public, no session needed) |
+
+### Lesson logged
+Two distinct bugs produced identical symptoms. The full chain was: (1) base64 line-wrapping → malformed data URI in server-side PDFs; (2) `readFileSync` not defined → endpoint throws → 404 in all HTTP logo requests. Both were masked by the same alt-text-as-body-copy effect. Future similar-symptom debugging must enumerate ALL code paths before declaring root cause.

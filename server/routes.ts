@@ -323,12 +323,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const baseBay = liveBayConfigs.find((bay: any) => bay.id === baseId);
         if (baseBay) {
           const snapshotBay = snapshotBays?.find((b: any) => b.id === selectedId);
+          const isSouth = suffix === '_south';
           return {
             ...baseBay,
             id: selectedId,
             bayName: snapshotBay?.bayName ?? `${baseBay.bayName} (${suffix.slice(1)})`,
+            // Square footage: use stored half-SF from snapshot (already correctly halved)
             rentableSquareFootage: snapshotBay?.rentableSquareFootage ?? baseBay.rentableSquareFootage,
             squareFootage: snapshotBay?.squareFootage ?? baseBay.squareFootage,
+            // Door counts: use per-half fields, fall back to full-bay values
+            standardDockDoors: isSouth
+              ? (baseBay.splitSouthDockDoors ?? baseBay.standardDockDoors)
+              : (baseBay.splitNorthDockDoors ?? baseBay.standardDockDoors),
+            oversizedDockDoors: isSouth
+              ? (baseBay.splitSouthOversizedDoors ?? baseBay.oversizedDockDoors)
+              : (baseBay.splitNorthOversizedDoors ?? baseBay.oversizedDockDoors),
+            // Boolean amenities: each half independently has/doesn't have these features
+            hasStorefrontEntry: isSouth
+              ? (baseBay.splitSouthStorefront ?? baseBay.hasStorefrontEntry)
+              : (baseBay.splitNorthStorefront ?? baseBay.hasStorefrontEntry),
+            hasSpeculativeOffice: isSouth
+              ? (baseBay.splitSouthOffice ?? baseBay.hasSpeculativeOffice)
+              : (baseBay.splitNorthOffice ?? baseBay.hasSpeculativeOffice),
+            hasRestroom: isSouth
+              ? (baseBay.splitSouthRestroom ?? baseBay.hasRestroom)
+              : (baseBay.splitNorthRestroom ?? baseBay.hasRestroom),
           };
         }
       }

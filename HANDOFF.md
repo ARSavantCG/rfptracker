@@ -330,3 +330,43 @@ All 4 filter call sites replaced with `resolveSelectedBays()`:
 
 ### Files Changed
 - `server/routes.ts` — `resolveSelectedBays` helper added + 6 filter call sites replaced
+
+---
+
+## Session: May 7, 2026 — resolveSelectedBays split-field audit + dock door fix
+
+### Problem
+After the `resolveSelectedBays` fix (April 29), dock door defaults in the Tenant Premises Overview were doubled for split-bay RFPs. Investigation confirmed:
+
+- **Before** `resolveSelectedBays`: `selectedBayConfigurations = []` → `calculateDoorCounts()` Step 1 returned 0 → Step 3 (the split-aware fallback) fired correctly using `splitSouthDockDoors`/`splitSouthOversizedDoors` → **correct** {37, 1}.
+- **After** `resolveSelectedBays`: bays were populated via `...baseBay` spread → Step 1 read `standardDockDoors` (full-bay count = 74) and `oversizedDockDoors` (= 2) → Step 3 never fired → **wrong** {74, 2}.
+- Parking was **fixed** by `resolveSelectedBays` (tenant SF now correctly ~198k → 25% proportion → 124 vehicular, 42 trailer).
+
+### Full split-field audit (BayConfiguration schema)
+
+All `splitNorth*`/`splitSouth*` field pairs vs their full-bay equivalents:
+
+| Full-bay field | Split-half fields | Previously handled | Fixed this session |
+|---|---|---|---|
+| `rentableSquareFootage` | *(derived from squareFootage)* | ✓ (snapshot override) | — |
+| `squareFootage` | `splitNorthSquareFootage` / `splitSouthSquareFootage` | ✓ (snapshot override) | — |
+| `standardDockDoors` | `splitNorthDockDoors` / `splitSouthDockDoors` | ✗ | ✓ |
+| `oversizedDockDoors` | `splitNorthOversizedDoors` / `splitSouthOversizedDoors` | ✗ | ✓ |
+| `hasStorefrontEntry` | `splitNorthStorefront` / `splitSouthStorefront` | ✗ | ✓ |
+| `hasSpeculativeOffice` | `splitNorthOffice` / `splitSouthOffice` | ✗ | ✓ |
+| `hasRestroom` | `splitNorthRestroom` / `splitSouthRestroom` | ✗ | ✓ |
+
+All overrides use `??` (nullish coalescing) so a stored value of `false` or `0` is correctly preserved and not overridden by the full-bay fallback.
+
+### Verified values for RFP-2026-014 after fix
+- Regular Doors: **37** ✓ (was 74)
+- Oversized Doors: **1** ✓ (was 2)
+- Vehicular Parking: **124** ✓ (unchanged — proportion-based, not affected)
+- Trailer Parking: **42** ✓ (unchanged)
+- Rentable Area: **198,583 SF** ✓ (unchanged)
+
+### Lesson documented
+When adding per-half override logic to one field in `resolveSelectedBays`, audit ALL `splitNorth*`/`splitSouth*` field pairs at the same time. The SF fields were correctly handled in April; the door and boolean amenity fields were missed and silently produced wrong values until this session. Step 3 of `calculateDoorCounts()` is left in place as harmless redundancy — it provides a correct fallback if `resolveSelectedBays` ever returns zero-value door counts (e.g. for older properties without split-field data populated).
+
+### Files Changed
+- `server/routes.ts` — `resolveSelectedBays` now overrides `standardDockDoors`, `oversizedDockDoors`, `hasStorefrontEntry`, `hasSpeculativeOffice`, `hasRestroom` for split-bay IDs

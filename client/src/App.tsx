@@ -19,6 +19,7 @@ import Properties from "@/pages/properties";
 import RomPilot from "@/pages/rom-pilot";
 import Reports from "@/pages/reports";
 import Admin from "@/pages/admin";
+import AuditLogAdmin from "@/pages/audit-log-admin";
 import Login from "@/pages/login";
 import ResetPassword from "@/pages/reset-password";
 import NotFound from "@/pages/not-found";
@@ -92,6 +93,7 @@ function Router() {
             <Route path="/historical-import" component={HistoricalImport} />
             <Route path="/proposals-library" component={ProposalsLibrary} />
             <Route path="/admin" component={Admin} />
+            <Route path="/admin/audit-log" component={AuditLogAdmin} />
             <Route
               path="/admin/property-summary-report"
               component={PropertySummaryReport}

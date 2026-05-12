@@ -6,7 +6,7 @@
  * distribution, or use of this software is strictly prohibited.
  */
 
-import { pgTable, text, serial, integer, timestamp, json, jsonb, boolean, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, timestamp, json, jsonb, boolean, varchar, uuid } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { parseLocalDate } from "./date-utils";
@@ -1296,19 +1296,23 @@ export type InsertProjectActual = z.infer<typeof insertProjectActualSchema>;
 export type ProjectActualLineItem = typeof projectActualLineItems.$inferSelect;
 export type InsertProjectActualLineItem = z.infer<typeof insertProjectActualLineItemSchema>;
 
-// Audit log for tracking changes to sensitive records (admin-only visibility)
+// Audit log — append-only event record for security and compliance review.
+// Known event types (open-ended; add new values without schema changes):
+//   'login_success'  — user authenticated successfully
+//   'login_failure'  — authentication attempt rejected
+// Future: 'rfp_updated', 'property_deleted', 'existing_improvement_created', etc.
 export const auditLog = pgTable("audit_log", {
-  id: serial("id").primaryKey(),
-  userId: varchar("user_id"),
-  username: varchar("username"),
-  action: varchar("action").notNull(), // 'create' | 'update' | 'delete'
-  entityType: varchar("entity_type").notNull(), // e.g. 'existing_improvement'
-  entityId: varchar("entity_id"),
-  entityName: varchar("entity_name"),
-  propertyId: integer("property_id"),
-  propertyName: varchar("property_name"),
-  changes: json("changes"),
-  createdAt: timestamp("created_at").defaultNow(),
+  id: uuid("id").primaryKey().defaultRandom(),
+  eventType: text("event_type").notNull(),
+  userId: text("user_id"),
+  userEmail: text("user_email"),
+  entityType: text("entity_type"),
+  entityId: text("entity_id"),
+  metadata: jsonb("metadata"),
+  beforeData: jsonb("before_data"),
+  afterData: jsonb("after_data"),
+  changedFields: text("changed_fields").array(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 export type AuditLogEntry = typeof auditLog.$inferSelect;

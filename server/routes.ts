@@ -14,7 +14,7 @@ import { storage } from "./storage";
 import { db } from "./db";
 import { users, contacts, insertRfpRequestSchema, updateRfpRequestSchema, insertContactSchema, updateContactSchema, insertInvitationSchema, updateInvitationSchema, insertInvitationToBidSchema, updateInvitationToBidSchema, insertPdfTemplateSchema, auditLog } from "@shared/schema";
 import { convertFormDateToDbDate } from "@shared/date-utils";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and, gte, lte, ilike, sql as drizzleSql } from "drizzle-orm";
 import { tokenStore } from "./token-auth";
 import { nanoid } from "nanoid";
 import { generateRfpPdf } from "./pdf-generator";
@@ -5241,18 +5241,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Audit log — admin only
+  // Audit log viewer — admin only
+  // GET /api/admin/audit-log/event-types — distinct event types for filter dropdown
+  app.get("/api/admin/audit-log/event-types", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const rows = await db
+        .selectDistinct({ eventType: auditLog.eventType })
+        .from(auditLog)
+        .orderBy(auditLog.eventType);
+      res.json(rows.map(r => r.eventType));
+    } catch (error) {
+      console.error('Error fetching audit log event types:', error);
+      res.status(500).json({ message: "Failed to fetch event types" });
+    }
+  });
+
+  // GET /api/admin/audit-log — paginated with optional filters
   app.get("/api/admin/audit-log", requireAuth, requireAdmin, async (req, res) => {
     try {
-      const limit = Math.min(parseInt(req.query.limit as string) || 200, 500);
-      const entityType = req.query.entityType as string | undefined;
+      const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const limit = 50;
+      const offset = (page - 1) * limit;
+
+      const eventTypes = req.query.eventTypes
+        ? String(req.query.eventTypes).split(',').filter(Boolean)
+        : null;
+      const userEmailSearch = req.query.userEmail ? String(req.query.userEmail) : null;
+      const dateFrom = req.query.dateFrom ? new Date(String(req.query.dateFrom)) : null;
+      const dateTo = req.query.dateTo ? new Date(String(req.query.dateTo) + 'T23:59:59Z') : null;
+
+      const conditions = [];
+      if (eventTypes && eventTypes.length > 0) {
+        conditions.push(drizzleSql`${auditLog.eventType} = ANY(${eventTypes})`);
+      }
+      if (userEmailSearch) {
+        conditions.push(ilike(auditLog.userEmail, `%${userEmailSearch}%`));
+      }
+      if (dateFrom) {
+        conditions.push(gte(auditLog.createdAt, dateFrom));
+      }
+      if (dateTo) {
+        conditions.push(lte(auditLog.createdAt, dateTo));
+      }
+
+      const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+      const [totalRow] = await db
+        .select({ count: drizzleSql<number>`count(*)::int` })
+        .from(auditLog)
+        .where(whereClause);
+
       const rows = await db
         .select()
         .from(auditLog)
+        .where(whereClause)
         .orderBy(desc(auditLog.createdAt))
-        .limit(limit);
-      const filtered = entityType ? rows.filter(r => r.entityType === entityType) : rows;
-      res.json(filtered);
+        .limit(limit)
+        .offset(offset);
+
+      res.json({
+        entries: rows,
+        total: totalRow?.count ?? 0,
+        page,
+        totalPages: Math.max(1, Math.ceil((totalRow?.count ?? 0) / limit)),
+      });
     } catch (error) {
       console.error('Error fetching audit log:', error);
       res.status(500).json({ message: "Failed to fetch audit log" });

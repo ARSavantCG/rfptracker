@@ -11,6 +11,7 @@ import { contacts, users } from '@shared/schema';
 import { eq, sql } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 import { requireAuth, upload } from './middleware';
+import { logEvent } from './audit-log';
 
 export function registerAuthRoutes(app: Express): void {
   // Authentication routes - supports both admin users and contact emails
@@ -23,28 +24,88 @@ export function registerAuthRoutes(app: Express): void {
       }
 
       // First try admin user login
-      const user = await AuthService.authenticateUser({ username, password });
-      if (user) {
-        const token = await tokenStore.generateToken(user.id);
-        console.log("Admin login successful - Token created for user:", user.username);
-        
-        return res.json({ 
-          user, 
+      const authResult = await AuthService.authenticateUser({ username, password });
+      if (authResult.user) {
+        const token = await tokenStore.generateToken(authResult.user.id);
+        logEvent({
+          eventType: 'login_success',
+          userId: authResult.user.id,
+          userEmail: authResult.user.email ?? null,
+          entityType: 'user',
+          entityId: authResult.user.id,
+          metadata: { authMethod: 'admin' },
+        });
+        return res.json({
+          user: authResult.user,
           token,
-          message: "Login successful" 
+          message: "Login successful"
         });
       }
 
-      // Try contact email login
-      // Try contact email login (case-insensitive)
+      // If an admin user was found but the password was wrong, reject immediately.
+      // Previously this fell through to the contact path — a bug where a wrong
+      // admin password silently ran contact-lookup logic and produced confusing results.
+      if (authResult.reason === 'bad_password') {
+        logEvent({
+          eventType: 'login_failure',
+          userId: null,
+          userEmail: username,
+          entityType: 'user',
+          entityId: null,
+          metadata: { reason: 'bad_password', authMethod: 'admin' },
+        });
+        return res.status(401).json({ message: "Invalid username or password" });
+      }
+
+      // No admin user matched this username — fall through to contact login
       const [contact] = await db.select().from(contacts).where(eq(sql`LOWER(${contacts.email})`, username.toLowerCase()));
-      
-      if (!contact || !contact.hasSystemAccess || !contact.passwordHash) {
+
+      if (!contact) {
+        logEvent({
+          eventType: 'login_failure',
+          userId: null,
+          userEmail: username,
+          entityType: 'user',
+          entityId: null,
+          metadata: { reason: 'no_user', authMethod: 'contact' },
+        });
+        return res.status(401).json({ message: "Invalid username or password" });
+      }
+
+      if (!contact.hasSystemAccess) {
+        logEvent({
+          eventType: 'login_failure',
+          userId: null,
+          userEmail: contact.email,
+          entityType: 'user',
+          entityId: null,
+          metadata: { reason: 'no_access', authMethod: 'contact' },
+        });
+        return res.status(401).json({ message: "Invalid username or password" });
+      }
+
+      if (!contact.passwordHash) {
+        logEvent({
+          eventType: 'login_failure',
+          userId: null,
+          userEmail: contact.email,
+          entityType: 'user',
+          entityId: null,
+          metadata: { reason: 'no_password_set', authMethod: 'contact' },
+        });
         return res.status(401).json({ message: "Invalid username or password" });
       }
 
       const isValidPassword = await bcrypt.compare(password, contact.passwordHash);
       if (!isValidPassword) {
+        logEvent({
+          eventType: 'login_failure',
+          userId: null,
+          userEmail: contact.email,
+          entityType: 'user',
+          entityId: null,
+          metadata: { reason: 'bad_password', authMethod: 'contact' },
+        });
         return res.status(401).json({ message: "Invalid username or password" });
       }
 
@@ -62,14 +123,21 @@ export function registerAuthRoutes(app: Express): void {
         permissions: contact.permissions,
         role: 'contact'
       };
-      
-      const token = await tokenStore.generateToken(`contact_${contact.id}`);
-      console.log("Contact login successful - Token created for:", contact.email);
 
-      res.json({ 
+      const token = await tokenStore.generateToken(`contact_${contact.id}`);
+      logEvent({
+        eventType: 'login_success',
+        userId: `contact_${contact.id}`,
+        userEmail: contact.email,
+        entityType: 'user',
+        entityId: `contact_${contact.id}`,
+        metadata: { authMethod: 'contact' },
+      });
+
+      res.json({
         user: userObj,
         token,
-        message: "Login successful" 
+        message: "Login successful"
       });
     } catch (error) {
       console.error("Login error:", error);

@@ -30,7 +30,10 @@ export interface CreateUserData {
 export class AuthService {
   private static readonly SALT_ROUNDS = 12;
 
-  static async authenticateUser(credentials: LoginCredentials) {
+  static async authenticateUser(credentials: LoginCredentials): Promise<
+    { user: Omit<typeof import('@shared/schema').users.$inferSelect, 'passwordHash'>; reason: null } |
+    { user: null; reason: 'no_user' | 'bad_password' | 'error' }
+  > {
     try {
       const { username, password } = credentials;
       
@@ -42,21 +45,21 @@ export class AuthService {
         .limit(1);
 
       if (!user) {
-        return null;
+        return { user: null, reason: 'no_user' };
       }
 
       // Verify password
       const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
       if (!isPasswordValid) {
-        return null;
+        return { user: null, reason: 'bad_password' };
       }
 
       // Return user without password hash
       const { passwordHash, ...userWithoutPassword } = user;
-      return userWithoutPassword;
+      return { user: userWithoutPassword, reason: null };
     } catch (error) {
       console.error('Authentication error:', error);
-      return null;
+      return { user: null, reason: 'error' };
     }
   }
 

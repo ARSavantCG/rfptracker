@@ -29,8 +29,36 @@ import {
   insertElectricalReservationSchema,
   updateElectricalReservationSchema,
   properties,
-  rfpRequests
+  rfpRequests,
+  auditLog
 } from '@shared/schema';
+
+async function logAudit(params: {
+  req: any;
+  action: 'create' | 'update' | 'delete';
+  entityType: string;
+  entityId: string | number;
+  entityName: string;
+  propertyId?: number;
+  propertyName?: string;
+  changes?: any;
+}) {
+  try {
+    await db.insert(auditLog).values({
+      userId: params.req.userId || null,
+      username: params.req.user?.username || params.req.session?.user?.username || null,
+      action: params.action,
+      entityType: params.entityType,
+      entityId: String(params.entityId),
+      entityName: params.entityName,
+      propertyId: params.propertyId ?? null,
+      propertyName: params.propertyName ?? null,
+      changes: params.changes ?? null,
+    });
+  } catch (err) {
+    console.error('Audit log write error:', err);
+  }
+}
 
 function getBridgeLogo(): string {
   try {
@@ -625,6 +653,27 @@ export function registerPropertyRoutes(app: Express): void {
       delete improvementData.costStage;
 
       const improvement = await storage.createPropertyExistingImprovement(improvementData);
+
+      const prop = await storage.getProperty(propertyId).catch(() => null);
+      logAudit({
+        req,
+        action: 'create',
+        entityType: 'existing_improvement',
+        entityId: improvement.id,
+        entityName: improvement.description || '(no description)',
+        propertyId,
+        propertyName: prop?.name ?? undefined,
+        changes: {
+          description: improvement.description,
+          category: improvement.category,
+          bucket: improvement.bucket,
+          forecastCost: (improvement.forecastCost || 0) / 100,
+          committedCost: (improvement.committedCost || 0) / 100,
+          actualsCost: (improvement.actualsCost || 0) / 100,
+          totalCost: (improvement.totalCost || 0) / 100,
+        },
+      });
+
       res.status(201).json(improvement);
     } catch (error) {
       console.error('Error creating property existing improvement:', error);
@@ -679,10 +728,36 @@ export function registerPropertyRoutes(app: Express): void {
         updates.addedAmount = updates.addedAmount ? Math.round(updates.addedAmount * 100) : undefined;
       }
 
+      const beforeUpdate = await storage.getPropertyExistingImprovement(id).catch(() => null);
       const improvement = await storage.updatePropertyExistingImprovement(id, updates);
       if (!improvement) {
         return res.status(404).json({ message: "Existing improvement not found" });
       }
+
+      const prop = await storage.getProperty(parseInt(req.params.propertyId)).catch(() => null);
+      const changedFields: Record<string, { from: any; to: any }> = {};
+      const displayFields = ['description', 'category', 'bucket', 'forecastCost', 'committedCost', 'actualsCost', 'totalCost'];
+      for (const field of displayFields) {
+        const oldVal = beforeUpdate ? (beforeUpdate as any)[field] : undefined;
+        const newVal = (improvement as any)[field];
+        if (oldVal !== newVal) {
+          const isMoney = ['forecastCost', 'committedCost', 'actualsCost', 'totalCost'].includes(field);
+          changedFields[field] = {
+            from: isMoney && oldVal != null ? oldVal / 100 : oldVal,
+            to: isMoney && newVal != null ? newVal / 100 : newVal,
+          };
+        }
+      }
+      logAudit({
+        req,
+        action: 'update',
+        entityType: 'existing_improvement',
+        entityId: id,
+        entityName: improvement.description || '(no description)',
+        propertyId: parseInt(req.params.propertyId),
+        propertyName: prop?.name ?? undefined,
+        changes: Object.keys(changedFields).length > 0 ? changedFields : { note: 'no tracked fields changed' },
+      });
 
       res.json(improvement);
     } catch (error) {
@@ -700,10 +775,29 @@ export function registerPropertyRoutes(app: Express): void {
         return res.status(400).json({ message: "Invalid improvement ID" });
       }
 
+      const toDelete = await storage.getPropertyExistingImprovement(id).catch(() => null);
       const deleted = await storage.deletePropertyExistingImprovement(id);
       if (!deleted) {
         return res.status(404).json({ message: "Existing improvement not found" });
       }
+
+      const propId = parseInt(req.params.propertyId);
+      const prop = await storage.getProperty(propId).catch(() => null);
+      logAudit({
+        req,
+        action: 'delete',
+        entityType: 'existing_improvement',
+        entityId: id,
+        entityName: toDelete?.description || '(no description)',
+        propertyId: propId,
+        propertyName: prop?.name ?? undefined,
+        changes: toDelete ? {
+          description: toDelete.description,
+          category: toDelete.category,
+          bucket: toDelete.bucket,
+          totalCost: (toDelete.totalCost || 0) / 100,
+        } : null,
+      });
 
       res.status(204).send();
     } catch (error) {

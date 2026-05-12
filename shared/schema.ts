@@ -1296,3 +1296,20 @@ export type InsertProjectActual = z.infer<typeof insertProjectActualSchema>;
 export type ProjectActualLineItem = typeof projectActualLineItems.$inferSelect;
 export type InsertProjectActualLineItem = z.infer<typeof insertProjectActualLineItemSchema>;
 
+// Audit log for tracking changes to sensitive records (admin-only visibility)
+export const auditLog = pgTable("audit_log", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id"),
+  username: varchar("username"),
+  action: varchar("action").notNull(), // 'create' | 'update' | 'delete'
+  entityType: varchar("entity_type").notNull(), // e.g. 'existing_improvement'
+  entityId: varchar("entity_id"),
+  entityName: varchar("entity_name"),
+  propertyId: integer("property_id"),
+  propertyName: varchar("property_name"),
+  changes: json("changes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type AuditLogEntry = typeof auditLog.$inferSelect;
+

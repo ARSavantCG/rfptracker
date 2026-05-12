@@ -12,9 +12,9 @@ import fs from "fs";
 import path from "path";
 import { storage } from "./storage";
 import { db } from "./db";
-import { users, contacts, insertRfpRequestSchema, updateRfpRequestSchema, insertContactSchema, updateContactSchema, insertInvitationSchema, updateInvitationSchema, insertInvitationToBidSchema, updateInvitationToBidSchema, insertPdfTemplateSchema } from "@shared/schema";
+import { users, contacts, insertRfpRequestSchema, updateRfpRequestSchema, insertContactSchema, updateContactSchema, insertInvitationSchema, updateInvitationSchema, insertInvitationToBidSchema, updateInvitationToBidSchema, insertPdfTemplateSchema, auditLog } from "@shared/schema";
 import { convertFormDateToDbDate } from "@shared/date-utils";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { tokenStore } from "./token-auth";
 import { nanoid } from "nanoid";
 import { generateRfpPdf } from "./pdf-generator";
@@ -5273,6 +5273,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error validating electrical capacity:", error);
       res.status(500).json({ message: "Failed to validate electrical capacity" });
+    }
+  });
+
+  // Audit log — admin only
+  app.get("/api/admin/audit-log", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const limit = Math.min(parseInt(req.query.limit as string) || 200, 500);
+      const entityType = req.query.entityType as string | undefined;
+      const rows = await db
+        .select()
+        .from(auditLog)
+        .orderBy(desc(auditLog.createdAt))
+        .limit(limit);
+      const filtered = entityType ? rows.filter(r => r.entityType === entityType) : rows;
+      res.json(filtered);
+    } catch (error) {
+      console.error('Error fetching audit log:', error);
+      res.status(500).json({ message: "Failed to fetch audit log" });
     }
   });
 

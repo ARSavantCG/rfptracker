@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Shield, Users, Settings, Edit, Trash2, CheckCircle, XCircle, User as UserIcon, KeyRound, FileText, HardDrive, Layout, Clock, Scale, ChevronDown, Hash, BarChart, ExternalLink, Mail, ClipboardCheck, Tags, Database, Wrench, CloudUpload, AlertCircle } from "lucide-react";
+import { Shield, Users, Settings, Edit, Trash2, CheckCircle, XCircle, User as UserIcon, KeyRound, FileText, HardDrive, Layout, Clock, Scale, ChevronDown, Hash, BarChart, ExternalLink, Mail, ClipboardCheck, Tags, Database, Wrench, CloudUpload, AlertCircle, Activity, PlusCircle, RefreshCw, Pencil, Trash } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
@@ -1089,6 +1089,11 @@ export default function Admin() {
               <span className="hidden sm:inline">System Maintenance</span>
               <span className="sm:hidden">Maintenance</span>
             </TabsTrigger>
+            <TabsTrigger value="activity-log" className="flex items-center gap-2 flex-shrink-0">
+              <Activity className="h-4 w-4" />
+              <span className="hidden sm:inline">Activity Log</span>
+              <span className="sm:hidden">Activity</span>
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="users" className="mt-6">
@@ -1386,9 +1391,164 @@ export default function Admin() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          <TabsContent value="activity-log" className="mt-6">
+            <ActivityLogPanel />
+          </TabsContent>
         </Tabs>
       </div>
     </div>
+  );
+}
+
+function ActivityLogPanel() {
+  const [filter, setFilter] = useState<'all' | 'create' | 'update' | 'delete'>('all');
+  const [search, setSearch] = useState('');
+
+  const { data: entries = [], isLoading, refetch } = useQuery<any[]>({
+    queryKey: ['/api/admin/audit-log'],
+  });
+
+  const filtered = entries.filter(e => {
+    if (filter !== 'all' && e.action !== filter) return false;
+    if (search) {
+      const s = search.toLowerCase();
+      return (
+        (e.entityName || '').toLowerCase().includes(s) ||
+        (e.username || '').toLowerCase().includes(s) ||
+        (e.propertyName || '').toLowerCase().includes(s)
+      );
+    }
+    return true;
+  });
+
+  const actionBadge = (action: string) => {
+    if (action === 'create') return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800"><PlusCircle className="h-3 w-3" />Added</span>;
+    if (action === 'update') return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800"><Pencil className="h-3 w-3" />Edited</span>;
+    if (action === 'delete') return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800"><Trash className="h-3 w-3" />Deleted</span>;
+    return <span className="px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700">{action}</span>;
+  };
+
+  const formatChanges = (changes: any, action: string) => {
+    if (!changes) return null;
+    if (action === 'create') {
+      const cost = changes.totalCost != null ? `$${Number(changes.totalCost).toLocaleString()}` : null;
+      return <span className="text-gray-500 text-xs">{[changes.category, changes.bucket, cost].filter(Boolean).join(' · ')}</span>;
+    }
+    if (action === 'delete') {
+      const cost = changes.totalCost != null ? `$${Number(changes.totalCost).toLocaleString()}` : null;
+      return <span className="text-gray-500 text-xs">{[changes.category, cost].filter(Boolean).join(' · ')}</span>;
+    }
+    if (action === 'update' && typeof changes === 'object') {
+      const parts = Object.entries(changes)
+        .filter(([k]) => k !== 'note')
+        .map(([field, val]: [string, any]) => {
+          const isMoney = ['forecastCost', 'committedCost', 'actualsCost', 'totalCost'].includes(field);
+          const fmt = (v: any) => isMoney ? `$${Number(v).toLocaleString()}` : String(v);
+          return `${field}: ${fmt(val.from)} → ${fmt(val.to)}`;
+        });
+      return parts.length > 0
+        ? <span className="text-gray-500 text-xs">{parts.join(', ')}</span>
+        : <span className="text-gray-400 text-xs italic">minor update</span>;
+    }
+    return null;
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5 text-blue-600" />
+              Activity Log
+            </CardTitle>
+            <CardDescription>All changes to Existing Cost records — who did what and when.</CardDescription>
+          </div>
+          <button
+            onClick={() => refetch()}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm border rounded-md hover:bg-gray-50 text-gray-600"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            Refresh
+          </button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="flex flex-wrap gap-3 mb-4">
+          <Input
+            placeholder="Search by name, user, or property…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="w-64"
+          />
+          <div className="flex gap-1">
+            {(['all', 'create', 'update', 'delete'] as const).map(f => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`px-3 py-1.5 text-sm rounded-md border transition-colors ${
+                  filter === f ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                {f === 'all' ? 'All' : f === 'create' ? 'Added' : f === 'update' ? 'Edited' : 'Deleted'}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {isLoading ? (
+          <div className="text-center py-12 text-gray-400">Loading…</div>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-12 text-gray-400">
+            {entries.length === 0 ? 'No activity recorded yet. Changes to Existing Costs will appear here.' : 'No entries match your filter.'}
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-gray-50">
+                  <th className="text-left px-3 py-2 font-medium text-gray-600 whitespace-nowrap">Date & Time</th>
+                  <th className="text-left px-3 py-2 font-medium text-gray-600">User</th>
+                  <th className="text-left px-3 py-2 font-medium text-gray-600">Action</th>
+                  <th className="text-left px-3 py-2 font-medium text-gray-600">Description</th>
+                  <th className="text-left px-3 py-2 font-medium text-gray-600">Property</th>
+                  <th className="text-left px-3 py-2 font-medium text-gray-600">Details</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map(entry => (
+                  <tr key={entry.id} className="border-b hover:bg-gray-50">
+                    <td className="px-3 py-2 whitespace-nowrap text-gray-500 text-xs">
+                      {new Date(entry.createdAt).toLocaleString('en-US', {
+                        month: 'short', day: 'numeric', year: 'numeric',
+                        hour: 'numeric', minute: '2-digit', hour12: true
+                      })}
+                    </td>
+                    <td className="px-3 py-2 whitespace-nowrap">
+                      <span className="font-medium text-gray-800">{entry.username || <span className="text-gray-400 italic">unknown</span>}</span>
+                    </td>
+                    <td className="px-3 py-2 whitespace-nowrap">
+                      {actionBadge(entry.action)}
+                    </td>
+                    <td className="px-3 py-2 text-gray-800 max-w-xs truncate" title={entry.entityName}>
+                      {entry.entityName}
+                    </td>
+                    <td className="px-3 py-2 text-gray-600 whitespace-nowrap text-xs">
+                      {entry.propertyName || '—'}
+                    </td>
+                    <td className="px-3 py-2">
+                      {formatChanges(entry.changes, entry.action)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="text-xs text-gray-400 mt-3">Showing {filtered.length} of {entries.length} entries (most recent first)</p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

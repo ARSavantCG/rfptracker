@@ -98,6 +98,44 @@ Key advanced systems and features include:
   - **Admin Panel Link**: Historical Import accessible from Admin → Data Quality tab
   - GET `/api/project-actuals/benchmarks` intelligence endpoint aggregates $/SF by category and area type across all historical projects
 
+### Known Pre-Existing TypeScript Errors (Baseline as of 2026-05-12)
+
+`tsc --noEmit` reports ~290 error lines across 32 files. These are **all pre-existing** and unrelated to recent auth-hardening / console-hygiene work. Future task: go file-by-file and fix or explicitly suppress each with a comment. Keeping the baseline documented means new errors are noticeable.
+
+Files with errors (as of checkpoint 427862b5):
+- `client/src/App.tsx` — missing type declaration for `./demo-radix`
+- `client/src/components/bay-configuration-manager.tsx` — missing split-bay fields on form state type
+- `client/src/components/bay-configuration-selector.tsx` — implicit any / nullability
+- `client/src/components/bay-selection-grid.tsx` — implicit any
+- `client/src/components/bid-collection-table.tsx` — type mismatches
+- `client/src/components/bid-view-modal.tsx` — type mismatches
+- `client/src/components/column-range-selector.tsx` — implicit any on parameters
+- `client/src/components/cost-benchmarks.tsx` — Set iteration without downlevelIteration
+- `client/src/components/create-rom-pilot-modal.tsx` — undefined `setBayConfigs`, possibly-null access
+- `client/src/components/electrical-capacity-management.tsx` — missing `transformerLocation` on type
+- `client/src/components/enhanced-rfp-customizer.tsx` — wrong argument count
+- `client/src/components/evaluation-budget-history.tsx` — `history` typed as unknown
+- `client/src/components/evaluation-budget.tsx` — largest file (~43 TS2322 errors); string/number mismatches and missing properties on `{}`
+- `client/src/components/invitation-to-bid-modal.tsx` — Control generic mismatch
+- `client/src/components/invitation-workflow-modal.tsx` — type mismatches
+- `client/src/components/legal-compliance-panel.tsx` — type mismatches
+- `client/src/components/navigation.tsx` — type mismatches
+- `client/src/components/pdf-template-management.tsx` — type mismatches
+- `client/src/components/property-bay-grid.tsx` — type mismatches
+- `client/src/components/property-existing-improvements-modal.tsx` — type mismatches
+- `client/src/components/property-form-modal.tsx` — type mismatches
+- `client/src/components/quarterly-pricing-panel.tsx` — type mismatches
+- `client/src/components/rfp-document-editor-fixed.tsx` — type mismatches
+- `client/src/components/rfp-document-editor.tsx` — type mismatches
+- `client/src/components/rfp-table.tsx` — type mismatches
+- `client/src/components/templates-management.tsx` — type mismatches
+- `client/src/components/timezone-admin-panel.tsx` — `rfps` typed as unknown
+- `client/src/components/version-display.tsx` — type mismatches
+- `client/src/hooks/usePermissions.ts` — type mismatches
+- `client/src/pages/admin.tsx` — type mismatches
+- `client/src/pages/bay-calculator.tsx` — type mismatches
+- `client/src/pages/reports-broken.tsx` — 24 errors; `SelectItem` not found (likely a broken/unused page)
+
 ### External Dependencies
 - **Database**: PostgreSQL (Neon serverless)
 - **UI Library**: Radix UI

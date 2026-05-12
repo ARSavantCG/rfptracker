@@ -92,26 +92,19 @@ export function EvaluationAttachments({ rfpId }: EvaluationAttachmentsProps) {
   });
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    console.log('File input change event triggered');
     const files = event.target.files;
-    console.log('Files detected:', files ? files.length : 0);
     if (files && files.length > 0) {
       const fileArray = Array.from(files);
       setAttachedFiles(prev => [...prev, ...fileArray]);
-      console.log('Files selected:', fileArray.map(f => f.name));
     }
     // Reset the input value to allow selecting the same file again
     event.target.value = '';
   };
 
   const handleUploadAreaClick = () => {
-    console.log('Upload area clicked');
     const fileInput = document.getElementById('schedule-upload') as HTMLInputElement;
     if (fileInput) {
-      console.log('File input found, triggering click');
       fileInput.click();
-    } else {
-      console.log('File input not found');
     }
   };
 

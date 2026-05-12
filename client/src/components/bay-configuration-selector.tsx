@@ -52,14 +52,6 @@ export default function BayConfigurationSelector({
     ? rawBayConfigs 
     : Object.values(rawBayConfigs || {})) as BayConfiguration[];
   
-  // CRITICAL DEBUG: Ensure we're using the correct property data
-  console.log('🚨 PROPERTY DATA CHECK:');
-  console.log('🚨 Property ID:', property.id);
-  console.log('🚨 Property Name:', property.propertyName);
-  console.log('🚨 Bay Configurations Count:', bayConfigurations.length);
-  console.log('🚨 First Bay:', bayConfigurations[0]?.bayName);
-  console.log('🚨 Total Property SF:', bayConfigurations.reduce((sum, bay) => sum + (bay.rentableSquareFootage || bay.squareFootage || 0), 0));
-
   
   
   
@@ -272,60 +264,6 @@ export default function BayConfigurationSelector({
     const availableBaysRatio = totalAllBaysSF > 0 ? selectedBaySquareFootage / totalAllBaysSF : 0;
     const proportionalMechanicalRoom = totalMechanicalRoomSF * availableBaysRatio;
     
-    
-    // Debug: Show calculation when all bays selected
-    if (selectedBayConfigs.length === bayConfigurations.length) {
-      console.log('🔍 ALL BAYS SELECTED - CALCULATION CHECK:');
-      console.log('- Total bays:', selectedBayConfigs.length);
-      console.log('- Bay SF total:', selectedBaySquareFootage);
-      console.log('- Mechanical SF:', property.mechanicalRoomSquareFootage);
-      console.log('- Expected grand total: 409,189 SF');
-      console.log('- ACTUAL grand total:', selectedBaySquareFootage + (property.mechanicalRoomSquareFootage || 0));
-      console.log('- DISCREPANCY:', (selectedBaySquareFootage + (property.mechanicalRoomSquareFootage || 0)) - 409189, 'SF');
-      
-      // Show each bay's contribution and look for the problem
-      console.log('🏗️ INDIVIDUAL BAYS FROM FRONTEND:');
-      selectedBayConfigs.forEach(bay => {
-        console.log(`  ${bay.bayName}: ${bay.rentableSquareFootage || bay.squareFootage} SF`);
-      });
-      
-      // Show the exact calculation that's happening
-      console.log('🔢 DETAILED CALCULATION BREAKDOWN:');
-      console.log('- Number of selected bays:', selectedBayConfigs.length);
-      console.log('- Number of total available bays:', bayConfigurations.length);
-      
-      // Calculate manually step by step to find the issue
-      let debugSum = 0;
-      selectedBayConfigs.forEach((bay, index) => {
-        console.log(`  Bay ${index + 1}: ${bay.bayName} = ${bay.rentableSquareFootage || bay.squareFootage} SF`);
-        debugSum += (bay.rentableSquareFootage || bay.squareFootage);
-      });
-      
-      console.log(`🔢 Debug sum total: ${debugSum} SF`);
-      console.log(`🔢 Reduce function result: ${selectedBaySquareFootage} SF`);
-      console.log(`🔢 Are they equal? ${debugSum === selectedBaySquareFootage}`);
-      
-      // Check if there are any duplicate bay IDs in selection
-      const uniqueBayIds = Array.from(new Set(selectedBayIds));
-      console.log(`🔍 Selected bay IDs count: ${selectedBayIds.length}`);
-      console.log(`🔍 Unique bay IDs count: ${uniqueBayIds.length}`);
-      if (selectedBayIds.length !== uniqueBayIds.length) {
-        console.log(`❌ DUPLICATE BAY IDS FOUND! This could cause double counting.`);
-        console.log(`🔍 Selected bay IDs:`, selectedBayIds);
-        console.log(`🔍 Unique bay IDs:`, uniqueBayIds);
-      }
-      
-      // Check if any bay configurations are being counted twice
-      console.log(`🔍 Checking for duplicate bay configurations...`);
-      const bayIdCounts = new Map();
-      selectedBayConfigs.forEach(bay => {
-        const count = bayIdCounts.get(bay.id) || 0;
-        bayIdCounts.set(bay.id, count + 1);
-        if (count > 0) {
-          console.log(`❌ DUPLICATE BAY FOUND: ${bay.bayName} (ID: ${bay.id}) appears ${count + 1} times`);
-        }
-      });
-    }
     
     // Calculate total property bay square footage for proportion calculation
     const totalPropertyBaysSF = bayConfigurations.reduce((sum, bay) => sum + (bay.squareFootage || 0), 0);
@@ -945,7 +883,6 @@ export default function BayConfigurationSelector({
                             onClick={() => {
                               setSavedVehicularParking(null);
                               setSavedTrailerParking(null);
-                              console.log('Reset parking overrides to calculated values');
                             }}
                             className="text-gray-600 border-gray-300 hover:bg-gray-50"
                           >
@@ -967,11 +904,6 @@ export default function BayConfigurationSelector({
                             
                             setSavedVehicularParking(vehicularValue);
                             setSavedTrailerParking(trailerValue);
-                            
-                            console.log('Saved parking overrides:', {
-                              vehicular: vehicularValue,
-                              trailer: trailerValue
-                            });
                             
                             // Exit override mode
                             setIsParkingOverrideMode(false);

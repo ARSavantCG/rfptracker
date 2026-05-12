@@ -85,15 +85,12 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
 
   // Ref-based navigation system
   const navigateScope = (currentIndex: number, currentField: 'description' | 'quantity' | 'unit', direction: 'forward' | 'backward' = 'forward') => {
-    console.log('🎯 REF NAV:', currentField, 'row', currentIndex, direction);
-    
     if (direction === 'forward') {
       if (currentField === 'description') {
         const quantityRef = scopeRefs.current[`quantity-${currentIndex}`];
         if (quantityRef) {
           quantityRef.focus();
           quantityRef.select();
-          console.log('🎯 REF FOCUSED QUANTITY');
           return;
         }
       } else if (currentField === 'quantity') {
@@ -101,7 +98,6 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
         if (unitRef) {
           unitRef.focus();
           unitRef.select();
-          console.log('🎯 REF FOCUSED UNIT');
           return;
         }
       } else if (currentField === 'unit') {
@@ -109,7 +105,6 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
         if (nextDescRef) {
           nextDescRef.focus();
           nextDescRef.select();
-          console.log('🎯 REF FOCUSED NEXT DESC');
           return;
         } else {
           // Add new row
@@ -121,7 +116,6 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
               if (newDescRef) {
                 newDescRef.focus();
                 newDescRef.select();
-                console.log('🎯 REF FOCUSED NEW DESC');
               }
             }, 100);
           }
@@ -134,14 +128,12 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
         if (quantityRef) {
           quantityRef.focus();
           quantityRef.select();
-          console.log('🎯 REF BACK TO QUANTITY');
         }
       } else if (currentField === 'quantity') {
         const descRef = scopeRefs.current[`description-${currentIndex}`];
         if (descRef) {
           descRef.focus();
           descRef.select();
-          console.log('🎯 REF BACK TO DESC');
         }
       }
     }
@@ -658,7 +650,6 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
       for (let i = 0; i < documentsToOpen.length; i++) {
         const doc = documentsToOpen[i];
         try {
-          console.log(`Opening ${doc.title} document...`);
           const token = localStorage.getItem('auth-token');
           const response = await fetch(`/api/rfp-requests/${rfp.id}/generate-pdf`, {
             method: 'POST',
@@ -680,7 +671,6 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
             if (newWindow) {
               newWindow.document.write(htmlContent);
               newWindow.document.close();
-              console.log(`Successfully opened ${doc.title} in new window`);
             } else {
               console.error(`Failed to open window for ${doc.title} - popup may be blocked`);
               toast({
@@ -695,7 +685,6 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
           
           // Add a small delay between documents to avoid overwhelming the browser
           if (i < documentsToOpen.length - 1) {
-            console.log("Waiting 500ms before opening next document...");
             await new Promise(resolve => setTimeout(resolve, 500));
           }
         } catch (error) {
@@ -789,7 +778,6 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
       for (let i = 0; i < documentsToOpen.length; i++) {
         const doc = documentsToOpen[i];
         try {
-          console.log(`Opening ${doc.title} document...`);
           const token = localStorage.getItem('auth-token');
           const response = await fetch(`/api/rfp-requests/${rfp.id}/generate-pdf`, {
             method: 'POST',
@@ -811,7 +799,6 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
             if (newWindow) {
               newWindow.document.write(htmlContent);
               newWindow.document.close();
-              console.log(`Successfully opened ${doc.title} in new window`);
             } else {
               console.error(`Failed to open window for ${doc.title} - popup may be blocked`);
             }
@@ -1336,7 +1323,6 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
                           }
                           
                           const savedArea = await response.json();
-                          console.log('Area saved successfully:', savedArea);
                           
                           // Mark inputs as readonly and change appearance to show saved state
                           const inputs = newRow.querySelectorAll('input');

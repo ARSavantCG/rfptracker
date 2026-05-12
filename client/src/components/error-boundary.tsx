@@ -36,8 +36,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
             </p>
             <button
               onClick={() => {
-                console.log('🚨 ErrorBoundary reload disabled - click ignored to prevent navigation');
-                // window.location.reload() // DISABLED for debugging
+                // window.location.reload() // DISABLED to prevent navigation issues
               }}
               className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
             >

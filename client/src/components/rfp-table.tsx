@@ -274,18 +274,14 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      console.log(`Frontend: Attempting to delete RFP ${id}`);
       try {
-        const result = await apiRequest(`/api/rfp-requests/${id}`, "DELETE");
-        console.log(`Frontend: Delete result:`, result);
-        return result;
+        return await apiRequest(`/api/rfp-requests/${id}`, "DELETE");
       } catch (error) {
         console.error(`Frontend: Delete error:`, error);
         throw error;
       }
     },
-    onSuccess: (data) => {
-      console.log(`Frontend: Delete successful:`, data);
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
       toast({
@@ -315,27 +311,18 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
   };
 
   const handleDelete = async (rfp: RfpRequest) => {
-    console.log(`=== DIRECT DELETE TEST START ===`);
-    console.log(`Attempting to delete RFP ${rfp.id} - ${rfp.projectName}`);
-    
     if (!rfp?.id) {
-      console.log(`No RFP ID provided`);
       alert("RFP ID is missing");
       return;
     }
     
     if (!confirm(`Are you sure you want to delete RFP ${rfp.rfpNumber || rfp.id}?`)) {
-      console.log(`Delete cancelled by user`);
       return;
     }
     
     try {
-      console.log(`Making direct fetch request to DELETE /api/rfp-requests/${rfp.id}`);
-      
-      // Get auth token from localStorage
       const token = localStorage.getItem('auth-token');
       if (!token) {
-        console.error('No auth token found');
         alert('Authentication required. Please log in again.');
         return;
       }
@@ -348,18 +335,13 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
         }
       });
       
-      console.log(`Response status: ${response.status}`);
-      console.log(`Response ok: ${response.ok}`);
-      
       const responseData = await response.json();
-      console.log(`Response data:`, responseData);
       
       if (response.ok) {
-        console.log(`=== DIRECT DELETE SUCCESS ===`);
         alert("RFP deleted successfully!");
-        window.location.reload(); // Simple page reload to see changes
+        window.location.reload();
       } else {
-        console.error(`=== DIRECT DELETE FAILED ===`);
+        console.error(`Delete failed:`, responseData);
         if (response.status === 401) {
           alert('Authentication required. Please log in again.');
           window.location.href = '/';

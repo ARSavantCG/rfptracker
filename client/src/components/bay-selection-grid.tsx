@@ -270,9 +270,6 @@ export function BaySelectionGrid({
 
   // Toggle bay selection for single building mode
   const toggleBaySelection = (bayId: string) => {
-    console.log('🔧 GRID toggleBaySelection called:', { bayId, currentSelectedCount: selectedBayIds.size });
-    console.warn('BAY CLICKED:', bayId); // Use warn for better visibility in console
-    
     const newSelectedBayIds = new Set(selectedBayIds);
     
     if (newSelectedBayIds.has(bayId)) {
@@ -282,7 +279,6 @@ export function BaySelectionGrid({
     }
     
     setSelectedBayIds(newSelectedBayIds);
-    console.log('🔧 GRID new selection:', { newCount: newSelectedBayIds.size, ids: Array.from(newSelectedBayIds).join(', ') });
     
     // Generate individual bays (with split support) to match against selection
     const individualBays = generateIndividualBays(property?.bayConfigurations || []);
@@ -307,19 +303,11 @@ export function BaySelectionGrid({
     const totalSquareFootage = selectedBayConfigs.reduce((total, bay) => 
       total + (bay.rentableSquareFootage || bay.squareFootage), 0);
     
-    console.log('🔧 GRID calling onSelectionChange:', { 
-      selectedBayConfigsCount: selectedBayConfigs.length, 
-      bayNames: selectedBayConfigs.map(b => b.bayName).join(', '),
-      totalSquareFootage,
-      hasCallback: !!onSelectionChange
-    });
     onSelectionChange?.(selectedBayConfigs, totalSquareFootage);
   };
 
   // Toggle bay selection for multi-building mode
   const toggleMultiBuildingBaySelection = (buildingKey: string, bayId: string, bay: BayConfiguration) => {
-    console.log('🔧 Bay click detected:', { buildingKey, bayId, bay: bay.bayName });
-    
     // Ensure the building exists in selectedBuildingIds
     if (!selectedBuildingIds[buildingKey]) {
       setSelectedBuildingIds(prev => ({
@@ -538,17 +526,6 @@ export function BaySelectionGrid({
 
   // Check if we have any data to display
   const hasData = multiBuildingMode ? properties.length > 0 : (property && bays.length > 0);
-  
-  // Debug logging for multi-building mode
-  if (multiBuildingMode) {
-    console.log('🚨 BAY SELECTION GRID DEBUG:', {
-      multiBuildingMode,
-      propertiesLength: properties.length,
-      propertiesArray: properties,
-      hasData,
-      isMultiBuilding
-    });
-  }
   
   if (!hasData) {
     return (
@@ -853,14 +830,6 @@ export function BaySelectionGrid({
                 {(() => {
                   // Generate individual bays with split support
                   const individualBays = generateIndividualBays(property?.bayConfigurations || []);
-                  console.log('🔧 GRID RENDER - Single building mode:', {
-                    propertyId: property?.id,
-                    propertyName: property?.propertyName,
-                    bayConfigurationsCount: property?.bayConfigurations?.length || 0,
-                    individualBaysCount: individualBays.length,
-                    selectedBayIdsCount: selectedBayIds.size,
-                    leasedBayIdsCount: leasedBayIds.length
-                  });
                   
                   // Group bays by bay number to stack split bays vertically
                   const bayGroups = new Map<number, typeof individualBays>();

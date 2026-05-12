@@ -240,27 +240,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
 
   // Handle property selection and set the selected property for bay configuration selector
   const handlePropertyChange = (propertyId: string) => {
-    console.log('Property changed:', propertyId);
     const property = properties.find(p => p.id.toString() === propertyId);
-    console.log('Found property:', property);
-    
-    // Debug: Log bay configuration square footages
-    if (property && property.bayConfigurations) {
-      console.log('CREATE RFP MODAL - Property bay configurations:', property.bayConfigurations);
-      console.log('CREATE RFP MODAL - Bay configurations count:', property.bayConfigurations.length);
-      
-      // Check for missing squareFootage values
-      const missingSquareFootage = property.bayConfigurations.filter(bay => !bay.squareFootage);
-      if (missingSquareFootage.length > 0) {
-        console.log('CREATE RFP MODAL - Bays missing squareFootage:', missingSquareFootage);
-      }
-      
-      const totalBaySF = property.bayConfigurations.reduce((sum, bay) => sum + (bay.squareFootage || 0), 0);
-      console.log('CREATE RFP MODAL - Frontend received bay total:', totalBaySF, 'SF');
-      console.log('CREATE RFP MODAL - Mechanical room SF:', property.mechanicalRoomSquareFootage);
-      console.log('CREATE RFP MODAL - Expected total:', totalBaySF + (property.mechanicalRoomSquareFootage || 0));
-    }
-    
     setSelectedProperty(property || null);
     setCalculatedFloorArea(0);
     setSelectedBayConfigurations([]);
@@ -277,25 +257,15 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
     selectedBaysPerBuilding?: {[propertyName: string]: BayConfiguration[]}, 
     costsPerBuilding?: {[propertyName: string]: BuildingCosts}
   ) => {
-    console.log('🔧 handleFloorAreaChange called with:', {
-      area,
-      bayConfigsLength: bayConfigs.length,
-      selectedBaysPerBuilding,
-      costsPerBuilding,
-      multiBuildingMode
-    });
-    
     // Use the area calculated by the Bay Configuration Selector (already includes proportional mechanical allocation)
     setCalculatedFloorArea(area);
     setSelectedBayConfigurations(bayConfigs);
     
     // Handle multi-building data if provided
     if (selectedBaysPerBuilding) {
-      console.log('🔧 Setting selectedBaysPerBuilding:', selectedBaysPerBuilding);
       setSelectedBaysPerBuilding(selectedBaysPerBuilding);
     }
     if (costsPerBuilding) {
-      console.log('🔧 Setting costsPerBuilding:', costsPerBuilding);
       setCostsPerBuilding(costsPerBuilding);
     }
     

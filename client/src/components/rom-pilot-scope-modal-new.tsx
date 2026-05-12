@@ -110,15 +110,6 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
             scopeItem: scopeItem,
           };
           
-          console.log('📥 Loading line item:', { 
-            id: item.id, 
-            quantity: item.quantity, 
-            quantityString: String(item.quantity), 
-            name: scopeItem?.name,
-            unitPrice: item.unitPrice,
-            scopeItemUnitPrice: scopeItem?.unitPrice
-          });
-          
           if (lineItem.category === 'tenant-improvements') {
             tenantItems.push(lineItem);
           } else if (lineItem.category === 'design-soft-costs') {
@@ -146,8 +137,6 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
             category: scopeItem.category.includes('Design') || scopeItem.category.includes('Soft Costs') ? 'design-soft-costs' : 'tenant-improvements',
             scopeItem: scopeItem,
           };
-          
-          console.log('🔧 Creating default item:', { name: scopeItem.name, unitPrice: scopeItem.unitPrice, category: lineItem.category });
           
           if (lineItem.category === 'tenant-improvements') {
             defaultTenantItems.push(lineItem);
@@ -201,13 +190,11 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
     field: keyof LineItem,
     value: string | number
   ) => {
-    console.log('🔄 updateLineItem called:', { category, index, field, value });
     const items = category === 'tenant-improvements' ? tenantImprovements : designSoftCosts;
     const setItems = category === 'tenant-improvements' ? setTenantImprovements : setDesignSoftCosts;
     
     const updatedItems = [...items];
     updatedItems[index] = { ...updatedItems[index], [field]: value };
-    console.log('📝 Updated item after field change:', updatedItems[index]);
 
     // Auto-populate data when scope item changes
     if (field === 'scopeItemId' && typeof value === 'number' && value > 0) {
@@ -215,12 +202,6 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
       if (scopeItem) {
         updatedItems[index].unitPrice = scopeItem.unitPrice;
         updatedItems[index].scopeItem = scopeItem;
-        console.log('🔄 Updated scope item data:', { 
-          scopeItemName: scopeItem.name, 
-          unitPrice: scopeItem.unitPrice,
-          hasMinimumCost: scopeItem.hasMinimumCost,
-          minimumCost: scopeItem.minimumCost 
-        });
       }
     }
 
@@ -239,7 +220,6 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
         const minimumCost = parseFloat(scopeItem.minimumCost) || 0;
         if (baseTotal < minimumCost) {
           baseTotal = minimumCost;
-          console.log(`💰 Applied minimum cost: $${minimumCost} (calculated: $${quantity * unitPrice})`);
         }
       }
       
@@ -331,7 +311,6 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
   // Individual line item save mutation
   const saveIndividualLineItem = useMutation({
     mutationFn: async (lineItem: LineItem) => {
-      console.log("Saving individual ROM line item:", { romPilotId, lineItem });
       return await apiRequest("/api/rom-pilots/" + romPilotId + "/line-items/individual", "POST", { lineItem });
     },
     onSuccess: () => {
@@ -358,7 +337,6 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
   const saveLineItems = useMutation({
     mutationFn: async () => {
       const allItems = [...tenantImprovements, ...designSoftCosts];
-      console.log("Saving ROM line items:", { romPilotId, allItems });
       return await apiRequest(`/api/rom-pilots/${romPilotId}/line-items`, "POST", { lineItems: allItems });
     },
     onSuccess: () => {
@@ -473,7 +451,6 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
                                   value={item.scopeItemId ? item.scopeItemId.toString() : "0"}
                                   onChange={(e) => {
                                     const newScopeItemId = parseInt(e.target.value);
-                                    console.log('🔄 Scope item change:', { newScopeItemId, category, index });
                                     updateLineItem(category, index, 'scopeItemId', newScopeItemId);
                                   }}
                                   className="w-full h-7 px-2 py-1 text-xs bg-background border border-input rounded-md appearance-none pr-6 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
@@ -495,16 +472,12 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
                                 onChange={(e) => {
                                   // Remove commas when saving the value
                                   const cleanValue = e.target.value.replace(/,/g, '');
-                                  console.log('✏️ Simple quantity change:', { newQuantity: cleanValue, itemId: item.id });
-                                  
                                   // Update quantity immediately - this is the key fix
                                   updateLineItem(category, index, 'quantity', cleanValue);
                                 }}
                                 onBlur={(e) => {
                                   // Get the current value from the input field, remove commas
                                   const currentQuantity = e.target.value.replace(/,/g, '');
-                                  console.log('💾 Saving quantity on blur:', { stateQuantity: item.quantity, inputQuantity: currentQuantity, item });
-                                  
                                   // Only save if there's actually a value
                                   if (currentQuantity.trim() !== '') {
                                     // Update state first with the clean value
@@ -517,10 +490,7 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
                                       totalPrice: ((parseFloat(currentQuantity) || 0) * (parseFloat(item.unitPrice) || 0) * ((item.tenantShare || 100) / 100)).toString()
                                     };
                                     
-                                    console.log('🚀 About to save:', updatedItem);
                                     saveIndividualLineItem.mutate(updatedItem);
-                                  } else {
-                                    console.log('⚠️ Skipping save for empty quantity');
                                   }
                                 }}
                                 className="h-7 text-xs text-center w-20"

@@ -16,11 +16,11 @@ export function useAuth() {
         const token = localStorage.getItem('auth-token');
         
         if (!token) {
-          console.log('Auth check - no session or token present');
+          console.debug('Auth check - no session or token present');
           return null;
         }
 
-        console.log('Auth check - trying token authentication');
+        console.debug('Auth check - trying token authentication');
         response = await fetch('/api/auth/user', {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -31,7 +31,7 @@ export function useAuth() {
       }
 
       if (!response.ok) {
-        console.log('Auth request failed:', response.status, response.statusText);
+        console.debug('Auth request failed:', response.status, response.statusText);
         if (response.status === 401) {
           // Authentication failed, clean up
           localStorage.removeItem('auth-token');
@@ -41,7 +41,7 @@ export function useAuth() {
       }
 
       const userData = await response.json();
-      console.log('Auth successful for user:', userData.username);
+      console.debug('Auth successful for user:', userData.username);
       return userData;
     }
   });

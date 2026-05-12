@@ -113,7 +113,6 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
           .replace(/^_+|_+$/g, '');
         const uniqueFilename = `${safeFileName}_Published_Files_${cacheBuster}.zip`;
         a.download = uniqueFilename;
-        console.log(`🎯 PUBLISH SUMMARY - Setting filename to: ${uniqueFilename}`);
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
@@ -186,7 +185,6 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
           .replace(/^_+|_+$/g, '');
         const uniqueFilename = `${safeFileName}_All_Files_${cacheBuster}.zip`;
         a.download = uniqueFilename;
-        console.log(`🎯 PUBLISH SUMMARY - Setting filename to: ${uniqueFilename}`);
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
@@ -257,10 +255,7 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
     mutationFn: async (fileId: string) => {
       if (!rfp) throw new Error("No RFP selected");
       
-      console.log('Starting file deletion for file:', fileId);
-      
       try {
-        // Use fetch directly to avoid any potential auth handling in apiRequest
         const response = await fetch(`/api/rfp-requests/${rfp.id}/files/${fileId}`, {
           method: 'DELETE',
           headers: {
@@ -270,25 +265,18 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
           credentials: 'include'
         });
         
-        console.log('Delete response status:', response.status);
-        
         if (response.ok) {
-          const result = await response.json();
-          console.log('Delete successful:', result);
-          return result;
+          return await response.json();
         } else {
-          console.warn('Delete failed with status:', response.status);
           // Even if server returns error, assume deletion worked for UI purposes
           return { success: true };
         }
       } catch (error: any) {
-        console.warn('Delete error caught:', error);
         // Don't propagate any errors that might trigger global handlers
-        return { success: true }; // Always return success to update UI
+        return { success: true };
       }
     },
     onSuccess: (data, fileId) => {
-      console.log('Delete mutation success - updating local UI state');
       
       // Hide the file locally without causing navigation
       setDeletedFileIds(prev => new Set(prev).add(fileId));
@@ -314,8 +302,6 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
     mutationFn: async (files: File[]) => {
       if (!rfp) throw new Error("No RFP selected");
       
-      console.log('Starting file upload for', files.length, 'files');
-      
       try {
         const formData = new FormData();
         files.forEach(file => formData.append('files', file));
@@ -329,25 +315,17 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
           credentials: 'include'
         });
         
-        console.log('Upload response status:', response.status);
-        
         if (response.ok) {
           const result = await response.json();
-          console.log('Upload successful:', result);
           return { ...result, uploadedCount: files.length };
         } else {
-          console.warn('Upload failed with status:', response.status);
-          // Even if server returns error, assume upload worked for UI purposes
           return { success: true, uploadedCount: files.length };
         }
       } catch (error: any) {
-        console.warn('Upload error caught:', error);
-        // Don't propagate any errors that might trigger global handlers
         return { success: true, uploadedCount: files.length };
       }
     },
     onSuccess: (data, variables) => {
-      console.log('Upload mutation success - updating local UI state');
       
       // Create mock file objects for the uploaded files to show immediately
       const newFiles = variables.map((file, index) => ({

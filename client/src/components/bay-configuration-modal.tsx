@@ -71,11 +71,6 @@ export function BayConfigurationModal({
     
     // Only sync on open transition (not on every re-render while open)
     if (isOpen && !wasOpen) {
-      console.log('🔧 BayConfigurationModal: Syncing state on OPEN TRANSITION', {
-        initialSelectedBays: initialSelectedBays?.length,
-        initialSelectedBaysPerBuilding: Object.keys(initialSelectedBaysPerBuilding || {}).length,
-        initialOverrideArea
-      });
       setCurrentBays(initialSelectedBays || []);
       setCurrentOverride(initialOverrideArea);
       setCurrentSelectedBaysPerBuilding(initialSelectedBaysPerBuilding || {});
@@ -107,17 +102,6 @@ export function BayConfigurationModal({
   const allProperties = properties || [];
   const isPropertiesLoading = false; // No loading since we use parent data
 
-  // DEBUG: Log what properties are actually being received
-  if (isOpen && isMultiBuilding) {
-    console.log('🔧 BAY MODAL DEBUG:', {
-      isOpen,
-      isMultiBuilding,
-      propertiesReceived: properties?.length || 0,
-      allPropertiesLength: allProperties.length,
-      propertiesArray: properties?.map(p => `${p.propertyName} - Building ${p.building}`) || []
-    });
-  }
-
   // Use appropriate data based on mode
   const propertyWithBayConfigs = fullProperty || property;
   
@@ -127,20 +111,6 @@ export function BayConfigurationModal({
     (properties || []) : 
     (propertyWithBayConfigs ? [propertyWithBayConfigs] : []);
   const isLoading = isMultiBuilding ? isPropertiesLoading : isSinglePropertyLoading;
-
-  // Debug logging for bay configuration modal
-  if (isOpen && isMultiBuilding) {
-    console.log('🚨 BAY CONFIG MODAL DEBUG:', {
-      isOpen,
-      isMultiBuilding,
-      propertiesFromParent: properties?.length || 0,
-      propertiesFromParentArray: properties,
-      propertiesWithBayConfigsLength: propertiesWithBayConfigs.length,
-      propertiesWithBayConfigsArray: propertiesWithBayConfigs
-    });
-  }
-
-
 
   // Helper to generate building key
   const getBuildingKey = (property: Property) => {
@@ -159,12 +129,6 @@ export function BayConfigurationModal({
 
   // Handle area changes from the bay selection grid
   const handleAreaChange = useCallback((selectedBays: BayConfiguration[], totalSquareFootage: number, selectedBaysPerBuilding?: {[propertyName: string]: BayConfiguration[]}, costsPerBuilding?: {[propertyName: string]: BuildingCosts}) => {
-    console.log('🔧 MODAL handleAreaChange called:', {
-      selectedBaysCount: selectedBays.length,
-      selectedBayNames: selectedBays.map(b => b.bayName).join(', '),
-      totalSquareFootage,
-      isMultiBuilding
-    });
     setCurrentArea(totalSquareFootage);
     setCurrentBays(selectedBays);
     setCurrentSelectedBaysPerBuilding(selectedBaysPerBuilding || {});
@@ -192,26 +156,9 @@ export function BayConfigurationModal({
   const handleConfirm = () => {
     const { totalBays, totalArea } = getTotalSelections();
     
-    console.log('🔧 BayConfigurationModal handleConfirm called with:', {
-      currentArea,
-      totalArea,
-      currentBaysLength: currentBays.length,
-      currentBayNames: currentBays.map(b => b.bayName).join(', '),
-      totalBays,
-      currentSelectedBaysPerBuilding,
-      currentCostsPerBuilding,
-      isMultiBuilding
-    });
-    
     // Use aggregated totals for multi-building mode
     const finalArea = isMultiBuilding ? totalArea : currentArea;
     const finalBays = isMultiBuilding ? Object.values(currentSelectedBaysPerBuilding).flat() : currentBays;
-    
-    console.log('🔧 BayConfigurationModal CONFIRMING with finalBays:', {
-      finalBaysCount: finalBays.length,
-      finalBayNames: finalBays.map(b => b.bayName).join(', '),
-      finalArea
-    });
     
     onConfirm(finalArea, finalBays, currentOverride, currentSelectedBaysPerBuilding, currentCostsPerBuilding);
     onClose();

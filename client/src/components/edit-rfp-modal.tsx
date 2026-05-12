@@ -90,12 +90,6 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
     selectedBaysPerBuilding?: {[propertyName: string]: BayConfiguration[]},
     costsPerBuilding?: {[propertyName: string]: BuildingCosts}
   ) => {
-    console.log('🔧 EDIT MODAL handleFloorAreaChange called:', {
-      area,
-      bayConfigsCount: bayConfigs.length,
-      bayConfigsNames: bayConfigs.map(b => b.bayName).join(', ')
-    });
-    
     // Use the area calculated by the Bay Configuration Selector (already includes proportional mechanical allocation)
     setCalculatedFloorArea(area);
     setSelectedBayConfigurations(bayConfigs);
@@ -279,12 +273,6 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
             sum + (bay.rentableSquareFootage || bay.squareFootage || 0), 0
           );
           setCalculatedFloorArea(Math.round(totalRentableArea));
-          
-          console.log('🔧 EDIT MODAL: Loading stored bay configs', {
-            bayCount: rfp.selectedBayConfigurations.length,
-            bayNames: rfp.selectedBayConfigurations.map((b: any) => b.bayName).join(', '),
-            totalRentableArea
-          });
         }
       } else if (isMultiBuildingRfp && rfp.selectedBaysPerBuilding) {
         // Calculate total area for multi-building RFPs using rentableSquareFootage (already includes mechanical)
@@ -543,13 +531,6 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
       });
       
       // Add bay configurations (single or multi-building)
-      console.log('🔧 SAVE DEBUG - Bay configurations:', {
-        isMultiBuilding,
-        selectedBayConfigurationsCount: selectedBayConfigurations.length,
-        selectedBaysPerBuildingKeys: Object.keys(selectedBaysPerBuilding),
-        selectedBayConfigurations: selectedBayConfigurations.map(b => b.bayName)
-      });
-      
       if (isMultiBuilding) {
         formData.append('isMultiBuilding', 'true');
         formData.append('selectedBaysPerBuilding', JSON.stringify(selectedBaysPerBuilding));
@@ -1372,28 +1353,6 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
         // Don't filter or compute parkProperties - let the modal handle filtering
         // This prevents timing issues where properties haven't loaded yet
 
-        // Debug logging (one-time)
-        if (bayConfigModalOpen) {
-          console.log('🔧 MODAL OPENED - Bay Configuration Debug');
-          console.log('🏢 ALL PROPERTIES AVAILABLE:', {
-            totalPropertiesCount: properties.length,
-            allPropertyNames: properties.map(p => `${p.propertyName} - Building ${p.building}`)
-          });
-          console.log('🏢 PROPERTIES PASSED TO MODAL:', {
-            isMultiBuilding,
-            selectedPropertyValue: form.getValues('property'),
-            selectedPropertiesArray: selectedProperties,
-            anchorPropertyName: anchorProperty?.propertyName,
-            allPropertiesCount: properties.length,
-            allPropertyNames: properties.map((p: Property) => `${p.propertyName} - Building ${p.building || 'N/A'}`)
-          });
-          console.log('🔧 INITIAL BAYS:', {
-            singleBuildingBays: !isMultiBuilding ? selectedBayConfigurations.length : 'N/A',
-            multiBuildingBays: isMultiBuilding ? Object.keys(selectedBaysPerBuilding).length : 'N/A',
-            totalSelectedBays: !isMultiBuilding ? selectedBayConfigurations.length : Object.values(selectedBaysPerBuilding).flat().length
-          });
-        }
-        
         return (
           <BayConfigurationModal
             isOpen={bayConfigModalOpen}

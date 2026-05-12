@@ -29,15 +29,6 @@ export function HierarchicalPropertySelector({ value, onChange, className, isMul
     retryDelay: 1000,
   });
 
-  // Debug logging for property loading
-  useEffect(() => {
-    console.log('🔧 HierarchicalPropertySelector Debug:', {
-      isLoading,
-      propertiesCount: properties.length,
-      error: error?.message,
-      isOpen
-    });
-  }, [isLoading, properties.length, error, isOpen]);
 
   // Group properties by propertyName
   const propertyGroups: PropertyGroup[] = properties.reduce((groups, property) => {

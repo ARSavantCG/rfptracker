@@ -41,8 +41,6 @@ export default function Login({ onLoginSuccess }: LoginProps) {
       return response.json();
     },
     onSuccess: (data) => {
-      console.log("Login response:", data);
-      
       // Store token as backup but rely on session
       if (data.token) {
         localStorage.setItem('auth-token', data.token);

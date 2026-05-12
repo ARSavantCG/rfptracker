@@ -3,8 +3,6 @@
  */
 
 export function clearAuthAndReload() {
-  console.log('🚨 CRITICAL: clearAuthAndReload called - this will navigate away from current page!');
-  console.trace('Stack trace for clearAuthAndReload call:');
   localStorage.removeItem('auth-token');
   window.location.reload();
 }
@@ -44,18 +42,8 @@ export async function validateToken(): Promise<boolean> {
 }
 
 export function handleAuthError(error: Error, showReloadMessage = true) {
-  console.log('🔍 handleAuthError called with:', error.message);
-  
   if (error.message.includes('401') || error.message.includes('Authentication')) {
-    console.log('🚨 AUTH ERROR DETECTED - but DISABLED to prevent navigation issues!');
-    console.trace('Stack trace for handleAuthError call:');
-    
-    // TEMPORARILY DISABLED: Don't reload the page to fix file deletion navigation issue
-    // if (showReloadMessage) {
-    //   alert('Your session has expired. The page will reload to log you in again.');
-    // }
-    // clearAuthAndReload();
-    console.log('Auth error handler is disabled - not reloading page');
+    // Auth error handler disabled to prevent navigation issues during file operations
     return true;
   }
   return false;

@@ -73,7 +73,6 @@ export function FormulaInput({
       
       if (strValue.startsWith('=')) {
         const result = evaluateFormula(strValue);
-        console.log('🧮 Formula evaluation:', strValue, '=>', result);
         setFormulaResult(result);
         setShowFormula(false); // Show result by default
       } else {
@@ -107,7 +106,6 @@ export function FormulaInput({
     const rawValue = removeThousands(displayValue);
     
     const result = evaluateFormula(rawValue);
-    console.log('🔍 FormulaInput handleBlur evaluation:', rawValue, '=>', result);
     setFormulaResult(result);
     
     // If it's a valid formula, show the result

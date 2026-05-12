@@ -242,7 +242,6 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
           }
         });
       } else {
-        console.log('Auth token for bid collection:', localStorage.getItem('auth-token'));
         response = await fetch(url, {
           method: 'POST',
           body: formData,

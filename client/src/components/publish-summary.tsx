@@ -264,7 +264,8 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
         const response = await fetch(`/api/rfp-requests/${rfp.id}/files/${fileId}`, {
           method: 'DELETE',
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('auth-token')}`,
           },
           credentials: 'include'
         });
@@ -323,6 +324,7 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
         
         const response = await fetch('/api/rfp-requests/upload-files', {
           method: 'POST',
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('auth-token')}` },
           body: formData,
           credentials: 'include'
         });

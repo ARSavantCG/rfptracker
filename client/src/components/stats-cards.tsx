@@ -24,7 +24,10 @@ export function StatsCards({ onStatusFilter, onRfpClick }: StatsCardsProps) {
   const { data: rfpRequests = [] } = useQuery({
     queryKey: ["/api/rfp-requests"],
     queryFn: async () => {
-      const response = await fetch("/api/rfp-requests");
+      const response = await fetch("/api/rfp-requests", {
+        credentials: 'include',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('auth-token')}` }
+      });
       if (!response.ok) throw new Error("Failed to fetch RFP requests");
       return response.json();
     },

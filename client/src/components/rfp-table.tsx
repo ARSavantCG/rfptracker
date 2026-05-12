@@ -172,7 +172,10 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
       if (searchQuery) params.append("search", searchQuery);
       if (statusFilter) params.append("status", statusFilter);
       
-      const response = await fetch(`/api/rfp-requests?${params}`, { credentials: 'include' });
+      const response = await fetch(`/api/rfp-requests?${params}`, {
+        credentials: 'include',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('auth-token')}` }
+      });
       if (!response.ok) throw new Error("Failed to fetch RFP requests");
       return response.json();
     },
@@ -195,6 +198,7 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
           try {
             const response = await fetch(`/api/rfp-requests/${rfp.id}/file-count`, {
               credentials: 'include',
+              headers: { 'Authorization': `Bearer ${localStorage.getItem('auth-token')}` },
             });
             if (response.ok) {
               const data = await response.json();

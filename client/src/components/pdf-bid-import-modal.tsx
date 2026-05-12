@@ -88,7 +88,10 @@ export function PdfBidImportModal({ isOpen, onClose, bidCollectionId, rfpId, con
   const { data: contractorTemplates } = useQuery<PdfMappingTemplate[]>({
     queryKey: ['/api/pdf-mapping-templates/contractor', contractorId],
     queryFn: async () => {
-      const response = await fetch(`/api/pdf-mapping-templates/contractor/${contractorId}`);
+      const response = await fetch(`/api/pdf-mapping-templates/contractor/${contractorId}`, {
+        credentials: 'include',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('auth-token')}` }
+      });
       if (!response.ok) throw new Error('Failed to fetch templates');
       return response.json();
     },
@@ -107,6 +110,8 @@ export function PdfBidImportModal({ isOpen, onClose, bidCollectionId, rfpId, con
       
       const response = await fetch("/api/bid-import/parse-pdf", {
         method: "POST",
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('auth-token')}` },
+        credentials: 'include',
         body: formData,
       });
       
@@ -141,7 +146,11 @@ export function PdfBidImportModal({ isOpen, onClose, bidCollectionId, rfpId, con
             description: `Using saved template: "${matchedTemplate.templateName}"`,
           });
           
-          await fetch(`/api/pdf-mapping-templates/${matchedTemplate.id}/use`, { method: 'POST' });
+          await fetch(`/api/pdf-mapping-templates/${matchedTemplate.id}/use`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('auth-token')}` }
+          });
         } else if (table.suggestedMapping) {
           appliedMapping = table.suggestedMapping;
         } else {

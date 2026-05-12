@@ -59,7 +59,10 @@ export default function Dashboard() {
   const { data: allRfps = [] } = useQuery<RfpRequest[]>({
     queryKey: ["/api/rfp-requests", "all-including-archived"],
     queryFn: async () => {
-      const response = await fetch("/api/rfp-requests?include_archived=true");
+      const response = await fetch("/api/rfp-requests?include_archived=true", {
+        credentials: 'include',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('auth-token')}` }
+      });
       if (!response.ok) throw new Error("Failed to fetch RFP requests");
       return response.json();
     },

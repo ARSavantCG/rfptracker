@@ -98,7 +98,10 @@ export function CustomReportModal({ isOpen, onClose, filters }: CustomReportModa
         filters
       };
 
-      const response = await fetch(`/api/reports/custom?config=${encodeURIComponent(JSON.stringify(reportConfig))}`, { credentials: 'include' });
+      const response = await fetch(`/api/reports/custom?config=${encodeURIComponent(JSON.stringify(reportConfig))}`, {
+        credentials: 'include',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('auth-token')}` }
+      });
       
       if (!response.ok) {
         throw new Error('Failed to generate custom report');

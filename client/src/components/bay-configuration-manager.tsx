@@ -537,7 +537,9 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem('auth-token')}`,
         },
+        credentials: 'include',
         body: JSON.stringify({
           bayConfigurations,
           mechanicalRoomSquareFootage: mechRoomValue

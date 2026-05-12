@@ -18,7 +18,10 @@ export default function PropertyDataAudit() {
       await Promise.all(
         properties.map(async (p) => {
           try {
-            const res = await fetch(`/api/properties/${p.id}/existing-improvements`);
+            const res = await fetch(`/api/properties/${p.id}/existing-improvements`, {
+              credentials: 'include',
+              headers: { 'Authorization': `Bearer ${localStorage.getItem('auth-token')}` }
+            });
             if (res.ok) {
               improvementsMap[p.id] = await res.json();
             }
@@ -40,7 +43,10 @@ export default function PropertyDataAudit() {
       await Promise.all(
         properties.map(async (p) => {
           try {
-            const res = await fetch(`/api/properties/${p.id}/transformers`);
+            const res = await fetch(`/api/properties/${p.id}/transformers`, {
+              credentials: 'include',
+              headers: { 'Authorization': `Bearer ${localStorage.getItem('auth-token')}` }
+            });
             if (res.ok) {
               transformersMap[p.id] = await res.json();
             }
@@ -62,7 +68,10 @@ export default function PropertyDataAudit() {
       await Promise.all(
         properties.map(async (p) => {
           try {
-            const res = await fetch(`/api/properties/${p.id}/main-panels`);
+            const res = await fetch(`/api/properties/${p.id}/main-panels`, {
+              credentials: 'include',
+              headers: { 'Authorization': `Bearer ${localStorage.getItem('auth-token')}` }
+            });
             if (res.ok) {
               panelsMap[p.id] = await res.json();
             }
@@ -84,7 +93,10 @@ export default function PropertyDataAudit() {
       await Promise.all(
         properties.map(async (p) => {
           try {
-            const res = await fetch(`/api/properties/${p.id}/executed-leases`);
+            const res = await fetch(`/api/properties/${p.id}/executed-leases`, {
+              credentials: 'include',
+              headers: { 'Authorization': `Bearer ${localStorage.getItem('auth-token')}` }
+            });
             if (res.ok) {
               leasesMap[p.id] = await res.json();
             }

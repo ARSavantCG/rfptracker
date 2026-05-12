@@ -14,7 +14,10 @@ export function PropertySummaryReport() {
   const handleViewReport = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/reports/property-summary', { credentials: 'include' });
+      const response = await fetch('/api/reports/property-summary', {
+        credentials: 'include',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('auth-token')}` }
+      });
       if (!response.ok) throw new Error(`Failed to load report (${response.status})`);
       const blob = await response.blob();
       const blobUrl = window.URL.createObjectURL(blob);

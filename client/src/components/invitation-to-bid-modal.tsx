@@ -371,7 +371,10 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
     queryKey: ["/api/rfp-requests", rfp?.id, "invitation-to-bid"],
     queryFn: async () => {
       if (!rfp?.id) return null;
-      const response = await fetch(`/api/rfp-requests/${rfp.id}/invitation-to-bid`);
+      const response = await fetch(`/api/rfp-requests/${rfp.id}/invitation-to-bid`, {
+        credentials: 'include',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('auth-token')}` }
+      });
       if (!response.ok) return null;
       return response.json();
     },
@@ -1318,6 +1321,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
                             method: 'POST',
                             headers: {
                               'Content-Type': 'application/json',
+                              'Authorization': `Bearer ${localStorage.getItem('auth-token')}`,
                             },
                             credentials: 'include',
                             body: JSON.stringify({

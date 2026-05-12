@@ -69,7 +69,10 @@ export function FinancialSummary({ rfp }: FinancialSummaryProps) {
       if (!rfp?.id) return [];
       const items: BidLineItem[] = [];
       for (const bid of bidCollections) {
-        const response = await fetch(`/api/rfp-requests/${rfp.id}/bid-collections/${bid.id}/line-items`);
+        const response = await fetch(`/api/rfp-requests/${rfp.id}/bid-collections/${bid.id}/line-items`, {
+          credentials: 'include',
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('auth-token')}` }
+        });
         if (response.ok) {
           const bidItems = await response.json();
           items.push(...bidItems);
@@ -88,6 +91,7 @@ export function FinancialSummary({ rfp }: FinancialSummaryProps) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('auth-token')}`,
         },
         credentials: 'include',
         body: JSON.stringify({

@@ -829,6 +829,8 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
         
         const uploadResponse = await fetch('/api/upload', {
           method: 'POST',
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('auth-token')}` },
+          credentials: 'include',
           body: formData,
         });
         
@@ -880,6 +882,8 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
         
         const uploadResponse = await fetch('/api/upload', {
           method: 'POST',
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('auth-token')}` },
+          credentials: 'include',
           body: formData,
         });
         

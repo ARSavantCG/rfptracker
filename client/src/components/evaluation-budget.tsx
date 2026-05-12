@@ -228,7 +228,10 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
     queryKey: ['/api/rfp-requests', rfp?.id, 'invitation-to-bid'],
     queryFn: async () => {
       if (!rfp?.id) return null;
-      const response = await fetch(`/api/rfp-requests/${rfp.id}/invitation-to-bid`);
+      const response = await fetch(`/api/rfp-requests/${rfp.id}/invitation-to-bid`, {
+        credentials: 'include',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('auth-token')}` }
+      });
       if (!response.ok) return null;
       return response.json();
     },
@@ -1001,7 +1004,10 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       if (!bidCollections || !Array.isArray(bidCollections)) return [];
       
       const lineItemPromises = bidCollections.map(async (bid: BidCollection) => {
-        const response = await fetch(`/api/bid-collections/${bid.id}/line-items`);
+        const response = await fetch(`/api/bid-collections/${bid.id}/line-items`, {
+          credentials: 'include',
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('auth-token')}` }
+        });
         if (!response.ok) return [];
         const lineItems = await response.json();
         return lineItems.map((item: BidLineItem) => ({ 
@@ -4037,6 +4043,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('auth-token')}`,
         },
         credentials: 'include',
         body: JSON.stringify({ phase: 'publish' }),

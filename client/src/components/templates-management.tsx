@@ -86,7 +86,10 @@ export function TemplatesManagement() {
     queryFn: async () => {
       const params = new URLSearchParams();
       if (searchTerm) params.append("search", searchTerm);
-      const response = await fetch(`/api/templates?${params}`);
+      const response = await fetch(`/api/templates?${params}`, {
+        credentials: 'include',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('auth-token')}` }
+      });
       if (!response.ok) throw new Error("Failed to fetch templates");
       return response.json();
     }

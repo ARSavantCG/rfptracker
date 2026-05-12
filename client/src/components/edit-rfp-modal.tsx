@@ -567,6 +567,9 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
       
       const response = await fetch(`/api/rfp-requests/${rfp.id}/update-with-files`, {
         method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth-token')}`,
+        },
         body: formData,
         credentials: 'include',
       });
@@ -669,6 +672,9 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
         
         const updateResponse = await fetch(`/api/rfp-requests/${rfp.id}/update-with-files`, {
           method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('auth-token')}`,
+          },
           body: formData,
           credentials: 'include',
         });

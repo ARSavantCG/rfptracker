@@ -66,7 +66,9 @@ export function useUpload(options: UseUploadOptions = {}) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem('auth-token')}`,
         },
+        credentials: 'include',
         body: JSON.stringify({
           name: file.name,
           size: file.size,
@@ -166,7 +168,9 @@ export function useUpload(options: UseUploadOptions = {}) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem('auth-token')}`,
         },
+        credentials: 'include',
         body: JSON.stringify({
           name: file.name,
           size: file.size,

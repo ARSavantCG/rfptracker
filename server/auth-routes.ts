@@ -42,6 +42,21 @@ export function registerAuthRoutes(app: Express): void {
         });
       }
 
+      // Unexpected internal error during admin auth (DB down, etc.) — log and reject.
+      // Without this branch the 'error' reason would silently fall through to the
+      // contact-lookup path, producing misleading behaviour under infrastructure failures.
+      if (authResult.reason === 'error') {
+        logEvent({
+          eventType: 'login_failure',
+          userId: null,
+          userEmail: username,
+          entityType: 'user',
+          entityId: null,
+          metadata: { reason: 'auth_error', authMethod: 'admin' },
+        });
+        return res.status(500).json({ message: "Login failed" });
+      }
+
       // If an admin user was found but the password was wrong, reject immediately.
       // Previously this fell through to the contact path — a bug where a wrong
       // admin password silently ran contact-lookup logic and produced confusing results.
@@ -141,6 +156,18 @@ export function registerAuthRoutes(app: Express): void {
       });
     } catch (error) {
       console.error("Login error:", error);
+      // Belt-and-suspenders: instrument unexpected exceptions so that an
+      // uncaught throw in the login handler is never a silent failure.
+      // logEvent swallows its own errors internally, so this call is safe
+      // even inside a catch block (no double-fault risk).
+      logEvent({
+        eventType: 'login_failure',
+        userId: null,
+        userEmail: req.body?.username ?? null,
+        entityType: 'user',
+        entityId: null,
+        metadata: { reason: 'exception', authMethod: 'unknown' },
+      });
       res.status(500).json({ message: "Login failed" });
     }
   });

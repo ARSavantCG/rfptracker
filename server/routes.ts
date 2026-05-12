@@ -14,7 +14,7 @@ import { storage } from "./storage";
 import { db } from "./db";
 import { users, contacts, insertRfpRequestSchema, updateRfpRequestSchema, insertContactSchema, updateContactSchema, insertInvitationSchema, updateInvitationSchema, insertInvitationToBidSchema, updateInvitationToBidSchema, insertPdfTemplateSchema, auditLog } from "@shared/schema";
 import { convertFormDateToDbDate } from "@shared/date-utils";
-import { eq, desc, and, gte, lte, ilike, sql as drizzleSql } from "drizzle-orm";
+import { eq, desc, and, gte, lte, ilike, inArray, sql as drizzleSql } from "drizzle-orm";
 import { tokenStore } from "./token-auth";
 import { nanoid } from "nanoid";
 import { generateRfpPdf } from "./pdf-generator";
@@ -5243,7 +5243,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Audit log viewer — admin only
   // GET /api/admin/audit-log/event-types — distinct event types for filter dropdown
-  app.get("/api/admin/audit-log/event-types", requireAuth, requireAdmin, async (req, res) => {
+  app.get("/api/admin/audit-log/event-types", requireAuth, checkPermission('admin.access'), async (req, res) => {
     try {
       const rows = await db
         .selectDistinct({ eventType: auditLog.eventType })
@@ -5257,7 +5257,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // GET /api/admin/audit-log — paginated with optional filters
-  app.get("/api/admin/audit-log", requireAuth, requireAdmin, async (req, res) => {
+  app.get("/api/admin/audit-log", requireAuth, checkPermission('admin.access'), async (req, res) => {
     try {
       const page = Math.max(1, parseInt(req.query.page as string) || 1);
       const limit = 50;
@@ -5272,7 +5272,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const conditions = [];
       if (eventTypes && eventTypes.length > 0) {
-        conditions.push(drizzleSql`${auditLog.eventType} = ANY(${eventTypes})`);
+        conditions.push(inArray(auditLog.eventType, eventTypes));
       }
       if (userEmailSearch) {
         conditions.push(ilike(auditLog.userEmail, `%${userEmailSearch}%`));

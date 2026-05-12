@@ -593,3 +593,62 @@ The missing-import audit is done, but a related problem remains: the recurring p
 - `server/property-routes.ts`
 - `server/rom-routes.ts`
 - All other extracted route modules
+
+---
+
+## Session: May 12, 2026 — Authentication Hardening
+
+### Completed
+
+✅ **Dev security hole deleted**
+- `POST /api/dev/make-admin` removed from `server/routes.ts`
+- Dead `makeAdminMutation` removed from `client/src/pages/dashboard.tsx`
+- Zero references remain anywhere in the codebase
+
+✅ **Duplicate workflow-phase handler merged**
+- Two `PATCH /api/rfp-requests/:id/workflow-phase` handlers existed; dead one deleted
+- Live handler (line 2114) now has: `requireAuth` + `canAdvanceToPhase` gate (from dead copy) + publish-email side effect
+- Publish email confirmed at line 2146: `sendWorkflowCompletionEmail(updated, 'publish')`
+- Comment added to the handler warning against future duplication
+
+✅ **Full endpoint auth coverage across all three server files**
+
+Every `GET`, `POST`, `PATCH`, `PUT`, `DELETE` returning or mutating business data now has `requireAuth`. Admin-only operations (`GET /api/admin/users`, `PATCH /api/admin/users/:id`) also have `requireAdmin`. The only intentionally public endpoint is `GET /api/version`.
+
+Files: `server/routes.ts` (~50 endpoints added), `server/property-routes.ts` (~20 endpoints added), `server/rom-routes.ts` (~10 endpoints added)
+
+Note: `requireAdmin` was **pre-existing** in `server/middleware.ts` before this session (git history confirms). Used without modification.
+
+✅ **Client credential gaps closed**
+
+| File | Fix applied |
+|---|---|
+| `edit-rfp-modal.tsx` | `credentials: 'include'` on `update-with-files` (×2), `workflow-phase`, `summary-report` |
+| `invitation-to-bid-modal.tsx` | `credentials: 'include'` on `additional-areas` |
+| `financial-summary.tsx` | `credentials: 'include'` on `financial-summary-pdf` |
+| `evaluation-budget.tsx` | `credentials: 'include'` on `workflow-phase` publish advance |
+| `rfp-table.tsx` | `credentials: 'include'` on `GET /api/rfp-requests` |
+| `top-rfps-by-cost.tsx` | `credentials: 'include'` on `GET /api/rfp-requests/top-open-by-cost` |
+| `bay-configuration-manager.tsx` | `Authorization: Bearer` + `credentials: 'include'` on `PUT /api/properties/:id` |
+
+✅ **window.open report calls converted to fetch+blob**
+
+`GET /api/reports/executive`, `GET /api/reports/vendor-workload/html`, `GET /api/reports/property-summary` now use `fetch({ credentials: 'include' }) → blob → createObjectURL → window.open`. `GET /api/reports/custom` → `credentials: 'include'` added to existing fetch+blob pattern.
+
+Files: `client/src/pages/reports.tsx`, `client/src/pages/PropertySummaryReport.tsx`, `client/src/components/custom-report-modal.tsx`
+
+### Verification
+
+**Unauthenticated → 401 (all ✓):** `GET /api/rfp-requests`, `GET /api/properties`, `GET /api/rom-pilots`, `POST /api/master-categories`
+
+**Public endpoint still works → 200 (✓):** `GET /api/version`
+
+**Authenticated → 200 (all ✓):** `GET /api/rfp-requests` (routes.ts:457), `GET /api/properties` (property-routes.ts:389), `GET /api/rom-pilots` (rom-routes.ts:464), `PATCH /api/rfp-requests/99999/workflow-phase` → 404 (auth passed, RFP not found)
+
+**Zero-gap final audit:** grep across all three server files for handlers missing `requireAuth` → 0 results.
+
+### Next Session Priorities
+
+1. **audit_log DB table** — never created. Full build: Drizzle schema → migration → write middleware → admin UI log viewer. This is the top remaining security task.
+2. **Browser smoke test** — log in, edit RFP-2026-014, verify south-half split bay selection, dock door counts (37/1), and Rentable Area figure.
+3. **Publish email live test** — advance a test RFP to "publish" and confirm `sendWorkflowCompletionEmail` fires (check SendGrid activity log or server console).

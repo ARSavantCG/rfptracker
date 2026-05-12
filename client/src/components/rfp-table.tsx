@@ -172,7 +172,7 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
       if (searchQuery) params.append("search", searchQuery);
       if (statusFilter) params.append("status", statusFilter);
       
-      const response = await fetch(`/api/rfp-requests?${params}`);
+      const response = await fetch(`/api/rfp-requests?${params}`, { credentials: 'include' });
       if (!response.ok) throw new Error("Failed to fetch RFP requests");
       return response.json();
     },

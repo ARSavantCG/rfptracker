@@ -50,7 +50,7 @@ export function TopOutstandingRfpsPanel({
   const { data: rawRfps = [], isLoading } = useQuery<RfpRow[]>({
     queryKey: ["/api/rfp-requests/top-open-by-cost", limit],
     queryFn: async () => {
-      const response = await fetch(`/api/rfp-requests/top-open-by-cost?limit=${limit}`);
+      const response = await fetch(`/api/rfp-requests/top-open-by-cost?limit=${limit}`, { credentials: 'include' });
       if (!response.ok) throw new Error("Failed to fetch top RFPs by cost");
       return response.json();
     },

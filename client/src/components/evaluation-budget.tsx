@@ -4038,6 +4038,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({ phase: 'publish' }),
       });
     },

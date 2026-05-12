@@ -89,6 +89,7 @@ export function FinancialSummary({ rfp }: FinancialSummaryProps) {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({
           includeExistingImprovements: budgetData.hasExistingImprovements
         }),

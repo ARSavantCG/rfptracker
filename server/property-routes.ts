@@ -383,7 +383,7 @@ export function registerPropertyRoutes(app: Express): void {
   });
 
   // Property routes
-  app.get("/api/properties", async (req, res) => {
+  app.get("/api/properties", requireAuth, async (req, res) => {
     try {
       const properties = await storage.getAllProperties();
       // Add cache-busting headers to force fresh data
@@ -398,7 +398,7 @@ export function registerPropertyRoutes(app: Express): void {
     }
   });
 
-  app.get("/api/properties/next-id", async (req, res) => {
+  app.get("/api/properties/next-id", requireAuth, async (req, res) => {
     try {
       const nextId = await storage.getNextPropertyId();
       res.json({ nextId });
@@ -407,7 +407,7 @@ export function registerPropertyRoutes(app: Express): void {
     }
   });
 
-  app.post("/api/properties", async (req, res) => {
+  app.post("/api/properties", requireAuth, async (req, res) => {
     try {
       const result = insertPropertySchema.safeParse(req.body);
       if (!result.success) {
@@ -421,7 +421,7 @@ export function registerPropertyRoutes(app: Express): void {
     }
   });
 
-  app.get("/api/properties/:id", async (req, res) => {
+  app.get("/api/properties/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -446,7 +446,7 @@ export function registerPropertyRoutes(app: Express): void {
     }
   });
 
-  app.put("/api/properties/:id", async (req, res) => {
+  app.put("/api/properties/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -472,7 +472,7 @@ export function registerPropertyRoutes(app: Express): void {
     }
   });
 
-  app.patch("/api/properties/:id", async (req, res) => {
+  app.patch("/api/properties/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -511,7 +511,7 @@ export function registerPropertyRoutes(app: Express): void {
   });
 
   // Dedicated endpoint for updating electrical allocation settings
-  app.patch("/api/properties/:id/electrical-allocation", async (req, res) => {
+  app.patch("/api/properties/:id/electrical-allocation", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -571,7 +571,7 @@ export function registerPropertyRoutes(app: Express): void {
   });
 
   // Property Existing Improvements routes
-  app.get("/api/properties/:propertyId/existing-improvements", async (req, res) => {
+  app.get("/api/properties/:propertyId/existing-improvements", requireAuth, async (req, res) => {
     try {
       const propertyId = parseInt(req.params.propertyId);
       if (isNaN(propertyId)) {
@@ -601,7 +601,7 @@ export function registerPropertyRoutes(app: Express): void {
     }
   });
 
-  app.post("/api/properties/:propertyId/existing-improvements", async (req, res) => {
+  app.post("/api/properties/:propertyId/existing-improvements", requireAuth, async (req, res) => {
     try {
       const propertyId = parseInt(req.params.propertyId);
       if (isNaN(propertyId)) {
@@ -683,7 +683,7 @@ export function registerPropertyRoutes(app: Express): void {
     }
   });
 
-  app.patch("/api/properties/:propertyId/existing-improvements/:id", async (req, res) => {
+  app.patch("/api/properties/:propertyId/existing-improvements/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       console.log('📝 PATCH existing-improvements - ID:', id, 'Body:', JSON.stringify(req.body));
@@ -1713,7 +1713,7 @@ export function registerPropertyRoutes(app: Express): void {
   // ============================================================================
 
   // Transformers endpoints
-  app.get("/api/transformers", async (req, res) => {
+  app.get("/api/transformers", requireAuth, async (req, res) => {
     try {
       const transformers = await storage.getTransformers();
       res.json(transformers);
@@ -1723,7 +1723,7 @@ export function registerPropertyRoutes(app: Express): void {
     }
   });
 
-  app.get("/api/properties/:propertyId/transformers", async (req, res) => {
+  app.get("/api/properties/:propertyId/transformers", requireAuth, async (req, res) => {
     try {
       const propertyId = parseInt(req.params.propertyId);
       if (isNaN(propertyId)) {
@@ -1818,7 +1818,7 @@ export function registerPropertyRoutes(app: Express): void {
   });
 
   // Main Panels endpoints
-  app.get("/api/transformers/:transformerId/panels", async (req, res) => {
+  app.get("/api/transformers/:transformerId/panels", requireAuth, async (req, res) => {
     try {
       const transformerId = parseInt(req.params.transformerId);
       if (isNaN(transformerId)) {
@@ -1833,7 +1833,7 @@ export function registerPropertyRoutes(app: Express): void {
     }
   });
 
-  app.get("/api/properties/:propertyId/main-panels", async (req, res) => {
+  app.get("/api/properties/:propertyId/main-panels", requireAuth, async (req, res) => {
     try {
       const propertyId = parseInt(req.params.propertyId);
       if (isNaN(propertyId)) {
@@ -1931,7 +1931,7 @@ export function registerPropertyRoutes(app: Express): void {
   });
 
   // Bay Panel Assignments endpoints
-  app.get("/api/properties/:propertyId/bay-panel-assignments", async (req, res) => {
+  app.get("/api/properties/:propertyId/bay-panel-assignments", requireAuth, async (req, res) => {
     try {
       const propertyId = parseInt(req.params.propertyId);
       if (isNaN(propertyId)) {
@@ -1980,7 +1980,7 @@ export function registerPropertyRoutes(app: Express): void {
   });
 
   // Active RFP Electrical Allocations for a property
-  app.get("/api/properties/:propertyId/active-electrical-allocations", async (req, res) => {
+  app.get("/api/properties/:propertyId/active-electrical-allocations", requireAuth, async (req, res) => {
     try {
       const propertyId = parseInt(req.params.propertyId);
       if (isNaN(propertyId)) {
@@ -2041,7 +2041,7 @@ export function registerPropertyRoutes(app: Express): void {
   });
 
   // Electrical Reservations endpoints
-  app.get("/api/transformers/:transformerId/reservations", async (req, res) => {
+  app.get("/api/transformers/:transformerId/reservations", requireAuth, async (req, res) => {
     try {
       const transformerId = parseInt(req.params.transformerId);
       if (isNaN(transformerId)) {
@@ -2056,7 +2056,7 @@ export function registerPropertyRoutes(app: Express): void {
     }
   });
 
-  app.get("/api/rfp-requests/:rfpId/electrical-reservation", async (req, res) => {
+  app.get("/api/rfp-requests/:rfpId/electrical-reservation", requireAuth, async (req, res) => {
     try {
       const rfpId = parseInt(req.params.rfpId);
       if (isNaN(rfpId)) {
@@ -2132,7 +2132,7 @@ export function registerPropertyRoutes(app: Express): void {
   });
 
   // Power Bank Dashboard - get capacity summary for a transformer
-  app.get("/api/transformers/:transformerId/capacity-summary", async (req, res) => {
+  app.get("/api/transformers/:transformerId/capacity-summary", requireAuth, async (req, res) => {
     try {
       const transformerId = parseInt(req.params.transformerId);
       if (isNaN(transformerId)) {
@@ -2148,7 +2148,7 @@ export function registerPropertyRoutes(app: Express): void {
   });
 
   // Power Bank Dashboard - get capacity overview for all properties
-  app.get("/api/electrical-capacity/overview", async (req, res) => {
+  app.get("/api/electrical-capacity/overview", requireAuth, async (req, res) => {
     try {
       const overview = await storage.getElectricalCapacityOverview();
       res.json(overview);

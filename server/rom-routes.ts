@@ -458,7 +458,7 @@ async function generateRomReportHtml(romPilot: any, lineItems: any[], scopeItems
 
 export function registerRomRoutes(app: Express): void {
   // ROM Pilot routes
-  app.get("/api/rom-pilots", async (req, res) => {
+  app.get("/api/rom-pilots", requireAuth, async (req, res) => {
     try {
       const pilots = await storage.getAllRomPilots();
       res.json(pilots);
@@ -467,7 +467,7 @@ export function registerRomRoutes(app: Express): void {
     }
   });
 
-  app.get("/api/rom-pilots/:id", async (req, res) => {
+  app.get("/api/rom-pilots/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -485,7 +485,7 @@ export function registerRomRoutes(app: Express): void {
     }
   });
 
-  app.post("/api/rom-pilots", async (req, res) => {
+  app.post("/api/rom-pilots", requireAuth, async (req, res) => {
     try {
       // Generate ROM number
       const currentYear = new Date().getFullYear();
@@ -506,7 +506,7 @@ export function registerRomRoutes(app: Express): void {
     }
   });
 
-  app.put("/api/rom-pilots/:id", async (req, res) => {
+  app.put("/api/rom-pilots/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -543,7 +543,7 @@ export function registerRomRoutes(app: Express): void {
   });
 
   // ROM Scope Items endpoints
-  app.get("/api/rom-scope-items", async (req, res) => {
+  app.get("/api/rom-scope-items", requireAuth, async (req, res) => {
     try {
       const scopeItems = await storage.getAllRomScopeItems();
       res.json(scopeItems);
@@ -552,7 +552,7 @@ export function registerRomRoutes(app: Express): void {
     }
   });
 
-  app.post("/api/rom-scope-items", async (req, res) => {
+  app.post("/api/rom-scope-items", requireAuth, async (req, res) => {
     try {
       // Handle date conversion for lastUpdated field
       const createData = { ...req.body };
@@ -621,7 +621,7 @@ export function registerRomRoutes(app: Express): void {
   });
 
   // ROM Scope Items file download endpoint
-  app.get("/api/rom-scope-items/download/:fileName", async (req, res) => {
+  app.get("/api/rom-scope-items/download/:fileName", requireAuth, async (req, res) => {
     try {
       const { fileName } = req.params;
       const { path: filePath } = req.query;
@@ -665,7 +665,7 @@ export function registerRomRoutes(app: Express): void {
   });
 
   // ROM Scope Items file view endpoint (opens in browser without forcing download)
-  app.get("/api/rom-scope-items/view/:fileName", async (req, res) => {
+  app.get("/api/rom-scope-items/view/:fileName", requireAuth, async (req, res) => {
     try {
       const { fileName } = req.params;
       const { path: filePath } = req.query;
@@ -726,7 +726,7 @@ export function registerRomRoutes(app: Express): void {
   });
 
   // ROM Pilot Line Items endpoints
-  app.get("/api/rom-pilots/:id/line-items", async (req, res) => {
+  app.get("/api/rom-pilots/:id/line-items", requireAuth, async (req, res) => {
     try {
       const romPilotId = parseInt(req.params.id);
       if (isNaN(romPilotId)) {
@@ -740,7 +740,7 @@ export function registerRomRoutes(app: Express): void {
     }
   });
 
-  app.post("/api/rom-pilots/:id/line-items", async (req, res) => {
+  app.post("/api/rom-pilots/:id/line-items", requireAuth, async (req, res) => {
     try {
       console.log("ROM line items save request received");
       console.log("User from auth:", req.user?.username);
@@ -776,7 +776,7 @@ export function registerRomRoutes(app: Express): void {
   });
 
   // Individual line item save endpoint
-  app.post("/api/rom-pilots/:id/line-items/individual", async (req, res) => {
+  app.post("/api/rom-pilots/:id/line-items/individual", requireAuth, async (req, res) => {
     try {
       const romPilotId = parseInt(req.params.id);
       if (isNaN(romPilotId)) {

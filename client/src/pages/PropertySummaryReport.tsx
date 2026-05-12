@@ -11,18 +11,30 @@ export function PropertySummaryReport() {
   const [reportHtml, setReportHtml] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const handleViewReport = () => {
+  const handleViewReport = async () => {
     setIsLoading(true);
-    // Open the report directly in a new tab like other reports
-    const newWindow = window.open('/api/reports/property-summary', '_blank');
-    if (!newWindow) {
+    try {
+      const response = await fetch('/api/reports/property-summary', { credentials: 'include' });
+      if (!response.ok) throw new Error(`Failed to load report (${response.status})`);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const newWindow = window.open(blobUrl, '_blank');
+      if (!newWindow) {
+        toast({
+          title: "Popup blocked",
+          description: "Please allow popups for this site to view the report.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
       toast({
-        title: "Popup blocked",
-        description: "Please allow popups for this site to view the report.",
+        title: "Failed to load report",
+        description: error instanceof Error ? error.message : "An error occurred",
         variant: "destructive"
       });
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
 

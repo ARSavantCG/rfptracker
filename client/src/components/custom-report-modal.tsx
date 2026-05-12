@@ -98,7 +98,7 @@ export function CustomReportModal({ isOpen, onClose, filters }: CustomReportModa
         filters
       };
 
-      const response = await fetch(`/api/reports/custom?config=${encodeURIComponent(JSON.stringify(reportConfig))}`);
+      const response = await fetch(`/api/reports/custom?config=${encodeURIComponent(JSON.stringify(reportConfig))}`, { credentials: 'include' });
       
       if (!response.ok) {
         throw new Error('Failed to generate custom report');

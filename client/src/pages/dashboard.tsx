@@ -71,26 +71,6 @@ export default function Dashboard() {
     retry: false,
   });
 
-  const makeAdminMutation = useMutation({
-    mutationFn: () => apiRequest("/api/dev/make-admin", "POST", { userId: (currentUser as any)?.id }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      toast({
-        title: "Success",
-        description: "You now have administrator privileges! The Admin Panel will appear in navigation.",
-        duration: 5000,
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to assign admin privileges",
-        variant: "destructive",
-        duration: 6000,
-      });
-    },
-  });
-
   // Auto-refresh selected RFP when data changes
   useEffect(() => {
     if (selectedRfp && allRfps.length > 0) {

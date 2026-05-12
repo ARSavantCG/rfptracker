@@ -101,7 +101,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerObjectStorageRoutes(app);
   
   // PDF Bid Import - Parse PDF and extract table data for mapping
-  app.post("/api/bid-import/parse-pdf", pdfUpload.single('file'), async (req, res) => {
+  app.post("/api/bid-import/parse-pdf", requireAuth, pdfUpload.single('file'), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No PDF file uploaded" });
@@ -130,7 +130,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Apply mapping to parsed PDF data and create bid line items
-  app.post("/api/bid-import/apply-mapping", async (req, res) => {
+  app.post("/api/bid-import/apply-mapping", requireAuth, async (req, res) => {
     try {
       const { bidCollectionId, tableData, mapping } = req.body;
       
@@ -178,7 +178,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // PDF Mapping Templates - Get all templates
-  app.get("/api/pdf-mapping-templates", async (req, res) => {
+  app.get("/api/pdf-mapping-templates", requireAuth, async (req, res) => {
     try {
       const templates = await storage.getPdfMappingTemplates();
       res.json(templates);
@@ -189,7 +189,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // PDF Mapping Templates - Get templates by contractor
-  app.get("/api/pdf-mapping-templates/contractor/:contractorId", async (req, res) => {
+  app.get("/api/pdf-mapping-templates/contractor/:contractorId", requireAuth, async (req, res) => {
     try {
       const contractorId = parseInt(req.params.contractorId);
       const templates = await storage.getPdfMappingTemplatesByContractor(contractorId);
@@ -201,7 +201,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // PDF Mapping Templates - Get template by header signature (for auto-matching)
-  app.get("/api/pdf-mapping-templates/signature/:signature", async (req, res) => {
+  app.get("/api/pdf-mapping-templates/signature/:signature", requireAuth, async (req, res) => {
     try {
       const signature = decodeURIComponent(req.params.signature);
       const template = await storage.getPdfMappingTemplateBySignature(signature);
@@ -213,7 +213,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // PDF Mapping Templates - Create new template
-  app.post("/api/pdf-mapping-templates", async (req, res) => {
+  app.post("/api/pdf-mapping-templates", requireAuth, async (req, res) => {
     try {
       const template = await storage.createPdfMappingTemplate(req.body);
       res.json(template);
@@ -224,7 +224,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // PDF Mapping Templates - Update template
-  app.patch("/api/pdf-mapping-templates/:id", async (req, res) => {
+  app.patch("/api/pdf-mapping-templates/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const updated = await storage.updatePdfMappingTemplate(id, req.body);
@@ -239,7 +239,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // PDF Mapping Templates - Delete template
-  app.delete("/api/pdf-mapping-templates/:id", async (req, res) => {
+  app.delete("/api/pdf-mapping-templates/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const deleted = await storage.deletePdfMappingTemplate(id);
@@ -254,7 +254,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // PDF Mapping Templates - Increment usage count
-  app.post("/api/pdf-mapping-templates/:id/use", async (req, res) => {
+  app.post("/api/pdf-mapping-templates/:id/use", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       await storage.incrementTemplateUsage(id);
@@ -267,7 +267,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
 
   // Generic upload endpoint for single files
-  app.post("/api/upload", upload.single("file"), (req, res) => {
+  app.post("/api/upload", requireAuth, upload.single("file"), (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
@@ -286,7 +286,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get RFP statistics (must come before /:id route)
-  app.get("/api/rfp-requests/stats", async (req, res) => {
+  app.get("/api/rfp-requests/stats", requireAuth, async (req, res) => {
     try {
       const allRequests = await storage.getAllRfpRequests();
       const activeRequests = allRequests.filter(r => r.status !== "archived");
@@ -454,7 +454,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   };
 
   // Get all RFP requests
-  app.get("/api/rfp-requests", async (req, res) => {
+  app.get("/api/rfp-requests", requireAuth, async (req, res) => {
     // Prevent caching to ensure fresh data with hydration
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.setHeader('Pragma', 'no-cache');
@@ -552,7 +552,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   };
 
   // Get top 5 completed RFPs by cost (only completed RFPs have evaluation workflow and costs)
-  app.get("/api/rfp-requests/top-open-by-cost", async (req, res) => {
+  app.get("/api/rfp-requests/top-open-by-cost", requireAuth, async (req, res) => {
     try {
       const limit = parseInt(req.query.limit as string) || 5;
       
@@ -690,7 +690,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get single RFP request with LIVE property bay data (single source of truth)
-  app.get("/api/rfp-requests/:id", async (req, res) => {
+  app.get("/api/rfp-requests/:id", requireAuth, async (req, res) => {
     // Prevent caching to ensure fresh data
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.setHeader('Pragma', 'no-cache');
@@ -818,7 +818,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create new RFP request with files
-  app.post("/api/rfp-requests/with-files", upload.array("files"), async (req, res) => {
+  app.post("/api/rfp-requests/with-files", requireAuth, upload.array("files"), async (req, res) => {
     try {
       console.log('Creating RFP with files - body:', req.body);
       console.log('Creating RFP with files - user ID:', (req as any).userId);
@@ -1106,7 +1106,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Advance workflow phase
-  app.post("/api/rfp-requests/:id/advance-phase", async (req, res) => {
+  app.post("/api/rfp-requests/:id/advance-phase", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -1199,7 +1199,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
   // Create RFP Option (alternative design/scope for same project)
-  app.post("/api/rfp-requests/:id/create-option", async (req, res) => {
+  app.post("/api/rfp-requests/:id/create-option", requireAuth, async (req, res) => {
     console.log("Auth check for POST /api/rfp-requests/:id/create-option");
     
     // Token-based authentication (sessions are disabled)
@@ -1414,7 +1414,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete RFP request - with permission checking
-  app.delete("/api/rfp-requests/:id", async (req, res) => {
+  app.delete("/api/rfp-requests/:id", requireAuth, async (req, res) => {
     console.log(`=== DELETE START ===`);
     console.log(`Delete request for RFP ID: ${req.params.id}`);
     
@@ -1489,7 +1489,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Upload files for publish workflow
-  app.post("/api/rfp-requests/upload-files", upload.array("files"), async (req, res) => {
+  app.post("/api/rfp-requests/upload-files", requireAuth, upload.array("files"), async (req, res) => {
     try {
       const rfpId = parseInt(req.body.rfpId);
       const stage = req.body.stage || 'general';
@@ -1612,7 +1612,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Download file
-  app.get("/api/rfp-requests/:id/files/:fileId", async (req, res) => {
+  app.get("/api/rfp-requests/:id/files/:fileId", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const fileId = req.params.fileId;
@@ -1648,7 +1648,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete file
-  app.delete("/api/rfp-requests/:id/files/:fileId", async (req, res) => {
+  app.delete("/api/rfp-requests/:id/files/:fileId", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const fileId = req.params.fileId;
@@ -1688,7 +1688,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Download all published files as zip
-  app.post("/api/rfp-requests/:id/files/download-all", async (req, res) => {
+  app.post("/api/rfp-requests/:id/files/download-all", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const { fileIds } = req.body;
@@ -1750,7 +1750,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update RFP request with files
-  app.patch("/api/rfp-requests/:id/update-with-files", upload.array("files"), async (req, res) => {
+  app.patch("/api/rfp-requests/:id/update-with-files", requireAuth, upload.array("files"), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -1956,7 +1956,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Contact routes
-  app.get("/api/contacts", async (req, res) => {
+  app.get("/api/contacts", requireAuth, async (req, res) => {
     try {
       const contacts = await storage.getAllContacts();
       res.json(contacts);
@@ -1965,7 +1965,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/contacts/:id", async (req, res) => {
+  app.get("/api/contacts/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -2035,7 +2035,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Invitation routes
-  app.get("/api/invitations", async (req, res) => {
+  app.get("/api/invitations", requireAuth, async (req, res) => {
     try {
       const invitations = await storage.getAllInvitations();
       res.json(invitations);
@@ -2044,7 +2044,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/rfp-requests/:id/invitations", async (req, res) => {
+  app.get("/api/rfp-requests/:id/invitations", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -2058,7 +2058,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/invitations", async (req, res) => {
+  app.post("/api/invitations", requireAuth, async (req, res) => {
     try {
       const parsed = insertInvitationSchema.parse(req.body);
       const invitation = await storage.createInvitation(parsed);
@@ -2068,7 +2068,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/invitations/:id", async (req, res) => {
+  app.patch("/api/invitations/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -2107,7 +2107,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Workflow phase management routes
-  app.patch("/api/rfp-requests/:id/workflow-phase", async (req, res) => {
+  // Was duplicated at ~line 2353 (now removed). Both handlers had divergent logic —
+  // merged here to include the canAdvanceToPhase business-rule gate from the dead
+  // handler plus the publish-email side effect from the live one.
+  // Verify before adding any new handlers for this path.
+  app.patch("/api/rfp-requests/:id/workflow-phase", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -2117,6 +2121,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { phase } = req.body;
       if (!phase || !["rfp-entry", "rfp-validation", "invitation-to-bid", "bid-collection", "evaluation", "award", "publish"].includes(phase)) {
         return res.status(400).json({ message: "Invalid workflow phase" });
+      }
+
+      const rfp = await storage.getRfpRequest(id);
+      if (!rfp) {
+        return res.status(404).json({ message: "RFP request not found" });
+      }
+
+      // Business-rule gate from previously-dead duplicate handler
+      if (!canAdvanceToPhase(rfp, phase)) {
+        return res.status(400).json({
+          message: "RFP validation failed. Complete all required fields before advancing."
+        });
       }
 
       const updated = await storage.advanceWorkflowPhase(id, phase);
@@ -2139,7 +2155,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/projects/phase/:phase", async (req, res) => {
+  app.get("/api/projects/phase/:phase", requireAuth, async (req, res) => {
     try {
       const { phase } = req.params;
       if (!["rfp-entry", "rfp-validation", "invitation-to-bid", "bid-collection", "evaluation", "publish"].includes(phase)) {
@@ -2154,7 +2170,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Advance workflow phase route
-  app.post("/api/rfp-requests/:id/advance-workflow", async (req, res) => {
+  app.post("/api/rfp-requests/:id/advance-workflow", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -2204,7 +2220,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Save additional areas for invitation to bid (Step 3)
-  app.post("/api/rfp-requests/:id/additional-areas", async (req, res) => {
+  app.post("/api/rfp-requests/:id/additional-areas", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -2259,7 +2275,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/rfp-requests/:id/invitation-to-bid", async (req, res) => {
+  app.get("/api/rfp-requests/:id/invitation-to-bid", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -2320,7 +2336,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // RFP Validation routes
-  app.post("/api/rfp-requests/validate", async (req, res) => {
+  app.post("/api/rfp-requests/validate", requireAuth, async (req, res) => {
     try {
       const { rfpId, ...validationData } = req.body;
       console.log("Validation request received for RFP:", rfpId);
@@ -2347,38 +2363,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Failed to validate RFP",
         error: error instanceof Error ? error.message : String(error)
       });
-    }
-  });
-
-  app.patch("/api/rfp-requests/:id/workflow-phase", async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const { phase } = req.body;
-      
-      if (isNaN(id)) {
-        return res.status(400).json({ message: "Invalid ID" });
-      }
-
-      const rfp = await storage.getRfpRequest(id);
-      if (!rfp) {
-        return res.status(404).json({ message: "RFP request not found" });
-      }
-
-      // Validate if RFP can advance to the target phase
-      if (!canAdvanceToPhase(rfp, phase)) {
-        return res.status(400).json({ 
-          message: "RFP validation failed. Complete all required fields before advancing." 
-        });
-      }
-
-      const updatedRfp = await storage.advanceWorkflowPhase(id, phase);
-      if (!updatedRfp) {
-        return res.status(404).json({ message: "Failed to advance workflow phase" });
-      }
-
-      res.json(updatedRfp);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to advance workflow phase" });
     }
   });
 
@@ -2755,7 +2739,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Bid Collection routes
   
   // Get all bid collections (for data scrubbing and project report generator)
-  app.get("/api/bid-collections", async (req, res) => {
+  app.get("/api/bid-collections", requireAuth, async (req, res) => {
     try {
       const bidCollections = await storage.getAllBidCollections();
       res.json(bidCollections);
@@ -2766,7 +2750,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get all bid line items (for data scrubbing view)
-  app.get("/api/bid-line-items/all", async (req, res) => {
+  app.get("/api/bid-line-items/all", requireAuth, async (req, res) => {
     try {
       const lineItems = await storage.getAllBidLineItems();
       res.json(lineItems);
@@ -2777,7 +2761,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Bulk update isCleanData for line items
-  app.patch("/api/bid-line-items/bulk-update-clean-data", async (req, res) => {
+  app.patch("/api/bid-line-items/bulk-update-clean-data", requireAuth, async (req, res) => {
     try {
       const { updates } = req.body;
       if (!Array.isArray(updates)) {
@@ -2805,7 +2789,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Master Categories routes
-  app.get("/api/master-categories", async (req, res) => {
+  app.get("/api/master-categories", requireAuth, async (req, res) => {
     try {
       const categories = await storage.getAllMasterCategories();
       res.json(categories);
@@ -2815,7 +2799,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/master-categories", async (req, res) => {
+  app.post("/api/master-categories", requireAuth, async (req, res) => {
     try {
       const { name, description, sortOrder } = req.body;
       if (!name) {
@@ -2830,7 +2814,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Unmapped line items for data scrubbing & mapping
-  app.get("/api/bid-line-items/unmapped", async (req, res) => {
+  app.get("/api/bid-line-items/unmapped", requireAuth, async (req, res) => {
     try {
       const lineItems = await storage.getUnmappedBidLineItems();
       res.json(lineItems);
@@ -2841,7 +2825,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update single line item mapping
-  app.patch("/api/bid-line-items/:id/mapping", async (req, res) => {
+  app.patch("/api/bid-line-items/:id/mapping", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -2866,7 +2850,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Bulk update line item mappings
-  app.patch("/api/bid-line-items/bulk-mapping", async (req, res) => {
+  app.patch("/api/bid-line-items/bulk-mapping", requireAuth, async (req, res) => {
     try {
       const { updates } = req.body;
       if (!Array.isArray(updates)) {
@@ -2891,7 +2875,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/rfp-requests/:id/bid-collections", async (req, res) => {
+  app.get("/api/rfp-requests/:id/bid-collections", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -3145,7 +3129,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get line items for a bid collection
-  app.get("/api/bid-collections/:id/line-items", async (req, res) => {
+  app.get("/api/bid-collections/:id/line-items", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -3190,7 +3174,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
   // Evaluation Budget routes
-  app.post("/api/rfp-requests/:rfpId/evaluation-budget", async (req, res) => {
+  app.post("/api/rfp-requests/:rfpId/evaluation-budget", requireAuth, async (req, res) => {
     try {
       const rfpId = parseInt(req.params.rfpId);
       if (isNaN(rfpId)) {
@@ -3252,7 +3236,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get evaluation budget for an RFP
-  app.get("/api/rfp-requests/:rfpId/evaluation-budget", async (req, res) => {
+  app.get("/api/rfp-requests/:rfpId/evaluation-budget", requireAuth, async (req, res) => {
     try {
       const rfpId = parseInt(req.params.rfpId);
       if (isNaN(rfpId)) {
@@ -3646,7 +3630,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Financial Summary PDF generation
-  app.post("/api/rfp-requests/:rfpId/financial-summary-pdf", async (req, res) => {
+  app.post("/api/rfp-requests/:rfpId/financial-summary-pdf", requireAuth, async (req, res) => {
     try {
       const rfpId = parseInt(req.params.rfpId);
       if (isNaN(rfpId)) {
@@ -3695,7 +3679,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Executive Summary Report route
-  app.get("/api/reports/executive", async (req, res) => {
+  app.get("/api/reports/executive", requireAuth, async (req, res) => {
     try {
       const filters = req.query.filters ? JSON.parse(req.query.filters as string) : {};
       console.log("Generating executive summary with filters:", filters);
@@ -3974,7 +3958,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Custom Report route
-  app.get("/api/reports/custom", async (req, res) => {
+  app.get("/api/reports/custom", requireAuth, async (req, res) => {
     try {
       const config = req.query.config ? JSON.parse(req.query.config as string) : {};
       console.log("Generating custom report with config:", config);
@@ -4211,27 +4195,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
 
-  // Development route to make current user admin (now persists in database)
-  app.post('/api/dev/make-admin', async (req, res) => {
-    try {
-      const user = await storage.updateUser('test-admin', { role: 'admin' });
-      res.json({ message: "User promoted to admin", user });
-    } catch (error) {
-      console.error("Error promoting user:", error);
-      // Fallback response
-      const adminUser = {
-        id: 'test-admin',
-        email: 'admin@rfptracker.com',
-        firstName: 'Admin',
-        lastName: 'User',
-        role: 'admin'
-      };
-      res.json({ message: "User promoted to admin", user: adminUser });
-    }
-  });
-
   // Admin routes for user management
-  app.get('/api/admin/users', async (req, res) => {
+  app.get('/api/admin/users', requireAuth, requireAdmin, async (req, res) => {
     try {
       const users = await storage.getAllUsers();
       res.json(users);
@@ -4242,7 +4207,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get contacts with system access (for user management)
-  app.get('/api/admin/authorized-contacts', async (req, res) => {
+  app.get('/api/admin/authorized-contacts', requireAuth, async (req, res) => {
     try {
       console.log("Fetching authorized contacts...");
       const authorizedContacts = await storage.getAuthorizedContacts();
@@ -4254,7 +4219,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/admin/users/:id', async (req, res) => {
+  app.patch('/api/admin/users/:id', requireAuth, requireAdmin, async (req, res) => {
     try {
       const { id } = req.params;
       const updates = req.body;
@@ -4428,7 +4393,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get comprehensive file count for an RFP from all workflow stages
-  app.get("/api/rfp-requests/:id/file-count", async (req, res) => {
+  app.get("/api/rfp-requests/:id/file-count", requireAuth, async (req, res) => {
     try {
       const rfpId = parseInt(req.params.id);
 
@@ -4996,7 +4961,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/reports/vendor-workload/html', async (req, res) => {
+  app.get('/api/reports/vendor-workload/html', requireAuth, async (req, res) => {
     try {
       const { startDate, endDate, vendors, incompleteOnly } = req.query;
       
@@ -5256,7 +5221,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ============================================================================
 
   // RFP Electrical Capacity Validation - check if capacity is available for RFP
-  app.post("/api/rfp-requests/:rfpId/validate-electrical-capacity", async (req, res) => {
+  app.post("/api/rfp-requests/:rfpId/validate-electrical-capacity", requireAuth, async (req, res) => {
     try {
       const rfpId = parseInt(req.params.rfpId);
       if (isNaN(rfpId)) {
@@ -5319,7 +5284,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ============================================================================
 
   // List templates with optional search and archived filter
-  app.get("/api/templates", async (req, res) => {
+  app.get("/api/templates", requireAuth, async (req, res) => {
     try {
       const search = typeof req.query.search === 'string' ? req.query.search : undefined;
       const includeArchived = req.query.includeArchived === 'true';
@@ -5333,7 +5298,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get single template by ID
-  app.get("/api/templates/:id", async (req, res) => {
+  app.get("/api/templates/:id", requireAuth, async (req, res) => {
     try {
       const template = await Templates.getTemplate(req.params.id);
       if (!template) {
@@ -5420,7 +5385,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Build import preview for a template
-  app.post("/api/templates/:id/preview", async (req, res) => {
+  app.post("/api/templates/:id/preview", requireAuth, async (req, res) => {
     try {
       const template = await Templates.getTemplate(req.params.id);
       if (!template) {
@@ -5525,7 +5490,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ============================================================================
 
   // Get all files for a project
-  app.get("/api/rfp-requests/:id/project-files", async (req, res) => {
+  app.get("/api/rfp-requests/:id/project-files", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -5540,7 +5505,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get files for a specific workflow step
-  app.get("/api/rfp-requests/:id/project-files/:step", async (req, res) => {
+  app.get("/api/rfp-requests/:id/project-files/:step", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const step = req.params.step;
@@ -5557,7 +5522,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
   // Reports PDF generation
-  app.post("/api/reports/detailed-report-pdf", async (req, res) => {
+  app.post("/api/reports/detailed-report-pdf", requireAuth, async (req, res) => {
     try {
       const { filters } = req.body;
       const { generateDetailedReportPdf, generateReportFilename } = await import("./detailed-report-pdf");
@@ -5601,7 +5566,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Historical Pricing Report route
-  app.get("/api/reports/historical", async (req, res) => {
+  app.get("/api/reports/historical", requireAuth, async (req, res) => {
     try {
       const { generateHistoricalPricingPdf } = await import("./historical-pricing-reports");
       const pdfBuffer = await generateHistoricalPricingPdf();
@@ -5615,7 +5580,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Property Summary Report route
-  app.get("/api/reports/property-summary", async (req, res) => {
+  app.get("/api/reports/property-summary", requireAuth, async (req, res) => {
     try {
       const { generatePropertySummaryReport } = await import("./property-summary-report");
       const rfpId = req.query.rfpId as string;

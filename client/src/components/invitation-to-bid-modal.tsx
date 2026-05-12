@@ -1319,6 +1319,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
                             headers: {
                               'Content-Type': 'application/json',
                             },
+                            credentials: 'include',
                             body: JSON.stringify({
                               description,
                               squareFootage: parseInt(squareFootage) || 0,

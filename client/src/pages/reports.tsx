@@ -72,34 +72,24 @@ export default function Reports() {
       setCustomReportModalOpen(true);
       return;
     }
-    
+
     try {
       let url = `/api/reports/${reportType}`;
-      if (reportType === "vendor-workload") {
-        url = `/api/reports/vendor-workload/html`;
-        
-        // Add vendor workload specific parameters
-        const params = new URLSearchParams({
-          filters: JSON.stringify(filters),
-          format: exportFormat
-        });
-        
-        if (incompleteOnly) {
-          params.append('incompleteOnly', 'true');
-        }
-        
-        // Open report in new window
-        window.open(`${url}?${params}`, '_blank');
-        return;
-      }
-      
       const params = new URLSearchParams({
         filters: JSON.stringify(filters),
         format: exportFormat
       });
-      
-      // Open report in new window
-      window.open(`${url}?${params}`, '_blank');
+
+      if (reportType === "vendor-workload") {
+        url = `/api/reports/vendor-workload/html`;
+        if (incompleteOnly) params.append('incompleteOnly', 'true');
+      }
+
+      const response = await fetch(`${url}?${params}`, { credentials: 'include' });
+      if (!response.ok) throw new Error(`Failed to generate report (${response.status})`);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      window.open(blobUrl, '_blank');
     } catch (error) {
       console.error("Error generating report:", error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';

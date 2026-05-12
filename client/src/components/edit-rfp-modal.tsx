@@ -568,6 +568,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
       const response = await fetch(`/api/rfp-requests/${rfp.id}/update-with-files`, {
         method: 'PATCH',
         body: formData,
+        credentials: 'include',
       });
       
       if (!response.ok) {
@@ -669,6 +670,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
         const updateResponse = await fetch(`/api/rfp-requests/${rfp.id}/update-with-files`, {
           method: 'PATCH',
           body: formData,
+          credentials: 'include',
         });
         
         if (!updateResponse.ok) {
@@ -683,6 +685,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('auth-token')}`,
         },
+        credentials: 'include',
         body: JSON.stringify({ phase: "rfp-validation" }),
       });
       
@@ -731,6 +734,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
                   const cacheBuster = Date.now();
                   const response = await fetch(`/api/rfp-requests/${rfp.id}/summary-report?t=${cacheBuster}`, {
                     headers: { 'Authorization': `Bearer ${token}`, 'Cache-Control': 'no-cache' },
+                    credentials: 'include',
                   });
                   if (!response.ok) throw new Error('Failed to load report');
                   const html = await response.text();

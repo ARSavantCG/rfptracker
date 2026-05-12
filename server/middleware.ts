@@ -160,30 +160,20 @@ async function requireAuth(req: any, res: any, next: any) {
   }
 }
 
-async function requireAdmin(req: any, res: any, next: any) {
-  console.log('requireAdmin middleware hit, userId:', req.userId);
-  
-  if (!req.userId) {
-    console.log('No userId found in requireAdmin');
+// requireAdmin — synchronous gate that reads req.user populated by the
+// preceding requireAuth middleware. MUST be used after requireAuth in the
+// middleware chain; calling it standalone would always return 401.
+// No DB call is made here — requireAuth already fetched and validated the
+// user object (role + permissions) before this function runs.
+function requireAdmin(req: any, res: any, next: any) {
+  const user = req.user; // already populated by requireAuth
+  if (!user) {
     return res.status(401).json({ message: "Authentication required" });
   }
-  
-  try {
-    // Get user from database to check admin permissions
-    const user = await storage.getUser(req.userId);
-    console.log('User found for admin check:', user?.username, 'role:', user?.role);
-    
-    if (!user || (user.role !== 'admin' && !(user.permissions && user.permissions.includes('admin.access')))) {
-      console.log('Admin access denied for user:', user?.username, 'role:', user?.role, 'permissions:', user?.permissions);
-      return res.status(403).json({ message: "Admin access required" });
-    }
-    
-    console.log('Admin authorization successful for user:', user.username);
-    next();
-  } catch (error) {
-    console.error('Error in requireAdmin middleware:', error);
-    return res.status(500).json({ message: "Internal server error" });
+  if (user.role !== 'admin' && !(user.permissions && user.permissions.includes('admin.access'))) {
+    return res.status(403).json({ message: "Admin access required" });
   }
+  next();
 }
 
 

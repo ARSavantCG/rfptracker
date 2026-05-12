@@ -617,7 +617,7 @@ Every `GET`, `POST`, `PATCH`, `PUT`, `DELETE` returning or mutating business dat
 
 Files: `server/routes.ts` (~50 endpoints added), `server/property-routes.ts` (~20 endpoints added), `server/rom-routes.ts` (~10 endpoints added)
 
-Note: `requireAdmin` was **pre-existing** in `server/middleware.ts` before this session (git history confirms). Used without modification.
+Note: `requireAdmin` was **pre-existing** in `server/middleware.ts` before this session (git history confirms). Used without modification at the time — bug discovered and fixed in the subsequent audit log session (see below).
 
 ✅ **Client credential gaps closed**
 
@@ -652,3 +652,108 @@ Files: `client/src/pages/reports.tsx`, `client/src/pages/PropertySummaryReport.t
 1. **audit_log DB table** — never created. Full build: Drizzle schema → migration → write middleware → admin UI log viewer. This is the top remaining security task.
 2. **Browser smoke test** — log in, edit RFP-2026-014, verify south-half split bay selection, dock door counts (37/1), and Rentable Area figure.
 3. **Publish email live test** — advance a test RFP to "publish" and confirm `sendWorkflowCompletionEmail` fires (check SendGrid activity log or server console).
+
+---
+
+## Session: May 12, 2026 — Audit Log Foundation + requireAdmin Fix
+
+### Recently Fixed
+
+✅ **`requireAdmin` middleware broken since inception**
+
+`requireAdmin` in `server/middleware.ts` called `storage.getUser(req.userId)`. That method is declared on the `IStorage` interface (line 236, marked `// (IMPORTANT) these user operations are mandatory for Replit Auth.` — legacy Replit Auth scaffolding) but was **never implemented** on `DatabaseStorage`. Every call threw `TypeError: storage.getUser is not a function`, caught by the middleware's own `catch` block, and returned HTTP 500.
+
+**Affected endpoints** (the only two using `requireAdmin` in the entire codebase):
+- `GET /api/admin/users` (routes.ts)
+- `PATCH /api/admin/users/:id` (routes.ts)
+
+Both returned 500 for every admin request — the Users tab in the Admin Panel has never worked.
+
+**Fix applied** (`server/middleware.ts`): Replaced the async DB-fetching implementation with a synchronous check against `req.user`, which `requireAuth` already populates before `requireAdmin` runs. No DB call needed — the user object (including `role` and `permissions`) is already on the request:
+
+```typescript
+// Before: async, called storage.getUser(req.userId) — method did not exist
+// After: synchronous, reads req.user populated by the preceding requireAuth
+function requireAdmin(req: any, res: any, next: any) {
+  const user = req.user;
+  if (!user) return res.status(401).json({ message: "Authentication required" });
+  if (user.role !== 'admin' && !(user.permissions?.includes('admin.access'))) {
+    return res.status(403).json({ message: "Admin access required" });
+  }
+  next();
+}
+```
+
+Side effect: eliminates a redundant DB round-trip on every admin request.
+
+**Production log evidence**: Only today's session logs are retained in `/tmp/logs/`. No historical hits to `/api/admin/users` appear in those logs — the bug existed since inception but no prior 500s are visible in the available window.
+
+**Verification**: `GET /api/admin/users` → 200 + user list ✓ · `PATCH /api/admin/users/:id` → 200 ✓ · no credentials → 401 ✓ · no non-admin system users exist in DB (4d skipped) ✓
+
+---
+
+✅ **Audit log foundation — complete**
+
+Full append-only audit log system built and deployed. Details:
+
+**Schema** (`shared/schema.ts`): New `audit_log` table — `uuid` PK, `event_type` (text), `user_id`, `user_email`, `entity_type`, `entity_id`, `metadata`/`before_data`/`after_data` (JSONB), `changed_fields` (text[]), `created_at`. Three indexes: `(event_type, created_at DESC)`, `(user_id, created_at DESC)`, `(created_at DESC)`. Old serial-PK `audit_log` table (action column) dropped and replaced.
+
+**Helper** (`server/audit-log.ts`): `logEvent()` — fire-and-forget insert with SENSITIVE_KEYS redaction (`password`, `passwordHash`, `token`, `sessionToken`, `apiKey`, `secret`). Controlled-swallow on DB failure: logs loudly to `console.error` but never re-throws (audit failures must never break user operations).
+
+**Login instrumentation** (`server/auth-routes.ts`): Seven branches instrumented — 2 successes (`admin`, `contact`) and 5 failures:
+- `bad_password` / admin path — **blocks fall-through** (this was the admin fall-through bug: wrong admin password previously leaked into contact lookup)
+- `auth_error` / admin path — new branch for `reason: 'error'` (unexpected DB failure during auth)
+- `bad_password` / contact path
+- `no_user` / contact path
+- `no_access` / contact path
+- `no_password_set` / contact path
+- `exception` in outer catch block — belt-and-suspenders, instruments uncaught throws
+
+**Admin viewer** (`client/src/pages/audit-log-admin.tsx`, route `/admin/audit-log`):
+- Paginated table (50/page), sorted newest-first
+- Filter chips for event type (populated from `/api/admin/audit-log/event-types`), email partial-match search, date-from/to range
+- Row expand showing all 11 fields with JSONB rendered as formatted objects
+- Linked from Admin Panel tab bar ("Audit Log" → Link component)
+
+**Server API** (`server/routes.ts`):
+- `GET /api/admin/audit-log` — paginated + filtered (`inArray` for event types, `ilike` for email, `gte`/`lte` for dates)
+- `GET /api/admin/audit-log/event-types` — distinct event type list for filter dropdown
+- Both gated with `requireAuth, checkPermission('admin.access')`
+
+**Auth.ts Option B refactor**: `authenticateUser` now returns discriminated union `{user, reason: null} | {user: null, reason: 'no_user'|'bad_password'|'error'}` instead of bare `null` — fixes the admin login fall-through bug at the source.
+
+### Lessons Learned
+
+**Fifth instance this session-pair: TypeScript silently allowed a runtime bug.**
+
+| Instance | Pattern |
+|----------|---------|
+| Missing `requireAuth` on ~80 endpoints | `any`-typed Express route handlers — TS can't enforce middleware presence |
+| `storage.getUser` not implemented | Interface declared, class body missing the method — no TS error due to `any` |
+| `authenticateUser` returning bare `null` hid fail reason | Return type `User \| null` gave no discrimination between no-user vs bad-password |
+| `logAudit()` had silent `console.error` swallow | No compile-time enforcement of audit-log integrity |
+| Orphaned `ActivityLogPanel` function body after partial removal | Compiler accepted floating `const` and JSX as module-level statements under `any` |
+
+**Pattern**: The storage interface (`IStorage`) is the most-called code surface in the app and the most dangerous place for any-heavy typing. Every method there is called from express route handlers that are typed as `(req: any, res: any)`. A missing implementation compiles, boots, and fails only at the specific runtime call site.
+
+**Future hardening target**: Tighten types on `IStorage` implementations specifically. Consider a compile-time check (e.g. a test that instantiates `DatabaseStorage` and calls every interface method) to catch missing implementations before they reach production.
+
+### Verification
+
+`GET /api/admin/users` → 200 + users list ✓  
+`PATCH /api/admin/users/:id` → 200 ✓  
+`GET /api/admin/users` (no auth) → 401 ✓  
+`GET /api/admin/audit-log` (admin) → 200 + paginated entries ✓  
+`GET /api/admin/audit-log?eventTypes=login_success` → 200 + filtered ✓  
+`GET /api/admin/audit-log?userEmail=admin` → 200 + filtered ✓  
+`GET /api/admin/audit-log?dateFrom=2027-01-01` → 200 + total: 0 ✓  
+`PATCH /api/rfp-requests/187` (RFP-2026-014) → 200 ✓  
+`login_success` rows in DB with `authMethod: admin`, correct `user_id` ✓  
+`login_failure` rows with `reason`, `authMethod` per branch ✓  
+
+### Next Session Priorities
+
+1. **Browser smoke test** — log in as Adolfo via the UI, open Admin Panel → Users tab, confirm user list loads. Navigate to `/admin/audit-log` and confirm rows are visible with expand working.
+2. **Deploy** — audit log foundation + requireAdmin fix unblocks the pending deploy. Republish.
+3. **TypeScript hardening** — per lesson above: tighten `IStorage` method typing. The `getUser` stub on the interface is still declared but unimplemented — either add the implementation or remove it.
+4. **Publish email live test** — advance a test RFP to "publish" and confirm `sendWorkflowCompletionEmail` fires.

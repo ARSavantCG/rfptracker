@@ -51,14 +51,6 @@ export default function BayConfigurationSelector({
   const bayConfigurations = (Array.isArray(rawBayConfigs) 
     ? rawBayConfigs 
     : Object.values(rawBayConfigs || {})) as BayConfiguration[];
-  
-  
-  
-  
-  
-
-  
-
 
   // Get list of all bay IDs that are already leased
   const leasedBayIds = executedLeases.flatMap(lease => lease.assignedBays || []);

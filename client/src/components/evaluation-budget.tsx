@@ -3707,7 +3707,18 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
   };
 
   const addNewItem = (category: 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', addAnother: boolean = false) => {
-    if (!newItem.description || !newItem.unitPrice) return;
+    if (!newItem.description && !newItem.unitPrice) {
+      toast({ title: "Missing fields", description: "Select an item from the picker (or choose 'Use as custom entry') and enter a unit price.", variant: "destructive" });
+      return;
+    }
+    if (!newItem.description) {
+      toast({ title: "Description required", description: "Select an item from the dropdown or click 'Use as custom entry' to set the description.", variant: "destructive" });
+      return;
+    }
+    if (!newItem.unitPrice) {
+      toast({ title: "Unit price required", description: "Enter a unit price before adding this line item.", variant: "destructive" });
+      return;
+    }
 
     const quantity = newItem.quantity || 1;
     const unitPrice = parseFloat(newItem.unitPrice) || 0;

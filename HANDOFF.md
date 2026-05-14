@@ -724,6 +724,8 @@ Full append-only audit log system built and deployed. Details:
 
 ### Lessons Learned
 
+**Sixth instance this session-pair of a long-dormant bug surfaced by new adjacent work.** The codebase has accumulated structural fragility (silent fetches, stale validators, missing imports, race conditions in useEffect). The pattern is consistent enough that future work should budget time for "discover and fix bugs the new work exposes" as part of the session, not as an interrupting surprise.
+
 **Fifth instance this session-pair: TypeScript silently allowed a runtime bug.**
 
 | Instance | Pattern |
@@ -769,3 +771,56 @@ Bid Collection (Step 4) will use a **separate** master list, not `rom_scope_item
 3. Some items will overlap conceptually (e.g. "Edge of Dock Levelers") across both masters. Do we cross-link them for analytics, or accept they're independent vocabularies?
 
 The `MasterScopeItemPicker` component is reusable — accepts `searchEndpoint` as a prop. The search endpoint and review queue are duplicated per master list. This is intentional — keeping the masters independent avoids accidentally coupling them at the infrastructure level.
+
+---
+
+## Session: May 14, 2026 — Evaluation Budget Race Condition Fixes (Bugs #1–3)
+
+### Context
+
+These three bugs predated this session's controlled-vocabulary work. The picker exposed them by lengthening the average time between "add line item" and "click save," making the race window easier to hit. All users had been at risk of intermittent line item loss in evaluation budgets for an unknown duration.
+
+### Resolved This Session
+
+**Bug #1 — useEffect race condition in `evaluation-budget.tsx`** (primary cause of silent data loss)
+
+The single `useEffect` at line 1708 had eight dependencies including `allBidLineItems` and `bidCollections`. These two async queries resolved after initial render (sometimes seconds later). Each resolution triggered a full non-partial `setBudgetData({...})` replacement sourced from the server snapshot (`existingBudget`), erasing any line items the user had added to local state since page load. The save then persisted the pre-edit data (HTTP 200, green toast), making the bug completely invisible.
+
+Fix: Split into two effects.
+- **Effect A** (deps: `[existingBudget]` only): does the full `setBudgetData` replacement from server snapshot on initial load and after post-save cache invalidation. The inline demising wall transform was removed — it duplicated the dedicated `useEffect` at line 1450 and was the original reason `propertyData` had been added as a dependency.
+- **Effect B** (deps: `[propertyImprovements, rfp?.selectedBayConfigurations]`): handles the "needsBucketRefresh" edge case using `setBudgetData(prev => ({...prev, ...}))` — functional setter only, never touches `tenantImprovements` or `designSoftCosts`.
+- `allBidLineItems` and `bidCollections` dropped from both effects (were never used in the effect body — pure spurious triggers).
+
+This bug had been present indefinitely and was causing silent intermittent data loss across all evaluation budgets for an unknown duration. Surfaced because the new picker UX lengthened the average time between "add line item" and "click save," making the race window easier to hit.
+
+**Bug #2 — `saveProgressMutation` and `saveAndAdvanceMutation` used raw `fetch()` without response checking**
+
+Both mutations called `fetch()` and never inspected `response.ok`. An HTTP 500 from the server resolved the promise without throwing, so `onSuccess` fired and showed a green "Progress Saved" / "Budget Saved & Workflow Advanced" toast even when the save had completely failed.
+
+Fix: Replaced all raw `fetch()` calls in both mutations with `apiRequest()` from `@/lib/queryClient`, which calls `throwIfResNotOk` internally. This covers the budget save, the attachments upload, and the workflow-phase PATCH. `onError` now fires on server-side failures, surfacing a red error toast instead.
+
+**Bug #3 — No cache invalidation after save**
+
+`saveProgressMutation.onSuccess` only showed a toast. It did not call `queryClient.invalidateQueries` for the evaluation budget query. As a result `existingBudget` held stale pre-save data indefinitely. If Effect A re-fired for any reason after the save (which was trivially easy to trigger before Bug #1 was fixed), it would restore the pre-save server snapshot, silently losing freshly saved line items.
+
+Fix: Both mutations' `onSuccess` handlers now call:
+```javascript
+queryClient.invalidateQueries({ queryKey: [`/api/rfp-requests/${rfp?.id}/evaluation-budget`] });
+```
+After Bug #1's fix, Effect A fires harmlessly on the resulting re-fetch and re-syncs from the now-fresh server data without overwriting user edits.
+
+### Files Changed
+
+- `client/src/components/evaluation-budget.tsx` — split useEffect, removed finalTI demising wall transform, replaced raw fetch() with apiRequest(), added cache invalidation to both onSuccess handlers
+
+### DB Evidence at Time of Fix
+
+- Budget for rfp_id 187: 1 master-linked item ("Pit Leveler - 40k lbs (Electric)") confirmed persisted in DB — proving the save mechanism CAN work when the race is won. All other 9 sampled budgets: 0 master-linked items, consistent with the race being lost consistently under typical usage timing.
+
+### Verification Steps (for next session or user to run)
+
+1. Pick "Edge of Dock Levelers" from master scope picker, save, refresh — confirm item persists.
+2. Add a line item, wait 15 seconds (longer than any async query should take to settle), save, refresh — confirm persistence.
+3. Add a master-picked item AND an "Other" item in the same session, save once, refresh — both should persist.
+4. Edit an existing line item's quantity, save, refresh — confirm the edit persists.
+5. Simulate a server error (DevTools → Network → block the evaluation-budget POST) — confirm a red error toast appears, not a green success toast.

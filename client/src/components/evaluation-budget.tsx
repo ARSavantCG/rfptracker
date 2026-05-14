@@ -1839,25 +1839,11 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       const cleanedDSC = cleanOrphanedAssemblyItems(savedDSC);
       const cleanedEI = cleanOrphanedAssemblyItems(savedEI);
 
-      // Apply building depth to demising wall items inline during load so the two
-      // effects don't race each other (property data loading re-triggers this effect).
-      const finalTI = cleanedTI.map((item: EvaluationLineItem) => {
-        const desc = (item.description || "").toLowerCase();
-        if (desc.includes("demising wall") && propertyData?.buildingDepth && !savedManualOverrides.includes(item.id)) {
-          const buildingDepth = propertyData.buildingDepth;
-          const unitPx = parseFloat(item.unitPrice || "0");
-          return {
-            ...item,
-            quantity: buildingDepth,
-            unit: "ft.",
-            totalPrice: (buildingDepth * unitPx).toString(),
-          };
-        }
-        return item;
-      });
-      
+      // Demising wall auto-calculation is handled by the dedicated useEffect below.
+      // Do NOT apply it here — doing so would require propertyData in this effect's
+      // dependency array, which was the original source of the spurious re-runs.
       setBudgetData({
-        tenantImprovements: finalTI,
+        tenantImprovements: cleanedTI,
         designSoftCosts: cleanedDSC,
         existingImprovements: cleanedEI,
         hasExistingImprovements: (existingBudget as any).hasExistingImprovements || existingImprovementsFromProperty.length > 0,
@@ -1928,7 +1914,35 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         electricalAllocations: initialElectricalAllocations,
       }));
     }
-  }, [existingBudget, allBidLineItems, bidCollections, rfp?.selectedBayConfigurations, propertyImprovements, propertyData, rfp?.tenantElectricalAllocation, rfp?.tenantElectricalAdditionalRequest]);
+  // Effect A depends only on existingBudget (the server snapshot). Removing
+  // allBidLineItems, bidCollections, propertyData, propertyImprovements, and
+  // rfp sub-fields from this array was the core Bug #1 fix: those async queries
+  // resolved after initial render and triggered full non-partial setBudgetData
+  // replacements, silently erasing any line items the user had added since load.
+  }, [existingBudget]);
+
+  // Effect B — property/improvements data merge (functional-setter only, never overwrites
+  // user-edited line item arrays). Runs when property improvements load or bay config changes.
+  // Handles the "needsBucketRefresh" case: if saved existingImprovements predate the
+  // bucket field, repopulate from live property data using a safe partial update.
+  useEffect(() => {
+    if (!propertyImprovements || !existingBudget) return;
+
+    const savedExistingImprovements = (existingBudget as any).existingImprovements || [];
+    const needsBucketRefresh = savedExistingImprovements.length > 0 &&
+      savedExistingImprovements.some((item: any) => item.bucket === undefined);
+
+    if (!needsBucketRefresh) return;
+
+    const refreshed = populateExistingImprovements();
+    if (refreshed.length > 0) {
+      setBudgetData(prev => ({
+        ...prev,
+        existingImprovements: refreshed,
+        hasExistingImprovements: true,
+      }));
+    }
+  }, [propertyImprovements, rfp?.selectedBayConfigurations]);
 
   const formatCurrency = (amount: string | number) => {
     const num = typeof amount === 'string' ? parseFloat(amount) : amount;
@@ -3943,14 +3957,10 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       };
 
 
-      await fetch(`/api/rfp-requests/${rfp.id}/evaluation-budget`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}`,
-        },
-        body: JSON.stringify(budgetPayload),
-      });
+      // Bug #2 fix: use apiRequest which calls throwIfResNotOk internally.
+      // Previously a raw fetch() was used — HTTP 4xx/5xx responses did not throw,
+      // so onSuccess fired (green toast) even when the server rejected the save.
+      await apiRequest(`/api/rfp-requests/${rfp.id}/evaluation-budget`, 'POST', budgetPayload);
 
       // Upload new files if any
       if (attachedFiles.length > 0) {
@@ -3960,18 +3970,17 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         });
         formData.append('rfpId', rfp.id.toString());
 
-        await fetch(`/api/rfp-requests/${rfp.id}/evaluation-budget/attachments`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}`,
-          },
-          body: formData,
-        });
+        await apiRequest(`/api/rfp-requests/${rfp.id}/evaluation-budget/attachments`, 'POST', formData);
         
         setAttachedFiles([]);
       }
     },
     onSuccess: () => {
+      // Bug #3 fix: invalidate the evaluation budget cache so existingBudget
+      // re-fetches fresh server data after save. Without this, existingBudget
+      // held stale pre-save data; if Effect A re-fired for any reason it would
+      // restore the pre-save snapshot, silently losing newly added line items.
+      queryClient.invalidateQueries({ queryKey: [`/api/rfp-requests/${rfp?.id}/evaluation-budget`] });
       toast({
         title: "Progress Saved",
         description: "Your evaluation has been saved. You can continue editing or proceed to team review when ready.",
@@ -4022,14 +4031,8 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       };
 
 
-      await fetch(`/api/rfp-requests/${rfp.id}/evaluation-budget`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}`,
-        },
-        body: JSON.stringify(budgetPayload),
-      });
+      // Bug #2 fix: use apiRequest which calls throwIfResNotOk internally.
+      await apiRequest(`/api/rfp-requests/${rfp.id}/evaluation-budget`, 'POST', budgetPayload);
 
       // Upload new files if any
       if (attachedFiles.length > 0) {
@@ -4039,28 +4042,16 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         });
         formData.append('rfpId', rfp.id.toString());
 
-        await fetch(`/api/rfp-requests/${rfp.id}/evaluation-budget/attachments`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}`,
-          },
-          body: formData,
-        });
+        await apiRequest(`/api/rfp-requests/${rfp.id}/evaluation-budget/attachments`, 'POST', formData);
         
         setAttachedFiles([]);
       }
 
-      await fetch(`/api/rfp-requests/${rfp.id}/workflow-phase`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}`,
-        },
-        credentials: 'include',
-        body: JSON.stringify({ phase: 'publish' }),
-      });
+      await apiRequest(`/api/rfp-requests/${rfp.id}/workflow-phase`, 'PATCH', { phase: 'publish' });
     },
     onSuccess: () => {
+      // Bug #3 fix: invalidate the evaluation budget cache in addition to the RFP list.
+      queryClient.invalidateQueries({ queryKey: [`/api/rfp-requests/${rfp?.id}/evaluation-budget`] });
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
       toast({

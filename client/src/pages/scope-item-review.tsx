@@ -115,7 +115,7 @@ export default function ScopeItemReview() {
   });
 
   const promoteMutation = useMutation({
-    mutationFn: (body: object) => apiRequest("POST", "/api/admin/scope-item-review/promote", body),
+    mutationFn: (body: object) => apiRequest("/api/admin/scope-item-review/promote", "POST", body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/scope-item-review/pending"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/scope-item-review/promoted"] });
@@ -126,7 +126,7 @@ export default function ScopeItemReview() {
   });
 
   const duplicateMutation = useMutation({
-    mutationFn: (body: object) => apiRequest("POST", "/api/admin/scope-item-review/duplicate", body),
+    mutationFn: (body: object) => apiRequest("/api/admin/scope-item-review/duplicate", "POST", body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/scope-item-review/pending"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/scope-item-review/duplicates"] });
@@ -137,7 +137,7 @@ export default function ScopeItemReview() {
   });
 
   const rejectMutation = useMutation({
-    mutationFn: (body: object) => apiRequest("POST", "/api/admin/scope-item-review/reject", body),
+    mutationFn: (body: object) => apiRequest("/api/admin/scope-item-review/reject", "POST", body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/scope-item-review/pending"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/scope-item-review/rejected"] });

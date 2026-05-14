@@ -32,11 +32,14 @@ export async function apiRequest(
     headers["Authorization"] = `Bearer ${token}`;
   }
 
+  // 20-second timeout prevents fetch hanging indefinitely when the network
+  // drops mid-request, which would leave isPending=true with no recovery path.
   const res = await fetch(url, {
     method,
     headers,
     body: isFormData ? data : data ? JSON.stringify(data) : undefined,
     credentials: "include",
+    signal: AbortSignal.timeout(20_000),
   });
 
   await throwIfResNotOk(res);

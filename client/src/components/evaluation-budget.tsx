@@ -4003,9 +4003,12 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
     },
     onError: (error) => {
       console.error('Save progress error:', error);
+      const isTimeout = error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError");
       toast({
-        title: "Save Failed",
-        description: "There was an error saving your progress. Please try again.",
+        title: isTimeout ? "Save Timed Out" : "Save Failed",
+        description: isTimeout
+          ? "The request took too long (network may be slow or offline). Click Save Progress again to retry."
+          : `There was an error saving your progress. Please try again. (${error instanceof Error ? error.message : "Unknown error"})`,
         variant: "destructive",
       });
     },

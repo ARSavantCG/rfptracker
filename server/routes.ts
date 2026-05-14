@@ -6084,6 +6084,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           name: romScopeItems.name,
           description: romScopeItems.description,
           csiDivision: romScopeItems.csiDivision,
+          csiCode: romScopeItems.csiCode,
           unit: romScopeItems.unit,
           unitPrice: romScopeItems.unitPrice,
           activePrice: romScopeItems.activePrice,
@@ -6107,6 +6108,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         name: item.name,
         description: item.description,
         csiDivision: item.csiDivision,
+        csiCode: item.csiCode,
         unit: item.unit,
         // active_price if populated by pricing intelligence, else fall back to unit_price
         unitPrice:

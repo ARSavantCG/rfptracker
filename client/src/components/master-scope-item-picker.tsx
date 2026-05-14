@@ -204,7 +204,7 @@ export default function MasterScopeItemPicker({
       {/* Soft enforcement notice — shown only after selecting "Other" */}
       {isOtherMode && (
         <p className="text-xs text-amber-600 mt-1 leading-tight">
-          Custom entry — an admin will review and may add it to the master list.
+          Saving as custom entry. Database update pending review.
         </p>
       )}
 

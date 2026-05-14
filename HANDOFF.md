@@ -824,3 +824,55 @@ After Bug #1's fix, Effect A fires harmlessly on the resulting re-fetch and re-s
 3. Add a master-picked item AND an "Other" item in the same session, save once, refresh — both should persist.
 4. Edit an existing line item's quantity, save, refresh — confirm the edit persists.
 5. Simulate a server error (DevTools → Network → block the evaluation-budget POST) — confirm a red error toast appears, not a green success toast.
+
+---
+
+## Session: May 14, 2026 — UX Polish & Verification Fixes (Post-Bug-Fix Session)
+
+### Context
+
+Adolfo conducted live verification of the controlled-vocabulary picker (MasterScopeItemPicker) and the three evaluation budget bug fixes from the prior session. Several pre-existing UX gaps and one cache bug were surfaced and fixed during verification.
+
+### Resolved This Session
+
+**Add & Continue button not resetting the picker for next entry**
+
+The MasterScopeItemPicker holds its own internal state (query text, search results, open/closed, "Other" mode flag). Resetting the parent's `newItem` state was insufficient — the picker still showed the old description in its text box. Fix: added a `pickerKey` counter state to `EvaluationBudget`; incremented on every successful "Add & Continue"; passed as `key={pickerKey}` to the picker, forcing a clean remount. Also fixed the auto-focus `setTimeout` which was targeting the old placeholder string `"Enter item description"` instead of the current `"Type to search scope items…"`.
+
+Files changed: `client/src/components/evaluation-budget.tsx`
+
+**Silent validation failure in the Add Item form**
+
+`addNewItem()` had a guard `if (!newItem.description || !newItem.unitPrice) return;` that silently did nothing — no toast, no shake, no indication. Since the picker requires completing the selection flow (pick from dropdown OR click "Use as custom entry"), users who typed text directly and clicked Add saw no feedback. Fix: replaced the single silent return with three specific red toasts distinguishing "both missing", "description missing", and "unit price missing". The description toast explicitly instructs the user to use the dropdown or "Use as custom entry".
+
+Files changed: `client/src/components/evaluation-budget.tsx`
+
+**Save Progress entering stuck pending state when network drops mid-request**
+
+`apiRequest` used bare `fetch()` with no timeout. If the network dropped while a save was in flight, the browser held the TCP connection open indefinitely — `isPending` stayed `true` forever, the Save Progress button appeared disabled (no visual change to the text since it was batched), and subsequent clicks silently did nothing. Fix: added `signal: AbortSignal.timeout(20_000)` to every `fetch()` call in `apiRequest`. After 20 seconds, the fetch rejects with `AbortError`; TanStack Query catches it, sets `isPending=false`, fires `onError`. The `saveProgressMutation.onError` handler now distinguishes timeout from other failures: "Save Timed Out — network may be slow or offline. Click Save Progress again to retry."
+
+Files changed: `client/src/lib/queryClient.ts`, `client/src/components/evaluation-budget.tsx`
+
+**Scope-item-review pending tab serving stale empty results (TanStack Query cache bug)**
+
+Root cause: the global `staleTime: 5 * 60 * 1000` in `queryClient.ts` caused the `/api/admin/scope-item-review/pending` query to be served from cache for up to 5 minutes after new Other entries were enqueued. The DB always had the correct rows; only the cache layer was stale. Symptoms: admin navigates to `/admin/scope-item-review`, sees "No pending items — queue is clear" even though two confirmed entries exist in the DB with `status='pending'`. Server logs confirmed the `/pending` endpoint was never being hit on those page visits.
+
+Two-part fix:
+1. `staleTime: 0` added to the pending query in `scope-item-review.tsx` — admin review pages are action-oriented; freshness matters more than performance.
+2. `queryClient.invalidateQueries({ queryKey: ["/api/admin/scope-item-review/pending"] })` added to both `saveProgressMutation.onSuccess` and `saveAndAdvanceMutation.onSuccess` in `evaluation-budget.tsx` — busts the cache immediately after any budget save that may have enqueued new Other entries.
+
+Verification: after the fix, all four scope-item-review queries (`/pending`, `/promoted`, `/rejected`, `/duplicates`) hit the server simultaneously on page load. `/pending` returned the two enqueued entries (`Tenant Custom Entry`, `Tenant Custom Scope 4`).
+
+Files changed: `client/src/pages/scope-item-review.tsx`, `client/src/components/evaluation-budget.tsx`
+
+### Lessons Learned
+
+**Seventh instance — action-oriented admin views must override the global staleTime.** The 5-minute global staleTime in `queryClient.ts` is appropriate for read-heavy views (RFP tables, property lists) but is a footgun for admin tools where users are acting on live queue state. Any review queue, audit log, or moderation view should set `staleTime: 0` or `refetchOnMount: 'always'` explicitly. The data was always correct in the DB; the cache was the only thing wrong.
+
+**Picker UX contract must be documented.** `MasterScopeItemPicker` is a search-then-select widget, not a free-text input. Typing text into the box does not update the parent's form state — only `onSelect` does. Any form using this picker must either (a) show validation feedback when `description` is empty, or (b) prevent the submit button from enabling until a selection is made. The silent guard pattern (`if (!x) return;`) is never acceptable in a form action.
+
+### Next Session Backlog
+
+- **Audit other admin-page `useQuery` calls for staleTime issues.** Highest priority candidate: `/admin/audit-log` — forensic audit data must always be live. Check all other admin views for the same silent-stale pattern.
+- **Scope-item-review invalidation on bid saves.** Currently only evaluation budget saves bust the pending cache. If Other entries can be added from bid collection or other surfaces in the future, those save handlers will also need the invalidation call.
+- **"Custom Entry 3" never reached the DB.** During verification, this entry was typed into the picker text box but the "Use as custom entry" flow was not completed before the save attempt. Not a bug — expected behavior of the picker contract — but worth noting as a training scenario.

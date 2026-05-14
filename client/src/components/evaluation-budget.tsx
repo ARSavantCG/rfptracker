@@ -3996,6 +3996,9 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       // held stale pre-save data; if Effect A re-fired for any reason it would
       // restore the pre-save snapshot, silently losing newly added line items.
       queryClient.invalidateQueries({ queryKey: [`/api/rfp-requests/${rfp?.id}/evaluation-budget`] });
+      // Bust the admin review queue cache so any new Other entries appear immediately
+      // on the scope-item-review page without requiring a manual page refresh.
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/scope-item-review/pending"] });
       toast({
         title: "Progress Saved",
         description: "Your evaluation has been saved. You can continue editing or proceed to team review when ready.",
@@ -4072,6 +4075,8 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       queryClient.invalidateQueries({ queryKey: [`/api/rfp-requests/${rfp?.id}/evaluation-budget`] });
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
+      // Bust the admin review queue cache so any new Other entries appear immediately.
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/scope-item-review/pending"] });
       toast({
         title: "Budget Saved & Workflow Advanced",
         description: "Evaluation budget saved and project moved to publish phase.",

@@ -86,6 +86,7 @@ export default function ScopeItemReview() {
 
   const { data: pendingGroups = [], isLoading: pendingLoading } = useQuery<QueueGroup[]>({
     queryKey: ["/api/admin/scope-item-review/pending"],
+    staleTime: 0, // Admin review queue must always be live — stale cached results hide new entries
   });
 
   const { data: promotedEntries = [], isLoading: promotedLoading } = useQuery<ReviewedEntry[]>({

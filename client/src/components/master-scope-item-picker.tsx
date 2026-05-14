@@ -76,7 +76,7 @@ export default function MasterScopeItemPicker({
         return;
       }
       setLoading(true);
-      const token = localStorage.getItem("auth_token") ?? "";
+      const token = localStorage.getItem("auth-token") ?? "";
       fetch(`${searchEndpoint}?q=${encodeURIComponent(q)}&limit=20`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         credentials: "include",

@@ -38,6 +38,7 @@ interface MasterScopeItemPickerProps {
   className?: string;
   disabled?: boolean;
   autoFocus?: boolean;
+  hideOther?: boolean;
 }
 
 export default function MasterScopeItemPicker({
@@ -49,6 +50,7 @@ export default function MasterScopeItemPicker({
   className,
   disabled,
   autoFocus,
+  hideOther = false,
 }: MasterScopeItemPickerProps) {
   const [query, setQuery] = useState(value ?? "");
   const [results, setResults] = useState<MasterScopeItem[]>([]);
@@ -143,7 +145,7 @@ export default function MasterScopeItemPicker({
       }
       return;
     }
-    const total = results.length + 1; // +1 for the "Other" row
+    const total = results.length + (hideOther ? 0 : 1);
     if (e.key === "ArrowDown") {
       e.preventDefault();
       setActiveIndex((i) => Math.min(i + 1, total - 1));
@@ -154,7 +156,7 @@ export default function MasterScopeItemPicker({
       e.preventDefault();
       if (activeIndex >= 0 && activeIndex < results.length) {
         selectMaster(results[activeIndex]);
-      } else if (activeIndex === results.length) {
+      } else if (!hideOther && activeIndex === results.length) {
         selectOther();
       }
     } else if (e.key === "Escape") {
@@ -244,8 +246,8 @@ export default function MasterScopeItemPicker({
             <div className="px-3 py-2 text-sm text-gray-400 italic">No master items matched</div>
           )}
 
-          {/* Visual separator before "Other" */}
-          {!loading && (
+          {/* Visual separator before "Other" — hidden when hideOther=true */}
+          {!loading && !hideOther && (
             <>
               <div className="border-t border-gray-100 mx-2" />
               <div

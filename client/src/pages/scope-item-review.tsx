@@ -471,6 +471,7 @@ export default function ScopeItemReview() {
                   }
                 }}
                 placeholder="Search master items…"
+                hideOther
               />
             </div>
           </div>

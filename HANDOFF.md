@@ -882,6 +882,26 @@ Files changed: `server/routes.ts` (import + 3 logEvent call blocks)
 
 **Picker UX contract must be documented.** `MasterScopeItemPicker` is a search-then-select widget, not a free-text input. Typing text into the box does not update the parent's form state — only `onSelect` does. Any form using this picker must either (a) show validation feedback when `description` is empty, or (b) prevent the submit button from enabling until a selection is made. The silent guard pattern (`if (!x) return;`) is never acceptable in a form action.
 
+### Critical Environment Note
+
+**Dev preview and production share the same Neon PostgreSQL database.** There is NO safe sandbox. Every API call or test made against the dev preview directly affects live production data. Confirmed: the `DATABASE_URL` is a global Replit secret (not environment-scoped), provided by the single `javascript_database:1.0.0` integration. There is no second database for production.
+
+Implications:
+- Schema migrations run in dev are immediately live in production
+- "Test" records (promotions, queue entries, line items) persist in the production database
+- Destructive operations have no rollback path via environment isolation
+- This session generated test data in production: two test-promoted master items (id 75 "Tenant Custom Scope 4", id 77 "Tenant Custom Entry") and two test-acted queue entries ("LED Dock Lights" marked duplicate, "Electrical Drops" marked rejected). **Cleaned up same session**: deleted rom_scope_items 75 and 77; reset all four queue entries (Tenant Custom Entry, Tenant Custom Scope 4, LED Dock Lights, Electrical Drops) back to `status=pending` with all reviewed_at/reviewed_by/FK fields cleared. Verified: no dangling references remain.
+
+### Backlog: Database Environment Separation (High Value, Not Urgent)
+
+Set up Neon database branching so dev preview points at a separate branch from production:
+1. Create a Neon branch from main DB for development
+2. Set `DATABASE_URL` as a regular env var (not secret), scoped to `development` only, pointing at the Neon dev branch
+3. Production `DATABASE_URL` secret stays pointing at the main branch
+4. Periodically reset dev branch from main to refresh test data
+
+Estimated: 1–2 hour infrastructure session. Do before any future destructive data operations or large schema migrations.
+
 ### Next Session Backlog
 
 - **Audit other admin-page `useQuery` calls for staleTime issues.** Highest priority candidate: `/admin/audit-log` — forensic audit data must always be live. Check all other admin views for the same silent-stale pattern.

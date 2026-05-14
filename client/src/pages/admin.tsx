@@ -1095,6 +1095,11 @@ export default function Admin() {
               <span className="hidden sm:inline">Audit Log</span>
               <span className="sm:hidden">Audit</span>
             </Link>
+            <Link href="/admin/scope-item-review" className="flex items-center gap-2 flex-shrink-0 px-3 py-1.5 text-sm rounded-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors whitespace-nowrap">
+              <BookOpen className="h-4 w-4" />
+              <span className="hidden sm:inline">Scope Review</span>
+              <span className="sm:hidden">Scope</span>
+            </Link>
           </TabsList>
 
           <TabsContent value="users" className="mt-6">

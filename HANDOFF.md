@@ -757,3 +757,15 @@ Full append-only audit log system built and deployed. Details:
 2. **Deploy** — audit log foundation + requireAdmin fix unblocks the pending deploy. Republish.
 3. **TypeScript hardening** — per lesson above: tighten `IStorage` method typing. The `getUser` stub on the interface is still declared but unimplemented — either add the implementation or remove it.
 4. **Publish email live test** — advance a test RFP to "publish" and confirm `sendWorkflowCompletionEmail` fires.
+
+---
+
+## Note for Next Session: Bid Collection (Step 4) Master List
+
+Bid Collection (Step 4) will use a **separate** master list, not `rom_scope_items`. Contractor vocabulary differs from internal scope vocabulary; forcing GC bids through the Evaluation Budget master would distort the data we're capturing. Decisions to make next session:
+
+1. New table for contractor-master items, OR extend the existing `master_categories` table (which `bid_line_items` already references)?
+2. Should the contractor master allow PDF-parsed items to contribute directly (semi-automated population from GC bids), or stay admin-curated like the Evaluation master?
+3. Some items will overlap conceptually (e.g. "Edge of Dock Levelers") across both masters. Do we cross-link them for analytics, or accept they're independent vocabularies?
+
+The `MasterScopeItemPicker` component is reusable — accepts `searchEndpoint` as a prop. The search endpoint and review queue are duplicated per master list. This is intentional — keeping the masters independent avoids accidentally coupling them at the infrastructure level.

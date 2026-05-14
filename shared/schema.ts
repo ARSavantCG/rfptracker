@@ -6,7 +6,7 @@
  * distribution, or use of this software is strictly prohibited.
  */
 
-import { pgTable, text, serial, integer, timestamp, json, jsonb, boolean, varchar, uuid } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, timestamp, json, jsonb, boolean, varchar, uuid, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { parseLocalDate } from "./date-utils";
@@ -880,6 +880,16 @@ export type EvaluationLineItem = {
   bidCollectionId?: number; // Reference to original bid if applicable
   bidLineItemId?: number; // Reference to original bid line item if applicable
   bucket?: 'ACTUALS' | 'COMMITTED' | 'FORECAST' | 'PIPELINE'; // Cost lifecycle bucket for existing improvements
+  // Controlled vocabulary fields — added May 2026
+  // masterItemId=null means "Other" (custom free-text entry)
+  masterItemId?: number | null;
+  masterItemSnapshot?: {
+    description: string;
+    csiDivision?: string;
+    unit: string;
+    unitPrice: string;
+  } | null; // captured at selection time; null when masterItemId is null
+  customDescription?: string | null; // populated when masterItemId=null ("Other" entries)
 };
 
 export const insertEvaluationBudgetSchema = createInsertSchema(evaluationBudgets).omit({
@@ -1316,4 +1326,43 @@ export const auditLog = pgTable("audit_log", {
 });
 
 export type AuditLogEntry = typeof auditLog.$inferSelect;
+
+// Master Item Review Queue — captures "Other" entries from Evaluation Budget
+// and legacy free-typed items for admin review and promotion to the master list.
+// Status lifecycle: pending → promoted | rejected | duplicate
+export const masterItemReviewQueue = pgTable(
+  "master_item_review_queue",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    // 'evaluation_budget' | 'bid_collection' | 'legacy_freetype'
+    sourceType: text("source_type").notNull(),
+    // client-generated EvaluationLineItem.id or bid_line_items.id
+    sourceLineItemId: text("source_line_item_id"),
+    customDescription: text("custom_description").notNull(),
+    suggestedCsiDivision: text("suggested_csi_division"),
+    suggestedUnit: text("suggested_unit"),
+    // 'pending' | 'promoted' | 'rejected' | 'duplicate'
+    status: text("status").notNull().default("pending"),
+    // set when status='promoted' — the newly created master scope item
+    promotedMasterItemId: integer("promoted_master_item_id").references(() => romScopeItems.id),
+    // set when status='duplicate' — the existing master item this duplicates
+    duplicateOfMasterItemId: integer("duplicate_of_master_item_id").references(() => romScopeItems.id),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    reviewedAt: timestamp("reviewed_at"),
+    reviewedBy: text("reviewed_by"),
+    notes: text("notes"),
+  },
+  (table) => [
+    index("mirq_status_idx").on(table.status),
+    index("mirq_description_idx").on(table.customDescription),
+  ]
+);
+
+export const insertMasterItemReviewQueueSchema = createInsertSchema(masterItemReviewQueue).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type MasterItemReviewQueueEntry = typeof masterItemReviewQueue.$inferSelect;
+export type InsertMasterItemReviewQueueEntry = z.infer<typeof insertMasterItemReviewQueueSchema>;
 

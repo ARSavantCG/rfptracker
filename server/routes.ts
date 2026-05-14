@@ -12,9 +12,9 @@ import fs from "fs";
 import path from "path";
 import { storage } from "./storage";
 import { db } from "./db";
-import { users, contacts, insertRfpRequestSchema, updateRfpRequestSchema, insertContactSchema, updateContactSchema, insertInvitationSchema, updateInvitationSchema, insertInvitationToBidSchema, updateInvitationToBidSchema, insertPdfTemplateSchema, auditLog } from "@shared/schema";
+import { users, contacts, insertRfpRequestSchema, updateRfpRequestSchema, insertContactSchema, updateContactSchema, insertInvitationSchema, updateInvitationSchema, insertInvitationToBidSchema, updateInvitationToBidSchema, insertPdfTemplateSchema, auditLog, romScopeItems, masterItemReviewQueue, evaluationBudgets } from "@shared/schema";
 import { convertFormDateToDbDate } from "@shared/date-utils";
-import { eq, desc, and, gte, lte, ilike, inArray, sql as drizzleSql } from "drizzle-orm";
+import { eq, desc, and, or, gte, lte, ilike, inArray, sql as drizzleSql } from "drizzle-orm";
 import { tokenStore } from "./token-auth";
 import { nanoid } from "nanoid";
 import { generateRfpPdf } from "./pdf-generator";
@@ -3223,7 +3223,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Create new budget
         savedBudget = await storage.createEvaluationBudget(budgetData);
       }
-      
+
+      // Fire-and-forget: enqueue "Other" line items for admin review.
+      // masterItemId=null AND customDescription set → user chose "Other".
+      // Deduped by normalized description + status='pending'.
+      // Never throws — audit failures must not break the save response.
+      (async () => {
+        try {
+          const allItems: any[] = [
+            ...((budgetData.tenantImprovements as any[]) || []),
+            ...((budgetData.designSoftCosts as any[]) || []),
+            ...((budgetData.existingImprovements as any[]) || []),
+          ];
+          const otherItems = allItems.filter(
+            (item: any) =>
+              item.masterItemId == null &&
+              item.customDescription &&
+              item.customDescription.trim()
+          );
+          for (const item of otherItems) {
+            const descNorm = item.customDescription.trim().toLowerCase();
+            const existing = await db
+              .select({ id: masterItemReviewQueue.id })
+              .from(masterItemReviewQueue)
+              .where(
+                and(
+                  drizzleSql`LOWER(TRIM(${masterItemReviewQueue.customDescription})) = ${descNorm}`,
+                  eq(masterItemReviewQueue.status, "pending"),
+                  eq(masterItemReviewQueue.sourceType, "evaluation_budget")
+                )
+              )
+              .limit(1);
+            if (existing.length === 0) {
+              await db.insert(masterItemReviewQueue).values({
+                sourceType: "evaluation_budget",
+                sourceLineItemId: item.id ?? null,
+                customDescription: item.customDescription.trim(),
+                status: "pending",
+              });
+            }
+          }
+        } catch (queueErr) {
+          console.error("[review-queue] Failed to enqueue Other entries:", queueErr);
+        }
+      })();
+
       res.status(201).json({ 
         message: "Evaluation budget saved successfully",
         rfpId,
@@ -6017,6 +6061,326 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating line item cost bucket:", error);
       res.status(500).json({ message: "Failed to update cost bucket" });
+    }
+  });
+
+  // ===========================
+  // MASTER SCOPE ITEMS — search endpoint for the typeahead picker.
+  // Source: rom_scope_items (Step 5 Evaluation Budget). Step 4 will use a
+  // separate master list; this endpoint stays specific to rom_scope_items.
+  // Price resolution: active_price if non-empty (pricing intelligence result),
+  // else unit_price (direct/base price). Documents the fallback explicitly.
+  // ===========================
+  app.get("/api/master-scope-items/search", requireAuth, async (req, res) => {
+    try {
+      const q = String(req.query.q ?? "").trim();
+      const limit = Math.min(parseInt(String(req.query.limit ?? "20")) || 20, 50);
+      if (!q) return res.json([]);
+
+      const items = await db
+        .select({
+          id: romScopeItems.id,
+          name: romScopeItems.name,
+          description: romScopeItems.description,
+          csiDivision: romScopeItems.csiDivision,
+          unit: romScopeItems.unit,
+          unitPrice: romScopeItems.unitPrice,
+          activePrice: romScopeItems.activePrice,
+        })
+        .from(romScopeItems)
+        .where(
+          and(
+            eq(romScopeItems.isActive, true),
+            or(
+              ilike(romScopeItems.name, `%${q}%`),
+              ilike(romScopeItems.description, `%${q}%`),
+              ilike(romScopeItems.csiDivision, `%${q}%`)
+            )
+          )
+        )
+        .orderBy(romScopeItems.name)
+        .limit(limit);
+
+      const result = items.map((item) => ({
+        id: item.id,
+        name: item.name,
+        description: item.description,
+        csiDivision: item.csiDivision,
+        unit: item.unit,
+        // active_price if populated by pricing intelligence, else fall back to unit_price
+        unitPrice:
+          item.activePrice && item.activePrice.trim() !== ""
+            ? item.activePrice
+            : item.unitPrice,
+      }));
+
+      res.json(result);
+    } catch (error) {
+      console.error("Master scope items search error:", error);
+      res.status(500).json({ message: "Search failed" });
+    }
+  });
+
+  // ===========================
+  // MASTER ITEM REVIEW QUEUE — admin-only routes.
+  // Captures "Other" entries from Evaluation Budget and legacy free-typed
+  // items for admin review. Status lifecycle: pending → promoted|rejected|duplicate.
+  // No line item backfill on promotion — historical items stay as-is.
+  // ===========================
+
+  // GET pending — grouped by normalized description, sorted by count desc
+  app.get("/api/admin/scope-item-review/pending", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const rows = await db
+        .select()
+        .from(masterItemReviewQueue)
+        .where(eq(masterItemReviewQueue.status, "pending"))
+        .orderBy(masterItemReviewQueue.createdAt);
+
+      const groups: Record<string, any> = {};
+      for (const row of rows) {
+        const key = row.customDescription.trim().toLowerCase();
+        if (!groups[key]) {
+          groups[key] = {
+            descriptionNormalized: key,
+            displayDescription: row.customDescription.trim(),
+            count: 0,
+            firstSeen: row.createdAt,
+            lastSeen: row.createdAt,
+            sources: {} as Record<string, number>,
+            entries: [] as any[],
+          };
+        }
+        const g = groups[key];
+        g.count++;
+        if (new Date(row.createdAt) < new Date(g.firstSeen)) g.firstSeen = row.createdAt;
+        if (new Date(row.createdAt) > new Date(g.lastSeen)) g.lastSeen = row.createdAt;
+        g.sources[row.sourceType] = (g.sources[row.sourceType] || 0) + 1;
+        g.entries.push({
+          id: row.id,
+          sourceType: row.sourceType,
+          sourceLineItemId: row.sourceLineItemId,
+          createdAt: row.createdAt,
+        });
+      }
+      res.json(Object.values(groups).sort((a: any, b: any) => b.count - a.count));
+    } catch (error) {
+      console.error("Review queue pending error:", error);
+      res.status(500).json({ message: "Failed to fetch pending queue" });
+    }
+  });
+
+  app.get("/api/admin/scope-item-review/promoted", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const rows = await db
+        .select()
+        .from(masterItemReviewQueue)
+        .where(eq(masterItemReviewQueue.status, "promoted"))
+        .orderBy(desc(masterItemReviewQueue.reviewedAt));
+      res.json(rows);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch promoted queue" });
+    }
+  });
+
+  app.get("/api/admin/scope-item-review/rejected", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const rows = await db
+        .select()
+        .from(masterItemReviewQueue)
+        .where(eq(masterItemReviewQueue.status, "rejected"))
+        .orderBy(desc(masterItemReviewQueue.reviewedAt));
+      res.json(rows);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch rejected queue" });
+    }
+  });
+
+  app.get("/api/admin/scope-item-review/duplicates", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const rows = await db
+        .select()
+        .from(masterItemReviewQueue)
+        .where(eq(masterItemReviewQueue.status, "duplicate"))
+        .orderBy(desc(masterItemReviewQueue.reviewedAt));
+      res.json(rows);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch duplicates queue" });
+    }
+  });
+
+  // POST promote — create a new rom_scope_items row and move all matching
+  // pending queue entries to status='promoted'. No line item backfill.
+  app.post("/api/admin/scope-item-review/promote", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const { descriptionNormalized, finalDescription, csiDivision, unit, defaultUnitPrice } =
+        req.body;
+      if (!descriptionNormalized || !finalDescription || !csiDivision || !unit) {
+        return res
+          .status(400)
+          .json({ message: "finalDescription, csiDivision, and unit are required" });
+      }
+
+      const [newMasterItem] = await db
+        .insert(romScopeItems)
+        .values({
+          name: finalDescription,
+          unit,
+          unitPrice: defaultUnitPrice ?? "0",
+          category: "Tenant Improvements",
+          csiDivision,
+          isActive: true,
+          includeByDefault: false,
+        })
+        .returning({ id: romScopeItems.id });
+
+      await db
+        .update(masterItemReviewQueue)
+        .set({
+          status: "promoted",
+          promotedMasterItemId: newMasterItem.id,
+          reviewedAt: new Date(),
+          reviewedBy: (req as any).user?.username ?? "admin",
+        })
+        .where(
+          and(
+            drizzleSql`LOWER(TRIM(${masterItemReviewQueue.customDescription})) = ${descriptionNormalized}`,
+            eq(masterItemReviewQueue.status, "pending")
+          )
+        );
+
+      res.json({ masterItemId: newMasterItem.id, message: "Promoted successfully" });
+    } catch (error) {
+      console.error("Promote error:", error);
+      res.status(500).json({ message: "Promote failed" });
+    }
+  });
+
+  // POST duplicate — mark all matching pending entries as duplicate of an
+  // existing master scope item. No line item backfill.
+  app.post("/api/admin/scope-item-review/duplicate", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const { descriptionNormalized, masterItemId } = req.body;
+      if (!descriptionNormalized || !masterItemId) {
+        return res
+          .status(400)
+          .json({ message: "descriptionNormalized and masterItemId are required" });
+      }
+      await db
+        .update(masterItemReviewQueue)
+        .set({
+          status: "duplicate",
+          duplicateOfMasterItemId: parseInt(masterItemId),
+          reviewedAt: new Date(),
+          reviewedBy: (req as any).user?.username ?? "admin",
+        })
+        .where(
+          and(
+            drizzleSql`LOWER(TRIM(${masterItemReviewQueue.customDescription})) = ${descriptionNormalized}`,
+            eq(masterItemReviewQueue.status, "pending")
+          )
+        );
+      res.json({ message: "Marked as duplicate" });
+    } catch (error) {
+      console.error("Duplicate error:", error);
+      res.status(500).json({ message: "Action failed" });
+    }
+  });
+
+  // POST reject — mark all matching pending entries as rejected.
+  app.post("/api/admin/scope-item-review/reject", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const { descriptionNormalized, notes } = req.body;
+      if (!descriptionNormalized) {
+        return res.status(400).json({ message: "descriptionNormalized is required" });
+      }
+      await db
+        .update(masterItemReviewQueue)
+        .set({
+          status: "rejected",
+          notes: notes ?? null,
+          reviewedAt: new Date(),
+          reviewedBy: (req as any).user?.username ?? "admin",
+        })
+        .where(
+          and(
+            drizzleSql`LOWER(TRIM(${masterItemReviewQueue.customDescription})) = ${descriptionNormalized}`,
+            eq(masterItemReviewQueue.status, "pending")
+          )
+        );
+      res.json({ message: "Rejected" });
+    } catch (error) {
+      console.error("Reject error:", error);
+      res.status(500).json({ message: "Action failed" });
+    }
+  });
+
+  // POST import-legacy — one-shot: scans evaluation_budgets JSON for free-typed
+  // line items (masterItemId=null, customDescription=null) and enqueues them.
+  // Deduplicated by description per sourceType. Run once; idempotent thereafter.
+  app.post("/api/admin/scope-item-review/import-legacy", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const budgets = await db
+        .select({
+          tenantImprovements: evaluationBudgets.tenantImprovements,
+          designSoftCosts: evaluationBudgets.designSoftCosts,
+          existingImprovements: evaluationBudgets.existingImprovements,
+        })
+        .from(evaluationBudgets);
+
+      let imported = 0;
+      let skipped = 0;
+
+      for (const budget of budgets) {
+        const allItems = [
+          ...((budget.tenantImprovements as any[]) || []),
+          ...((budget.designSoftCosts as any[]) || []),
+          ...((budget.existingImprovements as any[]) || []),
+        ];
+
+        const legacyItems = allItems.filter(
+          (item: any) =>
+            item.masterItemId == null &&
+            (item.customDescription == null || item.customDescription === "") &&
+            item.description &&
+            item.description.trim()
+        );
+
+        for (const item of legacyItems) {
+          const descNorm = item.description.trim().toLowerCase();
+          const existing = await db
+            .select({ id: masterItemReviewQueue.id })
+            .from(masterItemReviewQueue)
+            .where(
+              and(
+                drizzleSql`LOWER(TRIM(${masterItemReviewQueue.customDescription})) = ${descNorm}`,
+                eq(masterItemReviewQueue.sourceType, "legacy_freetype")
+              )
+            )
+            .limit(1);
+
+          if (existing.length === 0) {
+            await db.insert(masterItemReviewQueue).values({
+              sourceType: "legacy_freetype",
+              sourceLineItemId: item.id ?? null,
+              customDescription: item.description.trim(),
+              status: "pending",
+            });
+            imported++;
+          } else {
+            skipped++;
+          }
+        }
+      }
+
+      res.json({
+        imported,
+        skipped,
+        message: `Imported ${imported} legacy descriptions, skipped ${skipped} already present.`,
+      });
+    } catch (error) {
+      console.error("Legacy import error:", error);
+      res.status(500).json({ message: "Import failed" });
     }
   });
 

@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import MasterScopeItemPicker, { type MasterScopeSelection } from "@/components/master-scope-item-picker";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -126,7 +127,10 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
     unit: "",
     unitPrice: "",
     totalPrice: "",
-    tenantShare: 100
+    tenantShare: 100,
+    masterItemId: null,
+    masterItemSnapshot: null,
+    customDescription: null,
   });
   
   // Assembly creation state
@@ -3701,6 +3705,9 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       unitPrice: unitPrice.toFixed(2),
       totalPrice,
       tenantShare: newItem.tenantShare || 100,
+      masterItemId: newItem.masterItemId ?? null,
+      masterItemSnapshot: newItem.masterItemSnapshot ?? null,
+      customDescription: newItem.customDescription ?? null,
     };
 
     setBudgetData(prev => ({
@@ -3715,7 +3722,10 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       unit: "", // Always reset unit to blank
       unitPrice: "",
       totalPrice: "",
-      tenantShare: 100
+      tenantShare: 100,
+      masterItemId: null,
+      masterItemSnapshot: null,
+      customDescription: null,
     });
     
     if (!addAnother) {
@@ -4452,9 +4462,20 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
                               {editingItem === item.id ? (
                                 <>
                                   <TableCell>
-                                    <Input
-                                      value={item.description}
-                                      onChange={(e) => updateItem(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', item.id, { description: e.target.value })}
+                                    <MasterScopeItemPicker
+                                      searchEndpoint="/api/master-scope-items/search"
+                                      value={item.masterItemId ? item.description : (item.customDescription ?? item.description)}
+                                      masterItemId={item.masterItemId}
+                                      onSelect={(sel: MasterScopeSelection) => {
+                                        updateItem(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', item.id, {
+                                          description: sel.description,
+                                          unit: sel.unit ?? item.unit,
+                                          unitPrice: sel.unitPrice ?? item.unitPrice,
+                                          masterItemId: sel.masterItemId ?? null,
+                                          masterItemSnapshot: sel.snapshot ?? null,
+                                          customDescription: sel.customDescription ?? null,
+                                        });
+                                      }}
                                       className="text-sm"
                                     />
                                   </TableCell>
@@ -4661,16 +4682,22 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
             <div className="grid grid-cols-1 md:grid-cols-9 gap-4">
               <div className="md:col-span-3">
                 <Label>Description</Label>
-                <Input
+                <MasterScopeItemPicker
+                  searchEndpoint="/api/master-scope-items/search"
                   value={newItem.description || ""}
-                  onChange={(e) => setNewItem(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Enter item description"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && e.ctrlKey && newItem.description && newItem.unitPrice) {
-                      e.preventDefault();
-                      addNewItem(category, true);
-                    }
+                  masterItemId={newItem.masterItemId}
+                  onSelect={(sel: MasterScopeSelection) => {
+                    setNewItem(prev => ({
+                      ...prev,
+                      description: sel.description,
+                      unit: sel.unit ?? prev.unit ?? "",
+                      unitPrice: sel.unitPrice ?? prev.unitPrice ?? "",
+                      masterItemId: sel.masterItemId ?? null,
+                      masterItemSnapshot: sel.snapshot ?? null,
+                      customDescription: sel.customDescription ?? null,
+                    }));
                   }}
+                  placeholder="Type to search scope items…"
                 />
               </div>
               <div>

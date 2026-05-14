@@ -16,6 +16,7 @@ import { users, contacts, insertRfpRequestSchema, updateRfpRequestSchema, insert
 import { convertFormDateToDbDate } from "@shared/date-utils";
 import { eq, desc, and, or, gte, lte, ilike, inArray, sql as drizzleSql } from "drizzle-orm";
 import { tokenStore } from "./token-auth";
+import { logEvent } from "./audit-log";
 import { nanoid } from "nanoid";
 import { generateRfpPdf } from "./pdf-generator";
 import { enforceAllPropertiesLegalCompliance } from "./property-legal-compliance";
@@ -6249,6 +6250,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           )
         );
 
+      logEvent({
+        eventType: 'scope_item_review_promoted',
+        userId: (req as any).user?.id ?? null,
+        userEmail: (req as any).user?.email ?? null,
+        entityType: 'master_scope_item',
+        entityId: String(newMasterItem.id),
+        metadata: {
+          customDescription: finalDescription,
+          promotedMasterItemId: newMasterItem.id,
+          csiDivision,
+          unit,
+          unitPrice: defaultUnitPrice ?? null,
+        },
+      });
+
       res.json({ masterItemId: newMasterItem.id, message: "Promoted successfully" });
     } catch (error) {
       console.error("Promote error:", error);
@@ -6280,6 +6296,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
             eq(masterItemReviewQueue.status, "pending")
           )
         );
+
+      logEvent({
+        eventType: 'scope_item_review_duplicated',
+        userId: (req as any).user?.id ?? null,
+        userEmail: (req as any).user?.email ?? null,
+        entityType: 'master_scope_item',
+        entityId: String(masterItemId),
+        metadata: {
+          customDescription: descriptionNormalized,
+          duplicateOfMasterItemId: parseInt(masterItemId),
+        },
+      });
+
       res.json({ message: "Marked as duplicate" });
     } catch (error) {
       console.error("Duplicate error:", error);
@@ -6294,6 +6323,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!descriptionNormalized) {
         return res.status(400).json({ message: "descriptionNormalized is required" });
       }
+      // Fetch queue entry IDs before update so we can reference them in the audit log
+      const queueEntries = await db
+        .select({ id: masterItemReviewQueue.id, customDescription: masterItemReviewQueue.customDescription })
+        .from(masterItemReviewQueue)
+        .where(
+          and(
+            drizzleSql`LOWER(TRIM(${masterItemReviewQueue.customDescription})) = ${descriptionNormalized}`,
+            eq(masterItemReviewQueue.status, "pending")
+          )
+        );
+
       await db
         .update(masterItemReviewQueue)
         .set({
@@ -6308,6 +6348,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
             eq(masterItemReviewQueue.status, "pending")
           )
         );
+
+      logEvent({
+        eventType: 'scope_item_review_rejected',
+        userId: (req as any).user?.id ?? null,
+        userEmail: (req as any).user?.email ?? null,
+        entityType: 'scope_item_review_queue',
+        entityId: queueEntries[0]?.id ?? descriptionNormalized,
+        metadata: {
+          customDescription: queueEntries[0]?.customDescription ?? descriptionNormalized,
+          notes: notes ?? null,
+        },
+      });
+
       res.json({ message: "Rejected" });
     } catch (error) {
       console.error("Reject error:", error);

@@ -865,7 +865,18 @@ Verification: after the fix, all four scope-item-review queries (`/pending`, `/p
 
 Files changed: `client/src/pages/scope-item-review.tsx`, `client/src/components/evaluation-budget.tsx`
 
+### Recently Fixed (this session continuation)
+
+**Promote/duplicate/reject handlers now write to `audit_log`.** Added `logEvent` calls to all three review-queue action handlers in `server/routes.ts`. Also added the missing `import { logEvent } from "./audit-log"` to `routes.ts` (it was only imported in `auth-routes.ts`). Promote, duplicate, and reject actions now audit-log with correct user identity and metadata. Verified via direct API calls and audit_log query — all three event rows confirmed:
+- `scope_item_review_promoted` — entity_type: `master_scope_item`, entity_id: `77`, metadata includes `customDescription`, `promotedMasterItemId`, `csiDivision`, `unit`, `unitPrice`
+- `scope_item_review_duplicated` — entity_type: `master_scope_item`, entity_id: `56`, metadata includes `customDescription`, `duplicateOfMasterItemId`
+- `scope_item_review_rejected` — entity_type: `scope_item_review_queue`, entity_id: (queue row id or description fallback), metadata includes `customDescription`, `notes`
+
+Files changed: `server/routes.ts` (import + 3 logEvent call blocks)
+
 ### Lessons Learned
+
+**Pattern observation — agent does not automatically apply foundation patterns (like audit logging) to new admin actions unless explicitly instructed.** When a new admin action handler is built, ALWAYS add a `logEvent` call. This is the second instance in this session-pair where a foundation built earlier wasn't applied by default to new code built later. Rule: any handler that writes to a privileged table (queue status updates, master item inserts, role changes, etc.) gets a `logEvent` call in the same PR.
 
 **Seventh instance — action-oriented admin views must override the global staleTime.** The 5-minute global staleTime in `queryClient.ts` is appropriate for read-heavy views (RFP tables, property lists) but is a footgun for admin tools where users are acting on live queue state. Any review queue, audit log, or moderation view should set `staleTime: 0` or `refetchOnMount: 'always'` explicitly. The data was always correct in the DB; the cache was the only thing wrong.
 
@@ -877,6 +888,5 @@ Files changed: `client/src/pages/scope-item-review.tsx`, `client/src/components/
 - **Scope-item-review invalidation on bid saves.** Currently only evaluation budget saves bust the pending cache. If Other entries can be added from bid collection or other surfaces in the future, those save handlers will also need the invalidation call.
 - **"Custom Entry 3" never reached the DB.** During verification, this entry was typed into the picker text box but the "Use as custom entry" flow was not completed before the save attempt. Not a bug — expected behavior of the picker contract — but worth noting as a training scenario.
 - **`/admin/scope-item-review` has no navigation bar.** The page renders standalone without the standard app layout (no top nav, no sidebar). Pure UX bug — page is functional but visually orphaned. Defer to next session.
-- **Promote/duplicate/reject handlers do not write to `audit_log`.** The handlers update `master_item_review_queue.status`, `reviewed_at`, `reviewed_by` correctly but never INSERT into `audit_log`. A `SELECT * FROM audit_log WHERE event_type LIKE 'scope_item_review_%'` returns 0 rows even after a confirmed promote. `reviewedBy` on the queue row is the only trace of who acted. Fix next session: add `db.insert(auditLog).values({eventType: 'scope_item_review_promoted', userId, userEmail, metadata: {description, masterItemId}})` in each handler.
 - **Missing-master indicator not implemented (Test 5).** When a master scope item referenced by `masterItemId` is deleted from `rom_scope_items`, historical budget line items continue to display their stored `item.description` correctly (no crash, correct text). However, there is no visual indicator (badge, warning icon, strikethrough) that the referenced master is gone. The `masterItemId` becomes a dangling reference with no UI signal. Low priority since master deletes are admin-controlled, but track for future completeness.
 - **Audit other admin `useQuery` staleness.** `/admin/audit-log` view is highest priority — forensic data must be live. Same `staleTime: 0` fix needed.

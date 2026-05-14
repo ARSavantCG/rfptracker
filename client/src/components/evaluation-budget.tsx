@@ -122,6 +122,7 @@ interface EvaluationBudgetProps {
 export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete }: EvaluationBudgetProps) {
   const [editingItem, setEditingItem] = useState<string | null>(null);
   const [newItemCategory, setNewItemCategory] = useState<string>("");
+  const [pickerKey, setPickerKey] = useState(0);
   const [newItem, setNewItem] = useState<Partial<EvaluationLineItem>>({
     description: "",
     quantity: 0,
@@ -3746,13 +3747,16 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
     if (!addAnother) {
       setNewItemCategory("");
     } else {
-      // Auto-focus on description field for next item
+      // Increment key to remount the picker with fully fresh internal state
+      // (clears query text, results list, open/closed state, Other mode flag)
+      setPickerKey(k => k + 1);
+      // Auto-focus the picker's input after remount
       setTimeout(() => {
-        const descInput = document.querySelector('input[placeholder="Enter item description"]') as HTMLInputElement;
-        if (descInput) {
-          descInput.focus();
+        const pickerInput = document.querySelector('input[placeholder="Type to search scope items…"]') as HTMLInputElement;
+        if (pickerInput) {
+          pickerInput.focus();
         }
-      }, 100);
+      }, 50);
     }
   };
 
@@ -4675,6 +4679,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
               <div className="md:col-span-3">
                 <Label>Description</Label>
                 <MasterScopeItemPicker
+                  key={pickerKey}
                   searchEndpoint="/api/master-scope-items/search"
                   value={newItem.description || ""}
                   masterItemId={newItem.masterItemId}

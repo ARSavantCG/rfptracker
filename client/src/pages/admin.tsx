@@ -27,6 +27,7 @@ import { PropertyRenumberingPanel } from "@/components/property-renumbering-pane
 import { TemplatesManagement } from "@/components/templates-management";
 import type { User, UserRole, Permission } from "@shared/schema";
 import { ROLE_PERMISSIONS } from "@shared/schema";
+import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 
 function SystemUsersAndContacts() {
   const { toast } = useToast();
@@ -876,7 +877,7 @@ function EmailTestPanel() {
 
     setIsSending(true);
     try {
-      const token = localStorage.getItem('auth-token');
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
@@ -984,7 +985,7 @@ export default function Admin() {
     setMigrationState('running');
     setMigrationResult(null);
     try {
-      const token = localStorage.getItem('auth-token');
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
       const res = await fetch('/api/admin/migrate-uploads', {
         headers: { Authorization: `Bearer ${token}` },
       });

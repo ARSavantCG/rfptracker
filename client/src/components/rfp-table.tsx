@@ -8,6 +8,7 @@ import { handleAuthError } from "@/lib/authHelper";
 import { useAuth } from "@/hooks/useAuth";
 
 import type { RfpRequest, Property } from "@shared/schema";
+import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 
 interface RfpTableProps {
   searchQuery: string;
@@ -39,7 +40,7 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
   // Archive mutation
   const archiveMutation = useMutation({
     mutationFn: async (rfpId: number) => {
-      const token = localStorage.getItem('auth-token');
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
       const response = await fetch(`/api/rfp-requests/${rfpId}/archive`, {
         method: 'PATCH',
         headers: {
@@ -81,7 +82,7 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
   // Reopen mutation
   const reopenMutation = useMutation({
     mutationFn: async (rfpId: number) => {
-      const token = localStorage.getItem('auth-token');
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
       const response = await fetch(`/api/rfp-requests/${rfpId}/reopen`, {
         method: 'PATCH',
         headers: {
@@ -123,7 +124,7 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
   // Counter offer mutation
   const counterOfferMutation = useMutation({
     mutationFn: async (rfpId: number) => {
-      const token = localStorage.getItem('auth-token');
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
       const response = await fetch(`/api/rfp-requests/${rfpId}/counter-offer`, {
         method: 'POST',
         headers: {
@@ -174,7 +175,7 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
       
       const response = await fetch(`/api/rfp-requests?${params}`, {
         credentials: 'include',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('auth-token')}` }
+        headers: { 'Authorization': `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}` }
       });
       if (!response.ok) throw new Error("Failed to fetch RFP requests");
       return response.json();
@@ -198,7 +199,7 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
           try {
             const response = await fetch(`/api/rfp-requests/${rfp.id}/file-count`, {
               credentials: 'include',
-              headers: { 'Authorization': `Bearer ${localStorage.getItem('auth-token')}` },
+              headers: { 'Authorization': `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}` },
             });
             if (response.ok) {
               const data = await response.json();
@@ -321,7 +322,7 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
     }
     
     try {
-      const token = localStorage.getItem('auth-token');
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
       if (!token) {
         alert('Authentication required. Please log in again.');
         return;

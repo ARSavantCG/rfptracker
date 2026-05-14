@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Trash2, FileText, Download, Upload, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 
 interface PropertyAttachment {
   id: number;
@@ -59,7 +60,7 @@ export function PropertyAttachments({ propertyId, propertyName }: PropertyAttach
         method: 'POST',
         body: formData,
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('auth-token')}`
+          'Authorization': `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}`
         }
       });
       
@@ -133,7 +134,7 @@ export function PropertyAttachments({ propertyId, propertyName }: PropertyAttach
 
   const handleDownload = async (attachment: PropertyAttachment) => {
     try {
-      const token = localStorage.getItem('auth-token');
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
       if (!token) {
         toast({
           title: "Authentication required",

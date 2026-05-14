@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { formatDateForDisplay } from "@shared/date-utils";
 import type { RfpRequest } from "@shared/schema";
+import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 
 interface PublishSummaryProps {
   rfp: RfpRequest | null;
@@ -86,7 +87,7 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
     
     try {
       // Create a zip download request for published files only using the new endpoint
-      const token = localStorage.getItem('auth-token');
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
       const cacheBuster = Date.now();
       const response = await fetch(`/api/rfp-requests/${rfp.id}/download-published-files?t=${cacheBuster}`, {
         method: 'GET',
@@ -158,7 +159,7 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
       }
       
       // Create a zip download request using the working GET endpoint with cache busting
-      const token = localStorage.getItem('auth-token');
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
       const cacheBuster = Date.now();
       const response = await fetch(`/api/rfp-requests/${rfp.id}/download-all-files?t=${cacheBuster}`, {
         method: 'GET',
@@ -215,7 +216,7 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
   // Download file function
   const downloadFile = async (fileId: string, fileName: string) => {
     try {
-      const token = localStorage.getItem('auth-token');
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
       const response = await fetch(`/api/rfp-requests/${rfp?.id}/files/${fileId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -260,7 +261,7 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
           method: 'DELETE',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('auth-token')}`,
+            'Authorization': `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}`,
           },
           credentials: 'include'
         });
@@ -310,7 +311,7 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
         
         const response = await fetch('/api/rfp-requests/upload-files', {
           method: 'POST',
-          headers: { 'Authorization': `Bearer ${localStorage.getItem('auth-token')}` },
+          headers: { 'Authorization': `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}` },
           body: formData,
           credentials: 'include'
         });
@@ -398,7 +399,7 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
 
 
   const viewReport = async (reportType: string, reportId?: number) => {
-    const token = localStorage.getItem('auth-token');
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
     
     try {
       let url = '';

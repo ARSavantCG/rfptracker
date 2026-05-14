@@ -25,6 +25,7 @@ import { formatDate } from "@/lib/utils";
 import { nanoid } from "nanoid";
 import * as XLSX from "xlsx";
 import type { RfpRequest, BidCollection, BidLineItem } from "@shared/schema";
+import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 
 interface MasterCategory {
   id: number;
@@ -169,7 +170,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('auth-token')}`,
+          'Authorization': `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}`,
         },
         body: JSON.stringify(historyData),
       });
@@ -234,7 +235,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       if (!rfp?.id) return null;
       const response = await fetch(`/api/rfp-requests/${rfp.id}/invitation-to-bid`, {
         credentials: 'include',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('auth-token')}` }
+        headers: { 'Authorization': `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}` }
       });
       if (!response.ok) return null;
       return response.json();
@@ -302,7 +303,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       const response = await fetch(`/api/evaluation-budget-attachments/${attachmentId}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('auth-token')}`,
+          'Authorization': `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}`,
         },
       });
       
@@ -1010,7 +1011,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       const lineItemPromises = bidCollections.map(async (bid: BidCollection) => {
         const response = await fetch(`/api/bid-collections/${bid.id}/line-items`, {
           credentials: 'include',
-          headers: { 'Authorization': `Bearer ${localStorage.getItem('auth-token')}` }
+          headers: { 'Authorization': `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}` }
         });
         if (!response.ok) return [];
         const lineItems = await response.json();
@@ -3946,7 +3947,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('auth-token')}`,
+          'Authorization': `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}`,
         },
         body: JSON.stringify(budgetPayload),
       });
@@ -3962,7 +3963,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         await fetch(`/api/rfp-requests/${rfp.id}/evaluation-budget/attachments`, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('auth-token')}`,
+            'Authorization': `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}`,
           },
           body: formData,
         });
@@ -4025,7 +4026,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('auth-token')}`,
+          'Authorization': `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}`,
         },
         body: JSON.stringify(budgetPayload),
       });
@@ -4041,7 +4042,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         await fetch(`/api/rfp-requests/${rfp.id}/evaluation-budget/attachments`, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('auth-token')}`,
+            'Authorization': `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}`,
           },
           body: formData,
         });
@@ -4053,7 +4054,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('auth-token')}`,
+          'Authorization': `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}`,
         },
         credentials: 'include',
         body: JSON.stringify({ phase: 'publish' }),

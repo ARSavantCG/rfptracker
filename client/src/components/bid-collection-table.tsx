@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { formatDate } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
 import type { RfpRequest, BidCollection } from "@shared/schema";
+import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 
 interface BidCollectionTableProps {
   rfp: RfpRequest | null;
@@ -62,7 +63,7 @@ export function BidCollectionTable({ rfp, onComplete }: BidCollectionTableProps)
     mutationFn: async () => {
       if (!rfp) throw new Error("No RFP selected");
       
-      const token = localStorage.getItem('auth-token');
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
       const response = await fetch(`/api/rfp-requests/${rfp.id}/workflow-phase`, {
         method: 'PATCH',
         headers: { 
@@ -170,7 +171,7 @@ export function BidCollectionTable({ rfp, onComplete }: BidCollectionTableProps)
               <Button 
                 variant="outline"
                 onClick={() => {
-                  const token = localStorage.getItem('auth-token');
+                  const token = localStorage.getItem(AUTH_TOKEN_KEY);
                   const printUrl = `/api/rfp-requests/${rfp.id}/bid-collections/pdf`;
                   // Open PDF with authentication
                   fetch(printUrl, {
@@ -296,7 +297,7 @@ export function BidCollectionTable({ rfp, onComplete }: BidCollectionTableProps)
                                 // Download each attachment
                                 attachments.forEach((file: any) => {
                                   if (file.id) {
-                                    const token = localStorage.getItem('auth-token');
+                                    const token = localStorage.getItem(AUTH_TOKEN_KEY);
                                     const downloadUrl = `/api/bid-collections/${bid.id}/attachments/${file.id}`;
                                     
                                     // Create a temporary link to download with authentication

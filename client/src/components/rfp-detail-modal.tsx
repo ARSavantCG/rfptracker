@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CalendarIcon, Edit, Check, X, RefreshCw } from "lucide-react";
 import type { RfpRequest } from "@shared/schema";
+import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 
 interface RfpDetailModalProps {
   isOpen: boolean;
@@ -218,7 +219,7 @@ export function RfpDetailModal({ isOpen, onClose, rfp, onRfpUpdated }: RfpDetail
 
   const handleDownloadAllFiles = async (rfpId: number, rfpNumber: string) => {
     try {
-      const token = localStorage.getItem('auth-token');
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
       const response = await fetch(`/api/rfp-requests/${rfpId}/download-all-files`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -269,7 +270,7 @@ export function RfpDetailModal({ isOpen, onClose, rfp, onRfpUpdated }: RfpDetail
 
   const handleOpenSummaryReport = async (rfpId: number) => {
     try {
-      const token = localStorage.getItem('auth-token');
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
       const response = await fetch(`/api/rfp-requests/${rfpId}/summary-report`, {
         headers: { 'Authorization': `Bearer ${token}` },
       });

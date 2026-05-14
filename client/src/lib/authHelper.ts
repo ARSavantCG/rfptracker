@@ -1,19 +1,20 @@
+import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 /**
  * Authentication helper utilities
  */
 
 export function clearAuthAndReload() {
-  localStorage.removeItem('auth-token');
+  localStorage.removeItem(AUTH_TOKEN_KEY);
   window.location.reload();
 }
 
 export function isTokenPresent(): boolean {
-  const token = localStorage.getItem('auth-token');
+  const token = localStorage.getItem(AUTH_TOKEN_KEY);
   return !!token && token.length > 0;
 }
 
 export async function validateToken(): Promise<boolean> {
-  const token = localStorage.getItem('auth-token');
+  const token = localStorage.getItem(AUTH_TOKEN_KEY);
   if (!token) {
     return false;
   }
@@ -31,7 +32,7 @@ export async function validateToken(): Promise<boolean> {
       return true;
     } else if (response.status === 401) {
       // Token is invalid, clear it
-      localStorage.removeItem('auth-token');
+      localStorage.removeItem(AUTH_TOKEN_KEY);
       return false;
     }
     return false;

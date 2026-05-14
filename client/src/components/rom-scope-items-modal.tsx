@@ -18,6 +18,7 @@ import { FormulaInput } from "@/components/formula-input";
 import { evaluateFormula } from "@shared/formula-utils";
 import { Plus, Edit2, Trash2, Package, DollarSign, ChevronDown, ChevronRight, Upload, FileText, X, Edit3, Check, Printer, Download, Eye, Paperclip, BarChart2 } from "lucide-react";
 import { QuarterlyPricingPanel } from "@/components/quarterly-pricing-panel";
+import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 
 interface RomScopeItem {
   id: number;
@@ -829,7 +830,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
         
         const uploadResponse = await fetch('/api/upload', {
           method: 'POST',
-          headers: { 'Authorization': `Bearer ${localStorage.getItem('auth-token')}` },
+          headers: { 'Authorization': `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}` },
           credentials: 'include',
           body: formData,
         });
@@ -882,7 +883,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
         
         const uploadResponse = await fetch('/api/upload', {
           method: 'POST',
-          headers: { 'Authorization': `Bearer ${localStorage.getItem('auth-token')}` },
+          headers: { 'Authorization': `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}` },
           credentials: 'include',
           body: formData,
         });

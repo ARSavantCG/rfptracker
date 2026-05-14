@@ -23,6 +23,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Info, ToggleLeft, ToggleRight } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
+import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 
 interface RfpRow {
   id: string;
@@ -52,7 +53,7 @@ export function TopOutstandingRfpsPanel({
     queryFn: async () => {
       const response = await fetch(`/api/rfp-requests/top-open-by-cost?limit=${limit}`, {
         credentials: 'include',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('auth-token')}` }
+        headers: { 'Authorization': `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}` }
       });
       if (!response.ok) throw new Error("Failed to fetch top RFPs by cost");
       return response.json();

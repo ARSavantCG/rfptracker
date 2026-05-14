@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Upload, FileText, ArrowRight, Check, X, ChevronDown, Save, Trash2, Edit2, AlertTriangle } from "lucide-react";
+import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 
 interface ParsedRow {
   cells: string[];
@@ -90,7 +91,7 @@ export function PdfBidImportModal({ isOpen, onClose, bidCollectionId, rfpId, con
     queryFn: async () => {
       const response = await fetch(`/api/pdf-mapping-templates/contractor/${contractorId}`, {
         credentials: 'include',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('auth-token')}` }
+        headers: { 'Authorization': `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}` }
       });
       if (!response.ok) throw new Error('Failed to fetch templates');
       return response.json();
@@ -110,7 +111,7 @@ export function PdfBidImportModal({ isOpen, onClose, bidCollectionId, rfpId, con
       
       const response = await fetch("/api/bid-import/parse-pdf", {
         method: "POST",
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('auth-token')}` },
+        headers: { 'Authorization': `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}` },
         credentials: 'include',
         body: formData,
       });
@@ -149,7 +150,7 @@ export function PdfBidImportModal({ isOpen, onClose, bidCollectionId, rfpId, con
           await fetch(`/api/pdf-mapping-templates/${matchedTemplate.id}/use`, {
             method: 'POST',
             credentials: 'include',
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('auth-token')}` }
+            headers: { 'Authorization': `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}` }
           });
         } else if (table.suggestedMapping) {
           appliedMapping = table.suggestedMapping;

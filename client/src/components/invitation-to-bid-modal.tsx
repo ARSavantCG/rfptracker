@@ -16,6 +16,7 @@ import { ToastAction } from "@/components/ui/toast";
 import { FileText, Download, Users, Save, X, CheckCircle, Plus, Trash2, ChevronUp, ChevronDown, GripVertical } from "lucide-react";
 import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
 import type { RfpRequest, Property, Contact } from "@shared/schema";
+import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 
 const invitationFormSchema = z.object({
   generateArchitectRfp: z.boolean().default(false),
@@ -365,7 +366,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
       if (!rfp?.id) return null;
       const response = await fetch(`/api/rfp-requests/${rfp.id}/invitation-to-bid`, {
         credentials: 'include',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('auth-token')}` }
+        headers: { 'Authorization': `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}` }
       });
       if (!response.ok) return null;
       return response.json();
@@ -650,7 +651,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
       for (let i = 0; i < documentsToOpen.length; i++) {
         const doc = documentsToOpen[i];
         try {
-          const token = localStorage.getItem('auth-token');
+          const token = localStorage.getItem(AUTH_TOKEN_KEY);
           const response = await fetch(`/api/rfp-requests/${rfp.id}/generate-pdf`, {
             method: 'POST',
             headers: { 
@@ -778,7 +779,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
       for (let i = 0; i < documentsToOpen.length; i++) {
         const doc = documentsToOpen[i];
         try {
-          const token = localStorage.getItem('auth-token');
+          const token = localStorage.getItem(AUTH_TOKEN_KEY);
           const response = await fetch(`/api/rfp-requests/${rfp.id}/generate-pdf`, {
             method: 'POST',
             headers: { 
@@ -1308,7 +1309,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
                             method: 'POST',
                             headers: {
                               'Content-Type': 'application/json',
-                              'Authorization': `Bearer ${localStorage.getItem('auth-token')}`,
+                              'Authorization': `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}`,
                             },
                             credentials: 'include',
                             body: JSON.stringify({

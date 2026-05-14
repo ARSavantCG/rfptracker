@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Upload, X, FileDown, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 
 interface EvaluationAttachmentsProps {
   rfpId?: number;
@@ -31,7 +32,7 @@ export function EvaluationAttachments({ rfpId }: EvaluationAttachmentsProps) {
         formData.append(`attachment_${index}`, file);
       });
 
-      const token = localStorage.getItem('auth-token');
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
       const response = await fetch('/api/evaluation-budget-attachments', {
         method: 'POST',
         headers: {
@@ -110,7 +111,7 @@ export function EvaluationAttachments({ rfpId }: EvaluationAttachmentsProps) {
 
   const handleDownload = async (attachmentId: number, originalName: string) => {
     try {
-      const token = localStorage.getItem('auth-token');
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
       const response = await fetch(`/api/evaluation-budget-attachments/${attachmentId}/download`, {
         headers: {
           'Authorization': `Bearer ${token}`,

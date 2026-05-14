@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
 import { TopOutstandingRfpsPanel } from "./top-rfps-by-cost";
+import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 
 interface Stats {
   total: number;
@@ -26,7 +27,7 @@ export function StatsCards({ onStatusFilter, onRfpClick }: StatsCardsProps) {
     queryFn: async () => {
       const response = await fetch("/api/rfp-requests", {
         credentials: 'include',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('auth-token')}` }
+        headers: { 'Authorization': `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}` }
       });
       if (!response.ok) throw new Error("Failed to fetch RFP requests");
       return response.json();

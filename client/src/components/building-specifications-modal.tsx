@@ -10,6 +10,7 @@ import { ClipboardList, Save, AlertCircle, Edit, X, Printer } from 'lucide-react
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import type { Property } from '@shared/schema';
+import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 
 interface BuildingSpecificationsModalProps {
   property: Property;
@@ -94,7 +95,7 @@ export function BuildingSpecificationsModal({ property }: BuildingSpecifications
 
   const handlePrint = async () => {
     try {
-      const token = localStorage.getItem('auth-token');
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
       
       if (!token) {
         toast({

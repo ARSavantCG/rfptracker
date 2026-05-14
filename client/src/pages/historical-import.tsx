@@ -12,6 +12,7 @@ import { Trash2, Plus, Upload, Download, CheckCircle, AlertTriangle, ArrowLeft }
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
+import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 
 interface Property {
   id: number;
@@ -169,7 +170,7 @@ export default function HistoricalImport() {
         method: "POST",
         body: formData,
         credentials: "include",
-        headers: { "auth-token": localStorage.getItem("auth-token") || "" },
+        headers: { "auth-token": localStorage.getItem(AUTH_TOKEN_KEY) || "" },
       });
       if (!resp.ok) throw new Error("Import failed");
       return resp.json();

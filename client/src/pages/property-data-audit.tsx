@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, AlertTriangle, CheckCircle, Building2, Printer, DollarSign, Zap, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Property, Transformer, MainPanel, PropertyExistingImprovement, BayConfiguration, ExecutedLease } from "@shared/schema";
+import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 
 export default function PropertyDataAudit() {
   const { data: properties, isLoading: propertiesLoading } = useQuery<Property[]>({
@@ -20,7 +21,7 @@ export default function PropertyDataAudit() {
           try {
             const res = await fetch(`/api/properties/${p.id}/existing-improvements`, {
               credentials: 'include',
-              headers: { 'Authorization': `Bearer ${localStorage.getItem('auth-token')}` }
+              headers: { 'Authorization': `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}` }
             });
             if (res.ok) {
               improvementsMap[p.id] = await res.json();
@@ -45,7 +46,7 @@ export default function PropertyDataAudit() {
           try {
             const res = await fetch(`/api/properties/${p.id}/transformers`, {
               credentials: 'include',
-              headers: { 'Authorization': `Bearer ${localStorage.getItem('auth-token')}` }
+              headers: { 'Authorization': `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}` }
             });
             if (res.ok) {
               transformersMap[p.id] = await res.json();
@@ -70,7 +71,7 @@ export default function PropertyDataAudit() {
           try {
             const res = await fetch(`/api/properties/${p.id}/main-panels`, {
               credentials: 'include',
-              headers: { 'Authorization': `Bearer ${localStorage.getItem('auth-token')}` }
+              headers: { 'Authorization': `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}` }
             });
             if (res.ok) {
               panelsMap[p.id] = await res.json();
@@ -95,7 +96,7 @@ export default function PropertyDataAudit() {
           try {
             const res = await fetch(`/api/properties/${p.id}/executed-leases`, {
               credentials: 'include',
-              headers: { 'Authorization': `Bearer ${localStorage.getItem('auth-token')}` }
+              headers: { 'Authorization': `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}` }
             });
             if (res.ok) {
               leasesMap[p.id] = await res.json();

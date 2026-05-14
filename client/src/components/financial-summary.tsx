@@ -8,6 +8,7 @@ import { FileDown, Printer, Edit, Save, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatDate } from "@/lib/utils";
 import type { RfpRequest, BidCollection, BidLineItem } from "@shared/schema";
+import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 
 interface FinancialSummaryProps {
   rfp: RfpRequest | null;
@@ -71,7 +72,7 @@ export function FinancialSummary({ rfp }: FinancialSummaryProps) {
       for (const bid of bidCollections) {
         const response = await fetch(`/api/rfp-requests/${rfp.id}/bid-collections/${bid.id}/line-items`, {
           credentials: 'include',
-          headers: { 'Authorization': `Bearer ${localStorage.getItem('auth-token')}` }
+          headers: { 'Authorization': `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}` }
         });
         if (response.ok) {
           const bidItems = await response.json();
@@ -91,7 +92,7 @@ export function FinancialSummary({ rfp }: FinancialSummaryProps) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('auth-token')}`,
+          'Authorization': `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}`,
         },
         credentials: 'include',
         body: JSON.stringify({

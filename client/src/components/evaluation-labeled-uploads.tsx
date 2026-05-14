@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Upload, FileDown, Trash2, Building2, Ruler } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 
 interface EvaluationLabeledUploadsProps {
   rfpId?: number;
@@ -36,7 +37,7 @@ export function EvaluationLabeledUploads({ rfpId, projectFolder }: EvaluationLab
     queryFn: async () => {
       const res = await fetch(`/api/rfp-requests/${rfpId}/project-files/4`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('auth-token')}`,
+          'Authorization': `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}`,
         },
       });
       if (!res.ok) throw new Error('Failed to fetch project files');
@@ -60,7 +61,7 @@ export function EvaluationLabeledUploads({ rfpId, projectFolder }: EvaluationLab
         formData.append('files', file);
       });
 
-      const token = localStorage.getItem('auth-token');
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
       const response = await fetch('/api/project-files/upload', {
         method: 'POST',
         headers: {
@@ -123,7 +124,7 @@ export function EvaluationLabeledUploads({ rfpId, projectFolder }: EvaluationLab
 
   const handleDownload = async (file: ProjectFile) => {
     try {
-      const token = localStorage.getItem('auth-token');
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
       const response = await fetch(`/api/project-files/${file.id}/download`, {
         headers: {
           'Authorization': `Bearer ${token}`,

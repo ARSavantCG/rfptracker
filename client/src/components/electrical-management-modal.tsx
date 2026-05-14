@@ -10,6 +10,7 @@ import {
 import { Zap, Printer } from "lucide-react";
 import { ElectricalCapacityManagement } from "./electrical-capacity-management";
 import type { Property } from "@shared/schema";
+import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 
 interface ElectricalManagementModalProps {
   property: Property;
@@ -20,7 +21,7 @@ export function ElectricalManagementModal({ property }: ElectricalManagementModa
 
   const handlePrint = async () => {
     try {
-      const token = localStorage.getItem('auth-token');
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
       const response = await fetch(`/api/properties/${property.id}/electrical/print`, {
         headers: {
           'Authorization': `Bearer ${token}`

@@ -8,6 +8,7 @@ import { BookOpen, ChevronDown, ChevronRight, ChevronLeft, Filter, RefreshCw } f
 import Navigation from "@/components/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { Link } from "wouter";
+import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 
 interface AuditEntry {
   id: string;
@@ -105,7 +106,7 @@ export default function AuditLogAdmin() {
     queryKey: ['/api/admin/audit-log', params.toString()],
     queryFn: () =>
       fetch(`/api/admin/audit-log?${params}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('auth-token')}` },
+        headers: { Authorization: `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}` },
         credentials: 'include',
       }).then(r => r.json()),
   });

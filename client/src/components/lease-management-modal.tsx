@@ -24,6 +24,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { formatDate } from "@/lib/utils";
 import { Calendar, Trash2, Edit, Plus, Building, Users, Printer } from "lucide-react";
 import type { Property, ExecutedLease, BayConfiguration } from "@shared/schema";
+import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 
 const leaseFormSchema = z.object({
   tenantName: z.string().min(1, "Tenant name is required"),
@@ -144,7 +145,7 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
 
   const handlePrint = async () => {
     try {
-      const token = localStorage.getItem('auth-token');
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
       const response = await fetch(`/api/properties/${property.id}/executed-leases/print`, {
         headers: {
           'Authorization': `Bearer ${token}`

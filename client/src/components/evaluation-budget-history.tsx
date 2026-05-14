@@ -19,6 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Pencil, Trash2, Eye, Clock, User, ChevronDown, ChevronUp, FileText } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
+import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 
 interface EvaluationBudgetHistoryItem {
   id: number;
@@ -124,7 +125,7 @@ export function EvaluationBudgetHistory({ rfpId }: EvaluationBudgetHistoryProps)
   };
 
   const handleView = (id: number) => {
-    const token = localStorage.getItem('auth-token');
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
     if (!token) {
       toast({
         title: "Error",

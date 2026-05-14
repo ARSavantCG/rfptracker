@@ -11,6 +11,7 @@ import { RomScopeItemsModal } from "@/components/rom-scope-items-modal";
 import { CostBenchmarks } from "@/components/cost-benchmarks";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 
 interface RomPilot {
   id: number;
@@ -42,7 +43,7 @@ export default function RomPilotPage() {
     if (!confirm("Are you sure you want to delete this ROM Pilot?")) return;
 
     try {
-      const token = localStorage.getItem('auth-token');
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
       const response = await fetch(`/api/rom-pilots/${id}`, {
         method: "DELETE",
         headers: {
@@ -74,7 +75,7 @@ export default function RomPilotPage() {
 
   const saveRomPilot = async (id: number) => {
     try {
-      const token = localStorage.getItem('auth-token');
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
       const response = await fetch(`/api/rom-pilots/${id}`, {
         method: "PUT",
         headers: {
@@ -108,7 +109,7 @@ export default function RomPilotPage() {
 
   const archiveRomPilot = async (id: number) => {
     try {
-      const token = localStorage.getItem('auth-token');
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
       const response = await fetch(`/api/rom-pilots/${id}`, {
         method: "PUT",
         headers: {
@@ -153,7 +154,7 @@ export default function RomPilotPage() {
 
   const generateRomReport = async (pilot: RomPilot) => {
     try {
-      const token = localStorage.getItem('auth-token');
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
       const response = await fetch(`/api/rom-pilots/${pilot.id}/report`, {
         method: 'GET',
         headers: {

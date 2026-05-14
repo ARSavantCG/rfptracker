@@ -31,6 +31,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Check, Edit2, Plus, Trophy, ChevronDown, ChevronRight, HardHat, Ruler } from "lucide-react";
+import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 
 const COST_BUCKETS = ["Office", "Warehouse Office", "Warehouse", "Other"] as const;
 
@@ -76,7 +77,7 @@ export function BidLevelingView({ rfpId, onSelectPrimaryBidder }: BidLevelingVie
   const { data: bidLevelingData, isLoading } = useQuery<BidLevelingData[]>({
     queryKey: ["/api/rfp-requests", rfpId, "bid-leveling"],
     queryFn: async () => {
-      const token = localStorage.getItem('auth-token');
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
       const response = await fetch(`/api/rfp-requests/${rfpId}/bid-leveling`, {
         headers: {
           'Authorization': `Bearer ${token}`

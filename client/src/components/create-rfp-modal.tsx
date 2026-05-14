@@ -21,6 +21,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { X } from "lucide-react";
+import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 
 const createRfpSchema = z.object({
   property: z.string().min(1, "Property is required"),
@@ -164,7 +165,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
         formData.append('files', file);
       });
       
-      const token = localStorage.getItem('auth-token');
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
       const response = await fetch('/api/rfp-requests/with-files', {
         method: 'POST',
         headers: {

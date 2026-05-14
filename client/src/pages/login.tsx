@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Lock, User, Building2 } from "lucide-react";
+import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 
 interface LoginCredentials {
   username: string;
@@ -43,7 +44,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
     onSuccess: (data) => {
       // Store token as backup but rely on session
       if (data.token) {
-        localStorage.setItem('auth-token', data.token);
+        localStorage.setItem(AUTH_TOKEN_KEY, data.token);
       }
       
       // Clear any stale query cache

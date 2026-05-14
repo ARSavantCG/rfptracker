@@ -22,6 +22,7 @@ import {
   type BayConfiguration
 } from "@shared/schema";
 import { Checkbox } from "@/components/ui/checkbox";
+import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 
 // Cost stage labels for UI display
 const COST_STAGE_LABELS = {
@@ -409,7 +410,7 @@ export function PropertyExistingImprovementsModal({
 
   const handlePrint = async () => {
     try {
-      const token = localStorage.getItem('auth-token');
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
       const response = await fetch(`/api/properties/${property.id}/existing-improvements/print`, {
         headers: {
           'Authorization': `Bearer ${token}`

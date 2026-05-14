@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 // Session-based authentication - no token presence check needed
 
 export function useAuth() {
@@ -13,7 +14,7 @@ export function useAuth() {
 
       // If session auth fails, try token auth
       if (!response.ok && response.status === 401) {
-        const token = localStorage.getItem('auth-token');
+        const token = localStorage.getItem(AUTH_TOKEN_KEY);
         
         if (!token) {
           console.debug('Auth check - no session or token present');
@@ -34,7 +35,7 @@ export function useAuth() {
         console.debug('Auth request failed:', response.status, response.statusText);
         if (response.status === 401) {
           // Authentication failed, clean up
-          localStorage.removeItem('auth-token');
+          localStorage.removeItem(AUTH_TOKEN_KEY);
           return null;
         }
         throw new Error(`Authentication failed: ${response.status}`);

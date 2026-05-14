@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 // Removed Select import - using native HTML selects for consistency
 import { Download, Settings, ArrowUp, ArrowDown, ChevronDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 
 interface CustomReportModalProps {
   isOpen: boolean;
@@ -100,7 +101,7 @@ export function CustomReportModal({ isOpen, onClose, filters }: CustomReportModa
 
       const response = await fetch(`/api/reports/custom?config=${encodeURIComponent(JSON.stringify(reportConfig))}`, {
         credentials: 'include',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('auth-token')}` }
+        headers: { 'Authorization': `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}` }
       });
       
       if (!response.ok) {

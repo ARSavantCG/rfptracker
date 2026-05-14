@@ -15,6 +15,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { Plus, Edit2, Copy, Trash2, Search, FileText, AlertCircle, X } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useAuth } from "@/hooks/useAuth";
+import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 
 interface RomScopeItem {
   id: number;
@@ -88,7 +89,7 @@ export function TemplatesManagement() {
       if (searchTerm) params.append("search", searchTerm);
       const response = await fetch(`/api/templates?${params}`, {
         credentials: 'include',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('auth-token')}` }
+        headers: { 'Authorization': `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}` }
       });
       if (!response.ok) throw new Error("Failed to fetch templates");
       return response.json();

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 
 export function PropertySummaryReport() {
   const [isLoading, setIsLoading] = useState(false);
@@ -16,7 +17,7 @@ export function PropertySummaryReport() {
     try {
       const response = await fetch('/api/reports/property-summary', {
         credentials: 'include',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('auth-token')}` }
+        headers: { 'Authorization': `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}` }
       });
       if (!response.ok) throw new Error(`Failed to load report (${response.status})`);
       const blob = await response.blob();

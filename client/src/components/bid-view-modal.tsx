@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { BidTaggingModal } from "./bid-tagging-modal";
 import type { PrePopulatedLineItem } from "./bid-tagging-modal";
+import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 
 interface MasterCategory {
   id: number;
@@ -148,7 +149,7 @@ export function BidViewModal({ isOpen, onClose, bid }: BidViewModalProps) {
 
   const handleAnalyze = async () => {
     if (!bid?.id) return;
-    const token = localStorage.getItem('auth-token');
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
     if (!token) {
       toast({ title: "Not authenticated", description: "Please log in again.", variant: "destructive" });
       return;
@@ -233,7 +234,7 @@ export function BidViewModal({ isOpen, onClose, bid }: BidViewModalProps) {
             variant="outline"
             size="sm"
             onClick={() => {
-              const token = localStorage.getItem('auth-token');
+              const token = localStorage.getItem(AUTH_TOKEN_KEY);
               
               if (!token) {
                 alert('No authentication token found. Please log in again.');

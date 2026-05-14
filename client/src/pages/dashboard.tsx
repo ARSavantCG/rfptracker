@@ -28,6 +28,7 @@ import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { apiRequest } from "@/lib/queryClient";
 import type { RfpRequest } from "@shared/schema";
+import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 
 export default function Dashboard() {
   const { toast } = useToast();
@@ -61,7 +62,7 @@ export default function Dashboard() {
     queryFn: async () => {
       const response = await fetch("/api/rfp-requests?include_archived=true", {
         credentials: 'include',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('auth-token')}` }
+        headers: { 'Authorization': `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}` }
       });
       if (!response.ok) throw new Error("Failed to fetch RFP requests");
       return response.json();

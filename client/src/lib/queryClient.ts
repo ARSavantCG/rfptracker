@@ -1,4 +1,5 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -20,7 +21,7 @@ export async function apiRequest(
   data?: unknown | undefined,
 ): Promise<any> {
   const isFormData = data instanceof FormData;
-  const token = localStorage.getItem('auth-token');
+  const token = localStorage.getItem(AUTH_TOKEN_KEY);
   
   // Always send token if available
   const headers: Record<string, string> = {
@@ -54,7 +55,7 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const token = localStorage.getItem('auth-token');
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
     
     // Always send token if available
     const headers: Record<string, string> = {};

@@ -20,6 +20,7 @@ import { formatDate } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
 import type { RfpRequest, Contact, BidCollection, BidLineItem } from "@shared/schema";
 import * as XLSX from 'xlsx';
+import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 
 const bidCollectionSchema = z.object({
   contractorId: z.number(),
@@ -238,7 +239,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
           method: 'PUT',
           body: formData,
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('auth-token')}`
+            'Authorization': `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}`
           }
         });
       } else {
@@ -246,7 +247,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
           method: 'POST',
           body: formData,
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('auth-token')}`
+            'Authorization': `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}`
           }
         });
       }

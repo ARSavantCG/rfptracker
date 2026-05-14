@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 
 export interface MasterScopeItem {
   id: number;
@@ -76,7 +77,7 @@ export default function MasterScopeItemPicker({
         return;
       }
       setLoading(true);
-      const token = localStorage.getItem("auth-token") ?? "";
+      const token = localStorage.getItem(AUTH_TOKEN_KEY) ?? "";
       fetch(`${searchEndpoint}?q=${encodeURIComponent(q)}&limit=20`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         credentials: "include",

@@ -13,6 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
 import { FormulaInput } from './formula-input';
 import type { Property, BayConfiguration } from "@shared/schema";
+import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 
 interface BayConfigurationManagerProps {
   property: Property;
@@ -87,7 +88,7 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
 
   const handlePrint = async () => {
     try {
-      const token = localStorage.getItem('auth-token');
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
       const response = await fetch(`/api/properties/${property.id}/bay-configurations/print`, {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -152,7 +153,7 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem('auth-token')}`,
+          "Authorization": `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}`,
         },
         credentials: 'include',
         body: JSON.stringify(data)
@@ -537,7 +538,7 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem('auth-token')}`,
+          "Authorization": `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}`,
         },
         credentials: 'include',
         body: JSON.stringify({

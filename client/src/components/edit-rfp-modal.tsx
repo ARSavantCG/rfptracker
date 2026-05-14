@@ -18,6 +18,7 @@ import { BayConfigurationModal } from "./bay-configuration-modal";
 import { Edit, Save, X, Download, Trash2, Grid3x3, ChevronDown, Printer } from "lucide-react";
 import { formatDateForInput } from "@shared/date-utils";
 import type { RfpRequest, RfpFile, Property, BayConfiguration, Contact, BuildingCosts } from "@shared/schema";
+import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 
 const editRfpSchema = z.object({
   rfpNumber: z.string().min(1, "RFP number is required"),
@@ -493,7 +494,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
       // Check if this is a new alternate creation (id: 0)
       if (rfp.id === 0 && rfp.parentRfpId) {
         // Create new alternate via the create-option endpoint
-        const token = localStorage.getItem('auth-token');
+        const token = localStorage.getItem(AUTH_TOKEN_KEY);
         const response = await fetch(`/api/rfp-requests/${rfp.parentRfpId}/create-option`, {
           method: 'POST',
           headers: {
@@ -549,7 +550,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
       const response = await fetch(`/api/rfp-requests/${rfp.id}/update-with-files`, {
         method: 'PATCH',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('auth-token')}`,
+          'Authorization': `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}`,
         },
         body: formData,
         credentials: 'include',
@@ -589,7 +590,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
       
       // Handle new alternate creation first
       if (rfp.id === 0) {
-        const token = localStorage.getItem('auth-token');
+        const token = localStorage.getItem(AUTH_TOKEN_KEY);
         const headers: HeadersInit = {
           'Content-Type': 'application/json',
         };
@@ -654,7 +655,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
         const updateResponse = await fetch(`/api/rfp-requests/${rfp.id}/update-with-files`, {
           method: 'PATCH',
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('auth-token')}`,
+            'Authorization': `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}`,
           },
           body: formData,
           credentials: 'include',
@@ -670,7 +671,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('auth-token')}`,
+          'Authorization': `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}`,
         },
         credentials: 'include',
         body: JSON.stringify({ phase: "rfp-validation" }),
@@ -717,7 +718,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
               size="sm"
               onClick={async () => {
                 try {
-                  const token = localStorage.getItem('auth-token');
+                  const token = localStorage.getItem(AUTH_TOKEN_KEY);
                   const cacheBuster = Date.now();
                   const response = await fetch(`/api/rfp-requests/${rfp.id}/summary-report?t=${cacheBuster}`, {
                     headers: { 'Authorization': `Bearer ${token}`, 'Cache-Control': 'no-cache' },

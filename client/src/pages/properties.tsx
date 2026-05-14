@@ -14,6 +14,7 @@ import { PropertyAttachments } from "@/components/property-attachments";
 import { ElectricalManagementModal } from "@/components/electrical-management-modal";
 import { BuildingSpecificationsModal } from "@/components/building-specifications-modal";
 import type { Property, BayConfiguration } from "@shared/schema";
+import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 
 export default function Properties() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -314,7 +315,7 @@ export default function Properties() {
                               <button 
                                 onClick={async () => {
                                   try {
-                                    const token = localStorage.getItem('auth-token');
+                                    const token = localStorage.getItem(AUTH_TOKEN_KEY);
                                     const response = await fetch(`/api/properties/${property.id}/print`, {
                                       headers: {
                                         'Authorization': `Bearer ${token}`

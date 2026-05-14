@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 
 interface CreateAlternateModalProps {
   isOpen: boolean;
@@ -22,7 +23,7 @@ export function CreateAlternateModal({ isOpen, onClose, parentRfp, onAlternateCr
 
   const createMutation = useMutation({
     mutationFn: async () => {
-      const token = localStorage.getItem('auth-token');
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
       return await fetch(`/api/rfp-requests/${parentRfp.id}/create-option`, {
         method: 'POST',
         headers: {

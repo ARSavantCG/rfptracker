@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import type { UppyFile } from "@uppy/core";
+import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 
 interface UploadMetadata {
   name: string;
@@ -66,7 +67,7 @@ export function useUpload(options: UseUploadOptions = {}) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem('auth-token')}`,
+          "Authorization": `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}`,
         },
         credentials: 'include',
         body: JSON.stringify({
@@ -168,7 +169,7 @@ export function useUpload(options: UseUploadOptions = {}) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem('auth-token')}`,
+          "Authorization": `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}`,
         },
         credentials: 'include',
         body: JSON.stringify({

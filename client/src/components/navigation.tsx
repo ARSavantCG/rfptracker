@@ -10,6 +10,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import ChangePasswordModal from "./change-password-modal";
 import type { LucideIcon } from "lucide-react";
+import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 
 interface NavItem {
   path: string;
@@ -42,12 +43,12 @@ export default function Navigation() {
       return await apiRequest('/api/auth/logout', 'POST');
     },
     onSuccess: () => {
-      localStorage.removeItem('auth-token');
+      localStorage.removeItem(AUTH_TOKEN_KEY);
       queryClient.clear();
       window.location.reload();
     },
     onError: () => {
-      localStorage.removeItem('auth-token');
+      localStorage.removeItem(AUTH_TOKEN_KEY);
       toast({
         title: "Logout Error",
         description: "Failed to logout properly",

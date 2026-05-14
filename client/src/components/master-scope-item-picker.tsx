@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 
@@ -8,6 +7,7 @@ export interface MasterScopeItem {
   id: number;
   name: string;
   description?: string | null;
+  csiCode?: string | null;
   csiDivision?: string | null;
   unit: string;
   unitPrice: string;
@@ -231,17 +231,11 @@ export default function MasterScopeItemPicker({
               >
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium text-gray-900 truncate">{item.name}</div>
-                  {item.description && (
-                    <div className="text-xs text-gray-500 truncate mt-0.5">{item.description}</div>
+                  {(item.csiCode || item.csiDivision) && (
+                    <div className="text-xs text-gray-400 mt-0.5">
+                      {item.csiCode ?? shortCsiLabel(item.csiDivision!)}
+                    </div>
                   )}
-                </div>
-                <div className="flex-shrink-0 flex flex-col items-end gap-1 mt-0.5">
-                  {item.csiDivision && (
-                    <Badge variant="outline" className="text-xs py-0 h-4 font-normal">
-                      {shortCsiLabel(item.csiDivision)}
-                    </Badge>
-                  )}
-                  <span className="text-xs text-gray-400">{item.unit}</span>
                 </div>
               </div>
             ))}

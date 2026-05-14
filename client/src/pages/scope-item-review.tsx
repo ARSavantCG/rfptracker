@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { AlertTriangle, CheckCircle, XCircle, Copy, Download, RefreshCw } from "lucide-react";
 import MasterScopeItemPicker, { type MasterScopeSelection } from "@/components/master-scope-item-picker";
+import Navigation from "@/components/navigation";
 
 interface QueueGroup {
   descriptionNormalized: string;
@@ -201,6 +202,8 @@ export default function ScopeItemReview() {
       .join(", ");
 
   return (
+    <>
+    <Navigation />
     <div className="container mx-auto px-4 py-6 max-w-6xl">
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -520,5 +523,6 @@ export default function ScopeItemReview() {
         </DialogContent>
       </Dialog>
     </div>
+    </>
   );
 }

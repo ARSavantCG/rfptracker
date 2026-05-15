@@ -101,6 +101,33 @@ export const rfpRequests = pgTable("rfp_requests", {
   
   // Project folder for file organization (auto-generated, sanitized from project name)
   projectFolder: text("project_folder"),
+
+  // ── Enhanced RFP variant ──────────────────────────────────────────────────
+  // All fields below are nullable. They only populate when the Enhanced variant
+  // is used. Standard RFPs leave every field here as null.
+
+  // Building context
+  buildingPosition: text("building_position"),
+  adjacentTenants: text("adjacent_tenants"),
+  clearHeight: text("clear_height"),
+  sprinklerSpec: text("sprinkler_spec"),
+  existingPower: text("existing_power"),
+  dockDoorCount: integer("dock_door_count"),
+  driveInDoorCount: integer("drive_in_door_count"),
+  parkingRatio: text("parking_ratio"),
+  bayDimensions: text("bay_dimensions"),
+
+  // Tenant program
+  tenantProgramSummary: text("tenant_program_summary"),
+
+  // Schedule targets (stored as timestamps; date-only usage is enforced at UI layer)
+  targetLXE: timestamp("target_lxe"),
+  targetNTP: timestamp("target_ntp"),
+  targetMobilization: timestamp("target_mobilization"),
+  targetPermitDrawings: timestamp("target_permit_drawings"),
+  targetSubstantialCompletion: timestamp("target_substantial_completion"),
+  targetRCD: timestamp("target_rcd"),
+  // ─────────────────────────────────────────────────────────────────────────
   
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -270,6 +297,11 @@ export const invitationToBid = pgTable("invitation_to_bid", {
   contractorMilestones: json("contractor_milestones").$type<{description: string}[]>().default([]),
   selectedContractor: text("selected_contractor"),
   selectedArchitect: text("selected_architect"),
+
+  // Enhanced RFP variant tracking
+  rfpVariant: text("rfp_variant").notNull().default("standard"), // 'standard' | 'enhanced'
+  recipientType: text("recipient_type"), // 'gc' | 'architect' — nullable; populated when per-recipient rows are used
+
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -298,6 +330,8 @@ export const insertInvitationToBidSchema = createInsertSchema(invitationToBid).o
   contractorMilestones: z.array(z.object({
     description: z.string(),
   })).default([]),
+  rfpVariant: z.enum(["standard", "enhanced"]).default("standard"),
+  recipientType: z.enum(["gc", "architect"]).optional().nullable(),
 });
 
 export const updateInvitationToBidSchema = insertInvitationToBidSchema.partial();
@@ -359,6 +393,32 @@ export const updateMasterCategorySchema = insertMasterCategorySchema.partial().e
 export type MasterCategory = typeof masterCategories.$inferSelect;
 export type InsertMasterCategory = z.infer<typeof insertMasterCategorySchema>;
 export type UpdateMasterCategory = z.infer<typeof updateMasterCategorySchema>;
+
+// Project Alternates — Enhanced RFP variant
+// Stores the A/B option pairs that appear in an Enhanced RFP document.
+// Each row belongs to one RFP (projectId) and can optionally be tied to a
+// master cost category for analytics. Standard RFPs will have zero rows here.
+export const projectAlternates = pgTable("project_alternates", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  projectId: integer("project_id").notNull().references(() => rfpRequests.id),
+  description: text("description").notNull(),
+  optionA: text("option_a"),
+  optionB: text("option_b"),
+  masterCategoryId: integer("master_category_id").references(() => masterCategories.id),
+  displayOrder: integer("display_order").notNull().default(0),
+});
+
+export const insertProjectAlternateSchema = createInsertSchema(projectAlternates).omit({
+  id: true,
+});
+
+export const updateProjectAlternateSchema = insertProjectAlternateSchema.partial().extend({
+  id: z.string().uuid(),
+});
+
+export type ProjectAlternate = typeof projectAlternates.$inferSelect;
+export type InsertProjectAlternate = z.infer<typeof insertProjectAlternateSchema>;
+export type UpdateProjectAlternate = z.infer<typeof updateProjectAlternateSchema>;
 
 // Bid Collection tables
 export const bidCollections = pgTable("bid_collections", {

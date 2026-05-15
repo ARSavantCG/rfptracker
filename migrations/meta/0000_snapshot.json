@@ -1,5 +1,5 @@
 {
-  "id": "45fac607-a36d-4102-b276-f5b144287edc",
+  "id": "f1e12da9-8505-4e2a-bb5d-71a8e95c3068",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -2515,7 +2515,23 @@
           "default": 0
         }
       },
-      "indexes": {},
+      "indexes": {
+        "project_alternates_project_id_idx": {
+          "name": "project_alternates_project_id_idx",
+          "columns": [
+            {
+              "expression": "project_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "project_alternates_project_id_rfp_requests_id_fk": {
           "name": "project_alternates_project_id_rfp_requests_id_fk",
@@ -2527,7 +2543,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "cascade",
           "onUpdate": "no action"
         },
         "project_alternates_master_category_id_master_categories_id_fk": {
@@ -2540,7 +2556,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },

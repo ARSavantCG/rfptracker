@@ -400,13 +400,15 @@ export type UpdateMasterCategory = z.infer<typeof updateMasterCategorySchema>;
 // master cost category for analytics. Standard RFPs will have zero rows here.
 export const projectAlternates = pgTable("project_alternates", {
   id: uuid("id").primaryKey().defaultRandom(),
-  projectId: integer("project_id").notNull().references(() => rfpRequests.id),
+  projectId: integer("project_id").notNull().references(() => rfpRequests.id, { onDelete: "cascade" }),
   description: text("description").notNull(),
   optionA: text("option_a"),
   optionB: text("option_b"),
-  masterCategoryId: integer("master_category_id").references(() => masterCategories.id),
+  masterCategoryId: integer("master_category_id").references(() => masterCategories.id, { onDelete: "set null" }),
   displayOrder: integer("display_order").notNull().default(0),
-});
+}, (table) => ({
+  projectIdIdx: index("project_alternates_project_id_idx").on(table.projectId),
+}));
 
 export const insertProjectAlternateSchema = createInsertSchema(projectAlternates).omit({
   id: true,

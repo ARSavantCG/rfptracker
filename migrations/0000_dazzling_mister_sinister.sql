@@ -676,8 +676,8 @@ ALTER TABLE "master_item_review_queue" ADD CONSTRAINT "master_item_review_queue_
 ALTER TABLE "pdf_mapping_templates" ADD CONSTRAINT "pdf_mapping_templates_contractor_id_contacts_id_fk" FOREIGN KEY ("contractor_id") REFERENCES "public"."contacts"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "project_actual_line_items" ADD CONSTRAINT "project_actual_line_items_project_actual_id_project_actuals_id_fk" FOREIGN KEY ("project_actual_id") REFERENCES "public"."project_actuals"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "project_actuals" ADD CONSTRAINT "project_actuals_rfp_id_rfp_requests_id_fk" FOREIGN KEY ("rfp_id") REFERENCES "public"."rfp_requests"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "project_alternates" ADD CONSTRAINT "project_alternates_project_id_rfp_requests_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."rfp_requests"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "project_alternates" ADD CONSTRAINT "project_alternates_master_category_id_master_categories_id_fk" FOREIGN KEY ("master_category_id") REFERENCES "public"."master_categories"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "project_alternates" ADD CONSTRAINT "project_alternates_project_id_rfp_requests_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."rfp_requests"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "project_alternates" ADD CONSTRAINT "project_alternates_master_category_id_master_categories_id_fk" FOREIGN KEY ("master_category_id") REFERENCES "public"."master_categories"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "project_files" ADD CONSTRAINT "project_files_project_id_rfp_requests_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."rfp_requests"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "property_attachments" ADD CONSTRAINT "property_attachments_property_id_properties_id_fk" FOREIGN KEY ("property_id") REFERENCES "public"."properties"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "property_existing_improvements" ADD CONSTRAINT "property_existing_improvements_property_id_properties_id_fk" FOREIGN KEY ("property_id") REFERENCES "public"."properties"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -686,4 +686,5 @@ ALTER TABLE "scope_item_contractor_pricing" ADD CONSTRAINT "scope_item_contracto
 ALTER TABLE "scope_item_contractor_pricing" ADD CONSTRAINT "scope_item_contractor_pricing_contractor_id_contacts_id_fk" FOREIGN KEY ("contractor_id") REFERENCES "public"."contacts"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "transformers" ADD CONSTRAINT "transformers_property_id_properties_id_fk" FOREIGN KEY ("property_id") REFERENCES "public"."properties"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "mirq_status_idx" ON "master_item_review_queue" USING btree ("status");--> statement-breakpoint
-CREATE INDEX "mirq_description_idx" ON "master_item_review_queue" USING btree ("custom_description");
+CREATE INDEX "mirq_description_idx" ON "master_item_review_queue" USING btree ("custom_description");--> statement-breakpoint
+CREATE INDEX "project_alternates_project_id_idx" ON "project_alternates" USING btree ("project_id");

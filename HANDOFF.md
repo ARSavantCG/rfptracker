@@ -1022,3 +1022,64 @@ Stores A/B option pairs for Enhanced RFP documents. One RFP → zero or many row
 - **`scope_item_review_rejected` entity_id race condition.** The reject handler does a pre-update SELECT to capture the queue row UUID, but if the row status was already changed (race or prior test), the SELECT returns 0 rows and `entity_id` falls back to `descriptionNormalized` (a string) instead of the UUID. This makes `entity_id` type inconsistent across audit log rows. Fix: capture the queue row in the same transaction as the status update using `.returning({ id })` on the UPDATE call — that guarantees the ID without a separate SELECT and with no race window. Not deploy-blocking; the audit row is still meaningful. Files: `server/routes.ts` reject handler (~line 6340).
 - **Missing-master indicator not implemented (Test 5).** When a master scope item referenced by `masterItemId` is deleted from `rom_scope_items`, historical budget line items continue to display their stored `item.description` correctly (no crash, correct text). However, there is no visual indicator (badge, warning icon, strikethrough) that the referenced master is gone. The `masterItemId` becomes a dangling reference with no UI signal. Low priority since master deletes are admin-controlled, but track for future completeness.
 - **Audit other admin `useQuery` staleness.** `/admin/audit-log` view is highest priority — forensic data must be live. Same `staleTime: 0` fix needed.
+
+---
+
+## Enhanced RFP Variant System — Architecture Decision Record
+
+**Decision date:** 2026-05-15  
+**Status:** Implemented (Prompts 1 & 2 complete, Prompt 3 PDF templates pending)
+
+### What was built
+
+A two-modal system for capturing Enhanced RFP context and generating Enhanced RFP document variants:
+
+1. **Step 2 (Validation modal)** — Collapsible "Enhanced RFP — Optional Context" section adds 10 optional fields to the rfp_requests record (buildingPosition, adjacentTenants, clearHeight, sprinklerSpec, existingPower, dockDoorCount, driveInDoorCount, parkingRatio, bayDimensions, tenantProgramSummary). All are nullable; none gate workflow progression.
+
+2. **Step 3 (Invitation modal)** — "Select RFP Types to Generate" restructured as a 2×2 grid: GC RFP / GC RFP Enhanced / Architect RFP / Architect RFP Enhanced. A collapsible "Enhanced RFP — Schedule & Alternates" section adds 6 date milestone inputs (PATCHed to rfp_requests on save) and a repeatable project alternates editor (persisted to the project_alternates table). The chosen variant is stored in invitation_to_bid.rfp_variant as a JSON string.
+
+### Key architecture decision: rfpVariant is invitation-level, not bidder-level
+
+`rfpVariant` is a property of the **invitation as a whole**, not of individual contractors or architects within the invitation.
+
+**What this means in practice:**
+- A single invitation either uses Standard or Enhanced for each role (GC and Architect) — all selected contractors receive the same document variant; all selected architects receive the same document variant.
+- Example: If "GC Enhanced" is checked and three contractors are selected, all three receive the Enhanced GC RFP. There is no mechanism to send Standard to one and Enhanced to another within the same invitation.
+- The pilot strategy is **project-level**: one variant decision per project per invitation.
+
+**Why this was chosen:**
+- Matches the original plan specification ("add Enhanced variants, enforce mutual exclusion within each pair")
+- Simpler to implement, persist, and reason about
+- Sufficient for pilot: in practice, a leasing team would make one variant decision per project, not vary by individual bidder
+
+**Explicitly out of scope:**
+- Per-bidder variant customization (e.g., Bidder A gets Standard, Bidder B gets Enhanced in the same invitation)
+- Revisit only if the pilot reveals divergent bidder needs that cannot be handled at the project level
+
+### rfpVariant serialization format
+
+Stored in `invitation_to_bid.rfp_variant` (text, NOT NULL DEFAULT 'standard').
+
+| State | Stored value |
+|---|---|
+| Both standard (default) | `'standard'` |
+| GC enhanced, Arch standard | `'{"gc":"enhanced","architect":"standard"}'` |
+| GC standard, Arch enhanced | `'{"gc":"standard","architect":"enhanced"}'` |
+| Both enhanced | `'{"gc":"enhanced","architect":"enhanced"}'` |
+
+Keys are `"gc"` and `"architect"`. The `parseRfpVariant` function handles all legacy values (`null`, `'standard'`, `'enhanced'`, malformed JSON) with a safe fallback to `{ gc: 'standard', architect: 'standard' }` — never throws.
+
+### New DB objects added (migration applied)
+
+**rfp_requests** — 17 new nullable columns:
+buildingPosition, adjacentTenants, clearHeight, sprinklerSpec, existingPower, dockDoorCount, driveInDoorCount, parkingRatio, bayDimensions, tenantProgramSummary (Step 2 Enhanced context) + targetLxe, targetNtp, targetMobilization, targetPermitDrawings, targetSubstantialCompletion, targetRcd (Step 3 schedule milestones) + rfpTier (future use)
+
+**invitation_to_bid** — 2 new columns:
+rfpVariant (text NOT NULL DEFAULT 'standard'), rfpTier (text)
+
+**project_alternates** — new table:
+id (uuid PK), projectId (int FK → rfp_requests CASCADE), description (text NOT NULL), optionA (text), optionB (text), masterCategoryId (int FK → master_categories SET NULL), displayOrder (int DEFAULT 0)
+
+### Next: Prompt 3 — PDF templates
+
+Generate the actual Enhanced PDF documents for recipientType values `'contractor-enhanced'` and `'architect-enhanced'`. The invitation modal already queues these document types when the Enhanced checkboxes are checked; the PDF generation endpoint just needs new template branches.

@@ -67,6 +67,23 @@ const validationSchema = z.object({
   tenantElectricalAdditionalVoltage: z.string().nullable().optional(),
   tenantElectricalUpgradeTiming: z.string().nullable().optional(),
   tenantElectricalNotes: z.string().nullable().optional(),
+  // Enhanced RFP optional context fields
+  buildingPosition: z.string().optional(),
+  adjacentTenants: z.string().optional(),
+  clearHeight: z.string().optional(),
+  sprinklerSpec: z.string().optional(),
+  existingPower: z.string().optional(),
+  dockDoorCount: z.preprocess(
+    (val) => val === "" || val === null || val === undefined ? null : Number(val),
+    z.number().int().nullable().optional()
+  ),
+  driveInDoorCount: z.preprocess(
+    (val) => val === "" || val === null || val === undefined ? null : Number(val),
+    z.number().int().nullable().optional()
+  ),
+  parkingRatio: z.string().optional(),
+  bayDimensions: z.string().optional(),
+  tenantProgramSummary: z.string().optional(),
 });
 
 type ValidationFormData = z.infer<typeof validationSchema>;
@@ -82,6 +99,7 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [openAreaTypeIndex, setOpenAreaTypeIndex] = useState<number | null>(null);
+  const [showEnhancedContext, setShowEnhancedContext] = useState(false);
 
   const form = useForm<ValidationFormData>({
     resolver: zodResolver(validationSchema),
@@ -98,6 +116,16 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
       tenantElectricalAdditionalVoltage: null,
       tenantElectricalUpgradeTiming: null,
       tenantElectricalNotes: null,
+      buildingPosition: "",
+      adjacentTenants: "",
+      clearHeight: "",
+      sprinklerSpec: "",
+      existingPower: "",
+      dockDoorCount: null,
+      driveInDoorCount: null,
+      parkingRatio: "",
+      bayDimensions: "",
+      tenantProgramSummary: "",
     },
   });
 
@@ -175,6 +203,16 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
         tenantElectricalAdditionalVoltage: (rfp as any).tenantElectricalAdditionalVoltage ?? null,
         tenantElectricalUpgradeTiming: (rfp as any).tenantElectricalUpgradeTiming ?? null,
         tenantElectricalNotes: rfp.tenantElectricalNotes ?? null,
+        buildingPosition: (rfp as any).buildingPosition ?? "",
+        adjacentTenants: (rfp as any).adjacentTenants ?? "",
+        clearHeight: (rfp as any).clearHeight ?? "",
+        sprinklerSpec: (rfp as any).sprinklerSpec ?? "",
+        existingPower: (rfp as any).existingPower ?? "",
+        dockDoorCount: (rfp as any).dockDoorCount ?? null,
+        driveInDoorCount: (rfp as any).driveInDoorCount ?? null,
+        parkingRatio: (rfp as any).parkingRatio ?? "",
+        bayDimensions: (rfp as any).bayDimensions ?? "",
+        tenantProgramSummary: (rfp as any).tenantProgramSummary ?? "",
       });
     }
   }, [rfp, isOpen, form, contacts]);
@@ -804,6 +842,175 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                   </div>
                 );
               })()}
+            </div>
+
+            {/* Enhanced RFP — Optional Context */}
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => setShowEnhancedContext(v => !v)}
+                className="w-full flex items-center justify-between p-3 bg-indigo-50 border border-indigo-200 rounded-lg text-left hover:bg-indigo-100 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold text-indigo-800">Enhanced RFP — Optional Context</span>
+                  <span className="text-xs text-indigo-600 font-normal">
+                    These fields populate the Enhanced RFP variants. Standard RFPs do not use them.
+                  </span>
+                </div>
+                <ChevronDown className={`h-4 w-4 text-indigo-600 transition-transform ${showEnhancedContext ? "rotate-180" : ""}`} />
+              </button>
+
+              {showEnhancedContext && (
+                <div className="border border-indigo-200 rounded-lg p-4 space-y-4 bg-indigo-50/30">
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="buildingPosition"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Building Position</FormLabel>
+                          <FormControl>
+                            <Input {...field} value={field.value ?? ""} placeholder="e.g., Corner, End-cap, Mid-row" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="adjacentTenants"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Adjacent Tenants</FormLabel>
+                          <FormControl>
+                            <Input {...field} value={field.value ?? ""} placeholder="Names of neighboring tenants" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="clearHeight"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Clear Height</FormLabel>
+                          <FormControl>
+                            <Input {...field} value={field.value ?? ""} placeholder="e.g., 32' clear" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="sprinklerSpec"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Sprinkler Specification</FormLabel>
+                          <FormControl>
+                            <Input {...field} value={field.value ?? ""} placeholder="e.g., ESFR K-25" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="existingPower"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Existing Power</FormLabel>
+                          <FormControl>
+                            <Input {...field} value={field.value ?? ""} placeholder="e.g., 1,600A 480V 3-Phase" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="parkingRatio"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Parking Ratio</FormLabel>
+                          <FormControl>
+                            <Input {...field} value={field.value ?? ""} placeholder="e.g., 1/1,000 SF" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="dockDoorCount"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Dock Door Count</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              placeholder="e.g., 12"
+                              value={field.value ?? ""}
+                              onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="driveInDoorCount"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Drive-In Door Count</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              placeholder="e.g., 2"
+                              value={field.value ?? ""}
+                              onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="bayDimensions"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Bay Dimensions</FormLabel>
+                          <FormControl>
+                            <Input {...field} value={field.value ?? ""} placeholder="e.g., 54' × 50'" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <FormField
+                    control={form.control}
+                    name="tenantProgramSummary"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Tenant Program Summary</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            {...field}
+                            value={field.value ?? ""}
+                            placeholder="Brief description of the tenant's operational program and requirements..."
+                            className="min-h-[80px]"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              )}
             </div>
 
             {/* Contact Information */}

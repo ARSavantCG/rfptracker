@@ -18,9 +18,23 @@ import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautif
 import type { RfpRequest, Property, Contact } from "@shared/schema";
 import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 
+// Helpers for per-role rfpVariant serialization
+type RfpVariantData = { gc: 'standard' | 'enhanced'; architect: 'standard' | 'enhanced' };
+const parseRfpVariant = (v: string | null | undefined): RfpVariantData => {
+  if (!v || v === 'standard') return { gc: 'standard', architect: 'standard' };
+  if (v === 'enhanced') return { gc: 'enhanced', architect: 'enhanced' };
+  try { return { ...{ gc: 'standard', architect: 'standard' }, ...JSON.parse(v) }; } catch { return { gc: 'standard', architect: 'standard' }; }
+};
+const serializeRfpVariant = (gcEnhanced: boolean, archEnhanced: boolean): string => {
+  if (!gcEnhanced && !archEnhanced) return 'standard';
+  return JSON.stringify({ gc: gcEnhanced ? 'enhanced' : 'standard', architect: archEnhanced ? 'enhanced' : 'standard' });
+};
+
 const invitationFormSchema = z.object({
   generateArchitectRfp: z.boolean().default(false),
   generateContractorRfp: z.boolean().default(false),
+  generateArchitectRfpEnhanced: z.boolean().default(false),
+  generateContractorRfpEnhanced: z.boolean().default(false),
   generateBrokerArchitectRfp: z.boolean().default(false),
   generateBrokerContractorRfp: z.boolean().default(false),
   selectedContractor: z.string().optional(),
@@ -80,6 +94,14 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
   const [editingAreaId, setEditingAreaId] = useState<string | null>(null);
   const [editingAreaData, setEditingAreaData] = useState<{description: string, squareFootage: string, notes: string}>({description: '', squareFootage: '', notes: ''});
   const modalRef = useRef<HTMLDivElement>(null);
+  const [showEnhancedSection, setShowEnhancedSection] = useState(false);
+  const [scheduleFields, setScheduleFields] = useState({
+    targetLxe: '', targetNtp: '', targetMobilization: '',
+    targetPermitDrawings: '', targetSubstantialCompletion: '', targetRcd: '',
+  });
+  const [localAlternates, setLocalAlternates] = useState<Array<{
+    id: string; description: string; optionA: string; optionB: string; masterCategoryId: number | null; isNew?: boolean;
+  }>>([]);
   
   // Custom refs for scope of work navigation
   const scopeRefs = useRef<{[key: string]: HTMLInputElement}>({});
@@ -236,6 +258,8 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
     defaultValues: {
       generateArchitectRfp: false,
       generateContractorRfp: false,
+      generateArchitectRfpEnhanced: false,
+      generateContractorRfpEnhanced: false,
       generateBrokerArchitectRfp: false,
       generateBrokerContractorRfp: false,
       requestPricing: false,
@@ -352,12 +376,63 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
   // Watch checkbox values to enable/disable Generate RFPs button
   const watchedValues = form.watch([
     "generateArchitectRfp",
-    "generateContractorRfp", 
+    "generateContractorRfp",
+    "generateArchitectRfpEnhanced",
+    "generateContractorRfpEnhanced",
     "generateBrokerArchitectRfp",
     "generateBrokerContractorRfp"
   ]);
   
   const hasSelectedRfpType = watchedValues.some(value => value === true);
+
+  // Fetch master categories for the alternates dropdown
+  const { data: masterCategories = [] } = useQuery<any[]>({
+    queryKey: ["/api/master-categories"],
+    enabled: isOpen,
+  });
+
+  // Fetch project alternates for this RFP
+  const { data: savedAlternates = [], refetch: refetchAlternates } = useQuery<any[]>({
+    queryKey: ["/api/rfp-requests", rfp?.id, "project-alternates"],
+    queryFn: async () => {
+      if (!rfp?.id) return [];
+      const response = await fetch(`/api/rfp-requests/${rfp.id}/project-alternates`, {
+        credentials: 'include',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}` },
+      });
+      if (!response.ok) return [];
+      return response.json();
+    },
+    enabled: !!rfp?.id && isOpen,
+  });
+
+  // Sync savedAlternates into localAlternates when modal opens
+  useEffect(() => {
+    if (isOpen && savedAlternates) {
+      setLocalAlternates(savedAlternates.map((a: any) => ({
+        id: a.id,
+        description: a.description,
+        optionA: a.optionA ?? '',
+        optionB: a.optionB ?? '',
+        masterCategoryId: a.masterCategoryId ?? null,
+      })));
+    }
+  }, [isOpen, savedAlternates]);
+
+  // Sync schedule fields from rfp prop
+  useEffect(() => {
+    if (isOpen && rfp) {
+      const fmt = (v: any) => v ? new Date(v).toISOString().split('T')[0] : '';
+      setScheduleFields({
+        targetLxe: fmt((rfp as any).targetLxe),
+        targetNtp: fmt((rfp as any).targetNtp),
+        targetMobilization: fmt((rfp as any).targetMobilization),
+        targetPermitDrawings: fmt((rfp as any).targetPermitDrawings),
+        targetSubstantialCompletion: fmt((rfp as any).targetSubstantialCompletion),
+        targetRcd: fmt((rfp as any).targetRcd),
+      });
+    }
+  }, [isOpen, rfp]);
 
   // Fetch existing invitation data
   const { data: existingInvitation } = useQuery({
@@ -450,6 +525,8 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
       const defaultValues = {
         generateArchitectRfp: false,
         generateContractorRfp: false,
+        generateArchitectRfpEnhanced: false,
+        generateContractorRfpEnhanced: false,
         generateBrokerArchitectRfp: false,
         generateBrokerContractorRfp: false,
 
@@ -470,9 +547,14 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
         contractorMilestones: [],
       };
 
+      // Parse rfpVariant to set per-role checkbox state
+      const rfpVariantParsed = parseRfpVariant(existingInvitation?.rfpVariant);
+
       // Merge with existing invitation data if available
       const formValues = existingInvitation ? {
         ...defaultValues,
+        generateContractorRfpEnhanced: rfpVariantParsed.gc === 'enhanced',
+        generateArchitectRfpEnhanced: rfpVariantParsed.architect === 'enhanced',
         selectedContractor: existingInvitation.selectedContractor || defaultValues.selectedContractor,
         selectedArchitect: existingInvitation.selectedArchitect || defaultValues.selectedArchitect,
         additionalContractors: existingInvitation.additionalContractors || defaultValues.additionalContractors,
@@ -542,13 +624,42 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
         })),
       };
       
+      // Derive and persist rfpVariant
+      const gcEnhanced = (data as any).generateContractorRfpEnhanced === true;
+      const archEnhanced = (data as any).generateArchitectRfpEnhanced === true;
+      const rfpVariant = serializeRfpVariant(gcEnhanced, archEnhanced);
+      const transformedWithVariant = { ...transformedData, rfpVariant };
+
+      // Persist schedule fields to rfp_requests if any are set
+      const anyScheduleSet = Object.values(scheduleFields).some(v => v !== '');
+      if (anyScheduleSet) {
+        const schedulePayload: Record<string, string | null> = {};
+        if (scheduleFields.targetLxe) schedulePayload.targetLxe = new Date(scheduleFields.targetLxe).toISOString();
+        if (scheduleFields.targetNtp) schedulePayload.targetNtp = new Date(scheduleFields.targetNtp).toISOString();
+        if (scheduleFields.targetMobilization) schedulePayload.targetMobilization = new Date(scheduleFields.targetMobilization).toISOString();
+        if (scheduleFields.targetPermitDrawings) schedulePayload.targetPermitDrawings = new Date(scheduleFields.targetPermitDrawings).toISOString();
+        if (scheduleFields.targetSubstantialCompletion) schedulePayload.targetSubstantialCompletion = new Date(scheduleFields.targetSubstantialCompletion).toISOString();
+        if (scheduleFields.targetRcd) schedulePayload.targetRcd = new Date(scheduleFields.targetRcd).toISOString();
+        await apiRequest(`/api/rfp-requests/${rfp.id}`, "PATCH", schedulePayload);
+      }
+
+      // Persist new alternates
+      for (const alt of localAlternates.filter(a => a.isNew)) {
+        await apiRequest(`/api/rfp-requests/${rfp.id}/project-alternates`, "POST", {
+          description: alt.description,
+          optionA: alt.optionA || null,
+          optionB: alt.optionB || null,
+          masterCategoryId: alt.masterCategoryId || null,
+        });
+      }
+
       // Save or update invitation to bid record
       if (existingInvitation) {
-        return await apiRequest(`/api/rfp-requests/${rfp.id}/invitation-to-bid`, "PATCH", transformedData);
+        return await apiRequest(`/api/rfp-requests/${rfp.id}/invitation-to-bid`, "PATCH", transformedWithVariant);
       } else {
         return await apiRequest("/api/invitation-to-bid", "POST", {
           rfpId: rfp.id,
-          ...transformedData,
+          ...transformedWithVariant,
         });
       }
     },
@@ -619,12 +730,28 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
           documentsToOpen.push({ type: "architect", title: "Architect RFP", recipientName: "" });
         }
       }
+      if (data.generateArchitectRfpEnhanced) {
+        allArchitects.forEach(architect => {
+          documentsToOpen.push({ type: "architect-enhanced", title: `Architect RFP (Enhanced) - ${architect}`, recipientName: architect });
+        });
+        if (allArchitects.length === 0) {
+          documentsToOpen.push({ type: "architect-enhanced", title: "Architect RFP — Enhanced", recipientName: "" });
+        }
+      }
       if (data.generateContractorRfp) {
         allContractors.forEach(contractor => {
           documentsToOpen.push({ type: "contractor", title: `Contractor RFP - ${contractor}`, recipientName: contractor });
         });
         if (allContractors.length === 0) {
           documentsToOpen.push({ type: "contractor", title: "Contractor RFP", recipientName: "" });
+        }
+      }
+      if (data.generateContractorRfpEnhanced) {
+        allContractors.forEach(contractor => {
+          documentsToOpen.push({ type: "contractor-enhanced", title: `GC RFP (Enhanced) - ${contractor}`, recipientName: contractor });
+        });
+        if (allContractors.length === 0) {
+          documentsToOpen.push({ type: "contractor-enhanced", title: "GC RFP — Enhanced", recipientName: "" });
         }
       }
       if (data.generateBrokerArchitectRfp) {
@@ -747,12 +874,28 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
           documentsToOpen.push({ type: "architect", title: "Architect RFP", recipientName: "" });
         }
       }
+      if (data.generateArchitectRfpEnhanced) {
+        allArchitects.forEach(architect => {
+          documentsToOpen.push({ type: "architect-enhanced", title: `Architect RFP (Enhanced) - ${architect}`, recipientName: architect });
+        });
+        if (allArchitects.length === 0) {
+          documentsToOpen.push({ type: "architect-enhanced", title: "Architect RFP — Enhanced", recipientName: "" });
+        }
+      }
       if (data.generateContractorRfp) {
         allContractors.forEach(contractor => {
           documentsToOpen.push({ type: "contractor", title: `Contractor RFP - ${contractor}`, recipientName: contractor });
         });
         if (allContractors.length === 0) {
           documentsToOpen.push({ type: "contractor", title: "Contractor RFP", recipientName: "" });
+        }
+      }
+      if (data.generateContractorRfpEnhanced) {
+        allContractors.forEach(contractor => {
+          documentsToOpen.push({ type: "contractor-enhanced", title: `GC RFP (Enhanced) - ${contractor}`, recipientName: contractor });
+        });
+        if (allContractors.length === 0) {
+          documentsToOpen.push({ type: "contractor-enhanced", title: "GC RFP — Enhanced", recipientName: "" });
         }
       }
       if (data.generateBrokerArchitectRfp) {
@@ -978,21 +1121,113 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
               </div>
             </div>
 
-            {/* RFP Type Selection - MOVED DOWN */}
+            {/* RFP Type Selection */}
             <div className="space-y-4">
               <h3 className="text-lg font-medium">Select RFP Types to Generate</h3>
-              <div className="grid grid-cols-2 gap-4">
+              {/* Standard / Enhanced pairs */}
+              <div className="grid grid-cols-2 gap-3">
+                {/* GC standard */}
+                <FormField
+                  control={form.control}
+                  name="generateContractorRfp"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 p-3 border rounded-lg hover:bg-gray-50">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={(checked) => {
+                            field.onChange(checked);
+                            if (checked) form.setValue("generateContractorRfpEnhanced", false);
+                          }}
+                          tabIndex={-1}
+                        />
+                      </FormControl>
+                      <div className="space-y-0.5 leading-none">
+                        <FormLabel>GC RFP</FormLabel>
+                        <p className="text-xs text-gray-500">Standard contractor RFP</p>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+                {/* GC enhanced */}
+                <FormField
+                  control={form.control}
+                  name="generateContractorRfpEnhanced"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 p-3 border border-indigo-200 rounded-lg hover:bg-indigo-50">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={(checked) => {
+                            field.onChange(checked);
+                            if (checked) form.setValue("generateContractorRfp", false);
+                          }}
+                          tabIndex={-1}
+                        />
+                      </FormControl>
+                      <div className="space-y-0.5 leading-none">
+                        <FormLabel className="text-indigo-700">GC RFP — Enhanced</FormLabel>
+                        <p className="text-xs text-indigo-500">Includes schedule &amp; alternates</p>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+                {/* Architect standard */}
+                <FormField
+                  control={form.control}
+                  name="generateArchitectRfp"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 p-3 border rounded-lg hover:bg-gray-50">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={(checked) => {
+                            field.onChange(checked);
+                            if (checked) form.setValue("generateArchitectRfpEnhanced", false);
+                          }}
+                          tabIndex={-1}
+                        />
+                      </FormControl>
+                      <div className="space-y-0.5 leading-none">
+                        <FormLabel>Architect RFP</FormLabel>
+                        <p className="text-xs text-gray-500">Standard architect RFP</p>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+                {/* Architect enhanced */}
+                <FormField
+                  control={form.control}
+                  name="generateArchitectRfpEnhanced"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 p-3 border border-indigo-200 rounded-lg hover:bg-indigo-50">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={(checked) => {
+                            field.onChange(checked);
+                            if (checked) form.setValue("generateArchitectRfp", false);
+                          }}
+                          tabIndex={-1}
+                        />
+                      </FormControl>
+                      <div className="space-y-0.5 leading-none">
+                        <FormLabel className="text-indigo-700">Architect RFP — Enhanced</FormLabel>
+                        <p className="text-xs text-indigo-500">Includes schedule &amp; alternates</p>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+              </div>
+              {/* Broker response checkboxes (unchanged) */}
+              <div className="grid grid-cols-2 gap-3 pt-1 border-t">
                 <FormField
                   control={form.control}
                   name="generateBrokerArchitectRfp"
                   render={({ field }) => (
                     <FormItem className="flex flex-row items-start space-x-3 space-y-0">
                       <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                          tabIndex={-1}
-                        />
+                        <Checkbox checked={field.value} onCheckedChange={field.onChange} tabIndex={-1} />
                       </FormControl>
                       <div className="space-y-1 leading-none">
                         <FormLabel>Architect RFP (Broker Response)</FormLabel>
@@ -1000,18 +1235,13 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
                     </FormItem>
                   )}
                 />
-
                 <FormField
                   control={form.control}
                   name="generateBrokerContractorRfp"
                   render={({ field }) => (
                     <FormItem className="flex flex-row items-start space-x-3 space-y-0">
                       <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                          tabIndex={-1}
-                        />
+                        <Checkbox checked={field.value} onCheckedChange={field.onChange} tabIndex={-1} />
                       </FormControl>
                       <div className="space-y-1 leading-none">
                         <FormLabel>GC RFP (Broker Response)</FormLabel>
@@ -1198,6 +1428,147 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
                   </Button>
                 </div>
               </div>
+            </div>
+
+            {/* Enhanced RFP — Schedule & Alternates */}
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => setShowEnhancedSection(v => !v)}
+                className="w-full flex items-center justify-between p-3 bg-indigo-50 border border-indigo-200 rounded-lg text-left hover:bg-indigo-100 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold text-indigo-800">Enhanced RFP — Schedule &amp; Alternates</span>
+                  <span className="text-xs text-indigo-600 font-normal">Only used when generating an Enhanced variant.</span>
+                </div>
+                <ChevronDown className={`h-4 w-4 text-indigo-600 transition-transform ${showEnhancedSection ? "rotate-180" : ""}`} />
+              </button>
+
+              {showEnhancedSection && (
+                <div className="border border-indigo-200 rounded-lg p-4 space-y-6 bg-indigo-50/30">
+                  {/* Schedule Milestones */}
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-800 mb-3">Target Schedule Milestones</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      {([
+                        { key: 'targetLxe', label: 'Target LXE (Lease Execution)' },
+                        { key: 'targetNtp', label: 'Target NTP (Notice to Proceed)' },
+                        { key: 'targetMobilization', label: 'Target Mobilization' },
+                        { key: 'targetPermitDrawings', label: 'Target Permit Drawings' },
+                        { key: 'targetSubstantialCompletion', label: 'Target Substantial Completion' },
+                        { key: 'targetRcd', label: 'Target RCD (Rent Commencement)' },
+                      ] as const).map(({ key, label }) => (
+                        <div key={key} className="space-y-1">
+                          <label className="text-xs font-medium text-gray-700">{label}</label>
+                          <input
+                            type="date"
+                            value={scheduleFields[key]}
+                            onChange={(e) => setScheduleFields(prev => ({ ...prev, [key]: e.target.value }))}
+                            className="w-full text-sm border border-gray-300 rounded-md px-3 py-1.5 focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Project Alternates */}
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-sm font-semibold text-gray-800">Project Alternates</h4>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setLocalAlternates(prev => [...prev, {
+                          id: `new-${Date.now()}`,
+                          description: '',
+                          optionA: '',
+                          optionB: '',
+                          masterCategoryId: null,
+                          isNew: true,
+                        }])}
+                      >
+                        <Plus className="h-3 w-3 mr-1" /> Add Alternate
+                      </Button>
+                    </div>
+
+                    {localAlternates.length === 0 && (
+                      <p className="text-xs text-gray-500 italic">No alternates added. Click "Add Alternate" to include bid alternates in the Enhanced RFP.</p>
+                    )}
+
+                    <div className="space-y-3">
+                      {localAlternates.map((alt, idx) => (
+                        <div key={alt.id} className="grid grid-cols-[1fr_1fr_1fr_auto] gap-2 items-start p-3 bg-white border border-gray-200 rounded-lg">
+                          <div className="col-span-4 grid grid-cols-[1fr_1fr_1fr_auto] gap-2 items-center">
+                            <div className="space-y-1">
+                              <label className="text-xs font-medium text-gray-600">Description *</label>
+                              <input
+                                type="text"
+                                value={alt.description}
+                                onChange={(e) => setLocalAlternates(prev => prev.map((a, i) => i === idx ? { ...a, description: e.target.value } : a))}
+                                placeholder="Alternate description"
+                                className="w-full text-xs border border-gray-300 rounded px-2 py-1 focus:ring-1 focus:ring-indigo-400"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-xs font-medium text-gray-600">Option A</label>
+                              <input
+                                type="text"
+                                value={alt.optionA}
+                                onChange={(e) => setLocalAlternates(prev => prev.map((a, i) => i === idx ? { ...a, optionA: e.target.value } : a))}
+                                placeholder="e.g., Include"
+                                className="w-full text-xs border border-gray-300 rounded px-2 py-1 focus:ring-1 focus:ring-indigo-400"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-xs font-medium text-gray-600">Option B</label>
+                              <input
+                                type="text"
+                                value={alt.optionB}
+                                onChange={(e) => setLocalAlternates(prev => prev.map((a, i) => i === idx ? { ...a, optionB: e.target.value } : a))}
+                                placeholder="e.g., Exclude"
+                                className="w-full text-xs border border-gray-300 rounded px-2 py-1 focus:ring-1 focus:ring-indigo-400"
+                              />
+                            </div>
+                            <div className="flex items-end pb-0.5">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0 text-red-400 hover:text-red-600"
+                                onClick={async () => {
+                                  if (!alt.isNew && rfp?.id) {
+                                    try {
+                                      await apiRequest(`/api/project-alternates/${alt.id}`, "DELETE");
+                                      refetchAlternates();
+                                    } catch (e) { console.error(e); }
+                                  }
+                                  setLocalAlternates(prev => prev.filter((_, i) => i !== idx));
+                                }}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          </div>
+                          <div className="col-span-4">
+                            <label className="text-xs font-medium text-gray-600">Category</label>
+                            <select
+                              value={alt.masterCategoryId ?? ''}
+                              onChange={(e) => setLocalAlternates(prev => prev.map((a, i) => i === idx ? { ...a, masterCategoryId: e.target.value ? parseInt(e.target.value) : null } : a))}
+                              className="w-full text-xs border border-gray-300 rounded px-2 py-1 mt-1"
+                            >
+                              <option value="">— No category —</option>
+                              {masterCategories.map((mc: any) => (
+                                <option key={mc.id} value={mc.id}>{mc.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Area Breakdown - Pure DOM Implementation */}

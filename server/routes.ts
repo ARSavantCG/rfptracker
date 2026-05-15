@@ -12,7 +12,7 @@ import fs from "fs";
 import path from "path";
 import { storage } from "./storage";
 import { db } from "./db";
-import { users, contacts, insertRfpRequestSchema, updateRfpRequestSchema, insertContactSchema, updateContactSchema, insertInvitationSchema, updateInvitationSchema, insertInvitationToBidSchema, updateInvitationToBidSchema, insertPdfTemplateSchema, auditLog, romScopeItems, masterItemReviewQueue, evaluationBudgets } from "@shared/schema";
+import { users, contacts, insertRfpRequestSchema, updateRfpRequestSchema, insertContactSchema, updateContactSchema, insertInvitationSchema, updateInvitationSchema, insertInvitationToBidSchema, updateInvitationToBidSchema, insertPdfTemplateSchema, auditLog, romScopeItems, masterItemReviewQueue, evaluationBudgets, projectAlternates, insertProjectAlternateSchema } from "@shared/schema";
 import { convertFormDateToDbDate } from "@shared/date-utils";
 import { eq, desc, and, or, gte, lte, ilike, inArray, sql as drizzleSql } from "drizzle-orm";
 import { tokenStore } from "./token-auth";
@@ -6473,6 +6473,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Legacy import error:", error);
       res.status(500).json({ message: "Import failed" });
+    }
+  });
+
+  // Project Alternates CRUD
+  app.get("/api/rfp-requests/:id/project-alternates", requireAuth, async (req, res) => {
+    try {
+      const rfpId = parseInt(req.params.id);
+      const alternates = await db
+        .select()
+        .from(projectAlternates)
+        .where(eq(projectAlternates.projectId, rfpId))
+        .orderBy(projectAlternates.displayOrder);
+      res.json(alternates);
+    } catch (error) {
+      console.error("Error fetching project alternates:", error);
+      res.status(500).json({ message: "Failed to fetch project alternates" });
+    }
+  });
+
+  app.post("/api/rfp-requests/:id/project-alternates", requireAuth, async (req, res) => {
+    try {
+      const rfpId = parseInt(req.params.id);
+      const data = insertProjectAlternateSchema.parse({ ...req.body, projectId: rfpId });
+      const [created] = await db.insert(projectAlternates).values(data).returning();
+      res.json(created);
+    } catch (error) {
+      console.error("Error creating project alternate:", error);
+      res.status(500).json({ message: "Failed to create project alternate" });
+    }
+  });
+
+  app.patch("/api/project-alternates/:id", requireAuth, async (req, res) => {
+    try {
+      const id = req.params.id;
+      const { id: _id, projectId: _pid, ...body } = req.body;
+      const [updated] = await db
+        .update(projectAlternates)
+        .set(body)
+        .where(eq(projectAlternates.id, id))
+        .returning();
+      if (!updated) return res.status(404).json({ message: "Alternate not found" });
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating project alternate:", error);
+      res.status(500).json({ message: "Failed to update project alternate" });
+    }
+  });
+
+  app.delete("/api/project-alternates/:id", requireAuth, async (req, res) => {
+    try {
+      const id = req.params.id;
+      await db.delete(projectAlternates).where(eq(projectAlternates.id, id));
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting project alternate:", error);
+      res.status(500).json({ message: "Failed to delete project alternate" });
     }
   });
 

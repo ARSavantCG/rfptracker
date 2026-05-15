@@ -2130,7 +2130,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Step 1: run field-level validation and surface specific errors to the client
-      const validationResult = validateRfpForProgression(rfp);
+      // Pass targetPhase so date fields are only required from bid-collection onward
+      const validationResult = validateRfpForProgression(rfp, phase);
       if (!validationResult.isValid) {
         return res.status(400).json({
           message: `Cannot advance: ${validationResult.errors.join(", ")}`,

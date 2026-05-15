@@ -13,7 +13,8 @@ export interface ValidationRule {
   message: string;
 }
 
-const rfpValidationRules: ValidationRule[] = [
+// Fields required at every phase boundary
+const baseValidationRules: ValidationRule[] = [
   {
     field: "property",
     required: true,
@@ -45,7 +46,18 @@ const rfpValidationRules: ValidationRule[] = [
     validator: (types: string[]) => Array.isArray(types) && types.length > 0,
     message: "At least one request type must be selected"
   },
-  // Phase 2 validation fields (for workflow progression to General Contractor and/or Architect)
+  {
+    field: "files",
+    required: false,
+    validator: (files: any[]) => Array.isArray(files) && files.length > 0,
+    message: "Consider adding relevant project files"
+  }
+];
+
+// Date rules required only from bid-collection onward (these fields are captured in
+// Step 3 — Invitation to Bid UI, so they cannot be required at the rfp-validation →
+// invitation-to-bid transition where the UI doesn't exist yet).
+const dateValidationRules: ValidationRule[] = [
   {
     field: "contractorDueDate",
     required: true,
@@ -56,22 +68,29 @@ const rfpValidationRules: ValidationRule[] = [
     required: true,
     message: "Architect due date is required for validation"
   },
-  {
-    field: "files",
-    required: false,
-    validator: (files: any[]) => Array.isArray(files) && files.length > 0,
-    message: "Consider adding relevant project files"
-  }
 ];
 
-export function validateRfpForProgression(rfp: RfpRequest): ValidationResult {
+// Phases for which date fields are required (bid-collection and all later phases)
+const PHASES_REQUIRING_DATES = new Set([
+  "bid-collection",
+  "evaluation",
+  "award",
+  "publish",
+]);
+
+export function validateRfpForProgression(rfp: RfpRequest, targetPhase?: string): ValidationResult {
+  const datesRequired = targetPhase ? PHASES_REQUIRING_DATES.has(targetPhase) : true;
+  const rules = datesRequired
+    ? [...baseValidationRules, ...dateValidationRules]
+    : baseValidationRules;
+
   const errors: string[] = [];
   let validFields = 0;
-  const totalFields = rfpValidationRules.length;
+  const totalFields = rules.length;
 
-  for (const rule of rfpValidationRules) {
+  for (const rule of rules) {
     const fieldValue = (rfp as any)[rule.field];
-    
+
     if (rule.required) {
       if (!fieldValue || (typeof fieldValue === 'string' && fieldValue.trim() === '')) {
         errors.push(rule.message);
@@ -110,9 +129,9 @@ export function getRequiredFieldsForPhase(phase: string): string[] {
 }
 
 export function canAdvanceToPhase(rfp: RfpRequest, targetPhase: string): boolean {
-  const validation = validateRfpForProgression(rfp);
+  const validation = validateRfpForProgression(rfp, targetPhase);
   const requiredFields = getRequiredFieldsForPhase(targetPhase);
-  
+
   // Check if all required fields for the target phase are filled
   for (const field of requiredFields) {
     const value = (rfp as any)[field];
@@ -120,6 +139,6 @@ export function canAdvanceToPhase(rfp: RfpRequest, targetPhase: string): boolean
       return false;
     }
   }
-  
+
   return validation.isValid;
 }

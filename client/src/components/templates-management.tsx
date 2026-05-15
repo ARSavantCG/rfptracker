@@ -113,16 +113,25 @@ export function TemplatesManagement() {
     );
   }, [romItems, romSearchTerm]);
 
-  // Group ROM items by category
+  const SOFT_COSTS_KEY = "Soft Costs / Other Fees";
+
+  // Group ROM items by csi_division. Items with null csi_division (all soft-cost/fee
+  // items) go into the SOFT_COSTS_KEY bucket regardless of category.
+  // Returns a sorted array of [key, items] pairs: hard-cost divisions ascending by
+  // leading division number, soft-costs bucket last.
   const groupedRomItems = useMemo(() => {
     const groups: Record<string, RomScopeItem[]> = {};
     filteredRomItems.forEach((item: RomScopeItem) => {
-      if (!groups[item.category]) {
-        groups[item.category] = [];
-      }
-      groups[item.category].push(item);
+      // Treat null, undefined, and empty/whitespace-only strings as soft-costs
+      const key = (item.csiDivision && item.csiDivision.trim()) ? item.csiDivision : SOFT_COSTS_KEY;
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(item);
     });
-    return groups;
+    return Object.entries(groups).sort(([a], [b]) => {
+      if (a === SOFT_COSTS_KEY) return 1;
+      if (b === SOFT_COSTS_KEY) return -1;
+      return (parseInt(a) || 0) - (parseInt(b) || 0);
+    });
   }, [filteredRomItems]);
 
   const templates = templatesData?.items || [];
@@ -533,41 +542,57 @@ export function TemplatesManagement() {
                     <p className="text-sm">No ROM pilot items found</p>
                     <p className="text-xs mt-1">Add items in ROM Pilot management first</p>
                   </div>
-                ) : Object.entries(groupedRomItems).length === 0 ? (
+                ) : groupedRomItems.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     <p className="text-sm">No items match your search</p>
                   </div>
                 ) : (
-                  Object.entries(groupedRomItems).map(([category, items]) => (
-                  <div key={category} className="border-b last:border-b-0">
-                    <div className="bg-slate-50 px-3 py-2 font-medium text-sm sticky top-0">
-                      {category} ({items.length})
-                    </div>
-                    <div className="divide-y">
-                      {items.map((item: RomScopeItem) => (
-                        <div
-                          key={item.id}
-                          className="flex items-start gap-3 p-3 hover:bg-slate-50"
-                        >
-                          <Checkbox
-                            checked={selectedRomItems.has(item.id)}
-                            onCheckedChange={() => handleToggleRomItem(item.id)}
-                            className="mt-1"
-                          />
-                          <div className="flex-1 min-w-0">
-                            <div className="font-medium text-sm">{item.name}</div>
-                            {item.description && (
-                              <div className="text-xs text-muted-foreground mt-0.5">{item.description}</div>
-                            )}
-                            <div className="text-xs text-muted-foreground mt-1">
-                              {item.unit} • ${parseFloat(item.unitPrice).toFixed(2)}/{item.unit}
-                            </div>
-                          </div>
+                  groupedRomItems.map(([divKey, items]) => {
+                    const isSoftCosts = divKey === SOFT_COSTS_KEY;
+                    const headerText = isSoftCosts
+                      ? `Soft Costs / Other Fees (${items.length})`
+                      : (() => {
+                          const parts = divKey.split(' - ');
+                          const num = parts[0].trim();
+                          const name = parts.slice(1).join(' - ').trim();
+                          return `Division ${num} \u2014 ${name} (${items.length})`;
+                        })();
+                    return (
+                      <div key={divKey} className="border-b last:border-b-0">
+                        <div className="bg-slate-50 px-3 py-2 font-medium text-sm sticky top-0">
+                          {headerText}
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                  ))
+                        <div className="divide-y">
+                          {items.map((item: RomScopeItem) => (
+                            <div
+                              key={item.id}
+                              className="flex items-start gap-3 p-3 hover:bg-slate-50"
+                            >
+                              <Checkbox
+                                checked={selectedRomItems.has(item.id)}
+                                onCheckedChange={() => handleToggleRomItem(item.id)}
+                                className="mt-1"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-baseline justify-between gap-2">
+                                  <div className="font-medium text-sm truncate">{item.name}</div>
+                                  {item.csiCode && (
+                                    <div className="font-mono text-xs text-muted-foreground shrink-0">{item.csiCode}</div>
+                                  )}
+                                </div>
+                                {item.description && (
+                                  <div className="text-xs text-muted-foreground mt-0.5">{item.description}</div>
+                                )}
+                                <div className="text-xs text-muted-foreground mt-1">
+                                  {item.unit} • ${parseFloat(item.unitPrice).toFixed(2)}/{item.unit}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })
                 )}
               </div>
             </div>

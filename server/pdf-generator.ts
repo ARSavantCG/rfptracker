@@ -241,10 +241,44 @@ function getElectricalAllocationSection(rfp: any): string {
 export interface PdfGenerationOptions {
   rfp: any;
   invitationToBid?: any;
-  recipientType: "architect" | "contractor" | "broker-architect" | "broker-contractor" | "financial-summary";
+  recipientType: "architect" | "contractor" | "broker-architect" | "broker-contractor" | "financial-summary" | "contractor-enhanced" | "architect-enhanced";
   recipientName?: string;
   recipientCompany?: string;
   userEmail?: string;
+}
+
+function parseRfpVariantServer(v: string | null | undefined): { gc: string; architect: string } {
+  const defaults = { gc: 'standard', architect: 'standard' };
+  if (!v || v === 'standard') return defaults;
+  if (v === 'enhanced') return { gc: 'enhanced', architect: 'enhanced' };
+  try { return { ...defaults, ...JSON.parse(v) }; } catch { return defaults; }
+}
+
+function getEnhancedTemplateCss(): string {
+  return `
+    body { font-family: Arial, sans-serif; font-size: 10px; line-height: 1.5; color: #333; margin: 0; padding: 24px; }
+    .enh-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #1F4E79; padding-bottom: 14px; margin-bottom: 18px; }
+    .enh-header-right { text-align: right; font-size: 10px; color: #444; line-height: 1.7; }
+    .enh-title-band { background: #1F4E79; color: white; padding: 10px 14px; font-size: 13px; font-weight: bold; letter-spacing: 1px; margin-bottom: 4px; }
+    .enh-title-sub { font-size: 12px; color: #1F4E79; font-weight: bold; margin: 4px 0; }
+    .enh-title-rfp { font-size: 10px; color: #666; margin-bottom: 18px; }
+    .enh-callout { background: #D9E2F3; border-left: 4px solid #1F4E79; padding: 8px 12px; margin-bottom: 18px; }
+    .enh-callout-title { font-weight: bold; font-size: 10px; color: #1F4E79; }
+    .enh-callout-sub { font-size: 9px; color: #333; margin-top: 3px; }
+    .enh-section { margin-bottom: 20px; }
+    .enh-section-title { background: #1F4E79; color: white; padding: 5px 10px; font-size: 10px; font-weight: bold; letter-spacing: 0.5px; text-transform: uppercase; }
+    table { width: 100%; border-collapse: collapse; }
+    .kv-table td { border: 1px solid #b0b8c4; padding: 5px 8px; vertical-align: top; font-size: 10px; }
+    .kv-table td.kv-label { background: #D9E2F3; font-weight: bold; width: 32%; }
+    .data-table th { background: #D9E2F3; border: 1px solid #b0b8c4; padding: 5px 8px; font-size: 9px; font-weight: bold; text-align: left; }
+    .data-table td { border: 1px solid #b0b8c4; padding: 5px 8px; font-size: 10px; vertical-align: top; }
+    .data-table tbody tr:nth-child(even) td { background: #f7f9fc; }
+    ul { margin: 6px 0; padding-left: 18px; }
+    ul li { margin-bottom: 3px; font-size: 10px; }
+    .important-note { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 9px 12px; margin: 14px 0; font-size: 9px; }
+    .enh-footer { margin-top: 28px; border-top: 1px solid #ddd; padding-top: 8px; font-size: 9px; color: #888; text-align: center; }
+    .category-sub-heading { font-weight: bold; color: #1F4E79; font-size: 10px; margin: 8px 0 3px 0; border-bottom: 1px solid #D9E2F3; padding-bottom: 2px; }
+  `;
 }
 
 function generateFinancialSummaryHtml(options: PdfGenerationOptions, dates: any): string {
@@ -609,17 +643,23 @@ async function generateRfpHtml(options: PdfGenerationOptions): Promise<string> {
   // Get template content for this recipient type
   const templateContent = await getTemplateContent(recipientType);
 
+  const dateBundle = { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea, areaBreakdown, warehouseNotes };
+
   // Generate different content based on recipient type
-  if (recipientType === "contractor") {
-    return await generateContractorRfpHtml(options, { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea, areaBreakdown, warehouseNotes }, templateContent);
+  if (recipientType === "contractor-enhanced") {
+    return await generateContractorEnhancedRfpHtml(options, dateBundle);
+  } else if (recipientType === "architect-enhanced") {
+    return await generateArchitectEnhancedRfpHtml(options, dateBundle);
+  } else if (recipientType === "contractor") {
+    return await generateContractorRfpHtml(options, dateBundle, templateContent);
   } else if (recipientType === "broker-contractor") {
-    return await generateBrokerContractorRfpHtml(options, { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea, areaBreakdown, warehouseNotes }, templateContent);
+    return await generateBrokerContractorRfpHtml(options, dateBundle, templateContent);
   } else if (recipientType === "broker-architect") {
-    return await generateBrokerArchitectRfpHtml(options, { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea, areaBreakdown, warehouseNotes }, templateContent);
+    return await generateBrokerArchitectRfpHtml(options, dateBundle, templateContent);
   } else if (recipientType === "financial-summary") {
-    return generateFinancialSummaryHtml(options, { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea, areaBreakdown, warehouseNotes });
+    return generateFinancialSummaryHtml(options, dateBundle);
   } else {
-    return await generateArchitectRfpHtml(options, { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea, areaBreakdown, warehouseNotes }, templateContent);
+    return await generateArchitectRfpHtml(options, dateBundle, templateContent);
   }
 }
 
@@ -1686,6 +1726,492 @@ async function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, da
   </html>
   `;
 }
+async function generateContractorEnhancedRfpHtml(options: PdfGenerationOptions, dates: any): Promise<string> {
+  const { rfp, invitationToBid, recipientName, recipientCompany } = options;
+  const { today, bidDeadline, warehouseArea, existingOffice, newOffice, totalArea, areaBreakdown, warehouseNotes } = dates;
+
+  const projectName = rfp.projectName || (rfp.confidential ? `Confidential @ ${rfp.propertyAddress || rfp.property}` : `${rfp.tenantName} @ ${rfp.propertyAddress || rfp.property}`);
+  const projectAddress = rfp.propertyAddress || invitationToBid?.projectLocation || rfp.property;
+
+  const developmentContactInfo = rfp.developmentContact ? rfp.developmentContact.split(' - ') : [];
+  const invitationContactInfo = invitationToBid?.contactForQuestions?.split(' - ') || [];
+  const contactInfo = developmentContactInfo.length >= 2 ? developmentContactInfo : invitationContactInfo;
+  const contactPerson = contactInfo[0] || rfp.developmentContact || 'Development Contact';
+  const contactEmail = options.userEmail || contactInfo[1] || 'contact@kurvindustrial.com';
+
+  const formattedDeadline = bidDeadline ? bidDeadline.replace(/(\d{4})$/, '$1 E.O.B.') : 'TBD';
+
+  // ── Section 4: Project Overview rows ──────────────────────────────────────
+  const buildingPosition = (rfp as any).buildingPosition || '';
+
+  // ── Section 5: Building Context ──────────────────────────────────────────
+  const ctxRows: string[] = [];
+  if ((rfp as any).bayDimensions) ctxRows.push(`<tr><td class="kv-label">Building Envelope</td><td>${(rfp as any).bayDimensions}</td></tr>`);
+  if ((rfp as any).dockDoorCount) ctxRows.push(`<tr><td class="kv-label">Dock Doors (Building)</td><td>${(rfp as any).dockDoorCount}</td></tr>`);
+  if ((rfp as any).driveInDoorCount) ctxRows.push(`<tr><td class="kv-label">Drive-In Doors (Building)</td><td>${(rfp as any).driveInDoorCount}</td></tr>`);
+  if ((rfp as any).clearHeight) ctxRows.push(`<tr><td class="kv-label">Clear Height</td><td>${(rfp as any).clearHeight}</td></tr>`);
+  if ((rfp as any).sprinklerSpec) ctxRows.push(`<tr><td class="kv-label">Sprinkler System</td><td>${(rfp as any).sprinklerSpec}</td></tr>`);
+  if ((rfp as any).existingPower) ctxRows.push(`<tr><td class="kv-label">Electrical / Power</td><td>${(rfp as any).existingPower}</td></tr>`);
+  if ((rfp as any).parkingRatio) ctxRows.push(`<tr><td class="kv-label">Parking Ratio</td><td>${(rfp as any).parkingRatio}</td></tr>`);
+  const hasExistingImprovements = (rfp as any).evaluationBudget?.hasExistingImprovements || (rfp as any).adjacentTenants;
+  if (hasExistingImprovements) ctxRows.push(`<tr><td class="kv-label">Existing Improvements</td><td>Yes — see evaluation budget for detail</td></tr>`);
+  const buildingContextHtml = ctxRows.length > 0 ? `
+    <div class="enh-section">
+      <div class="enh-section-title">Building Context</div>
+      <table class="kv-table">${ctxRows.join('')}</table>
+    </div>` : '';
+
+  // ── Section 6: Space Requirements ─────────────────────────────────────────
+  let spaceRows = '';
+  if (warehouseArea > 0) spaceRows += `<tr><td>Warehouse</td><td>${warehouseArea.toLocaleString()} SF</td><td>${warehouseNotes || ''}</td></tr>`;
+  if (areaBreakdown && areaBreakdown.length > 0) {
+    areaBreakdown.forEach((item: any) => {
+      const sf = parseFloat(String(item.squareFootage || '0').replace(/[^0-9.]/g, ''));
+      if (sf > 0) spaceRows += `<tr><td>${item.description || 'Area'}</td><td>${sf.toLocaleString()} SF</td><td>${item.notes || ''}</td></tr>`;
+    });
+  } else {
+    if (existingOffice > 0) spaceRows += `<tr><td>Existing Office</td><td>${existingOffice.toLocaleString()} SF</td><td>Renovation level TBD</td></tr>`;
+    if (newOffice > 0) spaceRows += `<tr><td>New Office Space</td><td>${newOffice.toLocaleString()} SF</td><td>New construction</td></tr>`;
+  }
+  if (totalArea > 0) spaceRows += `<tr><td><strong>Total Rentable Area</strong></td><td><strong>${totalArea.toLocaleString()} SF</strong></td><td></td></tr>`;
+  const spaceRequirementsHtml = spaceRows ? `
+    <div class="enh-section">
+      <div class="enh-section-title">Space Requirements</div>
+      <table class="data-table">
+        <thead><tr><th>Space Type</th><th>Area</th><th>Notes</th></tr></thead>
+        <tbody>${spaceRows}</tbody>
+      </table>
+    </div>` : '';
+
+  // ── Section 7: Scope of Work ───────────────────────────────────────────────
+  let scopeOfWorkHtml = '';
+  if (invitationToBid?.scopeOfWork && invitationToBid.scopeOfWork.length > 0) {
+    const scopeRows = invitationToBid.scopeOfWork.map((item: any) => `
+      <tr>
+        <td>${item.description || ''}</td>
+        <td style="text-align:center;">${item.quantity || ''}</td>
+        <td style="text-align:center;">${item.unit || ''}</td>
+        <td>${item.notes || ''}</td>
+      </tr>`).join('');
+    scopeOfWorkHtml = `
+      <div class="enh-section">
+        <div class="enh-section-title">Scope of Work</div>
+        <p style="margin:6px 0;font-size:10px;">Please provide pricing and timeline for the following scope items:</p>
+        <table class="data-table">
+          <thead><tr><th style="width:35%">Description</th><th style="width:12%;text-align:center">Qty</th><th style="width:8%;text-align:center">Unit</th><th>Notes</th></tr></thead>
+          <tbody>${scopeRows}</tbody>
+        </table>
+      </div>`;
+  }
+
+  // ── Section 8: Pricing Alternates ─────────────────────────────────────────
+  let alternatesHtml = '';
+  try {
+    const alternates = await storage.getProjectAlternates(rfp.id);
+    if (alternates.length > 0) {
+      const altRows = alternates.map((alt, idx) => `
+        <tr>
+          <td style="text-align:center;">${idx + 1}</td>
+          <td>${alt.categoryName || '—'}</td>
+          <td>${alt.description || ''}</td>
+          <td>${alt.optionA || '—'}</td>
+          <td>${alt.optionB || '—'}</td>
+        </tr>`).join('');
+      alternatesHtml = `
+        <div class="enh-section">
+          <div class="enh-section-title">Pricing Alternates</div>
+          <p style="margin:6px 0;font-size:10px;">Please provide separate pricing for each alternate below.</p>
+          <table class="data-table">
+            <thead><tr><th style="width:5%;text-align:center">#</th><th style="width:20%">Category</th><th style="width:35%">Description</th><th>Option A</th><th>Option B</th></tr></thead>
+            <tbody>${altRows}</tbody>
+          </table>
+        </div>`;
+    }
+  } catch (err) {
+    console.error('Error fetching project alternates for enhanced GC template:', err);
+  }
+
+  // ── Section 9: Schedule Targets ───────────────────────────────────────────
+  const scheduleFields = [
+    { label: 'Lease Execution (LXE)', value: (rfp as any).targetLXE },
+    { label: 'Notice to Proceed (NTP)', value: (rfp as any).targetNTP },
+    { label: 'Mobilization', value: (rfp as any).targetMobilization },
+    { label: 'Permit / Construction Drawings', value: (rfp as any).targetPermitDrawings },
+    { label: 'Substantial Completion', value: (rfp as any).targetSubstantialCompletion },
+    { label: 'Required Completion Date (RCD)', value: (rfp as any).targetRCD },
+  ];
+  const scheduleRows = scheduleFields.filter(f => f.value).map(f => `<tr><td class="kv-label">${f.label}</td><td>${formatDate(f.value)}</td></tr>`).join('');
+  const scheduleHtml = scheduleRows ? `
+    <div class="enh-section">
+      <div class="enh-section-title">Schedule Targets</div>
+      <table class="kv-table">${scheduleRows}</table>
+    </div>` : '';
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Enhanced GC RFP — ${projectName}</title>
+  <style>${getEnhancedTemplateCss()}</style>
+</head>
+<body>
+
+  <!-- 1. HEADER -->
+  <div class="enh-header">
+    <div><img src="${getBridgeLogo()}" alt="Kurv Industrial" style="height:28px;width:auto;" /></div>
+    <div class="enh-header-right">
+      <div><strong>RFP #:</strong> ${rfp.rfpNumber}</div>
+      <div><strong>Contact:</strong> ${contactPerson}</div>
+      <div><strong>Email:</strong> ${contactEmail}</div>
+      <div><strong>Date:</strong> ${today}</div>
+    </div>
+  </div>
+
+  <!-- 2. TITLE BLOCK -->
+  <div class="enh-title-band">PRELIMINARY REQUEST FOR PROPOSAL</div>
+  <div class="enh-title-sub">${projectName} — General Contractor Services</div>
+  <div class="enh-title-rfp">RFP Number: ${rfp.rfpNumber}</div>
+
+  <!-- 3. CALLOUT -->
+  <div class="enh-callout">
+    <div class="enh-callout-title">PRELIMINARY BROKER RESPONSE RFP FOR GC SERVICES</div>
+    <div class="enh-callout-sub">This is a preliminary request for conceptual pricing and scheduling to support broker discussions with a prospective tenant. This is not a formal project commitment.</div>
+  </div>
+
+  <!-- 4. PROJECT OVERVIEW -->
+  <div class="enh-section">
+    <div class="enh-section-title">Project Overview</div>
+    <table class="kv-table">
+      <tr><td class="kv-label">Project</td><td>${projectName}</td></tr>
+      ${buildingPosition ? `<tr><td class="kv-label">Building Position</td><td>${buildingPosition}</td></tr>` : ''}
+      <tr><td class="kv-label">Property Address</td><td>${projectAddress}</td></tr>
+      <tr><td class="kv-label">Project Type</td><td>Tenant Improvement</td></tr>
+      <tr><td class="kv-label">Tenant</td><td>${rfp.tenantName || 'TBD'}</td></tr>
+      ${invitationToBid?.projectDescription ? `<tr><td class="kv-label">Project Description</td><td>${invitationToBid.projectDescription}</td></tr>` : ''}
+      <tr><td class="kv-label">Requested Response</td><td>${formattedDeadline}</td></tr>
+      ${invitationToBid?.documentsLink ? `<tr><td class="kv-label">Project Documents</td><td><a href="${invitationToBid.documentsLink}" style="color:#1F4E79;">${invitationToBid.documentsLink}</a></td></tr>` : ''}
+    </table>
+  </div>
+
+  <!-- 5. BUILDING CONTEXT -->
+  ${buildingContextHtml}
+
+  <!-- 6. SPACE REQUIREMENTS -->
+  ${spaceRequirementsHtml}
+
+  <!-- ELECTRICAL ALLOCATION -->
+  ${getElectricalAllocationSection(rfp)}
+
+  <!-- 7. SCOPE OF WORK -->
+  ${scopeOfWorkHtml}
+
+  <!-- 8. PRICING ALTERNATES -->
+  ${alternatesHtml}
+
+  <!-- 9. SCHEDULE TARGETS -->
+  ${scheduleHtml}
+
+  <!-- 10. REQUIRED DELIVERABLES -->
+  <div class="enh-section">
+    <div class="enh-section-title">Required Deliverables</div>
+    <ul>
+      <li>Bid Cost Breakdown — Excel format, itemized by scope category</li>
+      <li>Detailed Construction Schedule with long-lead items identified</li>
+      <li>List of assumptions and clarifications</li>
+      <li>Affidavit (if applicable)</li>
+      <li>Subcontractor list for key trades</li>
+      <li>Three references from similar tenant improvement projects</li>
+    </ul>
+  </div>
+
+  <!-- 11. SUBMISSION FORMAT -->
+  <div class="enh-section">
+    <div class="enh-section-title">Submission Format</div>
+    <ul>
+      <li>Submit via email to: <strong>${contactEmail}</strong></li>
+      <li>Subject line: <em>${rfp.rfpNumber} — GC Proposal — [Your Company Name]</em></li>
+      <li>Format: PDF + Excel cost breakdown</li>
+      <li>Proposal due: <strong>${formattedDeadline}</strong></li>
+      <li>Questions due no later than two (2) business days before the proposal deadline</li>
+    </ul>
+  </div>
+
+  <!-- 12. IMPORTANT NOTE -->
+  <div class="important-note">
+    <strong>Important Note:</strong> This preliminary RFP is issued to support ongoing lease negotiations with a prospective tenant. The project may not proceed, and this request does not constitute a commitment to construction services. Please provide conceptual-level pricing suitable for initial tenant discussions.
+  </div>
+
+  <!-- 13. FOOTER -->
+  <div class="enh-footer">
+    This document was generated on ${today} for broker response purposes. For questions, contact ${contactPerson} at ${contactEmail}. Confidential — do not distribute without authorization.
+  </div>
+
+</body>
+</html>`;
+}
+
+async function generateArchitectEnhancedRfpHtml(options: PdfGenerationOptions, dates: any): Promise<string> {
+  const { rfp, invitationToBid, recipientName, recipientCompany } = options;
+  const { today, bidDeadline, warehouseArea, existingOffice, newOffice, totalArea, areaBreakdown, warehouseNotes } = dates;
+
+  const projectName = rfp.projectName || (rfp.confidential ? `Confidential @ ${rfp.propertyAddress || rfp.property}` : `${rfp.tenantName} @ ${rfp.propertyAddress || rfp.property}`);
+  const projectAddress = rfp.propertyAddress || invitationToBid?.projectLocation || rfp.property;
+
+  const developmentContactInfo = rfp.developmentContact ? rfp.developmentContact.split(' - ') : [];
+  const invitationContactInfo = invitationToBid?.contactForQuestions?.split(' - ') || [];
+  const contactInfo = developmentContactInfo.length >= 2 ? developmentContactInfo : invitationContactInfo;
+  const contactPerson = contactInfo[0] || rfp.developmentContact || 'Development Contact';
+  const contactEmail = options.userEmail || contactInfo[1] || 'contact@kurvindustrial.com';
+
+  const formattedDeadline = bidDeadline ? bidDeadline.replace(/(\d{4})$/, '$1 E.O.B.') : 'TBD';
+  const rfpNumberArch = `${rfp.rfpNumber}-A`;
+
+  // ── Section 4: Project Overview ───────────────────────────────────────────
+  const buildingPosition = (rfp as any).buildingPosition || '';
+
+  // ── Section 5: Building Context ───────────────────────────────────────────
+  const ctxRows: string[] = [];
+  if ((rfp as any).bayDimensions) ctxRows.push(`<tr><td class="kv-label">Building Envelope</td><td>${(rfp as any).bayDimensions}</td></tr>`);
+  if ((rfp as any).dockDoorCount) ctxRows.push(`<tr><td class="kv-label">Dock Doors (Building)</td><td>${(rfp as any).dockDoorCount}</td></tr>`);
+  if ((rfp as any).driveInDoorCount) ctxRows.push(`<tr><td class="kv-label">Drive-In Doors (Building)</td><td>${(rfp as any).driveInDoorCount}</td></tr>`);
+  if ((rfp as any).clearHeight) ctxRows.push(`<tr><td class="kv-label">Clear Height</td><td>${(rfp as any).clearHeight}</td></tr>`);
+  if ((rfp as any).sprinklerSpec) ctxRows.push(`<tr><td class="kv-label">Sprinkler System</td><td>${(rfp as any).sprinklerSpec}</td></tr>`);
+  if ((rfp as any).existingPower) ctxRows.push(`<tr><td class="kv-label">Electrical / Power</td><td>${(rfp as any).existingPower}</td></tr>`);
+  if ((rfp as any).parkingRatio) ctxRows.push(`<tr><td class="kv-label">Parking Ratio</td><td>${(rfp as any).parkingRatio}</td></tr>`);
+  const hasExistingImprovements = (rfp as any).evaluationBudget?.hasExistingImprovements || (rfp as any).adjacentTenants;
+  if (hasExistingImprovements) ctxRows.push(`<tr><td class="kv-label">Existing Improvements</td><td>Yes — coordinate with development manager</td></tr>`);
+  const buildingContextHtml = ctxRows.length > 0 ? `
+    <div class="enh-section">
+      <div class="enh-section-title">Building Context</div>
+      <table class="kv-table">${ctxRows.join('')}</table>
+    </div>` : '';
+
+  // ── Section 6: Space Requirements ─────────────────────────────────────────
+  let spaceRows = '';
+  if (warehouseArea > 0) spaceRows += `<tr><td>Warehouse</td><td>${warehouseArea.toLocaleString()} SF</td><td>${warehouseNotes || ''}</td></tr>`;
+  if (areaBreakdown && areaBreakdown.length > 0) {
+    areaBreakdown.forEach((item: any) => {
+      const sf = parseFloat(String(item.squareFootage || '0').replace(/[^0-9.]/g, ''));
+      if (sf > 0) spaceRows += `<tr><td>${item.description || 'Area'}</td><td>${sf.toLocaleString()} SF</td><td>${item.notes || ''}</td></tr>`;
+    });
+  } else {
+    if (existingOffice > 0) spaceRows += `<tr><td>Existing Office</td><td>${existingOffice.toLocaleString()} SF</td><td>Renovation level TBD</td></tr>`;
+    if (newOffice > 0) spaceRows += `<tr><td>New Office Space</td><td>${newOffice.toLocaleString()} SF</td><td>New construction</td></tr>`;
+  }
+  if (totalArea > 0) spaceRows += `<tr><td><strong>Total Rentable Area</strong></td><td><strong>${totalArea.toLocaleString()} SF</strong></td><td></td></tr>`;
+  const spaceRequirementsHtml = spaceRows ? `
+    <div class="enh-section">
+      <div class="enh-section-title">Space Requirements</div>
+      <table class="data-table">
+        <thead><tr><th>Space Type</th><th>Area</th><th>Notes</th></tr></thead>
+        <tbody>${spaceRows}</tbody>
+      </table>
+    </div>` : '';
+
+  // ── Section 7: Tenant Program Intent ──────────────────────────────────────
+  const tenantProgramSummary = (rfp as any).tenantProgramSummary || '';
+  const tenantProgramHtml = `
+    <div class="enh-section">
+      <div class="enh-section-title">Tenant Program Intent</div>
+      ${tenantProgramSummary
+        ? `<p style="margin:6px 0;font-size:10px;">${tenantProgramSummary}</p>`
+        : `<p style="margin:6px 0;font-size:10px;font-style:italic;">Tenant program summary to be confirmed. Reference project description and space requirements above for initial planning context.</p>`}
+      <ul>
+        <li>Warehouse / distribution with potential office component</li>
+        <li>Functional layout to support tenant operations without architectural feature elements</li>
+        <li>Standard industrial finish level unless noted otherwise</li>
+        <li>Compliance with all applicable building codes and ADA requirements</li>
+      </ul>
+    </div>`;
+
+  // ── Section 8: Scope Summary ───────────────────────────────────────────────
+  const scopeSummaryHtml = `
+    <div class="enh-section">
+      <div class="enh-section-title">Scope Summary — Architectural Services</div>
+      <ul>
+        <li>Test-fit / preliminary space planning to evaluate lease feasibility</li>
+        <li>Schematic Design based on approved test-fit</li>
+        <li>Design Development — coordination with structural, MEP engineers</li>
+        <li>Construction Documents for full permit submittal</li>
+        <li>Permitting support — responses to plan check comments</li>
+        <li>Construction Administration — RFIs, submittals, site observations</li>
+        ${invitationToBid?.technicalSpecifications ? `<li>${invitationToBid.technicalSpecifications}</li>` : ''}
+        ${invitationToBid?.scopeOfWork && invitationToBid.scopeOfWork.length > 0
+          ? invitationToBid.scopeOfWork.map((item: any) => `<li>${item.description}${item.notes ? ` — ${item.notes}` : ''}</li>`).join('')
+          : ''}
+      </ul>
+    </div>`;
+
+  // ── Section 9: Test Fit Deliverables ──────────────────────────────────────
+  const testFitHtml = `
+    <div class="enh-section">
+      <div class="enh-section-title">Test Fit Deliverables</div>
+      <ul>
+        <li>Preliminary floor plan(s) showing proposed layout — min. two (2) options</li>
+        <li>Conceptual blocking diagram identifying warehouse, office, and support areas</li>
+        <li>Identification of major building system impacts (structural, HVAC, fire protection)</li>
+        <li>Preliminary estimate of design timeline through CD phase</li>
+        <li>Fee proposal for full architectural services — schematic through CA</li>
+      </ul>
+    </div>`;
+
+  // ── Section 10: Reference Documents ──────────────────────────────────────
+  const refDocsHtml = `
+    <div class="enh-section">
+      <div class="enh-section-title">Reference Documents</div>
+      <table class="data-table">
+        <thead><tr><th>Document</th><th>Status</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>Building Floor Plan / As-Built</td><td>To be provided</td><td>Request from development manager</td></tr>
+          <tr><td>Site Plan</td><td>To be provided</td><td>Confirm dock door locations and truck court</td></tr>
+          <tr><td>Structural Drawings</td><td>To be provided</td><td>Required for mezzanine / demising wall loading</td></tr>
+          <tr><td>MEP / Utilities Information</td><td>To be provided</td><td>Panel schedule, HVAC equipment schedule</td></tr>
+          ${invitationToBid?.documentsLink ? `<tr><td>Project Documents Portal</td><td>Available</td><td><a href="${invitationToBid.documentsLink}" style="color:#1F4E79;">${invitationToBid.documentsLink}</a></td></tr>` : ''}
+        </tbody>
+      </table>
+    </div>`;
+
+  // ── Section 11: Phasing Notes (conditional) ───────────────────────────────
+  const hasPhasingNotes = (rfp as any).evaluationBudget?.hasExistingImprovements || (rfp as any).adjacentTenants || (rfp as any).existingPower;
+  const phasingHtml = hasPhasingNotes ? `
+    <div class="enh-section">
+      <div class="enh-section-title">Phasing Notes</div>
+      <p style="margin:6px 0;font-size:10px;">This project includes existing improvements or active adjacent tenancies that may affect phasing and construction sequencing. Architect should coordinate with the development manager to confirm:</p>
+      <ul>
+        <li>Extent of existing improvements to remain, to be demolished, or to be modified</li>
+        <li>Impact on building systems shared with adjacent tenants</li>
+        <li>Sequencing requirements to maintain building operations during construction</li>
+        <li>Any demising wall upgrades required for separation between tenancies</li>
+      </ul>
+    </div>` : '';
+
+  // ── Schedule Targets ──────────────────────────────────────────────────────
+  const scheduleFields = [
+    { label: 'Lease Execution (LXE)', value: (rfp as any).targetLXE },
+    { label: 'Notice to Proceed (NTP)', value: (rfp as any).targetNTP },
+    { label: 'Mobilization', value: (rfp as any).targetMobilization },
+    { label: 'Permit / Construction Drawings', value: (rfp as any).targetPermitDrawings },
+    { label: 'Substantial Completion', value: (rfp as any).targetSubstantialCompletion },
+    { label: 'Required Completion Date (RCD)', value: (rfp as any).targetRCD },
+  ];
+  const scheduleRows = scheduleFields.filter(f => f.value).map(f => `<tr><td class="kv-label">${f.label}</td><td>${formatDate(f.value)}</td></tr>`).join('');
+  const scheduleHtml = scheduleRows ? `
+    <div class="enh-section">
+      <div class="enh-section-title">Schedule Targets</div>
+      <table class="kv-table">${scheduleRows}</table>
+    </div>` : '';
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Enhanced Architect RFP — ${projectName}</title>
+  <style>${getEnhancedTemplateCss()}</style>
+</head>
+<body>
+
+  <!-- 1. HEADER -->
+  <div class="enh-header">
+    <div><img src="${getBridgeLogo()}" alt="Kurv Industrial" style="height:28px;width:auto;" /></div>
+    <div class="enh-header-right">
+      <div><strong>RFP #:</strong> ${rfpNumberArch}</div>
+      <div><strong>Contact:</strong> ${contactPerson}</div>
+      <div><strong>Email:</strong> ${contactEmail}</div>
+      <div><strong>Date:</strong> ${today}</div>
+    </div>
+  </div>
+
+  <!-- 2. TITLE BLOCK -->
+  <div class="enh-title-band">PRELIMINARY REQUEST FOR PROPOSAL</div>
+  <div class="enh-title-sub">${projectName} — Architectural Services</div>
+  <div class="enh-title-rfp">RFP Number: ${rfpNumberArch}</div>
+
+  <!-- 3. CALLOUT -->
+  <div class="enh-callout">
+    <div class="enh-callout-title">PRELIMINARY BROKER RESPONSE RFP FOR ARCHITECTURAL SERVICES</div>
+    <div class="enh-callout-sub">This is a preliminary request for conceptual drawings, pricing, and scheduling to support broker discussions with a prospective tenant. This is not a formal project commitment.</div>
+  </div>
+
+  <!-- 4. PROJECT OVERVIEW -->
+  <div class="enh-section">
+    <div class="enh-section-title">Project Overview</div>
+    <table class="kv-table">
+      <tr><td class="kv-label">Project</td><td>${projectName}</td></tr>
+      ${buildingPosition ? `<tr><td class="kv-label">Building Position</td><td>${buildingPosition}</td></tr>` : ''}
+      <tr><td class="kv-label">Property Address</td><td>${projectAddress}</td></tr>
+      <tr><td class="kv-label">Project Type</td><td>Tenant Improvement — Architectural Services</td></tr>
+      <tr><td class="kv-label">Tenant</td><td>${rfp.tenantName || 'TBD'}</td></tr>
+      ${invitationToBid?.projectDescription ? `<tr><td class="kv-label">Project Description</td><td>${invitationToBid.projectDescription}</td></tr>` : ''}
+      <tr><td class="kv-label">Requested Response</td><td>${formattedDeadline}</td></tr>
+    </table>
+  </div>
+
+  <!-- 5. BUILDING CONTEXT -->
+  ${buildingContextHtml}
+
+  <!-- 6. SPACE REQUIREMENTS -->
+  ${spaceRequirementsHtml}
+
+  <!-- ELECTRICAL ALLOCATION -->
+  ${getElectricalAllocationSection(rfp)}
+
+  <!-- 7. TENANT PROGRAM INTENT -->
+  ${tenantProgramHtml}
+
+  <!-- 8. SCOPE SUMMARY -->
+  ${scopeSummaryHtml}
+
+  <!-- 9. TEST FIT DELIVERABLES -->
+  ${testFitHtml}
+
+  <!-- 10. REFERENCE DOCUMENTS -->
+  ${refDocsHtml}
+
+  <!-- 11. SCHEDULE TARGETS -->
+  ${scheduleHtml}
+
+  <!-- 11b. PHASING NOTES (conditional) -->
+  ${phasingHtml}
+
+  <!-- 12. REQUIRED DELIVERABLES -->
+  <div class="enh-section">
+    <div class="enh-section-title">Required Deliverables</div>
+    <ul>
+      <li>Preliminary test-fit floor plan(s) — minimum two layout options</li>
+      <li>Conceptual timeline from schematic design through permit submittal</li>
+      <li>Fee proposal for full architectural services (schematic through CA)</li>
+      <li>Identification of key design risks or code constraints</li>
+      <li>Team qualifications and three references from similar projects</li>
+      <li>Professional Liability and General Liability insurance certificates</li>
+    </ul>
+  </div>
+
+  <!-- 13. SUBMISSION FORMAT -->
+  <div class="enh-section">
+    <div class="enh-section-title">Submission Format</div>
+    <ul>
+      <li>Submit via email to: <strong>${contactEmail}</strong></li>
+      <li>Subject line: <em>${rfpNumberArch} — Architect Proposal — [Your Firm Name]</em></li>
+      <li>Format: PDF (all drawings and fee proposal) + DWG/CAD files if test-fit is included</li>
+      <li>Proposal due: <strong>${formattedDeadline}</strong></li>
+      <li>Questions due no later than two (2) business days before the proposal deadline</li>
+    </ul>
+  </div>
+
+  <!-- 14. IMPORTANT NOTE -->
+  <div class="important-note">
+    <strong>Important Note:</strong> This preliminary RFP is issued to support ongoing lease negotiations with a prospective tenant. The project may not proceed, and this request does not constitute a commitment to architectural services. Please provide conceptual-level deliverables suitable for initial tenant and broker discussions.
+  </div>
+
+  <!-- 15. FOOTER -->
+  <div class="enh-footer">
+    This document was generated on ${today} for broker response purposes. For questions, contact ${contactPerson} at ${contactEmail}. Confidential — do not distribute without authorization.
+  </div>
+
+</body>
+</html>`;
+}
+
 export function generatePdfFilename(rfp: any, recipientType: string): string {
   // Format date as MM.DD.YYYY
   const now = new Date();
@@ -1717,6 +2243,20 @@ export function generatePdfFilename(rfp: any, recipientType: string): string {
     .replace(/^_+|_+$/g, '');
   const timestamp = new Date().toISOString().split('T')[0];
   
+  // Special format for contractor-enhanced
+  if (recipientType === 'contractor-enhanced') {
+    const tenantName = rfp.tenantName || 'Unknown Tenant';
+    const propertyName = rfp.property || 'Unknown Property';
+    return `${tenantName} @ ${propertyName}_Enhanced GC RFP_${printDate}.pdf`;
+  }
+
+  // Special format for architect-enhanced
+  if (recipientType === 'architect-enhanced') {
+    const tenantName = rfp.tenantName || 'Unknown Tenant';
+    const propertyName = rfp.property || 'Unknown Property';
+    return `${tenantName} @ ${propertyName}_Enhanced Architect RFP_${printDate}.pdf`;
+  }
+
   // Determine document type prefix
   let prefix = 'RFP';
   if (recipientType === 'contractor') {

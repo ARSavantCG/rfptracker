@@ -30,6 +30,7 @@ import {
   bayPanelAssignments,
   electricalReservations,
   masterCategories,
+  projectAlternates,
   bidLevelingAdjustments,
   evaluationBidCarry,
   type MasterCategory,
@@ -2568,6 +2569,30 @@ class ExtendedDatabaseStorage extends DatabaseStorage {
     await db.update(pdfMappingTemplates)
       .set({ usageCount: sql`${pdfMappingTemplates.usageCount} + 1`, updatedAt: new Date() })
       .where(eq(pdfMappingTemplates.id, id));
+  }
+
+  async getProjectAlternates(rfpId: number): Promise<Array<{
+    id: string;
+    description: string;
+    optionA: string | null;
+    optionB: string | null;
+    categoryName: string | null;
+    displayOrder: number;
+  }>> {
+    const rows = await db
+      .select({
+        id: projectAlternates.id,
+        description: projectAlternates.description,
+        optionA: projectAlternates.optionA,
+        optionB: projectAlternates.optionB,
+        categoryName: masterCategories.name,
+        displayOrder: projectAlternates.displayOrder,
+      })
+      .from(projectAlternates)
+      .leftJoin(masterCategories, eq(projectAlternates.masterCategoryId, masterCategories.id))
+      .where(eq(projectAlternates.projectId, rfpId))
+      .orderBy(projectAlternates.displayOrder);
+    return rows;
   }
 }
 

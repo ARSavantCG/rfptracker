@@ -2713,6 +2713,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get invitation to bid data if available
       const invitationToBid = await storage.getInvitationToBid(id);
 
+      // Resolve effective recipient type based on rfpVariant stored on the invitation.
+      // The client always sends "contractor" or "architect"; the server upgrades to
+      // "contractor-enhanced" / "architect-enhanced" when the invitation's rfpVariant says so.
+      // Broker types are never upgraded — they have their own standalone templates.
+      const parseVariant = (v: string | null | undefined): { gc: string; architect: string } => {
+        const d = { gc: 'standard', architect: 'standard' };
+        if (!v || v === 'standard') return d;
+        if (v === 'enhanced') return { gc: 'enhanced', architect: 'enhanced' };
+        try { return { ...d, ...JSON.parse(v) }; } catch { return d; }
+      };
+      const rfpVariant = parseVariant((invitationToBid as any)?.rfpVariant);
+      let effectiveRecipientType = recipientType;
+      if (recipientType === 'contractor' && rfpVariant.gc === 'enhanced') {
+        effectiveRecipientType = 'contractor-enhanced';
+      } else if (recipientType === 'architect' && rfpVariant.architect === 'enhanced') {
+        effectiveRecipientType = 'architect-enhanced';
+      }
+
       // Get user email for contact information
       const user = (req as any).user;
       const userEmail = user?.email || user?.username || 'AReutlinger@bridgeindustrial.com';
@@ -2720,7 +2738,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const pdfOptions = {
         rfp: rfpWithAddress,
         invitationToBid,
-        recipientType: recipientType as "architect" | "contractor" | "broker-architect" | "broker-contractor",
+        recipientType: effectiveRecipientType as "architect" | "contractor" | "broker-architect" | "broker-contractor" | "contractor-enhanced" | "architect-enhanced",
         recipientName,
         recipientCompany,
         userEmail  // Pass the authenticated user's email
@@ -2738,13 +2756,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const user = (req as any).user;
         const generatedBy = user?.email || user?.username || 'Unknown';
         
+        const isArchitectType = effectiveRecipientType === "architect" || effectiveRecipientType === "broker-architect" || effectiveRecipientType === "architect-enhanced";
+        const typeLabel = effectiveRecipientType === "contractor-enhanced" ? "Enhanced GC"
+          : effectiveRecipientType === "architect-enhanced" ? "Enhanced Architect"
+          : effectiveRecipientType === "broker-contractor" ? "Broker GC"
+          : effectiveRecipientType === "broker-architect" ? "Broker Architect"
+          : isArchitectType ? "Architect" : "Contractor";
         const historyItem = {
           rfpId: id,
-          generationType: recipientType === "architect" || recipientType === "broker-architect" ? "architect" : "contractor",
+          generationType: isArchitectType ? "architect" : "contractor",
           generatedBy,
           invitationData: invitationToBid || null,
           generatedContent: htmlContent,
-          title: `${recipientType === "architect" || recipientType === "broker-architect" ? "Architect" : "Contractor"} RFP - ${rfp.projectName} - ${new Date().toLocaleDateString()}`,
+          title: `${typeLabel} RFP - ${rfp.projectName} - ${new Date().toLocaleDateString()}`,
           notes: recipientName && recipientCompany ? `${recipientName} (${recipientCompany})` : recipientName || recipientCompany || null
         };
         

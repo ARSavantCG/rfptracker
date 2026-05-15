@@ -330,7 +330,7 @@ export const insertInvitationToBidSchema = createInsertSchema(invitationToBid).o
   contractorMilestones: z.array(z.object({
     description: z.string(),
   })).default([]),
-  rfpVariant: z.enum(["standard", "enhanced"]).default("standard"),
+  rfpVariant: z.string().default("standard"), // accepts 'standard', 'enhanced', or JSON {"gc":"...","architect":"..."}
   recipientType: z.enum(["gc", "architect"]).optional().nullable(),
 });
 

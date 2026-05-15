@@ -1,3 +1,54 @@
+## Session: May 15, 2026 — Enhanced RFP PDF Templates (Prompt 3)
+
+### What was built
+
+✅ **Enhanced GC RFP Template** (`server/pdf-generator.ts` → `generateContractorEnhancedRfpHtml`)
+- 13 sections in order: Header, Title Block, Callout, Project Overview, Building Context, Space Requirements, Electrical Allocation, Scope of Work, Pricing Alternates, Schedule Targets, Required Deliverables, Submission Format, Important Note, Footer
+- Kurv branding (left logo), blue (#1F4E79) section band headers, light-blue (#D9E2F3) table shading
+- Building Context auto-populates from 8 Enhanced schema fields (bayDimensions, dockDoorCount, driveInDoorCount, clearHeight, sprinklerSpec, existingPower, parkingRatio, adjacentTenants); null fields are silently skipped
+- Pricing Alternates section populated via `storage.getProjectAlternates(rfpId)` with master category name lookup; section skipped entirely if no alternates exist
+- Schedule Targets: 6 timestamp fields (targetLXE, targetNTP, targetMobilization, targetPermitDrawings, targetSubstantialCompletion, targetRCD) rendered as key-value table; null dates skipped
+
+✅ **Enhanced Architect RFP Template** (`server/pdf-generator.ts` → `generateArchitectEnhancedRfpHtml`)
+- 15 sections: same header/callout/overview/context/space as GC, plus: Tenant Program Intent (from tenantProgramSummary or placeholder), Scope Summary (high-level bullets), Test Fit Deliverables, Reference Documents (3-column static table), Schedule Targets, Phasing Notes (conditional — only rendered if existingPower/adjacentTenants/hasExistingImprovements is set), Required Deliverables, Submission Format, Important Note, Footer
+- RFP number suffixed with "-A" in header and title block
+
+✅ **Routing Logic** (`server/routes.ts` → `POST /api/rfp-requests/:id/generate-pdf`)
+- Route reads `invitationToBid.rfpVariant` (JSON field storing `{"gc":"standard"|"enhanced","architect":"standard"|"enhanced"}`)
+- Internal `parseVariant` helper (mirrors client-side `parseRfpVariant`) resolves the variant safely for all edge cases (null, 'standard', 'enhanced', JSON object)
+- **Mapping**: client sends `recipientType: "contractor"` → server upgrades to `"contractor-enhanced"` if `rfpVariant.gc === 'enhanced'`; same for architect. Broker types (`broker-contractor`, `broker-architect`) are never auto-upgraded.
+- Public API validation is **unchanged** (still accepts only the 4 original public types); the enhanced routing is entirely server-side
+- Generation history title updated to include type label (e.g. "Enhanced GC RFP", "Enhanced Architect RFP")
+
+✅ **Storage method** (`server/storage.ts` → `getProjectAlternates(rfpId)`)
+- LEFT JOIN `project_alternates` with `master_categories` to return `{id, description, optionA, optionB, categoryName, displayOrder}[]`
+- Used by Enhanced GC template to render the Pricing Alternates table
+
+✅ **Shared CSS helper** (`getEnhancedTemplateCss()`) — single source for both Enhanced templates; uses #1F4E79 for section bands, #D9E2F3 for table header shading
+
+✅ **Filename updates** (`generatePdfFilename`) — new patterns for enhanced types:
+- `contractor-enhanced`: `{tenant} @ {property}_Enhanced GC RFP_{date}.pdf`
+- `architect-enhanced`: `{tenant} @ {property}_Enhanced Architect RFP_{date}.pdf`
+
+### Architecture Decision Record — rfpVariant
+
+**Decision**: `rfpVariant` is stored at invitation level (not per-bidder), as JSON `{"gc":"standard"|"enhanced","architect":"standard"|"enhanced"}`. Within a single invitation, all GC recipients get the same variant and all Architect recipients get the same variant. This matches the 2×2 checkbox grid UI in the Invitation modal (Step 3).
+
+**Parsing**: Both client (`parseRfpVariant` in invitation-to-bid-modal.tsx) and server (`parseVariant` in routes.ts, `parseRfpVariantServer` in pdf-generator.ts) use the same safe parse logic with identical fallback to `{gc:'standard', architect:'standard'}`.
+
+### Key Files Changed
+| File | Change |
+|---|---|
+| `server/pdf-generator.ts` | Added `parseRfpVariantServer`, `getEnhancedTemplateCss`, `generateContractorEnhancedRfpHtml`, `generateArchitectEnhancedRfpHtml`; extended `PdfGenerationOptions` type union; updated dispatcher and filename function |
+| `server/routes.ts` | Auto-routing logic in `POST /api/rfp-requests/:id/generate-pdf`; updated history saving |
+| `server/storage.ts` | Added `projectAlternates` import and `getProjectAlternates(rfpId)` method |
+| `shared/schema.ts` | **Bug fix**: changed `rfpVariant` Zod validation from `z.enum(["standard","enhanced"])` to `z.string()` so JSON values like `{"gc":"enhanced","architect":"standard"}` pass validation when the invitation is saved |
+
+### Next Phase — Prompt 4
+Reports & Evaluation Surfacing: surface Enhanced RFP context (building specs, schedule targets, alternates) in the Evaluation Budget view and generate an Enhanced evaluation report PDF that includes the building context block alongside bid results.
+
+---
+
 ## Product Vision — Phase 2 Platform Expansion
 
 ### Strategic Goal

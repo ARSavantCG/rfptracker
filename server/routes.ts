@@ -2216,10 +2216,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Invitation to Bid routes
+  // Shared helper: syncs contractor/architect due dates to rfp_requests BEFORE
+  // writing to invitation_to_bid. Both the POST (create) and PATCH (update) handlers
+  // call this so the phase-advance validator, which reads rfp_requests, always sees
+  // fresh date values regardless of which client path fired. rfp_requests is written
+  // first: if the invitation write subsequently fails, the validator still has correct
+  // data. Errors propagate — no silent swallowing.
+  async function syncInvitationDatesToRfp(
+    rfpId: number,
+    dates: { contractorDueDate?: string | null; architectDueDate?: string | null }
+  ): Promise<void> {
+    const rfpDateUpdate: Record<string, unknown> = {};
+    if (dates.contractorDueDate !== undefined) rfpDateUpdate.contractorDueDate = dates.contractorDueDate;
+    if (dates.architectDueDate !== undefined) rfpDateUpdate.architectDueDate = dates.architectDueDate;
+    if (Object.keys(rfpDateUpdate).length > 0) {
+      await storage.updateRfpRequest(rfpId, rfpDateUpdate as any);
+    }
+  }
+
   app.post("/api/invitation-to-bid", requireAuth, async (req, res) => {
     try {
       console.log('Invitation to bid request body:', JSON.stringify(req.body, null, 2));
       const parsed = insertInvitationToBidSchema.parse(req.body);
+      await syncInvitationDatesToRfp(parsed.rfpId, {
+        contractorDueDate: parsed.contractorDueDate,
+        architectDueDate: parsed.architectDueDate,
+      });
       const invitation = await storage.createInvitationToBid(parsed);
       res.status(201).json(invitation);
     } catch (error) {
@@ -2313,17 +2335,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const parsed = updateInvitationToBidSchema.parse(req.body);
-
-      // Sync contractor/architect due dates to rfp_requests FIRST so that the
-      // phase-advance validator (which reads rfp_requests) sees fresh data even if
-      // the subsequent invitation_to_bid write were to fail.
-      if (parsed.contractorDueDate !== undefined || parsed.architectDueDate !== undefined) {
-        const rfpDateUpdate: Record<string, unknown> = {};
-        if (parsed.contractorDueDate !== undefined) rfpDateUpdate.contractorDueDate = parsed.contractorDueDate;
-        if (parsed.architectDueDate !== undefined) rfpDateUpdate.architectDueDate = parsed.architectDueDate;
-        await storage.updateRfpRequest(id, rfpDateUpdate as any);
-      }
-
+      await syncInvitationDatesToRfp(id, {
+        contractorDueDate: parsed.contractorDueDate,
+        architectDueDate: parsed.architectDueDate,
+      });
       const invitation = await storage.updateInvitationToBid(id, parsed);
       
       if (!invitation) {

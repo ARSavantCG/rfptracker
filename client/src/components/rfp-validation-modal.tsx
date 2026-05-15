@@ -230,9 +230,12 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
       onValidationComplete?.();
     },
     onError: (error) => {
+      const raw = error instanceof Error ? error.message : "Failed to advance workflow";
+      // Strip leading HTTP status code prefix ("400: ") for cleaner display
+      const description = raw.replace(/^\d{3}:\s*/, "");
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to advance workflow",
+        title: "Cannot advance to next phase",
+        description,
         variant: "destructive",
         duration: 6000,
       });

@@ -2129,10 +2129,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "RFP request not found" });
       }
 
-      // Business-rule gate from previously-dead duplicate handler
+      // Step 1: run field-level validation and surface specific errors to the client
+      const validationResult = validateRfpForProgression(rfp);
+      if (!validationResult.isValid) {
+        return res.status(400).json({
+          message: `Cannot advance: ${validationResult.errors.join(", ")}`,
+          errors: validationResult.errors,
+        });
+      }
+
+      // Step 2: phase-specific gate (fields with actual UI; legacy no-UI fields removed)
       if (!canAdvanceToPhase(rfp, phase)) {
         return res.status(400).json({
-          message: "RFP validation failed. Complete all required fields before advancing."
+          message: "Cannot advance to next phase: phase-specific requirements not met.",
+          errors: [],
         });
       }
 

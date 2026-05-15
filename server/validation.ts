@@ -99,17 +99,11 @@ export function validateRfpForProgression(rfp: RfpRequest): ValidationResult {
 }
 
 export function getRequiredFieldsForPhase(phase: string): string[] {
+  // NOTE: projectAddress, projectSize, estimatedValue, timelineRequirements, specialRequirements
+  // exist in the schema but have NO UI for population. They are excluded from all phase gates
+  // to prevent permanently blocking advancement. Schema columns are preserved for future use.
+  // See backlog: "Four legacy schema columns in rfp_requests have no UI."
   switch (phase) {
-    case "invitation-to-bid":
-      return ["projectAddress", "projectSize", "estimatedValue", "timelineRequirements"];
-    case "bid-collection":
-      return ["projectAddress", "projectSize", "estimatedValue", "timelineRequirements", "specialRequirements"];
-    case "evaluation":
-      return ["projectAddress", "projectSize", "estimatedValue", "timelineRequirements", "specialRequirements"];
-    case "award":
-      return ["projectAddress", "projectSize", "estimatedValue", "timelineRequirements", "specialRequirements"];
-    case "publish":
-      return ["projectAddress", "projectSize", "estimatedValue", "timelineRequirements", "specialRequirements"];
     default:
       return [];
   }

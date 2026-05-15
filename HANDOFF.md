@@ -869,6 +869,16 @@ Files changed: `client/src/pages/scope-item-review.tsx`, `client/src/components/
 
 ### Recently Fixed (this session continuation)
 
+**Step 3 "Generate RFPs & Advance" wrote dates to wrong table, blocking phase advance.** `generateAndAdvanceMutation` correctly `await`s `saveInvitationMutation` before calling phase-advance — no race condition. The bug was that `saveInvitationMutation` PATCHes `/api/rfp-requests/:id/invitation-to-bid`, which wrote `contractorDueDate`/`architectDueDate` to the `invitation_to_bid` table only. `validateRfpForProgression` reads from `rfp_requests`, which had nulls. PDFs generated fine (PDF generator reads `invitation_to_bid`) but the validator failed. Root cause traces to the duplicate-handler merge: the merged validation gate read from `rfp_requests` for date fields that had historically only been written to `invitation_to_bid`.
+
+Fix: `PATCH /api/rfp-requests/:id/invitation-to-bid` handler now syncs `contractorDueDate` and `architectDueDate` to `rfp_requests` **first** (before the `invitation_to_bid` write), so the validator always sees fresh data. If the invitation write fails after the RFP write, the validator still has correct data. UX simplification: removed the standalone "Save Progress" button from Step 3; the only action is now "Generate RFPs & Advance" (which already saves before generating and advancing).
+
+**Audit — other write paths to `invitation_to_bid.contractor_due_date/architect_due_date`:** `POST /api/invitation-to-bid` (line ~2219) creates the initial invitation record (fires on first-ever save for an RFP) and writes the date fields to `invitation_to_bid` without syncing to `rfp_requests`. This path fires only once (when no `existingInvitation` record yet exists) and the PATCH path handles all subsequent saves — in practice, users always hit PATCH after the first save, so this isn't a live bug. But it's a latent inconsistency. Flagged for future fix; not addressed in this session per instructions.
+
+Files changed: `server/routes.ts` (PATCH handler + sync logic), `client/src/components/invitation-to-bid-modal.tsx` (removed Save Progress button).
+
+Verified (DB queries): after PATCH invitation-to-bid, `rfp_requests.contractor_due_date` = `2026-06-15T00:00:00.000Z`, `invitation_to_bid.contractor_due_date` = `2026-06-15 00:00:00` (both match). Phase advance to `bid-collection` returned 200. RFP 188 reset to `invitation-to-bid` with dates cleared for user to run full flow.
+
 **`canAdvanceToPhase` gate permanently blocked all Step 2 → Step 3 advancement — three-part fix.** All three bugs originated from the duplicate workflow-phase handler merge that activated previously-dead validation code:
 
 - **Bug 1 (no-UI fields):** `getRequiredFieldsForPhase` checked `projectAddress`, `projectSize`, `estimatedValue`, `timelineRequirements`, `specialRequirements` — fields with no UI, NULL for every RFP. Fix: emptied function to return `[]` for all phases. Schema columns preserved. File: `server/validation.ts`.

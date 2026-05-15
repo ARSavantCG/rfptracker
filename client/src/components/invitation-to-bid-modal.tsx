@@ -2018,22 +2018,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
             )}
 
             {/* Action Buttons */}
-            <div className="flex justify-between items-center pt-6 border-t">
-              <Button 
-                type="button"
-                variant="outline"
-                onClick={async () => {
-                  if (!rfp) return;
-                  
-                  const formData = form.getValues();
-                  await saveInvitationMutation.mutateAsync(formData);
-                }}
-                disabled={saveInvitationMutation.isPending}
-              >
-                <Save className="h-4 w-4 mr-2" />
-                Save Progress
-              </Button>
-              
+            <div className="flex justify-end items-center pt-6 border-t">
               <div className="flex gap-2">
                 <Button 
                   type="button"

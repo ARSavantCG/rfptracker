@@ -2313,6 +2313,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const parsed = updateInvitationToBidSchema.parse(req.body);
+
+      // Sync contractor/architect due dates to rfp_requests FIRST so that the
+      // phase-advance validator (which reads rfp_requests) sees fresh data even if
+      // the subsequent invitation_to_bid write were to fail.
+      if (parsed.contractorDueDate !== undefined || parsed.architectDueDate !== undefined) {
+        const rfpDateUpdate: Record<string, unknown> = {};
+        if (parsed.contractorDueDate !== undefined) rfpDateUpdate.contractorDueDate = parsed.contractorDueDate;
+        if (parsed.architectDueDate !== undefined) rfpDateUpdate.architectDueDate = parsed.architectDueDate;
+        await storage.updateRfpRequest(id, rfpDateUpdate as any);
+      }
+
       const invitation = await storage.updateInvitationToBid(id, parsed);
       
       if (!invitation) {

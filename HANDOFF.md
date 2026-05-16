@@ -38,6 +38,16 @@ Any hardcoded list of RFP recipient types (e.g. `["architect","contractor","brok
 ### Architecture Decision Record Update
 **Correction to Prompt 3 ADR**: The statement "Public API validation is unchanged (still accepts only the 4 original public types)" was incorrect as shipped. The client actually sends enhanced types directly (`"contractor-enhanced"`, `"architect-enhanced"`) in `documentsToOpen`, not the base types. The server's rfpVariant-based auto-upgrade is a fallback for the base-type path only. Both paths are now valid and the whitelist reflects this.
 
+### Deferred — Admin UI Enhanced Type Support
+The four admin-facing UI components below are intentionally Enhanced-blind today (enhanced types not listed in their dropdowns). This is acceptable while Standard is the default. **Revisit before deprecating Standard or making Enhanced the default.**
+
+| Component | File | What needs adding |
+|---|---|---|
+| RFP Customizer | `client/src/components/enhanced-rfp-customizer.tsx` lines 268–269 | Add `contractor-enhanced` and `architect-enhanced` option values |
+| Template Management | `client/src/components/pdf-template-management.tsx` lines 132–133 | Add enhanced entries to template type dropdown |
+| Document Editor | `client/src/components/rfp-document-editor.tsx` lines 289–290 | Add enhanced options to template selector |
+| Document Editor (fixed) | `client/src/components/rfp-document-editor-fixed.tsx` lines 221–222 | Same as above |
+
 ### Files Changed This Session
 | File | Change |
 |---|---|

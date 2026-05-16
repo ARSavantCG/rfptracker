@@ -1,3 +1,40 @@
+## Dashboard Redesign — Executive-Grade Density (Complete as of May 16, 2026)
+
+### What Was Done
+Restructured `client/src/pages/dashboard.tsx` to fit KPIs + RFP table above the fold at 1080p without scrolling.
+
+### Layout Changes
+- **Removed entirely**: donut chart, bar chart (stats-cards.tsx), AttentionRequired 3-card grid, DashboardPipeline section, DashboardPortfolioIntelligence section, "Largest Active Deal" card, "Most active property" orphan line, separate "Filter by status" heading + filter box card.
+- **Removed imports**: `StatsCards`, `AttentionRequired`, `DashboardPipeline`, `DashboardPortfolioIntelligence` — those component files remain on disk but are no longer rendered.
+
+### New Sections (top to bottom)
+1. **Compact page header** — `py-3` instead of `py-4`, `mb-3` gaps throughout.
+2. **KPI row** — 5 tiles in a `grid-cols-2 sm:grid-cols-3 lg:grid-cols-5` grid (~80px tall each):
+   - Active RFPs — static, from `pipeline.activeRfpCount`
+   - Overdue — red accent when > 0, click-to-expand inline list, from `attentionRequired.overdueRfps`
+   - Bids Awaiting — amber accent when > 0, click-to-expand, from `attentionRequired.bidsAwaitingEvaluation`
+   - Upcoming 7d — blue accent when > 0, click-to-expand, from `attentionRequired.upcomingDeadlines`
+   - Active TI Value — gray accent when $0, formatted as `$xM` / `$xK`, from `pipeline.totalActiveTiValue`
+3. **Expandable KPI list** — rendered directly below the KPI row when a tile is clicked; click same tile to collapse.
+4. **Portfolio Intelligence accordion** — collapsed by default; expands to show Avg TI $/SF (with YoY pill), Avg Cycle Time, and Top 3 RFPs by Cost (TopOutstandingRfpsPanel).
+5. **Pipeline by Property accordion** — collapsed by default; only rendered when at least one property has `totalTiValue > 0`; hides entirely when all values are $0.
+6. **Filter row** — search input + status pills (All / Received / In Progress / Completed / Archived) + From/To date pickers all on **one line** with `flex flex-wrap`.
+
+### Data Sources
+All data comes from existing cached queries — no new API calls added:
+- `/api/dashboard/metrics` (queryKey already shared by removed sub-components)
+- `/api/rfp-requests/top-open-by-cost?limit=3` (TopOutstandingRfpsPanel's own query, unchanged)
+
+### Key Files Changed
+| File | Change |
+|---|---|
+| `client/src/pages/dashboard.tsx` | Full layout restructure — only change in this task |
+
+### Not Changed
+`stats-cards.tsx`, `attention-required.tsx`, `dashboard-pipeline.tsx`, `dashboard-portfolio-intelligence.tsx`, `top-rfps-by-cost.tsx` — all on disk, just no longer imported by dashboard.
+
+---
+
 ## Enhanced RFP Migration — Four-Phase Summary (Complete as of May 16, 2026)
 
 ### What Was Built

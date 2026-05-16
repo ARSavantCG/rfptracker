@@ -104,8 +104,8 @@ function formatDate(date: string | Date): string {
 }
 
 function getMilestoneRequestsSection(invitationToBid: any, recipientType: string): string {
-  const isArchitect = recipientType === 'architect' || recipientType === 'broker-architect';
-  const isContractor = recipientType === 'contractor' || recipientType === 'broker-contractor';
+  const isArchitect = recipientType === 'architect' || recipientType === 'broker-architect' || recipientType === 'architect-enhanced';
+  const isContractor = recipientType === 'contractor' || recipientType === 'broker-contractor' || recipientType === 'contractor-enhanced';
   
   const architectMilestones = invitationToBid?.architectMilestones || [];
   const contractorMilestones = invitationToBid?.contractorMilestones || [];
@@ -134,8 +134,8 @@ function getMilestoneRequestsSection(invitationToBid: any, recipientType: string
 }
 
 function hasMilestones(invitationToBid: any, recipientType: string): boolean {
-  const isArchitect = recipientType === 'architect' || recipientType === 'broker-architect';
-  const isContractor = recipientType === 'contractor' || recipientType === 'broker-contractor';
+  const isArchitect = recipientType === 'architect' || recipientType === 'broker-architect' || recipientType === 'architect-enhanced';
+  const isContractor = recipientType === 'contractor' || recipientType === 'broker-contractor' || recipientType === 'contractor-enhanced';
   
   const architectMilestones = invitationToBid?.architectMilestones || [];
   const contractorMilestones = invitationToBid?.contractorMilestones || [];

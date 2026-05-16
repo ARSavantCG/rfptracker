@@ -18,6 +18,19 @@ import { eq, desc, and, or, gte, lte, ilike, inArray, sql as drizzleSql } from "
 import { tokenStore } from "./token-auth";
 import { logEvent } from "./audit-log";
 import { nanoid } from "nanoid";
+
+// Single source of truth for all accepted PDF recipient types.
+// Any new variant MUST be added here — the GET preview route and POST generate
+// route both reference this constant so they can never diverge.
+export const ALLOWED_RECIPIENT_TYPES = [
+  "architect",
+  "contractor",
+  "broker-architect",
+  "broker-contractor",
+  "contractor-enhanced",
+  "architect-enhanced",
+] as const;
+export type RecipientType = typeof ALLOWED_RECIPIENT_TYPES[number];
 import { generateRfpPdf } from "./pdf-generator";
 import { enforceAllPropertiesLegalCompliance } from "./property-legal-compliance";
 import Templates from "./lib/rfp-templates";
@@ -2417,7 +2430,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid ID" });
       }
 
-      if (!type || !["architect", "contractor", "broker-architect", "broker-contractor"].includes(type)) {
+      if (!type || !ALLOWED_RECIPIENT_TYPES.includes(type)) {
         return res.status(400).json({ message: "Valid recipient type is required" });
       }
 
@@ -2443,7 +2456,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const pdfOptions = {
         rfp: rfpWithAddress,
         invitationToBid,
-        recipientType: type as "architect" | "contractor" | "broker-architect" | "broker-contractor",
+        recipientType: type as "architect" | "contractor" | "broker-architect" | "broker-contractor" | "contractor-enhanced" | "architect-enhanced",
         recipientName: "Preview User",
         recipientCompany: "Preview Company",
         userEmail  // Pass the authenticated user's email
@@ -2694,8 +2707,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid ID" });
       }
 
-      const ALLOWED_RECIPIENT_TYPES = ["architect", "contractor", "broker-architect", "broker-contractor", "contractor-enhanced", "architect-enhanced"];
-      if (!recipientType || !ALLOWED_RECIPIENT_TYPES.includes(recipientType)) {
+      if (!recipientType || !(ALLOWED_RECIPIENT_TYPES as readonly string[]).includes(recipientType)) {
         return res.status(400).json({ message: "Valid recipient type is required" });
       }
 

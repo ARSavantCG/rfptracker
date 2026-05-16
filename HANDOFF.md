@@ -1,3 +1,52 @@
+## Session: May 16, 2026 — Enhanced RFP Bug Fixes (Prompt 3 cont.)
+
+### Bugs Found and Fixed
+
+#### Bug A — `onSubmit` `hasSelection` guard missing enhanced flags (client, SILENT FAILURE)
+**File**: `client/src/components/invitation-to-bid-modal.tsx`
+**Symptom**: Checking "Enhanced GC only" (no Standard GC) enabled the Generate button but clicking it produced no network request, no toast, no error — silent do-nothing.
+**Root cause**: Two guards existed for the same purpose and diverged:
+- `hasSelectedRfpType` (button-enable guard) watched all 6 checkbox fields including both enhanced flags → correctly enabled the button
+- `hasSelection` inside `onSubmit` (execution guard) only checked 4 fields, missing `generateContractorRfpEnhanced` and `generateArchitectRfpEnhanced` → evaluated `false`, hit `return` before the mutation fired
+**Fix**: Added both enhanced flags to `hasSelection`.
+
+#### Bug B — Server route whitelist rejected enhanced types (server, HTTP 400)
+**File**: `server/routes.ts` — `POST /api/rfp-requests/:id/generate-pdf`
+**Symptom**: Even after Bug A was fixed, the generate call would immediately 400 with "Valid recipient type is required".
+**Root cause**: `createInvitationMutation` builds `documentsToOpen` with `type: "contractor-enhanced"` or `"architect-enhanced"` and posts them directly. The route validated against a hardcoded 4-element list `["architect","contractor","broker-architect","broker-contractor"]` that didn't include the enhanced variants.
+**Fix**: Expanded whitelist to 6 types.
+
+#### Bug C — GET preview route had same hardcoded whitelist (server, HTTP 400)
+**File**: `server/routes.ts` — `GET /api/rfp-requests/:id/generate-pdf/:type`
+**Root cause**: Identical 4-type whitelist existed in the GET preview route — would have blocked any enhanced preview request.
+**Fix**: GET route now uses the module-level `ALLOWED_RECIPIENT_TYPES` constant.
+
+#### Bug D — `getMilestoneRequestsSection` / `hasMilestones` helpers missing enhanced types (server, wrong content)
+**File**: `server/pdf-generator.ts`
+**Root cause**: `isArchitect` and `isContractor` booleans didn't include `architect-enhanced` / `contractor-enhanced`. Enhanced types would be classified as neither, causing milestone sections to render empty even if milestones were set.
+**Fix**: Added enhanced variants to both `isArchitect` and `isContractor` conditions in both helper functions.
+
+### Pattern Rule — Hardcoded Type Lists Are Silent-Failure Points
+
+Any hardcoded list of RFP recipient types (e.g. `["architect","contractor","broker-architect","broker-contractor"]`) is a maintenance trap: when a new variant is added, every copy of the list must be updated or the new variant silently falls through, gets 400'd, or renders wrong content.
+
+**Going forward:**
+- `ALLOWED_RECIPIENT_TYPES` is defined once at module level in `server/routes.ts` (exported as a `const` array). Both the GET preview route and the POST generate route import and use it — they cannot diverge.
+- `isArchitect` / `isContractor` branch logic in `server/pdf-generator.ts` must always include the full set of types for that family (base + broker + enhanced).
+- When adding a new variant: (1) add to `ALLOWED_RECIPIENT_TYPES` in routes.ts, (2) add to `isArchitect`/`isContractor` in pdf-generator.ts, (3) search for any other inline type comparisons in the codebase.
+
+### Architecture Decision Record Update
+**Correction to Prompt 3 ADR**: The statement "Public API validation is unchanged (still accepts only the 4 original public types)" was incorrect as shipped. The client actually sends enhanced types directly (`"contractor-enhanced"`, `"architect-enhanced"`) in `documentsToOpen`, not the base types. The server's rfpVariant-based auto-upgrade is a fallback for the base-type path only. Both paths are now valid and the whitelist reflects this.
+
+### Files Changed This Session
+| File | Change |
+|---|---|
+| `client/src/components/invitation-to-bid-modal.tsx` | Added `generateArchitectRfpEnhanced \|\| generateContractorRfpEnhanced` to `hasSelection` guard in `onSubmit` |
+| `server/routes.ts` | Hoisted `ALLOWED_RECIPIENT_TYPES` to module level (exported const); both GET and POST routes reference it; removed inline duplicate from POST body |
+| `server/pdf-generator.ts` | `getMilestoneRequestsSection` and `hasMilestones`: added `architect-enhanced` and `contractor-enhanced` to `isArchitect`/`isContractor` |
+
+---
+
 ## Session: May 15, 2026 — Enhanced RFP PDF Templates (Prompt 3)
 
 ### What was built

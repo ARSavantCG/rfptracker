@@ -1,3 +1,24 @@
+## Standing Process Rule — Symmetry Audit After Every New Type/Variant/Column
+
+**After any session that adds a new type, variant, enum value, or DB column:**
+
+1. Grep for every consumer of that type (field name, variant string, column name).
+2. Build a symmetry table: location | current state | risk.
+3. Triage: critical (fix before any new feature work) vs deferred vs intentional gap.
+4. Fix all critical items in the same session before moving to the next prompt.
+
+**Why this rule exists:** Skipping this step in Prompts 2–3 of the Enhanced RFP session introduced 7+ silent-failure bugs that required ~3 hours to debug in Prompt 3. The audit itself took 15 minutes. The asymmetry is always in favor of auditing.
+
+**Known audit targets that grow when new types are added:**
+- `ALLOWED_RECIPIENT_TYPES` in `server/routes.ts` — add here first, then grep for consumers
+- `isArchitect` / `isContractor` booleans in `server/pdf-generator.ts`
+- `hasSelection` guards in every button `onClick` and `onSubmit` in `invitation-to-bid-modal.tsx`
+- `documentsToOpen` push blocks in `createInvitationMutation` and `generateAndAdvanceMutation`
+- Admin UI dropdowns (4 components — intentionally deferred until Standard deprecated)
+- Any `scheduleFields` state with acronym-cased keys — verify casing matches DB schema exactly
+
+---
+
 ## Session: May 16, 2026 — Enhanced RFP Bug Fixes (Prompt 3 cont.)
 
 ### Bugs Found and Fixed

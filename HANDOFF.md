@@ -26,6 +26,27 @@
 **Root cause**: `isArchitect` and `isContractor` booleans didn't include `architect-enhanced` / `contractor-enhanced`. Enhanced types would be classified as neither, causing milestone sections to render empty even if milestones were set.
 **Fix**: Added enhanced variants to both `isArchitect` and `isContractor` conditions in both helper functions.
 
+### Bug E — targetLXE / targetNTP / targetRCD casing mismatch (client, SILENT DATA LOSS)
+**Files**: `client/src/components/invitation-to-bid-modal.tsx` (4 spots)
+**Symptom**: LXE, NTP, and RCD schedule date fields always showed blank on modal open even after saving. Dates entered by the user were silently discarded — no error, no toast, status 200.
+**Root cause**: Drizzle preserves the exact JS property name from `shared/schema.ts`. The three columns are declared as `targetLXE`, `targetNTP`, `targetRCD` (uppercase acronyms). The client used lowercase variants (`targetLxe`, `targetNtp`, `targetRcd`) in four places:
+1. State initializer (`useState`)
+2. Pre-populate effect (reads `(rfp as any).targetLxe` — API returns `targetLXE` → undefined → blank)
+3. Save payload builder (sends `schedulePayload.targetLxe` — Zod strips unknown keys silently → DB unchanged)
+4. UI input render array (keys used as `scheduleFields[key]` and for `setScheduleFields`)
+
+`targetMobilization`, `targetPermitDrawings`, `targetSubstantialCompletion` were unaffected — standard camelCase with no acronym in the suffix.
+**Fix**: Renamed all four occurrences: `targetLxe → targetLXE`, `targetNtp → targetNTP`, `targetRcd → targetRCD`. The three correctly-cased fields were verified unchanged.
+
+### Pattern Rule — Acronym Casing in Drizzle Column Names
+
+**Rule**: When adding a column to `shared/schema.ts` that contains an uppercase acronym (LXE, NTP, RCD, ID, URL, etc.), Drizzle preserves the uppercase exactly as written in the JS property name. ALL client code reading or writing that column must use the exact same casing. Lowercased variants (`targetLxe` vs `targetLXE`) silently fail because Zod strips unknown keys without error and JavaScript object property lookups are case-sensitive.
+
+**Checklist when adding an acronym column**:
+1. Check the exact JS key in `shared/schema.ts` (not the SQL column name in `""`)
+2. `grep -r "targetXxx\|targetXXX"` across `client/src` to confirm both casings don't coexist
+3. Verify the pre-populate effect, save payload, state init, and UI render array all use the same key
+
 ### Pattern Rule — Hardcoded Type Lists Are Silent-Failure Points
 
 Any hardcoded list of RFP recipient types (e.g. `["architect","contractor","broker-architect","broker-contractor"]`) is a maintenance trap: when a new variant is added, every copy of the list must be updated or the new variant silently falls through, gets 400'd, or renders wrong content.

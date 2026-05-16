@@ -96,8 +96,8 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
   const modalRef = useRef<HTMLDivElement>(null);
   const [showEnhancedSection, setShowEnhancedSection] = useState(false);
   const [scheduleFields, setScheduleFields] = useState({
-    targetLxe: '', targetNtp: '', targetMobilization: '',
-    targetPermitDrawings: '', targetSubstantialCompletion: '', targetRcd: '',
+    targetLXE: '', targetNTP: '', targetMobilization: '',
+    targetPermitDrawings: '', targetSubstantialCompletion: '', targetRCD: '',
   });
   const [localAlternates, setLocalAlternates] = useState<Array<{
     id: string; description: string; optionA: string; optionB: string; masterCategoryId: number | null; isNew?: boolean;
@@ -424,12 +424,12 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
     if (isOpen && rfp) {
       const fmt = (v: any) => v ? new Date(v).toISOString().split('T')[0] : '';
       setScheduleFields({
-        targetLxe: fmt((rfp as any).targetLxe),
-        targetNtp: fmt((rfp as any).targetNtp),
+        targetLXE: fmt((rfp as any).targetLXE),
+        targetNTP: fmt((rfp as any).targetNTP),
         targetMobilization: fmt((rfp as any).targetMobilization),
         targetPermitDrawings: fmt((rfp as any).targetPermitDrawings),
         targetSubstantialCompletion: fmt((rfp as any).targetSubstantialCompletion),
-        targetRcd: fmt((rfp as any).targetRcd),
+        targetRCD: fmt((rfp as any).targetRCD),
       });
     }
   }, [isOpen, rfp]);
@@ -634,12 +634,12 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
       const anyScheduleSet = Object.values(scheduleFields).some(v => v !== '');
       if (anyScheduleSet) {
         const schedulePayload: Record<string, string | null> = {};
-        if (scheduleFields.targetLxe) schedulePayload.targetLxe = new Date(scheduleFields.targetLxe).toISOString();
-        if (scheduleFields.targetNtp) schedulePayload.targetNtp = new Date(scheduleFields.targetNtp).toISOString();
+        if (scheduleFields.targetLXE) schedulePayload.targetLXE = new Date(scheduleFields.targetLXE).toISOString();
+        if (scheduleFields.targetNTP) schedulePayload.targetNTP = new Date(scheduleFields.targetNTP).toISOString();
         if (scheduleFields.targetMobilization) schedulePayload.targetMobilization = new Date(scheduleFields.targetMobilization).toISOString();
         if (scheduleFields.targetPermitDrawings) schedulePayload.targetPermitDrawings = new Date(scheduleFields.targetPermitDrawings).toISOString();
         if (scheduleFields.targetSubstantialCompletion) schedulePayload.targetSubstantialCompletion = new Date(scheduleFields.targetSubstantialCompletion).toISOString();
-        if (scheduleFields.targetRcd) schedulePayload.targetRcd = new Date(scheduleFields.targetRcd).toISOString();
+        if (scheduleFields.targetRCD) schedulePayload.targetRCD = new Date(scheduleFields.targetRCD).toISOString();
         await apiRequest(`/api/rfp-requests/${rfp.id}`, "PATCH", schedulePayload);
       }
 
@@ -1455,12 +1455,12 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
                     <h4 className="text-sm font-semibold text-gray-800 mb-3">Target Schedule Milestones</h4>
                     <div className="grid grid-cols-2 gap-4">
                       {([
-                        { key: 'targetLxe', label: 'Target LXE (Lease Execution)' },
-                        { key: 'targetNtp', label: 'Target NTP (Notice to Proceed)' },
+                        { key: 'targetLXE', label: 'Target LXE (Lease Execution)' },
+                        { key: 'targetNTP', label: 'Target NTP (Notice to Proceed)' },
                         { key: 'targetMobilization', label: 'Target Mobilization' },
                         { key: 'targetPermitDrawings', label: 'Target Permit Drawings' },
                         { key: 'targetSubstantialCompletion', label: 'Target Substantial Completion' },
-                        { key: 'targetRcd', label: 'Target RCD (Rent Commencement)' },
+                        { key: 'targetRCD', label: 'Target RCD (Rent Commencement)' },
                       ] as const).map(({ key, label }) => (
                         <div key={key} className="space-y-1">
                           <label className="text-xs font-medium text-gray-700">{label}</label>

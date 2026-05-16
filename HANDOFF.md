@@ -1,3 +1,62 @@
+## Enhanced RFP Migration — Four-Phase Summary (Complete as of May 16, 2026)
+
+### What Was Built
+A two-tier RFP variant system layered on top of the existing Standard workflow. Enhanced RFPs carry richer building data and generate upgraded PDF invitations for contractors and architects. Standard RFPs are zero-change — all new panels and badges are conditionally hidden.
+
+### Phase 1 — Schema & Entry (Prompt 1)
+- Added `rfpVariant` column to `invitation_to_bid` table (`varchar`, default `'standard'`)
+- Added building context columns to `rfp_requests`: `clearHeight`, `sprinklerSpec`, `existingPower`, `dockDoorCount`, `parkingRatio`, `bayDimensions`, `tenantProgramSummary`
+- Added `project_alternates` table: `id`, `rfpId`, `description`, `optionA`, `optionB`, `masterCategoryId`, `categoryName`, `displayOrder`
+- Extended `invitation-to-bid-modal.tsx` with per-role variant toggles (GC Enhanced / Architect Enhanced checkboxes)
+- `serializeRfpVariant` encodes variant as JSON `{ gc, architect }` string
+
+### Phase 2 — Enhanced PDF Templates (Prompt 2)
+- Added `contractor-enhanced` and `architect-enhanced` to `ALLOWED_RECIPIENT_TYPES` (server)
+- Built two new Puppeteer HTML templates in `server/pdf-generator.ts`: `generateEnhancedContractorHTML` and `generateEnhancedArchitectHTML`
+- Templates include: building context section, alternates table, expanded scope of work, professional Bridge Industrial header
+
+### Phase 3 — Bug Fixes (Prompt 3)
+Five silent-failure bugs found and fixed:
+- **Bug A** — `hasSelection` guard in `onSubmit` was missing enhanced checkbox flags → Generate button fired nothing
+- **Bug B** — POST `/generate-pdf` route whitelist rejected enhanced types → HTTP 400
+- **Bug C** — GET `/generate-pdf/:type` preview route had same stale whitelist → HTTP 400
+- **Bug D** — `isArchitect` / `isContractor` in `pdf-generator.ts` milestone helpers didn't include enhanced variants → empty milestone sections
+- **Bug E** — `targetLXE` / `targetNTP` / `targetRCD` casing mismatch (lowercase vs DB uppercase) → schedule dates silently discarded
+
+### Phase 4 — Data Surfaces (Prompt 4)
+- Created `shared/rfp-variant.ts` — unified `parseRfpVariant` shared by server and client (zero inline copies)
+- Refactored all 3 inline parser copies to import from shared
+- **rfp-detail-modal.tsx**: Building Context panel (indigo), Alternates panel (amber), Invitation Recipients panel with Enhanced badge
+- **project-report-generator.tsx**: Alternate footnote inside category cell for matched `masterCategoryId`
+- **evaluation-budget.tsx**: `Info` icon indicator on line items whose `masterCategoryId` has a project alternate; `masterCategoryId` propagated through bid import flow
+
+### Current Enhanced Pilot Status
+| Area | Status |
+|---|---|
+| Schema / DB | ✅ Complete |
+| Enhanced PDF generation | ✅ Complete |
+| RFP entry modal (variant toggles) | ✅ Complete |
+| Detail modal — Building Context | ✅ Complete |
+| Detail modal — Alternates | ✅ Complete |
+| Detail modal — Invitation + Enhanced badge | ✅ Complete |
+| Project Report Generator footnotes | ✅ Complete |
+| Evaluation budget category indicator | ✅ Complete |
+| Admin UI recipient-type dropdowns | ⏸ Intentionally deferred — 4 components, awaiting Standard deprecation |
+
+### Key Files
+| File | Role |
+|---|---|
+| `shared/rfp-variant.ts` | Parser utility (single source of truth) |
+| `shared/schema.ts` | `invitation_to_bid.rfpVariant`, building context cols, `project_alternates` table |
+| `server/pdf-generator.ts` | `generateEnhancedContractorHTML`, `generateEnhancedArchitectHTML` |
+| `server/routes.ts` | `ALLOWED_RECIPIENT_TYPES`, variant upgrade logic at PDF generate endpoint |
+| `client/src/components/invitation-to-bid-modal.tsx` | Variant toggle UI, `serializeRfpVariant` |
+| `client/src/components/rfp-detail-modal.tsx` | Building Context, Alternates, Invitation panels |
+| `client/src/pages/project-report-generator.tsx` | Alternate footnotes |
+| `client/src/components/evaluation-budget.tsx` | Category alternate indicator |
+
+---
+
 ## Standing Process Rule — Symmetry Audit After Every New Type/Variant/Column
 
 **After any session that adds a new type, variant, enum value, or DB column:**

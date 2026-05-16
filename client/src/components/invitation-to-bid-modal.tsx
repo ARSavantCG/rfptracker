@@ -41,10 +41,10 @@ const invitationFormSchema = z.object({
   selectedArchitect: z.string().optional(),
   additionalContractors: z.array(z.string()).default([]),
   additionalArchitects: z.array(z.string()).default([]),
-  projectScope: z.string().min(1, "Project scope is required"),
-  projectLocation: z.string().min(1, "Project location is required"),
-  contractorDueDate: z.string().min(1, "Contractor due date is required"),
-  architectDueDate: z.string().min(1, "Architect due date is required"),
+  projectScope: z.string().optional().default(""),
+  projectLocation: z.string().optional().default(""),
+  contractorDueDate: z.string().optional().default(""),
+  architectDueDate: z.string().optional().default(""),
   projectDescription: z.string().optional(),
   documentsLink: z.string().optional(),
   keyDates: z.array(z.object({
@@ -265,8 +265,8 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
       requestPricing: false,
       requestSchedule: false,
       requestSpacePlan: false,
-      projectScope: "",
-      projectLocation: "",
+      projectScope: rfp?.projectName || rfp?.tenantName || "",
+      projectLocation: rfp?.propertyAddress || rfp?.property || "",
       contractorDueDate: "",
       architectDueDate: "",
       projectDescription: "",
@@ -1048,7 +1048,10 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6" key={`itb-form-${Date.now()}`}>
+          <form onSubmit={form.handleSubmit(onSubmit, (errors) => {
+            console.warn('[InvitationModal] Form validation failed:', errors);
+            toast({ title: "Form validation failed", description: "One or more fields are invalid — check the browser console for details.", variant: "destructive" });
+          })} className="space-y-6" key={`itb-form-${Date.now()}`}>
             {/* Project Information - MOVED TO TOP FOR BETTER TAB ORDER */}
             <div className="space-y-4">
               <h3 className="text-lg font-medium">Project Information</h3>

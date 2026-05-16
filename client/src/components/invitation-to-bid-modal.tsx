@@ -1023,6 +1023,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
   const onSubmit = (data: InvitationFormData) => {
     // Check if at least one option is selected
     const hasSelection = data.generateArchitectRfp || data.generateContractorRfp || 
+                        data.generateArchitectRfpEnhanced || data.generateContractorRfpEnhanced ||
                         data.generateBrokerArchitectRfp || data.generateBrokerContractorRfp;
     
     if (!hasSelection) {

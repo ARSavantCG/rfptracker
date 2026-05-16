@@ -2694,7 +2694,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid ID" });
       }
 
-      if (!recipientType || !["architect", "contractor", "broker-architect", "broker-contractor"].includes(recipientType)) {
+      const ALLOWED_RECIPIENT_TYPES = ["architect", "contractor", "broker-architect", "broker-contractor", "contractor-enhanced", "architect-enhanced"];
+      if (!recipientType || !ALLOWED_RECIPIENT_TYPES.includes(recipientType)) {
         return res.status(400).json({ message: "Valid recipient type is required" });
       }
 
@@ -2714,6 +2715,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const invitationToBid = await storage.getInvitationToBid(id);
 
       // Resolve effective recipient type based on rfpVariant stored on the invitation.
+      // Client may send "contractor-enhanced"/"architect-enhanced" directly (explicit enhanced request)
+      // OR send "contractor"/"architect" and rely on rfpVariant upgrade below.
       // The client always sends "contractor" or "architect"; the server upgrades to
       // "contractor-enhanced" / "architect-enhanced" when the invitation's rfpVariant says so.
       // Broker types are never upgraded — they have their own standalone templates.

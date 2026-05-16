@@ -186,6 +186,14 @@ export const updateRfpRequestSchema = insertRfpRequestSchema.partial().extend({
   status: z.enum(["received", "in-progress", "completed", "on-hold", "archived"]).optional(),
   completedDate: z.union([z.date(), z.string().transform((val) => val ? new Date(val) : null)]).optional().nullable(),
   publishedDate: z.union([z.date(), z.string().transform((val) => val ? new Date(val) : null)]).optional().nullable(),
+  // Schedule target fields: accept Date objects, ISO strings, or null/undefined.
+  // drizzle-zod generates z.date() for timestamp() columns which rejects ISO strings from the client.
+  targetLXE: z.union([z.date(), z.string().transform((val) => val ? new Date(val) : null)]).optional().nullable(),
+  targetNTP: z.union([z.date(), z.string().transform((val) => val ? new Date(val) : null)]).optional().nullable(),
+  targetMobilization: z.union([z.date(), z.string().transform((val) => val ? new Date(val) : null)]).optional().nullable(),
+  targetPermitDrawings: z.union([z.date(), z.string().transform((val) => val ? new Date(val) : null)]).optional().nullable(),
+  targetSubstantialCompletion: z.union([z.date(), z.string().transform((val) => val ? new Date(val) : null)]).optional().nullable(),
+  targetRCD: z.union([z.date(), z.string().transform((val) => val ? new Date(val) : null)]).optional().nullable(),
 });
 
 export type InsertRfpRequest = z.infer<typeof insertRfpRequestSchema>;

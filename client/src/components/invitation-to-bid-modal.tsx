@@ -2418,6 +2418,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
                   onClick={() => {
                     const formData = form.getValues();
                     const hasSelection = formData.generateArchitectRfp || formData.generateContractorRfp || 
+                                        formData.generateArchitectRfpEnhanced || formData.generateContractorRfpEnhanced ||
                                         formData.generateBrokerArchitectRfp || formData.generateBrokerContractorRfp;
                     if (hasSelection) {
                       generateAndAdvanceMutation.mutate(formData);

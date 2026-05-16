@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { CalendarIcon, Edit, Check, X, RefreshCw } from "lucide-react";
 import type { RfpRequest } from "@shared/schema";
 import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
+import { parseRfpVariant } from "@shared/rfp-variant";
 
 interface RfpDetailModalProps {
   isOpen: boolean;
@@ -60,6 +61,40 @@ export function RfpDetailModal({ isOpen, onClose, rfp, onRfpUpdated }: RfpDetail
   }>({
     queryKey: [`/api/properties/${displayRfp?.property}`],
     enabled: !!displayRfp?.property,
+  });
+
+  // Project alternates (Enhanced RFP — returns [] if none exist)
+  const { data: projectAlternates = [] } = useQuery<Array<{
+    id: string;
+    description: string;
+    optionA: string | null;
+    optionB: string | null;
+    categoryName: string | null;
+    displayOrder: number;
+  }>>({
+    queryKey: [`/api/rfp-requests/${rfp?.id}/project-alternates`],
+    enabled: !!rfp?.id,
+  });
+
+  // Invitation data for bidder panel (returns null on 404 — no invitation yet)
+  const { data: invitationData } = useQuery<{
+    selectedContractor: string | null;
+    selectedArchitect: string | null;
+    rfpVariant: string;
+  } | null>({
+    queryKey: ["/api/rfp-requests", rfp?.id, "invitation-to-bid"],
+    queryFn: async () => {
+      if (!rfp?.id) return null;
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
+      const res = await fetch(`/api/rfp-requests/${rfp.id}/invitation-to-bid`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: "include",
+      });
+      if (!res.ok) return null;
+      return res.json();
+    },
+    enabled: !!rfp?.id,
+    retry: false,
   });
 
   const updateStatusMutation = useMutation({
@@ -607,6 +642,92 @@ export function RfpDetailModal({ isOpen, onClose, rfp, onRfpUpdated }: RfpDetail
                     </div>
                   )}
                 </div>
+
+                {/* ── Building Context (Enhanced RFP only — hidden when all fields empty) ── */}
+                {(() => {
+                  const dr = displayRfp as any;
+                  const rows = [
+                    { label: 'Bay Dimensions', value: dr?.bayDimensions },
+                    { label: 'Dock Doors', value: dr?.dockDoorCount != null ? String(dr.dockDoorCount) : null },
+                    { label: 'Clear Height', value: dr?.clearHeight },
+                    { label: 'Sprinkler System', value: dr?.sprinklerSpec },
+                    { label: 'Existing Power', value: dr?.existingPower },
+                    { label: 'Parking Ratio', value: dr?.parkingRatio },
+                    { label: 'Tenant Program', value: dr?.tenantProgramSummary },
+                  ].filter(r => r.value != null && r.value !== '');
+                  if (rows.length === 0) return null;
+                  return (
+                    <div className="bg-indigo-50 rounded-lg p-4 border border-indigo-200">
+                      <h4 className="font-medium text-indigo-900 mb-3">Building Context</h4>
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        {rows.map(r => (
+                          <div key={r.label} className="flex items-start">
+                            <span className="text-indigo-700 font-medium whitespace-nowrap">{r.label}:</span>
+                            <span className="ml-2 text-indigo-900">{r.value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* ── Alternates (Enhanced RFP only — hidden when none exist) ── */}
+                {projectAlternates.length > 0 && (
+                  <div className="bg-amber-50 rounded-lg p-4 border border-amber-200">
+                    <h4 className="font-medium text-amber-900 mb-3">Project Alternates</h4>
+                    <div className="space-y-3">
+                      {projectAlternates.map(alt => (
+                        <div key={alt.id} className="text-sm">
+                          <div className="font-medium text-amber-900">{alt.description}</div>
+                          {alt.categoryName && (
+                            <div className="text-xs text-amber-600 mb-1">Category: {alt.categoryName}</div>
+                          )}
+                          <div className="grid grid-cols-2 gap-2 mt-1">
+                            {alt.optionA && (
+                              <div>
+                                <span className="text-amber-700 font-medium">Option A:</span>
+                                <span className="ml-1 text-amber-800">{alt.optionA}</span>
+                              </div>
+                            )}
+                            {alt.optionB && (
+                              <div>
+                                <span className="text-amber-700 font-medium">Option B:</span>
+                                <span className="ml-1 text-amber-800">{alt.optionB}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Invitation Recipients — Enhanced badge when applicable ── */}
+                {((displayRfp as any)?.generalContractor || (displayRfp as any)?.architect) && (
+                  <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                    <h4 className="font-medium text-gray-900 mb-3">Invitation Recipients</h4>
+                    <div className="space-y-2 text-sm">
+                      {(displayRfp as any)?.generalContractor && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-500 w-24 shrink-0">Contractor:</span>
+                          <span className="text-gray-900">{(displayRfp as any).generalContractor}</span>
+                          {invitationData && parseRfpVariant(invitationData.rfpVariant).gc === 'enhanced' && (
+                            <span className="px-1.5 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-700 rounded">Enhanced</span>
+                          )}
+                        </div>
+                      )}
+                      {(displayRfp as any)?.architect && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-500 w-24 shrink-0">Architect:</span>
+                          <span className="text-gray-900">{(displayRfp as any).architect}</span>
+                          {invitationData && parseRfpVariant(invitationData.rfpVariant).architect === 'enhanced' && (
+                            <span className="px-1.5 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-700 rounded">Enhanced</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 <div className="bg-gray-50 rounded-lg p-4">
                   <h4 className="font-medium text-gray-900 mb-3">Request Information</h4>

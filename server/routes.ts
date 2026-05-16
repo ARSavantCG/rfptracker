@@ -14,6 +14,7 @@ import { storage } from "./storage";
 import { db } from "./db";
 import { users, contacts, insertRfpRequestSchema, updateRfpRequestSchema, insertContactSchema, updateContactSchema, insertInvitationSchema, updateInvitationSchema, insertInvitationToBidSchema, updateInvitationToBidSchema, insertPdfTemplateSchema, auditLog, romScopeItems, masterItemReviewQueue, evaluationBudgets, projectAlternates, insertProjectAlternateSchema } from "@shared/schema";
 import { convertFormDateToDbDate } from "@shared/date-utils";
+import { parseRfpVariant } from "@shared/rfp-variant";
 import { eq, desc, and, or, gte, lte, ilike, inArray, sql as drizzleSql } from "drizzle-orm";
 import { tokenStore } from "./token-auth";
 import { logEvent } from "./audit-log";
@@ -2732,13 +2733,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // The client always sends "contractor" or "architect"; the server upgrades to
       // "contractor-enhanced" / "architect-enhanced" when the invitation's rfpVariant says so.
       // Broker types are never upgraded — they have their own standalone templates.
-      const parseVariant = (v: string | null | undefined): { gc: string; architect: string } => {
-        const d = { gc: 'standard', architect: 'standard' };
-        if (!v || v === 'standard') return d;
-        if (v === 'enhanced') return { gc: 'enhanced', architect: 'enhanced' };
-        try { return { ...d, ...JSON.parse(v) }; } catch { return d; }
-      };
-      const rfpVariant = parseVariant((invitationToBid as any)?.rfpVariant);
+      const rfpVariant = parseRfpVariant((invitationToBid as any)?.rfpVariant);
       let effectiveRecipientType = recipientType;
       if (recipientType === 'contractor' && rfpVariant.gc === 'enhanced') {
         effectiveRecipientType = 'contractor-enhanced';

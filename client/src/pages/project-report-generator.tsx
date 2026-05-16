@@ -18,6 +18,7 @@ type BidLineItem = {
   totalPrice: string;
   notes: string | null;
   isCleanData: boolean;
+  masterCategoryId?: number | null;
 };
 
 type BidCollection = {
@@ -59,6 +60,15 @@ export default function ProjectReportGenerator() {
     queryKey: ["/api/bid-line-items/all"],
   });
 
+  const { data: projectAlternates = [] } = useQuery<Array<{
+    id: string;
+    description: string;
+    masterCategoryId: number | null;
+  }>>({
+    queryKey: [`/api/rfp-requests/${selectedProjectId}/project-alternates`],
+    enabled: !!selectedProjectId,
+  });
+
   const selectedProject = rfps.find((r) => r.id === selectedProjectId);
 
   const projectTotalArea = useMemo(() => {
@@ -90,6 +100,18 @@ export default function ProjectReportGenerator() {
         };
       });
   }, [selectedProjectId, bidCollections, allLineItems, showCleanDataOnly]);
+
+  const alternateCategoryMap = useMemo(() => {
+    const map = new Map<number, string[]>();
+    for (const alt of projectAlternates) {
+      if (alt.masterCategoryId != null) {
+        const arr = map.get(alt.masterCategoryId) || [];
+        arr.push(alt.description);
+        map.set(alt.masterCategoryId, arr);
+      }
+    }
+    return map;
+  }, [projectAlternates]);
 
   const totals = useMemo(() => {
     const totalCost = projectLineItems.reduce((sum, item) => {
@@ -209,7 +231,14 @@ export default function ProjectReportGenerator() {
                       <tbody>
                         {projectLineItems.map((item, index) => (
                           <tr key={item.id} className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}>
-                            <td className="border p-3 text-sm">{item.category || "-"}</td>
+                            <td className="border p-3 text-sm">
+                              {item.category || "-"}
+                              {item.masterCategoryId != null && alternateCategoryMap.has(item.masterCategoryId) && (
+                                <div className="text-xs text-indigo-600 italic mt-0.5">
+                                  {alternateCategoryMap.get(item.masterCategoryId)!.map(d => `*Alternate available: ${d}`).join('; ')}
+                                </div>
+                              )}
+                            </td>
                             <td className="border p-3 text-sm">
                               <div>{item.contractorName}</div>
                               <div className="text-xs text-gray-500">{item.contractorCompany}</div>

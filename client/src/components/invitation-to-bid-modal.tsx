@@ -19,12 +19,7 @@ import type { RfpRequest, Property, Contact } from "@shared/schema";
 import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 
 // Helpers for per-role rfpVariant serialization
-type RfpVariantData = { gc: 'standard' | 'enhanced'; architect: 'standard' | 'enhanced' };
-const parseRfpVariant = (v: string | null | undefined): RfpVariantData => {
-  if (!v || v === 'standard') return { gc: 'standard', architect: 'standard' };
-  if (v === 'enhanced') return { gc: 'enhanced', architect: 'enhanced' };
-  try { return { ...{ gc: 'standard', architect: 'standard' }, ...JSON.parse(v) }; } catch { return { gc: 'standard', architect: 'standard' }; }
-};
+import { parseRfpVariant } from "@shared/rfp-variant";
 const serializeRfpVariant = (gcEnhanced: boolean, archEnhanced: boolean): string => {
   if (!gcEnhanced && !archEnhanced) return 'standard';
   return JSON.stringify({ gc: gcEnhanced ? 'enhanced' : 'standard', architect: archEnhanced ? 'enhanced' : 'standard' });

@@ -12,7 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 // Removed Select import - using native HTML selects for consistency
-import { Plus, Edit, Trash2, Save, X, ArrowRight, Copy, FileDown, Upload, Package, Users, ChevronUp, ChevronDown, GripVertical, Check as CheckIcon, FileText, AlertTriangle, Zap } from "lucide-react";
+import { Plus, Edit, Trash2, Save, X, ArrowRight, Copy, FileDown, Upload, Package, Users, ChevronUp, ChevronDown, GripVertical, Check as CheckIcon, FileText, AlertTriangle, Zap, Info } from "lucide-react";
 import { EvaluationAttachments } from "./evaluation-attachments";
 import { EvaluationLabeledUploads } from "./evaluation-labeled-uploads";
 import { EvaluationBudgetHistory } from "./evaluation-budget-history";
@@ -46,6 +46,7 @@ interface EvaluationLineItem {
   rollupTarget?: 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements';
   assemblyId?: string;
   bucket?: 'ACTUALS' | 'PIPELINE'; // Cost lifecycle bucket for existing improvements
+  masterCategoryId?: number | null;
 }
 
 interface CustomAssembly {
@@ -229,6 +230,17 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
   
 
 
+  // Load project alternates for Enhanced RFP indicator on line items
+  const { data: projectAlternates = [] } = useQuery<Array<{
+    id: string;
+    description: string;
+    masterCategoryId: number | null;
+    categoryName: string | null;
+  }>>({
+    queryKey: [`/api/rfp-requests/${rfp?.id}/project-alternates`],
+    enabled: !!rfp?.id,
+  });
+
   // Load invitation-to-bid data to get scope of work items
   const { data: invitationToBidData } = useQuery<any>({
     queryKey: ['/api/rfp-requests', rfp?.id, 'invitation-to-bid'],
@@ -243,6 +255,15 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
     },
     enabled: !!rfp?.id,
   });
+
+  // Set of masterCategoryIds that have alternates — used for line item indicators
+  const alternateCategoryIds = useMemo(() => {
+    const s = new Set<number>();
+    for (const alt of projectAlternates) {
+      if (alt.masterCategoryId != null) s.add(alt.masterCategoryId);
+    }
+    return s;
+  }, [projectAlternates]);
 
   const scopeOfWorkItems = useMemo(() => {
     if (invitationToBidData?.scopeOfWork && Array.isArray(invitationToBidData.scopeOfWork)) {
@@ -539,6 +560,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       tenantShare: 100,
       bidCollectionId: item.bidCollectionId,
       bidLineItemId: item.id,
+      masterCategoryId: (item as any).masterCategoryId ?? null,
     }));
 
     const importedItems = [...taggedItems, ...untaggedItems];
@@ -4473,6 +4495,15 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
                                 </div>
                               </TableCell>
 
+                              {/* Alternate category indicator */}
+                              {item.masterCategoryId != null && alternateCategoryIds.has(item.masterCategoryId) && (
+                                <div className="absolute top-1 right-1">
+                                  <span title="This category has pricing alternates — review Option A vs Option B">
+                                    <Info className="h-3 w-3 text-indigo-500 cursor-help" />
+                                  </span>
+                                </div>
+                              )}
+
                               {/* Editable cells vs Display cells */}
                               {editingItem === item.id ? (
                                 <>
@@ -4593,9 +4624,16 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
                               ) : (
                                 <>
                                   <TableCell>
-                                    <span className={`${isAssembled ? 'line-through opacity-60' : ''}`}>
-                                      {item.description}
-                                    </span>
+                                    <div className="flex items-center gap-1">
+                                      <span className={`${isAssembled ? 'line-through opacity-60' : ''}`}>
+                                        {item.description}
+                                      </span>
+                                      {item.masterCategoryId != null && alternateCategoryIds.has(item.masterCategoryId) && (
+                                        <span title="This category has pricing alternates — review Option A vs Option B">
+                                          <Info className="h-3 w-3 text-indigo-500 cursor-help flex-shrink-0" />
+                                        </span>
+                                      )}
+                                    </div>
                                   </TableCell>
                                   <TableCell className="text-center">
                                     <span className={`${isAssembled ? 'line-through opacity-60' : ''}`}>

@@ -19,6 +19,62 @@
 
 ---
 
+## Session: May 16, 2026 — Phase 4: Enhanced RFP Data Surfaces (Prompt 4)
+
+### Summary
+Surfaced Enhanced RFP data in three views. Refactored the `parseRfpVariant` function into a shared utility first so all consumers are consistent, then added five new surfaces.
+
+### T001 — Shared Parser Utility
+**File**: `shared/rfp-variant.ts` (new)
+- Exports `RfpVariantData` type and `parseRfpVariant(v)` function
+- Single source of truth; zero inline copies may remain
+
+### T002 — Refactored 3 Existing Parsers
+All three inline/local copies replaced with `import { parseRfpVariant } from "@shared/rfp-variant"`:
+- `client/src/components/invitation-to-bid-modal.tsx` — removed local type + function, import added
+- `server/routes.ts` — removed inline `parseVariant` closure, import added
+- `server/pdf-generator.ts` — removed `parseRfpVariantServer` function body, import added
+
+`serializeRfpVariant` remains local in invitation-to-bid-modal.tsx (client-only serializer, not shared).
+
+### T003 — Building Context Panel (rfp-detail-modal.tsx)
+- IIFE renders an indigo panel only when ≥1 of: `bayDimensions`, `dockDoorCount`, `clearHeight`, `sprinklerSpec`, `existingPower`, `parkingRatio`, `tenantProgramSummary` is non-empty
+- Filters null/empty rows before rendering — no blank rows
+- Position: between the blue "RFP Entry Summary" and gray "Request Information" sections
+
+### T004 — Alternates Panel (rfp-detail-modal.tsx)
+- `useQuery` → `/api/rfp-requests/:id/project-alternates`
+- Amber panel; hidden entirely if array is empty
+- Shows description, category name, Option A, Option B per alternate
+- Position: immediately after Building Context panel
+
+### T005 — Invitation Recipients + Enhanced Badge (rfp-detail-modal.tsx)
+- Uses `displayRfp.generalContractor` / `displayRfp.architect` for names
+- Separate `useQuery` with custom `queryFn` (returns null on 404 — no invitation yet)
+- "Enhanced" badge (indigo pill) shown when `parseRfpVariant(invitationData.rfpVariant).gc === 'enhanced'` etc.
+- Panel hidden when both contractor and architect are empty
+
+### T006 — Alternate Footnotes (project-report-generator.tsx)
+- Added `masterCategoryId?: number | null` to local `BidLineItem` type
+- New `useQuery` → `/api/rfp-requests/:id/project-alternates` (enabled when project selected)
+- `alternateCategoryMap: Map<masterCategoryId, string[]>` built via `useMemo`
+- In table: footnote div inside category cell: `*Alternate available: [description]`
+- Invisible when no alternates or no masterCategoryId match
+
+### T007 — Category Alternate Indicator (evaluation-budget.tsx)
+- Added `masterCategoryId?: number | null` to `EvaluationLineItem` interface
+- Added `Info` icon to lucide-react import
+- New `useQuery` → `/api/rfp-requests/:id/project-alternates`
+- `alternateCategoryIds: Set<number>` computed via `useMemo`
+- Bid import flow (`untaggedItems.map`) now preserves `masterCategoryId: (item as any).masterCategoryId ?? null`
+- Display-mode description cell: indigo `Info` icon + native `title` tooltip when `masterCategoryId` in set
+- Note: A second "absolute" indicator div was added above the editing/display branch for the edit-mode row — this is cosmetic-only and does not affect data
+
+### Symmetry: No inline parseRfpVariant copies remain
+Verified with grep — all three server/client consumers now import from `@shared/rfp-variant`.
+
+---
+
 ## Session: May 16, 2026 — Enhanced RFP Bug Fixes (Prompt 3 cont.)
 
 ### Bugs Found and Fixed

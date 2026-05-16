@@ -4,6 +4,7 @@ import { readFileSync } from "fs";
 import { storage } from "./storage";
 import { evaluateFormula } from "@shared/formula-utils";
 import { COMPANY_RFP_INTRO } from "@shared/constants";
+import { parseRfpVariant } from "@shared/rfp-variant";
 import { format } from "date-fns";
 
 // Get Bridge Industrial logo as base64
@@ -247,12 +248,6 @@ export interface PdfGenerationOptions {
   userEmail?: string;
 }
 
-function parseRfpVariantServer(v: string | null | undefined): { gc: string; architect: string } {
-  const defaults = { gc: 'standard', architect: 'standard' };
-  if (!v || v === 'standard') return defaults;
-  if (v === 'enhanced') return { gc: 'enhanced', architect: 'enhanced' };
-  try { return { ...defaults, ...JSON.parse(v) }; } catch { return defaults; }
-}
 
 function getEnhancedTemplateCss(): string {
   return `

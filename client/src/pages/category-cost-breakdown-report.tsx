@@ -133,6 +133,16 @@ export default function CategoryCostBreakdownReport() {
     queryKey: ["/api/properties"],
   });
 
+  // Deduplicate properties by name (DB has duplicate rows for some properties)
+  const uniqueProperties = useMemo(() => {
+    const seen = new Set<string>();
+    return properties.filter((p: Property) => {
+      if (seen.has(p.propertyName)) return false;
+      seen.add(p.propertyName);
+      return true;
+    });
+  }, [properties]);
+
   // Build grouped picker options
   const pickerGroups = useMemo(() => {
     const q = pickerSearch.toLowerCase();
@@ -199,7 +209,7 @@ export default function CategoryCostBreakdownReport() {
         dateTo,
         items: JSON.stringify(selectedItems.map(i => ({ type: i.type, id: i.id, label: i.label }))),
       });
-      const data = await apiRequest("GET", `/api/reports/category-cost-breakdown?${params}`);
+      const data = await apiRequest(`/api/reports/category-cost-breakdown?${params}`, "GET");
       setReportData(data as ReportData);
     } catch (err) {
       setReportError("Failed to generate report. Please try again.");
@@ -376,10 +386,10 @@ export default function CategoryCostBreakdownReport() {
             <div>
               <label className="text-xs font-medium text-gray-500 uppercase tracking-wide block mb-2">Property</label>
               <div className="flex flex-wrap gap-1 max-h-[72px] overflow-y-auto">
-                {properties.length === 0 && (
+                {uniqueProperties.length === 0 && (
                   <span className="text-xs text-gray-400 italic">Loading…</span>
                 )}
-                {properties.map((p: Property) => (
+                {uniqueProperties.map((p: Property) => (
                   <button
                     key={p.id}
                     onClick={() => toggleProperty(p.id)}

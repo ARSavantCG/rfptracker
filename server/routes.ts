@@ -12,7 +12,7 @@ import fs from "fs";
 import path from "path";
 import { storage } from "./storage";
 import { db } from "./db";
-import { users, contacts, insertRfpRequestSchema, updateRfpRequestSchema, insertContactSchema, updateContactSchema, insertInvitationSchema, updateInvitationSchema, insertInvitationToBidSchema, updateInvitationToBidSchema, insertPdfTemplateSchema, auditLog, romScopeItems, masterItemReviewQueue, evaluationBudgets, projectAlternates, insertProjectAlternateSchema } from "@shared/schema";
+import { users, contacts, insertRfpRequestSchema, updateRfpRequestSchema, insertContactSchema, updateContactSchema, insertInvitationSchema, updateInvitationSchema, insertInvitationToBidSchema, updateInvitationToBidSchema, insertPdfTemplateSchema, auditLog, romScopeItems, masterItemReviewQueue, evaluationBudgets, projectAlternates, insertProjectAlternateSchema, bidLineItems, properties } from "@shared/schema";
 import { convertFormDateToDbDate } from "@shared/date-utils";
 import { parseRfpVariant } from "@shared/rfp-variant";
 import { eq, desc, and, or, gte, lte, ilike, inArray, sql as drizzleSql } from "drizzle-orm";
@@ -6563,6 +6563,151 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting project alternate:", error);
       res.status(500).json({ message: "Failed to delete project alternate" });
+    }
+  });
+
+  // ─── Category Cost Breakdown Report ───────────────────────────────────────
+  app.get("/api/reports/category-cost-breakdown", requireAuth, async (req, res) => {
+    try {
+      const { statuses, propertyIds, dateFrom, dateTo, items: itemsRaw } = req.query;
+
+      const selectedItems: Array<{ type: "category" | "scopeItem"; id: number; label: string }> =
+        itemsRaw ? JSON.parse(itemsRaw as string) : [];
+
+      const statusList: string[] = statuses
+        ? (statuses as string).split(",").filter(Boolean)
+        : [];
+      const propertyIdList: number[] = propertyIds
+        ? (propertyIds as string).split(",").map(Number).filter((n) => !isNaN(n) && n > 0)
+        : [];
+
+      // Fetch all RFPs
+      let allRfps = await storage.getAllRfpRequests();
+
+      // Status filter
+      if (statusList.length > 0) {
+        allRfps = allRfps.filter((r) => statusList.includes(r.status));
+      }
+
+      // Property filter (IDs → names)
+      if (propertyIdList.length > 0) {
+        const props = await db
+          .select({ id: properties.id, propertyName: properties.propertyName })
+          .from(properties)
+          .where(inArray(properties.id, propertyIdList));
+        const propNames = new Set(props.map((p) => p.propertyName));
+        allRfps = allRfps.filter((r) => propNames.has(r.property));
+      }
+
+      // Date filter (applied to receivedOn)
+      if (dateFrom) {
+        const from = new Date(dateFrom as string);
+        allRfps = allRfps.filter((r) => new Date(r.receivedOn) >= from);
+      }
+      if (dateTo) {
+        const to = new Date(dateTo as string);
+        to.setHours(23, 59, 59, 999);
+        allRfps = allRfps.filter((r) => new Date(r.receivedOn) <= to);
+      }
+
+      const categoryItems = selectedItems.filter((i) => i.type === "category");
+      const scopeItemsSelected = selectedItems.filter((i) => i.type === "scopeItem");
+
+      const parsePrice = (v: string | null | undefined): number => {
+        if (!v) return 0;
+        const n = parseFloat(v.replace(/[^0-9.-]/g, ""));
+        return isNaN(n) ? 0 : n;
+      };
+
+      const projects = await Promise.all(
+        allRfps.map(async (rfp) => {
+          const itemAmounts: Record<string, number | null> = {};
+
+          // Evaluation budget for grandTotal + scope item amounts
+          const budget = await storage.getEvaluationBudget(rfp.id);
+          let grandTotal: number | null = null;
+          if (budget?.grandTotal) {
+            const parsed = parsePrice(budget.grandTotal);
+            if (parsed > 0) grandTotal = parsed;
+          }
+
+          // Scope item amounts: match on masterItemId inside budget JSON line items
+          if (scopeItemsSelected.length > 0) {
+            const allLineItems = [
+              ...((budget?.tenantImprovements as any[]) || []),
+              ...((budget?.designSoftCosts as any[]) || []),
+              ...((budget?.existingImprovements as any[]) || []),
+            ];
+            for (const si of scopeItemsSelected) {
+              const key = `s_${si.id}`;
+              const matches = allLineItems.filter(
+                (li: any) => li.masterItemId != null && Number(li.masterItemId) === si.id
+              );
+              if (matches.length > 0) {
+                const total = matches.reduce(
+                  (sum: number, li: any) => sum + parsePrice(li.totalPrice),
+                  0
+                );
+                itemAmounts[key] = total; // $0 = present but zero, null = not present
+              } else {
+                itemAmounts[key] = null;
+              }
+            }
+          }
+
+          // Category amounts: sum bid_line_items tagged with that masterCategoryId
+          if (categoryItems.length > 0) {
+            const bidColls = await storage.getBidCollectionsByRfp(rfp.id);
+            if (bidColls.length > 0) {
+              const bcIds = bidColls.map((bc) => bc.id);
+              const lineItems = await db
+                .select()
+                .from(bidLineItems)
+                .where(inArray(bidLineItems.bidCollectionId, bcIds));
+
+              for (const ci of categoryItems) {
+                const key = `c_${ci.id}`;
+                const matches = lineItems.filter((li) => li.masterCategoryId === ci.id);
+                if (matches.length > 0) {
+                  const total = matches.reduce(
+                    (sum, li) => sum + parsePrice(li.totalPrice),
+                    0
+                  );
+                  itemAmounts[key] = total;
+                } else {
+                  itemAmounts[key] = null;
+                }
+              }
+            } else {
+              for (const ci of categoryItems) {
+                itemAmounts[`c_${ci.id}`] = null;
+              }
+            }
+          }
+
+          return {
+            rfpId: rfp.id,
+            rfpNumber: rfp.rfpNumber,
+            tenantName: rfp.tenantName,
+            property: rfp.property,
+            status: rfp.status,
+            receivedOn: rfp.receivedOn,
+            grandTotal,
+            itemAmounts,
+          };
+        })
+      );
+
+      const columns = selectedItems.map((item) => ({
+        key: `${item.type === "category" ? "c" : "s"}_${item.id}`,
+        label: item.label,
+        type: item.type,
+      }));
+
+      return res.json({ projects, columns });
+    } catch (error) {
+      console.error("Error generating category cost breakdown:", error);
+      res.status(500).json({ message: "Failed to generate category cost breakdown report" });
     }
   });
 

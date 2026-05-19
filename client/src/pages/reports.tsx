@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Download, FileText, Calendar, TrendingUp, Clock, CheckCircle, AlertTriangle, BarChart3, ChevronDown, Users } from "lucide-react";
+import { Download, FileText, Calendar, TrendingUp, Clock, CheckCircle, AlertTriangle, BarChart3, ChevronDown, Users, TableIcon } from "lucide-react";
+import { Link } from "wouter";
 import Navigation from "@/components/navigation";
 import { CustomReportModal } from "@/components/custom-report-modal";
 import { format, parseISO, isAfter, isBefore, addDays } from "date-fns";
@@ -240,7 +241,7 @@ export default function Reports() {
         </Card>
 
         {/* Report Generation Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center space-x-2 text-base">
@@ -413,6 +414,48 @@ export default function Reports() {
                 <Download className="h-3 w-3 mr-1" />
                 Build Custom Report
               </Button>
+            </CardContent>
+          </Card>
+
+          {/* Category Cost Breakdown — interactive table report */}
+          <Card className="border-blue-200 bg-blue-50/30">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center space-x-2 text-base text-blue-800">
+                <TableIcon className="h-4 w-4 text-blue-600" />
+                <span>Category Cost Breakdown</span>
+              </CardTitle>
+              <p className="text-xs text-gray-600">
+                Project cost data sliced by category or scope item
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <div className="grid grid-cols-2 gap-1">
+                <div className="bg-white p-1.5 rounded text-center border border-blue-100">
+                  <p className="text-lg font-bold text-blue-700">Live</p>
+                  <p className="text-xs text-blue-600 uppercase font-medium">Interactive</p>
+                </div>
+                <div className="bg-white p-1.5 rounded text-center border border-blue-100">
+                  <p className="text-lg font-bold text-green-700">XLSX</p>
+                  <p className="text-xs text-green-600 uppercase font-medium">Export</p>
+                </div>
+              </div>
+
+              <div className="bg-white p-2 rounded border border-blue-100">
+                <h4 className="font-medium text-gray-900 mb-1 text-xs">Features</h4>
+                <ul className="space-y-0 text-xs text-gray-600">
+                  <li>• Pick any master categories or scope items</li>
+                  <li>• Per-project $ amount and % of total</li>
+                  <li>• Filter by status, property, date range</li>
+                  <li>• Footer totals + weighted averages</li>
+                </ul>
+              </div>
+
+              <Link href="/reports/category-cost-breakdown">
+                <Button className="w-full h-8 text-xs bg-blue-600 hover:bg-blue-700">
+                  <TableIcon className="h-3 w-3 mr-1" />
+                  Open Report
+                </Button>
+              </Link>
             </CardContent>
           </Card>
         </div>

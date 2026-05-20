@@ -1387,3 +1387,97 @@ id (uuid PK), projectId (int FK → rfp_requests CASCADE), description (text NOT
 ### Next: Prompt 3 — PDF templates
 
 Generate the actual Enhanced PDF documents for recipientType values `'contractor-enhanced'` and `'architect-enhanced'`. The invitation modal already queues these document types when the Enhanced checkboxes are checked; the PDF generation endpoint just needs new template branches.
+
+---
+
+## Session: May 20, 2026 — Category Cost Breakdown Report: Two Bug Fixes + propertyId Backfill
+
+### Bug 1 — Property filter returned 0 rows (FIXED)
+
+**Root cause**: `rfp_requests.property` (legacy text column) stores the property ID as a numeric string (`"1"`, `"11"`, `"3"`, etc.), not the property name. The backend filter was resolving selected property IDs → property names, then comparing those names against `r.property`. Because `"Bridge Point Doral" !== "11"`, any active property filter returned 0 RFPs.
+
+**Backfill run (2026-05-20)**:
+All 50 rows where `property_id IS NULL` had a clean numeric `property` text value pointing to a valid `properties.id`. Pre-flight checks confirmed: (a) 50 clean-numeric rows, (b) 0 non-numeric rows, (c) 9 distinct cast values, (d) all 9 exist in the properties table — no orphans.
+
+```sql
+UPDATE rfp_requests
+SET property_id = property::integer
+WHERE property_id IS NULL AND property ~ '^\d+$';
+-- Updated 50 rows. Remaining NULLs after: 0.
+```
+
+**Fix applied** (`server/routes.ts` lines ~6595–6600):
+```ts
+// Before (broken — name comparison against numeric string):
+const propNames = new Set(props.map((p) => p.propertyName));
+allRfps = allRfps.filter((r) => propNames.has(r.property));
+
+// After (correct — integer FK comparison):
+const propIdSet = new Set(propertyIdList);
+allRfps = allRfps.filter((r) => r.propertyId != null && propIdSet.has(r.propertyId));
+```
+
+Rows with a null `propertyId` are excluded when a filter is active — safe degradation, not a crash. The guard is permanent even though the backfill brought NULLs to zero.
+
+**Future cleanup**: The legacy `rfp_requests.property` (text) column is now fully redundant with `rfp_requests.property_id` (integer FK). Once every code path that reads `r.property` (the text field) has been migrated to `r.propertyId`, the text column can be dropped.
+
+---
+
+### Bug 2 — Scope item columns always showed "—" even when item was in budget (INTERIM FIX)
+
+**Root cause**: The backend searched for `li.masterItemId` inside evaluation budget JSON line items. `masterItemId` has **never** been written to budget line items — confirmed:
+```sql
+SELECT COUNT(*) FROM evaluation_budgets
+WHERE tenant_improvements::text  ILIKE '%masterItemId%'
+   OR design_soft_costs::text    ILIKE '%masterItemId%'
+   OR existing_improvements::text ILIKE '%masterItemId%'
+-- → 0
+```
+Every scope item column always returned null/dash regardless of what was in the budget.
+
+**Interim fix applied** (`server/routes.ts` ~line 6644):
+Scope item matching now uses `li.romSnapshot.label` — normalized (trimmed, lowercased, full equality, no loose contains-match):
+```ts
+const normalizedLabel = si.label.trim().toLowerCase();
+const matches = allLineItems.filter(
+  (li: any) =>
+    typeof li.romSnapshot?.label === "string" &&
+    li.romSnapshot.label.trim().toLowerCase() === normalizedLabel
+);
+```
+
+**Limitations of this interim approach**:
+- Line items added manually (no `romSnapshot`) will never match any scope item filter.
+- If a scope item is renamed in the library, existing budgets won't update — match silently breaks for old data.
+- Two scope items with the same label (different IDs) cannot be distinguished.
+
+**Future task (permanent fix)**: Stamp `masterItemId` onto budget line items at creation time. When a line item is imported from a ROM scope item, write the `rom_scope_items.id` into a `masterItemId` field in the JSON blob. The report can then join on a stable integer and retire the string match entirely.
+
+---
+
+### Verification evidence
+
+**Bug 1 — Row counts per building** (status: in-progress + completed, post-backfill):
+
+| property_id | Property | Bldg | RFP count |
+|-------------|----------|------|-----------|
+| 11 | Bridge Point Doral | 1 | 7 |
+| 12 | Bridge Point Doral | 2 | 6 |
+| 13 | Bridge Point Doral | 3 | 2 ← spot-check |
+| 15 | Bridge Point Doral | 5 | 5 |
+| 17 | Bridge Point Miami Station | 1 | 5 |
+| 21 | Bridge Point 826 | 1 | 2 |
+
+Bldg 3 (propertyId=13): RFP-2026-006 (completed), RFP-2026-015 (in-progress) — matches diagnostic count of 2. ✓
+
+**Bug 2 — CM Fee dollar spot-check** (scope item: "Construction Management (2.75%)", id=29):
+
+| RFP | romSnapshot.label | totalPrice | Report shows |
+|-----|-------------------|------------|--------------|
+| RFP-2026-006 (Bldg 3) | "Construction Management (2.75%)" | $49,140.08 | $49,140 ✓ |
+| RFP-2026-005 (Bldg 1) | "Construction Management (2.75%)" | $25,678.55 | $25,679 ✓ |
+| RFP-2026-007 (Bldg 2) | "Construction Management (2.75%)" | $23,559.45 | $23,559 ✓ |
+
+Note: RFP-2026-001 and RFP-2026-002 have description text "Construction Management (2.75%)" but `romSnapshot.label = "Construction Management (3.5%)"` — they correctly match the 3.5% scope item, not 2.75%.
+
+**No-CM projects → "—"**: `fmtDollar(null)` returns `"—"` (frontend line 48). Projects with no matching `romSnapshot` line (e.g. RFP-2025-009, RFP-2025-017, RFP-2025-028, RFP-2026-004, RFP-2026-011) correctly show dash, not $0. ✓

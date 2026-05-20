@@ -6589,14 +6589,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         allRfps = allRfps.filter((r) => statusList.includes(r.status));
       }
 
-      // Property filter (IDs → names)
+      // Property filter — integer FK comparison (r.propertyId vs selected IDs)
+      // Rows with null propertyId are excluded when a filter is active (safe degradation, not a crash)
       if (propertyIdList.length > 0) {
-        const props = await db
-          .select({ id: properties.id, propertyName: properties.propertyName })
-          .from(properties)
-          .where(inArray(properties.id, propertyIdList));
-        const propNames = new Set(props.map((p) => p.propertyName));
-        allRfps = allRfps.filter((r) => propNames.has(r.property));
+        const propIdSet = new Set(propertyIdList);
+        allRfps = allRfps.filter((r) => r.propertyId != null && propIdSet.has(r.propertyId));
       }
 
       // Date filter (applied to receivedOn)
@@ -6631,7 +6628,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             if (parsed > 0) grandTotal = parsed;
           }
 
-          // Scope item amounts: match on masterItemId inside budget JSON line items
+          // Scope item amounts: match on romSnapshot.label (interim — budget line items do not
+          // carry masterItemId; a future task should stamp that at creation time so this
+          // string match can be retired in favour of a stable integer join)
           if (scopeItemsSelected.length > 0) {
             const allLineItems = [
               ...((budget?.tenantImprovements as any[]) || []),
@@ -6640,15 +6639,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ];
             for (const si of scopeItemsSelected) {
               const key = `s_${si.id}`;
+              const normalizedLabel = si.label.trim().toLowerCase();
               const matches = allLineItems.filter(
-                (li: any) => li.masterItemId != null && Number(li.masterItemId) === si.id
+                (li: any) =>
+                  typeof li.romSnapshot?.label === "string" &&
+                  li.romSnapshot.label.trim().toLowerCase() === normalizedLabel
               );
               if (matches.length > 0) {
                 const total = matches.reduce(
                   (sum: number, li: any) => sum + parsePrice(li.totalPrice),
                   0
                 );
-                itemAmounts[key] = total; // $0 = present but zero, null = not present
+                itemAmounts[key] = total;
               } else {
                 itemAmounts[key] = null;
               }

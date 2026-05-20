@@ -230,33 +230,99 @@ Content: rounded-md border bg-white shadow-md
 Item: py-1.5 pl-8 pr-2 text-sm focus:bg-blue-50 hover:bg-blue-50
 ```
 
-### 4.3 Multi-Select
+### 4.3 Multi-Select ⭐ CANONICAL STANDARD
 
-**Canonical pattern:** `client/src/components/ui/checkbox.tsx` + plain `<label>`.
+**This is THE standard pattern for choosing one or more items from a list anywhere in the app.** Do not use toggle-pill buttons, custom dropdown multi-selects, or any other mechanism for this purpose.
+
+**Component:** shadcn `Checkbox` (`client/src/components/ui/checkbox.tsx`) paired with a plain `<label htmlFor>` in a `flex items-center space-x-2` row.
 
 ```tsx
 <div className="flex items-center space-x-2">
   <Checkbox
-    id="item-id"
+    id="item-{item.id}"
     checked={selectedIds.includes(item.id)}
     onCheckedChange={() => toggleItem(item.id)}
   />
   <label
-    htmlFor="item-id"
-    className="text-xs font-medium leading-none cursor-pointer text-gray-700"
+    htmlFor="item-{item.id}"
+    className="text-xs font-medium leading-none cursor-pointer text-gray-700
+               peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
   >
     {item.label}
   </label>
 </div>
 ```
 
-Used in: `create-rfp-modal.tsx` (Request Types), `invitation-to-bid-modal.tsx` (RFP type selection), `category-cost-breakdown-report.tsx` (Property filter).
+When the list is long (more than ~6 items), wrap the rows in a scrollable container:
 
-**Select All / Clear** action links (when accompanying a multi-select list):
 ```tsx
-<button className="text-xs text-blue-600 hover:text-blue-800">Select All</button>
-<span className="text-gray-300">|</span>
-<button className="text-xs text-blue-600 hover:text-blue-800">Clear</button>
+<div className="max-h-[120px] overflow-y-auto space-y-1.5 pr-1">
+  {items.map(item => (
+    <div key={item.id} className="flex items-center space-x-2">
+      {/* Checkbox + label as above */}
+    </div>
+  ))}
+</div>
+```
+
+**Confirmed in the codebase:**
+
+| File | Location |
+|---|---|
+| `client/src/components/create-rfp-modal.tsx` | Request Types section (Pricing / Schedule / Space Plan) — the original reference implementation |
+| `client/src/components/invitation-to-bid-modal.tsx` | RFP type selection (GC RFP / Architect RFP / Enhanced variants) |
+| `client/src/pages/category-cost-breakdown-report.tsx` | Property filter |
+
+---
+
+### 4.3a Select All / Clear ⭐ CANONICAL STANDARD
+
+**This is THE standard style for Select All and Clear/Deselect All controls accompanying any multi-select list.**
+
+```tsx
+<div className="flex items-center gap-2">
+  <button
+    type="button"
+    className="text-xs text-blue-600 hover:text-blue-800"
+    onClick={selectAll}
+  >
+    Select All
+  </button>
+  {selectedCount > 0 && (
+    <>
+      <span className="text-gray-300">|</span>
+      <button
+        type="button"
+        className="text-xs text-blue-600 hover:text-blue-800"
+        onClick={clearAll}
+      >
+        Clear
+      </button>
+    </>
+  )}
+</div>
+```
+
+The pipe separator (`<span className="text-gray-300">|</span>`) separates the two actions. The Clear / Deselect All button is only rendered when at least one item is selected. Both label variants ("Clear" and "Deselect All") exist in the codebase — "Clear" is preferred for brevity.
+
+**Confirmed in the codebase:**
+
+| File | Location | Label used |
+|---|---|---|
+| `client/src/components/rom-scope-items-modal.tsx` | CSI Divisions filter (lines 2813–2839) — the original reference implementation | "Select All" / "Deselect All" |
+| `client/src/pages/category-cost-breakdown-report.tsx` | Property filter header | "Select All" / "Clear" |
+
+**Placement:** Select All / Clear links live in the section header row, right-aligned opposite the section label — not inline with the checkbox rows.
+
+```tsx
+<div className="flex items-center justify-between mb-2">
+  <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+    {sectionLabel}
+  </label>
+  <div className="flex items-center gap-2">
+    {/* Select All | Clear */}
+  </div>
+</div>
 ```
 
 ### 4.4 Tables

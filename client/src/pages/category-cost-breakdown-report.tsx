@@ -10,7 +10,7 @@ import { apiRequest } from "@/lib/queryClient";
 import * as XLSX from "xlsx";
 import {
   ArrowLeft, Download, Search, ChevronUp, ChevronDown,
-  ChevronsUpDown, X, Check, TableIcon, Filter
+  ChevronsUpDown, X, Check, TableIcon, Filter, Printer
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -89,18 +89,24 @@ function statusLabel(s: string) {
 // ─── Sortable column header ───────────────────────────────────────────────────
 
 function SortHeader({
-  col, label, sortCol, sortDir, onSort
-}: { col: string; label: string; sortCol: string; sortDir: "asc"|"desc"; onSort: (c: string) => void }) {
+  col, label, sortCol, sortDir, onSort, align = "left"
+}: {
+  col: string; label: string; sortCol: string; sortDir: "asc"|"desc";
+  onSort: (c: string) => void; align?: "left" | "right"
+}) {
   const active = sortCol === col;
+  const icon = active
+    ? sortDir === "asc" ? <ChevronUp className="h-3 w-3 shrink-0" /> : <ChevronDown className="h-3 w-3 shrink-0" />
+    : <ChevronsUpDown className="h-3 w-3 shrink-0 opacity-30" />;
   return (
     <button
       onClick={() => onSort(col)}
-      className="flex items-center gap-1 text-left w-full hover:text-gray-900 font-medium whitespace-nowrap"
+      className={`flex items-center gap-1 w-full hover:text-gray-900 font-medium whitespace-nowrap ${
+        align === "right" ? "flex-row-reverse justify-start" : "text-left"
+      }`}
     >
+      {icon}
       {label}
-      {active
-        ? sortDir === "asc" ? <ChevronUp className="h-3 w-3 shrink-0" /> : <ChevronDown className="h-3 w-3 shrink-0" />
-        : <ChevronsUpDown className="h-3 w-3 shrink-0 opacity-30" />}
     </button>
   );
 }
@@ -359,13 +365,56 @@ export default function CategoryCostBreakdownReport() {
 
   const canRun = selectedItems.length > 0 && !loading;
 
+  // Build a human-readable filter summary for print headers
+  const printFilterSummary = useMemo(() => {
+    const parts: string[] = [];
+    if (selectedStatuses.length > 0) {
+      parts.push(`Status: ${selectedStatuses.map(s => statusLabel(s)).join(", ")}`);
+    }
+    if (selectedPropertyIds.length > 0) {
+      const names = selectedPropertyIds.map(id => {
+        const p = sortedProperties.find((pr: Property) => pr.id === id);
+        return p ? `${p.propertyName} Bldg. ${p.building}` : String(id);
+      });
+      parts.push(`Properties: ${names.join(", ")}`);
+    } else {
+      parts.push("Properties: All");
+    }
+    if (dateFrom || dateTo) {
+      parts.push(`Received: ${dateFrom || "—"} to ${dateTo || "—"}`);
+    }
+    if (selectedItems.length > 0) {
+      parts.push(`Columns: ${selectedItems.map(i => i.label).join(", ")}`);
+    }
+    return parts.join(" · ");
+  }, [selectedStatuses, selectedPropertyIds, sortedProperties, dateFrom, dateTo, selectedItems]);
+
+  function handlePrint() {
+    window.print();
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
+      <style>{`
+        @media print {
+          @page { size: landscape; margin: 0.5in; }
+          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          .print\\:hidden { display: none !important; }
+          .print\\:block { display: block !important; }
+        }
+      `}</style>
       <Navigation />
+
+      {/* Print-only header — hidden on screen, visible when printing */}
+      <div className="hidden print:block px-6 pt-4 pb-2 border-b border-gray-300">
+        <div className="text-lg font-bold text-gray-900">Category Cost Breakdown Report</div>
+        <div className="text-xs text-gray-600 mt-0.5">{printFilterSummary}</div>
+        <div className="text-xs text-gray-400 mt-0.5">Generated {format(new Date(), "MMMM d, yyyy")}</div>
+      </div>
 
       <div className="max-w-screen-2xl mx-auto px-6 py-5 space-y-5">
         {/* Header */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 print:hidden">
           <Link href="/reports">
             <button className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition-colors">
               <ArrowLeft className="h-4 w-4" />
@@ -378,14 +427,14 @@ export default function CategoryCostBreakdownReport() {
               <TableIcon className="h-5 w-5 text-blue-600" />
               Category Cost Breakdown
             </h1>
-            <p className="text-xs text-gray-500 mt-0.5">
+            <p className="text-xs text-gray-500 mt-0.5 ml-7">
               Project-level cost data sliced by master category or specific scope item
             </p>
           </div>
         </div>
 
         {/* Filter bar */}
-        <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-4">
+        <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-4 print:hidden">
           <div className="flex items-center gap-2">
             <Filter className="h-4 w-4 text-gray-400" />
             <span className="text-sm font-medium text-gray-700">Filters</span>
@@ -634,7 +683,7 @@ export default function CategoryCostBreakdownReport() {
 
         {/* Loading state */}
         {loading && (
-          <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-3">
+          <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-3 print:hidden">
             <Skeleton className="h-4 w-48" />
             <Skeleton className="h-48 w-full" />
           </div>
@@ -656,7 +705,7 @@ export default function CategoryCostBreakdownReport() {
         {!loading && reportData && (
           <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
             {/* Table toolbar */}
-            <div className="px-4 py-3 border-b border-gray-100 flex flex-wrap items-center gap-3">
+            <div className="px-4 py-3 border-b border-gray-100 flex flex-wrap items-center gap-3 print:hidden">
               <span className="text-sm font-medium text-gray-700">
                 {displayRows.length} project{displayRows.length !== 1 ? "s" : ""}
                 {tableSearch && ` matching "${tableSearch}"`}
@@ -677,16 +726,28 @@ export default function CategoryCostBreakdownReport() {
                   </button>
                 )}
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="ml-auto h-7 text-xs gap-1"
-                onClick={exportToExcel}
-                disabled={displayRows.length === 0}
-              >
-                <Download className="h-3 w-3" />
-                Export Excel
-              </Button>
+              <div className="ml-auto flex items-center gap-2 print:hidden">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs gap-1"
+                  onClick={handlePrint}
+                  disabled={displayRows.length === 0}
+                >
+                  <Printer className="h-3 w-3" />
+                  Print / PDF
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs gap-1"
+                  onClick={exportToExcel}
+                  disabled={displayRows.length === 0}
+                >
+                  <Download className="h-3 w-3" />
+                  Export Excel
+                </Button>
+              </div>
             </div>
 
             {/* No results after filtering */}
@@ -700,22 +761,22 @@ export default function CategoryCostBreakdownReport() {
                   <thead>
                     <tr className="bg-gray-50 border-b border-gray-200">
                       <th className="px-3 py-2.5 text-left text-gray-500 font-medium min-w-[100px]">
-                        <SortHeader col="rfpNumber" label="Project ID" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
+                        <SortHeader col="rfpNumber" label="Project ID" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} align="left" />
                       </th>
                       <th className="px-3 py-2.5 text-left text-gray-500 font-medium min-w-[120px]">
-                        <SortHeader col="tenant" label="Tenant" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
+                        <SortHeader col="tenant" label="Tenant" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} align="left" />
                       </th>
                       <th className="px-3 py-2.5 text-left text-gray-500 font-medium min-w-[120px]">
-                        <SortHeader col="property" label="Property" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
+                        <SortHeader col="property" label="Property" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} align="left" />
                       </th>
                       <th className="px-3 py-2.5 text-left text-gray-500 font-medium">
-                        <SortHeader col="status" label="Status" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
+                        <SortHeader col="status" label="Status" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} align="left" />
                       </th>
                       <th className="px-3 py-2.5 text-left text-gray-500 font-medium min-w-[90px]">
-                        <SortHeader col="receivedOn" label="Received" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
+                        <SortHeader col="receivedOn" label="Received" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} align="left" />
                       </th>
-                      <th className="px-3 py-2.5 text-right text-gray-500 font-medium min-w-[110px]">
-                        <SortHeader col="grandTotal" label="Total Cost" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
+                      <th className="px-3 py-2.5 text-right text-gray-500 font-medium min-w-[110px] border-r border-gray-200">
+                        <SortHeader col="grandTotal" label="Total Cost" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} align="right" />
                       </th>
                       {reportData.columns.map(col => (
                         <Fragment key={col.key}>
@@ -726,10 +787,11 @@ export default function CategoryCostBreakdownReport() {
                               sortCol={sortCol}
                               sortDir={sortDir}
                               onSort={handleSort}
+                              align="right"
                             />
                           </th>
-                          <th className="px-3 py-2.5 text-right text-gray-500 font-medium min-w-[70px]">
-                            <span className="text-gray-400 text-[10px]">{col.label} %</span>
+                          <th className="px-3 py-2.5 text-right text-gray-500 font-medium min-w-[70px] border-r border-gray-100">
+                            <span className="text-gray-400 text-[10px] block text-right">{col.label} %</span>
                           </th>
                         </Fragment>
                       ))}
@@ -753,7 +815,7 @@ export default function CategoryCostBreakdownReport() {
                         <td className="px-3 py-2 text-gray-500 whitespace-nowrap">
                           {row.receivedOn ? format(new Date(row.receivedOn), "MM/dd/yy") : "—"}
                         </td>
-                        <td className="px-3 py-2 text-right font-medium text-gray-800 tabular-nums">
+                        <td className="px-3 py-2 text-right font-medium text-gray-800 tabular-nums border-r border-gray-200">
                           {fmtDollar(row.grandTotal)}
                         </td>
                         {reportData.columns.map(col => {
@@ -766,7 +828,7 @@ export default function CategoryCostBreakdownReport() {
                               <td className="px-3 py-2 text-right tabular-nums text-gray-700">
                                 {fmtDollar(amt)}
                               </td>
-                              <td className="px-3 py-2 text-right tabular-nums text-gray-500">
+                              <td className="px-3 py-2 text-right tabular-nums text-gray-500 border-r border-gray-100">
                                 {fmtPct(p)}
                               </td>
                             </Fragment>
@@ -779,7 +841,7 @@ export default function CategoryCostBreakdownReport() {
                   <tfoot>
                     <tr className="bg-gray-50 border-t-2 border-gray-300 font-semibold">
                       <td className="px-3 py-2 text-gray-700" colSpan={5}>Totals / Weighted Avg</td>
-                      <td className="px-3 py-2 text-right tabular-nums text-gray-900">
+                      <td className="px-3 py-2 text-right tabular-nums text-gray-900 border-r border-gray-200">
                         {fmtDollar(footerTotals["grandTotal"] ?? null)}
                       </td>
                       {reportData.columns.map(col => (
@@ -787,7 +849,7 @@ export default function CategoryCostBreakdownReport() {
                           <td className="px-3 py-2 text-right tabular-nums text-gray-800">
                             {fmtDollar(footerTotals[col.key] ?? null)}
                           </td>
-                          <td className="px-3 py-2 text-right tabular-nums text-gray-600">
+                          <td className="px-3 py-2 text-right tabular-nums text-gray-600 border-r border-gray-100">
                             {fmtPct(footerPct(col.key))}
                           </td>
                         </Fragment>

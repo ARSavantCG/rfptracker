@@ -474,6 +474,8 @@ export default function CategoryCostBreakdownReport() {
             cursor: default !important;
             font-weight: 600 !important;
             color: #6b7280 !important;
+            white-space: normal !important;
+            word-break: break-word !important;
           }
 
           /* Status badge: keep readable at smaller size */
@@ -489,12 +491,7 @@ export default function CategoryCostBreakdownReport() {
       <div className="hidden print:block px-0 pt-3 pb-3" style={{ borderBottom: "2.5px solid #1F4E79" }}>
         <div className="flex items-start justify-between">
           <div>
-            <div className="font-bold tracking-tight leading-none" style={{ color: "#1F4E79", fontSize: "20pt" }}>
-              Kurv
-            </div>
-            <div className="text-gray-500 tracking-widest uppercase mt-0.5" style={{ fontSize: "7pt", letterSpacing: "0.12em" }}>
-              Commercial Real Estate
-            </div>
+            <img src="/api/bridge-logo" alt="Kurv Industrial" style={{ height: "30px", maxWidth: "200px" }} />
           </div>
           <div className="text-right">
             <div className="font-semibold text-gray-900" style={{ fontSize: "13pt" }}>

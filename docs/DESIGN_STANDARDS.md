@@ -498,6 +498,72 @@ The current, correct implementation of each concern. When in doubt, read the fil
 
 -----
 
+## 10. Brand / Logo Usage ⭐ CANONICAL STANDARD
+
+### 10.1 The canonical Kurv logo
+
+**Asset:** served from the `/api/bridge-logo` endpoint (reads `bridge_logo_new_base64.txt`
+from the project root as a base64-encoded PNG). This is the soundwave/bar mark + "KURV"
+wordmark in navy, identical to the broker RFP documents.
+
+**Rule:** Kurv branding is ALWAYS this logo asset. Never use a plain text wordmark, never
+invent a tagline or descriptor ("Commercial Real Estate", "Construction Cost Management",
+etc.). Do not generate brand copy.
+
+### 10.2 Canonical rendering (React component)
+
+```tsx
+<img
+  src="/api/bridge-logo"
+  alt="Kurv Industrial"
+  style={{ height: "30px", maxWidth: "200px" }}
+/>
+```
+
+Reference implementation: `client/src/components/evaluation-budget.tsx` (line ~3437) —
+the Evaluation Budget Report print header.
+
+### 10.3 Standard placement in report / document headers
+
+Print headers use a two-column layout: logo left, document title + metadata right.
+
+```tsx
+<div style={{ borderBottom: "2.5px solid #1F4E79" }} className="flex items-start justify-between pb-3">
+  <div>
+    <img src="/api/bridge-logo" alt="Kurv Industrial" style={{ height: "30px", maxWidth: "200px" }} />
+  </div>
+  <div className="text-right">
+    <div style={{ fontSize: "13pt" }} className="font-semibold text-gray-900">
+      {reportTitle}
+    </div>
+    <div style={{ fontSize: "8pt" }} className="text-gray-500 mt-1">{filterSummary}</div>
+    <div style={{ fontSize: "7.5pt" }} className="text-gray-400 mt-0.5">{generatedDate}</div>
+  </div>
+</div>
+```
+
+The `#1F4E79` navy border rule separates the header from the report body.
+
+**Logo height standards:**
+- React print headers: `height: 30px` (Category Cost Breakdown, any new reports)
+- HTML/PDF templates (Puppeteer-rendered): `height: 25px–28px` (see `pdf-generator.ts`)
+- In-app page headers: `height: 32px` (`h-8`) with `bg-white rounded px-2 py-1` background
+
+### 10.4 Brand audit — codebase status (May 2026)
+
+| File | Location | Status |
+|---|---|---|
+| `client/src/components/evaluation-budget.tsx` | Print header HTML template | ✅ Uses logo |
+| `client/src/pages/category-cost-breakdown-report.tsx` | React print header | ✅ Uses logo (fixed May 2026) |
+| `client/src/pages/property-data-audit.tsx` | In-app page header | ✅ Uses logo |
+| `client/src/components/rom-scope-items-modal.tsx` | PDF HTML template header | ✅ Uses logo (fixed May 2026) |
+| `server/pdf-generator.ts` | Puppeteer PDF headers | ✅ Uses `getBridgeLogo()` base64 |
+| `server/pdf-reports.ts` | Puppeteer PDF headers | ✅ Uses `getBridgeLogo()` base64 |
+| `client/src/pages/PropertySummaryReport.tsx` | UI bullet-point description | ℹ️ Text only — this is a UI description, not a logo render; acceptable |
+| `client/src/pages/admin.tsx` | UI bullet-point description | ℹ️ Text only — UI description; acceptable |
+
+-----
+
 *This document describes the RFP Tracker / Savant Portal front-end as of May 2026. It is
 prescriptive: where the codebase and this document disagree, the document is the target
 and the code is corrected. Update this file whenever a standard genuinely changes — and
@@ -508,3 +574,4 @@ when you do, note it in the changelog below.*
 |Date        |Change                                                             |
 |------------|-------------------------------------------------------------------|
 |May 2026    |Initial standards extracted from codebase; 8 inconsistencies ruled.|
+|May 2026    |Section 10 added: Brand/Logo Usage — canonical asset, rendering code, placement standards, and full brand audit.|

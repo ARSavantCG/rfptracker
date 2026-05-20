@@ -712,7 +712,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
       <body>
         <div class="header" style="${isContractorReport ? 'margin-bottom: 10px; padding-bottom: 10px;' : ''}">
           <div class="document-title">${isContractorReport ? 'CONTRACTOR PRICING SHEET' : 'ROM PILOT SCOPE ITEMS LIBRARY'}</div>
-          <div class="project-title">Kurv Industrial - Construction Cost Management</div>
+          <div style="margin-bottom: 6px;"><img src="/api/bridge-logo" alt="Kurv Industrial" style="height: 22px; width: auto;" /></div>
           <div class="project-title">Generated on ${currentDate}</div>
         </div>
         

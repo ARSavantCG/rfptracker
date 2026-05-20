@@ -31,6 +31,7 @@ interface ProjectRow {
   receivedOn: string;
   grandTotal: number | null;
   itemAmounts: Record<string, number | null>;
+  contingencyAmount: number | null;
 }
 interface ColDef { key: string; label: string; type: "category" | "scopeItem" }
 interface ReportData { projects: ProjectRow[]; columns: ColDef[] }
@@ -55,6 +56,22 @@ function fmtPct(n: number | null): string {
 function pct(amount: number | null, total: number | null): number | null {
   if (amount === null || total === null || total === 0) return null;
   return (amount / total) * 100;
+}
+// CM fee % uses base-backout: CM / (Total − CM − Contingency)
+// because CM is a markup ON the base, not a direct cost.
+// ROM build order: Base → CM (2.75% of Base) → Contingency (5% of Base+CM) → Total
+function pctCMBase(
+  cmAmt: number | null,
+  grandTotal: number | null,
+  contingencyAmt: number | null
+): number | null {
+  if (cmAmt === null || grandTotal === null) return null;
+  const base = grandTotal - cmAmt - (contingencyAmt ?? 0);
+  if (base <= 0) return null;
+  return (cmAmt / base) * 100;
+}
+function isCmColumn(label: string): boolean {
+  return label.toLowerCase().includes("construction management");
 }
 function statusColor(s: string) {
   switch (s) {
@@ -259,12 +276,26 @@ export default function CategoryCostBreakdownReport() {
         return v != null ? s + v : s;
       }, 0);
       totals[col.key] = sum;
+      // For CM columns also compute sum of bases for a correct weighted-average %
+      if (isCmColumn(col.label)) {
+        const baseSum = displayRows.reduce((s, r) => {
+          const cmAmt = r.itemAmounts[col.key];
+          if (cmAmt === null || r.grandTotal === null) return s;
+          const base = r.grandTotal - cmAmt - (r.contingencyAmount ?? 0);
+          return base > 0 ? s + base : s;
+        }, 0);
+        totals[`${col.key}_base`] = baseSum > 0 ? baseSum : null;
+      }
     });
     return totals;
   }, [reportData, displayRows]);
 
   // Weighted average pct for footer
   function footerPct(colKey: string): number | null {
+    const col = reportData?.columns.find(c => c.key === colKey);
+    if (col && isCmColumn(col.label)) {
+      return pct(footerTotals[colKey] ?? null, footerTotals[`${colKey}_base`] ?? null);
+    }
     const colAmt = footerTotals[colKey];
     const colGrand = footerTotals["grandTotal"];
     return pct(colAmt ?? null, colGrand ?? null);
@@ -401,8 +432,16 @@ export default function CategoryCostBreakdownReport() {
                     {p.propertyName} - Bldg. {p.building}
                   </button>
                 ))}
+                {sortedProperties.length > 0 && (
+                  <button
+                    onClick={() => setSelectedPropertyIds(sortedProperties.map(p => p.id))}
+                    className="text-xs text-gray-400 hover:text-gray-600 px-1 shrink-0"
+                  >
+                    Select All
+                  </button>
+                )}
                 {selectedPropertyIds.length > 0 && (
-                  <button onClick={() => setSelectedPropertyIds([])} className="text-xs text-gray-400 hover:text-gray-600 px-1">
+                  <button onClick={() => setSelectedPropertyIds([])} className="text-xs text-gray-400 hover:text-gray-600 px-1 shrink-0">
                     Clear
                   </button>
                 )}
@@ -519,8 +558,13 @@ export default function CategoryCostBreakdownReport() {
                       </div>
                     )}
 
-                    {/* Scope Items sections grouped by category */}
-                    {Object.entries(pickerGroups.byCat).sort(([a], [b]) => a.localeCompare(b)).map(([cat, items]) => (
+                    {/* Scope Items sections grouped by category — soft costs group always first */}
+                    {Object.entries(pickerGroups.byCat).sort(([a], [b]) => {
+                      const SOFT = "Design / Soft Costs / Other Fees";
+                      if (a === SOFT) return -1;
+                      if (b === SOFT) return 1;
+                      return a.localeCompare(b);
+                    }).map(([cat, items]) => (
                       <div key={cat}>
                         <div className="px-3 py-1.5 bg-gray-50 text-[10px] font-semibold text-gray-500 uppercase tracking-wide sticky top-0">
                           Scope: {cat}
@@ -714,7 +758,9 @@ export default function CategoryCostBreakdownReport() {
                         </td>
                         {reportData.columns.map(col => {
                           const amt = row.itemAmounts[col.key];
-                          const p = pct(amt, row.grandTotal);
+                          const p = isCmColumn(col.label)
+                            ? pctCMBase(amt, row.grandTotal, row.contingencyAmount)
+                            : pct(amt, row.grandTotal);
                           return (
                             <Fragment key={col.key}>
                               <td className="px-3 py-2 text-right tabular-nums text-gray-700">

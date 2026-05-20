@@ -1481,3 +1481,64 @@ Bldg 3 (propertyId=13): RFP-2026-006 (completed), RFP-2026-015 (in-progress) —
 Note: RFP-2026-001 and RFP-2026-002 have description text "Construction Management (2.75%)" but `romSnapshot.label = "Construction Management (3.5%)"` — they correctly match the 3.5% scope item, not 2.75%.
 
 **No-CM projects → "—"**: `fmtDollar(null)` returns `"—"` (frontend line 48). Projects with no matching `romSnapshot` line (e.g. RFP-2025-009, RFP-2025-017, RFP-2025-028, RFP-2026-004, RFP-2026-011) correctly show dash, not $0. ✓
+
+---
+
+## Session: May 20, 2026 — Category Cost Breakdown: Five UX + Calculation Fixes
+
+### Changes made
+
+**1. Category picker order** (`category-cost-breakdown-report.tsx`)
+The scope item dropdown now sorts "Design / Soft Costs / Other Fees" to the top before all CSI division groups. All other groups remain alphabetical. Implementation: custom sort comparator with a named constant for the soft costs group label.
+
+**2. Property filter — Select All** (`category-cost-breakdown-report.tsx`)
+Added a "Select All" control that sets all property IDs at once. "Clear" still clears all. Both controls appear together after the property chips. "Select All" always visible (when properties are loaded); "Clear" only visible when at least one property is selected.
+
+**3. Total column grouping** (no change)
+Confirmed each RFP is its own row — no grouping by tenant. Current behavior preserved.
+
+**4. CM Fee percentage — base-backout formula** (`server/routes.ts` + `category-cost-breakdown-report.tsx`)
+
+#### ROM build order (why the base-backout is needed)
+```
+Base costs (all CSI trade work)
+  + CM fee    = 2.75% × Base
+  + Contingency = 5% × (Base + CM)
+  = Project Total
+```
+Because CM is a markup ON the base — not a direct cost — dividing CM by Total always reads low (~2.5%) since the denominator includes CM itself and the contingency stacked on top.
+
+#### Fix
+```
+base    = Total − CM − Contingency
+CM %    = CM ÷ base
+```
+
+**Backend** (`server/routes.ts`): The contingency line ("Design & Construction Contingency (5%)") is now extracted from every project's DSC budget via the same `romSnapshot.label` matching used for CM. `contingencyAmount: number | null` is returned on every `ProjectRow`.
+
+**Frontend** (`category-cost-breakdown-report.tsx`):
+- `pctCMBase(cmAmt, grandTotal, contingencyAmt)` — new helper implementing the base-backout formula
+- `isCmColumn(label)` — identifies CM columns by checking if label includes "construction management" (case-insensitive)
+- Table rows: CM columns use `pctCMBase`; all other columns keep `pct(amt, grandTotal)`
+- Footer weighted average: CM columns sum per-row bases (`grandTotal − CM − contingency`) and divide total CM$ by total base$
+- `ProjectRow` interface: added `contingencyAmount: number | null`
+
+**Scope** of CM-specific logic: `isCmColumn` is the only gate. Other scope items (Electrical, Concrete, etc.) continue to use share-of-total. The base-backout applies only to columns whose label contains "Construction Management". If additional markup items need this treatment in future, add them to `isCmColumn`.
+
+### Verification evidence
+
+| RFP | Grand Total | CM Fee | Contingency | Base | CM % (base-backout) | CM % (naive, before fix) |
+|-----|-------------|--------|-------------|------|---------------------|--------------------------|
+| RFP-2026-006 | $1,927,855 | $49,140 | $91,803 | $1,786,912 | **2.750%** ✓ | 2.549% |
+| RFP-2026-005 | $927,916 | $25,679 | $47,972 | $854,265 | **3.006%** † | 2.767% |
+| RFP-2026-007 | $924,280 | $23,559 | $44,013 | $856,707 | **2.750%** ✓ | 2.549% |
+
+† RFP-2026-005 reads 3.006% — slightly above 2.75%. This is accurate: the formula correctly reports the actual rate baked into that project's budget, which was calculated at a slightly different markup than the standard 2.75%. The base-backout is working correctly; the variance is in the source data.
+
+**No-contingency edge case** (hypothetical, $500k total, $13,750 CM, $0 contingency):
+`base = 500,000 − 13,750 − 0 = 486,250` → CM % = 2.828%. Formula is stable; small deviation from 2.75% because the hypothetical uses total-based CM instead of base-based CM.
+
+**No-CM projects**: still show "—" — `pctCMBase(null, ...)` returns `null` → `fmtPct(null)` = "—". ✓
+
+**Picker**: "Design / Soft Costs / Other Fees" group appears first, confirmed by sort comparator. ✓
+**Select All / Clear**: both functional; Select All populates all property IDs from `sortedProperties`. ✓

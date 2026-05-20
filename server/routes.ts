@@ -6687,6 +6687,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           }
 
+          // Always extract contingency for base-backout percentage calculations
+          // (CM fee % is CM / base where base = Total − CM − Contingency)
+          const CONTINGENCY_LABEL = "design & construction contingency (5%)";
+          const dscItems = (budget?.designSoftCosts as any[]) || [];
+          const contingencyMatches = dscItems.filter(
+            (li: any) =>
+              typeof li.romSnapshot?.label === "string" &&
+              li.romSnapshot.label.trim().toLowerCase() === CONTINGENCY_LABEL
+          );
+          const contingencyAmount: number | null =
+            contingencyMatches.length > 0
+              ? contingencyMatches.reduce(
+                  (sum: number, li: any) => sum + parsePrice(li.totalPrice),
+                  0
+                )
+              : null;
+
           return {
             rfpId: rfp.id,
             rfpNumber: rfp.rfpNumber,
@@ -6696,6 +6713,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             receivedOn: rfp.receivedOn,
             grandTotal,
             itemAmounts,
+            contingencyAmount,
           };
         })
       );

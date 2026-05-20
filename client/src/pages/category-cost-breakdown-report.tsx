@@ -369,18 +369,33 @@ export default function CategoryCostBreakdownReport() {
   // Build a human-readable filter summary for print headers
   const printFilterSummary = useMemo(() => {
     const parts: string[] = [];
-    if (selectedStatuses.length > 0) {
+
+    // Status — collapse to "All statuses" when all four are selected
+    const allStatusValues = STATUS_LIST.map(s => s.value);
+    if (selectedStatuses.length === 0) {
+      parts.push("Status: None selected");
+    } else if (selectedStatuses.length === allStatusValues.length) {
+      parts.push("Status: All statuses");
+    } else {
       parts.push(`Status: ${selectedStatuses.map(s => statusLabel(s)).join(", ")}`);
     }
-    if (selectedPropertyIds.length > 0) {
+
+    // Properties — collapse to "All properties (N)" when none or all are selected
+    const totalProps = sortedProperties.length;
+    if (selectedPropertyIds.length === 0 || selectedPropertyIds.length === totalProps) {
+      parts.push(`Properties: All (${totalProps})`);
+    } else {
       const names = selectedPropertyIds.map(id => {
         const p = sortedProperties.find((pr: Property) => pr.id === id);
         return p ? `${p.propertyName} Bldg. ${p.building}` : String(id);
       });
-      parts.push(`Properties: ${names.join(", ")}`);
-    } else {
-      parts.push("Properties: All");
+      if (names.length > 4) {
+        parts.push(`Properties: ${names.slice(0, 3).join(", ")} +${names.length - 3} more`);
+      } else {
+        parts.push(`Properties: ${names.join(", ")}`);
+      }
     }
+
     if (dateFrom || dateTo) {
       parts.push(`Received: ${dateFrom || "—"} to ${dateTo || "—"}`);
     }
@@ -390,6 +405,24 @@ export default function CategoryCostBreakdownReport() {
     return parts.join(" · ");
   }, [selectedStatuses, selectedPropertyIds, sortedProperties, dateFrom, dateTo, selectedItems]);
 
+  // Human-readable sort caption for print footer
+  const sortCaption = useMemo(() => {
+    const staticLabels: Record<string, string> = {
+      rfpNumber: "Project ID",
+      tenant: "Tenant",
+      property: "Property",
+      status: "Status",
+      receivedOn: "Received Date",
+      grandTotal: "Total Cost",
+    };
+    const dynLabels = reportData?.columns.reduce<Record<string, string>>(
+      (acc, col) => ({ ...acc, [col.key]: `${col.label} $` }),
+      {}
+    ) ?? {};
+    const label = staticLabels[sortCol] ?? dynLabels[sortCol] ?? sortCol;
+    return `Sorted by: ${label} (${sortDir === "asc" ? "ascending" : "descending"})`;
+  }, [sortCol, sortDir, reportData]);
+
   function handlePrint() {
     window.print();
   }
@@ -397,20 +430,84 @@ export default function CategoryCostBreakdownReport() {
   return (
     <div className="min-h-screen bg-gray-50">
       <style>{`
+        @page {
+          size: landscape;
+          margin: 0.4in 0.35in 0.55in;
+          @bottom-right {
+            content: "Page " counter(page) " of " counter(pages);
+            font-size: 7.5pt;
+            color: #9ca3af;
+            font-family: Inter, ui-sans-serif, sans-serif;
+          }
+        }
         @media print {
-          @page { size: landscape; margin: 0.5in; }
           body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           .print\\:hidden { display: none !important; }
           .print\\:block { display: block !important; }
+          nav { display: none !important; }
+
+          /* ── Table: scale down to fit landscape printable width ── */
+          .report-table {
+            font-size: 7.5pt !important;
+            width: 100% !important;
+            table-layout: auto !important;
+          }
+          .report-table th,
+          .report-table td {
+            padding: 3px 5px !important;
+            min-width: 0 !important;
+          }
+
+          /* Property cell: allow word-wrap so nothing truncates */
+          .report-table td.cell-property {
+            white-space: normal !important;
+            overflow: visible !important;
+            text-overflow: clip !important;
+            max-width: 80pt !important;
+            word-break: break-word !important;
+          }
+
+          /* Sort icons: hidden in print; header buttons render as plain text */
+          .report-table thead button svg { display: none !important; }
+          .report-table thead button {
+            pointer-events: none !important;
+            cursor: default !important;
+            font-weight: 600 !important;
+            color: #6b7280 !important;
+          }
+
+          /* Status badge: keep readable at smaller size */
+          .report-table .status-badge {
+            font-size: 7pt !important;
+            padding: 1px 3px !important;
+          }
         }
       `}</style>
       <Navigation />
 
       {/* Print-only header — hidden on screen, visible when printing */}
-      <div className="hidden print:block px-6 pt-4 pb-2 border-b border-gray-300">
-        <div className="text-lg font-bold text-gray-900">Category Cost Breakdown Report</div>
-        <div className="text-xs text-gray-600 mt-0.5">{printFilterSummary}</div>
-        <div className="text-xs text-gray-400 mt-0.5">Generated {format(new Date(), "MMMM d, yyyy")}</div>
+      <div className="hidden print:block px-0 pt-3 pb-3" style={{ borderBottom: "2.5px solid #1F4E79" }}>
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="font-bold tracking-tight leading-none" style={{ color: "#1F4E79", fontSize: "20pt" }}>
+              Kurv
+            </div>
+            <div className="text-gray-500 tracking-widest uppercase mt-0.5" style={{ fontSize: "7pt", letterSpacing: "0.12em" }}>
+              Commercial Real Estate
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="font-semibold text-gray-900" style={{ fontSize: "13pt" }}>
+              Category Cost Breakdown Report
+            </div>
+            <div className="text-gray-500 mt-1" style={{ fontSize: "8pt" }}>
+              {printFilterSummary}
+            </div>
+            <div className="text-gray-400 mt-0.5" style={{ fontSize: "7.5pt" }}>
+              Generated {format(new Date(), "MMMM d, yyyy")}
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="max-w-screen-2xl mx-auto px-6 py-5 space-y-5">
@@ -771,7 +868,7 @@ export default function CategoryCostBreakdownReport() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-xs border-collapse">
+                <table className="report-table w-full text-xs border-collapse">
                   <thead>
                     <tr className="bg-gray-50 border-b border-gray-200">
                       <th className="px-3 py-2.5 text-left text-gray-500 font-medium min-w-[100px]">
@@ -818,7 +915,7 @@ export default function CategoryCostBreakdownReport() {
                           {row.rfpNumber}
                         </td>
                         <td className="px-3 py-2 text-gray-700">{row.tenantName}</td>
-                        <td className="px-3 py-2 text-gray-600 max-w-[140px] truncate" title={row.property}>
+                        <td className="cell-property px-3 py-2 text-gray-600 max-w-[140px] truncate" title={row.property}>
                           {row.property}
                         </td>
                         <td className="px-3 py-2">
@@ -873,6 +970,16 @@ export default function CategoryCostBreakdownReport() {
                 </table>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Print-only sort + generated footer — appears below the table in the document flow */}
+        {reportData && (
+          <div className="hidden print:flex items-center justify-between pt-2 mt-1 border-t border-gray-200">
+            <span className="text-gray-400" style={{ fontSize: "7.5pt" }}>{sortCaption}</span>
+            <span className="text-gray-400" style={{ fontSize: "7.5pt" }}>
+              Generated {format(new Date(), "MMMM d, yyyy")}
+            </span>
           </div>
         )}
       </div>

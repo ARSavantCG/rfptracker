@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useEffect, Fragment } from "react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import Navigation from "@/components/navigation";
@@ -463,38 +464,51 @@ export default function CategoryCostBreakdownReport() {
 
             {/* Property multi-select */}
             <div>
-              <label className="text-xs font-medium text-gray-500 uppercase tracking-wide block mb-2">Property</label>
-              <div className="flex flex-wrap gap-1 max-h-[72px] overflow-y-auto">
-                {sortedProperties.length === 0 && (
-                  <span className="text-xs text-gray-400 italic">Loading…</span>
-                )}
-                {sortedProperties.map((p: Property) => (
-                  <button
-                    key={p.id}
-                    onClick={() => toggleProperty(p.id)}
-                    className={`px-2 py-0.5 rounded text-xs border transition-all ${
-                      selectedPropertyIds.includes(p.id)
-                        ? "bg-blue-600 text-white border-transparent font-medium"
-                        : "bg-white text-gray-600 border-gray-300 hover:border-blue-400"
-                    }`}
-                  >
-                    {p.propertyName} - Bldg. {p.building}
-                  </button>
-                ))}
-                {sortedProperties.length > 0 && (
-                  <button
-                    onClick={() => setSelectedPropertyIds(sortedProperties.map(p => p.id))}
-                    className="text-xs text-gray-400 hover:text-gray-600 px-1 shrink-0"
-                  >
-                    Select All
-                  </button>
-                )}
-                {selectedPropertyIds.length > 0 && (
-                  <button onClick={() => setSelectedPropertyIds([])} className="text-xs text-gray-400 hover:text-gray-600 px-1 shrink-0">
-                    Clear
-                  </button>
-                )}
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Property</label>
+                <div className="flex items-center gap-2">
+                  {sortedProperties.length > 0 && (
+                    <button
+                      onClick={() => setSelectedPropertyIds(sortedProperties.map((p: Property) => p.id))}
+                      className="text-xs text-blue-600 hover:text-blue-800"
+                    >
+                      Select All
+                    </button>
+                  )}
+                  {selectedPropertyIds.length > 0 && sortedProperties.length > 0 && (
+                    <span className="text-gray-300">|</span>
+                  )}
+                  {selectedPropertyIds.length > 0 && (
+                    <button
+                      onClick={() => setSelectedPropertyIds([])}
+                      className="text-xs text-blue-600 hover:text-blue-800"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
               </div>
+              {sortedProperties.length === 0 ? (
+                <span className="text-xs text-gray-400 italic">Loading…</span>
+              ) : (
+                <div className="max-h-[120px] overflow-y-auto space-y-1.5 pr-1">
+                  {sortedProperties.map((p: Property) => (
+                    <div key={p.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`prop-${p.id}`}
+                        checked={selectedPropertyIds.includes(p.id)}
+                        onCheckedChange={() => toggleProperty(p.id)}
+                      />
+                      <label
+                        htmlFor={`prop-${p.id}`}
+                        className="text-xs font-medium leading-none cursor-pointer text-gray-700 peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      >
+                        {p.propertyName} - Bldg. {p.building}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Date range */}

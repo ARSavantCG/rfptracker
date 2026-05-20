@@ -18,7 +18,7 @@ import { format } from "date-fns";
 
 interface MasterCategory { id: number; name: string; description?: string }
 interface ScopeItem { id: number; name: string; description?: string; category: string }
-interface Property { id: number; propertyName: string }
+interface Property { id: number; propertyName: string; building: string }
 
 interface PickerItem { type: "category" | "scopeItem"; id: number; label: string }
 
@@ -133,13 +133,12 @@ export default function CategoryCostBreakdownReport() {
     queryKey: ["/api/properties"],
   });
 
-  // Deduplicate properties by name (DB has duplicate rows for some properties)
-  const uniqueProperties = useMemo(() => {
-    const seen = new Set<string>();
-    return properties.filter((p: Property) => {
-      if (seen.has(p.propertyName)) return false;
-      seen.add(p.propertyName);
-      return true;
+  // Sort properties by name then building number for display
+  const sortedProperties = useMemo(() => {
+    return [...properties].sort((a, b) => {
+      const nameCompare = a.propertyName.localeCompare(b.propertyName);
+      if (nameCompare !== 0) return nameCompare;
+      return a.building.localeCompare(b.building, undefined, { numeric: true });
     });
   }, [properties]);
 
@@ -386,10 +385,10 @@ export default function CategoryCostBreakdownReport() {
             <div>
               <label className="text-xs font-medium text-gray-500 uppercase tracking-wide block mb-2">Property</label>
               <div className="flex flex-wrap gap-1 max-h-[72px] overflow-y-auto">
-                {uniqueProperties.length === 0 && (
+                {sortedProperties.length === 0 && (
                   <span className="text-xs text-gray-400 italic">Loading…</span>
                 )}
-                {uniqueProperties.map((p: Property) => (
+                {sortedProperties.map((p: Property) => (
                   <button
                     key={p.id}
                     onClick={() => toggleProperty(p.id)}
@@ -399,7 +398,7 @@ export default function CategoryCostBreakdownReport() {
                         : "bg-white text-gray-600 border-gray-300 hover:border-blue-400"
                     }`}
                   >
-                    {p.propertyName}
+                    {p.propertyName} - Bldg. {p.building}
                   </button>
                 ))}
                 {selectedPropertyIds.length > 0 && (

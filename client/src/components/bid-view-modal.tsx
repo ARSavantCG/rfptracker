@@ -76,7 +76,7 @@ export function BidViewModal({ isOpen, onClose, bid }: BidViewModalProps) {
   // Mutation to save masterCategoryId on a line item
   const categoryMutation = useMutation({
     mutationFn: ({ itemId, masterCategoryId, isCleanData }: { itemId: number; masterCategoryId: number | null; isCleanData: boolean }) =>
-      apiRequest('PATCH', `/api/bid-line-items/${itemId}/mapping`, { masterCategoryId, isCleanData }),
+      apiRequest(`/api/bid-line-items/${itemId}/mapping`, 'PATCH', { masterCategoryId, isCleanData }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/bid-collections/${bid?.id}/line-items`] });
     },

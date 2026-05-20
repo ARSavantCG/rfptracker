@@ -100,7 +100,7 @@ export default function HistoricalImport() {
   };
 
   const createMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/project-actuals", data),
+    mutationFn: (data: any) => apiRequest("/api/project-actuals", "POST", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/project-actuals"] });
       toast({ title: "Project actual saved successfully" });

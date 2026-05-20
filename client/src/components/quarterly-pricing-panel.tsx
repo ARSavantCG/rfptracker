@@ -112,7 +112,7 @@ export function QuarterlyPricingPanel({
 
   const addQuoteMutation = useMutation({
     mutationFn: (data: any) =>
-      apiRequest("POST", `/api/scope-items/${scopeItemId}/contractor-pricing`, data),
+      apiRequest(`/api/scope-items/${scopeItemId}/contractor-pricing`, "POST", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/scope-items/${scopeItemId}/contractor-pricing`] });
       queryClient.invalidateQueries({ queryKey: ["/api/rom-scope-items"] });
@@ -124,7 +124,7 @@ export function QuarterlyPricingPanel({
 
   const deleteQuoteMutation = useMutation({
     mutationFn: (pricingId: number) =>
-      apiRequest("DELETE", `/api/scope-items/${scopeItemId}/contractor-pricing/${pricingId}`),
+      apiRequest(`/api/scope-items/${scopeItemId}/contractor-pricing/${pricingId}`, "DELETE"),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/scope-items/${scopeItemId}/contractor-pricing`] });
       queryClient.invalidateQueries({ queryKey: ["/api/rom-scope-items"] });
@@ -134,7 +134,7 @@ export function QuarterlyPricingPanel({
 
   const updateModeMutation = useMutation({
     mutationFn: (data: any) =>
-      apiRequest("PATCH", `/api/scope-items/${scopeItemId}/pricing-mode`, data),
+      apiRequest(`/api/scope-items/${scopeItemId}/pricing-mode`, "PATCH", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rom-scope-items"] });
       toast({ title: "Pricing mode saved" });

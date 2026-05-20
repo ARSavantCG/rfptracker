@@ -15,6 +15,16 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
+/**
+ * Authenticated fetch helper.
+ * Argument order: apiRequest(url, method, data?)
+ * Examples:
+ *   apiRequest("/api/things", "POST", { name: "foo" })
+ *   apiRequest(`/api/things/${id}`, "DELETE")
+ *   apiRequest("/api/things", "GET")
+ * NOTE: url is ALWAYS first, HTTP method is ALWAYS second.
+ * TypeScript cannot catch a swap because both args are strings.
+ */
 export async function apiRequest(
   url: string,
   method: string,

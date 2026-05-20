@@ -145,7 +145,7 @@ export function BidTaggingModal({
 
   const saveMutation = useMutation({
     mutationFn: async (tags: object[]) => {
-      return apiRequest("POST", `/api/proposals/${bidCollectionId}/tag-line-items`, { tags });
+      return apiRequest(`/api/proposals/${bidCollectionId}/tag-line-items`, "POST", { tags });
     },
     onSuccess: (data: any) => {
       const count = data?.saved ?? 0;

@@ -60,7 +60,7 @@ export function CostBenchmarks() {
 
   const updatePriceMutation = useMutation({
     mutationFn: ({ id, avgPrice }: { id: number; avgPrice: string }) =>
-      apiRequest("PATCH", `/api/scope-items/${id}/pricing-mode`, {
+      apiRequest(`/api/scope-items/${id}/pricing-mode`, "PATCH", {
         pricingMode: "manual",
         manualOverridePrice: avgPrice,
         manualOverrideReason: "Updated from historical benchmarks",

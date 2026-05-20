@@ -103,7 +103,7 @@ export default function ScopeItemReview() {
   });
 
   const importLegacyMutation = useMutation({
-    mutationFn: () => apiRequest("POST", "/api/admin/scope-item-review/import-legacy", {}),
+    mutationFn: () => apiRequest("/api/admin/scope-item-review/import-legacy", "POST", {}),
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/scope-item-review/pending"] });
       toast({

@@ -1435,21 +1435,59 @@ WHERE tenant_improvements::text  ILIKE '%masterItemId%'
 ```
 Every scope item column always returned null/dash regardless of what was in the budget.
 
-**Interim fix applied** (`server/routes.ts` ~line 6644):
-Scope item matching now uses `li.romSnapshot.label` — normalized (trimmed, lowercased, full equality, no loose contains-match):
+**Fix applied** (`server/routes.ts` ~line 6655):
+Scope item matching uses `li.romSnapshot.label` as the primary match. For Construction Management items only, a description-field fallback fires when `romSnapshot` is absent (the entire pre-2026 cohort was created before the snapshot system existed, so `romSnapshot` is null throughout):
+
 ```ts
 const normalizedLabel = si.label.trim().toLowerCase();
-const matches = allLineItems.filter(
-  (li: any) =>
+const isCmItem = normalizedLabel.includes("construction management");
+const matches = allLineItems.filter((li: any) => {
+  // Primary: exact romSnapshot.label match (applies to all scope items)
+  if (
     typeof li.romSnapshot?.label === "string" &&
     li.romSnapshot.label.trim().toLowerCase() === normalizedLabel
-);
+  ) return true;
+  // Fallback — CM items only: match by description when romSnapshot is absent
+  if (isCmItem) {
+    const desc = (li.description || "").trim().toLowerCase();
+    return desc.includes("construction management") || desc.includes("cm fee");
+  }
+  return false;
+});
 ```
 
-**Limitations of this interim approach**:
-- Line items added manually (no `romSnapshot`) will never match any scope item filter.
+**Why description is authoritative for pre-2026 budgets**: `romSnapshot` was introduced after the 2025 project cohort was already built. All pre-2026 line items carry `romSnapshot: null`; the `description` field is the only label present. The fallback is intentionally scoped to CM items only — broadening it globally would collapse distinct scope item columns for categories that happen to share keywords.
+
+**Historical description variants the fallback catches**:
+- `"3% CM Fee"` (RFP-2025-001, 002, 003)
+- `"CM Fee (3%)"` (RFP-2025-001.01)
+- `"CM Fee"` (RFP-2025-009)
+- `"Construction Management Fee (3%)"` (bulk of 2025 cohort)
+- `"Construction Management (2.75%)"` with null snapshot (mixed 2025–2026 boundary)
+
+**⚠️ DATA INTEGRITY FLAG — RFP-2026-001, RFP-2026-002, RFP-2026-003**:
+These three projects have a CM line where `description = "Construction Management (2.75%)"` but `romSnapshot.label = "Construction Management (3.5%)"` — the two fields disagree. After the fix they match via the description fallback (primary romSnapshot check fails when user selects the 2.75% scope item). The dollar amounts display correctly but the rate embedded in the description string may not match what was actually used — **manual review of the source ROM rate is required before these three are relied on for analytics**. Do not auto-correct.
+
+**Genuinely no CM line (show "—" after fix — verified project-by-project)**:
+| RFP | Reason |
+|-----|--------|
+| RFP-2025-007 (Lilly — original) | No CM entry; budget uses SBE Premium / P&P Bond instead |
+| RFP-2025-007.A (Lilly — 303,808 sf) | Same structure, no CM |
+| RFP-2025-007.B (Lilly — No Freezer/Cooler) | Same structure, no CM |
+| RFP-2025-015 (Sibs International) | `design_soft_costs = []` — DSC section entirely empty |
+| RFP-2025-016 (Viro Holdings) | `design_soft_costs = []` |
+| RFP-2025-019 (Atlas Air) | `design_soft_costs = []` |
+| RFP-2025-020 (CH Robinson Doral Bldg 2) | `design_soft_costs = []` |
+| RFP-2025-021 (Quick Shipping) | `design_soft_costs = []` |
+| RFP-2025-025 (Happi Tree — original) | `design_soft_costs = []` (RFP-2025-025.A has CM ✓) |
+| RFP-2025-026 (Maersk) | `design_soft_costs = []` |
+| RFP-2025-027 (Absher) | `design_soft_costs = []` |
+| RFP-2026-008 (Sterling) | Has DSC items (Design, Builder's Risk) but no CM line entered |
+
+**Limitations remaining**:
 - If a scope item is renamed in the library, existing budgets won't update — match silently breaks for old data.
 - Two scope items with the same label (different IDs) cannot be distinguished.
+- Contingency matching still uses romSnapshot-only (scope boundary intentional); pre-2026 projects show `contingencyAmount = null`, so CM % uses `base = Total − CM` which slightly overstates the base but is still far more accurate than total-based %.
 
 **Future task (permanent fix)**: Stamp `masterItemId` onto budget line items at creation time. When a line item is imported from a ROM scope item, write the `rom_scope_items.id` into a `masterItemId` field in the JSON blob. The report can then join on a stable integer and retire the string match entirely.
 

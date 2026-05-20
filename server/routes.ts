@@ -6628,9 +6628,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
             if (parsed > 0) grandTotal = parsed;
           }
 
-          // Scope item amounts: match on romSnapshot.label (interim — budget line items do not
-          // carry masterItemId; a future task should stamp that at creation time so this
-          // string match can be retired in favour of a stable integer join)
+          // Scope item amounts: match on romSnapshot.label primarily (interim — budget line
+          // items do not carry masterItemId; a future task should stamp that at creation
+          // time so this string match can be retired in favour of a stable integer join).
+          //
+          // CONSTRUCTION MANAGEMENT EXCEPTION: the entire pre-2026 cohort was created
+          // before the romSnapshot system existed, so romSnapshot is null for those budgets.
+          // The description field IS populated everywhere and is the authoritative label for
+          // those rows. For any selected scope item whose label contains "construction
+          // management" we therefore fall back to matching by description when romSnapshot
+          // is absent. No other item type uses this fallback (scope boundary intentional).
+          //
+          // Historical description variants caught by the fallback:
+          //   "3% CM Fee", "CM Fee (3%)", "CM Fee",
+          //   "Construction Management Fee (3%)", "Construction Management (2.75%)" (no snapshot)
+          //
+          // DATA INTEGRITY FLAG: RFP-2026-001, RFP-2026-002, RFP-2026-003 have a CM line
+          // whose description says "Construction Management (2.75%)" but whose romSnapshot.label
+          // says "Construction Management (3.5%)". These three projects match via the description
+          // fallback after the primary (romSnapshot) check fails. The displayed dollar amount
+          // is correct but the percentage label in the description disagrees with the snapshot —
+          // the source ROM rate should be verified manually for those three projects.
           if (scopeItemsSelected.length > 0) {
             const allLineItems = [
               ...((budget?.tenantImprovements as any[]) || []),
@@ -6640,11 +6658,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
             for (const si of scopeItemsSelected) {
               const key = `s_${si.id}`;
               const normalizedLabel = si.label.trim().toLowerCase();
-              const matches = allLineItems.filter(
-                (li: any) =>
+              const isCmItem = normalizedLabel.includes("construction management");
+              const matches = allLineItems.filter((li: any) => {
+                // Primary: exact romSnapshot.label match (applies to all scope items)
+                if (
                   typeof li.romSnapshot?.label === "string" &&
                   li.romSnapshot.label.trim().toLowerCase() === normalizedLabel
-              );
+                ) {
+                  return true;
+                }
+                // Fallback — CM items only: match by description when romSnapshot is absent
+                if (isCmItem) {
+                  const desc = (li.description || "").trim().toLowerCase();
+                  return desc.includes("construction management") || desc.includes("cm fee");
+                }
+                return false;
+              });
               if (matches.length > 0) {
                 const total = matches.reduce(
                   (sum: number, li: any) => sum + parsePrice(li.totalPrice),

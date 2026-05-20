@@ -167,7 +167,7 @@ export default function Navigation() {
                     </Button>
                     
                     {isReportsOpen && (
-                      <div className="absolute left-0 mt-2 w-56 bg-white border border-gray-200 rounded-md shadow-lg z-50">
+                      <div className="absolute left-0 mt-2 w-64 bg-white border border-gray-200 rounded-md shadow-lg z-50">
                         <div className="py-1">
                           {reportsSubmenu.map((subItem) => {
                             const SubIcon = subItem.icon;
@@ -184,7 +184,7 @@ export default function Navigation() {
                                   setIsReportsOpen(false);
                                 }}
                                 className={cn(
-                                  "flex items-center w-full px-4 py-2 text-sm transition-colors",
+                                  "flex items-center w-full px-4 py-2 text-sm text-left transition-colors",
                                   isSubActive 
                                     ? "bg-blue-50 text-blue-700" 
                                     : "text-gray-700 hover:bg-gray-100"

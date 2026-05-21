@@ -3480,6 +3480,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           totalPrice: liveUnitCost && item.qty ? (liveUnitCost * item.qty).toString() : "0",
           tenantShare: item.percent || 100,
           notes: item.notes || "",
+          // Stamp stable integer link to the master scope items library.
+          // item.romScopeItemId is the rom_scope_items.id captured when the template was built.
+          masterItemId: item.romScopeItemId ?? null,
           romSnapshot: liveSnapshot ? {
             ...liveSnapshot,
             itemGroup: liveSnapshot.itemGroup,

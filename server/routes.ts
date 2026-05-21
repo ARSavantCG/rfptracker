@@ -2147,12 +2147,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Pass targetPhase so date fields are only required from bid-collection onward.
       // Merge contractorRfpRequired / architectRfpRequired from invitation_to_bid so the
       // validator can condition each due-date requirement on its RFP type being selected.
+      //
+      // Also merge contractorDueDate / architectDueDate from invitation_to_bid as a
+      // fallback for the 27 historical rows that pre-date syncInvitationDatesToRfp —
+      // those rows have dates in invitation_to_bid but NULL in rfp_requests, so without
+      // this fallback the validator would block advancement even when a date exists.
       const invitation = await storage.getInvitationToBid(id);
       const rfpWithFlags = invitation
         ? {
             ...rfp,
             contractorRfpRequired: invitation.contractorRfpRequired ?? false,
             architectRfpRequired:  invitation.architectRfpRequired  ?? false,
+            // Prefer rfp_requests date (synced source of truth); fall back to
+            // invitation_to_bid date for rows that predate the sync function.
+            contractorDueDate: rfp.contractorDueDate ?? invitation.contractorDueDate,
+            architectDueDate:  rfp.architectDueDate  ?? invitation.architectDueDate,
           }
         : rfp;
       const validationResult = validateRfpForProgression(rfpWithFlags, phase);

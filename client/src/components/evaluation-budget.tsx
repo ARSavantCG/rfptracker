@@ -4508,25 +4508,42 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
                               {editingItem === item.id ? (
                                 <>
                                   <TableCell>
-                                    <MasterScopeItemPicker
-                                      searchEndpoint="/api/master-scope-items/search"
-                                      value={item.masterItemId ? item.description : (item.customDescription ?? item.description)}
-                                      masterItemId={item.masterItemId}
-                                      onSelect={(sel: MasterScopeSelection) => {
-                                        updateItem(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', item.id, {
-                                          description: sel.description,
-                                          unit: sel.unit ?? item.unit,
-                                          unitPrice: sel.unitPrice ?? item.unitPrice,
-                                          // "master" → user picked a (different) library item; use the new ID.
-                                          // "other"  → user is rewording the display label; preserve the
-                                          //            existing masterItemId so the report link survives.
-                                          masterItemId: sel.type === "master" ? (sel.masterItemId ?? null) : item.masterItemId,
-                                          masterItemSnapshot: sel.type === "master" ? (sel.snapshot ?? null) : item.masterItemSnapshot,
-                                          customDescription: sel.customDescription ?? null,
-                                        });
-                                      }}
-                                      className="text-sm"
-                                    />
+                                    {item.masterItemId ? (
+                                      // Linked item: plain text input for renaming the display label.
+                                      // updateItem does a spread merge — only description changes,
+                                      // masterItemId is preserved automatically without any picker interaction.
+                                      <div className="flex flex-col gap-0.5">
+                                        <Input
+                                          value={item.description}
+                                          onChange={(e) => updateItem(
+                                            category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements',
+                                            item.id,
+                                            { description: e.target.value }
+                                          )}
+                                          className="text-sm border-green-400 bg-green-50 focus:border-green-500 focus-visible:ring-green-300"
+                                          placeholder="Description"
+                                        />
+                                        <p className="text-xs text-green-600 leading-tight">Linked to library item — ID preserved.</p>
+                                      </div>
+                                    ) : (
+                                      // Unlinked item: picker for library search or custom entry (unchanged).
+                                      <MasterScopeItemPicker
+                                        searchEndpoint="/api/master-scope-items/search"
+                                        value={item.customDescription ?? item.description}
+                                        masterItemId={item.masterItemId}
+                                        onSelect={(sel: MasterScopeSelection) => {
+                                          updateItem(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', item.id, {
+                                            description: sel.description,
+                                            unit: sel.unit ?? item.unit,
+                                            unitPrice: sel.unitPrice ?? item.unitPrice,
+                                            masterItemId: sel.type === "master" ? (sel.masterItemId ?? null) : null,
+                                            masterItemSnapshot: sel.type === "master" ? (sel.snapshot ?? null) : null,
+                                            customDescription: sel.customDescription ?? null,
+                                          });
+                                        }}
+                                        className="text-sm"
+                                      />
+                                    )}
                                   </TableCell>
                                   <TableCell className="text-center">
                                     <div className="flex gap-1 justify-center">

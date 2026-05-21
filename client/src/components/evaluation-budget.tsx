@@ -4517,8 +4517,11 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
                                           description: sel.description,
                                           unit: sel.unit ?? item.unit,
                                           unitPrice: sel.unitPrice ?? item.unitPrice,
-                                          masterItemId: sel.masterItemId ?? null,
-                                          masterItemSnapshot: sel.snapshot ?? null,
+                                          // "master" → user picked a (different) library item; use the new ID.
+                                          // "other"  → user is rewording the display label; preserve the
+                                          //            existing masterItemId so the report link survives.
+                                          masterItemId: sel.type === "master" ? (sel.masterItemId ?? null) : item.masterItemId,
+                                          masterItemSnapshot: sel.type === "master" ? (sel.snapshot ?? null) : item.masterItemSnapshot,
                                           customDescription: sel.customDescription ?? null,
                                         });
                                       }}

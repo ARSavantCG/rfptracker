@@ -623,7 +623,26 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
       const gcEnhanced = (data as any).generateContractorRfpEnhanced === true;
       const archEnhanced = (data as any).generateArchitectRfpEnhanced === true;
       const rfpVariant = serializeRfpVariant(gcEnhanced, archEnhanced);
-      const transformedWithVariant = { ...transformedData, rfpVariant };
+
+      // Persist RFP type selection flags. Standard OR enhanced OR broker variants all
+      // count — any contractor selection means contractorRfpRequired=true, etc. These
+      // flags are stored on invitation_to_bid and read by the workflow-phase validator
+      // to condition due-date requirements (date only required when type was selected).
+      const contractorRfpRequired =
+        (data as any).generateContractorRfp         === true ||
+        (data as any).generateContractorRfpEnhanced === true ||
+        (data as any).generateBrokerContractorRfp   === true;
+      const architectRfpRequired =
+        (data as any).generateArchitectRfp         === true ||
+        (data as any).generateArchitectRfpEnhanced === true ||
+        (data as any).generateBrokerArchitectRfp   === true;
+
+      const transformedWithVariant = {
+        ...transformedData,
+        rfpVariant,
+        contractorRfpRequired,
+        architectRfpRequired,
+      };
 
       // Persist schedule fields to rfp_requests if any are set
       const anyScheduleSet = Object.values(scheduleFields).some(v => v !== '');

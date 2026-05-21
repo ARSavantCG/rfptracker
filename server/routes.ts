@@ -2144,8 +2144,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Step 1: run field-level validation and surface specific errors to the client
-      // Pass targetPhase so date fields are only required from bid-collection onward
-      const validationResult = validateRfpForProgression(rfp, phase);
+      // Pass targetPhase so date fields are only required from bid-collection onward.
+      // Merge contractorRfpRequired / architectRfpRequired from invitation_to_bid so the
+      // validator can condition each due-date requirement on its RFP type being selected.
+      const invitation = await storage.getInvitationToBid(id);
+      const rfpWithFlags = invitation
+        ? {
+            ...rfp,
+            contractorRfpRequired: invitation.contractorRfpRequired ?? false,
+            architectRfpRequired:  invitation.architectRfpRequired  ?? false,
+          }
+        : rfp;
+      const validationResult = validateRfpForProgression(rfpWithFlags, phase);
       if (!validationResult.isValid) {
         return res.status(400).json({
           message: `Cannot advance: ${validationResult.errors.join(", ")}`,

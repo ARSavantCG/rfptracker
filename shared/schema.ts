@@ -310,6 +310,14 @@ export const invitationToBid = pgTable("invitation_to_bid", {
   rfpVariant: text("rfp_variant").notNull().default("standard"), // 'standard' | 'enhanced'
   recipientType: text("recipient_type"), // 'gc' | 'architect' — nullable; populated when per-recipient rows are used
 
+  // RFP type selection flags — set true when the corresponding checkbox is checked and the
+  // form is saved (standard OR enhanced both set the flag). Used by the workflow-phase
+  // validator to condition due-date requirements: a due date is only required when its
+  // type was actually selected. Default false preserves the pre-column behaviour for
+  // rows that predate this column (backfill handled separately by admin SQL).
+  contractorRfpRequired: boolean("contractor_rfp_required").notNull().default(false),
+  architectRfpRequired: boolean("architect_rfp_required").notNull().default(false),
+
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

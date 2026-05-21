@@ -9,6 +9,11 @@ export interface ValidationResult {
 export interface ValidationRule {
   field: string;
   required: boolean;
+  // When present, overrides `required` for a specific rfp object. The rule fires only
+  // when this predicate returns true — used for due-date fields that are only required
+  // when the corresponding RFP type was selected (contractorRfpRequired /
+  // architectRfpRequired flags, merged in from invitation_to_bid before validation).
+  conditionalRequired?: (rfp: any) => boolean;
   validator?: (value: any) => boolean;
   message: string;
 }
@@ -57,15 +62,23 @@ const baseValidationRules: ValidationRule[] = [
 // Date rules required only from bid-collection onward (these fields are captured in
 // Step 3 — Invitation to Bid UI, so they cannot be required at the rfp-validation →
 // invitation-to-bid transition where the UI doesn't exist yet).
+//
+// Each date is conditional on its RFP type being selected (contractorRfpRequired /
+// architectRfpRequired flags merged from invitation_to_bid by the route handler before
+// calling validateRfpForProgression). If the flag is false the date is never required,
+// regardless of phase. This means a user who solicits neither a contractor nor an
+// architect can advance past invitation-to-bid without providing any due dates.
 const dateValidationRules: ValidationRule[] = [
   {
     field: "contractorDueDate",
-    required: true,
+    required: false,
+    conditionalRequired: (rfp: any) => rfp.contractorRfpRequired === true,
     message: "Contractor due date is required for validation"
   },
   {
     field: "architectDueDate",
-    required: true,
+    required: false,
+    conditionalRequired: (rfp: any) => rfp.architectRfpRequired === true,
     message: "Architect due date is required for validation"
   },
 ];
@@ -91,7 +104,12 @@ export function validateRfpForProgression(rfp: RfpRequest, targetPhase?: string)
   for (const rule of rules) {
     const fieldValue = (rfp as any)[rule.field];
 
-    if (rule.required) {
+    // A rule fires as required when either `required` is true OR `conditionalRequired`
+    // returns true for this specific rfp object (e.g. date required only when its RFP
+    // type was selected).
+    const isRequired = rule.required || (rule.conditionalRequired ? rule.conditionalRequired(rfp) : false);
+
+    if (isRequired) {
       if (!fieldValue || (typeof fieldValue === 'string' && fieldValue.trim() === '')) {
         errors.push(rule.message);
       } else if (rule.validator && !rule.validator(fieldValue)) {

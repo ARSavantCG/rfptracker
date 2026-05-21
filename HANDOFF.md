@@ -1563,7 +1563,88 @@ CM %    = CM ÷ base
 
 **Scope** of CM-specific logic: `isCmColumn` is the only gate. Other scope items (Electrical, Concrete, etc.) continue to use share-of-total. The base-backout applies only to columns whose label contains "Construction Management". If additional markup items need this treatment in future, add them to `isCmColumn`.
 
-### Verification evidence
+---
+
+## Session: May 2026 — BACKLOG 2.3: Stamp `masterItemId` on Budget Line Items
+
+### What was built
+
+**Goal**: Give every budget line item a stable integer FK (`masterItemId`) pointing to `rom_scope_items.id`, so the Category Cost Breakdown report can join on an integer instead of string-matching descriptions.
+
+### Schema approach (no DB migration needed)
+
+`masterItemId` lives inside each line item's JSON object alongside `romSnapshot`. The TypeScript type (`BudgetLineItem`) already had `masterItemId?: number | null` defined. No DB column added — it's a JSON field following the same pattern as `romSnapshot`.
+
+### Stage 2 — Stamp going forward (two creation paths)
+
+**Path 1 — Interactive picker** (`evaluation-budget.tsx`): Already working before this session. `MasterScopeItemPicker.selectMaster()` fires `onSelect({ masterItemId: item.id })`, which flows through `newItem.masterItemId` → `handleAddItem` → saved line item. Accounted for the 3 items that already had `masterItemId` before the session.
+
+**Path 2 — Template import** (`/api/templates/:id/for-import`, `server/routes.ts`): The `lineItem` object being returned was not including `masterItemId`. The template item already had `item.romScopeItemId` (the scope item's integer ID, used for live price refresh). Added one line: `masterItemId: item.romScopeItemId ?? null`. All future template imports now stamp the stable ID.
+
+### Stage 3c — Backfill (279 items stamped)
+
+Three-pass SQL `UPDATE` run against all three budget columns (`tenant_improvements`, `design_soft_costs`, `existing_improvements`):
+
+| Pass | Logic | Items stamped |
+|---|---|---|
+| 1 | `romSnapshot.label` exact match (case-insensitive) → library id | 109 |
+| 2 | Description contains "construction management" / "cm fee" → id=29 | 44 |
+| 3 | Description exactly equals a library item name → library id | 126 |
+| **Total** | | **279** |
+
+**Post-backfill state**: 282 items with `masterItemId` (3 original + 279 stamped). All 282 resolve to valid `rom_scope_items` records — zero orphans.
+
+**Left as null** (correctly): ~890 free-text/project-specific items, ~30 office-area items where SF tier is unknown (see BACKLOG 5.2).
+
+Office-tier finding: library has three tiers (id 36/37/38). Only items with `romSnapshot.label = "Office Area (3,001 - 5,000 sf)"` (id=37) matched — 7 items. Items with descriptions like "New Office Area", "Office Area", "Warehouse Office Area" cannot be tier-assigned without knowing the SF. These need per-project human review (BACKLOG 5.2).
+
+### Stage 4 — Report switched to integer-primary matching
+
+`/api/reports/category-cost-breakdown` (`server/routes.ts` ~line 6668):
+
+**Before** (2 passes):
+1. `romSnapshot.label` exact match
+2. CM description fallback
+
+**After** (3 passes):
+1. `li.masterItemId != null && li.masterItemId === si.id` — integer FK, immune to rewording
+2. `romSnapshot.label` exact match (unchanged fallback)
+3. CM description fallback (unchanged, scope boundary intentional)
+
+Change is purely additive — existing matches continue to match. Items with `masterItemId` now resolve without any string comparison.
+
+### Verification evidence (Stage 4)
+
+Spot-checked CM totals (id=29) and contingency totals (id=31) via integer path vs string path for 5 projects. Every column matched exactly:
+
+| RFP | CM via masterItemId | CM via string match |
+|---|---|---|
+| RFP-2025-001 KSI | $106,242.45 | $106,242.45 ✓ |
+| RFP-2025-001.01 KSI counter | $89,311.56 | $89,311.56 ✓ |
+| RFP-2025-009 CH Robinson | $263,662.00 | $263,662.00 ✓ |
+| RFP-2026-001 C1 International | matches ✓ | matches ✓ |
+| RFP-2026-002 Logisteed | matches ✓ | matches ✓ |
+
+**Reword safety**: confirmed — the primary check is `masterItemId === si.id`, which ignores description entirely. A reworded line item with a stamped ID will still tag to the correct category.
+
+**Null fallback**: secondary and tertiary passes are unchanged; items with `masterItemId = null` resolve exactly as before.
+
+### Files changed
+
+| File | Change |
+|---|---|
+| `server/routes.ts` (`/api/templates/:id/for-import`) | Added `masterItemId: item.romScopeItemId ?? null` to template import line item builder |
+| `server/routes.ts` (`/api/reports/category-cost-breakdown`) | Report matching switched to 3-pass integer-primary strategy; comment block updated |
+| `evaluation_budgets` DB rows | 279 line items backfilled with `masterItemId` via SQL UPDATE |
+| `BACKLOG.md` | Item 2.3 marked done; 5.2 added (office-tier follow-up); 2.6 added (fixed-allowance exemption) |
+
+### Known follow-up items
+- **BACKLOG 5.2**: ~30 office-area items need per-project SF review before they can be tier-assigned (ids 36/37/38).
+- **BACKLOG 2.6**: Fixed-allowance exemption (sequenced after 2.3 — unblocked now).
+
+---
+
+### Verification evidence (CM base-backout, previous session)
 
 | RFP | Grand Total | CM Fee | Contingency | Base | CM % (base-backout) | CM % (naive, before fix) |
 |-----|-------------|--------|-------------|------|---------------------|--------------------------|

@@ -6631,27 +6631,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
             if (parsed > 0) grandTotal = parsed;
           }
 
-          // Scope item amounts: match on romSnapshot.label primarily (interim — budget line
-          // items do not carry masterItemId; a future task should stamp that at creation
-          // time so this string match can be retired in favour of a stable integer join).
+          // Scope item matching — three-pass strategy (BACKLOG 2.3, shipped May 2026):
           //
-          // CONSTRUCTION MANAGEMENT EXCEPTION: the entire pre-2026 cohort was created
-          // before the romSnapshot system existed, so romSnapshot is null for those budgets.
-          // The description field IS populated everywhere and is the authoritative label for
-          // those rows. For any selected scope item whose label contains "construction
-          // management" we therefore fall back to matching by description when romSnapshot
-          // is absent. No other item type uses this fallback (scope boundary intentional).
+          // Pass 1 (primary): masterItemId integer — rom_scope_items.id stamped on the
+          //   line item at creation time. Immune to description rewording. 282 of 1,172
+          //   line items carry this after the May 2026 backfill.
           //
-          // Historical description variants caught by the fallback:
+          // Pass 2 (secondary): exact romSnapshot.label match — covers newly-added items
+          //   before the picker stamps the ID, and any edge cases where masterItemId is null.
+          //
+          // Pass 3 (tertiary, CM only): description contains "construction management" /
+          //   "cm fee" — covers the entire pre-2026 cohort whose budgets predate the
+          //   romSnapshot system. Scope boundary intentional — only CM has reliable fuzzy
+          //   description terms. No other item type uses this fallback.
+          //
+          // Historical CM description variants caught by pass 3:
           //   "3% CM Fee", "CM Fee (3%)", "CM Fee",
           //   "Construction Management Fee (3%)", "Construction Management (2.75%)" (no snapshot)
           //
           // DATA INTEGRITY FLAG: RFP-2026-001, RFP-2026-002, RFP-2026-003 have a CM line
           // whose description says "Construction Management (2.75%)" but whose romSnapshot.label
-          // says "Construction Management (3.5%)". These three projects match via the description
-          // fallback after the primary (romSnapshot) check fails. The displayed dollar amount
-          // is correct but the percentage label in the description disagrees with the snapshot —
-          // the source ROM rate should be verified manually for those three projects.
+          // says "Construction Management (3.5%)". These three projects now match via pass 1
+          // (masterItemId=29 was stamped during backfill). The displayed dollar amount is
+          // correct but the rate in the description disagrees with the snapshot — the source
+          // ROM rate should be verified manually for those three projects.
           if (scopeItemsSelected.length > 0) {
             const allLineItems = [
               ...((budget?.tenantImprovements as any[]) || []),
@@ -6663,14 +6666,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const normalizedLabel = si.label.trim().toLowerCase();
               const isCmItem = normalizedLabel.includes("construction management");
               const matches = allLineItems.filter((li: any) => {
-                // Primary: exact romSnapshot.label match (applies to all scope items)
+                // Primary: stable integer ID — immune to description rewording.
+                // masterItemId is rom_scope_items.id stamped at line-item creation.
+                if (li.masterItemId != null && li.masterItemId === si.id) return true;
+
+                // Secondary: exact romSnapshot.label match (items without masterItemId,
+                // or newly-added items before the picker stamps the ID).
                 if (
                   typeof li.romSnapshot?.label === "string" &&
                   li.romSnapshot.label.trim().toLowerCase() === normalizedLabel
                 ) {
                   return true;
                 }
-                // Fallback — CM items only: match by description when romSnapshot is absent
+                // Tertiary fallback — CM items only: match by description when romSnapshot
+                // is absent (covers the entire pre-2026 cohort whose budgets predate the
+                // romSnapshot system). Scope boundary intentional — only CM has reliable
+                // fuzzy description terms.
                 if (isCmItem) {
                   const desc = (li.description || "").trim().toLowerCase();
                   return desc.includes("construction management") || desc.includes("cm fee");

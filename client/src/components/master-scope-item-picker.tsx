@@ -175,9 +175,14 @@ export default function MasterScopeItemPicker({
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  // "Reword mode": user clicked Other on an item that already has a masterItemId.
+  // The save path preserves the ID — this is just a display-label edit, not a delink.
+  // Distinct from a genuine free-text custom entry (no prior masterItemId).
+  const isRewordMode = isOtherMode && masterItemId != null;
+
   const inputClasses = cn(
     className,
-    selectedMasterItemId
+    selectedMasterItemId || isRewordMode
       ? "border-green-400 bg-green-50 focus:border-green-500"
       : isOtherMode
       ? "border-amber-300 bg-amber-50 focus:border-amber-400"
@@ -203,8 +208,16 @@ export default function MasterScopeItemPicker({
         autoFocus={autoFocus}
       />
 
-      {/* Soft enforcement notice — shown only after selecting "Other" */}
-      {isOtherMode && (
+      {/* Reword mode: item had a masterItemId and user typed a new label via Other.
+          The ID is preserved — this is not a custom entry. Show green confirmation. */}
+      {isRewordMode && (
+        <p className="text-xs text-green-600 mt-1 leading-tight">
+          Description updated — still linked to library item.
+        </p>
+      )}
+
+      {/* True custom entry: no prior masterItemId, user confirmed free-text. */}
+      {isOtherMode && !isRewordMode && (
         <p className="text-xs text-amber-600 mt-1 leading-tight">
           Saving as custom entry. Database update pending review.
         </p>
@@ -261,9 +274,15 @@ export default function MasterScopeItemPicker({
                 }}
                 onMouseEnter={() => setActiveIndex(results.length)}
               >
-                <span className="text-xs text-gray-400 italic">
-                  Other: &ldquo;{query || "…"}&rdquo; — custom entry
-                </span>
+                {masterItemId != null ? (
+                  <span className="text-xs text-gray-400 italic">
+                    Use &ldquo;{query || "…"}&rdquo; — keep library link
+                  </span>
+                ) : (
+                  <span className="text-xs text-gray-400 italic">
+                    Other: &ldquo;{query || "…"}&rdquo; — custom entry
+                  </span>
+                )}
               </div>
             </>
           )}

@@ -1661,3 +1661,32 @@ Spot-checked CM totals (id=29) and contingency totals (id=31) via integer path v
 
 **Picker**: "Design / Soft Costs / Other Fees" group appears first, confirmed by sort comparator. ✓
 **Select All / Clear**: both functional; Select All populates all property IDs from `sortedProperties`. ✓
+
+---
+
+## Permanent Architectural Note — Due Date Canonical Source (added May 2026)
+
+**`invitation_to_bid` is the CANONICAL source for contractor and architect due dates.**
+
+`rfp_requests` has copy columns (`contractor_due_date`, `architect_due_date`) that are kept in
+sync by `syncInvitationDatesToRfp` — but that function was added after many rows were already
+written, leaving **~27 rows where the date exists only in `invitation_to_bid` and is NULL in
+`rfp_requests`**.
+
+**Rule for any code that needs these dates:**
+- Always read from `invitation_to_bid`, OR
+- Read `rfp_requests` value with an `invitation_to_bid` fallback:
+  `contractorDueDate: rfp.contractorDueDate ?? invitation.contractorDueDate`
+- Never trust `rfp_requests` due-date columns alone.
+
+**Why this matters:** The workflow-phase validator was fixed (May 2026) to use the fallback.
+One remaining reader does NOT have the fallback — see BACKLOG 4.6.
+
+**Known readers and their status:**
+
+| Location | Direction | Fallback? |
+|---|---|---|
+| `server/validation.ts` (field `contractorDueDate` / `architectDueDate`) | Read for validation | ✅ Fixed — route merges itb fallback before calling validator |
+| `client/.../invitation-to-bid-modal.tsx` lines 534-560 | Read for form init | ✅ Safe — already reads `existingInvitation` dates as override |
+| `server/routes.ts` ~line 1383 (counter-offer creation) | Copies `originalRfp.contractorDueDate` to new RFP | ❌ No fallback — latent bug; see BACKLOG 4.6 |
+| All other occurrences | Write paths (INSERT/UPDATE/date conversion) | N/A — not consumers |

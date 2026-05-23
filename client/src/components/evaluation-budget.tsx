@@ -4427,6 +4427,15 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
                     {items.map((item, index) => {
                       const isAssembled = item.assemblyId;
                       const isRolledUp = budgetData.lineItemRollups[item.id];
+                      // Guard: at least one non-fixed line must remain to absorb hidden costs.
+                      // If this item is the only non-rolled-up, non-assembled, non-fixed line
+                      // in the section, prevent toggling it to fixed.
+                      const nonFixedAbsorbers = items.filter(
+                        i => !budgetData.lineItemRollups[i.id] && !i.assemblyId && !i.isFixedAllowance
+                      );
+                      const isLastNonFixed = !item.isFixedAllowance
+                        && nonFixedAbsorbers.length === 1
+                        && nonFixedAbsorbers[0].id === item.id;
                       
                       return (
                         <Draggable key={item.id} draggableId={item.id} index={index}>
@@ -4668,12 +4677,16 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
                                           <X className="h-3 w-3" />
                                         </Button>
                                       </div>
-                                      <label className="flex items-center gap-1 cursor-pointer select-none" title="Fixed Allowance — line displays exact entered value, exempt from hidden-cost distribution">
+                                      <label
+                                        className={`flex items-center gap-1 select-none ${isLastNonFixed ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
+                                        title={isLastNonFixed ? 'At least one line must remain non-fixed so hidden costs balance to the total' : 'Fixed Allowance — line displays exact entered value, exempt from hidden-cost distribution'}
+                                      >
                                         <input
                                           type="checkbox"
                                           checked={!!item.isFixedAllowance}
-                                          onChange={(e) => updateItem(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', item.id, { isFixedAllowance: e.target.checked })}
-                                          className="h-3 w-3 accent-amber-500"
+                                          disabled={isLastNonFixed}
+                                          onChange={(e) => !isLastNonFixed && updateItem(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', item.id, { isFixedAllowance: e.target.checked })}
+                                          className="h-3 w-3 accent-amber-500 disabled:cursor-not-allowed"
                                         />
                                         <span className="text-[10px] text-amber-700 font-medium">Fixed</span>
                                       </label>
@@ -4745,9 +4758,10 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
                                       <Button
                                         variant="ghost"
                                         size="sm"
-                                        onClick={() => updateItem(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', item.id, { isFixedAllowance: !item.isFixedAllowance })}
-                                        className={`h-8 w-8 p-0 ${item.isFixedAllowance ? 'text-amber-600 hover:text-amber-700 hover:bg-amber-50' : 'text-gray-400 hover:text-amber-500 hover:bg-amber-50'}`}
-                                        title={item.isFixedAllowance ? 'Fixed Allowance ON — click to remove (line will participate in hidden-cost distribution)' : 'Mark as Fixed Allowance (line will display exact entered value, exempt from hidden-cost distribution)'}
+                                        onClick={() => !isLastNonFixed && updateItem(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', item.id, { isFixedAllowance: !item.isFixedAllowance })}
+                                        disabled={isLastNonFixed}
+                                        className={`h-8 w-8 p-0 ${isLastNonFixed ? 'text-gray-300 cursor-not-allowed opacity-50' : item.isFixedAllowance ? 'text-amber-600 hover:text-amber-700 hover:bg-amber-50' : 'text-gray-400 hover:text-amber-500 hover:bg-amber-50'}`}
+                                        title={isLastNonFixed ? 'At least one line must remain non-fixed so hidden costs balance to the total' : item.isFixedAllowance ? 'Fixed Allowance ON — click to remove (line will participate in hidden-cost distribution)' : 'Mark as Fixed Allowance (line will display exact entered value, exempt from hidden-cost distribution)'}
                                       >
                                         {item.isFixedAllowance ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
                                       </Button>

@@ -12,7 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 // Removed Select import - using native HTML selects for consistency
-import { Plus, Edit, Trash2, Save, X, ArrowRight, Copy, FileDown, Upload, Package, Users, ChevronUp, ChevronDown, GripVertical, Check as CheckIcon, FileText, AlertTriangle, Zap, Info } from "lucide-react";
+import { Plus, Edit, Trash2, Save, X, ArrowRight, Copy, FileDown, Upload, Package, Users, ChevronUp, ChevronDown, GripVertical, Check as CheckIcon, FileText, AlertTriangle, Zap, Info, Lock, Unlock } from "lucide-react";
 import { EvaluationAttachments } from "./evaluation-attachments";
 import { EvaluationLabeledUploads } from "./evaluation-labeled-uploads";
 import { EvaluationBudgetHistory } from "./evaluation-budget-history";
@@ -47,6 +47,7 @@ interface EvaluationLineItem {
   assemblyId?: string;
   bucket?: 'ACTUALS' | 'PIPELINE'; // Cost lifecycle bucket for existing improvements
   masterCategoryId?: number | null;
+  isFixedAllowance?: boolean; // When true, line displays its exact entered value — exempt from hidden-cost distribution
 }
 
 interface CustomAssembly {
@@ -134,6 +135,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
     masterItemId: null,
     masterItemSnapshot: null,
     customDescription: null,
+    isFixedAllowance: false,
   });
   
   // Assembly creation state
@@ -2066,15 +2068,27 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
     const baseItemCost = parseFloat(item.totalPrice) || 0;
     const tenantShare = (item.tenantShare || 100) / 100;
     const itemCost = baseItemCost * tenantShare;
+
+    // Fixed-allowance items display their exact entered value — exempt from all hidden-cost distribution.
+    // The hidden-cost pool that would have gone to this line is redistributed across the remaining
+    // non-fixed lines (handled by excluding fixed items from the denominators below).
+    if (item.isFixedAllowance) {
+      return itemCost;
+    }
     
     // First handle design cost distribution if applicable
     let distributedDesignCost = 0;
     if (budgetData.separateDesignCosts) {
-      const tiTotal = calculateCategoryTotal(budgetData.tenantImprovements);
+      // Distribute design costs only among non-fixed TI items so that fixed lines receive no design
+      // allocation. If every TI item is fixed (edge case), fall back to distributing among all.
+      const tiTotalNonFixed = budgetData.tenantImprovements
+        .filter(i => !i.isFixedAllowance)
+        .reduce((sum, i) => sum + (parseFloat(i.totalPrice) || 0) * ((i.tenantShare || 100) / 100), 0);
       const designTotal = calculateCategoryTotal(budgetData.designSoftCosts);
-      
-      if (tiTotal > 0) {
-        const itemPercentage = itemCost / tiTotal;
+      const effectiveTiTotal = tiTotalNonFixed > 0 ? tiTotalNonFixed : calculateCategoryTotal(budgetData.tenantImprovements);
+
+      if (effectiveTiTotal > 0) {
+        const itemPercentage = itemCost / effectiveTiTotal;
         distributedDesignCost = designTotal * itemPercentage;
       }
     }
@@ -2089,9 +2103,10 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
     else if (budgetData.existingImprovements.find(i => i.id === item.id)) itemCategory = 'existingImprovements';
     
     if (itemCategory) {
-      // Calculate base total for this category (excluding rolled-up items AND assembled items)
+      // Base total: non-rolled-up, non-assembled, non-fixed items absorb all hidden-cost distribution.
+      // Fixed-allowance items are excluded from the denominator so their share redistributes to peers.
       const baseCategoryTotal = budgetData[itemCategory]
-        .filter(i => !budgetData.lineItemRollups[i.id] && !i.assemblyId)
+        .filter(i => !budgetData.lineItemRollups[i.id] && !i.assemblyId && !i.isFixedAllowance)
         .reduce((total, i) => {
           const price = parseFloat(i.totalPrice) || 0;
           const tenantShare = (i.tenantShare || 100) / 100;
@@ -2132,10 +2147,8 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         }
       });
       
-      // Distribute rolled-in amount proportionally if this item is not rolled up elsewhere
+      // Distribute rolled-in amount proportionally among non-fixed items only
       if (!budgetData.lineItemRollups[item.id] && !item.assemblyId && baseCategoryTotal > 0 && totalRolledIn > 0) {
-        // CORRECTED LOGIC: Calculate item percentage based on what the user expects
-        // If item represents 60% of the displayed costs, it should get 60% of the rolled-up amount
         const itemPercentage = itemCost / baseCategoryTotal;
         rolledUpDistribution = totalRolledIn * itemPercentage;
       }
@@ -3025,8 +3038,8 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
                         const unitPrice = calculateDistributedUnitPrice(item);
                         const pricePerSf = rentableArea > 0 ? totalPrice / rentableArea : 0;
                         return `
-                        <tr>
-                            <td>${item.description}</td>
+                        <tr${item.isFixedAllowance ? ' class="fixed-allowance-row"' : ''}>
+                            <td>${item.description}${item.isFixedAllowance ? ' <span class="fixed-allowance-badge">&#x1F512; Fixed Allowance</span>' : ''}</td>
                             <td>${new Intl.NumberFormat('en-US').format(item.quantity)}</td>
                             <td>${item.unit}</td>
                             <td class="currency">${formatCurrency(unitPrice)}</td>
@@ -3284,6 +3297,21 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         th:nth-child(6), td:nth-child(6) { width: 13%; text-align: right; }   /* $ / sf */
         
         .currency { text-align: right; font-weight: 600; }
+        .fixed-allowance-row td { background-color: #fffbeb; }
+        .fixed-allowance-badge {
+            display: inline-block;
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fbbf24;
+            font-size: 9px;
+            font-weight: 700;
+            padding: 1px 5px;
+            border-radius: 3px;
+            margin-left: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            vertical-align: middle;
+        }
         .grand-total {
             border: 1px solid #dee2e6;
             color: #333;
@@ -4619,25 +4647,36 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
                                     </div>
                                   </TableCell>
                                   <TableCell className="w-32">
-                                    <div className="flex gap-1 items-center justify-center">
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => setEditingItem(null)}
-                                        className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
-                                        title="Save changes"
-                                      >
-                                        <Save className="h-3 w-3" />
-                                      </Button>
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => setEditingItem(null)}
-                                        className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700 hover:bg-gray-50"
-                                        title="Cancel editing"
-                                      >
-                                        <X className="h-3 w-3" />
-                                      </Button>
+                                    <div className="flex flex-col gap-1 items-center justify-center">
+                                      <div className="flex gap-1">
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => setEditingItem(null)}
+                                          className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                          title="Save changes"
+                                        >
+                                          <Save className="h-3 w-3" />
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => setEditingItem(null)}
+                                          className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                                          title="Cancel editing"
+                                        >
+                                          <X className="h-3 w-3" />
+                                        </Button>
+                                      </div>
+                                      <label className="flex items-center gap-1 cursor-pointer select-none" title="Fixed Allowance — line displays exact entered value, exempt from hidden-cost distribution">
+                                        <input
+                                          type="checkbox"
+                                          checked={!!item.isFixedAllowance}
+                                          onChange={(e) => updateItem(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', item.id, { isFixedAllowance: e.target.checked })}
+                                          className="h-3 w-3 accent-amber-500"
+                                        />
+                                        <span className="text-[10px] text-amber-700 font-medium">Fixed</span>
+                                      </label>
                                     </div>
                                   </TableCell>
                                 </>
@@ -4648,6 +4687,15 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
                                       <span className={`${isAssembled ? 'line-through opacity-60' : ''}`}>
                                         {item.description}
                                       </span>
+                                      {item.isFixedAllowance && (
+                                        <span
+                                          className="inline-flex items-center gap-0.5 bg-amber-100 text-amber-700 border border-amber-300 text-[10px] font-semibold px-1.5 py-0.5 rounded"
+                                          title="Fixed Allowance — this line displays its exact entered value and is exempt from hidden-cost distribution"
+                                        >
+                                          <Lock className="h-2.5 w-2.5" />
+                                          Fixed
+                                        </span>
+                                      )}
                                       {item.masterCategoryId != null && alternateCategoryIds.has(item.masterCategoryId) && (
                                         <span title="This category has pricing alternates — review Option A vs Option B">
                                           <Info className="h-3 w-3 text-indigo-500 cursor-help flex-shrink-0" />
@@ -4694,6 +4742,15 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
                                   </TableCell>
                                   <TableCell className="w-32">
                                     <div className="flex gap-1 items-center justify-center">
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => updateItem(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', item.id, { isFixedAllowance: !item.isFixedAllowance })}
+                                        className={`h-8 w-8 p-0 ${item.isFixedAllowance ? 'text-amber-600 hover:text-amber-700 hover:bg-amber-50' : 'text-gray-400 hover:text-amber-500 hover:bg-amber-50'}`}
+                                        title={item.isFixedAllowance ? 'Fixed Allowance ON — click to remove (line will participate in hidden-cost distribution)' : 'Mark as Fixed Allowance (line will display exact entered value, exempt from hidden-cost distribution)'}
+                                      >
+                                        {item.isFixedAllowance ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
+                                      </Button>
                                       <Button
                                         variant="ghost"
                                         size="sm"

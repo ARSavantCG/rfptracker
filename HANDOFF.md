@@ -1664,6 +1664,44 @@ Spot-checked CM totals (id=29) and contingency totals (id=31) via integer path v
 
 ---
 
+## BACKLOG 2.6 — Fixed-Allowance Line Item Exemption (Complete May 2026)
+
+### What Was Built
+A per-line-item toggle that marks a line as a "Fixed Allowance." When ON, the line is exempt from hidden-cost distribution and displays its exact entered value. The hidden-cost pool that would have gone to the exempt line redistributes to the remaining non-exempt lines. Grand total is always unchanged.
+
+### Key Files Changed
+| File | Change |
+|---|---|
+| `client/src/components/evaluation-budget.tsx` | All changes — interface, distribution logic, UI toggle, report HTML/CSS |
+
+### Implementation Details
+- **`EvaluationLineItem.isFixedAllowance?: boolean`** — new field, stored in the existing JSON columns (`tenant_improvements`, `design_soft_costs`, `existing_improvements`). Defaults `undefined` / `false`. No schema migration needed.
+- **`calculateDistributedCosts`** — if `item.isFixedAllowance`, returns `itemCost` immediately. For non-fixed items, both denominators (rollup base and design-cost TI base) exclude fixed items, so their share of the hidden pool redistributes proportionally to peers.
+- **UI (display row)** — amber `[🔒 Fixed]` badge in the description cell; lock/unlock toggle button in the actions column.
+- **UI (edit row)** — "Fixed" checkbox with amber accent in the save/cancel area.
+- **Report HTML** — amber-background row; `Fixed Allowance` label badge in the description cell. Applies to print and browser-PDF output.
+- **Edge case (all lines fixed)** — each item returns early with its raw value; hidden costs remain in the grand total but are not allocated per-line. Total is still correct. Logged per spec.
+
+### Verification Numbers (RFP-2026-015, Colour Republic LLC — $18,932,354.96 budget)
+
+**Grand total: $18,932,354.96 before AND after — identical in both states.**
+
+The budget has all DSC items rolled into TI ($2,260,098.96 total rolled in). Cooler entered at $11,550,000 (58% of TI base).
+
+| | Cooler | Office Area | Electrical Distribution |
+|---|---|---|---|
+| **BEFORE** (no fixed) | $13,115,723.50 | $2,657,211.51 | $532,505.19 |
+| **AFTER** (Cooler fixed) | **$11,550,000.00** ← exact entered | $3,372,480.92 | $675,845.18 |
+| Change | −$1,565,723.50 | +$715,269.40 | +$143,339.99 |
+
+- Cooler's exact entered value displayed: **$11,550,000.00** ✓
+- Hidden costs that left Cooler: **$1,565,723.50**
+- Sum of all increases on non-fixed lines: **$1,565,723.50** — exact match ✓
+- Toggle OFF → every line returns to BEFORE values exactly ✓
+- Zero-line-no-fixed budget (default path): produces byte-identical numbers to pre-feature behavior ✓
+
+---
+
 ## Permanent Architectural Note — Due Date Canonical Source (added May 2026)
 
 **`invitation_to_bid` is the CANONICAL source for contractor and architect due dates.**

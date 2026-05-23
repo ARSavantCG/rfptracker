@@ -3218,7 +3218,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=1200">
     <title>Evaluation Budget Report - ${rfp?.projectName}</title>
     <style>
         body {
@@ -3452,8 +3452,18 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
             font-size: 12px;
             color: #c1611d;
         }
+        @page {
+            size: 8.5in 11in;
+            margin: 1in;
+        }
         @media print {
-            body { background-color: white; }
+            body {
+                background-color: white;
+                max-width: 100%;
+                width: 6.5in;
+                margin: 0;
+                padding: 0;
+            }
             .section { border: 1px solid #ddd; }
         }
     </style>

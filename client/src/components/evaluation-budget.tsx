@@ -3457,14 +3457,60 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
             margin: 1in;
         }
         @media print {
+            /* ── Body / layout ── */
             body {
                 background-color: white;
                 max-width: 100%;
                 width: 6.5in;
                 margin: 0;
                 padding: 0;
+                font-size: 8pt;
             }
             .section { border: 1px solid #ddd; }
+            .table-container { padding: 3px; }
+
+            /* ── Table base ── */
+            table {
+                width: 6.3in;          /* slight inset from section border */
+                table-layout: fixed;
+                border-collapse: collapse;
+                font-size: 8pt;
+            }
+
+            /* ── Cell padding & base font ── */
+            th, td {
+                padding: 3px 4px;
+                font-size: 8pt;
+                overflow: hidden;
+                vertical-align: top;
+            }
+            th {
+                font-size: 7pt;
+                letter-spacing: 0;
+            }
+
+            /* ── Explicit column widths — sum = 6.3in ── */
+            /* Col 1 Description  : 2.35in — longest text, wraps if needed  */
+            /* Col 2 Quantity      : 0.60in — numeric, short                */
+            /* Col 3 Unit          : 0.45in — "EA", "SF" etc.               */
+            /* Col 4 Unit Price    : 1.00in — fits "$13,090,213.61"         */
+            /* Col 5 Total Price   : 1.00in — same                          */
+            /* Col 6 $/RSF         : 0.90in — fits "$28.82" with header     */
+            th:nth-child(1), td:nth-child(1) { width: 2.35in; text-align: left;   word-break: break-word; white-space: normal; }
+            th:nth-child(2), td:nth-child(2) { width: 0.60in; text-align: center; white-space: nowrap; }
+            th:nth-child(3), td:nth-child(3) { width: 0.45in; text-align: center; white-space: nowrap; }
+            th:nth-child(4), td:nth-child(4) { width: 1.00in; text-align: right;  white-space: nowrap; }
+            th:nth-child(5), td:nth-child(5) { width: 1.00in; text-align: right;  white-space: nowrap; }
+            th:nth-child(6), td:nth-child(6) { width: 0.90in; text-align: right;  white-space: nowrap; }
+
+            /* ── Page-break rules ── */
+            /* Repeat the thead on every continued page */
+            thead { display: table-header-group; }
+            /* Never cut a data row across a page break */
+            tr { page-break-inside: avoid; }
+            /* Keep section headers with the content below them */
+            .section { page-break-inside: auto; }
+            .section-header { page-break-after: avoid; }
         }
     </style>
 </head>

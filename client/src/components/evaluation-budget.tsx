@@ -4816,10 +4816,16 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
                                         size="sm"
                                         onClick={() => !isLastNonFixed && updateItem(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', item.id, { isFixedAllowance: !item.isFixedAllowance })}
                                         disabled={isLastNonFixed}
-                                        className={`h-8 w-8 p-0 ${isLastNonFixed ? 'text-gray-300 cursor-not-allowed opacity-50' : item.isFixedAllowance ? 'text-amber-600 hover:text-amber-700 hover:bg-amber-50' : 'text-gray-400 hover:text-amber-500 hover:bg-amber-50'}`}
-                                        title={isLastNonFixed ? 'At least one line must remain non-fixed so hidden costs balance to the total' : item.isFixedAllowance ? 'Fixed Allowance ON — click to remove (line will participate in hidden-cost distribution)' : 'Mark as Fixed Allowance (line will display exact entered value, exempt from hidden-cost distribution)'}
+                                        className={`h-8 w-8 p-0 rounded transition-colors ${
+                                          isLastNonFixed
+                                            ? 'text-gray-300 cursor-not-allowed opacity-50'
+                                            : item.isFixedAllowance
+                                              ? 'text-amber-600 bg-amber-50 ring-1 ring-amber-300 hover:text-amber-700 hover:bg-amber-100'
+                                              : 'text-slate-500 hover:text-amber-600 hover:bg-amber-50 hover:ring-1 hover:ring-amber-200'
+                                        }`}
+                                        title={isLastNonFixed ? 'At least one line must remain non-fixed so hidden costs balance to the total' : item.isFixedAllowance ? 'Fixed Allowance ON — click to remove (price will rejoin cost distribution)' : 'Mark as fixed allowance (locks price, exempts from cost distribution)'}
                                       >
-                                        {item.isFixedAllowance ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
+                                        {item.isFixedAllowance ? <Lock className="h-3.5 w-3.5" /> : <Unlock className="h-3.5 w-3.5" />}
                                       </Button>
                                       <Button
                                         variant="ghost"

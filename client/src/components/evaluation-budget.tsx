@@ -3038,8 +3038,8 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
                         const unitPrice = calculateDistributedUnitPrice(item);
                         const pricePerSf = rentableArea > 0 ? totalPrice / rentableArea : 0;
                         return `
-                        <tr${item.isFixedAllowance ? ' class="fixed-allowance-row"' : ''}>
-                            <td>${item.description}${item.isFixedAllowance ? ' <span class="fixed-allowance-badge">&#x1F512; Fixed Allowance</span>' : ''}</td>
+                        <tr>
+                            <td>${item.description}${item.isFixedAllowance ? ' <span class="fixed-lock-icon">&#x1F512;</span>' : ''}</td>
                             <td>${new Intl.NumberFormat('en-US').format(item.quantity)}</td>
                             <td>${item.unit}</td>
                             <td class="currency">${formatCurrency(unitPrice)}</td>
@@ -3297,19 +3297,12 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         th:nth-child(6), td:nth-child(6) { width: 13%; text-align: right; }   /* $ / sf */
         
         .currency { text-align: right; font-weight: 600; }
-        .fixed-allowance-row td { background-color: #fffbeb; }
-        .fixed-allowance-badge {
+        .fixed-lock-icon {
             display: inline-block;
-            background: #fef3c7;
-            color: #92400e;
-            border: 1px solid #fbbf24;
             font-size: 9px;
-            font-weight: 700;
-            padding: 1px 5px;
-            border-radius: 3px;
-            margin-left: 6px;
-            text-transform: uppercase;
-            letter-spacing: 0.4px;
+            color: #94a3b8;
+            margin-left: 4px;
+            opacity: 0.75;
             vertical-align: middle;
         }
         .grand-total {
@@ -4758,11 +4751,10 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
                                       </span>
                                       {item.isFixedAllowance && (
                                         <span
-                                          className="inline-flex items-center gap-0.5 bg-amber-100 text-amber-700 border border-amber-300 text-[10px] font-semibold px-1.5 py-0.5 rounded"
-                                          title="Fixed Allowance — this line displays its exact entered value and is exempt from hidden-cost distribution"
+                                          className="ml-1 text-slate-400 flex-shrink-0"
+                                          title="Fixed allowance — locked price, exempt from cost distribution"
                                         >
-                                          <Lock className="h-2.5 w-2.5" />
-                                          Fixed
+                                          <Lock className="h-3 w-3" />
                                         </span>
                                       )}
                                       {item.masterCategoryId != null && alternateCategoryIds.has(item.masterCategoryId) && (

@@ -3039,7 +3039,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
                         const pricePerSf = rentableArea > 0 ? totalPrice / rentableArea : 0;
                         return `
                         <tr>
-                            <td>${item.isFixedAllowance ? '<span class="fixed-lock-icon">&#x1F512;</span> ' : ''}${item.description}</td>
+                            <td>${item.isFixedAllowance ? '<svg xmlns="http://www.w3.org/2000/svg" width="9" height="11" viewBox="0 0 14 17" style="display:inline-block;vertical-align:middle;margin-right:3px;opacity:0.55;"><rect x="1" y="7" width="12" height="9" rx="1.5" fill="#64748b"/><path d="M4 7V5a3 3 0 0 1 6 0v2" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round"/></svg>' : ''}${item.description}</td>
                             <td>${new Intl.NumberFormat('en-US').format(item.quantity)}</td>
                             <td>${item.unit}</td>
                             <td class="currency">${formatCurrency(unitPrice)}</td>
@@ -3472,7 +3472,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
 
             /* ── Cell padding & base font ── */
             th, td {
-                padding: 3px 4px;
+                padding: 5px 5px;
                 font-size: 8pt;
                 overflow: hidden;
                 vertical-align: top;
@@ -3483,18 +3483,18 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
             }
 
             /* ── Explicit column widths — sum = 6.3in ── */
-            /* Col 1 Description  : 2.35in — longest text, wraps if needed  */
-            /* Col 2 Quantity      : 0.60in — numeric, short                */
-            /* Col 3 Unit          : 0.45in — "EA", "SF" etc.               */
-            /* Col 4 Unit Price    : 1.00in — fits "$13,090,213.61"         */
-            /* Col 5 Total Price   : 1.00in — same                          */
-            /* Col 6 $/RSF         : 0.90in — fits "$28.82" with header     */
-            th:nth-child(1), td:nth-child(1) { width: 2.35in; text-align: left;   word-break: break-word; white-space: normal; }
+            /* Col 1 Description  : 1.80in — wraps if needed; numeric cols get more room */
+            /* Col 2 Quantity      : 0.60in — numeric, short                             */
+            /* Col 3 Unit          : 0.45in — "EA", "SF" etc.                            */
+            /* Col 4 Unit Price    : 1.15in — fits "$13,090,213.61" with breathing room  */
+            /* Col 5 Total Price   : 1.15in — same                                       */
+            /* Col 6 $/RSF         : 1.15in — even with Unit Price / Total Price         */
+            th:nth-child(1), td:nth-child(1) { width: 1.80in; text-align: left;   word-break: break-word; white-space: normal; }
             th:nth-child(2), td:nth-child(2) { width: 0.60in; text-align: center; white-space: nowrap; }
             th:nth-child(3), td:nth-child(3) { width: 0.45in; text-align: center; white-space: nowrap; }
-            th:nth-child(4), td:nth-child(4) { width: 1.00in; text-align: right;  white-space: nowrap; }
-            th:nth-child(5), td:nth-child(5) { width: 1.00in; text-align: right;  white-space: nowrap; }
-            th:nth-child(6), td:nth-child(6) { width: 0.90in; text-align: right;  white-space: nowrap; }
+            th:nth-child(4), td:nth-child(4) { width: 1.15in; text-align: right;  white-space: nowrap; }
+            th:nth-child(5), td:nth-child(5) { width: 1.15in; text-align: right;  white-space: nowrap; }
+            th:nth-child(6), td:nth-child(6) { width: 1.15in; text-align: right;  white-space: nowrap; }
 
             /* ── Page-break rules ── */
             /* Repeat the thead on every continued page */

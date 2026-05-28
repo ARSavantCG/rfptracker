@@ -3039,7 +3039,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
                         const pricePerSf = rentableArea > 0 ? totalPrice / rentableArea : 0;
                         return `
                         <tr>
-                            <td>${item.description}${item.isFixedAllowance ? ' <span class="fixed-lock-icon">&#x1F512;</span>' : ''}</td>
+                            <td>${item.isFixedAllowance ? '<span class="fixed-lock-icon">&#x1F512;</span> ' : ''}${item.description}</td>
                             <td>${new Intl.NumberFormat('en-US').format(item.quantity)}</td>
                             <td>${item.unit}</td>
                             <td class="currency">${formatCurrency(unitPrice)}</td>
@@ -4746,17 +4746,17 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
                                 <>
                                   <TableCell>
                                     <div className="flex items-center gap-1">
-                                      <span className={`${isAssembled ? 'line-through opacity-60' : ''}`}>
-                                        {item.description}
-                                      </span>
                                       {item.isFixedAllowance && (
                                         <span
-                                          className="ml-1 text-slate-400 flex-shrink-0"
-                                          title="Fixed allowance — locked price, exempt from cost distribution"
+                                          className="text-slate-400 flex-shrink-0"
+                                          title="Locked — price held, exempt from cost distribution"
                                         >
                                           <Lock className="h-3 w-3" />
                                         </span>
                                       )}
+                                      <span className={`${isAssembled ? 'line-through opacity-60' : ''}`}>
+                                        {item.description}
+                                      </span>
                                       {item.masterCategoryId != null && alternateCategoryIds.has(item.masterCategoryId) && (
                                         <span title="This category has pricing alternates — review Option A vs Option B">
                                           <Info className="h-3 w-3 text-indigo-500 cursor-help flex-shrink-0" />

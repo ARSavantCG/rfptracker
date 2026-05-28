@@ -3020,14 +3020,22 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
           </div>
           <div class="table-container">
               <table>
+                  <colgroup>
+                      <col style="width:1.80in">
+                      <col style="width:0.60in">
+                      <col style="width:0.45in">
+                      <col style="width:1.15in">
+                      <col style="width:1.15in">
+                      <col style="width:1.15in">
+                  </colgroup>
                   <thead>
                       <tr>
-                          <th>Description</th>
-                          <th>Quantity</th>
-                          <th>Unit</th>
-                          <th>Unit Price</th>
-                          <th>Total Price</th>
-                          <th>$/RSF</th>
+                          <th style="text-align:left">Description</th>
+                          <th style="text-align:center">Quantity</th>
+                          <th style="text-align:center">Unit</th>
+                          <th style="text-align:right">Unit Price</th>
+                          <th style="text-align:right">Total Price</th>
+                          <th style="text-align:right">$/RSF</th>
                       </tr>
                   </thead>
                   <tbody>
@@ -3104,14 +3112,22 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
             </div>
             <div class="table-container">
                 <table>
+                    <colgroup>
+                        <col style="width:1.80in">
+                        <col style="width:0.60in">
+                        <col style="width:0.45in">
+                        <col style="width:1.15in">
+                        <col style="width:1.15in">
+                        <col style="width:1.15in">
+                    </colgroup>
                     <thead>
                         <tr>
-                            <th>Description</th>
-                            <th>Quantity</th>
-                            <th>Unit</th>
-                            <th>Unit Price</th>
-                            <th>Total Price</th>
-                            <th>$/RSF</th>
+                            <th style="text-align:left">Description</th>
+                            <th style="text-align:center">Quantity</th>
+                            <th style="text-align:center">Unit</th>
+                            <th style="text-align:right">Unit Price</th>
+                            <th style="text-align:right">Total Price</th>
+                            <th style="text-align:right">$/RSF</th>
                         </tr>
                     </thead>
                     <tbody>

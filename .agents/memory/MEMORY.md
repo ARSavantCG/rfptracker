@@ -1,0 +1,1 @@
+- [Actuals vs ROM feature](actuals-rom-feature.md) — getOrCreate pattern for leased-project actuals; schema, routes, and UI structure decisions.

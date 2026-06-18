@@ -11,6 +11,7 @@ import { CalendarIcon, Edit, Check, X, RefreshCw } from "lucide-react";
 import type { RfpRequest } from "@shared/schema";
 import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 import { parseRfpVariant } from "@shared/rfp-variant";
+import { RfpActualsSection } from "@/components/rfp-actuals-section";
 
 interface RfpDetailModalProps {
   isOpen: boolean;
@@ -820,6 +821,12 @@ export function RfpDetailModal({ isOpen, onClose, rfp, onRfpUpdated }: RfpDetail
                     </div>
                   </div>
                 )}
+
+                {/* ── Contract Actuals ── */}
+                <RfpActualsSection
+                  rfpId={rfp.id}
+                  rfpIsLeased={!!displayRfp?.isLeased}
+                />
               </div>
               
               {/* Files Section */}

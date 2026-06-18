@@ -2,7 +2,7 @@ import { Express, Request, Response } from "express";
 import multer from "multer";
 import { db } from "./db";
 import { requireAuth, checkPermission } from "./middleware";
-import { projectActuals, projectActualLineItems } from "@shared/schema";
+import { projectActuals, projectActualLineItems, rfpRequests } from "@shared/schema";
 import { eq, desc, and, isNotNull, sql } from "drizzle-orm";
 
 const csvUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
@@ -123,6 +123,50 @@ export function registerActualsRoutes(app: Express): void {
     } catch (error) {
       console.error("Error fetching benchmarks:", error);
       res.status(500).json({ message: "Failed to fetch benchmarks" });
+    }
+  });
+
+  // GET /api/rfp-requests/:rfpId/actuals — getOrCreate for leased RFPs
+  app.get("/api/rfp-requests/:rfpId/actuals", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const rfpId = parseInt(req.params.rfpId);
+      if (isNaN(rfpId)) return res.status(400).json({ message: "Invalid RFP ID" });
+
+      // Return existing if found (never duplicate)
+      const [existing] = await db
+        .select()
+        .from(projectActuals)
+        .where(eq(projectActuals.rfpId, rfpId));
+
+      if (existing) {
+        const lineItems = await db
+          .select()
+          .from(projectActualLineItems)
+          .where(eq(projectActualLineItems.projectActualId, existing.id));
+        return res.json({ ...existing, lineItems });
+      }
+
+      // Auto-create from RFP fields
+      const [rfp] = await db.select().from(rfpRequests).where(eq(rfpRequests.id, rfpId));
+      if (!rfp) return res.status(404).json({ message: "RFP not found" });
+
+      const [created] = await db
+        .insert(projectActuals)
+        .values({
+          rfpId,
+          projectName: rfp.projectName || rfp.rfpNumber,
+          tenantName: rfp.tenantName,
+          propertyName: rfp.property || "",
+          completedDate: null,
+          totalActualCost: null,
+          source: "leased_actuals",
+        })
+        .returning();
+
+      return res.json({ ...created, lineItems: [] });
+    } catch (error) {
+      console.error("Error in getOrCreate project actual:", error);
+      res.status(500).json({ message: "Failed to get or create project actual" });
     }
   });
 
@@ -273,6 +317,8 @@ export function registerActualsRoutes(app: Express): void {
           areaType: body.areaType || "combined",
           areaSf: liSf,
           costPerSf: computeCostPerSf(liCost, liSf),
+          vendorName: body.vendorName || null,
+          linkedMasterItemIds: body.linkedMasterItemIds || [],
           notes: body.notes || null,
         })
         .returning();
@@ -296,6 +342,8 @@ export function registerActualsRoutes(app: Express): void {
       if (liCost !== undefined) updateData.totalCost = liCost;
       if (body.areaType !== undefined) updateData.areaType = body.areaType;
       if (liSf !== undefined) updateData.areaSf = liSf;
+      if (body.vendorName !== undefined) updateData.vendorName = body.vendorName;
+      if (body.linkedMasterItemIds !== undefined) updateData.linkedMasterItemIds = body.linkedMasterItemIds;
       if (body.notes !== undefined) updateData.notes = body.notes;
       if (liCost !== undefined || liSf !== undefined) {
         const [existing] = await db.select().from(projectActualLineItems).where(eq(projectActualLineItems.id, lineItemId));

@@ -26,6 +26,7 @@ export function RfpDetailModal({ isOpen, onClose, rfp, onRfpUpdated }: RfpDetail
   const [isEditingDates, setIsEditingDates] = useState(false);
   const [editCompletedDate, setEditCompletedDate] = useState("");
   const [editPublishedDate, setEditPublishedDate] = useState("");
+  const [isTogglingLeased, setIsTogglingLeased] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -154,6 +155,28 @@ export function RfpDetailModal({ isOpen, onClose, rfp, onRfpUpdated }: RfpDetail
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to update completion dates",
+        variant: "destructive",
+        duration: 6000,
+      });
+    },
+  });
+
+  const leasedMutation = useMutation({
+    mutationFn: async (newValue: boolean) => {
+      if (!rfp) return;
+      return await apiRequest(`/api/rfp-requests/${rfp.id}`, "PATCH", { isLeased: newValue });
+    },
+    onSuccess: (updatedRfp: RfpRequest) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
+      if (onRfpUpdated && updatedRfp) onRfpUpdated(updatedRfp);
+      setIsTogglingLeased(false);
+    },
+    onError: (error) => {
+      setIsTogglingLeased(false);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update leased status",
         variant: "destructive",
         duration: 6000,
       });
@@ -613,6 +636,30 @@ export function RfpDetailModal({ isOpen, onClose, rfp, onRfpUpdated }: RfpDetail
                         >
                           <Edit className="h-3 w-3" />
                         </button>
+                      )}
+                    </div>
+
+                    {/* Leased toggle */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-blue-700 font-medium">Leased:</span>
+                      <input
+                        type="checkbox"
+                        id="leased-toggle"
+                        checked={!!rfp.isLeased}
+                        disabled={leasedMutation.isPending}
+                        onChange={() => {
+                          setIsTogglingLeased(true);
+                          leasedMutation.mutate(!rfp.isLeased);
+                        }}
+                        className="h-4 w-4 rounded border-gray-300 text-blue-600 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+                      />
+                      {rfp.isLeased && rfp.leasedAt && (
+                        <span className="text-blue-900 text-xs">
+                          since {formatDateForDisplay(rfp.leasedAt)}
+                        </span>
+                      )}
+                      {leasedMutation.isPending && (
+                        <span className="text-xs text-gray-400">Saving…</span>
                       )}
                     </div>
                   </div>

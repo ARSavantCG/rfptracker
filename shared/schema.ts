@@ -98,6 +98,10 @@ export const rfpRequests = pgTable("rfp_requests", {
   // Completion tracking
   completedDate: timestamp("completed_date"),
   publishedDate: timestamp("published_date"),
+
+  // Lease status
+  isLeased: boolean("is_leased").notNull().default(false),
+  leasedAt: timestamp("leased_at"),
   
   // Project folder for file organization (auto-generated, sanitized from project name)
   projectFolder: text("project_folder"),
@@ -194,6 +198,7 @@ export const updateRfpRequestSchema = insertRfpRequestSchema.partial().extend({
   targetPermitDrawings: z.union([z.date(), z.string().transform((val) => val ? new Date(val) : null)]).optional().nullable(),
   targetSubstantialCompletion: z.union([z.date(), z.string().transform((val) => val ? new Date(val) : null)]).optional().nullable(),
   targetRCD: z.union([z.date(), z.string().transform((val) => val ? new Date(val) : null)]).optional().nullable(),
+  leasedAt: z.union([z.date(), z.string().transform((val) => val ? new Date(val) : null)]).optional().nullable(),
 });
 
 export type InsertRfpRequest = z.infer<typeof insertRfpRequestSchema>;

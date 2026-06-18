@@ -1108,6 +1108,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error('RFP 400 parse error:', error instanceof Error ? error.message : String(error));
         return res.status(400).json({ message: error instanceof Error ? error.message : String(error) });
       }
+
+      // isLeased transition logic: stamp or clear leasedAt automatically
+      if ((updates as any).isLeased === true && (updates as any).leasedAt === undefined) {
+        (updates as any).leasedAt = new Date();   // false → true: stamp now
+      } else if ((updates as any).isLeased === false) {
+        (updates as any).leasedAt = null;          // true → false: clear timestamp
+      }
+
       const updatedRequest = await storage.updateRfpRequest(id, updates);
       
       if (!updatedRequest) {

@@ -6599,7 +6599,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ─── Category Cost Breakdown Report ───────────────────────────────────────
   app.get("/api/reports/category-cost-breakdown", requireAuth, async (req, res) => {
     try {
-      const { statuses, propertyIds, dateFrom, dateTo, items: itemsRaw } = req.query;
+      const { statuses, propertyIds, dateFrom, dateTo, items: itemsRaw, leased } = req.query;
 
       const selectedItems: Array<{ type: "category" | "scopeItem"; id: number; label: string }> =
         itemsRaw ? JSON.parse(itemsRaw as string) : [];
@@ -6635,6 +6635,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const to = new Date(dateTo as string);
         to.setHours(23, 59, 59, 999);
         allRfps = allRfps.filter((r) => new Date(r.receivedOn) <= to);
+      }
+
+      // Leased filter
+      if (leased === "true") {
+        allRfps = allRfps.filter((r) => r.isLeased === true);
       }
 
       const categoryItems = selectedItems.filter((i) => i.type === "category");
@@ -6784,6 +6789,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             grandTotal,
             itemAmounts,
             contingencyAmount,
+            isLeased: rfp.isLeased ?? false,
+            leasedAt: rfp.leasedAt ? (rfp.leasedAt as Date).toISOString() : null,
           };
         })
       );

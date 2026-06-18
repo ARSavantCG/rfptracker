@@ -33,6 +33,8 @@ interface ProjectRow {
   grandTotal: number | null;
   itemAmounts: Record<string, number | null>;
   contingencyAmount: number | null;
+  isLeased: boolean;
+  leasedAt: string | null;
 }
 interface ColDef { key: string; label: string; type: "category" | "scopeItem" }
 interface ReportData { projects: ProjectRow[]; columns: ColDef[] }
@@ -120,6 +122,7 @@ export default function CategoryCostBreakdownReport() {
   const [selectedPropertyIds, setSelectedPropertyIds] = useState<number[]>([]);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [leasedOnly, setLeasedOnly] = useState(false);
   const [selectedItems, setSelectedItems] = useState<PickerItem[]>([]);
   const [pickerSearch, setPickerSearch] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -231,6 +234,7 @@ export default function CategoryCostBreakdownReport() {
         dateFrom,
         dateTo,
         items: JSON.stringify(selectedItems.map(i => ({ type: i.type, id: i.id, label: i.label }))),
+        ...(leasedOnly ? { leased: "true" } : {}),
       });
       const data = await apiRequest(`/api/reports/category-cost-breakdown?${params}`, "GET");
       setReportData(data as ReportData);
@@ -297,6 +301,17 @@ export default function CategoryCostBreakdownReport() {
     return totals;
   }, [reportData, displayRows]);
 
+  // Ordered columns: scope items (CM first) then categories — stable sort on a copy
+  const orderedColumns = useMemo(() => {
+    if (!reportData) return [] as ColDef[];
+    const priority = (col: ColDef): number => {
+      if (col.type === "scopeItem" && col.label.toLowerCase().includes("construction management")) return 0;
+      if (col.type === "scopeItem") return 1;
+      return 2; // category
+    };
+    return [...reportData.columns].sort((a, b) => priority(a) - priority(b));
+  }, [reportData]);
+
   // Weighted average pct for footer
   function footerPct(colKey: string): number | null {
     const col = reportData?.columns.find(c => c.key === colKey);
@@ -311,7 +326,7 @@ export default function CategoryCostBreakdownReport() {
   // Export to Excel
   function exportToExcel() {
     if (!reportData) return;
-    const cols = reportData.columns;
+    const cols = orderedColumns;
     const header: string[] = [
       "Project ID", "Tenant", "Property", "Status", "Received Date", "Total Project Cost",
       ...cols.flatMap(c => [`${c.label} $`, `${c.label} %`]),
@@ -561,14 +576,12 @@ export default function CategoryCostBreakdownReport() {
               <div className="flex items-center justify-between mb-2">
                 <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Property</label>
                 <div className="flex items-center gap-2">
-                  {sortedProperties.length > 0 && (
-                    <button
-                      onClick={() => setSelectedPropertyIds(sortedProperties.map((p: Property) => p.id))}
-                      className="text-xs text-blue-600 hover:text-blue-800"
-                    >
-                      Select All
-                    </button>
-                  )}
+                  <button
+                    onClick={() => setSelectedPropertyIds(sortedProperties.map((p: Property) => p.id))}
+                    className="text-xs text-blue-600 hover:text-blue-800"
+                  >
+                    Select All
+                  </button>
                   {selectedPropertyIds.length > 0 && sortedProperties.length > 0 && (
                     <span className="text-gray-300">|</span>
                   )}
@@ -684,38 +697,7 @@ export default function CategoryCostBreakdownReport() {
                     </div>
                   </div>
                   <div className="max-h-72 overflow-y-auto">
-                    {/* Master Categories section */}
-                    {pickerGroups.cats.length > 0 && (
-                      <div>
-                        <div className="px-3 py-1.5 bg-gray-50 text-[10px] font-semibold text-gray-500 uppercase tracking-wide sticky top-0">
-                          Master Categories
-                        </div>
-                        {pickerGroups.cats.map(item => {
-                          const k = `${item.type}_${item.id}`;
-                          const checked = selectedKeys.has(k);
-                          return (
-                            <button
-                              key={k}
-                              onClick={() => toggleItem(item)}
-                              className={`w-full flex items-center gap-2 px-3 py-2 text-left text-xs hover:bg-blue-50 transition-colors ${
-                                checked ? "bg-blue-50" : ""
-                              }`}
-                            >
-                              <div className={`h-4 w-4 rounded border flex items-center justify-center shrink-0 ${
-                                checked ? "bg-blue-600 border-blue-600" : "border-gray-300"
-                              }`}>
-                                {checked && <Check className="h-2.5 w-2.5 text-white" />}
-                              </div>
-                              <span className={checked ? "font-medium text-blue-800" : "text-gray-700"}>
-                                {item.label}
-                              </span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-
-                    {/* Scope Items sections grouped by category — soft costs group always first */}
+                    {/* Scope Items sections first — soft costs group first, CM items first within each group */}
                     {Object.entries(pickerGroups.byCat).sort(([a], [b]) => {
                       const SOFT = "Design / Soft Costs / Other Fees";
                       if (a === SOFT) return -1;
@@ -726,7 +708,11 @@ export default function CategoryCostBreakdownReport() {
                         <div className="px-3 py-1.5 bg-gray-50 text-[10px] font-semibold text-gray-500 uppercase tracking-wide sticky top-0">
                           Scope: {cat}
                         </div>
-                        {items.map(si => {
+                        {[...items].sort((a, b) => {
+                          const aCm = a.name.toLowerCase().includes("construction management") ? 0 : 1;
+                          const bCm = b.name.toLowerCase().includes("construction management") ? 0 : 1;
+                          return aCm - bCm;
+                        }).map(si => {
                           const item: PickerItem = { type: "scopeItem", id: si.id, label: si.name };
                           const k = `scopeItem_${si.id}`;
                           const checked = selectedKeys.has(k);
@@ -757,6 +743,37 @@ export default function CategoryCostBreakdownReport() {
                       </div>
                     ))}
 
+                    {/* Master Categories section — below scope items */}
+                    {pickerGroups.cats.length > 0 && (
+                      <div>
+                        <div className="px-3 py-1.5 bg-gray-50 text-[10px] font-semibold text-gray-500 uppercase tracking-wide sticky top-0">
+                          Master Categories
+                        </div>
+                        {pickerGroups.cats.map(item => {
+                          const k = `${item.type}_${item.id}`;
+                          const checked = selectedKeys.has(k);
+                          return (
+                            <button
+                              key={k}
+                              onClick={() => toggleItem(item)}
+                              className={`w-full flex items-center gap-2 px-3 py-2 text-left text-xs hover:bg-blue-50 transition-colors ${
+                                checked ? "bg-blue-50" : ""
+                              }`}
+                            >
+                              <div className={`h-4 w-4 rounded border flex items-center justify-center shrink-0 ${
+                                checked ? "bg-blue-600 border-blue-600" : "border-gray-300"
+                              }`}>
+                                {checked && <Check className="h-2.5 w-2.5 text-white" />}
+                              </div>
+                              <span className={checked ? "font-medium text-blue-800" : "text-gray-700"}>
+                                {item.label}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+
                     {pickerGroups.cats.length === 0 && Object.keys(pickerGroups.byCat).length === 0 && (
                       <div className="px-3 py-6 text-center text-xs text-gray-400">
                         No matches for "{pickerSearch}"
@@ -771,6 +788,20 @@ export default function CategoryCostBreakdownReport() {
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Leased filter */}
+          <div className="flex items-center gap-2 pt-1">
+            <input
+              type="checkbox"
+              id="leased-only-filter"
+              checked={leasedOnly}
+              onChange={e => setLeasedOnly(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300 text-blue-600 cursor-pointer"
+            />
+            <label htmlFor="leased-only-filter" className="text-xs font-medium text-gray-700 cursor-pointer select-none">
+              Leased only
+            </label>
           </div>
 
           {/* Run report button */}
@@ -886,7 +917,7 @@ export default function CategoryCostBreakdownReport() {
                       <th className="px-3 py-2.5 text-right text-gray-500 font-medium min-w-[110px] border-r border-gray-200">
                         <SortHeader col="grandTotal" label="Total Cost" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} align="right" />
                       </th>
-                      {reportData.columns.map(col => (
+                      {orderedColumns.map(col => (
                         <Fragment key={col.key}>
                           <th className="px-3 py-2.5 text-right text-gray-500 font-medium min-w-[110px]">
                             <SortHeader
@@ -916,9 +947,16 @@ export default function CategoryCostBreakdownReport() {
                           {row.property}
                         </td>
                         <td className="px-3 py-2">
-                          <Badge className={`text-[10px] px-1.5 py-0 border-0 ${statusColor(row.status)}`}>
-                            {statusLabel(row.status)}
-                          </Badge>
+                          <div className="flex items-center gap-1 flex-wrap">
+                            <Badge className={`text-[10px] px-1.5 py-0 border-0 ${statusColor(row.status)}`}>
+                              {statusLabel(row.status)}
+                            </Badge>
+                            {row.isLeased && (
+                              <Badge className="text-[10px] px-1.5 py-0 border-0 bg-green-100 text-green-800">
+                                Leased
+                              </Badge>
+                            )}
+                          </div>
                         </td>
                         <td className="px-3 py-2 text-gray-500 whitespace-nowrap">
                           {row.receivedOn ? format(new Date(row.receivedOn), "MM/dd/yy") : "—"}
@@ -926,7 +964,7 @@ export default function CategoryCostBreakdownReport() {
                         <td className="px-3 py-2 text-right font-medium text-gray-800 tabular-nums border-r border-gray-200">
                           {fmtDollar(row.grandTotal)}
                         </td>
-                        {reportData.columns.map(col => {
+                        {orderedColumns.map(col => {
                           const amt = row.itemAmounts[col.key];
                           const p = isCmColumn(col.label)
                             ? pctCMBase(amt, row.grandTotal, row.contingencyAmount)
@@ -952,7 +990,7 @@ export default function CategoryCostBreakdownReport() {
                       <td className="px-3 py-2 text-right tabular-nums text-gray-900 border-r border-gray-200">
                         {fmtDollar(footerTotals["grandTotal"] ?? null)}
                       </td>
-                      {reportData.columns.map(col => (
+                      {orderedColumns.map(col => (
                         <Fragment key={col.key}>
                           <td className="px-3 py-2 text-right tabular-nums text-gray-800">
                             {fmtDollar(footerTotals[col.key] ?? null)}

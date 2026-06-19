@@ -23,6 +23,49 @@ function computeCostPerSf(costCents: number, areaSf: number | null | undefined):
   return (costCents / 100 / areaSf).toFixed(2);
 }
 
+// Returns conflict info when incomingIds overlap masterItemIds already claimed by OTHER line items
+// on the same project_actual. excludeLineItemId = the line being edited (skip its own current links).
+async function checkLinkedIdsConflict(
+  projectActualId: number,
+  incomingIds: number[],
+  excludeLineItemId?: number
+): Promise<{ conflict: boolean; message: string }> {
+  const allItems = await db
+    .select({
+      id: projectActualLineItems.id,
+      category: projectActualLineItems.category,
+      linkedMasterItemIds: projectActualLineItems.linkedMasterItemIds,
+    })
+    .from(projectActualLineItems)
+    .where(eq(projectActualLineItems.projectActualId, projectActualId));
+
+  const others = excludeLineItemId
+    ? allItems.filter((li) => li.id !== excludeLineItemId)
+    : allItems;
+
+  const claimedMap = new Map<number, string>();
+  for (const li of others) {
+    for (const mid of ((li.linkedMasterItemIds as number[]) || [])) {
+      claimedMap.set(mid, li.category);
+    }
+  }
+
+  const conflicts: string[] = [];
+  for (const mid of incomingIds) {
+    if (claimedMap.has(mid)) {
+      conflicts.push(`${mid} (owned by "${claimedMap.get(mid)}")`);
+    }
+  }
+
+  if (conflicts.length > 0) {
+    return {
+      conflict: true,
+      message: `masterItemId(s) already linked to another line on this project: ${conflicts.join(", ")}`,
+    };
+  }
+  return { conflict: false, message: "" };
+}
+
 export function registerActualsRoutes(app: Express): void {
 
   // GET /api/project-actuals — all actuals with line items
@@ -132,11 +175,11 @@ export function registerActualsRoutes(app: Express): void {
       const rfpId = parseInt(req.params.rfpId);
       if (isNaN(rfpId)) return res.status(400).json({ message: "Invalid RFP ID" });
 
-      // Return existing if found (never duplicate)
+      // Return existing leased_actuals row for this rfpId (never touch historical_import rows)
       const [existing] = await db
         .select()
         .from(projectActuals)
-        .where(eq(projectActuals.rfpId, rfpId));
+        .where(and(eq(projectActuals.rfpId, rfpId), eq(projectActuals.source, "leased_actuals")));
 
       if (existing) {
         const lineItems = await db
@@ -305,6 +348,16 @@ export function registerActualsRoutes(app: Express): void {
     try {
       const projectActualId = parseInt(req.params.id);
       const body = req.body;
+
+      // Validate and enforce exclusive linking
+      let linkedIds: number[] = [];
+      if (body.linkedMasterItemIds && Array.isArray(body.linkedMasterItemIds) && body.linkedMasterItemIds.length > 0) {
+        // De-dupe within the incoming array first
+        linkedIds = [...new Set<number>(body.linkedMasterItemIds)];
+        const check = await checkLinkedIdsConflict(projectActualId, linkedIds);
+        if (check.conflict) return res.status(409).json({ message: check.message });
+      }
+
       const liCost = dollarsToCents(body.totalCost);
       const liSf = body.areaSf ? parseInt(body.areaSf) : null;
       const [created] = await db
@@ -318,7 +371,7 @@ export function registerActualsRoutes(app: Express): void {
           areaSf: liSf,
           costPerSf: computeCostPerSf(liCost, liSf),
           vendorName: body.vendorName || null,
-          linkedMasterItemIds: body.linkedMasterItemIds || [],
+          linkedMasterItemIds: linkedIds,
           notes: body.notes || null,
         })
         .returning();
@@ -343,7 +396,18 @@ export function registerActualsRoutes(app: Express): void {
       if (body.areaType !== undefined) updateData.areaType = body.areaType;
       if (liSf !== undefined) updateData.areaSf = liSf;
       if (body.vendorName !== undefined) updateData.vendorName = body.vendorName;
-      if (body.linkedMasterItemIds !== undefined) updateData.linkedMasterItemIds = body.linkedMasterItemIds;
+      if (body.linkedMasterItemIds !== undefined) {
+        if (Array.isArray(body.linkedMasterItemIds) && body.linkedMasterItemIds.length > 0) {
+          // De-dupe within the incoming array, then check cross-line exclusivity
+          const deduped = [...new Set<number>(body.linkedMasterItemIds)];
+          const check = await checkLinkedIdsConflict(parseInt(req.params.id), deduped, lineItemId);
+          if (check.conflict) return res.status(409).json({ message: check.message });
+          updateData.linkedMasterItemIds = deduped;
+        } else {
+          // Empty array = clear all links; allowed unconditionally
+          updateData.linkedMasterItemIds = body.linkedMasterItemIds;
+        }
+      }
       if (body.notes !== undefined) updateData.notes = body.notes;
       if (liCost !== undefined || liSf !== undefined) {
         const [existing] = await db.select().from(projectActualLineItems).where(eq(projectActualLineItems.id, lineItemId));

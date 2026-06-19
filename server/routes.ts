@@ -12,7 +12,7 @@ import fs from "fs";
 import path from "path";
 import { storage } from "./storage";
 import { db } from "./db";
-import { users, contacts, insertRfpRequestSchema, updateRfpRequestSchema, insertContactSchema, updateContactSchema, insertInvitationSchema, updateInvitationSchema, insertInvitationToBidSchema, updateInvitationToBidSchema, insertPdfTemplateSchema, auditLog, romScopeItems, masterItemReviewQueue, evaluationBudgets, projectAlternates, insertProjectAlternateSchema, bidLineItems, properties } from "@shared/schema";
+import { users, contacts, insertRfpRequestSchema, updateRfpRequestSchema, insertContactSchema, updateContactSchema, insertInvitationSchema, updateInvitationSchema, insertInvitationToBidSchema, updateInvitationToBidSchema, insertPdfTemplateSchema, auditLog, romScopeItems, masterItemReviewQueue, evaluationBudgets, projectAlternates, insertProjectAlternateSchema, bidLineItems, properties, projectActuals, projectActualLineItems } from "@shared/schema";
 import { convertFormDateToDbDate } from "@shared/date-utils";
 import { parseRfpVariant } from "@shared/rfp-variant";
 import { eq, desc, and, or, gte, lte, ilike, inArray, sql as drizzleSql } from "drizzle-orm";
@@ -6779,6 +6779,99 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 )
               : null;
 
+          // ── Actuals (read-only — leased projects only, source-scoped) ──────────
+          // Plain SELECT only — never getOrCreate, never insert
+          let actualTotal: number | null = null;
+          let deltaAmount: number | null = null;
+          let deltaPct: number | null = null;
+          let cmRomAmount: number | null = null;
+          let romCmPct: number | null = null;
+          let cmActual: number | null = null;
+          let actualCmPct: number | null = null;
+
+          if (rfp.isLeased) {
+            const [paRow] = await db
+              .select()
+              .from(projectActuals)
+              .where(and(eq(projectActuals.rfpId, rfp.id), eq(projectActuals.source, "leased_actuals")));
+
+            let paLineItems: (typeof projectActualLineItems.$inferSelect)[] = [];
+            if (paRow) {
+              paLineItems = await db
+                .select()
+                .from(projectActualLineItems)
+                .where(eq(projectActualLineItems.projectActualId, paRow.id));
+              if (paLineItems.length > 0) {
+                actualTotal = paLineItems.reduce((s, li) => s + (li.totalCost ?? 0), 0) / 100;
+              }
+            }
+
+            if (actualTotal !== null && grandTotal !== null) {
+              deltaAmount = actualTotal - grandTotal;
+              deltaPct = grandTotal > 0 ? (deltaAmount / grandTotal) * 100 : null;
+            }
+
+            // CM ROM extraction — mirrors contingency block; scans DSC + TI sections
+            const allBudgetItems = [
+              ...((budget?.designSoftCosts as any[]) || []),
+              ...((budget?.tenantImprovements as any[]) || []),
+            ];
+            const cmRomMatches = allBudgetItems.filter((li: any) => {
+              const snapshotLabel = typeof li.romSnapshot?.label === "string"
+                ? li.romSnapshot.label.trim().toLowerCase() : "";
+              const desc = (li.description || "").trim().toLowerCase();
+              // Primary: romSnapshot.label contains CM keywords
+              if (snapshotLabel.includes("construction management") || snapshotLabel.includes("cm fee")) return true;
+              // Fallback for pre-2026 rows without snapshot: match description
+              if (!li.romSnapshot?.label && (desc.includes("construction management") || desc.includes("cm fee"))) return true;
+              return false;
+            });
+
+            cmRomAmount = cmRomMatches.length > 0
+              ? cmRomMatches.reduce((s: number, li: any) => s + parsePrice(li.totalPrice), 0)
+              : null;
+
+            // romCmPct — same formula as client pctCMBase: CM / (Total − CM − Contingency)
+            if (cmRomAmount !== null && grandTotal !== null) {
+              const base = grandTotal - cmRomAmount - (contingencyAmount ?? 0);
+              romCmPct = base > 0 ? (cmRomAmount / base) * 100 : null;
+            }
+
+            // cmActual — primary: linked_master_item_ids; fallback: category label
+            if (paLineItems.length > 0) {
+              const cmMasterItemIds = new Set<number>(
+                cmRomMatches
+                  .filter((li: any) => li.masterItemId != null)
+                  .map((li: any) => Number(li.masterItemId))
+              );
+
+              // Primary: actual lines whose linkedMasterItemIds intersect CM ROM masterItemIds
+              let cmActualLines = cmMasterItemIds.size > 0
+                ? paLineItems.filter((li) => {
+                    const linked = (li.linkedMasterItemIds as number[] | null) || [];
+                    return linked.some(mid => cmMasterItemIds.has(mid));
+                  })
+                : [];
+
+              // Fallback: no masterItemId or no intersection — match by category label
+              if (cmActualLines.length === 0) {
+                cmActualLines = paLineItems.filter((li) => {
+                  const cat = (li.category || "").toLowerCase();
+                  return cat.includes("construction management") || cat.includes("cm fee");
+                });
+              }
+
+              if (cmActualLines.length > 0) {
+                cmActual = cmActualLines.reduce((s, li) => s + (li.totalCost ?? 0), 0) / 100;
+              }
+
+              if (cmActual !== null && actualTotal !== null) {
+                const base = actualTotal - cmActual;
+                actualCmPct = base > 0 ? (cmActual / base) * 100 : null;
+              }
+            }
+          }
+
           return {
             rfpId: rfp.id,
             rfpNumber: rfp.rfpNumber,
@@ -6791,6 +6884,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             contingencyAmount,
             isLeased: rfp.isLeased ?? false,
             leasedAt: rfp.leasedAt ? (rfp.leasedAt as Date).toISOString() : null,
+            actualTotal,
+            deltaAmount,
+            deltaPct,
+            cmRomAmount,
+            romCmPct,
+            cmActual,
+            actualCmPct,
           };
         })
       );

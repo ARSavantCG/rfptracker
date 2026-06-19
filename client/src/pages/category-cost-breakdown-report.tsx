@@ -35,6 +35,13 @@ interface ProjectRow {
   contingencyAmount: number | null;
   isLeased: boolean;
   leasedAt: string | null;
+  actualTotal: number | null;
+  deltaAmount: number | null;
+  deltaPct: number | null;
+  cmRomAmount: number | null;
+  romCmPct: number | null;
+  cmActual: number | null;
+  actualCmPct: number | null;
 }
 interface ColDef { key: string; label: string; type: "category" | "scopeItem" }
 interface ReportData { projects: ProjectRow[]; columns: ColDef[] }
@@ -123,6 +130,7 @@ export default function CategoryCostBreakdownReport() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [leasedOnly, setLeasedOnly] = useState(false);
+  const [showActuals, setShowActuals] = useState(false);
   const [selectedItems, setSelectedItems] = useState<PickerItem[]>([]);
   const [pickerSearch, setPickerSearch] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -312,6 +320,15 @@ export default function CategoryCostBreakdownReport() {
     return [...reportData.columns].sort((a, b) => priority(a) - priority(b));
   }, [reportData]);
 
+  // Actuals trailing-group footer totals
+  const actualsFooter = useMemo(() => {
+    const actualRows = displayRows.filter(r => r.actualTotal != null);
+    if (actualRows.length === 0) return { actualTotal: null, deltaAmount: null, hasAny: false };
+    const actualTotal = actualRows.reduce((s, r) => s + r.actualTotal!, 0);
+    const grandForActual = actualRows.reduce((s, r) => r.grandTotal != null ? s + r.grandTotal : s, 0);
+    return { actualTotal, deltaAmount: actualTotal - grandForActual, hasAny: true };
+  }, [displayRows]);
+
   // Weighted average pct for footer
   function footerPct(colKey: string): number | null {
     const col = reportData?.columns.find(c => c.key === colKey);
@@ -327,9 +344,18 @@ export default function CategoryCostBreakdownReport() {
   function exportToExcel() {
     if (!reportData) return;
     const cols = orderedColumns;
+
+    // Actuals footer pre-compute for Excel (mirrors actualsFooter useMemo)
+    const xlActualRows = displayRows.filter(r => r.actualTotal != null);
+    const xlActualTotal = xlActualRows.length > 0
+      ? xlActualRows.reduce((s, r) => s + r.actualTotal!, 0) : null;
+    const xlGrandForActual = xlActualRows.reduce((s, r) => r.grandTotal != null ? s + r.grandTotal : s, 0);
+    const xlDelta = xlActualTotal !== null ? xlActualTotal - xlGrandForActual : null;
+
     const header: string[] = [
       "Project ID", "Tenant", "Property", "Status", "Received Date", "Total Project Cost",
       ...cols.flatMap(c => [`${c.label} $`, `${c.label} %`]),
+      ...(showActuals ? ["Actual Total $", "Δ $", "Δ %", "ROM CM%", "Actual CM%"] : []),
     ];
     const dataRows = displayRows.map(r => [
       r.rfpNumber,
@@ -343,6 +369,13 @@ export default function CategoryCostBreakdownReport() {
         const p = pct(amt, r.grandTotal);
         return [amt ?? "", p != null ? p / 100 : ""];
       }),
+      ...(showActuals ? [
+        r.actualTotal ?? "",
+        r.deltaAmount ?? "",
+        r.deltaPct != null ? r.deltaPct / 100 : "",
+        r.romCmPct != null ? r.romCmPct / 100 : "",
+        r.actualCmPct != null ? r.actualCmPct / 100 : "",
+      ] : []),
     ]);
     const footerRow: any[] = [
       "TOTALS", "", "", "", "", footerTotals["grandTotal"] ?? "",
@@ -351,11 +384,23 @@ export default function CategoryCostBreakdownReport() {
         const p = footerPct(c.key);
         return [amt ?? "", p != null ? p / 100 : ""];
       }),
+      ...(showActuals ? [
+        xlActualTotal ?? "",
+        xlDelta ?? "",
+        "", // Δ% — ratio, leave blank
+        "", // ROM CM% — ratio, leave blank
+        "", // Actual CM% — ratio, leave blank
+      ] : []),
     ];
 
     const ws = XLSX.utils.aoa_to_sheet([header, ...dataRows, footerRow]);
-    // Format currency columns
-    const currencyCols = [5, ...cols.flatMap((_, i) => [6 + i * 2])];
+    // Format currency columns: col 5 (grandTotal), dynamic $ cols, trailing $ cols when showActuals
+    const trailingBase = 6 + cols.length * 2;
+    const currencyCols = [
+      5,
+      ...cols.flatMap((_, i) => [6 + i * 2]),
+      ...(showActuals ? [trailingBase, trailingBase + 1] : []),
+    ];
     currencyCols.forEach(ci => {
       for (let ri = 1; ri <= dataRows.length + 1; ri++) {
         const addr = XLSX.utils.encode_cell({ r: ri, c: ci });
@@ -364,7 +409,10 @@ export default function CategoryCostBreakdownReport() {
         }
       }
     });
-    const pctCols = cols.flatMap((_, i) => [7 + i * 2]);
+    const pctCols = [
+      ...cols.flatMap((_, i) => [7 + i * 2]),
+      ...(showActuals ? [trailingBase + 2, trailingBase + 3, trailingBase + 4] : []),
+    ];
     pctCols.forEach(ci => {
       for (let ri = 1; ri <= dataRows.length + 1; ri++) {
         const addr = XLSX.utils.encode_cell({ r: ri, c: ci });
@@ -790,18 +838,32 @@ export default function CategoryCostBreakdownReport() {
             </div>
           </div>
 
-          {/* Leased filter */}
-          <div className="flex items-center gap-2 pt-1">
-            <input
-              type="checkbox"
-              id="leased-only-filter"
-              checked={leasedOnly}
-              onChange={e => setLeasedOnly(e.target.checked)}
-              className="h-4 w-4 rounded border-gray-300 text-blue-600 cursor-pointer"
-            />
-            <label htmlFor="leased-only-filter" className="text-xs font-medium text-gray-700 cursor-pointer select-none">
-              Leased only
-            </label>
+          {/* Leased filter + Show Actuals toggle */}
+          <div className="flex items-center gap-6 pt-1">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="leased-only-filter"
+                checked={leasedOnly}
+                onChange={e => setLeasedOnly(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300 text-blue-600 cursor-pointer"
+              />
+              <label htmlFor="leased-only-filter" className="text-xs font-medium text-gray-700 cursor-pointer select-none">
+                Leased only
+              </label>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="show-actuals-toggle"
+                checked={showActuals}
+                onChange={e => setShowActuals(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300 text-teal-600 cursor-pointer"
+              />
+              <label htmlFor="show-actuals-toggle" className="text-xs font-medium text-gray-700 cursor-pointer select-none">
+                Show Actuals (ROM vs Actual)
+              </label>
+            </div>
           </div>
 
           {/* Run report button */}
@@ -934,6 +996,25 @@ export default function CategoryCostBreakdownReport() {
                           </th>
                         </Fragment>
                       ))}
+                      {showActuals && (
+                        <>
+                          <th className="px-3 py-2.5 text-right text-teal-700 font-medium min-w-[110px] border-l-2 border-teal-300 bg-teal-50">
+                            <span className="block text-right text-[11px]">Actual Total</span>
+                          </th>
+                          <th className="px-3 py-2.5 text-right text-teal-700 font-medium min-w-[100px] bg-teal-50">
+                            <span className="block text-right text-[11px]">Δ $</span>
+                          </th>
+                          <th className="px-3 py-2.5 text-right text-teal-700 font-medium min-w-[70px] bg-teal-50">
+                            <span className="block text-right text-[11px]">Δ %</span>
+                          </th>
+                          <th className="px-3 py-2.5 text-right text-teal-700 font-medium min-w-[80px] bg-teal-50">
+                            <span className="block text-right text-[11px]">ROM CM%</span>
+                          </th>
+                          <th className="px-3 py-2.5 text-right text-teal-700 font-medium min-w-[80px] bg-teal-50">
+                            <span className="block text-right text-[11px]">Actual CM%</span>
+                          </th>
+                        </>
+                      )}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
@@ -980,6 +1061,31 @@ export default function CategoryCostBreakdownReport() {
                             </Fragment>
                           );
                         })}
+                        {showActuals && (
+                          <>
+                            <td className="px-3 py-2 text-right tabular-nums text-gray-700 border-l-2 border-teal-300 bg-teal-50/40">
+                              {fmtDollar(row.actualTotal ?? null)}
+                            </td>
+                            <td className={`px-3 py-2 text-right tabular-nums font-medium bg-teal-50/40 ${
+                              row.deltaAmount == null ? "text-gray-400" :
+                              row.deltaAmount > 0 ? "text-red-600" : "text-green-700"
+                            }`}>
+                              {fmtDollar(row.deltaAmount ?? null)}
+                            </td>
+                            <td className={`px-3 py-2 text-right tabular-nums bg-teal-50/40 ${
+                              row.deltaPct == null ? "text-gray-400" :
+                              row.deltaPct > 0 ? "text-red-600" : "text-green-700"
+                            }`}>
+                              {fmtPct(row.deltaPct ?? null)}
+                            </td>
+                            <td className="px-3 py-2 text-right tabular-nums text-gray-600 bg-teal-50/40">
+                              {fmtPct(row.romCmPct ?? null)}
+                            </td>
+                            <td className="px-3 py-2 text-right tabular-nums text-gray-600 bg-teal-50/40">
+                              {fmtPct(row.actualCmPct ?? null)}
+                            </td>
+                          </>
+                        )}
                       </tr>
                     ))}
                   </tbody>
@@ -1000,6 +1106,22 @@ export default function CategoryCostBreakdownReport() {
                           </td>
                         </Fragment>
                       ))}
+                      {showActuals && (
+                        <>
+                          <td className="px-3 py-2 text-right tabular-nums text-gray-900 font-semibold border-l-2 border-teal-300 bg-teal-50">
+                            {actualsFooter.hasAny ? fmtDollar(actualsFooter.actualTotal) : "—"}
+                          </td>
+                          <td className={`px-3 py-2 text-right tabular-nums font-semibold bg-teal-50 ${
+                            !actualsFooter.hasAny ? "text-gray-400" :
+                            (actualsFooter.deltaAmount ?? 0) > 0 ? "text-red-600" : "text-green-700"
+                          }`}>
+                            {actualsFooter.hasAny ? fmtDollar(actualsFooter.deltaAmount) : "—"}
+                          </td>
+                          <td className="px-3 py-2 text-right text-gray-400 bg-teal-50">—</td>
+                          <td className="px-3 py-2 text-right text-gray-400 bg-teal-50">—</td>
+                          <td className="px-3 py-2 text-right text-gray-400 bg-teal-50">—</td>
+                        </>
+                      )}
                     </tr>
                   </tfoot>
                 </table>

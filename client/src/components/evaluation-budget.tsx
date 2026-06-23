@@ -3089,11 +3089,13 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       // Separate improvements by bucket
       const actualsItems = budgetData.existingImprovements.filter((item: any) => item.bucket === 'ACTUALS');
       const pipelineItems = budgetData.existingImprovements.filter((item: any) => item.bucket === 'PIPELINE');
-      
+      // Items with no bucket classification (e.g. property-sourced improvements)
+      const unbucketedItems = budgetData.existingImprovements.filter((item: any) => !item.bucket || (item.bucket !== 'ACTUALS' && item.bucket !== 'PIPELINE'));
       
       const actualsTotal = calculateCategoryTotal(actualsItems);
       const pipelineTotal = calculateCategoryTotal(pipelineItems);
-      const grandTotal = actualsTotal + pipelineTotal;
+      const unbucketedTotal = calculateCategoryTotal(unbucketedItems);
+      const grandTotal = actualsTotal + pipelineTotal + unbucketedTotal;
       
       const renderSection = (title: string, items: any[], total: number, colorClass: string, description: string) => {
         if (items.length === 0) return '';
@@ -3201,6 +3203,9 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         </div>`;
       }
       
+      // Count how many bucketed sections will render (to decide whether to show combined total)
+      const bucketedSectionCount = (actualsItems.length > 0 ? 1 : 0) + (pipelineItems.length > 0 ? 1 : 0);
+
       return `
       ${renderSection(
         'Cost to Date (Actuals)', 
@@ -3217,8 +3222,16 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         '#0891b2', 
         'Committed or projected costs not yet in draws'
       )}
+
+      ${renderSection(
+        'Existing Improvements',
+        unbucketedItems,
+        unbucketedTotal,
+        '#6366f1',
+        'Property improvements carried into this evaluation'
+      )}
       
-      ${(actualsItems.length > 0 && pipelineItems.length > 0) ? `
+      ${bucketedSectionCount > 1 ? `
       <div style="text-align: right; padding: 10px; background-color: #f8f9fa; border-radius: 4px; margin-bottom: 15px;">
           <span style="font-weight: bold; font-size: 16px;">Total Existing Improvements: ${formatCurrency(grandTotal)}</span>
       </div>` : ''}

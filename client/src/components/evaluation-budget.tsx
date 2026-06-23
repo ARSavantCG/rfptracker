@@ -3799,7 +3799,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       `;
     })()}
 
-    ${budgetData.hasExistingImprovements ? renderExistingImprovementsSection() : ''}
+    ${budgetData.existingImprovements.length > 0 ? renderExistingImprovementsSection() : ''}
 </body>
 </html>`;
     

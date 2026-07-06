@@ -32,6 +32,7 @@ import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 function SystemUsersAndContacts() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user: currentUser } = usePermissions();
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [selectedContact, setSelectedContact] = useState<any>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -357,6 +358,7 @@ function SystemUsersAndContacts() {
           onDelete={(userId) => deleteUserMutation.mutate(userId)}
           isSaving={updateUserMutation.isPending}
           isDeleting={deleteUserMutation.isPending}
+          isSelf={!!currentUser && (currentUser as any).id === selectedUser.id}
         />
       )}
 
@@ -680,9 +682,10 @@ interface UserProfileDialogProps {
   onDelete: (userId: string) => void;
   isSaving: boolean;
   isDeleting: boolean;
+  isSelf?: boolean;
 }
 
-function UserProfileDialog({ user, open, onOpenChange, onSave, onDelete, isSaving, isDeleting }: UserProfileDialogProps) {
+function UserProfileDialog({ user, open, onOpenChange, onSave, onDelete, isSaving, isDeleting, isSelf }: UserProfileDialogProps) {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -808,40 +811,48 @@ function UserProfileDialog({ user, open, onOpenChange, onSave, onDelete, isSavin
             
             {/* Delete User Section - Small and at bottom */}
             <div className="pt-4 border-t border-gray-100">
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-xs text-red-500 hover:text-red-600 hover:bg-red-50 h-6 px-2"
-                    disabled={isDeleting}
-                  >
-                    <Trash2 className="h-3 w-3 mr-1" />
-                    Delete User Account
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Delete User Account</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Are you sure you want to permanently delete this user account? This action cannot be undone and will remove all associated data.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={() => {
-                        onDelete(user.id);
-                        onOpenChange(false);
-                      }}
-                      className="bg-red-600 hover:bg-red-700"
+              {isSelf ? (
+                <p className="text-xs text-gray-400">
+                  You cannot delete your own account.
+                </p>
+              ) : (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs text-red-500 hover:text-red-600 hover:bg-red-50 h-6 px-2"
                       disabled={isDeleting}
                     >
-                      {isDeleting ? 'Deleting...' : 'Delete User'}
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+                      <Trash2 className="h-3 w-3 mr-1" />
+                      Delete User Account
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete User Account</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Are you sure you want to deactivate this user account? They will lose access
+                        immediately. This can be reversed by an admin later; it does not permanently
+                        erase historical records tied to this account.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => {
+                          onDelete(user.id);
+                          onOpenChange(false);
+                        }}
+                        className="bg-red-600 hover:bg-red-700"
+                        disabled={isDeleting}
+                      >
+                        {isDeleting ? 'Deactivating...' : 'Delete User'}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
             </div>
           </div>
         </div>

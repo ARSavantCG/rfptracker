@@ -1731,8 +1731,16 @@ class ExtendedDatabaseStorage extends DatabaseStorage {
 
   async deleteUser(id: string): Promise<boolean> {
     try {
-      const result = await db.delete(users).where(eq(users.id, id));
-      return result.rowCount! > 0;
+      // Soft-delete: the users table has no FK constraints to safely detect
+      // references from other tables, so we deactivate the account instead of
+      // hard-deleting it. This preserves history/audit trails and avoids
+      // orphaning any records that may reference this user id elsewhere.
+      const [updated] = await db
+        .update(users)
+        .set({ isActive: false, updatedAt: new Date() })
+        .where(eq(users.id, id))
+        .returning();
+      return !!updated;
     } catch (error) {
       console.error("Error deleting user:", error);
       throw error;

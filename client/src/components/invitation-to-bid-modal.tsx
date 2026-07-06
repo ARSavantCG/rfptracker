@@ -1589,287 +1589,9 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
               )}
             </div>
 
-            {/* Area Breakdown - Pure DOM Implementation */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium">Area Breakdown</h3>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    const container = document.getElementById('additional-areas-container');
-                    if (!container) return;
-                    
-                    const newId = `area-${Date.now()}-${Math.random()}`;
-                    const newRow = document.createElement('div');
-                    newRow.className = 'grid grid-cols-5 gap-4 items-center py-2 border-b border-gray-100';
-                    newRow.setAttribute('data-area-id', newId);
-                    
-                    newRow.innerHTML = `
-                      <input
-                        type="text"
-                        placeholder="Area description"
-                        data-field="description"
-                        class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                      />
-                      <input
-                        type="text"
-                        placeholder="0"
-                        data-field="squareFootage"
-                        class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                      />
-                      <input
-                        type="text"
-                        placeholder="Notes (optional)"
-                        data-field="notes"
-                        class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                      />
-                      <div class="flex gap-1">
-                        <button
-                          type="button"
-                          data-save="${newId}"
-                          class="flex h-8 w-8 items-center justify-center rounded-md text-blue-500 hover:text-blue-700 hover:bg-blue-50"
-                          title="Save area"
-                        >
-                          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-                            <polyline points="17,21 17,13 7,13 7,21"/>
-                            <polyline points="7,3 7,8 15,8"/>
-                          </svg>
-                        </button>
-                        <button
-                          type="button"
-                          data-remove="${newId}"
-                          class="flex h-8 w-8 items-center justify-center rounded-md text-red-500 hover:text-red-700 hover:bg-red-50"
-                          title="Remove area"
-                        >
-                          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polyline points="3,6 5,6 21,6"></polyline>
-                            <path d="m19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"></path>
-                            <line x1="10" y1="11" x2="10" y2="17"></line>
-                            <line x1="14" y1="11" x2="14" y2="17"></line>
-                          </svg>
-                        </button>
-                      </div>
-                    `;
-                    
-                    container.appendChild(newRow);
-                    
-                    // Add event listeners for formatting and cleanup
-                    const sqftInput = newRow.querySelector('[data-field="squareFootage"]') as HTMLInputElement;
-                    if (sqftInput) {
-                      sqftInput.addEventListener('input', (event) => {
-                        const target = event.target as HTMLInputElement;
-                        const rawValue = target.value.replace(/,/g, '');
-                        if (rawValue && !isNaN(Number(rawValue)) && rawValue !== '0') {
-                          const formatted = Number(rawValue).toLocaleString();
-                          if (target.value !== formatted) {
-                            const cursorPos = target.selectionStart || 0;
-                            target.value = formatted;
-                            // Try to maintain cursor position
-                            target.setSelectionRange(cursorPos, cursorPos);
-                          }
-                        }
-                      });
-                    }
-                    
-                    // Save button functionality
-                    const saveBtn = newRow.querySelector('[data-save]');
-                    if (saveBtn) {
-                      saveBtn.addEventListener('click', async () => {
-                        const inputs = newRow.querySelectorAll('input');
-                        const description = (inputs[0] as HTMLInputElement).value;
-                        const squareFootage = (inputs[1] as HTMLInputElement).value.replace(/,/g, '');
-                        const notes = (inputs[2] as HTMLInputElement).value;
-                        
-                        if (!description.trim()) {
-                          toast({
-                            title: "Validation Error",
-                            description: "Area description is required",
-                            variant: "destructive",
-                            duration: 4000,
-                          });
-                          return;
-                        }
-                        
-                        // Save to database
-                        try {
-                          const response = await fetch(`/api/rfp-requests/${rfp.id}/additional-areas`, {
-                            method: 'POST',
-                            headers: {
-                              'Content-Type': 'application/json',
-                              'Authorization': `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}`,
-                            },
-                            credentials: 'include',
-                            body: JSON.stringify({
-                              description,
-                              squareFootage: parseInt(squareFootage) || 0,
-                              notes
-                            })
-                          });
-                          
-                          if (!response.ok) {
-                            throw new Error('Failed to save area');
-                          }
-                          
-                          const savedArea = await response.json();
-                          
-                          // Mark inputs as readonly and change appearance to show saved state
-                          const inputs = newRow.querySelectorAll('input');
-                          inputs.forEach(input => {
-                            const htmlInput = input as HTMLInputElement;
-                            htmlInput.readOnly = true;
-                            htmlInput.style.backgroundColor = '#f8f9fa';
-                            htmlInput.style.border = '1px solid #28a745';
-                          });
-                          
-                          // Update the row to show it's from database
-                          const savedIndicator = document.createElement('div');
-                          savedIndicator.className = 'text-xs text-green-600 bg-green-50 px-2 py-1 rounded';
-                          savedIndicator.textContent = 'Saved';
-                          
-                          // Replace the actions column with saved indicator
-                          const actionsCell = newRow.children[3];
-                          if (actionsCell) {
-                            actionsCell.innerHTML = '';
-                            actionsCell.appendChild(savedIndicator);
-                          }
-                          
-                          toast({
-                            title: "✅ AREA SAVED SUCCESSFULLY!",
-                            description: `${description} - ${parseInt(squareFootage).toLocaleString()} SF has been permanently saved to the database. Close this modal and reopen it to see your new area in the green section.`,
-                            duration: 6000,
-                          });
-                          
-                          // Remove the new row since it's now saved to database
-                          newRow.remove();
-                          
-                          // Refresh the RFP data cache to include new area
-                          queryClient.invalidateQueries({ queryKey: [`/api/rfp-requests/${rfp.id}`] });
-                          queryClient.invalidateQueries({ queryKey: ['/api/rfp-requests'] });
-                          
-                          // Force a simpler solution - just show success message and tell user to close/reopen
-                          toast({
-                            title: "✅ Area Added Successfully!",
-                            description: "Close this modal and reopen the Invitation to Bid to see your new area in the saved section.",
-                            duration: 6000,
-                          });
-                        } catch (error) {
-                          console.error('Save error:', error);
-                          toast({
-                            title: "❌ Save Failed", 
-                            description: "Could not save the additional area. Please check your connection and try again.",
-                            variant: "destructive",
-                            duration: 6000,
-                          });
-                          return;
-                        }
-                        
-                        // Visual indication that it's saved
-                        (saveBtn as HTMLElement).style.opacity = '0.5';
-                        saveBtn.setAttribute('title', 'Area saved');
-                      });
-                    }
-                    
-                    // Remove button functionality
-                    const removeBtn = newRow.querySelector('[data-remove]');
-                    if (removeBtn) {
-                      removeBtn.addEventListener('click', () => {
-                        newRow.remove();
-                      });
-                    }
-                    
-                    // Focus first input
-                    const firstInput = newRow.querySelector('input') as HTMLInputElement;
-                    if (firstInput) {
-                      firstInput.focus();
-                    }
-                  }}
-                  className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-3"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Area
-                </button>
-              </div>
-              
-              <div className="space-y-2">
-                {/* Column Headers */}
-                <div className="grid grid-cols-5 gap-4 pb-2 border-b text-sm font-medium text-gray-600">
-                  <div>Description</div>
-                  <div>Square Footage</div>
-                  <div>Notes</div>
-                  <div>Actions</div>
-                  <div></div>
-                </div>
-                
-                {/* Saved Area Items (both from Step 2 and newly added) */}
-                {savedAreas.map((area, index) => (
-                  <div key={area.id || index} className="grid grid-cols-5 gap-4 items-center py-2 border-b border-gray-100 bg-green-50">
-                    {editingAreaId === area.id ? (
-                      <>
-                        <Input
-                          value={editingAreaData.description}
-                          onChange={(e) => setEditingAreaData({...editingAreaData, description: e.target.value})}
-                          placeholder="Area description"
-                          className="h-8 text-sm"
-                        />
-                        <Input
-                          value={editingAreaData.squareFootage}
-                          onChange={(e) => setEditingAreaData({...editingAreaData, squareFootage: e.target.value.replace(/,/g, '')})}
-                          placeholder="Square footage"
-                          className="h-8 text-sm"
-                        />
-                        <Input
-                          value={editingAreaData.notes}
-                          onChange={(e) => setEditingAreaData({...editingAreaData, notes: e.target.value})}
-                          placeholder="Notes"
-                          className="h-8 text-sm"
-                        />
-                        <div className="flex gap-1">
-                          <Button type="button" variant="ghost" size="sm" onClick={handleSaveEditArea} className="h-8 w-8 p-0 text-green-600 hover:text-green-800">
-                            <CheckCircle className="h-4 w-4" />
-                          </Button>
-                          <Button type="button" variant="ghost" size="sm" onClick={() => setEditingAreaId(null)} className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700">
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                        <div></div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="text-sm font-medium text-green-800">{area.description}</div>
-                        <div className="text-sm font-medium text-green-800">{parseInt(area.squareFootage || '0').toLocaleString()} SF</div>
-                        <div className="text-sm text-green-600">{area.notes || '—'}</div>
-                        <div className="flex gap-1">
-                          <Button type="button" variant="ghost" size="sm" onClick={() => handleEditArea(area)} className="h-8 w-8 p-0 text-blue-500 hover:text-blue-700" title="Edit area">
-                            <FileText className="h-4 w-4" />
-                          </Button>
-                          <Button type="button" variant="ghost" size="sm" onClick={() => handleDeleteArea(area.id)} className="h-8 w-8 p-0 text-red-500 hover:text-red-700" title="Delete area">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                        <div></div>
-                      </>
-                    )}
-                  </div>
-                ))}
-                
-                {/* Pure DOM Container for Additional Areas */}
-                <div id="additional-areas-container"></div>
-                
-                {!savedAreas.length && !additionalAreas.length && (
-                  <div className="text-center text-gray-500 py-4 border border-dashed border-gray-300 rounded-lg">
-                    No area breakdown defined. Areas can be defined during RFP validation phase or added here.
-                  </div>
-                )}
-                
-                {savedAreas.length > 0 && (
-                  <div className="text-sm text-gray-500 italic">
-                    Area breakdown defined during RFP validation phase
-                  </div>
-                )}
-              </div>
-            </div>
+            {/* Area Breakdown UI removed from ITB workflow per spec — data model, DB column, and
+                downstream consumers (evaluation-budget.tsx, pdf-generator.ts, rfp-validation-modal.tsx,
+                project-report-generator.tsx, historical-pricing-reports.ts) are untouched. */}
 
             {/* Scope of Work */}
             <div className="space-y-4">
@@ -2429,14 +2151,25 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
                 
                 <Button 
                   type="button"
-                  onClick={() => {
+                  onClick={async () => {
+                    // Run the same Zod validation as the "Generate RFPs" submit button before
+                    // proceeding, so this button can no longer bypass form validation.
+                    const isValid = await form.trigger();
+                    if (!isValid) {
+                      console.warn('[InvitationModal] Advance button blocked by validation errors:', form.formState.errors);
+                      toast({ title: "Form validation failed", description: "One or more fields are invalid — check the highlighted fields.", variant: "destructive" });
+                      return;
+                    }
+
                     const formData = form.getValues();
                     const hasSelection = formData.generateArchitectRfp || formData.generateContractorRfp || 
                                         formData.generateArchitectRfpEnhanced || formData.generateContractorRfpEnhanced ||
                                         formData.generateBrokerArchitectRfp || formData.generateBrokerContractorRfp;
-                    if (hasSelection) {
-                      generateAndAdvanceMutation.mutate(formData);
+                    if (!hasSelection) {
+                      toast({ title: "Selection required", description: "Select at least one RFP type to generate.", variant: "destructive" });
+                      return;
                     }
+                    generateAndAdvanceMutation.mutate(formData);
                   }}
                   disabled={!hasSelectedRfpType || createInvitationMutation.isPending || isGeneratingPdfs || saveInvitationMutation.isPending || generateAndAdvanceMutation.isPending || skipToBudgetMutation.isPending}
                   className="bg-green-600 hover:bg-green-700 text-white disabled:opacity-50"

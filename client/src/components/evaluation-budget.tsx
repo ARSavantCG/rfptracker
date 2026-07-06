@@ -1745,11 +1745,10 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       const savedTenantVoltage = (existingBudget as any).metadata?.tenantVoltage;
       const savedElectricalAllocations = (existingBudget as any).metadata?.electricalAllocations || [];
       
-      // Restore manual overrides from saved metadata - this prevents auto-population from overwriting user changes
-      const savedManualOverrides = (existingBudget as any).metadata?.manualOverrides || [];
-      if (savedManualOverrides.length > 0) {
-        setManualOverrides(new Set(savedManualOverrides));
-      }
+      // NOTE: Manual overrides are intentionally session-only (component state) and are
+      // NOT restored from saved metadata. Reloading the page/evaluation resets them so
+      // auto-calculation resumes for CM/Contingency/Permit Fees until the user edits again
+      // in the current session.
       
       // Check if saved allocations have the new amps field (not legacy kVA-only data)
       const hasLegacyData = savedElectricalAllocations.length > 0 && 
@@ -4094,8 +4093,8 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
           electricalAllocationOverride: budgetData.electricalAllocationOverride,
           tenantVoltage: budgetData.tenantVoltage,
           electricalAllocations: budgetData.electricalAllocations,
-          // Persist manual overrides to prevent auto-population from overwriting user changes
-          manualOverrides: Array.from(manualOverrides)
+          // Manual overrides are intentionally NOT persisted here - they are session-only
+          // (component state) per spec and should reset on reload.
         },
       };
 

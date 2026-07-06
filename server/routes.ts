@@ -4377,11 +4377,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/admin/users/:id', requireAuth, checkPermission('admin.access'), async (req, res) => {
+  app.delete('/api/admin/users/:id', requireAuth, checkPermission('admin.access'), async (req: any, res) => {
     try {
       const { id } = req.params;
+      if (req.user?.id === id) {
+        return res.status(403).json({ message: "You cannot delete your own account" });
+      }
       await storage.deleteUser(id);
-      res.json({ message: "User deleted successfully" });
+      res.json({ message: "User deactivated successfully" });
     } catch (error) {
       console.error("Error deleting user:", error);
       res.status(500).json({ message: "Failed to delete user" });
@@ -4810,7 +4813,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             for (const file of bid.attachments) {
               const filePath = path.join(uploadsDir, file.path || file.name);
               if (fs.existsSync(filePath)) {
-                const contractorFolder = bid.contractorCompany.replace(/[^a-zA-Z0-9-]/g, '-');
+                const contractorFolder = (bid.contractorCompany || 'Unknown-Contractor').replace(/[^a-zA-Z0-9-]/g, '-');
                 archive.file(filePath, { name: `3-Bid-Collection/${contractorFolder}/${file.name}` });
                 hasFiles = true;
               }

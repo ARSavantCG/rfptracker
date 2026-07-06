@@ -141,12 +141,12 @@ export default function DataMapping() {
     if (searchTerm) {
       const search = searchTerm.toLowerCase();
       return (
-        item.description.toLowerCase().includes(search) ||
+        (item.description || "").toLowerCase().includes(search) ||
         item.category?.toLowerCase().includes(search) ||
-        item.contractorName.toLowerCase().includes(search) ||
-        item.contractorCompany.toLowerCase().includes(search) ||
-        item.projectName.toLowerCase().includes(search) ||
-        item.rfpNumber.toLowerCase().includes(search)
+        (item.contractorName || "").toLowerCase().includes(search) ||
+        (item.contractorCompany || "").toLowerCase().includes(search) ||
+        (item.projectName || "").toLowerCase().includes(search) ||
+        (item.rfpNumber || "").toLowerCase().includes(search)
       );
     }
     return true;

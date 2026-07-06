@@ -305,7 +305,16 @@ export const invitationToBid = pgTable("invitation_to_bid", {
   projectDescription: text("project_description"),
   documentsLink: text("documents_link"),
   keyDates: json("key_dates").$type<{label: string, date: string}[]>().default([]),
-  scopeOfWork: json("scope_of_work").$type<{description: string, quantity: number, unit: string}[]>().default([]),
+  scopeOfWork: json("scope_of_work").$type<{
+    description: string,
+    quantity: number,
+    unit: string,
+    // Optional link to the ROM Pilot master scope catalog (rom_scope_items.id).
+    // Existing rows predate these fields and will simply lack them — treat as
+    // free-typed rows (no catalog link) when absent.
+    masterItemId?: number | null,
+    masterItemSnapshot?: { description: string, unit: string, unitPrice: string } | null,
+  }[]>().default([]),
   architectMilestones: json("architect_milestones").$type<{description: string}[]>().default([]),
   contractorMilestones: json("contractor_milestones").$type<{description: string}[]>().default([]),
   selectedContractor: text("selected_contractor"),
@@ -344,6 +353,12 @@ export const insertInvitationToBidSchema = createInsertSchema(invitationToBid).o
     description: z.string(),
     quantity: z.number(),
     unit: z.string(),
+    masterItemId: z.number().nullable().optional(),
+    masterItemSnapshot: z.object({
+      description: z.string(),
+      unit: z.string(),
+      unitPrice: z.string(),
+    }).nullable().optional(),
   })).default([]),
   architectMilestones: z.array(z.object({
     description: z.string(),

@@ -12,7 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 // Removed Select import - using native HTML selects for consistency
-import { Plus, Edit, Trash2, Save, X, ArrowRight, Copy, FileDown, Upload, Package, Users, ChevronUp, ChevronDown, GripVertical, Check as CheckIcon, FileText, AlertTriangle, Zap, Info, Lock, Unlock } from "lucide-react";
+import { Plus, Edit, Trash2, Save, X, ArrowRight, Copy, FileDown, Upload, Package, Users, ChevronUp, ChevronDown, GripVertical, Check as CheckIcon, FileText, AlertTriangle, Zap, Info, Lock, Unlock, ListChecks } from "lucide-react";
 import { EvaluationAttachments } from "./evaluation-attachments";
 import { EvaluationLabeledUploads } from "./evaluation-labeled-uploads";
 import { EvaluationBudgetHistory } from "./evaluation-budget-history";
@@ -48,6 +48,9 @@ interface EvaluationLineItem {
   bucket?: 'ACTUALS' | 'PIPELINE'; // Cost lifecycle bucket for existing improvements
   masterCategoryId?: number | null;
   isFixedAllowance?: boolean; // When true, line displays its exact entered value — exempt from hidden-cost distribution
+  masterItemId?: number | null; // Links this line item back to a rom_scope_items catalog entry, when picked from a Scope of Work / ROM catalog selection
+  masterItemSnapshot?: { description: string; unit: string; unitPrice: string } | null; // Snapshot of the catalog item at time of selection
+  customDescription?: string | null;
 }
 
 interface CustomAssembly {
@@ -937,7 +940,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
             ...recalculateTotalPrice(processed),
             id: `template-dsc-${Date.now()}-${index}`,
           };
-        }) || []).sort((a, b) => {
+        }) || []).sort((a: any, b: any) => {
           const priorityA = getDesignCostPriority(a.description || "");
           const priorityB = getDesignCostPriority(b.description || "");
           return priorityA - priorityB;
@@ -973,6 +976,220 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       toast({
         title: "Import Failed",
         description: "Failed to import template.",
+        variant: "destructive",
+        duration: 6000,
+      });
+      throw error;
+    }
+  };
+
+  // Import priced/unpriced line items from the current RFP's ITB Step 3 Scope of Work.
+  // Mirrors handleTemplateImport's client-side post-processing pipeline (tiered pricing,
+  // quantity auto-population, contingency defaults, total recalculation) so imported rows
+  // behave identically regardless of source. Additive only — does not touch existing
+  // handleTemplateImport, handleRfpImport, or evaluation calc bases.
+  const handleScopeOfWorkImport = async () => {
+    if (!rfp?.id) return;
+    try {
+      const response = await apiRequest(`/api/rfp-requests/${rfp.id}/evaluation-import/scope-of-work`, "GET");
+
+      if (!response) {
+        throw new Error("No scope of work data found");
+      }
+
+      if (!response.hasScopeOfWork) {
+        toast({
+          title: "No Scope of Work Found",
+          description: "This RFP's Invitation to Bid (Step 3) has no Scope of Work line items to import.",
+          duration: 5000,
+        });
+        return;
+      }
+
+      // Fetch all ROM items for tier matching
+      const romItems = await apiRequest("/api/rom-scope-items", "GET");
+
+      const applyTieredPricing = (item: any) => {
+        const snapshot = item.romSnapshot;
+        if (!snapshot || !snapshot.itemGroup) {
+          return item;
+        }
+
+        const areaBreakdown = rfp?.areaBreakdown || [];
+        const matchedArea = areaBreakdown.find((area: any) =>
+          area.areaType === snapshot.itemGroup ||
+          area.description?.includes(snapshot.itemGroup)
+        );
+
+        if (!matchedArea || !matchedArea.squareFootage) {
+          return item;
+        }
+
+        const sqft = parseInt(matchedArea.squareFootage.replace(/,/g, ""));
+        const tieredItems = romItems.filter((romItem: any) =>
+          romItem.itemGroup === snapshot.itemGroup && romItem.isActive
+        );
+
+        const matchingTier = tieredItems.find((tier: any) => {
+          const minSf = tier.minSquareFootage ?? -Infinity;
+          const maxSf = tier.maxSquareFootage ?? Infinity;
+          return sqft >= minSf && sqft <= maxSf;
+        });
+
+        if (matchingTier) {
+          const tierUnitPrice = typeof matchingTier.unitPrice === 'string'
+            ? matchingTier.unitPrice
+            : matchingTier.unitPrice.toString();
+
+          return {
+            ...item,
+            name: matchingTier.name,
+            description: matchingTier.description || item.description,
+            unitPrice: tierUnitPrice,
+            romSnapshot: {
+              ...snapshot,
+              name: matchingTier.name,
+              unitPrice: matchingTier.unitPrice,
+              minSquareFootage: matchingTier.minSquareFootage,
+              maxSquareFootage: matchingTier.maxSquareFootage,
+            },
+          };
+        }
+
+        return item;
+      };
+
+      const autoPopulateQuantity = (item: any) => {
+        const description = (item.description || "").toLowerCase();
+        const areaBreakdown = rfp?.areaBreakdown || [];
+
+        let quantity = item.quantity;
+        let unit = item.romSnapshot?.unit || item.unit;
+
+        if (description.includes("demising wall") && propertyData?.buildingDepth) {
+          quantity = propertyData.buildingDepth;
+          unit = "ft.";
+        } else if (description.includes("office area") || description.includes("office space")) {
+          const matchedArea = areaBreakdown.find((area: any) => area.areaType === "Office Area");
+          if (matchedArea && matchedArea.squareFootage) {
+            quantity = parseInt(matchedArea.squareFootage.replace(/,/g, ""));
+          }
+        } else if (description.includes("warehouse office")) {
+          const matchedArea = areaBreakdown.find((area: any) => area.areaType === "Warehouse Office");
+          if (matchedArea && matchedArea.squareFootage) {
+            quantity = parseInt(matchedArea.squareFootage.replace(/,/g, ""));
+          }
+        } else if (description.includes("design") && (description.includes("architectural") || description.includes("architect"))) {
+          unit = "sf.";
+        } else if (description.includes("permit") && description.includes("fee")) {
+          unit = "$";
+        } else if (description.includes("construction") && description.includes("management")) {
+          unit = "$";
+        }
+
+        if (unit) {
+          unit = unit.toLowerCase();
+          if (!unit.endsWith('.')) {
+            unit = unit + '.';
+          }
+        }
+
+        return {
+          ...item,
+          quantity,
+          unit,
+        };
+      };
+
+      const getDesignCostPriority = (description: string): number => {
+        const desc = description.toLowerCase();
+        if (desc.includes("design") && (desc.includes("architectural") || desc.includes("architect"))) return 1;
+        if (desc.includes("builder") && desc.includes("risk")) return 2;
+        if (desc.includes("permit expediter")) return 3;
+        if (desc.includes("certificate") && desc.includes("occupancy")) return 4;
+        if (desc.includes("permit") && desc.includes("fee")) return 5;
+        if (desc.includes("construction") && desc.includes("management")) return 998;
+        if (desc.includes("contingency")) return 999;
+        return 500;
+      };
+
+      const autoPopulateContingency = (item: any) => {
+        const description = (item.description || "").toLowerCase();
+        if (description.includes("contingency")) {
+          return {
+            ...item,
+            unitPrice: "0.05",
+            quantity: 0,
+            unit: "$",
+          };
+        }
+        return item;
+      };
+
+      const recalculateTotalPrice = (item: any) => {
+        const qty = parseFloat(item.quantity) || 0;
+        const unitPx = parseFloat(item.unitPrice) || 0;
+        const totalPx = qty * unitPx;
+        return {
+          ...item,
+          totalPrice: totalPx.toString(),
+        };
+      };
+
+      const newItems = {
+        tenantImprovements: response.tenantImprovements?.map((item: any, index: number) => {
+          const processed = autoPopulateQuantity(applyTieredPricing(item));
+          return {
+            ...recalculateTotalPrice(processed),
+            id: `scope-ti-${Date.now()}-${index}`,
+          };
+        }) || [],
+        designSoftCosts: (response.designSoftCosts?.map((item: any, index: number) => {
+          const processed = autoPopulateContingency(autoPopulateQuantity(applyTieredPricing(item)));
+          return {
+            ...recalculateTotalPrice(processed),
+            id: `scope-dsc-${Date.now()}-${index}`,
+          };
+        }) || []).sort((a: any, b: any) => {
+          const priorityA = getDesignCostPriority(a.description || "");
+          const priorityB = getDesignCostPriority(b.description || "");
+          return priorityA - priorityB;
+        }),
+        existingImprovements: response.existingImprovements?.map((item: any, index: number) => {
+          const processed = autoPopulateQuantity(applyTieredPricing(item));
+          return {
+            ...recalculateTotalPrice(processed),
+            id: `scope-ei-${Date.now()}-${index}`,
+          };
+        }) || [],
+      };
+
+      const totalImported =
+        newItems.tenantImprovements.length +
+        newItems.designSoftCosts.length +
+        newItems.existingImprovements.length;
+
+      setBudgetData(prev => ({
+        ...prev,
+        tenantImprovements: [...prev.tenantImprovements, ...newItems.tenantImprovements],
+        designSoftCosts: [...prev.designSoftCosts, ...newItems.designSoftCosts],
+        existingImprovements: [...prev.existingImprovements, ...newItems.existingImprovements],
+      }));
+
+      const unpricedNote = response.unpricedCount > 0
+        ? ` ${response.unpricedCount} unpriced item(s) were imported with $0 unit price — please review.`
+        : "";
+
+      toast({
+        title: "Scope of Work Imported",
+        description: `Imported ${totalImported} line item(s) from Invitation to Bid Scope of Work.${unpricedNote}`,
+        duration: 6000,
+      });
+    } catch (error) {
+      console.error('Scope of Work import error:', error);
+      toast({
+        title: "Import Failed",
+        description: "Failed to import from Scope of Work.",
         variant: "destructive",
         duration: 6000,
       });
@@ -4399,6 +4616,18 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
               >
                 <Copy className="h-4 w-4 mr-1" />
                 Import from RFP
+              </Button>
+
+              {/* Import from this RFP's ITB Step 3 Scope of Work */}
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleScopeOfWorkImport}
+                className="h-8"
+                title="Import line items from this RFP's Invitation to Bid Scope of Work"
+              >
+                <ListChecks className="h-4 w-4 mr-1" />
+                Import from Scope of Work
               </Button>
               
               {/* Import buttons for Tenant Improvements */}

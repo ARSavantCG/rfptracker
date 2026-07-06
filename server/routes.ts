@@ -38,6 +38,7 @@ import Templates from "./lib/rfp-templates";
 import { sendWorkflowCompletionEmail, sendTestStatusReportEmail } from "./email-service";
 import { sendStatusReportNow } from "./email-scheduler";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
+import { resolveLiveRomItemPricing, normalizeUnit, categorizeRomLineItem, isKnownRomCategory } from "./rom-pricing-utils";
 import { parsePdfBuffer, applyMapping, type MappingConfig } from "./pdf-parser";
 import {
   sanitizeProjectName,
@@ -3463,89 +3464,140 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       template.items.forEach((item: any, index: number) => {
-        // Refresh from live ROM scope item if available
-        let liveLabel = item.label;
-        let liveUnitCost = item.unit_cost;
-        let liveUnit = item.snapshot?.unit || item.unit || "ea.";
-        let liveCategory = item.snapshot?.category || "";
-        let liveSnapshot = item.snapshot;
+        // Refresh from live ROM scope item if available, via the shared resolution
+        // helper (also used by the Scope-of-Work import endpoint below) so both paths
+        // stay in sync instead of re-implementing this logic per-route.
+        const liveRomItem = item.romScopeItemId ? romItemsMap.get(item.romScopeItemId) : undefined;
+        const resolved = resolveLiveRomItemPricing(liveRomItem, {
+          label: item.label,
+          unitPrice: item.unit_cost,
+          unit: item.snapshot?.unit || item.unit || "ea.",
+          category: item.snapshot?.category || "",
+          snapshot: item.snapshot,
+        });
 
-        if (item.romScopeItemId) {
-          const liveRomItem = romItemsMap.get(item.romScopeItemId);
-          if (liveRomItem) {
-            liveLabel = liveRomItem.name;
-            liveUnitCost = typeof liveRomItem.unitPrice === 'string' ? parseFloat(liveRomItem.unitPrice) : liveRomItem.unitPrice;
-            liveUnit = liveRomItem.unit || liveUnit;
-            liveCategory = liveRomItem.category || liveCategory;
-            liveSnapshot = {
-              ...item.snapshot,
-              label: liveRomItem.name,
-              unitPrice: liveUnitCost,
-              unit: liveUnit,
-              category: liveCategory,
-              source: liveRomItem.source || item.snapshot?.source,
-              itemGroup: liveRomItem.itemGroup || item.snapshot?.itemGroup,
-              minSquareFootage: liveRomItem.minSquareFootage || item.snapshot?.minSquareFootage,
-              maxSquareFootage: liveRomItem.maxSquareFootage || item.snapshot?.maxSquareFootage,
-            };
-          }
-        }
+        const normalizedUnit = normalizeUnit(resolved.unit);
 
-        // Normalize unit format: lowercase with period
-        let normalizedUnit = liveUnit;
-        normalizedUnit = normalizedUnit.toLowerCase();
-        if (!normalizedUnit.endsWith('.')) {
-          normalizedUnit = normalizedUnit + '.';
-        }
-        
         const lineItem = {
           id: `template-${template.id}-${index}`,
-          description: liveLabel,
+          description: resolved.label,
           quantity: item.qty || 1,
           unit: normalizedUnit,
-          unitPrice: liveUnitCost ? liveUnitCost.toString() : "0",
-          totalPrice: liveUnitCost && item.qty ? (liveUnitCost * item.qty).toString() : "0",
+          unitPrice: resolved.unitPrice ? resolved.unitPrice.toString() : "0",
+          totalPrice: resolved.unitPrice && item.qty ? (resolved.unitPrice * item.qty).toString() : "0",
           tenantShare: item.percent || 100,
           notes: item.notes || "",
           // Stamp stable integer link to the master scope items library.
           // item.romScopeItemId is the rom_scope_items.id captured when the template was built.
           masterItemId: item.romScopeItemId ?? null,
-          romSnapshot: liveSnapshot ? {
-            ...liveSnapshot,
-            itemGroup: liveSnapshot.itemGroup,
-            minSquareFootage: liveSnapshot.minSquareFootage,
-            maxSquareFootage: liveSnapshot.maxSquareFootage,
-          } : undefined,
+          romSnapshot: resolved.snapshot,
         };
 
         // Categorize based on live category, snapshot category, tags, or type
-        const category = liveCategory;
         const tags = item.tags || [];
-        
-        // Check category first (most reliable)
-        if (category.toLowerCase().includes("design") || 
-            category.toLowerCase().includes("soft cost") ||
-            category.toLowerCase().includes("other fees")) {
-          evaluationItems.designSoftCosts.push(lineItem);
-        } else if (category.toLowerCase().includes("existing")) {
-          evaluationItems.existingImprovements.push(lineItem);
-        } 
-        // Fall back to tag checking
-        else if (tags.some((tag: string) => tag.includes("design") || tag.includes("soft-cost"))) {
-          evaluationItems.designSoftCosts.push(lineItem);
-        } else if (tags.some((tag: string) => tag.includes("existing"))) {
-          evaluationItems.existingImprovements.push(lineItem);
-        } 
-        // Default to tenant improvements
-        else {
-          evaluationItems.tenantImprovements.push(lineItem);
-        }
+        const bucket = categorizeRomLineItem(resolved.category, tags);
+        evaluationItems[bucket].push(lineItem);
       });
 
       res.json(evaluationItems);
     } catch (error) {
       console.error('Template import fetch error:', error);
       res.status(500).json({ message: "Failed to fetch template for import" });
+    }
+  });
+
+  // Read-only: resolve an RFP's ITB Scope of Work rows into evaluation-line-item-shaped
+  // data for the Evaluation Budget's "Import from Scope of Work" button. Never writes
+  // back to invitation_to_bid. Rows with a masterItemId are refreshed against the live
+  // rom_scope_items catalog (via the same resolution helper used by /for-import above);
+  // free-typed rows (no masterItemId) pass through with blank pricing for manual entry.
+  app.get("/api/rfp-requests/:rfpId/evaluation-import/scope-of-work", requireAuth, async (req, res) => {
+    try {
+      const rfpId = parseInt(req.params.rfpId);
+      if (isNaN(rfpId)) {
+        return res.status(400).json({ message: "Invalid RFP ID" });
+      }
+
+      const invitation = await storage.getInvitationToBid(rfpId);
+      const scopeRows: any[] = Array.isArray(invitation?.scopeOfWork) ? invitation!.scopeOfWork : [];
+
+      const evaluationItems = {
+        tenantImprovements: [] as any[],
+        designSoftCosts: [] as any[],
+        existingImprovements: [] as any[],
+      };
+
+      const flaggedUnknownCategory: string[] = [];
+      let pricedCount = 0;
+      let unpricedCount = 0;
+
+      if (scopeRows.length > 0) {
+        const allRomItems = await storage.getAllRomScopeItems();
+        const romItemsMap = new Map(allRomItems.map((item) => [item.id, item]));
+
+        scopeRows.forEach((row: any, index: number) => {
+          const masterItemId = row?.masterItemId ?? null;
+          const liveRomItem = masterItemId ? romItemsMap.get(masterItemId) : undefined;
+
+          if (masterItemId && liveRomItem) {
+            const resolved = resolveLiveRomItemPricing(liveRomItem, {
+              label: row.description,
+              unit: row.unit,
+            });
+            const normalizedUnit = normalizeUnit(resolved.unit);
+            const quantity = row.quantity || 0;
+            const unitPrice = resolved.unitPrice || 0;
+
+            const lineItem = {
+              id: `scope-import-${rfpId}-${Date.now()}-${index}`,
+              description: resolved.label || row.description,
+              quantity,
+              unit: normalizedUnit,
+              unitPrice: unitPrice.toString(),
+              totalPrice: (unitPrice * quantity).toString(),
+              tenantShare: 100,
+              masterItemId,
+              romSnapshot: resolved.snapshot,
+            };
+
+            if (!isKnownRomCategory(resolved.category)) {
+              flaggedUnknownCategory.push(lineItem.description);
+            }
+
+            const bucket = categorizeRomLineItem(resolved.category);
+            evaluationItems[bucket].push(lineItem);
+            pricedCount++;
+          } else {
+            // Free-typed row (no catalog link) or the linked catalog item was deleted/deactivated
+            // since the ITB was saved — import unpriced for manual pricing, same convention as
+            // the Bid Collection "Import from Scope of Work" action.
+            const lineItem = {
+              id: `scope-import-${rfpId}-${Date.now()}-${index}`,
+              description: row?.description || "",
+              quantity: row?.quantity || 0,
+              unit: row?.unit || "",
+              unitPrice: "",
+              totalPrice: "",
+              tenantShare: 100,
+              masterItemId: null,
+              romSnapshot: undefined,
+            };
+            evaluationItems.tenantImprovements.push(lineItem);
+            unpricedCount++;
+          }
+        });
+      }
+
+      res.json({
+        ...evaluationItems,
+        hasScopeOfWork: scopeRows.length > 0,
+        pricedCount,
+        unpricedCount,
+        flaggedUnknownCategory,
+      });
+    } catch (error) {
+      console.error("Scope of Work import fetch error:", error);
+      res.status(500).json({ message: "Failed to fetch scope of work for import" });
     }
   });
 

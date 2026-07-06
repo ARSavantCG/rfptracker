@@ -1,3 +1,42 @@
+## Session: July 6, 2026 — Admin User Fixes, Evaluation Override Fix, ITB Cleanup
+
+### What Was Done
+- **System Users admin**: `deleteUser` switched from hard delete to soft-delete (`isActive=false`). DELETE `/api/admin/users/:id` now blocks self-delete (403). Admin UI disables delete for the current user with an explanatory message.
+- **Evaluation Budget**: Removed DB load/save of `manualOverrides` — the override set is now session-only `useState`, never persisted or reloaded (previously it leaked into saved budget metadata, which could stick overrides across sessions unintentionally).
+- **Invitation to Bid modal**: Removed the entire Area Breakdown UI block. "Generate RFPs & Advance" now runs `form.trigger()` (Zod validation) before submitting, instead of bypassing validation via raw `form.getValues()`.
+- **Null-safety**: `data-mapping.tsx`, `data-scrubbing.tsx`, and `server/routes.ts` (contractor company filename sanitization) now guard against null/undefined contractor/project fields.
+
+### Verified Live (no code changes needed for calc bases)
+Permit Fees / Construction Management / Contingency auto-calc bases were reviewed and confirmed **already correct** — no rewrite was made. Live-tested on a fresh RFP with zero manual overrides:
+- Permit Fees qty = TI Total only ($20,000 → $20,000 qty)
+- CM qty = TI + Design + other fee lines (20,000 + 1,278,834 + 200 = 1,299,034)
+- Contingency qty = everything above it, including CM (20,000 + 1,278,834 + 200 + 64,951.70 = 1,363,985.7)
+
+### ⚠️ Design Note — Calc Base Matching Is by Description Keyword, Not Row Position
+`evaluation-budget.tsx` (~lines 1110–1269): the CM and Contingency bases are computed by **filtering on description keywords** (`"contingency"`, `"construction"+"management"`, `"design"+"architect"`), not by a line item's visual position in the table. A custom-named Design/Soft Cost line will **always** be swept into both the CM base and the Contingency base regardless of where a user places it in the list — there is no "everything above this row" positional logic.
+**Do not convert this to positional (row-index-based) logic without discussion** — the current keyword-based approach is intentional and more robust to reordering for the known categories, but changing it is a real behavior change, not a bug fix.
+
+### Process Note — Cross-Check Diffs Against Task List Before Reporting Done
+Session summary tables can omit entire task groups covered earlier in a session. **Always cross-check the actual diff file list (`git diff --stat`) against the original task list before presenting a "done" summary** — a summary table that looks complete can still silently drop a task group that was actually finished.
+
+### `manualOverrides` Is Session-Only By Design
+`manualOverrides` in `evaluation-budget.tsx` is a plain `useState<Set<string>>`, intentionally never read from or written to the database. It always starts empty on page load/reload — this is correct, expected behavior, not a bug. Any future request to "persist" it should be treated as a scope change, not a fix.
+
+### Future Cleanup (not done — noted only)
+After the Area Breakdown UI removal in `invitation-to-bid-modal.tsx`, `additionalAreas` state is still referenced in the ITB submit payload (~line 613), and the now-orphaned handlers (`savedAreas`, `editingAreaId`, `editingAreaData`, `handleSaveEditArea`, `handleEditArea`, `handleDeleteArea`) remain as dead code. Left in place intentionally to avoid touching the submit/data path in that session. Safe to remove in a dedicated cleanup pass.
+
+### Key Files Changed
+| File | Change |
+|---|---|
+| `client/src/components/evaluation-budget.tsx` | `manualOverrides` made session-only (no DB load/save) |
+| `client/src/components/invitation-to-bid-modal.tsx` | Removed Area Breakdown UI; added `form.trigger()` gate on Generate & Advance |
+| `client/src/pages/admin.tsx` | Self-delete guard UI, soft-delete confirmation copy |
+| `client/src/pages/data-mapping.tsx`, `client/src/pages/data-scrubbing.tsx` | Null-safety on contractor/project string fields |
+| `server/routes.ts` | Self-delete 403 guard; null-safe `contractorCompany` |
+| `server/storage.ts` | `deleteUser` → soft-delete |
+
+---
+
 ## Dashboard Redesign — Executive-Grade Density (Complete as of May 16, 2026)
 
 ### What Was Done

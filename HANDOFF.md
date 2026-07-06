@@ -1,3 +1,21 @@
+## Session: July 6, 2026 — Scope of Work → Evaluation Carry-Through (Verified with Raw Proof)
+
+### What Was Done
+- Wired the missing unknown-category toast in `handleScopeOfWorkImport` (`evaluation-budget.tsx`): when the API's `flaggedUnknownCategory` array is non-empty, the import toast now appends `"N item(s) had an unrecognized category and were placed in Tenant Improvements: [names]"`. No other import logic changed. Verified live by temporarily setting a real catalog item's category to a bogus value, clicking Import, capturing the exact toast text via screenshot, then reverting the category — no lasting data changes.
+
+### Verified Behaviors (raw DB/API proof, not just code review)
+- (a) ITB `scopeOfWork` rows now optionally carry `masterItemId` + `masterItemSnapshot` alongside the original free-typed fields — **backward compatible**. All consumer surfaces (PDF generation, evaluation import, bid views, etc.) read only `description`/`quantity`/`unit`, so legacy free-typed rows with no catalog link are unaffected.
+- (b) Evaluation "Import from Scope of Work" is **append-only** — clicking it multiple times on the same RFP appends duplicate copies of every scope row each time (verified: 1 → 2 → 3 identical "Eye Wash Station with Plumbing" rows after two clicks). There is **no dedupe check or warning dialog** before a second import. Flagged as a known gap; dedupe/warning behavior is a future decision, not yet built.
+- (c) Live catalog pricing resolves through the shared `resolveLiveRomItemPricing` in `server/rom-pricing-utils.ts` — the same path `handleTemplateImport` uses, so imported rows get current catalog pricing, not stale snapshot data. `active_price` can be `null`; resolution correctly falls back to the item's base `unit_price` in that case (confirmed via live JSON: item with `active_price=null, unit_price=8000` resolved to `unitPrice: "8000"`). The primary tiered/averaged pricing path (when `active_price` IS set) has been code-reviewed but not yet exercised against a live import with a populated `active_price` — worth a follow-up live test before relying on it.
+- (d) Unknown catalog categories default safely to `tenantImprovements` (never dropped, never crash) **and** now surface a toast warning naming the affected item(s) — both halves of the "safe-default + toast" requirement are implemented and live-verified as of this session.
+
+### Files Changed
+| File | Change |
+|---|---|
+| `client/src/components/evaluation-budget.tsx` | Added `flaggedUnknownCategory` toast note in `handleScopeOfWorkImport` |
+
+---
+
 ## Session: July 6, 2026 — Admin User Fixes, Evaluation Override Fix, ITB Cleanup
 
 ### What Was Done

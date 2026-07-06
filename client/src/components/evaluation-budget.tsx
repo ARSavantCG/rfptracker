@@ -1180,9 +1180,18 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         ? ` ${response.unpricedCount} unpriced item(s) were imported with $0 unit price — please review.`
         : "";
 
+      const unknownCategoryNames: string[] = Array.isArray(response.flaggedUnknownCategory)
+        ? response.flaggedUnknownCategory.map((item: any) =>
+            typeof item === "string" ? item : (item?.description || item?.name || "Unnamed item")
+          )
+        : [];
+      const unknownCategoryNote = unknownCategoryNames.length > 0
+        ? ` ${unknownCategoryNames.length} item(s) had an unrecognized category and were placed in Tenant Improvements: ${unknownCategoryNames.join(", ")}.`
+        : "";
+
       toast({
         title: "Scope of Work Imported",
-        description: `Imported ${totalImported} line item(s) from Invitation to Bid Scope of Work.${unpricedNote}`,
+        description: `Imported ${totalImported} line item(s) from Invitation to Bid Scope of Work.${unpricedNote}${unknownCategoryNote}`,
         duration: 6000,
       });
     } catch (error) {

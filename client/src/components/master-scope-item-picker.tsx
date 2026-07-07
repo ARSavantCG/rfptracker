@@ -110,6 +110,9 @@ export default function MasterScopeItemPicker({
     setQuery(val);
     setSelectedMasterItemId(null);
     setIsOtherMode(false);
+    // User started typing — any upcoming blur is a genuine edit blur, not a
+    // post-selection synthetic one. Clear the suppression flag.
+    justSelectedRef.current = false;
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => search(val), 200);
   };

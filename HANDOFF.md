@@ -1,3 +1,60 @@
+## Session: July 7, 2026 (Part 2) — User Deletion Fix + Demising Wall UX
+
+### What Was Done
+
+**A1 — Admin: User Deletion Visual Fix (`client/src/pages/admin.tsx`)**
+
+Root cause: the soft-delete API worked correctly (sets `isActive=false`), but the user list
+rendered ALL users with no filter — so deleted users stayed visible with an "Inactive" badge.
+Admins saw the user still in the list and assumed the delete did nothing.
+
+Changes made:
+- Added `reactivateUserMutation`: PATCH `/api/admin/users/:id` with `{ isActive: true }`
+- Split the user list into two sections:
+  - **Active users** (main "Admin Users" section) — users with `isActive !== false`
+  - **Deactivated users** (collapsed `<details>` "Deactivated Users (N)") — users with `isActive === false`
+- Deactivated section only renders when `deactivatedUsers.length > 0`
+- Each deactivated row shows a "Reactivate" button that calls `reactivateUserMutation`
+- Active rows no longer show the "Inactive" XCircle badge (they're always active now)
+- Updated success toast: "User deactivated successfully" (more accurate than "deleted")
+
+**A2 — Demising Wall: Bay Boundary Picker (`client/src/components/property-existing-improvements-modal.tsx`)**
+
+Root cause: the Left Bay / Right Bay dropdowns showed all bays, requiring manual coordination
+to pick adjacent bays. No guidance that demising walls must be on adjacent bay boundaries.
+
+Change: Added a "Bay Boundary (adjacent bays only)" convenience `<select>` above the existing
+Left Bay / Right Bay selects in the demising-wall allocation type section:
+- Computes adjacent pairs from `availableBays.filter(b => !b.isSplitBay)` sorted by bay number
+- Shows options like "Bay 1-5 – Bay 5-9" for each consecutive pair
+- `onChange` auto-populates both `demisingWallData.leftBayId` and `demisingWallData.rightBayId`
+  via `form.setValue`
+- Shows "— Select boundary —" as default; optional field (no schema change)
+- The existing Left Bay / Right Bay selects remain below for split-bay advanced use
+- On load/edit: pre-selects the matching pair if `leftBayId`/`rightBayId` form an adjacent pair
+
+**A2 — Demising Wall: Visual Markers on Bay Selection Grid (`client/src/components/bay-selection-grid.tsx`)**
+
+Added wall markers between bay columns where an existing demising wall is recorded:
+- Added `useQuery` for `GET /api/properties/:id/existing-improvements` (single-building mode only)
+- Added `wallBoundaries` useMemo: maps each demising wall's `leftBayId`/`rightBayId` to a
+  boundary key like "3,4" (sorted lower,higher bay numbers) → tooltip text (wallLocation or description)
+- Changed the single-building render loop from `.map(...)` to `.flatMap(...)`, with `wIdx`/`wArr` params
+- After each bay group, checks if there's a wall on the boundary between this group and the next
+- If yes, returns `[bayGroup, wallMarker]` — a narrow dark `div.bg-gray-800` with "WALL" label
+  (8px wide, full column height, cursor-help, tooltip showing wall location)
+- If no wall, returns `[bayGroup]`
+- Wall marker has: `key="wall-${bayNumber}"`, title tooltip, 144px min-height
+
+**Testing Notes**
+- Admin UI split-list: verified via e2e test — active users show cleanly, no Inactive badges
+  in the main section; deactivated section only appears when deactivated users exist
+- Bay Boundary picker: verified it renders and shows adjacent pairs in the modal
+- Bay Grid markers: code-reviewed; will be visible in properties with `demising-wall` type
+  existing improvements when viewing the Bay Selection Grid
+
+---
+
 ## Session: July 7, 2026 — Area Breakdown UI Removal + Consumer Hardening
 
 ### What Was Done

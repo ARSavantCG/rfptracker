@@ -1113,6 +1113,52 @@ export function PropertyExistingImprovementsModal({
                         )}
                       />
 
+                      {/* Bay Boundary convenience picker — adjacent pairs only */}
+                      {(() => {
+                        const sorted = availableBays
+                          .filter(b => !b.isSplitBay)
+                          .sort((a, b) => {
+                            const an = parseInt(a.bayName.match(/(\d+)/)?.[1] || '0');
+                            const bn = parseInt(b.bayName.match(/(\d+)/)?.[1] || '0');
+                            return an - bn;
+                          });
+                        const pairs = sorted.slice(0, -1).map((b, i) => ({
+                          key: `${b.id}|${sorted[i + 1].id}`,
+                          leftId: b.id,
+                          rightId: sorted[i + 1].id,
+                          label: `${b.bayName} – ${sorted[i + 1].bayName}`,
+                        }));
+                        const curLeft = form.watch('demisingWallData.leftBayId');
+                        const curRight = form.watch('demisingWallData.rightBayId');
+                        const selKey = pairs.find(p => p.leftId === curLeft && p.rightId === curRight)?.key || '';
+                        return (
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Bay Boundary{' '}
+                              <span className="text-gray-400 font-normal">(adjacent bays only)</span>
+                            </label>
+                            <select
+                              value={selKey}
+                              onChange={(e) => {
+                                if (!e.target.value) return;
+                                const [l, r] = e.target.value.split('|');
+                                form.setValue('demisingWallData.leftBayId', l);
+                                form.setValue('demisingWallData.rightBayId', r);
+                              }}
+                              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                            >
+                              <option value="">— Select boundary —</option>
+                              {pairs.map(p => (
+                                <option key={p.key} value={p.key}>{p.label}</option>
+                              ))}
+                            </select>
+                            <p className="text-xs text-gray-500 mt-1">
+                              For split-bay walls, use the Left / Right Bay selects below.
+                            </p>
+                          </div>
+                        );
+                      })()}
+
                       <div className="grid grid-cols-2 gap-4">
                         <FormField
                           control={form.control}

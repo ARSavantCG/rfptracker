@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -66,6 +66,44 @@ export function BaySelectionGrid({
   
   // Get all leased bay IDs
   const leasedBayIds = (allExecutedLeases || []).flatMap(lease => lease.assignedBays || []);
+
+  // Fetch demising wall improvements for visual boundary markers (single-building only)
+  const { data: propertyImprovements = [] } = useQuery<any[]>({
+    queryKey: [`/api/properties/${property?.id}/existing-improvements`],
+    enabled: !!property?.id && !multiBuildingMode,
+  });
+
+  // Compute wall boundary keys (e.g. "3,4") → tooltip text
+  const wallBoundaries = useMemo(() => {
+    const bounds = new Map<string, string>();
+    const walls = (propertyImprovements as any[]).filter(
+      imp => imp.allocationType === 'demising-wall' && imp.demisingWallData?.leftBayId
+    );
+    if (!walls.length) return bounds;
+    const sortedConfigs = [...(property?.bayConfigurations || [])].sort((a, b) => {
+      const aNum = parseInt(a.bayName.match(/Bay (\d+)/)?.[1] || '0');
+      const bNum = parseInt(b.bayName.match(/Bay (\d+)/)?.[1] || '0');
+      return aNum - bNum;
+    });
+    const idToNum = new Map<string, number>();
+    sortedConfigs.forEach((bc, i) => {
+      idToNum.set(bc.id, i + 1);
+      idToNum.set(`${bc.id}_north`, i + 1);
+      idToNum.set(`${bc.id}_south`, i + 1);
+    });
+    walls.forEach(w => {
+      const lNum = idToNum.get(w.demisingWallData.leftBayId);
+      const rNum = idToNum.get(w.demisingWallData.rightBayId);
+      if (lNum !== undefined && rNum !== undefined) {
+        const lo = Math.min(lNum, rNum);
+        const hi = Math.max(lNum, rNum);
+        const key = `${lo},${hi}`;
+        const tip = w.demisingWallData?.wallLocation || w.description || 'Existing Demising Wall';
+        if (!bounds.has(key)) bounds.set(key, tip);
+      }
+    });
+    return bounds;
+  }, [propertyImprovements, property?.bayConfigurations]);
 
   // Initialize single-building mode with previous selections
   // Use JSON stringified IDs to detect when actual bay selections change (not just count)
@@ -842,17 +880,20 @@ export function BaySelectionGrid({
 
                   // Sort groups by bay number and render each group
                   return Array.from(bayGroups.entries())
-                    .sort(([a], [b]) => b - a) // Reverse order for display
-                    .map(([bayNumber, baysInGroup]) => {
-                      // Sort bays within group: North first, then South
+                    .sort(([a], [b]) => b - a)
+                    .flatMap(([bayNumber, baysInGroup], wIdx, wArr) => {
                       const sortedBays = baysInGroup.sort((a: any, b: any) => {
                         if (a.isSplitBay && b.isSplitBay) {
                           return a.splitSide === 'north' ? -1 : 1;
                         }
                         return 0;
                       });
-
-                      return (
+                      const _nextBayNum = wIdx < wArr.length - 1 ? wArr[wIdx + 1][0] : null;
+                      const _wallKey = _nextBayNum !== null
+                        ? `${Math.min(bayNumber, _nextBayNum)},${Math.max(bayNumber, _nextBayNum)}`
+                        : null;
+                      const _wallTip = _wallKey ? wallBoundaries.get(_wallKey) : undefined;
+                      const bayGroup = (
                         <div key={bayNumber} className="flex flex-col gap-0.5">
                           {sortedBays.map((bay: any) => {
                             const isLeased = leasedBayIds.includes(bay.id) || leasedBayIds.includes(bay.parentBayId);
@@ -934,6 +975,24 @@ export function BaySelectionGrid({
                           })}
                         </div>
                       );
+                      if (_wallTip !== undefined) {
+                        return [bayGroup, (
+                          <div
+                            key={`wall-${bayNumber}`}
+                            title={_wallTip}
+                            className="self-stretch w-2 bg-gray-800 rounded-sm flex-shrink-0 cursor-help flex items-center justify-center"
+                            style={{ minHeight: '144px' }}
+                          >
+                            <span
+                              className="text-white font-bold"
+                              style={{ writingMode: 'vertical-rl', fontSize: '7px' }}
+                            >
+                              WALL
+                            </span>
+                          </div>
+                        )];
+                      }
+                      return [bayGroup];
                     });
                 })()}
               </div>

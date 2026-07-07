@@ -61,7 +61,29 @@ function SystemUsersAndContacts() {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
       toast({
         title: "Success",
-        description: "User deleted successfully",
+        description: "User deactivated successfully",
+        duration: 4000,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+        duration: 6000,
+      });
+    },
+  });
+
+  const reactivateUserMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest(`/api/admin/users/${id}`, "PATCH", { isActive: true });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      toast({
+        title: "User Reactivated",
+        description: "The user account has been reactivated and can log in again.",
         duration: 4000,
       });
     },
@@ -209,69 +231,112 @@ function SystemUsersAndContacts() {
   return (
     <div className="space-y-6">
       {/* System Users Section */}
-      {users && users.length > 0 && (
-        <div>
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Admin Users</h3>
-          <div className="space-y-4">
-            {users.map((user: User) => (
-              <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="flex items-center space-x-4">
-                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                    <span className="text-blue-600 font-medium">
-                      {user.firstName?.[0] || user.email?.[0] || 'U'}
-                    </span>
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-gray-900">
-                      {user.firstName && user.lastName 
-                        ? `${user.firstName} ${user.lastName}`
-                        : user.email
-                      }
-                    </h3>
-                    <p className="text-sm text-gray-600">{user.email}</p>
-                    <div className="flex items-center space-x-2 mt-1">
-                      <Badge className={getRoleBadgeColor(user.role)}>
-                        {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
-                      </Badge>
-                      {user.isActive ? (
-                        <div className="flex items-center text-green-600 text-sm">
-                          <CheckCircle className="h-4 w-4 mr-1" />
-                          Active
+      {users && users.length > 0 && (() => {
+        const activeUsers = users.filter((u: User) => u.isActive !== false);
+        const deactivatedUsers = users.filter((u: User) => u.isActive === false);
+        return (
+          <>
+            <div>
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Admin Users</h3>
+              <div className="space-y-4">
+                {activeUsers.map((user: User) => (
+                  <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                        <span className="text-blue-600 font-medium">
+                          {user.firstName?.[0] || user.email?.[0] || 'U'}
+                        </span>
+                      </div>
+                      <div>
+                        <h3 className="font-medium text-gray-900">
+                          {user.firstName && user.lastName 
+                            ? `${user.firstName} ${user.lastName}`
+                            : user.email
+                          }
+                        </h3>
+                        <p className="text-sm text-gray-600">{user.email}</p>
+                        <div className="flex items-center space-x-2 mt-1">
+                          <Badge className={getRoleBadgeColor(user.role)}>
+                            {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                          </Badge>
+                          <div className="flex items-center text-green-600 text-sm">
+                            <CheckCircle className="h-4 w-4 mr-1" />
+                            Active
+                          </div>
                         </div>
-                      ) : (
-                        <div className="flex items-center text-red-600 text-sm">
-                          <XCircle className="h-4 w-4 mr-1" />
-                          Inactive
-                        </div>
-                      )}
+                      </div>
+                    </div>
+                    
+                    <div className="flex space-x-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditProfile(user)}
+                      >
+                        <UserIcon className="h-4 w-4 mr-1" />
+                        Edit Profile
+                      </Button>
+                      
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditUser(user)}
+                      >
+                        <Settings className="h-4 w-4 mr-1" />
+                        Permissions
+                      </Button>
                     </div>
                   </div>
-                </div>
-                
-                <div className="flex space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleEditProfile(user)}
-                  >
-                    <UserIcon className="h-4 w-4 mr-1" />
-                    Edit Profile
-                  </Button>
-                  
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleEditUser(user)}
-                  >
-                    <Settings className="h-4 w-4 mr-1" />
-                    Permissions
-                  </Button>
-                </div>
+                ))}
+                {activeUsers.length === 0 && (
+                  <p className="text-sm text-gray-500 italic">No active users.</p>
+                )}
               </div>
-            ))}
-          </div>
-        </div>
-      )}
+            </div>
+
+            {deactivatedUsers.length > 0 && (
+              <details className="mt-4 border rounded-lg p-3 bg-gray-50">
+                <summary className="cursor-pointer text-sm font-medium text-gray-600 select-none">
+                  Deactivated Users ({deactivatedUsers.length})
+                </summary>
+                <div className="mt-3 space-y-2">
+                  {deactivatedUsers.map((user: User) => (
+                    <div key={user.id} className="flex items-center justify-between p-3 border rounded bg-white opacity-80">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
+                          <span className="text-gray-500 text-sm font-medium">
+                            {user.firstName?.[0] || user.email?.[0] || 'U'}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-500">
+                            {user.firstName && user.lastName
+                              ? `${user.firstName} ${user.lastName}`
+                              : user.email}
+                          </p>
+                          <p className="text-xs text-gray-400">{user.email}</p>
+                          <Badge className={getRoleBadgeColor(user.role) + " mt-1 text-xs"}>
+                            {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                          </Badge>
+                        </div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs"
+                        onClick={() => reactivateUserMutation.mutate(user.id)}
+                        disabled={reactivateUserMutation.isPending}
+                      >
+                        Reactivate
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </details>
+            )}
+          </>
+        );
+      })()}
 
       {/* Authorized Contacts Section */}
       {sortedContacts.length > 0 && (

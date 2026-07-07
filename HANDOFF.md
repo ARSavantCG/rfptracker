@@ -1,3 +1,82 @@
+## Session: July 7, 2026 — ITB Type-Ahead Picker + Area Breakdown Recon
+
+### Part A — Reconnaissance Findings
+
+#### ITB Scope-of-Work Catalog Picker (why the icon showed nothing)
+The old picker used a `Popover` + shadcn `Command`/`CommandItem` component with a
+`ListChecks` icon button. Data came from `GET /api/rom-scope-items` (loaded all items
+upfront, filtered locally). The `CommandItem` value-based filtering works, but the
+approach was fragile — the Command component would show all items when the input was
+empty (click icon → popover opens → blank input → all items shown), but typing
+triggered cmdk's built-in `value` prop filter which compared against
+`"${romItem.name} ${romItem.category}"`. This worked technically, but only if items
+were loaded by the time the popover opened. In practice, users saw nothing because the
+`/api/rom-scope-items` fetch ran but the cmdk rendering was inconsistent and the UX
+was click-to-open rather than type-to-search.
+
+**Root cause confirmed**: different endpoint + different component from Evaluation Budget.
+Evaluation Budget uses `MasterScopeItemPicker` → `GET /api/master-scope-items/search?q=<text>` (server-side ilike search with `active_price` priority). ITB used local client filter from `/api/rom-scope-items`. These are now unified.
+
+#### Area Breakdown Section in RFP Validation (Step 2)
+**Consumers found — removal was STOPPED.** The `areaBreakdown` JSON array (from the
+Validation modal's Area Breakdown section) is read by:
+- `server/pdf-generator.ts` — populates area tables in contractor/architect PDFs and
+  computes "Remaining Rentable Area" (total minus sum of breakdown areas)
+- `client/src/components/evaluation-budget.tsx` — matches specific area types (e.g.
+  "Office Area", "Warehouse Office") to apply unit-cost math for certain line items
+- `server/historical-pricing-reports.ts` — uses total SF for cost-per-SF benchmarks
+- `client/src/pages/project-report-generator.tsx` — aggregates for project summaries
+
+**The kVA/Tenant Area calc does NOT use `areaBreakdown` entries.** It uses the main
+RFP rentable area field (`rfpArea / totalPropertyArea * totalTransformerKva`) — confirmed
+in `rfp-validation-modal.tsx` electrical section. Area Breakdown UI removal was deferred
+pending a separate decision about whether the PDF tables and evaluation area-type matching
+can be removed or migrated. This is **distinct from the earlier ITB Area Breakdown
+removal** (Step 3 modal), which was already done in a prior session.
+
+### Part B — Implemented
+
+**ITB Scope-of-Work type-ahead (Task 3):**
+- Replaced `Popover` + `Command`/`CommandItem` + `ListChecks` icon button with
+  `MasterScopeItemPicker` component inline in the description cell — exact same
+  component and endpoint (`/api/master-scope-items/search`) as Evaluation Budget.
+- Added `onBlur?: (value: string) => void` prop to `MasterScopeItemPicker` so
+  free-typed descriptions persist on Tab/blur without requiring an explicit "Other" click.
+- Selecting a catalog item sets `description`, `unit`, `masterItemId`,
+  `masterItemSnapshot` via `form.setValue`. Free-typing then blurring sets only
+  `description` and clears any prior catalog link — saves exactly as before.
+- Removed: `openScopeCombobox` state, `romScopeItemsForAutocomplete` query,
+  `activeRomScopeItems` derived array, and all `Popover`/`Command` imports from ITB modal.
+
+**Area Breakdown removal (Task 4): NOT DONE — consumers found, see above.**
+
+### Part C — Verified Live (API + SQL proof)
+
+**Catalog-linked row:**
+- `GET /api/master-scope-items/search?q=Off&limit=5` → returned "5' x 6' Office Window",
+  "Office Area (3,001 - 5,000 sf)", "Office Area (5,001 sf and over)",
+  "Office Area (Up to 3,000 sf)" — endpoint confirmed live.
+- PATCH `invitation_to_bid` for rfp_id=194 with `masterItemId: 36` + snapshot.
+- SQL `SELECT scope_of_work FROM invitation_to_bid WHERE rfp_id = 194` confirmed:
+  `Row 0: masterItemId=36, unit='sf.', snapshot={"description":"Office Area (Up to 3,000 sf)","unit":"sf.","unitPrice":"200"}`
+
+**Free-text row:**
+- Same PATCH with `masterItemId: null, masterItemSnapshot: null`.
+- SQL confirmed: `Row 1: masterItemId=null, snapshot=null, description="xyzabc123nonsense custom free text"`
+
+### Files Changed
+| File | Change |
+|---|---|
+| `client/src/components/master-scope-item-picker.tsx` | Added `onBlur?: (value: string) => void` prop — called on input blur with current query value; no behavior change for existing callers |
+| `client/src/components/invitation-to-bid-modal.tsx` | Replaced Popover+Command picker with `MasterScopeItemPicker`; removed `romScopeItemsForAutocomplete` query, `activeRomScopeItems`, `openScopeCombobox` state; removed `Popover`/`Command`/`ListChecks` imports |
+
+### Note on ITB vs. Validation Area Breakdown
+Two separate "Area Breakdown" removals exist in project history:
+1. **ITB (Step 3) Area Breakdown** — removed in a prior session (see entry dated July 6, 2026 "Admin User Fixes, Evaluation Override Fix, ITB Cleanup").
+2. **Validation (Step 2) Area Breakdown** — investigated this session; **NOT removed** because consumers were found. Any future removal must first handle pdf-generator.ts area tables, evaluation-budget.tsx area-type matching, and historical pricing SF calculations.
+
+---
+
 ## Session: July 6, 2026 — Scope of Work → Evaluation Carry-Through (Verified with Raw Proof)
 
 ### What Was Done

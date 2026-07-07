@@ -11,11 +11,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 // Removed Select import - using native HTML selects for consistency
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
-import { FileText, Download, Users, Save, X, CheckCircle, Plus, Trash2, ChevronUp, ChevronDown, GripVertical, ListChecks } from "lucide-react";
+import { FileText, Download, Users, Save, X, CheckCircle, Plus, Trash2, ChevronUp, ChevronDown, GripVertical } from "lucide-react";
+import MasterScopeItemPicker, { type MasterScopeSelection } from "@/components/master-scope-item-picker";
 import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
 import type { RfpRequest, Property, Contact } from "@shared/schema";
 import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
@@ -206,13 +205,6 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
     queryKey: ["/api/contacts"],
   });
 
-  // Fetch active ROM Pilot scope catalog items for the Scope of Work description autocomplete.
-  // Free-typing remains fully supported — this only offers an optional catalog link.
-  const { data: romScopeItemsForAutocomplete = [] } = useQuery<any[]>({
-    queryKey: ["/api/rom-scope-items"],
-  });
-  const activeRomScopeItems = romScopeItemsForAutocomplete.filter((item: any) => item.isActive !== false);
-  const [openScopeCombobox, setOpenScopeCombobox] = useState<number | null>(null);
 
   // Fetch RFP generation history
   const { data: generationHistory = [], refetch: refetchHistory } = useQuery({
@@ -1703,91 +1695,25 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
                             return (
                               <FormItem>
                                 <FormControl>
-                                  <div className="relative flex items-center gap-1">
-                                    <Input 
-                                      {...field} 
-                                      placeholder="Work description"
-                                      onChange={(e) => {
-                                        field.onChange(e);
-                                        // Free-typing clears any previous catalog link so the row
-                                        // is treated as a plain free-typed entry again.
-                                        if (linkedMasterItemId) {
-                                          form.setValue(`scopeOfWork.${index}.masterItemId`, null);
-                                          form.setValue(`scopeOfWork.${index}.masterItemSnapshot`, null);
-                                        }
-                                      }}
-                                      onKeyDown={(e) => {
-                                        if (e.key === 'Tab' && !e.shiftKey) {
-                                          e.preventDefault();
-                                          // Focus next input (quantity) in same row
-                                          const quantityInput = document.querySelector(`input[data-testid="quantity-${index}"]`) as HTMLInputElement;
-                                          if (quantityInput) {
-                                            quantityInput.focus();
-                                            quantityInput.select();
-                                          }
-                                        } else if (e.key === 'Tab' && e.shiftKey) {
-                                          e.preventDefault();
-                                          // Focus previous row's unit input or stay on this description if first row
-                                          if (index > 0) {
-                                            const prevUnitInput = document.querySelector(`input[data-testid="unit-${index - 1}"]`) as HTMLInputElement;
-                                            if (prevUnitInput) {
-                                              prevUnitInput.focus();
-                                              prevUnitInput.select();
-                                            }
-                                          }
-                                          // If first row, let default tab behavior handle going to previous form section
-                                        }
-                                      }}
-                                    />
-                                    <Popover open={openScopeCombobox === index} onOpenChange={(open) => setOpenScopeCombobox(open ? index : null)}>
-                                      <PopoverTrigger asChild>
-                                        <Button
-                                          type="button"
-                                          variant={linkedMasterItemId ? "secondary" : "ghost"}
-                                          size="sm"
-                                          tabIndex={-1}
-                                          className="h-8 w-8 p-0 shrink-0"
-                                          title="Search scope item catalog"
-                                        >
-                                          <ListChecks className="h-4 w-4" />
-                                        </Button>
-                                      </PopoverTrigger>
-                                      <PopoverContent className="w-80 p-0" align="start">
-                                        <Command>
-                                          <CommandInput placeholder="Search scope catalog..." />
-                                          <CommandList>
-                                            <CommandEmpty>No matching catalog items.</CommandEmpty>
-                                            <CommandGroup>
-                                              {activeRomScopeItems.map((romItem: any) => (
-                                                <CommandItem
-                                                  key={romItem.id}
-                                                  value={`${romItem.name} ${romItem.category || ""}`}
-                                                  onSelect={() => {
-                                                    form.setValue(`scopeOfWork.${index}.description`, romItem.name);
-                                                    form.setValue(`scopeOfWork.${index}.unit`, romItem.unit || "");
-                                                    form.setValue(`scopeOfWork.${index}.masterItemId`, romItem.id);
-                                                    form.setValue(`scopeOfWork.${index}.masterItemSnapshot`, {
-                                                      description: romItem.name,
-                                                      unit: romItem.unit || "",
-                                                      unitPrice: romItem.activePrice || romItem.unitPrice || "0",
-                                                    });
-                                                    setOpenScopeCombobox(null);
-                                                  }}
-                                                >
-                                                  <div className="flex flex-col">
-                                                    <span>{romItem.name}</span>
-                                                    {romItem.category && (
-                                                      <span className="text-xs text-muted-foreground">{romItem.category}</span>
-                                                    )}
-                                                  </div>
-                                                </CommandItem>
-                                              ))}
-                                            </CommandGroup>
-                                          </CommandList>
-                                        </Command>
-                                      </PopoverContent>
-                                    </Popover>
-                                  </div>
+                                  <MasterScopeItemPicker
+                                    searchEndpoint="/api/master-scope-items/search"
+                                    value={field.value}
+                                    masterItemId={linkedMasterItemId}
+                                    onSelect={(sel: MasterScopeSelection) => {
+                                      field.onChange(sel.description);
+                                      form.setValue(`scopeOfWork.${index}.unit`, sel.unit ?? "");
+                                      form.setValue(`scopeOfWork.${index}.masterItemId`, sel.type === "master" ? (sel.masterItemId ?? null) : null);
+                                      form.setValue(`scopeOfWork.${index}.masterItemSnapshot`, sel.type === "master" ? (sel.snapshot ?? null) : null);
+                                    }}
+                                    onBlur={(typed) => {
+                                      field.onChange(typed);
+                                      if (linkedMasterItemId) {
+                                        form.setValue(`scopeOfWork.${index}.masterItemId`, null);
+                                        form.setValue(`scopeOfWork.${index}.masterItemSnapshot`, null);
+                                      }
+                                    }}
+                                    placeholder="Work description"
+                                  />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>

@@ -34,6 +34,7 @@ interface MasterScopeItemPickerProps {
   value?: string;
   masterItemId?: number | null;
   onSelect: (selection: MasterScopeSelection) => void;
+  onBlur?: (value: string) => void;
   placeholder?: string;
   className?: string;
   disabled?: boolean;
@@ -46,6 +47,7 @@ export default function MasterScopeItemPicker({
   value,
   masterItemId,
   onSelect,
+  onBlur,
   placeholder,
   className,
   disabled,
@@ -201,6 +203,9 @@ export default function MasterScopeItemPicker({
         onFocus={() => {
           if (query.trim() && results.length) setOpen(true);
           else if (query.trim()) search(query);
+        }}
+        onBlur={() => {
+          onBlur?.(query);
         }}
         placeholder={placeholder ?? "Type to search scope items…"}
         className={inputClasses}

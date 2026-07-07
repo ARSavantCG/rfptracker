@@ -1,3 +1,57 @@
+## Session: July 7, 2026 — Area Breakdown UI Removal + Consumer Hardening
+
+### What Was Done
+
+**Part A — Removed Area Breakdown UI from Step 2 Validation modal**
+- Deleted the "Area Breakdown" heading, "Add Area" button, and all area-entry rows from
+  `rfp-validation-modal.tsx`. Users can no longer add/edit/remove area breakdown entries
+  through the UI.
+- Removed dead code: `addAreaBreakdown`, `removeAreaBreakdown`, `updateAreaBreakdown`
+  functions; `openAreaTypeIndex` state + its `useEffect` click-outside handler; `Plus`
+  and `nanoid` imports that were exclusively used by those functions.
+- **Preserved**: the "Additional Areas" summary display (read-only, shows legacy data when
+  `.length > 0`) and the "Remaining Rentable Area" calculation — both still work correctly
+  for old RFPs that have areaBreakdown entries. New RFPs have empty arrays so those blocks
+  are hidden by the `length > 0` guards.
+- **DB column untouched**: `areaBreakdown` JSON column on `rfp_requests` is retained so
+  historical data is safe and readable by all downstream consumers.
+
+**Part B — Consumer hardening audit (no code changes needed for 3 of 4)**
+
+| Consumer | Finding | Action |
+|---|---|---|
+| `server/pdf-generator.ts` | Already guarded: `dates.areaBreakdown && dates.areaBreakdown.length > 0 ? ... : ''` wraps every section including Remaining-Area calc | No change |
+| `client/src/components/evaluation-budget.tsx` | Already guarded: `areaBreakdown \|\| []` init + `!matchedArea \|\| !matchedArea.squareFootage` early return; empty array → no pricing/qty auto-populate, items keep defaults | No change |
+| `client/src/pages/project-report-generator.tsx` | Already guarded: checks `totalRentableArea` first, then `areaBreakdown.length > 0`, then returns 0; division-by-zero blocked by `projectTotalArea > 0` | No change |
+| `server/historical-pricing-reports.ts` | **Gap found**: when both `warehouseArea` and `areaBreakdown` were 0/empty, `rentableSquareFootage = 0` — no fallback to main RFP area field | **Fixed** |
+
+**Fix for `server/historical-pricing-reports.ts`:**
+Added `projectArea` as a third fallback:
+```typescript
+const projectAreaNumber = parseInt((rfp as any).projectArea?.replace(/,/g, '') || '0') || 0;
+const rentableSquareFootage = warehouseAreaNumber || totalBreakdownArea || projectAreaNumber;
+```
+Priority order now matches the validation modal: `warehouseArea` > `areaBreakdown sum` >
+`projectArea`. Eliminates RSF=0 ghost rows in the historical benchmarks report for RFPs
+that used `projectArea` as their primary area field.
+
+### Files Changed
+| File | Change |
+|---|---|
+| `client/src/components/rfp-validation-modal.tsx` | Removed Area Breakdown UI section; removed `addAreaBreakdown`, `removeAreaBreakdown`, `updateAreaBreakdown` helpers; removed `openAreaTypeIndex` state + useEffect; removed `Plus`, `nanoid` imports |
+| `server/historical-pricing-reports.ts` | Added `projectArea` fallback in RSF calculation; eliminates RSF=0 for RFPs where area was entered in `projectArea` field |
+
+### Verified
+- Server starts cleanly (no import/parse errors from removed dead code).
+- `evaluation-budget.tsx`, `pdf-generator.ts`, `project-report-generator.tsx` confirmed
+  safe for empty `areaBreakdown` via code review — no code changes needed.
+- Old RFPs: legacy areaBreakdown data still displays read-only in the validation modal
+  summary and flows through all PDF/report consumers unchanged.
+- New RFPs: empty areaBreakdown → no Area Breakdown section rendered anywhere; all
+  consumers degrade gracefully.
+
+---
+
 ## Session: July 7, 2026 — ITB Type-Ahead Picker + Area Breakdown Recon
 
 ### Part A — Reconnaissance Findings

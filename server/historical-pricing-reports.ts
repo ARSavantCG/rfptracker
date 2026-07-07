@@ -174,11 +174,15 @@ async function getHistoricalPricingData(): Promise<HistoricalPricingData> {
       const highestBid = Math.max(...bidAmounts);
       const averageBid = bidAmounts.reduce((sum, amount) => sum + amount, 0) / bidAmounts.length;
 
-      // Calculate rentable square footage from area breakdown or warehouse area
+      // Calculate rentable square footage.
+      // Priority: warehouseArea > areaBreakdown sum > projectArea (main RFP text field).
+      // This ensures empty areaBreakdown never produces RSF=0 when a top-level area
+      // field exists, avoiding garbage $0/SF rows in benchmarks.
       const areaBreakdown = (rfp as any).areaBreakdown || [];
       const totalBreakdownArea = areaBreakdown.reduce((sum: number, item: any) => sum + (parseInt(item.squareFootage) || 0), 0);
       const warehouseAreaNumber = parseInt(rfp.warehouseArea?.replace(/,/g, '') || '0') || 0;
-      const rentableSquareFootage = warehouseAreaNumber || totalBreakdownArea;
+      const projectAreaNumber = parseInt((rfp as any).projectArea?.replace(/,/g, '') || '0') || 0;
+      const rentableSquareFootage = warehouseAreaNumber || totalBreakdownArea || projectAreaNumber;
 
       completedProjects.push({
         rfpId: rfp.id,

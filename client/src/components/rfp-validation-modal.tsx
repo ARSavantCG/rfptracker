@@ -18,10 +18,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ChevronDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, X, Save, Zap } from "lucide-react";
+import { X, Save, Zap } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import type { RfpRequest, Contact } from "@shared/schema";
-import { nanoid } from "nanoid";
+
 
 // Voltage options for electrical allocation
 const VOLTAGE_OPTIONS = [
@@ -98,7 +98,6 @@ interface RfpValidationModalProps {
 export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete }: RfpValidationModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [openAreaTypeIndex, setOpenAreaTypeIndex] = useState<number | null>(null);
   const [showEnhancedContext, setShowEnhancedContext] = useState(false);
 
   const form = useForm<ValidationFormData>({
@@ -129,25 +128,6 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
     },
   });
 
-  // Close area type dropdown when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      const target = event.target as HTMLElement;
-      if (!target.closest('.area-type-dropdown')) {
-        setOpenAreaTypeIndex(null);
-      }
-    }
-
-    if (openAreaTypeIndex !== null) {
-      setTimeout(() => {
-        document.addEventListener('mousedown', handleClickOutside);
-      }, 100);
-      
-      return () => {
-        document.removeEventListener('mousedown', handleClickOutside);
-      };
-    }
-  }, [openAreaTypeIndex]);
 
   const { data: contacts = [] } = useQuery<Contact[]>({
     queryKey: ["/api/contacts"],
@@ -293,33 +273,6 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
     onClose();
   };
 
-  const addAreaBreakdown = () => {
-    const currentBreakdown = form.getValues("areaBreakdown") || [];
-    form.setValue("areaBreakdown", [
-      ...currentBreakdown,
-      {
-        id: nanoid(),
-        areaType: "Office",
-        description: "Office",
-        squareFootage: "",
-        notes: ""
-      }
-    ]);
-  };
-
-  const removeAreaBreakdown = (index: number) => {
-    const currentBreakdown = form.getValues("areaBreakdown") || [];
-    form.setValue("areaBreakdown", currentBreakdown.filter((_, i) => i !== index));
-  };
-
-  const updateAreaBreakdown = (index: number, field: keyof ValidationFormData["areaBreakdown"][0], value: string) => {
-    const currentBreakdown = form.getValues("areaBreakdown") || [];
-    const updatedBreakdown = [...currentBreakdown];
-    if (updatedBreakdown[index]) {
-      updatedBreakdown[index] = { ...updatedBreakdown[index], [field]: value };
-      form.setValue("areaBreakdown", updatedBreakdown);
-    }
-  };
 
   if (!rfp) return null;
 
@@ -453,110 +406,6 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                 </div>
               )}
 
-              {/* Area Breakdown */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-medium">Area Breakdown</h4>
-                  <Button
-                    type="button"
-                    onClick={addAreaBreakdown}
-                    variant="outline"
-                    size="sm"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Area
-                  </Button>
-                </div>
-
-                {form.watch("areaBreakdown")?.length > 0 && (
-                  <div className="space-y-2">
-                    {/* Area Items */}
-                    {form.watch("areaBreakdown")?.map((area, index) => (
-                      <div key={area.id} className="space-y-2 p-3 border rounded-md bg-gray-50">
-                        <div className="grid grid-cols-12 gap-2 items-center">
-                          <div className="col-span-3 relative">
-                            <label className="text-xs font-medium text-gray-600">Description</label>
-                            <div className="relative area-type-dropdown">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setOpenAreaTypeIndex(openAreaTypeIndex === index ? null : index);
-                                }}
-                                className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                              >
-                                <span className={area.description ? "text-foreground" : "text-muted-foreground"}>
-                                  {area.description || "Select description"}
-                                </span>
-                                <ChevronDown className={`h-4 w-4 opacity-70 transition-transform ${openAreaTypeIndex === index ? "rotate-180" : ""}`} />
-                              </button>
-                              {openAreaTypeIndex === index && (
-                                <div className="absolute z-[9999] mt-1 w-full rounded-md border bg-popover shadow-lg">
-                                  <div className="p-1">
-                                    {["Office", "Warehouse Office", "Other"].map((option) => (
-                                      <div
-                                        key={option}
-                                        className="px-3 py-2 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground rounded-sm"
-                                        onClick={() => {
-                                          updateAreaBreakdown(index, "description", option);
-                                          updateAreaBreakdown(index, "areaType", option);
-                                          setOpenAreaTypeIndex(null);
-                                        }}
-                                      >
-                                        {option}
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                          {area.description === "Other" && (
-                            <div className="col-span-3">
-                              <label className="text-xs font-medium text-gray-600">Custom Name</label>
-                              <Input
-                                value={area.notes || ""}
-                                onChange={(e) => updateAreaBreakdown(index, "notes", e.target.value)}
-                                placeholder="Enter custom name"
-                              />
-                            </div>
-                          )}
-                          <div className={area.description === "Other" ? "col-span-2" : "col-span-3"}>
-                            <label className="text-xs font-medium text-gray-600">Area (sq ft)</label>
-                            <Input
-                              value={area.squareFootage ? parseInt(area.squareFootage.replace(/,/g, "")).toLocaleString() : ""}
-                              onChange={(e) => {
-                                const value = e.target.value.replace(/,/g, "");
-                                if (value === "" || /^\d+$/.test(value)) {
-                                  updateAreaBreakdown(index, "squareFootage", value);
-                                }
-                              }}
-                              placeholder="e.g., 5,000"
-                            />
-                          </div>
-                          <div className={area.description === "Other" ? "col-span-3" : "col-span-5"}>
-                            <label className="text-xs font-medium text-gray-600">Notes</label>
-                            <Input
-                              value={area.notes || ""}
-                              onChange={(e) => updateAreaBreakdown(index, "notes", e.target.value)}
-                              placeholder="Additional notes"
-                            />
-                          </div>
-                          <div className="col-span-1 flex items-end pb-1">
-                            <Button
-                              type="button"
-                              onClick={() => removeAreaBreakdown(index)}
-                              variant="outline"
-                              size="sm"
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
             </div>
 
             {/* Electrical Allocation */}

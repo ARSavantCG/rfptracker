@@ -1697,6 +1697,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
                                 <FormControl>
                                   <MasterScopeItemPicker
                                     searchEndpoint="/api/master-scope-items/search"
+                                    name={`scopeOfWork.${index}.description`}
                                     value={field.value}
                                     masterItemId={linkedMasterItemId}
                                     onSelect={(sel: MasterScopeSelection) => {
@@ -1706,7 +1707,13 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
                                       form.setValue(`scopeOfWork.${index}.masterItemSnapshot`, sel.type === "master" ? (sel.snapshot ?? null) : null);
                                     }}
                                     onBlur={(typed) => {
+                                      // Only act when the user actually changed the text.
+                                      // A plain focus-then-blur (no edits) fires onBlur with the
+                                      // same value that's already in the field — leave everything intact.
+                                      if (typed === field.value) return;
                                       field.onChange(typed);
+                                      // User typed something new — clear any stale catalog link so
+                                      // the row is treated as a plain free-typed entry.
                                       if (linkedMasterItemId) {
                                         form.setValue(`scopeOfWork.${index}.masterItemId`, null);
                                         form.setValue(`scopeOfWork.${index}.masterItemSnapshot`, null);

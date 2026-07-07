@@ -40,6 +40,7 @@ interface MasterScopeItemPickerProps {
   disabled?: boolean;
   autoFocus?: boolean;
   hideOther?: boolean;
+  name?: string;
 }
 
 export default function MasterScopeItemPicker({
@@ -53,6 +54,7 @@ export default function MasterScopeItemPicker({
   disabled,
   autoFocus,
   hideOther = false,
+  name,
 }: MasterScopeItemPickerProps) {
   const [query, setQuery] = useState(value ?? "");
   const [results, setResults] = useState<MasterScopeItem[]>([]);
@@ -204,6 +206,7 @@ export default function MasterScopeItemPicker({
     <div ref={containerRef} className="relative">
       <Input
         ref={inputRef}
+        name={name}
         value={query}
         onChange={handleInputChange}
         onKeyDown={handleKeyDown}

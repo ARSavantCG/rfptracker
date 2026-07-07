@@ -53,6 +53,7 @@ import { validateRfpForProgression, canAdvanceToPhase } from "./validation";
 import { checkPermission, upload, pdfUpload, uploadsDir, setupSession, requireAuth, requireAdmin } from './middleware';
 import { generateBidCollectionHtml, generateAllBidCollectionsHtml, generateRfpPreviewHtml } from './html-generators';
 import { registerAuthRoutes } from './auth-routes';
+import { AuthService } from './auth';
 import { registerRomRoutes } from './rom-routes';
 import { registerActualsRoutes } from './actuals-routes';
 import { registerPropertyRoutes } from './property-routes';
@@ -4401,6 +4402,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching users:", error);
       res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  app.post('/api/admin/create-user', requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const { username, email, firstName, lastName, role, permissions, generatePassword, customPassword } = req.body;
+      if (!username || !email || !firstName || !lastName) {
+        return res.status(400).json({ message: "username, email, firstName, and lastName are required" });
+      }
+      const password = generatePassword
+        ? nanoid(12).replace(/[^a-zA-Z0-9]/g, 'x').slice(0, 12) + 'A1!'
+        : customPassword;
+      if (!password) {
+        return res.status(400).json({ message: "A password is required" });
+      }
+      const user = await AuthService.createUser({
+        username,
+        password,
+        email,
+        firstName,
+        lastName,
+        role: role || 'user',
+        permissions: permissions || [],
+      });
+      res.json({ user, password });
+    } catch (error: any) {
+      console.error("Error creating user:", error);
+      res.status(500).json({ message: error.message || "Failed to create user" });
     }
   });
 

@@ -1,5 +1,63 @@
 ## Session: July 7, 2026 (Part 2) — User Deletion Fix + Demising Wall UX
 
+### Verification Record (all 5 points)
+
+**Point 1 — User deletion lifecycle (Playwright e2e: PASSED)**
+- Root cause confirmed: soft-delete API always worked; the bug was purely visual (list showed
+  all users with no isActive filter, deleted user stayed visible with "Inactive" badge).
+- Playwright test (status=success) walked the full cycle: Create User → Edit Profile → Delete
+  User Account → confirm AlertDialog → "User deactivated successfully" toast → user removed
+  from active list → Deactivated Users (1) section appeared → Reactivate → back in active
+  list → Deactivated section gone.
+- SQL before/after: `is_active=t` (inserted) → `is_active=t` (after reactivate, confirmed via
+  `SELECT is_active FROM users WHERE username='testuser_verify'`).
+- Network DELETE returns `{ "message": "User deactivated successfully" }` with HTTP 200.
+- Self-delete 403: Playwright confirmed "You cannot delete your own account." text in profile
+  dialog (no delete button shown). Server code at routes.ts enforces `HTTP 403` when
+  `req.user.id === id`.
+- Also added missing `POST /api/admin/create-user` backend route (was referenced by
+  CreateUserModal but never implemented) and wired the CreateUserModal into admin.tsx with
+  a "Create User" button next to the "Admin Users" heading.
+
+**Point 2 — Demising wall marker on Bay Selection Grid**
+- SQL (property_existing_improvements id=29, property_id=11):
+  `leftBayId=1754314100387` (Bay 9-10) | `rightBayId=1754314197856` (Bay 10-11)
+  `wallLocation="Between Column Lines 9 and 10"`
+- Code review (bay-selection-grid.tsx lines 70-106, 884, 981-990):
+  - `useQuery` fetches `/api/properties/:id/existing-improvements` with `= []` default
+  - `wallBoundaries` useMemo maps `"9,10"` → `"Between Column Lines 9 and 10"`
+  - `flatMap(([bayNumber, baysInGroup], wIdx, wArr)` inserts wall marker between columns 9-10
+    and 10-11 when `wallBoundaries.has(wallKey)`
+  - Marker: `w-2 bg-gray-800 rounded-sm cursor-help`, label "WALL", `title` tooltip
+
+**Point 3 — Selection math unaffected by wall marker**
+- SQL verified sqft for the four bays:
+  Bay 8-9=10832 + Bay 9-10=10821 + Bay 10-11=10821 + Bay 11-12=10832 = **43306 sqft**
+- Wall marker is display-only — rendered via flatMap alongside bay groups, not replacing them;
+  clicking the wall div has no effect on selectedBayIds
+
+**Point 4 — Boundary picker populates both left/right bay fields**
+- Code review (property-existing-improvements-modal.tsx lines 1116-1155):
+  - "Bay Boundary (adjacent bays only)" label + native `<select>` appear when
+    `allocationType === 'demising-wall'`
+  - `pairs` computed from `availableBays.filter(b => !b.isSplitBay)` sorted by bay number,
+    sliced to consecutive adjacent groups
+  - `onChange` calls `form.setValue('demisingWallData.leftBayId', l)` and `...rightBayId, r`
+  - `selKey` from `form.watch` drives controlled `value=` so picker reflects current state
+  - Old records load unchanged (form fills leftBayId/rightBayId from DB; picker shows matching
+    pair via selKey computation)
+
+**Point 5 — No query errors on zero-improvements properties**
+- SQL: `SELECT COUNT(*) FROM property_existing_improvements WHERE property_id=21` → 0
+- Code review confirms null safety (bay-selection-grid.tsx line 71):
+  - `const { data: propertyImprovements = [] }` — default prevents null/undefined
+  - `enabled: !!property?.id && !multiBuildingMode` — query skipped with no property
+  - `if (!walls.length) return bounds` — early return on empty array, Map stays empty
+  - All `wallBoundaries.get(key)` calls return `undefined` (no throw), and `undefined` keys
+    simply skip the wall marker insertion
+
+---
+
 ### What Was Done
 
 **A1 — Admin: User Deletion Visual Fix (`client/src/pages/admin.tsx`)**

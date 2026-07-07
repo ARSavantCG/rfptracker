@@ -25,6 +25,7 @@ import { TimezoneAdminPanel } from "@/components/timezone-admin-panel";
 import { LegalCompliancePanel } from "@/components/legal-compliance-panel";
 import { PropertyRenumberingPanel } from "@/components/property-renumbering-panel";
 import { TemplatesManagement } from "@/components/templates-management";
+import { CreateUserModal } from "@/components/create-user-modal";
 import type { User, UserRole, Permission } from "@shared/schema";
 import { ROLE_PERMISSIONS } from "@shared/schema";
 import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
@@ -38,6 +39,7 @@ function SystemUsersAndContacts() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
+  const [showCreateUserModal, setShowCreateUserModal] = useState(false);
   const [selectedContactForPassword, setSelectedContactForPassword] = useState<any>(null);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [selectedContactForReset, setSelectedContactForReset] = useState<any>(null);
@@ -237,7 +239,13 @@ function SystemUsersAndContacts() {
         return (
           <>
             <div>
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Admin Users</h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium text-gray-900">Admin Users</h3>
+                <Button size="sm" onClick={() => setShowCreateUserModal(true)}>
+                  <UserIcon className="h-4 w-4 mr-1" />
+                  Create User
+                </Button>
+              </div>
               <div className="space-y-4">
                 {activeUsers.map((user: User) => (
                   <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg">
@@ -397,6 +405,11 @@ function SystemUsersAndContacts() {
           </p>
         </div>
       )}
+
+      <CreateUserModal
+        isOpen={showCreateUserModal}
+        onClose={() => setShowCreateUserModal(false)}
+      />
 
       {/* User Edit Dialog */}
       <UserEditDialog

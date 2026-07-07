@@ -49,6 +49,7 @@ that used `projectArea` as their primary area field.
   summary and flows through all PDF/report consumers unchanged.
 - New RFPs: empty areaBreakdown → no Area Breakdown section rendered anywhere; all
   consumers degrade gracefully.
+- Step 2 areaBreakdown retired → evaluation tiered-pricing area-matching is now inert for new RFPs by design; tier selection is driven solely by the Step 3 scope line quantity. Legacy RFPs with areaBreakdown data still use area-matching unchanged.
 
 ---
 

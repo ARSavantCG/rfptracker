@@ -73,37 +73,25 @@ export function BaySelectionGrid({
     enabled: !!property?.id && !multiBuildingMode,
   });
 
-  // Compute wall boundary keys (e.g. "3,4") → tooltip text
-  const wallBoundaries = useMemo(() => {
-    const bounds = new Map<string, string>();
-    const walls = (propertyImprovements as any[]).filter(
-      imp => imp.allocationType === 'demising-wall' && imp.demisingWallData?.leftBayId
-    );
-    if (!walls.length) return bounds;
-    const sortedConfigs = [...(property?.bayConfigurations || [])].sort((a, b) => {
-      const aNum = parseInt(a.bayName.match(/Bay (\d+)/)?.[1] || '0');
-      const bNum = parseInt(b.bayName.match(/Bay (\d+)/)?.[1] || '0');
-      return aNum - bNum;
-    });
-    const idToNum = new Map<string, number>();
-    sortedConfigs.forEach((bc, i) => {
-      idToNum.set(bc.id, i + 1);
-      idToNum.set(`${bc.id}_north`, i + 1);
-      idToNum.set(`${bc.id}_south`, i + 1);
-    });
-    walls.forEach(w => {
-      const lNum = idToNum.get(w.demisingWallData.leftBayId);
-      const rNum = idToNum.get(w.demisingWallData.rightBayId);
-      if (lNum !== undefined && rNum !== undefined) {
-        const lo = Math.min(lNum, rNum);
-        const hi = Math.max(lNum, rNum);
-        const key = `${lo},${hi}`;
-        const tip = w.demisingWallData?.wallLocation || w.description || 'Existing Demising Wall';
-        if (!bounds.has(key)) bounds.set(key, tip);
-      }
-    });
-    return bounds;
-  }, [propertyImprovements, property?.bayConfigurations]);
+  // Wall markers keyed by actual bay-pair identity, not render index.
+  // Strips _north/_south suffixes so split-bay IDs resolve to their parent config id.
+  const wallMarkers = useMemo(() => {
+    const stripSuffix = (id: string) => id.replace(/_(north|south)$/, '');
+    return (propertyImprovements as any[])
+      .filter(
+        (imp: any) =>
+          imp.allocationType === 'demising-wall' &&
+          imp.demisingWallData?.leftBayId &&
+          imp.demisingWallData?.rightBayId
+      )
+      .map((w: any) => ({
+        leftId: stripSuffix(w.demisingWallData.leftBayId as string),
+        rightId: stripSuffix(w.demisingWallData.rightBayId as string),
+        tip: (w.demisingWallData?.wallLocation ||
+               w.description ||
+               'Existing Demising Wall') as string,
+      }));
+  }, [propertyImprovements]);
 
   // Initialize single-building mode with previous selections
   // Use JSON stringified IDs to detect when actual bay selections change (not just count)
@@ -888,11 +876,26 @@ export function BaySelectionGrid({
                         }
                         return 0;
                       });
-                      const _nextBayNum = wIdx < wArr.length - 1 ? wArr[wIdx + 1][0] : null;
-                      const _wallKey = _nextBayNum !== null
-                        ? `${Math.min(bayNumber, _nextBayNum)},${Math.max(bayNumber, _nextBayNum)}`
-                        : null;
-                      const _wallTip = _wallKey ? wallBoundaries.get(_wallKey) : undefined;
+                      // Match wall by actual bay-pair identity, not by render index.
+                      // Works regardless of render direction (ascending or descending).
+                      // Returns undefined (no marker) if either bay isn't present.
+                      const _wallTip = (() => {
+                        if (wIdx >= wArr.length - 1) return undefined;
+                        const stripSuffix = (id: string) => id.replace(/_(north|south)$/, '');
+                        const curBaseIds = new Set<string>(
+                          baysInGroup.map((b: any) => stripSuffix(b.parentBayId || b.id))
+                        );
+                        const nextGroup = wArr[wIdx + 1][1] as any[];
+                        const nextBaseIds = new Set<string>(
+                          nextGroup.map((b: any) => stripSuffix(b.parentBayId || b.id))
+                        );
+                        const match = wallMarkers.find(
+                          (m) =>
+                            (curBaseIds.has(m.leftId) && nextBaseIds.has(m.rightId)) ||
+                            (curBaseIds.has(m.rightId) && nextBaseIds.has(m.leftId))
+                        );
+                        return match?.tip;
+                      })();
                       const bayGroup = (
                         <div key={bayNumber} className="flex flex-col gap-0.5">
                           {sortedBays.map((bay: any) => {

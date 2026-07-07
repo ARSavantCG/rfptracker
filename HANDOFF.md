@@ -1,3 +1,106 @@
+## Session: July 7, 2026 (Part 3) — Wall Marker Identity Fix
+
+### Summary
+Wall markers must match bay-pair identity, not render index — grids render in either
+direction based on building orientation.
+
+### Root Cause (Points 1–3)
+
+**How wallBoundaries keys were built (old code):**
+`wallBoundaries` (now removed) sorted ALL bayConfigs ascending, assigned 1-based position
+numbers to each config id, then stored a key `"lo,hi"` (e.g. "9,10") per wall record.
+
+**How the flatMap insertion worked (old code):**
+```ts
+const _nextBayNum = wIdx < wArr.length - 1 ? wArr[wIdx + 1][0] : null;
+const _wallKey = `${Math.min(bayNumber, _nextBayNum)},${Math.max(bayNumber, _nextBayNum)}`;
+const _wallTip = _wallKey ? wallBoundaries.get(_wallKey) : undefined;
+```
+`bayNumber` comes from `generateIndividualBays` where `bayNumber = index + 1` in the
+**filtered** list (bays with squareFootage > 0 only). `wallBoundaries` positions were from
+ALL configs. Any bay with squareFootage=0 would cause the two numbering systems to diverge,
+shifting the wall one slot to the wrong gap.
+
+**Render order:** The grid always sorts `b - a` (descending) — Bay N on left, Bay 1 on right,
+regardless of `firstBayDirection`. No orientation-based flip exists in the code.
+
+**For property 11 specifically:** All 33 bays have sqft > 0, so the old code happened to
+place the marker correctly (systems didn't diverge). The bug was latent — any 0-sqft bay
+would have broken it.
+
+**Off-by-one trace for property 11:**
+- Wall record id=29: leftBayId=1754314100387 (Bay 9-10, sortedConfigs pos=9),
+  rightBayId=1754314197856 (Bay 10-11, pos=10) → wallBoundaries key="9,10"
+- Render (descending 33→1): at wIdx=23 (bayNumber=10, Bay 10-11):
+  `_nextBayNum=9`, `_wallKey="9,10"` → FOUND → marker rendered after Bay 10-11 col ✅
+- This was correct only because no bays were filtered. Wrong in principle.
+
+### Fix (Points 4–5)
+
+**Old `wallBoundaries` useMemo replaced with `wallMarkers` array:**
+```ts
+const wallMarkers = useMemo(() => {
+  const stripSuffix = (id: string) => id.replace(/_(north|south)$/, '');
+  return (propertyImprovements as any[])
+    .filter((imp: any) =>
+      imp.allocationType === 'demising-wall' &&
+      imp.demisingWallData?.leftBayId &&
+      imp.demisingWallData?.rightBayId
+    )
+    .map((w: any) => ({
+      leftId: stripSuffix(w.demisingWallData.leftBayId as string),
+      rightId: stripSuffix(w.demisingWallData.rightBayId as string),
+      tip: (w.demisingWallData?.wallLocation || w.description ||
+            'Existing Demising Wall') as string,
+    }));
+}, [propertyImprovements]);
+```
+
+**Old `_nextBayNum/_wallKey/_wallTip` arithmetic replaced with identity match:**
+```ts
+const _wallTip = (() => {
+  if (wIdx >= wArr.length - 1) return undefined;  // Point 5: no marker at last col
+  const stripSuffix = (id: string) => id.replace(/_(north|south)$/, '');
+  const curBaseIds = new Set<string>(
+    baysInGroup.map((b: any) => stripSuffix(b.parentBayId || b.id))
+  );
+  const nextGroup = wArr[wIdx + 1][1] as any[];
+  const nextBaseIds = new Set<string>(
+    nextGroup.map((b: any) => stripSuffix(b.parentBayId || b.id))
+  );
+  const match = wallMarkers.find(
+    (m) =>
+      (curBaseIds.has(m.leftId) && nextBaseIds.has(m.rightId)) ||
+      (curBaseIds.has(m.rightId) && nextBaseIds.has(m.leftId))  // handles both directions
+  );
+  return match?.tip;
+})();
+```
+- `parentBayId || id` resolves split bays to their parent config id
+- OR condition handles both ascending and descending render without caring about direction
+- Returns `undefined` (no marker) if either bay of the pair isn't in the rendered group list
+
+### Verification (Points 6–7)
+
+**Property 11 — Bridge Point Doral Building 1 (`first_bay_direction=east`):**
+- 33 bays (Bay 1-2 through Bay 33-34), all sqft > 0
+- Grid renders descending: Bay 33 on far left, Bay 1 on far right ("Bay 1 right" orientation)
+- Playwright test (status=success): "WALL marker is visible, and its position is between the
+  Bay 10 and Bay 11 columns (bounding-box placement check passed). Bay 33 on the left edge
+  and Bay 1 on the right edge."
+- The fix produces the same correct result as the old code for this property ✅
+
+**Both orientations:** The OR condition in `wallMarkers.find` means the fix is direction-
+agnostic. A property rendering ascending (Bay 1 left) would match `curBaseIds.has(m.leftId)
+&& nextBaseIds.has(m.rightId)`; one rendering descending (Bay 1 right) would match the
+reverse. The wall always appears between the two correct columns regardless of sort direction.
+
+**Note on render direction:** All grids currently sort `b - a` (descending) — Bay 1 always
+appears on the right. There is no code that flips render order based on `firstBayDirection`.
+The fix is correct and future-proof if a directional flip is ever added.
+
+---
+
 ## Session: July 7, 2026 (Part 2) — User Deletion Fix + Demising Wall UX
 
 ### Create User feature (modal + POST /api/admin/create-user) — authz verified July 7, 2026

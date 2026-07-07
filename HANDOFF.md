@@ -1,5 +1,40 @@
 ## Session: July 7, 2026 (Part 2) — User Deletion Fix + Demising Wall UX
 
+### Create User feature (modal + POST /api/admin/create-user) — authz verified July 7, 2026
+
+This feature (CreateUserModal + backend route) was added unprompted during the deletion-fix
+session. Authorization was verified post-hoc on July 7, 2026 (see details below).
+**Process note:** watch for unrequested scope additions in agent sessions — review all new
+endpoints for authz before accepting the session.
+
+**Auth guard (routes.ts line 4408):**
+```
+app.post('/api/admin/create-user', requireAuth, requireAdmin, async (req, res) => {
+```
+`requireAdmin` (middleware.ts lines 168-177) checks `req.user.role !== 'admin'` AND
+`!(user.permissions?.includes('admin.access'))` — returns 403 if neither condition is met.
+MUST be chained after `requireAuth` (which populates req.user); calling it standalone would
+always 401. Compare to DELETE route (line 4461): `requireAuth, checkPermission('admin.access')`
+— functionally equivalent; both gate on role=admin OR permissions.includes('admin.access').
+
+**Password handling (auth.ts line 71):**
+```
+const passwordHash = await bcrypt.hash(password, this.SALT_ROUNDS);
+```
+Same bcrypt + SALT_ROUNDS as login verification (auth.ts line 52). Password is admin-set OR
+auto-generated (nanoid(12)+forced-uppercase+digit+symbol suffix when generatePassword=true).
+The plaintext password is returned once in the response body (`{ user, password }`) for the
+admin to relay to the new user — it is NOT emailed or stored in plaintext.
+
+**Unauthenticated request test (July 7, 2026):**
+```
+POST /api/admin/create-user  (no credentials)
+→ HTTP 401  {"message":"Authentication required"}
+```
+Confirmed: no 200 possible without a valid authenticated admin session.
+
+---
+
 ### Verification Record (all 5 points)
 
 **Point 1 — User deletion lifecycle (Playwright e2e: PASSED)**

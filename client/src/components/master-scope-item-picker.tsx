@@ -65,6 +65,11 @@ export default function MasterScopeItemPicker({
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  // Suppresses the onBlur callback for the blur event that immediately follows
+  // a dropdown selection (mouse-click or Enter on an item closes the dropdown,
+  // which returns focus to the input and then blurs it — we don't want that
+  // synthetic blur to look like a free-typed entry to the parent).
+  const justSelectedRef = useRef(false);
 
   // Sync controlled value/masterItemId changes from parent
   useEffect(() => {
@@ -108,6 +113,7 @@ export default function MasterScopeItemPicker({
   };
 
   const selectMaster = (item: MasterScopeItem) => {
+    justSelectedRef.current = true;
     setQuery(item.name);
     setSelectedMasterItemId(item.id);
     setIsOtherMode(false);
@@ -130,6 +136,7 @@ export default function MasterScopeItemPicker({
   };
 
   const selectOther = () => {
+    justSelectedRef.current = true;
     setSelectedMasterItemId(null);
     setIsOtherMode(true);
     setOpen(false);
@@ -205,6 +212,10 @@ export default function MasterScopeItemPicker({
           else if (query.trim()) search(query);
         }}
         onBlur={() => {
+          if (justSelectedRef.current) {
+            justSelectedRef.current = false;
+            return;
+          }
           onBlur?.(query);
         }}
         placeholder={placeholder ?? "Type to search scope items…"}

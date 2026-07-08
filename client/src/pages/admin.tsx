@@ -439,9 +439,7 @@ function SystemUsersAndContacts() {
                         <KeyRound className="h-4 w-4 mr-1" />
                         {contact.passwordHash ? 'Reset Password' : 'Set Password'}
                       </Button>
-                      {isSelfContact ? (
-                        <span className="text-xs text-gray-400 px-2">Cannot delete own account</span>
-                      ) : (
+                      {isSelfContact ? null : (
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button

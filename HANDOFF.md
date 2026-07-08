@@ -2221,3 +2221,46 @@ All verified against the running dev database (not simulated):
 **Migration note:** the `contacts.is_active` column was added via a direct `ALTER TABLE` SQL statement rather than `npm run db:push`, because `db:push` got stuck on an unrelated interactive prompt about the `auth_tokens_token_unique` constraint. `shared/schema.ts` and the live DB are confirmed in sync for this column.
 
 **Reminder:** these changes have not been pushed to GitHub yet — push the pending commits from the Git pane when ready.
+
+---
+
+## Deployment — 9 Commits to Neon Production (July 8 2026)
+
+### What was deployed
+All 9 commits that had accumulated on local `main` since `4d796a6c` were pushed to `origin/main` and republished. Final deployed commit: **`a382b029`** ("Unify System Users vs Contacts reachability (soft-delete)").
+
+Commits shipped, oldest → newest:
+1. `66a665e2` — Published your App (tag)
+2. `4b427759` — Admin user deletion visibility + demising wall UX improvements
+3. `ae5b4fe3` — User management improvements, property boundary display
+4. `56cf98a9` — Docs for new user creation endpoint
+5. `8dbfe2a1` — Published your App (tag)
+6. `d7a55878` — Wall marker placement fix (bay identity matching)
+7. `ea324346` — Published your App (tag)
+8. `89a1bea8` — Published your App (tag)
+9. `a382b029` — Contacts `isActive` soft-delete, deactivate/reactivate UI, auth-routes login guard
+
+### Pre-deploy Neon migration (applied BEFORE push/republish)
+```sql
+ALTER TABLE contacts ADD COLUMN is_active boolean NOT NULL DEFAULT true;
+```
+Run directly against `NEON_DATABASE_URL`. All 13 existing Neon contact rows were backfilled to `true`. The column was verified present before any code was deployed. The currently-deployed code (at `4d796a6c`) did not reference `is_active`, so adding it caused zero disruption to the live production app.
+
+### Step 3 verification — all queries against Neon (production), stated explicitly
+
+| Check | DB queried | Result |
+|---|---|---|
+| **Schema safety** — `GET /api/admin/authorized-contacts` returned 4 contacts each with `isActive` field; no "column does not exist" errors in deployment logs | Neon (via production API) | ✅ PASSED |
+| **Delete/edit reachability** — created throwaway contact id=25 (`throwaway-z9-verify@example.com`, `hasSystemAccess=true`); `DELETE /api/contacts/25` returned `{deactivated:true, isActive:false}`; Neon SQL confirmed `is_active=f`; `POST /api/contacts/25/reactivate` returned `isActive=true`; Neon SQL confirmed `is_active=t`; row removed via Neon SQL cleanup | Neon (API + direct SQL) | ✅ PASSED |
+| **Wall marker** — `property_wall_markers` table does not exist on Neon; no production wall-marker data to exercise | Neon (direct SQL) | ⚠️ NOT TESTABLE ON PROD DATA — test manually when real wall data is present on Neon |
+| **Scope-of-work / ITB catalog** — `GET /api/rom-scope-items` returned 47 items from Neon | Neon (via production API) | ✅ PASSED |
+| **Regression — RFP open + PDF** — `GET /api/rfp-requests/33` returned RFP "KSI Auto Parts @ Bridge Point Gratigny"; `GET /api/rfp-requests/33/generate-pdf` returned HTTP 200 | Neon (via production API) | ✅ PASSED |
+| **Deployment boot log** — server started cleanly (`✅ RFP Templates initialized`, `✅ Email scheduler started`, `serving on port 5000`); zero schema errors, zero crash lines post-startup | Production deployment logs | ✅ CLEAN |
+
+### Database clarity (permanent note)
+| Environment | `DATABASE_URL` resolves to | RFP count at deploy time |
+|---|---|---|
+| Dev workspace | `helium/heliumdb` (Replit internal Postgres) | 71 |
+| Production deployed app | Neon (`ep-still-mud-a6uzawf6.us-west-2.aws.neon.tech/neondb`) | 68 |
+
+These are **separate databases**. All prior session SQL work (Francis investigation, Katia Novi test cycle, dev test contacts) ran against `helium` only and never touched Neon. Francis Roura does not exist on Neon. The `is_active` column added to `contacts` on helium (earlier session) and then on Neon (this session) are independent operations on two separate databases.

@@ -1,9 +1,11 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronRight, FileText, Users, ClipboardCheck, Award, FileOutput, CheckCircle, ChevronLeft } from "lucide-react";
+import { ChevronRight, FileText, Users, ClipboardCheck, Award, FileOutput, CheckCircle, ChevronLeft, Ban, RotateCcw } from "lucide-react";
 import { useState, useEffect } from "react";
 import type { RfpRequest } from "@shared/schema";
 
@@ -70,6 +72,9 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValida
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isCollapsed, setIsCollapsed] = useState(externalIsCollapsed || false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancelReasonError, setCancelReasonError] = useState("");
 
   // Sync external collapse state with internal state
   useEffect(() => {
@@ -123,6 +128,55 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValida
       toast({
         title: "Error",
         description: "Failed to mark project as completed",
+        variant: "destructive",
+        duration: 6000,
+      });
+    },
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: async (reason: string) => {
+      return apiRequest(`/api/rfp-requests/${rfp.id}/cancel`, "PATCH", { reason });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
+      setShowCancelDialog(false);
+      setCancelReason("");
+      setCancelReasonError("");
+      toast({
+        title: "RFP Cancelled",
+        description: "The RFP has been removed from the active pipeline",
+        duration: 4000,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to cancel RFP",
+        variant: "destructive",
+        duration: 6000,
+      });
+    },
+  });
+
+  const reinstateMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest(`/api/rfp-requests/${rfp.id}/reinstate`, "PATCH", {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
+      toast({
+        title: "RFP Reinstated",
+        description: "The RFP has been restored to the active pipeline",
+        duration: 4000,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to reinstate RFP",
         variant: "destructive",
         duration: 6000,
       });
@@ -216,11 +270,11 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValida
       <div className="space-y-3">
         {workflowPhases.map((phase, index) => {
           const Icon = phase.icon;
-          // For archived RFPs, no phase should be active (all completed)
-          const isActive = phase.key === actualWorkflowPhase && rfp.status !== "completed" && rfp.status !== "archived";
-          // For archived RFPs or completed projects, show all phases as completed
-          const isCompleted = rfp.status === "archived" || index < currentPhaseIndex || (phase.key === "publish" && rfp.status === "completed");
-          const isNext = index === currentPhaseIndex + 1 && rfp.status !== "archived";
+          // For archived/cancelled/completed RFPs, no phase should be active
+          const isActive = phase.key === actualWorkflowPhase && rfp.status !== "completed" && rfp.status !== "archived" && rfp.status !== "cancelled";
+          // For archived/cancelled/completed projects, show phases up to current as completed
+          const isCompleted = rfp.status === "archived" || rfp.status === "cancelled" || index < currentPhaseIndex || (phase.key === "publish" && rfp.status === "completed");
+          const isNext = index === currentPhaseIndex + 1 && rfp.status !== "archived" && rfp.status !== "cancelled";
 
           const isClickable = (isActive || isCompleted) && (phase.key === "rfp-entry" || phase.key === "rfp-validation" || phase.key === "invitation-to-bid" || phase.key === "bid-collection" || phase.key === "evaluation" || phase.key === "publish");
           
@@ -277,8 +331,37 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValida
                   View Project Summary
                 </Button>
               </div>
+            ) : rfp.status === "cancelled" ? (
+              /* Cancelled RFPs show reason banner + reinstate */
+              <div className="space-y-2">
+                <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Ban className="h-3.5 w-3.5 text-rose-600" />
+                    <p className="text-xs font-semibold text-rose-700">RFP Cancelled</p>
+                  </div>
+                  {(rfp as any).cancelledAt && (
+                    <p className="text-xs text-rose-500">
+                      {new Date((rfp as any).cancelledAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                    </p>
+                  )}
+                  {(rfp as any).cancellationReason && (
+                    <p className="text-xs text-gray-700 mt-1 italic">
+                      &ldquo;{(rfp as any).cancellationReason}&rdquo;
+                    </p>
+                  )}
+                </div>
+                <Button
+                  onClick={() => reinstateMutation.mutate()}
+                  disabled={reinstateMutation.isPending}
+                  variant="outline"
+                  className="w-full px-4 py-2 text-sm border-blue-300 text-blue-700 hover:bg-blue-50 flex items-center justify-center gap-2"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  {reinstateMutation.isPending ? "Reinstating…" : "Reinstate RFP"}
+                </Button>
+              </div>
             ) : (
-              /* Active RFPs show current phase actions */
+              /* Active RFPs show current phase actions + cancel option */
               <div className="space-y-2">
           {actualWorkflowPhase === "rfp-entry" && (
             <div className="text-sm text-gray-500 text-center py-2">
@@ -383,13 +466,82 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValida
                 </Button>
               )}
             </div>
-            )}
+          )}
+
+          {/* Cancel RFP — always available for active non-terminal RFPs */}
+          <div className="pt-2 border-t border-gray-100 mt-2">
+            <Button
+              onClick={() => setShowCancelDialog(true)}
+              variant="ghost"
+              size="sm"
+              className="w-full text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 flex items-center justify-center gap-1"
+            >
+              <Ban className="h-3 w-3" />
+              Cancel RFP
+            </Button>
+          </div>
             </div>
           )}
           </div>
         </>
       )}
       </div>
+
+      {/* Cancel RFP confirmation dialog */}
+      <Dialog open={showCancelDialog} onOpenChange={(open) => {
+        if (!open) { setCancelReason(""); setCancelReasonError(""); }
+        setShowCancelDialog(open);
+      }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-rose-700">
+              <Ban className="h-5 w-5" />
+              Cancel RFP {rfp.rfpNumber}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <p className="text-sm text-gray-600">
+              This removes the RFP from the active pipeline. All data is preserved and it can be reinstated later.
+            </p>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-gray-700">
+                Reason <span className="text-rose-500">*</span>
+              </label>
+              <Textarea
+                value={cancelReason}
+                onChange={(e) => { setCancelReason(e.target.value); setCancelReasonError(""); }}
+                placeholder='e.g. "per broker email 7/7 — tenant found space elsewhere"'
+                className="text-sm resize-none"
+                rows={3}
+              />
+              {cancelReasonError && (
+                <p className="text-xs text-rose-500">{cancelReasonError}</p>
+              )}
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => { setShowCancelDialog(false); setCancelReason(""); setCancelReasonError(""); }}
+            >
+              Keep Active
+            </Button>
+            <Button
+              onClick={() => {
+                if (!cancelReason.trim()) {
+                  setCancelReasonError("A reason is required");
+                  return;
+                }
+                cancelMutation.mutate(cancelReason);
+              }}
+              disabled={cancelMutation.isPending}
+              className="bg-rose-600 hover:bg-rose-700 text-white"
+            >
+              {cancelMutation.isPending ? "Cancelling…" : "Confirm Cancel"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

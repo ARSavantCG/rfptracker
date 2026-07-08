@@ -598,6 +598,10 @@ export default function Dashboard() {
                 onClick={() => setStatusFilter("archived")}
                 className={`px-2.5 py-1 text-xs rounded transition-all ${statusFilter === "archived" ? "bg-gray-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
               >Archived</button>
+              <button
+                onClick={() => setStatusFilter("cancelled")}
+                className={`px-2.5 py-1 text-xs rounded transition-all ${statusFilter === "cancelled" ? "bg-rose-600 text-white" : "bg-rose-50 text-rose-700 hover:bg-rose-100"}`}
+              >Cancelled</button>
 
               {/* Date range — pushed to the right */}
               <div className="flex items-center gap-1.5 ml-auto">

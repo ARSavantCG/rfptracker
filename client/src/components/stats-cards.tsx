@@ -10,6 +10,7 @@ interface Stats {
   completed: number;
   onHold: number;
   archived: number;
+  cancelled: number;
 }
 
 interface StatsCardsProps {
@@ -93,6 +94,15 @@ export function StatsCards({ onStatusFilter, onRfpClick }: StatsCardsProps) {
       change: "0%",
       trend: "neutral"
     },
+    {
+      title: "Cancelled",
+      value: stats.cancelled ?? 0,
+      icon: "fas fa-ban",
+      bgColor: "bg-rose-100",
+      iconColor: "text-rose-600",
+      change: "0%",
+      trend: "neutral"
+    },
   ];
 
   // Prepare data for charts - always show all three main statuses
@@ -130,7 +140,8 @@ export function StatsCards({ onStatusFilter, onRfpClick }: StatsCardsProps) {
       'Received': 'received',
       'In Progress': 'in-progress', 
       'Completed': 'completed',
-      'Archived': 'archived'
+      'Archived': 'archived',
+      'Cancelled': 'cancelled',
     };
     
     return rfpRequests.filter((rfp: any) => rfp.status === statusMap[status]);
@@ -142,7 +153,8 @@ export function StatsCards({ onStatusFilter, onRfpClick }: StatsCardsProps) {
         'Received': 'received',
         'In Progress': 'in-progress', 
         'Completed': 'completed',
-        'Archived': 'archived'
+        'Archived': 'archived',
+        'Cancelled': 'cancelled',
       };
       onStatusFilter(statusMap[data.name]);
     }
@@ -154,7 +166,8 @@ export function StatsCards({ onStatusFilter, onRfpClick }: StatsCardsProps) {
         'Received': 'received',
         'In Progress': 'in-progress', 
         'Completed': 'completed',
-        'Archived': 'archived'
+        'Archived': 'archived',
+        'Cancelled': 'cancelled',
       };
       onStatusFilter(statusMap[data.name]);
     }
@@ -166,7 +179,8 @@ export function StatsCards({ onStatusFilter, onRfpClick }: StatsCardsProps) {
         'Received': 'received',
         'In Progress': 'in-progress',
         'Completed': 'completed',
-        'Archived': 'archived'
+        'Archived': 'archived',
+        'Cancelled': 'cancelled',
       };
       
       const targetStatus = statusMap[cardTitle];

@@ -53,6 +53,7 @@ const STATUS_LIST = [
   { value: "in-progress", label: "In Progress", color: "bg-orange-100 text-orange-800" },
   { value: "completed",   label: "Completed",   color: "bg-green-100 text-green-800" },
   { value: "archived",    label: "Archived",    color: "bg-gray-100 text-gray-700" },
+  { value: "cancelled",   label: "Cancelled",   color: "bg-rose-100 text-rose-800" },
 ];
 
 function fmtDollar(n: number | null): string {
@@ -89,6 +90,7 @@ function statusColor(s: string) {
     case "in-progress": return "bg-orange-100 text-orange-800";
     case "completed":   return "bg-green-100 text-green-800";
     case "archived":    return "bg-gray-100 text-gray-700";
+    case "cancelled":   return "bg-rose-100 text-rose-800";
     default:            return "bg-gray-100 text-gray-700";
   }
 }

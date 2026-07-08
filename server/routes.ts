@@ -306,7 +306,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/rfp-requests/stats", requireAuth, async (req, res) => {
     try {
       const allRequests = await storage.getAllRfpRequests();
-      const activeRequests = allRequests.filter(r => r.status !== "archived");
+      // "active" excludes archived and cancelled — pipeline counts only
+      const activeRequests = allRequests.filter(r => r.status !== "archived" && r.status !== "cancelled");
       
       const stats = {
         total: activeRequests.length, // Total of active RFPs only
@@ -315,6 +316,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         completed: allRequests.filter(r => r.status === "completed").length,
         onHold: allRequests.filter(r => r.status === "on-hold").length,
         archived: allRequests.filter(r => r.status === "archived").length,
+        cancelled: allRequests.filter(r => r.status === "cancelled").length,
       };
 
       res.json(stats);
@@ -1222,6 +1224,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+
+  // Cancel RFP — requires a free-text reason; stamps cancelled_at server-side
+  app.patch("/api/rfp-requests/:id/cancel", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ message: "Invalid ID" });
+
+      const rfp = await storage.getRfpRequest(id);
+      if (!rfp) return res.status(404).json({ message: "RFP request not found" });
+
+      if (rfp.status === "cancelled") return res.status(400).json({ message: "RFP is already cancelled" });
+      if (rfp.status === "archived") return res.status(400).json({ message: "Archived RFPs cannot be cancelled" });
+
+      const { reason } = req.body;
+      if (!reason || !String(reason).trim()) {
+        return res.status(400).json({ message: "A cancellation reason is required" });
+      }
+
+      const updated = await storage.updateRfpRequest(id, {
+        status: "cancelled",
+        cancellationReason: String(reason).trim(),
+        cancelledAt: new Date(),
+        priorWorkflowPhase: rfp.workflowPhase,
+      } as any);
+
+      res.json(updated);
+    } catch (error) {
+      res.status(400).json({ message: error instanceof Error ? error.message : "Failed to cancel RFP" });
+    }
+  });
+
+  // Reinstate RFP — restores status to in-progress and workflow_phase to prior snapshot
+  app.patch("/api/rfp-requests/:id/reinstate", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ message: "Invalid ID" });
+
+      const rfp = await storage.getRfpRequest(id);
+      if (!rfp) return res.status(404).json({ message: "RFP request not found" });
+
+      if (rfp.status !== "cancelled") return res.status(400).json({ message: "Only cancelled RFPs can be reinstated" });
+
+      const restorePhase = (rfp as any).priorWorkflowPhase || rfp.workflowPhase;
+
+      const updated = await storage.updateRfpRequest(id, {
+        status: "in-progress",
+        workflowPhase: restorePhase,
+      } as any);
+
+      res.json(updated);
+    } catch (error) {
+      res.status(400).json({ message: error instanceof Error ? error.message : "Failed to reinstate RFP" });
+    }
+  });
 
   // Create RFP Option (alternative design/scope for same project)
   app.post("/api/rfp-requests/:id/create-option", requireAuth, async (req, res) => {

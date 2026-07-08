@@ -48,7 +48,7 @@ export const rfpRequests = pgTable("rfp_requests", {
   requestTypes: json("request_types").$type<string[]>().notNull(), // pricing, schedule, space-plan
   
   // System fields
-  status: text("status").notNull().default("received"), // received, in-progress, completed, on-hold, archived
+  status: text("status").notNull().default("received"), // received, in-progress, completed, on-hold, archived, cancelled
   workflowPhase: text("workflow_phase").notNull().default("rfp-entry"), // rfp-entry, rfp-validation, invitation-to-bid, bid-collection, evaluation, publish
   notes: text("notes"), // Development Team Notes
   dealMetricNotes: text("deal_metric_notes"), // Deal Metric Notes for finance/metrics team
@@ -95,6 +95,11 @@ export const rfpRequests = pgTable("rfp_requests", {
   tenantElectricalUpgradeTiming: text("tenant_electrical_upgrade_timing"), // "immediate" or "future" - transformer upgrade timing
   tenantElectricalNotes: text("tenant_electrical_notes"), // Notes about electrical requirements
   
+  // Cancellation tracking
+  cancelledAt: timestamp("cancelled_at"),
+  cancellationReason: text("cancellation_reason"),
+  priorWorkflowPhase: text("prior_workflow_phase"), // phase snapshot for Reinstate
+
   // Completion tracking
   completedDate: timestamp("completed_date"),
   publishedDate: timestamp("published_date"),
@@ -148,7 +153,7 @@ export const insertRfpRequestSchema = createInsertSchema(rfpRequests).omit({
   property: z.string(), // Explicitly define as string to match database text type
   propertyId: z.number().optional(), // Explicitly define as number
   requestTypes: z.array(z.string()).min(1, "At least one request type is required"),
-  status: z.enum(["received", "in-progress", "completed", "on-hold", "archived"]).default("received"),
+  status: z.enum(["received", "in-progress", "completed", "on-hold", "archived", "cancelled"]).default("received"),
   workflowPhase: z.enum(["rfp-entry", "rfp-validation", "invitation-to-bid", "bid-collection", "evaluation", "publish"]).default("rfp-entry"),
   // Multi-building support validation
   isMultiBuilding: z.union([z.boolean(), z.string().transform(val => val === 'true')]).optional().default(false),
@@ -187,7 +192,7 @@ export const insertRfpRequestSchema = createInsertSchema(rfpRequests).omit({
 export const updateRfpRequestSchema = insertRfpRequestSchema.partial().extend({
   id: z.number(),
   workflowPhase: z.enum(["rfp-entry", "rfp-validation", "invitation-to-bid", "bid-collection", "evaluation", "publish"]).optional(),
-  status: z.enum(["received", "in-progress", "completed", "on-hold", "archived"]).optional(),
+  status: z.enum(["received", "in-progress", "completed", "on-hold", "archived", "cancelled"]).optional(),
   completedDate: z.union([z.date(), z.string().transform((val) => val ? new Date(val) : null)]).optional().nullable(),
   publishedDate: z.union([z.date(), z.string().transform((val) => val ? new Date(val) : null)]).optional().nullable(),
   // Schedule target fields: accept Date objects, ISO strings, or null/undefined.

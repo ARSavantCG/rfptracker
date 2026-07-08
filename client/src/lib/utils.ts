@@ -118,6 +118,8 @@ export function getStatusColor(status: string): string {
       return 'bg-green-100 text-green-800';
     case 'on-hold':
       return 'bg-red-100 text-red-800';
+    case 'cancelled':
+      return 'bg-rose-100 text-rose-800';
     default:
       return 'bg-gray-100 text-gray-800';
   }
@@ -133,6 +135,8 @@ export function getStatusIcon(status: string): string {
       return 'fas fa-check-circle';
     case 'on-hold':
       return 'fas fa-pause-circle';
+    case 'cancelled':
+      return 'fas fa-ban';
     default:
       return 'fas fa-circle';
   }

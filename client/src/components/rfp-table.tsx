@@ -589,6 +589,7 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
                     className="px-3 py-3 whitespace-nowrap"
                   >
                     <span
+                      title={(parentRfp as any).cancellationReason ? `Cancelled: ${(parentRfp as any).cancellationReason}` : undefined}
                       className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
                         parentRfp.status === "received" 
                           ? "bg-purple-100 text-purple-700" 
@@ -598,6 +599,8 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
                           ? "bg-green-100 text-green-700"
                           : parentRfp.status === "archived"
                           ? "bg-gray-100 text-gray-700"
+                          : parentRfp.status === "cancelled"
+                          ? "bg-rose-100 text-rose-700"
                           : "bg-red-100 text-red-700"
                       }`}
                     >
@@ -611,12 +614,15 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
                             ? "bg-green-500"
                             : parentRfp.status === "archived"
                             ? "bg-gray-500"
+                            : parentRfp.status === "cancelled"
+                            ? "bg-rose-500"
                             : "bg-red-500"
                         }`}
                       ></div>
                       {parentRfp.status === "in-progress" ? "In Progress" : 
                        parentRfp.status === "on-hold" ? "On Hold" :
                        parentRfp.status === "archived" ? "Archived" :
+                       parentRfp.status === "cancelled" ? "Cancelled" :
                        parentRfp.status.charAt(0).toUpperCase() + parentRfp.status.slice(1)}
                     </span>
                   </td>

@@ -2172,3 +2172,52 @@ One remaining reader does NOT have the fallback — see BACKLOG 4.6.
 | `client/.../invitation-to-bid-modal.tsx` lines 534-560 | Read for form init | ✅ Safe — already reads `existingInvitation` dates as override |
 | `server/routes.ts` ~line 1383 (counter-offer creation) | Copies `originalRfp.contractorDueDate` to new RFP | ❌ No fallback — latent bug; see BACKLOG 4.6 |
 | All other occurrences | Write paths (INSERT/UPDATE/date conversion) | N/A — not consumers |
+---
+
+## Session — System Users vs Contacts: Unified Soft-Delete Reachability (July 2026)
+
+### Part A — Investigation Findings
+
+The app has **two separate, unrelated identity systems** that are only merged visually in the Admin page under a single "System Users" heading:
+
+| | `users` table | `contacts` table (type=owner, hasSystemAccess=true) |
+|---|---|---|
+| Purpose | Internal admin/staff accounts | External owner contacts who also get a login |
+| Auth path | `AuthService.authenticateUser` (tried first) | Email + `bcrypt.compare` against `contacts.passwordHash` directly (fallback) |
+| Reachability flag (pre-fix) | `isActive` (soft-delete already existed) | **none** — delete was a hard `db.delete(contacts)` |
+| Relationship | No FK between the two tables. A contact login does NOT create a row in `users`; `req.user.id` for a contact session is the synthetic string `contact_<id>`. |
+
+**Important correction to the original premise:** live SQL was run before making any changes and found **no orphaned/deleted contact rows and no audit_log deletion entries** — at investigation time there were 6 active owner contacts with `hasSystemAccess=true`, all `isActive=true`, and only 1 (active) admin user. The "just-deleted / orphaned" scenario described in the request did not exist in the current database; the real, confirmed gap was structural: **deleting a login-holding contact used a hard delete with no linkage handling**, so doing so at any point would have silently destroyed both their login *and* their business contact record (name, company, notes, tags, bid/evaluation history references) with no soft-delete, no warning, and no way to reverse it. That gap is what Part B fixes.
+
+### Part B — Implementation
+
+**Schema** (`shared/schema.ts`): added `contacts.isActive` (boolean, default `true`) — mirrors the existing `users.isActive` pattern so both identity systems now share the same reachability semantics.
+
+**Backend**
+- `server/storage.ts`: added `deactivateContact` / `reactivateContact` (soft-delete pattern identical to `deleteUser`/reactivate for users). `getAuthorizedContacts` now explicitly returns both active and inactive rows so the admin UI can render a Deactivated section.
+- `server/routes.ts` `DELETE /api/contacts/:id`:
+  - Self-delete guard: a contact session cannot deactivate its own login (`req.user.id === "contact_" + id` → 403), matching the existing admin-user self-delete guard.
+  - **Cross-delete guard**: if `contact.hasSystemAccess`, the row is soft-deactivated (`isActive=false`) instead of hard-deleted, returning `{ deactivated: true, contact, message }`. Non-login contacts are unaffected — behavior unchanged (hard delete).
+- New `POST /api/contacts/:id/reactivate` route.
+- `server/auth-routes.ts`: login now rejects with the same generic "Invalid username or password" when `contact.isActive === false`, even if `hasSystemAccess` is still true — `isActive` is the reachability flag, `hasSystemAccess` is the role/type flag.
+
+**Frontend**
+- `client/src/pages/admin.tsx` "Authorized Ownership Contacts" section: now splits into an active list and a collapsible "Deactivated Contacts (N)" section (mirrors the existing Admin Users active/deactivated pattern). Each active row has a red "Deactivate" button behind an `AlertDialog` confirmation; the currently-logged-in contact (if any) sees "Cannot delete own account" instead. Each deactivated row has a "Reactivate" button.
+- `client/src/components/contact-form-modal.tsx` and `contact-management-modal.tsx`: delete confirmation text now warns "This contact has a system login — their account will be deactivated instead of deleted..." when `hasSystemAccess` is true; success handling distinguishes the `{deactivated:true}` response from a real delete and invalidates `/api/admin/authorized-contacts` in addition to `/api/contacts`.
+
+### Part C — Live Verification
+
+All verified against the running dev database (not simulated):
+1. Created a temporary owner contact with `hasSystemAccess=true` and a real bcrypt password hash.
+2. Logged in as that contact — succeeded (`role: "contact"`, `id: "contact_25"`).
+3. Called `DELETE /api/contacts/25` — response was `{ deactivated: true, ... }`, DB row confirmed `is_active=false`, `has_system_access` still `true` (contact record intact, not destroyed).
+4. Re-attempted login with the same credentials — rejected with "Invalid username or password", confirming the auth-routes `isActive` check blocks a deactivated login-holding contact.
+5. Called `POST /api/contacts/25/reactivate` — DB row confirmed `is_active=true` again.
+6. Deleted the temporary test row directly via SQL to leave no test data behind.
+7. End-to-end Playwright test against the live Admin UI: logged in as admin → System Users & Contacts → deactivated a real contact ("Katia Novi") via the new red Deactivate button and confirmation dialog → verified success toast and the contact moved into the "Deactivated Contacts" section → reactivated her from that section → verified she reappeared in the active list. Final DB state confirmed `Katia Novi` is `has_system_access=true, is_active=true` (unchanged from before the test — no lasting side effects).
+
+**No `tsc` regressions**: `npx tsc --noEmit` was diffed against the pre-existing baseline (see "Known Pre-Existing TypeScript Errors" in replit.md) — no new errors were introduced in any file touched by this change (`admin.tsx`, `contact-form-modal.tsx`, `contact-management-modal.tsx`, `auth-routes.ts`, `routes.ts`, `storage.ts`, `schema.ts`).
+
+**Migration note:** the `contacts.is_active` column was added via a direct `ALTER TABLE` SQL statement rather than `npm run db:push`, because `db:push` got stuck on an unrelated interactive prompt about the `auth_tokens_token_unique` constraint. `shared/schema.ts` and the live DB are confirmed in sync for this column.
+
+**Reminder:** these changes have not been pushed to GitHub yet — push the pending commits from the Git pane when ready.

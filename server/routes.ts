@@ -2041,13 +2041,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/contacts/:id", requireAuth, checkPermission('contacts.delete'), async (req, res) => {
+  app.delete("/api/contacts/:id", requireAuth, checkPermission('contacts.delete'), async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
         return res.status(400).json({ message: "Invalid ID" });
       }
 
+      // Self-delete guard: a contact-authenticated user cannot deactivate their own login,
+      // matching the same 403 guard used on DELETE /api/admin/users/:id.
+      if (req.user?.id === `contact_${id}`) {
+        return res.status(403).json({ message: "You cannot delete your own account" });
+      }
+
+      const contact = await storage.getContact(id);
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+
+      // Cross-delete guard: a contact with system access (a login-holding contact) is
+      // never hard-deleted. Hard-deleting would destroy business contact data (name,
+      // email, company, notes, tags) at the same time it revokes their login — the two
+      // are stored on the same row, so a straight DELETE could not do one without the
+      // other. Instead we soft-delete: flip isActive=false, which revokes login (checked
+      // in auth-routes.ts) while preserving the contact record intact. This mirrors the
+      // deleteUser soft-delete pattern and satisfies "never destroy business contact
+      // data when deactivating a login" (see HANDOFF.md, Part 4 session notes).
+      if (contact.hasSystemAccess) {
+        const updated = await storage.deactivateContact(id);
+        return res.status(200).json({
+          deactivated: true,
+          contact: updated,
+          message: "This contact has a system login; the record was preserved and their account was deactivated instead of deleted.",
+        });
+      }
+
+      // No system login on this contact — behavior unchanged, hard delete.
       const deleted = await storage.deleteContact(id);
       if (!deleted) {
         return res.status(404).json({ message: "Contact not found" });
@@ -2056,6 +2085,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ message: "Failed to delete contact" });
+    }
+  });
+
+  app.post('/api/contacts/:id/reactivate', requireAuth, checkPermission('contacts.delete'), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid ID" });
+      }
+      const contact = await storage.reactivateContact(id);
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+      res.json(contact);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to reactivate contact" });
     }
   });
 

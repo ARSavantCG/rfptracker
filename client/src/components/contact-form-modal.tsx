@@ -105,13 +105,22 @@ export function ContactFormModal({ contact, trigger, onSuccess }: ContactFormMod
 
   const deleteMutation = useMutation({
     mutationFn: () => apiRequest(`/api/contacts/${contact?.id}`, "DELETE"),
-    onSuccess: () => {
+    onSuccess: (response: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
-      toast({
-        title: "Contact deleted",
-        description: "Contact has been successfully deleted.",
-        duration: 4000,
-      });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/authorized-contacts"] });
+      if (response?.deactivated) {
+        toast({
+          title: "Login deactivated",
+          description: "This contact has a system login — their account was deactivated and the contact record was preserved.",
+          duration: 6000,
+        });
+      } else {
+        toast({
+          title: "Contact deleted",
+          description: "Contact has been successfully deleted.",
+          duration: 4000,
+        });
+      }
       setOpen(false);
       onSuccess?.();
     },
@@ -169,7 +178,10 @@ export function ContactFormModal({ contact, trigger, onSuccess }: ContactFormMod
   };
 
   const handleDelete = () => {
-    if (confirm(`Are you sure you want to delete ${contact?.name}? This action cannot be undone.`)) {
+    const message = contact?.hasSystemAccess
+      ? `This contact has a system login — their account will be deactivated instead of deleted, and the contact record will be preserved. Continue?`
+      : `Are you sure you want to delete ${contact?.name}? This action cannot be undone.`;
+    if (confirm(message)) {
       deleteMutation.mutate();
     }
   };

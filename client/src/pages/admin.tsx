@@ -124,6 +124,52 @@ function SystemUsersAndContacts() {
     },
   });
 
+  const deactivateContactMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return await apiRequest(`/api/contacts/${id}`, "DELETE");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/authorized-contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
+      toast({
+        title: "Login deactivated",
+        description: "The contact's system login has been deactivated. Their contact record was preserved.",
+        duration: 4000,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+        duration: 6000,
+      });
+    },
+  });
+
+  const reactivateContactMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return await apiRequest(`/api/contacts/${id}/reactivate`, "POST");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/authorized-contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
+      toast({
+        title: "Contact Reactivated",
+        description: "The contact's system login has been reactivated and they can log in again.",
+        duration: 4000,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+        duration: 6000,
+      });
+    },
+  });
+
   const updateContactMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: number; updates: any }) => {
       return await apiRequest(`/api/contacts/${id}`, "PATCH", updates);
@@ -347,53 +393,137 @@ function SystemUsersAndContacts() {
       })()}
 
       {/* Authorized Contacts Section */}
-      {sortedContacts.length > 0 && (
-        <div>
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Authorized Ownership Contacts</h3>
-          <div className="space-y-4">
-            {sortedContacts.map((contact: any) => (
-              <div key={contact.id} className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="flex items-center space-x-4">
-                  <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
-                    <span className="text-purple-600 font-medium">
-                      {contact.name?.[0] || 'U'}
-                    </span>
+      {sortedContacts.length > 0 && (() => {
+        const activeContacts = sortedContacts.filter((c: any) => c.isActive !== false);
+        const deactivatedContacts = sortedContacts.filter((c: any) => c.isActive === false);
+        return (
+          <div>
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Authorized Ownership Contacts</h3>
+            <div className="space-y-4">
+              {activeContacts.map((contact: any) => {
+                const isSelfContact = !!currentUser && (currentUser as any).id === `contact_${contact.id}`;
+                return (
+                  <div key={contact.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                        <span className="text-purple-600 font-medium">
+                          {contact.name?.[0] || 'U'}
+                        </span>
+                      </div>
+                      <div>
+                        <h3 className="font-medium text-gray-900">{contact.name}</h3>
+                        <p className="text-sm text-gray-600">{contact.email}</p>
+                        <p className="text-xs text-gray-500">{contact.company}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Badge variant="default" className={getRoleBadgeColor(getContactRole(contact).toLowerCase())}>
+                        {getContactRole(contact)}
+                      </Badge>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditContact(contact)}
+                      >
+                        <Settings className="h-4 w-4 mr-1" />
+                        Permissions
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedContactForReset(contact);
+                          setShowResetPasswordModal(true);
+                        }}
+                      >
+                        <KeyRound className="h-4 w-4 mr-1" />
+                        {contact.passwordHash ? 'Reset Password' : 'Set Password'}
+                      </Button>
+                      {isSelfContact ? (
+                        <span className="text-xs text-gray-400 px-2">Cannot delete own account</span>
+                      ) : (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                              disabled={deactivateContactMutation.isPending}
+                            >
+                              <Trash2 className="h-4 w-4 mr-1" />
+                              Deactivate
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Deactivate Contact Login</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This contact has a system login. Deactivating will immediately revoke their
+                                access, but their contact record and history will be preserved. This can be
+                                reversed later by reactivating the contact.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => deactivateContactMutation.mutate(contact.id)}
+                                className="bg-red-600 hover:bg-red-700"
+                                disabled={deactivateContactMutation.isPending}
+                              >
+                                {deactivateContactMutation.isPending ? 'Deactivating...' : 'Deactivate'}
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      )}
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-medium text-gray-900">{contact.name}</h3>
-                    <p className="text-sm text-gray-600">{contact.email}</p>
-                    <p className="text-xs text-gray-500">{contact.company}</p>
-                  </div>
+                );
+              })}
+              {activeContacts.length === 0 && (
+                <p className="text-sm text-gray-500 italic">No active authorized contacts.</p>
+              )}
+            </div>
+
+            {deactivatedContacts.length > 0 && (
+              <details className="mt-4 border rounded-lg p-3 bg-gray-50">
+                <summary className="cursor-pointer text-sm font-medium text-gray-600 select-none">
+                  Deactivated Contacts ({deactivatedContacts.length})
+                </summary>
+                <div className="mt-3 space-y-2">
+                  {deactivatedContacts.map((contact: any) => (
+                    <div key={contact.id} className="flex items-center justify-between p-3 border rounded bg-white opacity-80">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
+                          <span className="text-gray-500 text-sm font-medium">
+                            {contact.name?.[0] || 'U'}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-500">{contact.name}</p>
+                          <p className="text-xs text-gray-400">{contact.email}</p>
+                          <Badge className={getRoleBadgeColor(getContactRole(contact).toLowerCase()) + " mt-1 text-xs"}>
+                            {getContactRole(contact)}
+                          </Badge>
+                        </div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs"
+                        onClick={() => reactivateContactMutation.mutate(contact.id)}
+                        disabled={reactivateContactMutation.isPending}
+                      >
+                        Reactivate
+                      </Button>
+                    </div>
+                  ))}
                 </div>
-                <div className="flex items-center space-x-2">
-                  <Badge variant="default" className={getRoleBadgeColor(getContactRole(contact).toLowerCase())}>
-                    {getContactRole(contact)}
-                  </Badge>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleEditContact(contact)}
-                  >
-                    <Settings className="h-4 w-4 mr-1" />
-                    Permissions
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setSelectedContactForReset(contact);
-                      setShowResetPasswordModal(true);
-                    }}
-                  >
-                    <KeyRound className="h-4 w-4 mr-1" />
-                    {contact.passwordHash ? 'Reset Password' : 'Set Password'}
-                  </Button>
-                </div>
-              </div>
-            ))}
+              </details>
+            )}
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Empty State */}
       {(!users || users.length === 0) && sortedContacts.length === 0 && (

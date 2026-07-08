@@ -216,6 +216,7 @@ export const contacts = pgTable("contacts", {
   specialties: json("specialties").$type<string[]>().default([]),
   notes: text("notes"),
   hasSystemAccess: boolean("has_system_access").default(false),
+  isActive: boolean("is_active").default(true),
   permissions: json("permissions").$type<Permission[]>().default([]),
   passwordHash: text("password_hash"),
   resetToken: text("reset_token"),

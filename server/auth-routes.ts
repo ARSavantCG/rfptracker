@@ -99,6 +99,21 @@ export function registerAuthRoutes(app: Express): void {
         return res.status(401).json({ message: "Invalid username or password" });
       }
 
+      // Deactivated contacts (soft-deleted via the Contacts tab or the System Users
+      // panel) must not be able to authenticate, even though hasSystemAccess is still
+      // true — isActive is the reachability flag, hasSystemAccess is the role/type flag.
+      if (contact.isActive === false) {
+        logEvent({
+          eventType: 'login_failure',
+          userId: null,
+          userEmail: contact.email,
+          entityType: 'user',
+          entityId: null,
+          metadata: { reason: 'inactive', authMethod: 'contact' },
+        });
+        return res.status(401).json({ message: "Invalid username or password" });
+      }
+
       if (!contact.passwordHash) {
         logEvent({
           eventType: 'login_failure',

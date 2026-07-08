@@ -151,6 +151,8 @@ export interface IStorage {
   createContact(contact: InsertContact): Promise<Contact>;
   updateContact(id: number, updates: Partial<UpdateContact>): Promise<Contact | undefined>;
   deleteContact(id: number): Promise<boolean>;
+  deactivateContact(id: number): Promise<Contact | undefined>;
+  reactivateContact(id: number): Promise<Contact | undefined>;
   getContactsByType(type: string): Promise<Contact[]>;
   
   // Invitation management
@@ -1689,13 +1691,46 @@ class ExtendedDatabaseStorage extends DatabaseStorage {
 
   async getAuthorizedContacts(): Promise<Contact[]> {
     try {
-      // Get all owner contacts and filter by hasSystemAccess
+      // Get all owner contacts and filter by hasSystemAccess. Includes both
+      // active and deactivated (isActive=false) rows so the admin UI can render
+      // a "Deactivated" section for ownership contacts, matching the Admin Users pattern.
       const ownerContacts = await db.select().from(contacts).where(eq(contacts.type, "owner"));
       const result = ownerContacts.filter(contact => contact.hasSystemAccess === true);
       console.log("Authorized contacts query result:", result);
       return result;
     } catch (error) {
       console.error("Error in getAuthorizedContacts:", error);
+      throw error;
+    }
+  }
+
+  async deactivateContact(id: number): Promise<Contact | undefined> {
+    try {
+      // Soft-delete: preserve the contact row (business data, tags, notes, history)
+      // and only revoke login capability by flipping isActive. Mirrors deleteUser's
+      // soft-delete pattern so both identity systems have the same reachability semantics.
+      const [updated] = await db
+        .update(contacts)
+        .set({ isActive: false, updatedAt: new Date() })
+        .where(eq(contacts.id, id))
+        .returning();
+      return updated || undefined;
+    } catch (error) {
+      console.error("Error deactivating contact:", error);
+      throw error;
+    }
+  }
+
+  async reactivateContact(id: number): Promise<Contact | undefined> {
+    try {
+      const [updated] = await db
+        .update(contacts)
+        .set({ isActive: true, updatedAt: new Date() })
+        .where(eq(contacts.id, id))
+        .returning();
+      return updated || undefined;
+    } catch (error) {
+      console.error("Error reactivating contact:", error);
       throw error;
     }
   }

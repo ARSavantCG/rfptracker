@@ -1,2 +1,3 @@
 - [Actuals vs ROM feature](actuals-rom-feature.md) — getOrCreate pattern for leased-project actuals; schema, routes, and UI structure decisions.
 - [Scope of Work catalog linking](scope-of-work-catalog-linking.md) — optional masterItemId link on free-typed JSON rows; re-resolve live pricing, never write back, reuse existing import pipelines.
+- [Users vs Contacts dual identity](users-vs-contacts-identity.md) — two unrelated login tables merged only visually; isActive (not hasSystemAccess) is the reachability flag on both.

@@ -1,0 +1,62 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "vjPfZy95_LYrpfMhmIahN"
+uri = "file://attached_assets/cancel-verify/1-cancel-button.jpeg"
+type = "image"
+title = "Cancel RFP button — bottom of workflow panel"
+
+[[outputs]]
+id = "bh6zyc29MCfFhLrLB7SZy"
+uri = "file://attached_assets/cancel-verify/2-cancel-dialog-open.jpeg"
+type = "image"
+title = "① Cancel dialog — opens with Reason field + Keep Active / Confirm Cancel buttons"
+
+[[outputs]]
+id = "2MmMsz1qUd-2VF6SgFrqv"
+uri = "file://attached_assets/cancel-verify/3-cancel-dialog-with-reason.jpeg"
+type = "image"
+title = "① Cancel dialog — reason filled in before submitting"
+
+[[outputs]]
+id = "T23TNCTZixjbb19IUrsSS"
+uri = "file://attached_assets/cancel-verify/4-cancelled-badge-stats12.jpeg"
+type = "image"
+title = "② Cancelled badge on row + Active RFPs drops 13→12"
+
+[[outputs]]
+id = "B65YcH8_1u63xrgT5oYAO"
+uri = "file://attached_assets/cancel-verify/5-cancelled-panel-top.jpeg"
+type = "image"
+title = "② Cancelled badge in table + RFP Cancelled banner starts appearing at bottom of panel"
+
+[[outputs]]
+id = "XIipeL9PKLbC4vN1Ryw7C"
+uri = "file://attached_assets/cancel-verify/6-cancelled-panel-reason-reinstate.jpeg"
+type = "image"
+title = "② Cancelled panel — banner shows Jul 8 date, reason text, Reinstate RFP button"
+
+[[outputs]]
+id = "qS2dK_zZz0udZlrJCvoyN"
+uri = "file://attached_assets/cancel-verify/7-stepper-safety-cancelled.jpeg"
+type = "image"
+title = "④ Stepper safety — all 6 steps render muted/grey for cancelled RFP, no crash, no ‘Current’ badge"
+
+[[outputs]]
+id = "LqUATGKbno1KjONMnr2xA"
+uri = "file://attached_assets/cancel-verify/8-cancelled-filter-1result.jpeg"
+type = "image"
+title = "③ Cancelled filter pill active — shows exactly 1 result, Active RFPs=12"
+
+[[outputs]]
+id = "VdBznNxJr2NMSe38fZUB5"
+uri = "file://attached_assets/cancel-verify/9-after-reinstate-toast.jpeg"
+type = "image"
+title = "② Reinstate clicked — toast ‘RFP Reinstated: The RFP has been restored to the active pipeline’, Cancelled list now empty"
+
+[[outputs]]
+id = "ydaXC_2IU_VaOp2wmdUI4"
+uri = "file://attached_assets/cancel-verify/10-category-report-no-crash.jpeg"
+type = "image"
+title = "⑥ Category Cost Breakdown report — loads clean, Cancelled pill visible in STATUS filters"

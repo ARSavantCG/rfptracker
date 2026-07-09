@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Shield, Users, Settings, Edit, Trash2, CheckCircle, XCircle, User as UserIcon, KeyRound, FileText, HardDrive, Layout, Clock, Scale, ChevronDown, Hash, BarChart, ExternalLink, Mail, ClipboardCheck, Tags, Database, Wrench, CloudUpload, AlertCircle, BookOpen } from "lucide-react";
+import { Shield, Users, Settings, Edit, Trash2, CheckCircle, XCircle, User as UserIcon, KeyRound, FileText, HardDrive, Layout, Clock, Scale, ChevronDown, Hash, BarChart, ExternalLink, Mail, ClipboardCheck, Tags, Database, Wrench, CloudUpload, AlertCircle, BookOpen, Eye, EyeOff } from "lucide-react";
 import { Link } from "wouter";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -44,6 +44,11 @@ function SystemUsersAndContacts() {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [selectedContactForReset, setSelectedContactForReset] = useState<any>(null);
   const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
+  const [selectedUserForPassword, setSelectedUserForPassword] = useState<User | null>(null);
+  const [showUserPasswordDialog, setShowUserPasswordDialog] = useState(false);
+  const [userPasswordInput, setUserPasswordInput] = useState("");
+  const [showUserPasswordText, setShowUserPasswordText] = useState(false);
+  const [userToHardDelete, setUserToHardDelete] = useState<User | null>(null);
 
   const { data: users, isLoading: usersLoading } = useQuery<User[]>({
     queryKey: ["/api/admin/users"],
@@ -88,6 +93,54 @@ function SystemUsersAndContacts() {
         description: "The user account has been reactivated and can log in again.",
         duration: 4000,
       });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+        duration: 6000,
+      });
+    },
+  });
+
+  const hardDeleteUserMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest(`/api/admin/users/${id}/hard-delete`, "DELETE");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      setUserToHardDelete(null);
+      toast({
+        title: "User Permanently Deleted",
+        description: "The user account has been permanently removed.",
+        duration: 4000,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+        duration: 6000,
+      });
+    },
+  });
+
+  const setUserPasswordMutation = useMutation({
+    mutationFn: async ({ id, newPassword }: { id: string; newPassword: string }) => {
+      return await apiRequest(`/api/admin/users/${id}/set-password`, "POST", { newPassword });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Password Set",
+        description: `Password has been updated for ${selectedUserForPassword?.firstName || selectedUserForPassword?.email}.`,
+        duration: 4000,
+      });
+      setShowUserPasswordDialog(false);
+      setSelectedUserForPassword(null);
+      setUserPasswordInput("");
+      setShowUserPasswordText(false);
     },
     onError: (error) => {
       toast({
@@ -339,6 +392,20 @@ function SystemUsersAndContacts() {
                         <Settings className="h-4 w-4 mr-1" />
                         Permissions
                       </Button>
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedUserForPassword(user);
+                          setUserPasswordInput("");
+                          setShowUserPasswordText(false);
+                          setShowUserPasswordDialog(true);
+                        }}
+                      >
+                        <KeyRound className="h-4 w-4 mr-1" />
+                        Set Password
+                      </Button>
                     </div>
                   </div>
                 ))}
@@ -374,15 +441,26 @@ function SystemUsersAndContacts() {
                           </Badge>
                         </div>
                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-xs"
-                        onClick={() => reactivateUserMutation.mutate(user.id)}
-                        disabled={reactivateUserMutation.isPending}
-                      >
-                        Reactivate
-                      </Button>
+                      <div className="flex space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-xs"
+                          onClick={() => reactivateUserMutation.mutate(user.id)}
+                          disabled={reactivateUserMutation.isPending}
+                        >
+                          Reactivate
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-xs text-red-500 hover:text-red-600 hover:bg-red-50"
+                          onClick={() => setUserToHardDelete(user)}
+                        >
+                          <Trash2 className="h-3 w-3 mr-1" />
+                          Delete
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -600,6 +678,109 @@ function SystemUsersAndContacts() {
           setSelectedContactForReset(null);
         }}
       />
+
+      {/* Set Password Dialog — admin users (users table) */}
+      <Dialog open={showUserPasswordDialog} onOpenChange={(open) => {
+        if (!open) {
+          setShowUserPasswordDialog(false);
+          setSelectedUserForPassword(null);
+          setUserPasswordInput("");
+          setShowUserPasswordText(false);
+        }
+      }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <KeyRound className="h-5 w-5" />
+              Set Password — {selectedUserForPassword?.firstName && selectedUserForPassword?.lastName
+                ? `${selectedUserForPassword.firstName} ${selectedUserForPassword.lastName}`
+                : selectedUserForPassword?.email}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+              <p className="text-sm text-yellow-800">
+                <strong>Admin Action:</strong> You are setting the password for {selectedUserForPassword?.email}. No current password required. Share the new password securely.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="userNewPassword">New Password</Label>
+              <div className="relative">
+                <Input
+                  id="userNewPassword"
+                  type={showUserPasswordText ? "text" : "password"}
+                  value={userPasswordInput}
+                  onChange={(e) => setUserPasswordInput(e.target.value)}
+                  placeholder="Enter new password (min 6 characters)"
+                  disabled={setUserPasswordMutation.isPending}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                  onClick={() => setShowUserPasswordText(!showUserPasswordText)}
+                >
+                  {showUserPasswordText ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
+              {userPasswordInput && userPasswordInput.length < 6 && (
+                <p className="text-sm text-red-500">Password must be at least 6 characters</p>
+              )}
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowUserPasswordDialog(false);
+                  setSelectedUserForPassword(null);
+                  setUserPasswordInput("");
+                  setShowUserPasswordText(false);
+                }}
+                disabled={setUserPasswordMutation.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  if (selectedUserForPassword && userPasswordInput.length >= 6) {
+                    setUserPasswordMutation.mutate({ id: selectedUserForPassword.id, newPassword: userPasswordInput });
+                  }
+                }}
+                disabled={setUserPasswordMutation.isPending || !userPasswordInput || userPasswordInput.length < 6}
+              >
+                {setUserPasswordMutation.isPending ? "Setting..." : "Set Password"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Hard Delete Confirmation — deactivated users */}
+      <AlertDialog open={!!userToHardDelete} onOpenChange={(open) => { if (!open) setUserToHardDelete(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Permanently Delete User</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently deletes <strong>{userToHardDelete?.firstName && userToHardDelete?.lastName
+                ? `${userToHardDelete.firstName} ${userToHardDelete.lastName}`
+                : userToHardDelete?.email}</strong> ({userToHardDelete?.email}). This cannot be undone.
+              <br /><br />
+              Their audit log entries will remain (recorded by email) but the login account will be gone forever.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setUserToHardDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              onClick={() => userToHardDelete && hardDeleteUserMutation.mutate(userToHardDelete.id)}
+              disabled={hardDeleteUserMutation.isPending}
+            >
+              {hardDeleteUserMutation.isPending ? "Deleting..." : "Permanently Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

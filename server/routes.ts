@@ -18,6 +18,7 @@ import { parseRfpVariant } from "@shared/rfp-variant";
 import { eq, desc, and, or, gte, lte, ilike, inArray, sql as drizzleSql } from "drizzle-orm";
 import { tokenStore } from "./token-auth";
 import { logEvent } from "./audit-log";
+import bcrypt from "bcryptjs";
 import { nanoid } from "nanoid";
 
 // Single source of truth for all accepted PDF recipient types.
@@ -4570,6 +4571,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting user:", error);
       res.status(500).json({ message: "Failed to delete user" });
+    }
+  });
+
+  // Hard-delete a deactivated user permanently (no FK constraints on users.id)
+  app.delete('/api/admin/users/:id/hard-delete', requireAuth, checkPermission('admin.access'), async (req: any, res) => {
+    try {
+      const { id } = req.params;
+
+      if (req.user?.id === id) {
+        return res.status(403).json({ message: "You cannot delete your own account" });
+      }
+
+      const [userRow] = await db.select().from(users).where(eq(users.id, id));
+      if (!userRow) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      if (userRow.isActive !== false) {
+        return res.status(400).json({ message: "Only deactivated users can be permanently deleted. Deactivate the account first." });
+      }
+
+      await db.delete(users).where(eq(users.id, id));
+
+      logEvent({
+        eventType: 'user_hard_deleted',
+        userId: req.user?.id ?? null,
+        userEmail: req.user?.email ?? null,
+        entityType: 'user',
+        entityId: id,
+        metadata: { deletedUsername: userRow.username, deletedEmail: userRow.email },
+      });
+
+      res.json({ message: "User permanently deleted", deletedId: id });
+    } catch (error) {
+      console.error("Error hard-deleting user:", error);
+      res.status(500).json({ message: "Failed to permanently delete user" });
+    }
+  });
+
+  // Admin sets password for a users-table account (no current password required)
+  app.post('/api/admin/users/:id/set-password', requireAuth, checkPermission('admin.access'), async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { newPassword } = req.body;
+
+      if (!newPassword || newPassword.length < 6) {
+        return res.status(400).json({ message: "Password must be at least 6 characters" });
+      }
+
+      const [userRow] = await db.select().from(users).where(eq(users.id, id));
+      if (!userRow) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const passwordHash = await bcrypt.hash(newPassword, 12);
+      await db.update(users).set({ passwordHash }).where(eq(users.id, id));
+
+      logEvent({
+        eventType: 'admin_set_user_password',
+        userId: req.user?.id ?? null,
+        userEmail: req.user?.email ?? null,
+        entityType: 'user',
+        entityId: id,
+        metadata: { targetUsername: userRow.username },
+      });
+
+      res.json({ message: "Password set successfully" });
+    } catch (error) {
+      console.error("Error setting user password:", error);
+      res.status(500).json({ message: "Failed to set password" });
     }
   });
 

@@ -232,7 +232,7 @@ export function registerActualsRoutes(app: Express): void {
   });
 
   // POST /api/project-actuals
-  app.post("/api/project-actuals", requireAuth, async (req: Request, res: Response) => {
+  app.post("/api/project-actuals", requireAuth, checkPermission('admin.access'), async (req: Request, res: Response) => {
     try {
       const body = req.body;
       const officeAreaSf = parseInt(body.officeAreaSf) || 0;
@@ -291,7 +291,7 @@ export function registerActualsRoutes(app: Express): void {
   });
 
   // PATCH /api/project-actuals/:id
-  app.patch("/api/project-actuals/:id", requireAuth, async (req: Request, res: Response) => {
+  app.patch("/api/project-actuals/:id", requireAuth, checkPermission('admin.access'), async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       const body = req.body;
@@ -344,7 +344,7 @@ export function registerActualsRoutes(app: Express): void {
   });
 
   // POST /api/project-actuals/:id/line-items
-  app.post("/api/project-actuals/:id/line-items", requireAuth, async (req: Request, res: Response) => {
+  app.post("/api/project-actuals/:id/line-items", requireAuth, checkPermission('admin.access'), async (req: Request, res: Response) => {
     try {
       const projectActualId = parseInt(req.params.id);
       const body = req.body;
@@ -382,7 +382,7 @@ export function registerActualsRoutes(app: Express): void {
   });
 
   // PATCH /api/project-actuals/:id/line-items/:lineItemId
-  app.patch("/api/project-actuals/:id/line-items/:lineItemId", requireAuth, async (req: Request, res: Response) => {
+  app.patch("/api/project-actuals/:id/line-items/:lineItemId", requireAuth, checkPermission('admin.access'), async (req: Request, res: Response) => {
     try {
       const lineItemId = parseInt(req.params.lineItemId);
       const body = req.body;
@@ -424,7 +424,7 @@ export function registerActualsRoutes(app: Express): void {
   });
 
   // DELETE /api/project-actuals/:id/line-items/:lineItemId
-  app.delete("/api/project-actuals/:id/line-items/:lineItemId", requireAuth, async (req: Request, res: Response) => {
+  app.delete("/api/project-actuals/:id/line-items/:lineItemId", requireAuth, checkPermission('admin.access'), async (req: Request, res: Response) => {
     try {
       const lineItemId = parseInt(req.params.lineItemId);
       await db.delete(projectActualLineItems).where(eq(projectActualLineItems.id, lineItemId));

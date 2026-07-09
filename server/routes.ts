@@ -775,7 +775,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create new RFP request
-  app.post("/api/rfp-requests", upload.array("files"), requireAuth, async (req, res) => {
+  app.post("/api/rfp-requests", upload.array("files"), requireAuth, checkPermission('rfp.create'), async (req, res) => {
     try {
       
       const formData = { ...req.body };
@@ -838,7 +838,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create new RFP request with files
-  app.post("/api/rfp-requests/with-files", requireAuth, upload.array("files"), async (req, res) => {
+  app.post("/api/rfp-requests/with-files", requireAuth, checkPermission('rfp.create'), upload.array("files"), async (req, res) => {
     try {
       console.log('Creating RFP with files - body:', req.body);
       console.log('Creating RFP with files - user ID:', (req as any).userId);
@@ -1099,7 +1099,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update RFP request
-  app.patch("/api/rfp-requests/:id", requireAuth, async (req, res) => {
+  app.patch("/api/rfp-requests/:id", requireAuth, checkPermission('rfp.edit'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -1134,7 +1134,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Advance workflow phase
-  app.post("/api/rfp-requests/:id/advance-phase", requireAuth, async (req, res) => {
+  app.post("/api/rfp-requests/:id/advance-phase", requireAuth, checkPermission('rfp.edit'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -2065,7 +2065,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/contacts", requireAuth, async (req, res) => {
+  app.post("/api/contacts", requireAuth, checkPermission('contacts.create'), async (req, res) => {
     try {
       const parsed = insertContactSchema.parse(req.body);
       const contact = await storage.createContact(parsed);
@@ -2075,7 +2075,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/contacts/:id", requireAuth, async (req, res) => {
+  app.patch("/api/contacts/:id", requireAuth, checkPermission('contacts.edit'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -3110,7 +3110,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/rfp-requests/:id/bid-collections", upload.any(), requireAuth, async (req, res) => {
+  app.post("/api/rfp-requests/:id/bid-collections", upload.any(), requireAuth, checkPermission('rfp.edit'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -3194,7 +3194,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/rfp-requests/:rfpId/bid-collections/:id", requireAuth, async (req, res) => {
+  app.patch("/api/rfp-requests/:rfpId/bid-collections/:id", requireAuth, checkPermission('rfp.edit'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -3222,7 +3222,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/rfp-requests/:rfpId/bid-collections/:id", upload.any(), requireAuth, async (req, res) => {
+  app.put("/api/rfp-requests/:rfpId/bid-collections/:id", upload.any(), requireAuth, checkPermission('rfp.edit'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -3377,7 +3377,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
   // Evaluation Budget routes
-  app.post("/api/rfp-requests/:rfpId/evaluation-budget", requireAuth, async (req, res) => {
+  app.post("/api/rfp-requests/:rfpId/evaluation-budget", requireAuth, checkPermission('rfp.edit'), async (req, res) => {
     try {
       const rfpId = parseInt(req.params.rfpId);
       if (isNaN(rfpId)) {
@@ -4644,7 +4644,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Set password for contact (admin only)
-  app.post('/api/admin/contacts/:id/set-password', requireAuth, async (req, res) => {
+  app.post('/api/admin/contacts/:id/set-password', requireAuth, checkPermission('admin.access'), async (req, res) => {
     try {
       const { id } = req.params;
       const { password } = req.body;
@@ -4677,7 +4677,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Generate password for contact (admin only)  
-  app.post('/api/admin/contacts/:id/generate-password', requireAuth, async (req, res) => {
+  app.post('/api/admin/contacts/:id/generate-password', requireAuth, checkPermission('admin.access'), async (req, res) => {
     try {
       const { id } = req.params;
       const contactId = parseInt(id);

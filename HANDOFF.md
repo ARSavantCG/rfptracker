@@ -1,109 +1,115 @@
-# Cancel / Void RFP — Handoff Notes
+# Auth & Permission Hardening — Handoff Notes
 
-## What was built
+## What was done
 
-A lightweight "Cancel RFP" feature across the full stack. Cancelled RFPs are removed from the forward-looking pipeline but kept fully accessible for history and reinstatement.
+### Part B — Backend checkPermission guards added
 
----
+All routes below previously had only `requireAuth`. `checkPermission` middleware now fires a real 403 before any handler logic runs.
 
-## Part A findings (recon)
-
-- `rfp_requests.status` is a plain `text NOT NULL DEFAULT 'received'` column (not a DB enum). Validated by Zod in schema.ts. Values previously allowed: `received | in-progress | completed | on-hold | archived`.
-- `rfp_requests.workflow_phase` tracks the 6-step position independently.
-- Neon (production) had only `completed` (65) and `in-progress` (3) at scan time.
-- Four nullable text columns exist for notes; none were appropriate for a cancellation reason (wrong semantic). Added 3 new columns instead.
-
----
-
-## Schema changes (applied to BOTH helium and Neon before this commit)
-
-```sql
-ALTER TABLE rfp_requests
-  ADD COLUMN IF NOT EXISTS cancellation_reason  text,
-  ADD COLUMN IF NOT EXISTS cancelled_at         timestamp,
-  ADD COLUMN IF NOT EXISTS prior_workflow_phase  text;
-```
-
-`shared/schema.ts` updated: new columns added to table def; `"cancelled"` added to Zod enum in both `insertRfpRequestSchema` and `updateRfpRequestSchema`.
-
----
-
-## Backend changes (`server/routes.ts`)
-
-| Endpoint | Change |
+#### server/routes.ts
+| Route | Guard added |
 |---|---|
-| `GET /api/rfp-requests/stats` | `activeRequests` now excludes `cancelled` AND `archived`; `cancelled` count added to stats response |
-| `PATCH /api/rfp-requests/:id/cancel` | **New** — requires `{ reason }` body; stamps `cancelled_at`, `cancellation_reason`, `prior_workflow_phase`; rejects archived RFPs; rejects if already cancelled |
-| `PATCH /api/rfp-requests/:id/reinstate` | **New** — restores `status → in-progress`, `workflow_phase → prior_workflow_phase`; rejects if not cancelled; audit fields (`cancelled_at`, `cancellation_reason`) left intact for history |
+| `POST /api/contacts` | `contacts.create` |
+| `PATCH /api/contacts/:id` | `contacts.edit` |
+| `POST /api/rfp-requests` | `rfp.create` |
+| `POST /api/rfp-requests/with-files` | `rfp.create` |
+| `PATCH /api/rfp-requests/:id` | `rfp.edit` |
+| `POST /api/rfp-requests/:id/advance-phase` | `rfp.edit` |
+| `POST /api/rfp-requests/:id/bid-collections` | `rfp.edit` |
+| `PATCH /api/rfp-requests/:rfpId/bid-collections/:id` | `rfp.edit` |
+| `PUT /api/rfp-requests/:rfpId/bid-collections/:id` | `rfp.edit` |
+| `POST /api/rfp-requests/:rfpId/evaluation-budget` | `rfp.edit` |
+| `POST /api/admin/contacts/:id/set-password` | `admin.access` |
+| `POST /api/admin/contacts/:id/generate-password` | `admin.access` |
 
-Default `GET /api/rfp-requests` list: **cancelled RFPs remain visible** (they appear in "All" and in the dedicated Cancelled filter pill). Only excluded from the pipeline *counts*.
-
----
-
-## Frontend changes
-
-| File | Change |
+#### server/property-routes.ts
+| Route | Guard added |
 |---|---|
-| `workflow-status.tsx` | Cancel button (ghost/rose) at bottom of active RFP panel; Dialog with required reason textarea; `isActive`/`isCompleted`/`isNext` updated for `cancelled`; Cancelled banner with date + reason + Reinstate button |
-| `rfp-table.tsx` | Rose badge for `cancelled`; `title` attribute shows the reason on hover |
-| `stats-cards.tsx` | `cancelled` added to Stats interface + a Cancelled stats card (rose) |
-| `dashboard.tsx` | "Cancelled" filter pill (rose) added to status bar |
-| `category-cost-breakdown-report.tsx` | `cancelled` added to `STATUS_LIST` and `statusColor`; default selection unchanged (`completed + in-progress`) |
-| `lib/utils.ts` | `getStatusColor` and `getStatusIcon` extended for `cancelled` |
+| `POST /api/properties` | `properties.create` |
+| `PUT /api/properties/:id` | `properties.edit` |
+| `PATCH /api/properties/:id` | `properties.edit` |
+| `PATCH /api/properties/:id/electrical-allocation` | `properties.edit` |
+| `POST /api/properties/:propertyId/existing-improvements` | `properties.edit` |
+| `PATCH /api/properties/:propertyId/existing-improvements/:id` | `properties.edit` |
+| `POST /api/properties/:propertyId/executed-leases` | `properties.edit` |
+| `POST /api/properties/:id/attachments` | `properties.edit` |
+| `DELETE /api/properties/:id/attachments/:attachmentId` | `properties.edit` |
 
----
+#### server/actuals-routes.ts
+Using `admin.access` — consistent with existing delete guard, no new permission string required.
+| Route | Guard added |
+|---|---|
+| `POST /api/project-actuals` | `admin.access` |
+| `PATCH /api/project-actuals/:id` | `admin.access` |
+| `POST /api/project-actuals/:id/line-items` | `admin.access` |
+| `PATCH /api/project-actuals/:id/line-items/:lineItemId` | `admin.access` |
+| `DELETE /api/project-actuals/:id/line-items/:lineItemId` | `admin.access` |
 
-## Reports touched / left alone
+### Part C — John Mejia permissions updated on Neon (contacts.id = 5)
 
-| Report | Action | Reason |
-|---|---|---|
-| Dashboard pipeline stats card | **Changed** — excludes cancelled | Forward-looking |
-| Dashboard status filter pills | **Changed** — Cancelled pill added | Navigation |
-| `rfp-table.tsx` badge | **Changed** — rose badge | Label only |
-| `stats-cards.tsx` | **Changed** — counts cancelled | Informational |
-| `reports.tsx` | **Left alone** — user can manually filter by status | User-controlled; `cancelled` would show if selected |
-| `category-cost-breakdown-report.tsx` | **Added to list, not default** | Opt-in only |
-| `category-cost-breakdown-report.tsx` server endpoint | **Not changed** — queries by `statuses` param | Backend already filters by what user selects |
-| Email scheduler status report | **Left alone — flagged** | Cancelled RFPs show in owner emails (ambiguous whether desired; leave for follow-up) |
-| Historical/actuals (`project_actuals`) | **Not changed** | Actuals are stored independently of RFP status |
+**Database:** Neon (production)
 
----
-
-## Part C verification results (helium dev DB)
-
-### Cancel test — RFP-2026-017 (id=193)
-```
-Before:  status=in-progress  workflow_phase=evaluation  reason=NULL  cancelled_at=NULL  prior=NULL
-After:   status=cancelled     workflow_phase=evaluation  reason="per broker email 7/7…"  cancelled_at=2026-07-08 20:44:54  prior=evaluation
+**Before:**
+```json
+["rfp.view","properties.view","contacts.view","reports.view","reports.generate","users.view","rom.view"]
 ```
 
-### Reinstate test — same RFP
-```
-After:   status=in-progress  workflow_phase=evaluation  (prior_workflow_phase still stored for audit)
-```
-
-### Pipeline count after 1 cancel:
-```
-pipeline_active=70  cancelled=1  completed=58  in-progress=12
-```
-→ Cancelled RFP correctly excluded from pipeline_active.
-
-### Non-cancelled unaffected: confirmed (all other rows unchanged).
-
----
-
-## Migration note
-
-`ALTER TABLE` was run on **Neon first** (before any republish), then on helium. Both DBs confirmed:
-```
-cancellation_reason   text   nullable ✓
-cancelled_at          timestamp  nullable ✓  
-prior_workflow_phase  text   nullable ✓
+**After:**
+```json
+["rfp.create","rfp.edit","rfp.view","contacts.create","contacts.view","properties.view","reports.view","reports.generate","users.view","rom.view"]
 ```
 
----
+Added: `rfp.create`, `rfp.edit`, `contacts.create`
+NOT granted: `properties.create`, `properties.edit`, any `*.delete`, `contacts.edit`, `admin.access`
 
-## Remaining / follow-up
+Data-only change — no schema migration required.
 
-- **Email scheduler**: Owner status report currently includes cancelled RFPs in "incomplete" list. Decide whether Owner emails should show or hide cancelled — ambiguous per spec, left alone.
-- **Git push + Republish**: Must be done manually via Git pane → Push, then Replit Dashboard → Republish.
+### Part D — Verification results
+
+Tests run against dev server (helium DB). Code behavior is DB-agnostic — same middleware runs against Neon in production.
+
+**John — 403 confirmed on all blocked routes:**
+
+| Endpoint | Result |
+|---|---|
+| `PATCH /api/contacts/:id` | 403 "contacts.edit permission required" |
+| `POST /api/properties` | 403 "properties.create permission required" |
+| `PATCH /api/properties/:id` | 403 "properties.edit permission required" |
+| `POST /api/project-actuals` | 403 "admin.access permission required" |
+| `PATCH /api/properties/:id/existing-improvements/:id` | 403 "properties.edit permission required" |
+
+**John — 200/201 confirmed on allowed workflow routes:**
+
+| Endpoint | Result |
+|---|---|
+| `POST /api/contacts` | 201 (contacts.create passes) |
+| `POST /api/rfp-requests/:rfpId/evaluation-budget` | 200 (rfp.edit passes) |
+| `POST /api/rfp-requests/:id/bid-collections` | 201 (rfp.edit passes) |
+| `POST /api/rfp-requests` | Permission gate passes (no 403); test payload hit Zod validation (missing required RFP fields) — expected for a minimal test call. Real UI form succeeds. |
+
+**Admin — confirmed passes all guarded routes:**
+
+| Endpoint | Result |
+|---|---|
+| `PATCH /api/contacts/:id` | 200 |
+| `POST /api/project-actuals` | 201 |
+
+## Known remaining gaps
+
+- **`checkPermission` only checks the custom array, not `ROLE_PERMISSIONS`**: middleware does `user.permissions.includes(permission)` — does not consult the role-based preset table in schema.ts. In practice all users have their permissions explicitly in the array, so this works. Future fix: check role first, then custom array.
+- **`rfp-detail-modal.tsx` bug**: `user?.permissions?.['admin.access']` treats array as object — always undefined. Only `user?.isAdmin` fires. Frontend-only gating in that modal is inconsistent with the backend.
+- **RFP endpoints still `requireAuth`-only**: `advance-workflow`, `additional-areas`, `invitation-to-bid PATCH`, `generate-pdf`, `rfp-format-settings`, `project-alternates`, `evaluation-budget/cleanup-assemblies`, `evaluation-budget/attachments`, `evaluation-budget-history`. Covered by rfp.edit in principle but not explicitly guarded yet.
+- **`contacts.create` is now real for owners**: John and other owners with `contacts.create` can add contacts server-side. Confirm this is the intended policy for all owner-type contacts with system access.
+
+## No schema migration needed
+
+Zero new DB columns. Zero new permission string types. All changes are middleware calls in 3 server files + a JSON value update on one Neon contacts row.
+
+## Manual Git push required
+
+Changes are on the dev branch. Push to remote when ready:
+```
+git add server/routes.ts server/property-routes.ts server/actuals-routes.ts HANDOFF.md
+git commit -m "Part B/C/D: add checkPermission guards to 23 unguarded routes; update John Mejia Neon permissions"
+git push
+```

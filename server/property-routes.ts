@@ -379,7 +379,7 @@ export function registerPropertyRoutes(app: Express): void {
     }
   });
 
-  app.post("/api/properties", requireAuth, async (req, res) => {
+  app.post("/api/properties", requireAuth, checkPermission('properties.create'), async (req, res) => {
     try {
       const result = insertPropertySchema.safeParse(req.body);
       if (!result.success) {
@@ -418,7 +418,7 @@ export function registerPropertyRoutes(app: Express): void {
     }
   });
 
-  app.put("/api/properties/:id", requireAuth, async (req, res) => {
+  app.put("/api/properties/:id", requireAuth, checkPermission('properties.edit'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -444,7 +444,7 @@ export function registerPropertyRoutes(app: Express): void {
     }
   });
 
-  app.patch("/api/properties/:id", requireAuth, async (req, res) => {
+  app.patch("/api/properties/:id", requireAuth, checkPermission('properties.edit'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -483,7 +483,7 @@ export function registerPropertyRoutes(app: Express): void {
   });
 
   // Dedicated endpoint for updating electrical allocation settings
-  app.patch("/api/properties/:id/electrical-allocation", requireAuth, async (req, res) => {
+  app.patch("/api/properties/:id/electrical-allocation", requireAuth, checkPermission('properties.edit'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -573,7 +573,7 @@ export function registerPropertyRoutes(app: Express): void {
     }
   });
 
-  app.post("/api/properties/:propertyId/existing-improvements", requireAuth, async (req, res) => {
+  app.post("/api/properties/:propertyId/existing-improvements", requireAuth, checkPermission('properties.edit'), async (req, res) => {
     try {
       const propertyId = parseInt(req.params.propertyId);
       if (isNaN(propertyId)) {
@@ -635,7 +635,7 @@ export function registerPropertyRoutes(app: Express): void {
     }
   });
 
-  app.patch("/api/properties/:propertyId/existing-improvements/:id", requireAuth, async (req, res) => {
+  app.patch("/api/properties/:propertyId/existing-improvements/:id", requireAuth, checkPermission('properties.edit'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       console.log('📝 PATCH existing-improvements - ID:', id, 'Body:', JSON.stringify(req.body));
@@ -1359,7 +1359,7 @@ export function registerPropertyRoutes(app: Express): void {
     }
   });
 
-  app.post('/api/properties/:propertyId/executed-leases', requireAuth, async (req, res) => {
+  app.post('/api/properties/:propertyId/executed-leases', requireAuth, checkPermission('properties.edit'), async (req, res) => {
     try {
       const { propertyId } = req.params;
       const leaseData = { 
@@ -1390,7 +1390,7 @@ export function registerPropertyRoutes(app: Express): void {
     }
   });
 
-  app.post("/api/properties/:id/attachments", requireAuth, upload.any(), async (req, res) => {
+  app.post("/api/properties/:id/attachments", requireAuth, checkPermission('properties.edit'), upload.any(), async (req, res) => {
     try {
       const propertyId = parseInt(req.params.id);
       if (isNaN(propertyId)) {
@@ -1468,7 +1468,7 @@ export function registerPropertyRoutes(app: Express): void {
     }
   });
 
-  app.delete("/api/properties/:id/attachments/:attachmentId", requireAuth, async (req, res) => {
+  app.delete("/api/properties/:id/attachments/:attachmentId", requireAuth, checkPermission('properties.edit'), async (req, res) => {
     try {
       const propertyId = parseInt(req.params.id);
       const attachmentId = parseInt(req.params.attachmentId);

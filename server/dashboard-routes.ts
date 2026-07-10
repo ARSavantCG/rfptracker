@@ -10,7 +10,7 @@ const parseTiValue = (val: any): number => {
   return isNaN(parsed) ? 0 : parsed;
 };
 
-const INACTIVE_STATUSES = ['completed', 'on-hold', 'archived'];
+const INACTIVE_STATUSES = ['completed', 'on-hold', 'archived', 'cancelled'];
 const ACTIVE_STATUSES = ['received', 'in-progress'];
 
 export function registerDashboardRoutes(app: Express): void {

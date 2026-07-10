@@ -1,4 +1,4 @@
-# Auth & Permission Hardening — Handoff Notes
+# Auth & Permission Hardening + Dashboard Fix — Handoff Notes
 
 ## What was done
 
@@ -94,6 +94,34 @@ Tests run against dev server (helium DB). Code behavior is DB-agnostic — same 
 | `PATCH /api/contacts/:id` | 200 |
 | `POST /api/project-actuals` | 201 |
 
+---
+
+### Dashboard fix — cancelled excluded from all count tiles
+
+**File:** `server/dashboard-routes.ts` line 16
+
+**Change:** Added `'cancelled'` to `INACTIVE_STATUSES`.
+
+```
+BEFORE: const INACTIVE_STATUSES = ['completed', 'on-hold', 'archived'];
+AFTER:  const INACTIVE_STATUSES = ['completed', 'on-hold', 'archived', 'cancelled'];
+```
+
+This one constant is shared by all three `notInArray` filters — Overdue, Bids Awaiting Evaluation, and Upcoming 7 Days. All three now exclude cancelled RFPs automatically. Active RFPs was never affected (uses a positive `ACTIVE_STATUSES` list that never included `'cancelled'`).
+
+**Verified against Neon (production):**
+
+| Metric | Before | After |
+|---|---|---|
+| Overdue | 3 (all 3 were cancelled: ids 176, 177, 194) | 0 |
+| Bids Awaiting | 0 | 0 (no cancelled-RFP bids existed) |
+| Upcoming 7 days | 0 | 0 |
+| Active RFPs | 0 | 0 (unchanged — positive-list filter) |
+
+No genuinely active past-due RFPs exist on Neon, so overdue correctly drops to 0. If a future active RFP goes past its due date it will still appear — only `cancelled` status is newly excluded.
+
+---
+
 ## Known remaining gaps
 
 - **`checkPermission` only checks the custom array, not `ROLE_PERMISSIONS`**: middleware does `user.permissions.includes(permission)` — does not consult the role-based preset table in schema.ts. In practice all users have their permissions explicitly in the array, so this works. Future fix: check role first, then custom array.
@@ -103,13 +131,12 @@ Tests run against dev server (helium DB). Code behavior is DB-agnostic — same 
 
 ## No schema migration needed
 
-Zero new DB columns. Zero new permission string types. All changes are middleware calls in 3 server files + a JSON value update on one Neon contacts row.
+Zero new DB columns. Zero new permission string types.
 
 ## Manual Git push required
 
-Changes are on the dev branch. Push to remote when ready:
 ```
-git add server/routes.ts server/property-routes.ts server/actuals-routes.ts HANDOFF.md
-git commit -m "Part B/C/D: add checkPermission guards to 23 unguarded routes; update John Mejia Neon permissions"
+git add server/routes.ts server/property-routes.ts server/actuals-routes.ts server/dashboard-routes.ts HANDOFF.md
+git commit -m "Add checkPermission guards to 23 routes; exclude cancelled from dashboard tiles; update John Mejia Neon permissions"
 git push
 ```

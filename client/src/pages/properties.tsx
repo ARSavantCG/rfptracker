@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Building, MapPin, Plus, Search, Edit, Grid, ChevronDown, ChevronUp, Printer, Layers, Zap } from "lucide-react";
 import { useState } from "react";
 import Navigation from "@/components/navigation";
+import { useAuth } from "@/hooks/useAuth";
 import { PropertyFormModal } from "@/components/property-form-modal";
 import BayConfigurationManager from "@/components/bay-configuration-manager";
 import { formatDate } from "@/lib/utils";
@@ -21,6 +22,9 @@ export default function Properties() {
   const [expandedProperty, setExpandedProperty] = useState<string | null>(null);
   const [expandedPropertyInfo, setExpandedPropertyInfo] = useState<number | null>(null);
   const [selectedBuilding, setSelectedBuilding] = useState<Record<string, string>>({});
+  const { user } = useAuth();
+  const canCreateProperties = user?.permissions?.includes('properties.create') || false;
+  const canEditProperties = user?.permissions?.includes('properties.edit') || false;
 
 
   const { data: properties, isLoading } = useQuery<Property[]>({
@@ -156,7 +160,7 @@ export default function Properties() {
               Manage your property portfolio and building information
             </p>
           </div>
-          <PropertyFormModal />
+          {canCreateProperties && <PropertyFormModal />}
         </div>
 
         {/* Search Bar */}
@@ -196,7 +200,7 @@ export default function Properties() {
                     : 'Get started by adding your first property'
                   }
                 </p>
-                {!searchTerm && (
+                {!searchTerm && canCreateProperties && (
                   <PropertyFormModal />
                 )}
               </div>
@@ -300,14 +304,16 @@ export default function Properties() {
                           </div>
                           <div className="flex flex-col items-end gap-2 flex-shrink-0">
                             <div className="flex gap-1 items-center">
-                              <PropertyFormModal 
-                                property={property}
-                                trigger={
-                                  <button className="h-8 w-8 p-0 flex items-center justify-center rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors">
-                                    <Edit className="h-4 w-4" />
-                                  </button>
-                                }
-                              />
+                              {canEditProperties && (
+                                <PropertyFormModal 
+                                  property={property}
+                                  trigger={
+                                    <button className="h-8 w-8 p-0 flex items-center justify-center rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors">
+                                      <Edit className="h-4 w-4" />
+                                    </button>
+                                  }
+                                />
+                              )}
                               <PropertyAttachments 
                                 propertyId={property.id}
                                 propertyName={property.propertyName || 'Property'}
@@ -366,18 +372,20 @@ export default function Properties() {
                           </div>
                         </div>
                         
-                        <div className="flex flex-wrap gap-2 mt-4">
-                          <BayConfigurationManager property={property} />
-                          <LeaseManagementModal 
-                            property={property} 
-                            availableBays={property.bayConfigurations || []} 
-                          />
-                          <PropertyExistingImprovementsModal 
-                            property={property}
-                          />
-                          <ElectricalManagementModal property={property} />
-                          <BuildingSpecificationsModal property={property} />
-                        </div>
+                        {canEditProperties && (
+                          <div className="flex flex-wrap gap-2 mt-4">
+                            <BayConfigurationManager property={property} />
+                            <LeaseManagementModal 
+                              property={property} 
+                              availableBays={property.bayConfigurations || []} 
+                            />
+                            <PropertyExistingImprovementsModal 
+                              property={property}
+                            />
+                            <ElectricalManagementModal property={property} />
+                            <BuildingSpecificationsModal property={property} />
+                          </div>
+                        )}
                         
                         {/* Property Info Section */}
                         <div className="mt-4 pt-4 border-t">

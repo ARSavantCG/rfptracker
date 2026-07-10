@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { Plus, Edit, Building, Trash2 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import type { Property, InsertProperty } from "@shared/schema";
@@ -66,7 +67,9 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const isEdit = !!property;
+  const canDeleteProperties = user?.permissions?.includes('properties.delete') || false;
 
   const createMutation = useMutation({
     mutationFn: (data: InsertProperty) => apiRequest("/api/properties", "POST", data),
@@ -484,7 +487,7 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
 
           <div className="flex justify-between pt-4">
             <div>
-              {isEdit && (
+              {isEdit && canDeleteProperties && (
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button type="button" variant="destructive" size="sm">

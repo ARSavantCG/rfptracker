@@ -217,7 +217,7 @@ export function RfpDetailModal({ isOpen, onClose, rfp, onRfpUpdated }: RfpDetail
   }, [rfp?.id]);
 
   // Check if user has admin permissions
-  const isAdmin = user?.permissions?.['admin.access'] || user?.isAdmin;
+  const isAdmin = user?.permissions?.includes('admin.access') || user?.isAdmin;
 
   // Refresh handler to force fresh data from server
   const handleRefresh = async () => {

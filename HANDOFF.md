@@ -122,10 +122,52 @@ No genuinely active past-due RFPs exist on Neon, so overdue correctly drops to 0
 
 ---
 
+---
+
+### Frontend permission gating — contacts, properties, rfp-detail-modal
+
+**Files changed:**
+- `client/src/pages/contacts.tsx`
+- `client/src/pages/properties.tsx`
+- `client/src/components/property-form-modal.tsx`
+- `client/src/components/rfp-detail-modal.tsx`
+
+#### Contacts page (`contacts.tsx`)
+- Imported `useAuth`, derived `canEditContacts = user?.permissions?.includes('contacts.edit')`
+- The **Edit button** on every contact card is now hidden when the user lacks `contacts.edit`
+- **Add Contact** button (top-right) remains always visible — non-admins keep `contacts.create`
+- **Delete** inside the modal was already gated by `contacts.delete` (no change needed)
+
+#### Properties page (`properties.tsx`)
+- Imported `useAuth`, derived `canCreateProperties` and `canEditProperties`
+- **Add Property** button (top-right and empty-state fallback) now hidden when lacking `properties.create`
+- **Edit** pencil icon per property card now hidden when lacking `properties.edit`
+- **All write sub-modals** (Bay Configuration Manager, Lease Management, Existing Improvements, Electrical Management, Building Specifications) are wrapped in `{canEditProperties && (...)}` — the entire row of buttons is hidden for read-only users
+
+#### Property form modal (`property-form-modal.tsx`)
+- Imported `useAuth`, derived `canDeleteProperties = user?.permissions?.includes('properties.delete')`
+- **Delete Property** button inside the edit modal now hidden when lacking `properties.delete`
+
+#### RFP detail modal bug fix (`rfp-detail-modal.tsx` line 220)
+- **Before (broken):** `user?.permissions?.['admin.access']` — treats the permissions array as an object; always `undefined`
+- **After (fixed):** `user?.permissions?.includes('admin.access') || user?.isAdmin`
+- This means admin-only fields in the RFP detail modal (status/phase editing, date editing) now correctly show for admins and hide for non-admins
+
+#### Verified via e2e test (John Mejia non-admin, admin):
+| Check | John (non-admin) | Admin |
+|---|---|---|
+| Contacts: Add Contact button | ✅ visible | ✅ visible |
+| Contacts: Edit button on cards | ❌ hidden | ✅ visible |
+| Properties: Add Property button | ❌ hidden | ✅ visible |
+| Properties: Edit icon per card | ❌ hidden | ✅ visible |
+| Properties: Sub-modal buttons | ❌ hidden | ✅ visible (Bay Config, Lease, Costs-in-Place, Electrical, Building Specs) |
+
+---
+
 ## Known remaining gaps
 
 - **`checkPermission` only checks the custom array, not `ROLE_PERMISSIONS`**: middleware does `user.permissions.includes(permission)` — does not consult the role-based preset table in schema.ts. In practice all users have their permissions explicitly in the array, so this works. Future fix: check role first, then custom array.
-- **`rfp-detail-modal.tsx` bug**: `user?.permissions?.['admin.access']` treats array as object — always undefined. Only `user?.isAdmin` fires. Frontend-only gating in that modal is inconsistent with the backend.
+- **`rfp-detail-modal.tsx` bug**: ✅ FIXED — `permissions.includes('admin.access')` now used correctly.
 - **RFP endpoints still `requireAuth`-only**: `advance-workflow`, `additional-areas`, `invitation-to-bid PATCH`, `generate-pdf`, `rfp-format-settings`, `project-alternates`, `evaluation-budget/cleanup-assemblies`, `evaluation-budget/attachments`, `evaluation-budget-history`. Covered by rfp.edit in principle but not explicitly guarded yet.
 - **`contacts.create` is now real for owners**: John and other owners with `contacts.create` can add contacts server-side. Confirm this is the intended policy for all owner-type contacts with system access.
 

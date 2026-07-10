@@ -7,11 +7,14 @@ import { Users, Mail, Phone, Building2, Plus, Search } from "lucide-react";
 import { useState } from "react";
 import Navigation from "@/components/navigation";
 import { ContactFormModal } from "@/components/contact-form-modal";
+import { useAuth } from "@/hooks/useAuth";
 import type { Contact } from "@shared/schema";
 
 export default function Contacts() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedType, setSelectedType] = useState<string>("all");
+  const { user } = useAuth();
+  const canEditContacts = user?.permissions?.includes('contacts.edit') || false;
 
   const { data: contacts, isLoading } = useQuery<Contact[]>({
     queryKey: ["/api/contacts"],
@@ -265,14 +268,16 @@ export default function Contacts() {
                   )}
                   
                   <div className="flex space-x-1 mt-3">
-                    <ContactFormModal 
-                      contact={contact}
-                      trigger={
-                        <Button variant="outline" size="sm" className="flex-1 text-xs">
-                          Edit
-                        </Button>
-                      }
-                    />
+                    {canEditContacts && (
+                      <ContactFormModal 
+                        contact={contact}
+                        trigger={
+                          <Button variant="outline" size="sm" className="flex-1 text-xs">
+                            Edit
+                          </Button>
+                        }
+                      />
+                    )}
                     <Button variant="outline" size="sm" className="px-2">
                       <Mail className="h-3 w-3" />
                     </Button>

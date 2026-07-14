@@ -372,6 +372,7 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics"] });
       toast({
         title: "Project Published & Completed",
         description: "RFP has been published and marked as completed successfully",

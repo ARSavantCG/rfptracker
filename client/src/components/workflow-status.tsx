@@ -95,6 +95,7 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValida
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics"] });
       toast({
         title: "Workflow advanced",
         description: "Project has been moved to the next phase",
@@ -118,6 +119,7 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValida
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics"] });
       toast({
         title: "Project Completed",
         description: "RFP has been marked as completed successfully",
@@ -141,6 +143,7 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValida
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics"] });
       setShowCancelDialog(false);
       setCancelReason("");
       setCancelReasonError("");
@@ -167,6 +170,7 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValida
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics"] });
       toast({
         title: "RFP Reinstated",
         description: "The RFP has been restored to the active pipeline",

@@ -4428,6 +4428,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       queryClient.invalidateQueries({ queryKey: [`/api/rfp-requests/${rfp?.id}/evaluation-budget`] });
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics"] });
       // Bust the admin review queue cache so any new Other entries appear immediately.
       queryClient.invalidateQueries({ queryKey: ["/api/admin/scope-item-review/pending"] });
       toast({

@@ -147,15 +147,17 @@ export default function Login({ onLoginSuccess }: LoginProps) {
                 {loginMutation.isPending ? "Signing In..." : "Sign In"}
               </Button>
 
+              {/*
+                Self-service password reset is not implemented: the /reset-password
+                page has no backing API routes (POST /api/auth/reset-password-request
+                and /api/auth/reset-password do not exist), so the old link 404'd.
+                Until that flow is built, point users at an administrator.
+                Logged-in users CAN change their own password via the account menu.
+              */}
               <div className="text-center">
-                <Button
-                  type="button"
-                  variant="link"
-                  onClick={() => window.location.href = '/reset-password'}
-                  className="text-sm"
-                >
-                  Forgot your password?
-                </Button>
+                <p className="text-sm text-muted-foreground">
+                  Forgot your password? Contact your administrator to have it reset.
+                </p>
               </div>
             </form>
           </CardContent>

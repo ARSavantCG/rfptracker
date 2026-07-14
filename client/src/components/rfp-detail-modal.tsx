@@ -107,6 +107,7 @@ export function RfpDetailModal({ isOpen, onClose, rfp, onRfpUpdated }: RfpDetail
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics"] });
       toast({
         title: "Success",
         description: "RFP status updated successfully",
@@ -141,6 +142,7 @@ export function RfpDetailModal({ isOpen, onClose, rfp, onRfpUpdated }: RfpDetail
       // Invalidate all RFP-related queries to ensure fresh data
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics"] });
       // Update the parent component with fresh RFP data
       if (onRfpUpdated && updatedRfp) {
         onRfpUpdated(updatedRfp);
@@ -170,6 +172,7 @@ export function RfpDetailModal({ isOpen, onClose, rfp, onRfpUpdated }: RfpDetail
     onSuccess: (updatedRfp: RfpRequest) => {
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics"] });
       if (onRfpUpdated && updatedRfp) onRfpUpdated(updatedRfp);
       setIsTogglingLeased(false);
     },

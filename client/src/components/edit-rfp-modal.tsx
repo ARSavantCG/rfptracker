@@ -124,6 +124,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics"] });
       toast({
         title: "Success",
         description: "File deleted successfully",
@@ -565,6 +566,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics"] });
       toast({
         title: "Success",
         description: rfp?.id === 0 ? "Alternate created successfully" : "RFP updated successfully",
@@ -686,6 +688,7 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics"] });
       toast({
         title: "Success",
         description: rfp?.id === 0 ? "Alternate created and advanced to validation phase" : "RFP updated and advanced to validation phase",

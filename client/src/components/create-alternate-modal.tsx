@@ -43,6 +43,7 @@ export function CreateAlternateModal({ isOpen, onClose, parentRfp, onAlternateCr
     onSuccess: (alternateRfp) => {
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics"] });
       toast({
         title: "Success",
         description: "RFP alternate created successfully. Opening Step 1...",

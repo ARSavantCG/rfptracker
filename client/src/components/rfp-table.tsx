@@ -59,6 +59,7 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics"] });
       toast({
         title: "Success",
         description: "RFP has been archived successfully",
@@ -101,6 +102,7 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics"] });
       toast({
         title: "Success",
         description: "RFP has been reopened and moved back to in-progress",
@@ -143,6 +145,7 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
     onSuccess: (counterOffer) => {
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics"] });
       toast({
         title: "Success",
         description: `Counter offer ${counterOffer.rfpNumber} created successfully`,
@@ -285,6 +288,7 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics"] });
       toast({
         title: "Success",
         description: "RFP deleted successfully",

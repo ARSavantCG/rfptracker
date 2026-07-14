@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Download, FileText, Calendar, TrendingUp, Clock, CheckCircle, AlertTriangle, BarChart3, ChevronDown, Users, TableIcon } from "lucide-react";
+import { Download, FileText, Calendar, TrendingUp, Clock, CheckCircle, AlertTriangle, BarChart3, ChevronDown, Users, TableIcon, DollarSign } from "lucide-react";
 import { Link } from "wouter";
 import Navigation from "@/components/navigation";
 import { CustomReportModal } from "@/components/custom-report-modal";
@@ -24,6 +24,7 @@ export default function Reports() {
   const [exportFormat, setExportFormat] = useState<"pdf" | "excel">("pdf");
   const [customReportModalOpen, setCustomReportModalOpen] = useState(false);
   const [incompleteOnly, setIncompleteOnly] = useState(false);
+  const [costsInPlacePropertyId, setCostsInPlacePropertyId] = useState<string>("");
 
   const { data: rfpRequests = [], isLoading } = useQuery<RfpRequest[]>({
     queryKey: ["/api/rfp-requests"],
@@ -93,6 +94,23 @@ export default function Reports() {
       window.open(blobUrl, '_blank');
     } catch (error) {
       console.error("Error generating report:", error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      alert(`Failed to generate report: ${errorMessage}`);
+    }
+  };
+
+  const generateCostsInPlaceReport = async () => {
+    try {
+      const url = costsInPlacePropertyId
+        ? `/api/reports/costs-in-place?propertyId=${costsInPlacePropertyId}`
+        : `/api/reports/costs-in-place`;
+      const response = await fetch(url, { credentials: 'include' });
+      if (!response.ok) throw new Error(`Failed to generate report (${response.status})`);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      window.open(blobUrl, '_blank');
+    } catch (error) {
+      console.error("Error generating Costs-in-Place report:", error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       alert(`Failed to generate report: ${errorMessage}`);
     }
@@ -456,6 +474,55 @@ export default function Reports() {
                   Open Report
                 </Button>
               </Link>
+            </CardContent>
+          </Card>
+
+          {/* Costs-in-Place — $/SF of existing improvements, per property or portfolio */}
+          <Card className="border-emerald-200 bg-emerald-50/30">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center space-x-2 text-base text-emerald-800">
+                <DollarSign className="h-4 w-4 text-emerald-600" />
+                <span>Costs-in-Place</span>
+              </CardTitle>
+              <p className="text-xs text-gray-600">
+                Existing improvement costs and $/SF, per property or portfolio roll-up
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <div className="grid grid-cols-2 gap-1">
+                <div className="bg-white p-1.5 rounded text-center border border-emerald-100">
+                  <p className="text-lg font-bold text-emerald-700">$/SF</p>
+                  <p className="text-xs text-emerald-600 uppercase font-medium">Per SF</p>
+                </div>
+                <div className="bg-white p-1.5 rounded text-center border border-emerald-100">
+                  <p className="text-lg font-bold text-gray-900">Print</p>
+                  <p className="text-xs text-gray-600 uppercase font-medium">Format</p>
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-xs">Property</Label>
+                <select
+                  value={costsInPlacePropertyId}
+                  onChange={(e) => setCostsInPlacePropertyId(e.target.value)}
+                  className="w-full h-8 px-2 text-xs bg-background border border-input rounded-md"
+                >
+                  <option value="">All properties (portfolio roll-up)</option>
+                  {properties.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.displayName || p.propertyName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <Button
+                className="w-full h-8 text-xs bg-emerald-600 hover:bg-emerald-700"
+                onClick={generateCostsInPlaceReport}
+              >
+                <DollarSign className="h-3 w-3 mr-1" />
+                Generate Report
+              </Button>
             </CardContent>
           </Card>
         </div>

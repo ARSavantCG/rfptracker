@@ -442,27 +442,6 @@ export function PropertyExistingImprovementsModal({
     }
   };
 
-  const handleCostsInPlaceReport = async () => {
-    try {
-      const token = localStorage.getItem(AUTH_TOKEN_KEY);
-      const response = await fetch(`/api/reports/costs-in-place?propertyId=${property.id}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Costs-in-Place report failed');
-      }
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      window.open(url, '_blank');
-    } catch (error) {
-      console.error('Costs-in-Place report error:', error);
-    }
-  };
-
   const allocationType = form.watch("allocationType");
   
   // Track previous bucket to handle bucket switching
@@ -667,26 +646,15 @@ export function PropertyExistingImprovementsModal({
           <DialogTitle>
             Manage Improvements - {property.propertyName}
           </DialogTitle>
-          <div className="flex items-center gap-2 mr-2 mt-1">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleCostsInPlaceReport}
-              className="flex items-center gap-1"
-            >
-              <Printer className="h-4 w-4" />
-              Costs-in-Place
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handlePrint}
-              className="flex items-center gap-1"
-            >
-              <Printer className="h-4 w-4" />
-              Print
-            </Button>
-          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handlePrint}
+            className="flex items-center gap-1 mr-2 mt-1"
+          >
+            <Printer className="h-4 w-4" />
+            Print
+          </Button>
         </DialogHeader>
 
         <div className="space-y-6">

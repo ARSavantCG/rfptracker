@@ -53,18 +53,56 @@ export function registerAiRoutes(app: Express): void {
       });
 
       const text = response.content[0].type === 'text' ? response.content[0].text : '';
+
+      /**
+       * Claude is asked for raw JSON, but models frequently wrap it in markdown
+       * code fences (```json ... ```) or add a sentence before/after. Calling
+       * JSON.parse() on the raw text then throws and the user just sees
+       * "Analysis failed" with no clue why. Normalize before parsing:
+       *   1. strip code fences
+       *   2. fall back to extracting the outermost {...} block
+       */
+      const extractJson = (raw: string): string => {
+        let s = raw.trim();
+        // ```json ... ```  or  ``` ... ```
+        const fenced = s.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+        if (fenced) s = fenced[1].trim();
+        if (s.startsWith('{')) return s;
+        // Last resort: grab the outermost object in the response.
+        const first = s.indexOf('{');
+        const last = s.lastIndexOf('}');
+        if (first !== -1 && last > first) return s.slice(first, last + 1);
+        return s;
+      };
+
       let analysis;
       try {
-        console.log('Claude raw response:', text.substring(0, 500));
-        analysis = JSON.parse(text);
+        analysis = JSON.parse(extractJson(text));
       } catch (parseError: any) {
-        console.error('Failed to parse Claude response as JSON:', parseError.message);
-        return res.status(500).json({ message: "Analysis failed", error: "Claude returned non-JSON response" });
+        console.error('AI analyze: could not parse model response as JSON:', parseError.message);
+        console.error('AI analyze: raw response was:', text.slice(0, 1000));
+        return res.status(502).json({
+          message: "Analysis failed",
+          error: "The AI returned a response that could not be read as JSON.",
+          detail: text.slice(0, 300),
+        });
       }
       res.json(analysis);
     } catch (error: any) {
+      // Surface *why* it failed instead of a blanket "Analysis failed".
       console.error("AI bid analysis error:", error);
-      res.status(500).json({ message: "Analysis failed", error: error.message });
+      const status = error?.status ?? error?.response?.status;
+      let hint = error?.message || "Unknown error";
+      if (!process.env.ANTHROPIC_API_KEY) {
+        hint = "ANTHROPIC_API_KEY is not set on the server.";
+      } else if (status === 401) {
+        hint = "The Anthropic API key was rejected (401). It may be invalid or revoked.";
+      } else if (status === 404) {
+        hint = `The model was not found (404). Check the model ID.`;
+      } else if (status === 429) {
+        hint = "Rate limited by the Anthropic API (429). Try again shortly.";
+      }
+      res.status(500).json({ message: "Analysis failed", error: hint });
     }
   });
 }

@@ -166,7 +166,10 @@ export function BidViewModal({ isOpen, onClose, bid }: BidViewModalProps) {
       });
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
-        throw new Error(err.message || `HTTP ${response.status}`);
+        // The server puts the generic label in `message` and the actual reason
+        // in `error` (bad API key, rate limit, unparseable response, ...).
+        // Prefer the reason so the toast is diagnosable.
+        throw new Error(err.error || err.message || `HTTP ${response.status}`);
       }
       const data: AiAnalysis = await response.json();
       setAiAnalysis(data);

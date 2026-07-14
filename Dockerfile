@@ -9,18 +9,21 @@ FROM node:22-slim
 
 ENV PUPPETEER_SKIP_DOWNLOAD=true
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-ENV NODE_ENV=production
 
 WORKDIR /app
 
-# Install deps first for layer caching. Include dev deps — vite/esbuild are
-# needed for the build step. --ignore-scripts avoids the puppeteer postinstall.
+# Install deps first for layer caching. NODE_ENV is deliberately NOT set to
+# production here — that would make npm skip devDependencies (vite, esbuild),
+# which the build step needs. --ignore-scripts avoids the puppeteer postinstall.
 COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund --ignore-scripts
 
 # Copy source and build (vite client + esbuild server → dist/).
 COPY . .
 RUN npm run build
+
+# Only now switch to production for the runtime.
+ENV NODE_ENV=production
 
 # Railway provides PORT at runtime; the server reads process.env.PORT.
 EXPOSE 8080

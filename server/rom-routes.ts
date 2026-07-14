@@ -872,6 +872,76 @@ export function registerRomRoutes(app: Express): void {
 
   // ── Quarterly Contractor Pricing Routes ──────────────────────────────────
 
+  // Recalculates activePrice + priceSpreadPercent for a scope item from its active
+  // quotes, honoring the item's stored pricingMode. Called after any quote add/delete
+  // so activePrice never goes stale between "Save Price Mode" clicks, and by the
+  // pricing-mode PATCH route itself (which passes explicit mode fields).
+  async function recalculateScopeItemActivePrice(
+    scopeItemId: number,
+    modeOverride?: {
+      pricingMode: string | null;
+      selectedContractorName: string | null;
+      manualOverridePrice: string | null;
+      manualOverrideReason: string | null;
+    }
+  ) {
+    const [item] = await db.select().from(romScopeItems).where(eq(romScopeItems.id, scopeItemId));
+    if (!item) return null;
+
+    const pricingMode = modeOverride ? (modeOverride.pricingMode || 'average') : (item.pricingMode || 'average');
+    const selectedContractorName = modeOverride ? modeOverride.selectedContractorName : item.selectedContractorName;
+    const manualOverridePrice = modeOverride ? modeOverride.manualOverridePrice : item.manualOverridePrice;
+    const manualOverrideReason = modeOverride ? modeOverride.manualOverrideReason : item.manualOverrideReason;
+
+    const quotes = await db
+      .select()
+      .from(scopeItemContractorPricing)
+      .where(and(eq(scopeItemContractorPricing.scopeItemId, scopeItemId), eq(scopeItemContractorPricing.isActive, true)));
+
+    const prices = quotes.map(q => parseFloat(q.price)).filter(n => !isNaN(n));
+
+    let activePrice: string | null = null;
+    if (pricingMode === 'average' && prices.length > 0) {
+      activePrice = (prices.reduce((a, b) => a + b, 0) / prices.length).toFixed(2);
+    } else if (pricingMode === 'contractor' && selectedContractorName) {
+      const contractorQuotes = quotes
+        .filter(q => q.contractorName === selectedContractorName)
+        .sort((a, b) => new Date(b.quotedDate).getTime() - new Date(a.quotedDate).getTime());
+      if (contractorQuotes.length > 0) {
+        activePrice = contractorQuotes[0].price;
+      }
+    } else if (pricingMode === 'manual' && manualOverridePrice) {
+      activePrice = String(manualOverridePrice);
+    }
+
+    let priceSpreadPercent: string | null = null;
+    if (prices.length >= 2) {
+      const avg = prices.reduce((a, b) => a + b, 0) / prices.length;
+      const min = Math.min(...prices);
+      const max = Math.max(...prices);
+      if (avg > 0) {
+        priceSpreadPercent = (((max - min) / avg) * 100).toFixed(1);
+      }
+    }
+
+    const [updated] = await db
+      .update(romScopeItems)
+      .set({
+        pricingMode,
+        selectedContractorName: selectedContractorName || null,
+        manualOverridePrice: manualOverridePrice || null,
+        manualOverrideReason: manualOverrideReason || null,
+        activePrice,
+        priceSpreadPercent,
+        lastQuarterlyUpdate: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(romScopeItems.id, scopeItemId))
+      .returning();
+
+    return updated;
+  }
+
   // GET /api/scope-items/:id/contractor-pricing
   app.get("/api/scope-items/:id/contractor-pricing", requireAuth, async (req, res) => {
     try {
@@ -911,6 +981,9 @@ export function registerRomRoutes(app: Express): void {
           isActive: true,
         })
         .returning();
+      // Keep activePrice in sync — a new quote changes the average (and possibly
+      // the selected contractor's latest quote) immediately.
+      await recalculateScopeItemActivePrice(scopeItemId);
       res.json(record);
     } catch (error) {
       res.status(500).json({ message: "Failed to create contractor pricing record" });
@@ -922,7 +995,13 @@ export function registerRomRoutes(app: Express): void {
     try {
       const pricingId = parseInt(req.params.id);
       if (isNaN(pricingId)) return res.status(400).json({ message: "Invalid pricing record ID" });
+      const scopeItemIdForRecalc = parseInt(req.params.scopeItemId);
       await db.delete(scopeItemContractorPricing).where(eq(scopeItemContractorPricing.id, pricingId));
+      // Keep activePrice in sync — removing a quote changes the average / selected
+      // contractor's latest quote immediately.
+      if (!isNaN(scopeItemIdForRecalc)) {
+        await recalculateScopeItemActivePrice(scopeItemIdForRecalc);
+      }
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ message: "Failed to delete contractor pricing record" });
@@ -936,54 +1015,13 @@ export function registerRomRoutes(app: Express): void {
       if (isNaN(scopeItemId)) return res.status(400).json({ message: "Invalid scope item ID" });
       const { pricingMode, selectedContractorName, manualOverridePrice, manualOverrideReason } = req.body;
 
-      // Fetch all active quotes for this item
-      const quotes = await db
-        .select()
-        .from(scopeItemContractorPricing)
-        .where(and(eq(scopeItemContractorPricing.scopeItemId, scopeItemId), eq(scopeItemContractorPricing.isActive, true)));
-
-      const prices = quotes.map(q => parseFloat(q.price)).filter(n => !isNaN(n));
-
-      // Calculate activePrice based on mode
-      let activePrice: string | null = null;
-      if (pricingMode === 'average' && prices.length > 0) {
-        activePrice = (prices.reduce((a, b) => a + b, 0) / prices.length).toFixed(2);
-      } else if (pricingMode === 'contractor' && selectedContractorName) {
-        const contractorQuotes = quotes
-          .filter(q => q.contractorName === selectedContractorName)
-          .sort((a, b) => new Date(b.quotedDate).getTime() - new Date(a.quotedDate).getTime());
-        if (contractorQuotes.length > 0) {
-          activePrice = contractorQuotes[0].price;
-        }
-      } else if (pricingMode === 'manual' && manualOverridePrice) {
-        activePrice = String(manualOverridePrice);
-      }
-
-      // Calculate price spread
-      let priceSpreadPercent: string | null = null;
-      if (prices.length >= 2) {
-        const avg = prices.reduce((a, b) => a + b, 0) / prices.length;
-        const min = Math.min(...prices);
-        const max = Math.max(...prices);
-        if (avg > 0) {
-          priceSpreadPercent = (((max - min) / avg) * 100).toFixed(1);
-        }
-      }
-
-      const [updated] = await db
-        .update(romScopeItems)
-        .set({
-          pricingMode: pricingMode || 'average',
-          selectedContractorName: selectedContractorName || null,
-          manualOverridePrice: manualOverridePrice || null,
-          manualOverrideReason: manualOverrideReason || null,
-          activePrice,
-          priceSpreadPercent,
-          lastQuarterlyUpdate: new Date(),
-          updatedAt: new Date(),
-        })
-        .where(eq(romScopeItems.id, scopeItemId))
-        .returning();
+      const updated = await recalculateScopeItemActivePrice(scopeItemId, {
+        pricingMode: pricingMode || 'average',
+        selectedContractorName: selectedContractorName || null,
+        manualOverridePrice: manualOverridePrice || null,
+        manualOverrideReason: manualOverrideReason || null,
+      });
+      if (!updated) return res.status(404).json({ message: "Scope item not found" });
 
       res.json(updated);
     } catch (error) {

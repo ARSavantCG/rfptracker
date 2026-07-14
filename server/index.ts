@@ -91,10 +91,10 @@ app.use((req, res, next) => {
     log(`⚠️  Warning: Failed to start email scheduler: ${error}`);
   }
 
-  // ALWAYS serve the app on port 5000
+  // Serve on the platform-assigned port (Railway sets PORT), falling back to
+  // 5000 for Replit where 5000 is the only non-firewalled port.
   // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = 5000;
+  const port = parseInt(process.env.PORT || "5000", 10);
   server.listen(port, "0.0.0.0", () => {
     log(`serving on port ${port}`);
   });

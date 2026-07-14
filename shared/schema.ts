@@ -792,6 +792,7 @@ export const propertyExistingImprovements = pgTable("property_existing_improveme
   allocationType: text("allocation_type").notNull(), // "prorated", "bay-specific", "whole-property", "demising-wall"
   allocationValue: integer("allocation_value"), // For percentage-based or custom allocations
   units: text("units"), // Units for the allocation (sf, percentage, etc.)
+  areaSf: integer("area_sf"), // Optional improvement-specific area in SF (e.g., office buildout SF). Used for $/SF on the Costs-in-Place report; when null, whole-property items fall back to the property's derived rentable SF.
   
   // For bay-specific items - which bays this improvement applies to
   applicableBays: json("applicable_bays").$type<string[]>().default([]), // Array of bay IDs
@@ -833,6 +834,7 @@ export const insertPropertyExistingImprovementSchema = createInsertSchema(proper
   updatedAt: true,
 }).extend({
   totalCost: z.number().min(0),
+  areaSf: z.number().int().min(0).nullable().optional(),
   // Per-stage cost fields (in cents)
   forecastCost: z.number().min(0).default(0),
   committedCost: z.number().min(0).default(0),

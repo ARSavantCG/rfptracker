@@ -41,6 +41,9 @@ const formSchema = z.object({
   committedCost: z.coerce.number().min(0).default(0),
   actualsCost: z.coerce.number().min(0).default(0),
   allocationType: z.enum(["prorated", "bay-specific", "whole-property", "demising-wall"]),
+  // Kept as a string in form state (users may type "1,200"); converted to an
+  // integer or null in onSubmit via regex-strip + parseFloat.
+  areaSf: z.string().optional(),
   allocationValue: z.number().optional(),
   units: z.string().optional(),
   applicableBays: z.array(z.string()).optional(),
@@ -189,6 +192,7 @@ export function PropertyExistingImprovementsModal({
       committedCost: 0,
       actualsCost: 0,
       allocationType: "prorated",
+      areaSf: "",
       applicableBays: [],
       notes: "",
       bucket: "FORECAST",
@@ -359,10 +363,18 @@ export function PropertyExistingImprovementsModal({
   });
 
   const onSubmit = (data: FormData) => {
+    // Convert areaSf from form string to integer-or-null. parseFloat + regex strip
+    // (not parseInt) so "1,200" doesn't silently truncate at the comma.
+    const areaSfRaw = (data.areaSf || "").replace(/[^0-9.]/g, "");
+    const areaSfNum = parseFloat(areaSfRaw);
+    const payload = {
+      ...data,
+      areaSf: !isNaN(areaSfNum) && areaSfNum > 0 ? Math.round(areaSfNum) : null,
+    };
     if (editingId) {
-      updateMutation.mutate({ id: editingId, data });
+      updateMutation.mutate({ id: editingId, data: payload as any });
     } else {
-      createMutation.mutate(data);
+      createMutation.mutate(payload as any);
     }
   };
 
@@ -388,6 +400,7 @@ export function PropertyExistingImprovementsModal({
       committedCost: imp.committedCost ? imp.committedCost / 100 : 0,
       actualsCost: imp.actualsCost ? imp.actualsCost / 100 : 0,
       allocationType: improvement.allocationType as "prorated" | "bay-specific" | "whole-property" | "demising-wall",
+      areaSf: imp.areaSf != null ? String(imp.areaSf) : "",
       applicableBays: improvement.applicableBays || [],
       notes: improvement.notes || "",
       bucket: bucket,
@@ -1052,6 +1065,29 @@ export function PropertyExistingImprovementsModal({
                         </FormItem>
                       )}
                     />
+
+                    {allocationType !== "demising-wall" && (
+                      <FormField
+                        control={form.control}
+                        name="areaSf"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Area (SF) — optional</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                inputMode="numeric"
+                                placeholder="e.g., 2,400 (for $/SF on Costs-in-Place report)"
+                              />
+                            </FormControl>
+                            <div className="text-xs text-slate-500">
+                              Enter for area-specific items like office buildouts. Leave blank to use the property's rentable SF for $/SF.
+                            </div>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )}
                   </div>
 
                   {allocationType === "bay-specific" && (

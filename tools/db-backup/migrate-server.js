@@ -40,7 +40,8 @@ const VERIFY_SQL = `
   SELECT column_name, data_type, is_nullable
   FROM information_schema.columns
   WHERE table_name = 'property_existing_improvements'
-    AND column_name = 'area_sf'
+    AND column_name IN ('area_sf', 'denominator_basis')
+  ORDER BY column_name
 `;
 
 app.get('/', (_req, res) => {
@@ -83,6 +84,9 @@ app.get('/apply', async (req, res) => {
     await client.connect();
     await client.query(
       'ALTER TABLE property_existing_improvements ADD COLUMN IF NOT EXISTS area_sf integer'
+    );
+    await client.query(
+      'ALTER TABLE property_existing_improvements ADD COLUMN IF NOT EXISTS denominator_basis text'
     );
     const { rows } = await client.query(VERIFY_SQL);
     await client.end();

@@ -581,6 +581,7 @@ export type BayConfiguration = {
   rentableSquareFootage?: number; // Calculated rentable area (squareFootage + mechanicalRoomAllocation)
   hasStorefrontEntry?: boolean; // Whether this bay has storefront entry door(s)
   hasSpeculativeOffice?: boolean; // Whether this bay has speculative office space
+  officeSquareFootage?: number; // SF of the office portion within this bay (single source of truth for office area; a portion of squareFootage, not the whole bay)
   hasRestroom?: boolean; // Whether this bay has restroom facilities
   
   // Cross-dock splitting support - controlled per bay
@@ -793,6 +794,7 @@ export const propertyExistingImprovements = pgTable("property_existing_improveme
   allocationValue: integer("allocation_value"), // For percentage-based or custom allocations
   units: text("units"), // Units for the allocation (sf, percentage, etc.)
   areaSf: integer("area_sf"), // Optional improvement-specific area in SF (e.g., office buildout SF). Used for $/SF on the Costs-in-Place report; when null, whole-property items fall back to the property's derived rentable SF.
+  denominatorBasis: text("denominator_basis"), // Optional override for Costs-in-Place $/SF basis ('own-area' | 'warehouse-net' | 'whole-property' | 'none'). Null = category default.
   
   // For bay-specific items - which bays this improvement applies to
   applicableBays: json("applicable_bays").$type<string[]>().default([]), // Array of bay IDs
@@ -835,6 +837,7 @@ export const insertPropertyExistingImprovementSchema = createInsertSchema(proper
 }).extend({
   totalCost: z.number().min(0),
   areaSf: z.number().int().min(0).nullable().optional(),
+  denominatorBasis: z.enum(['own-area', 'warehouse-net', 'whole-property', 'none']).nullable().optional(),
   // Per-stage cost fields (in cents)
   forecastCost: z.number().min(0).default(0),
   committedCost: z.number().min(0).default(0),
@@ -879,6 +882,48 @@ export const ALLOCATION_TYPES = {
   'whole-property': 'Whole Property',
   'demising-wall': 'Demising Wall (50/50 Split)'
 } as const;
+
+// $/SF denominator basis for the Costs-in-Place report. Determines what area an
+// improvement's cost is divided by:
+//   own-area      → the improvement's own areaSf (e.g. a specific office buildout)
+//   warehouse-net → rentable SF minus total office SF (warehouse-floor systems
+//                   like LED lighting that don't cover the offices, which have
+//                   their own fixtures)
+//   whole-property→ full rentable SF (building-wide systems: fire alarm, etc.)
+//   none          → no meaningful $/SF (demising walls)
+export const DENOMINATOR_BASES = {
+  'own-area': 'Own Area (entered SF)',
+  'warehouse-net': 'Warehouse (rentable − office)',
+  'whole-property': 'Whole Property',
+  'none': 'Not Applicable',
+} as const;
+
+export type DenominatorBasis = keyof typeof DENOMINATOR_BASES;
+
+// Smart default basis per category. Warehouse-floor systems net out office area;
+// building-wide systems use the full footprint; demising walls get no $/SF.
+// spec-office uses its own entered area. Overridable per-item via
+// property_existing_improvements.denominator_basis when set.
+export const DEFAULT_DENOMINATOR_BASIS_BY_CATEGORY: Record<string, DenominatorBasis> = {
+  lighting: 'warehouse-net',
+  hvac: 'warehouse-net',
+  'spec-office': 'own-area',
+  restrooms: 'whole-property',
+  'fire-alarm': 'whole-property',
+  'demising-wall': 'none',
+  custom: 'whole-property',
+};
+
+export function resolveDenominatorBasis(
+  category: string,
+  override?: string | null,
+  allocationType?: string | null,
+): DenominatorBasis {
+  // Demising walls never get a $/SF regardless of category default.
+  if (allocationType === 'demising-wall' || category === 'demising-wall') return 'none';
+  if (override && override in DENOMINATOR_BASES) return override as DenominatorBasis;
+  return DEFAULT_DENOMINATOR_BASIS_BY_CATEGORY[category] ?? 'whole-property';
+}
 
 // Evaluation Budget table
 export const evaluationBudgets = pgTable("evaluation_budgets", {

@@ -56,6 +56,7 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
     oversizedDockDoors: "", 
     hasStorefrontEntry: false, 
     hasSpeculativeOffice: false, 
+    officeSquareFootage: "",
     hasRestroom: false,
     canBeSplit: false,
     splitNorthSquareFootage: "",
@@ -280,6 +281,7 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
       oversizedDockDoors: parseInt(newBay.oversizedDockDoors) || 0,
       hasStorefrontEntry: newBay.hasStorefrontEntry,
       hasSpeculativeOffice: newBay.hasSpeculativeOffice,
+      officeSquareFootage: newBay.hasSpeculativeOffice ? (parseFloat((newBay.officeSquareFootage || "").replace(/[^0-9.]/g, "")) || undefined) : undefined,
       hasRestroom: newBay.hasRestroom,
       canBeSplit: newBay.canBeSplit,
       splitNorthDockDoors: newBay.canBeSplit ? (parseInt(newBay.splitNorthDockDoors) || 0) : undefined,
@@ -300,6 +302,7 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
       oversizedDockDoors: "",
       hasStorefrontEntry: false,
       hasSpeculativeOffice: false,
+      officeSquareFootage: "",
       hasRestroom: false,
       canBeSplit: false,
       splitNorthSquareFootage: "",
@@ -355,6 +358,7 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
       oversizedDockDoors: "",
       hasStorefrontEntry: false,
       hasSpeculativeOffice: false,
+      officeSquareFootage: "",
       hasRestroom: false,
       canBeSplit: false,
       splitNorthSquareFootage: "",
@@ -391,6 +395,7 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
       oversizedDockDoors: bay.oversizedDockDoors?.toString() || "0",
       hasStorefrontEntry: bay.hasStorefrontEntry || false,
       hasSpeculativeOffice: bay.hasSpeculativeOffice || false,
+      officeSquareFootage: bay.officeSquareFootage != null ? String(bay.officeSquareFootage) : "",
       hasRestroom: bay.hasRestroom || false,
       canBeSplit: bay.canBeSplit || false,
       splitNorthSquareFootage: bay.canBeSplit ? Math.floor(bay.squareFootage / 2).toString() : "",
@@ -438,6 +443,7 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
       oversizedDockDoors: parseInt(newBay.oversizedDockDoors) || 0,
       hasStorefrontEntry: newBay.hasStorefrontEntry,
       hasSpeculativeOffice: newBay.hasSpeculativeOffice,
+      officeSquareFootage: newBay.hasSpeculativeOffice ? (parseFloat((newBay.officeSquareFootage || "").replace(/[^0-9.]/g, "")) || undefined) : undefined,
       hasRestroom: newBay.hasRestroom,
       canBeSplit: newBay.canBeSplit,
       splitNorthDockDoors: newBay.canBeSplit ? (parseInt(newBay.splitNorthDockDoors) || 0) : undefined,
@@ -480,6 +486,7 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
       oversizedDockDoors: "",
       hasStorefrontEntry: false,
       hasSpeculativeOffice: false,
+      officeSquareFootage: "",
       hasRestroom: false,
       canBeSplit: false,
       splitNorthSquareFootage: "",
@@ -508,6 +515,7 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
       oversizedDockDoors: "",
       hasStorefrontEntry: false,
       hasSpeculativeOffice: false,
+      officeSquareFootage: "",
       hasRestroom: false,
       canBeSplit: false,
       splitNorthSquareFootage: "",
@@ -879,6 +887,22 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                       Speculative Office
                     </Label>
                   </div>
+                  {newBay.hasSpeculativeOffice && (
+                    <div className="ml-6 flex items-center gap-2">
+                      <Label htmlFor="officeSquareFootage" className="text-xs text-muted-foreground whitespace-nowrap">
+                        Office SF
+                      </Label>
+                      <Input
+                        id="officeSquareFootage"
+                        type="text"
+                        inputMode="numeric"
+                        className="h-8 text-xs w-32"
+                        placeholder="e.g., 2,400"
+                        value={newBay.officeSquareFootage}
+                        onChange={(e) => setNewBay({ ...newBay, officeSquareFootage: e.target.value })}
+                      />
+                    </div>
+                  )}
                   <div className="flex items-center space-x-2">
                     <Checkbox 
                       id="hasRestroom"

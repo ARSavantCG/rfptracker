@@ -15,8 +15,8 @@
 import type { Express } from 'express';
 import { storage } from './storage';
 import { requireAuth } from './middleware';
-import { EXISTING_IMPROVEMENT_CATEGORIES } from '@shared/schema';
-import type { Property, PropertyExistingImprovement, BayConfiguration } from '@shared/schema';
+import { EXISTING_IMPROVEMENT_CATEGORIES, resolveDenominatorBasis, DENOMINATOR_BASES } from '@shared/schema';
+import type { Property, PropertyExistingImprovement, BayConfiguration, DenominatorBasis } from '@shared/schema';
 import { readFileSync } from 'fs';
 import path from 'path';
 
@@ -36,6 +36,14 @@ function getBridgeLogo(): string {
 export function derivePropertyRentableSf(property: Property): number {
   const bays = (property.bayConfigurations || []) as BayConfiguration[];
   return bays.reduce((sum, bay) => sum + (bay.rentableSquareFootage || bay.squareFootage || 0), 0);
+}
+
+// Total office SF across the property's bays — the single source of truth for
+// office area, entered per-bay in bay config. Warehouse-net denominators subtract
+// this from rentable SF.
+export function derivePropertyOfficeSf(property: Property): number {
+  const bays = (property.bayConfigurations || []) as BayConfiguration[];
+  return bays.reduce((sum, bay) => sum + (bay.officeSquareFootage || 0), 0);
 }
 
 function categoryLabel(category: string): string {
@@ -66,29 +74,59 @@ interface ImprovementRow {
   perSf: string;     // e.g. "$12.34" | "—"
 }
 
-export function buildImprovementRow(imp: PropertyExistingImprovement, propertyRentableSf: number): ImprovementRow {
+export function buildImprovementRow(
+  imp: PropertyExistingImprovement,
+  propertyRentableSf: number,
+  propertyOfficeSf: number,
+): ImprovementRow {
   const costDollars = (imp.totalCost || 0) / 100;
   const areaSf = (imp as any).areaSf as number | null | undefined;
+  const override = (imp as any).denominatorBasis as string | null | undefined;
+  const basis: DenominatorBasis = resolveDenominatorBasis(imp.category, override, imp.allocationType);
 
-  let sfBasis = '—';
-  let perSf = '—';
+  const warehouseNetSf = Math.max(propertyRentableSf - propertyOfficeSf, 0);
 
-  if (imp.allocationType === 'demising-wall') {
-    // $/SF is meaningless for demising walls; leave dashes.
-  } else if (areaSf != null && areaSf > 0) {
-    sfBasis = `${fmtSf(areaSf)} sf (entered)`;
-    perSf = fmtCurrency(costDollars / areaSf);
-  } else if (propertyRentableSf > 0) {
-    sfBasis = `${fmtSf(propertyRentableSf)} sf (property)`;
-    perSf = fmtCurrency(costDollars / propertyRentableSf);
+  let denomSf = 0;
+  let basisLabel = '—';
+
+  switch (basis) {
+    case 'none':
+      // Demising walls: no meaningful $/SF.
+      break;
+    case 'own-area':
+      if (areaSf != null && areaSf > 0) {
+        denomSf = areaSf;
+        basisLabel = `${fmtSf(areaSf)} sf (entered)`;
+      }
+      break;
+    case 'warehouse-net':
+      if (propertyOfficeSf > 0 && warehouseNetSf > 0) {
+        denomSf = warehouseNetSf;
+        basisLabel = `${fmtSf(warehouseNetSf)} sf (warehouse)`;
+      } else if (propertyRentableSf > 0) {
+        // Office SF unknown (0) or ≥ rentable — can't net cleanly; fall back to
+        // full rentable and flag the basis (*) so the number is never silently
+        // presented as a true warehouse rate.
+        denomSf = propertyRentableSf;
+        basisLabel = `${fmtSf(propertyRentableSf)} sf (rentable*)`;
+      }
+      break;
+    case 'whole-property':
+    default:
+      if (propertyRentableSf > 0) {
+        denomSf = propertyRentableSf;
+        basisLabel = `${fmtSf(propertyRentableSf)} sf (rentable)`;
+      }
+      break;
   }
-  // else: property SF unavailable — keep dashes rather than divide by zero.
+
+  const perSf = denomSf > 0 ? fmtCurrency(costDollars / denomSf) : '—';
 
   return {
     category: categoryLabel(imp.category),
     description: imp.description,
     costDollars,
-    sfBasis,
+    sfBasis: basisLabel,
     perSf,
   };
 }
@@ -96,10 +134,11 @@ export function buildImprovementRow(imp: PropertyExistingImprovement, propertyRe
 // One property's report section (used by both modes).
 function renderPropertySection(property: Property, improvements: PropertyExistingImprovement[]): string {
   const rentableSf = derivePropertyRentableSf(property);
+  const officeSf = derivePropertyOfficeSf(property);
+  const warehouseNetSf = Math.max(rentableSf - officeSf, 0);
   const activeImprovements = improvements.filter((imp) => imp.isActive !== false);
-  const rows = activeImprovements.map((imp) => buildImprovementRow(imp, rentableSf));
+  const rows = activeImprovements.map((imp) => buildImprovementRow(imp, rentableSf, officeSf));
   const sectionTotal = rows.reduce((sum, r) => sum + r.costDollars, 0);
-  const sectionPerSf = rentableSf > 0 ? fmtCurrency(sectionTotal / rentableSf) : '—';
 
   const bodyRows = rows.length > 0
     ? rows.map((r, idx) => `
@@ -112,11 +151,17 @@ function renderPropertySection(property: Property, improvements: PropertyExistin
         </tr>`).join('')
     : `<tr><td colspan="5" style="text-align: center; color: #999; font-style: italic;">No costs-in-place recorded</td></tr>`;
 
+  const areaMeta = [
+    `Rentable: ${rentableSf > 0 ? fmtSf(rentableSf) + ' sf' : 'N/A'}`,
+    officeSf > 0 ? `Office: ${fmtSf(officeSf)} sf` : null,
+    officeSf > 0 ? `Warehouse: ${fmtSf(warehouseNetSf)} sf` : null,
+  ].filter(Boolean).join(' &nbsp;·&nbsp; ');
+
   return `
     <div class="property-section">
       <div class="property-header">
         <div class="property-title">${escapeHtml(property.displayName || property.propertyName)}</div>
-        <div class="property-meta">Rentable Area: ${rentableSf > 0 ? fmtSf(rentableSf) + ' sf' : 'N/A'}</div>
+        <div class="property-meta">${areaMeta}</div>
       </div>
       <table>
         <colgroup>
@@ -140,8 +185,8 @@ function renderPropertySection(property: Property, improvements: PropertyExistin
           <tr class="total-row">
             <td colspan="2"><strong>Property Total</strong></td>
             <td class="currency"><strong>${fmtCurrency(sectionTotal)}</strong></td>
-            <td class="sf">${rentableSf > 0 ? fmtSf(rentableSf) + ' sf (property)' : '—'}</td>
-            <td class="currency"><strong>${sectionPerSf}</strong></td>
+            <td class="sf"></td>
+            <td class="currency"></td>
           </tr>
         </tbody>
       </table>
@@ -229,6 +274,7 @@ export function registerCostsInPlaceReportRoutes(app: Express): void {
 
       let portfolioCostCents = 0;
       let portfolioRentableSf = 0;
+      let portfolioOfficeSf = 0;
       let propertiesWithCosts = 0;
       const sections: string[] = [];
 
@@ -239,20 +285,24 @@ export function registerCostsInPlaceReportRoutes(app: Express): void {
         // the roll-up is a complete portfolio picture — but track the count.
         portfolioCostCents += active.reduce((sum, imp) => sum + (imp.totalCost || 0), 0);
         portfolioRentableSf += derivePropertyRentableSf(property);
+        portfolioOfficeSf += derivePropertyOfficeSf(property);
         if (active.length > 0) propertiesWithCosts++;
         sections.push(renderPropertySection(property, improvements));
       }
 
       const portfolioCostDollars = portfolioCostCents / 100;
-      const portfolioPerSf = portfolioRentableSf > 0 ? fmtCurrency(portfolioCostDollars / portfolioRentableSf) : '—';
+      const portfolioWarehouseSf = Math.max(portfolioRentableSf - portfolioOfficeSf, 0);
 
+      // No portfolio "blended $/SF": summing costs with different denominators
+      // (office SF, warehouse-net SF, full SF) over one area figure isn't a
+      // meaningful rate. Report the honest facts — total cost and the area
+      // breakdown — and let the per-item $/SF carry the rate detail.
       const portfolioSummary = `
         <div class="summary">
           <h3 style="margin-top: 0;">Portfolio Summary</h3>
           <p><strong>Properties:</strong> ${sorted.length} (${propertiesWithCosts} with costs-in-place)</p>
           <p><strong>Total Costs in Place:</strong> ${fmtCurrency(portfolioCostDollars)}</p>
-          <p><strong>Total Rentable Area:</strong> ${portfolioRentableSf > 0 ? fmtSf(portfolioRentableSf) + ' sf' : 'N/A'}</p>
-          <p><strong>Blended $/SF:</strong> ${portfolioPerSf}</p>
+          <p><strong>Total Rentable Area:</strong> ${portfolioRentableSf > 0 ? fmtSf(portfolioRentableSf) + ' sf' : 'N/A'}${portfolioOfficeSf > 0 ? ` &nbsp;·&nbsp; Office: ${fmtSf(portfolioOfficeSf)} sf &nbsp;·&nbsp; Warehouse: ${fmtSf(portfolioWarehouseSf)} sf` : ''}</p>
         </div>`;
 
       const html = renderReportHtml(

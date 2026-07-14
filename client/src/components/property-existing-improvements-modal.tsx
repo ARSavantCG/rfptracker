@@ -370,6 +370,8 @@ export function PropertyExistingImprovementsModal({
     const payload = {
       ...data,
       areaSf: !isNaN(areaSfNum) && areaSfNum > 0 ? Math.round(areaSfNum) : null,
+      // Basis override left null → report uses the smart category default.
+      denominatorBasis: null,
     };
     if (editingId) {
       updateMutation.mutate({ id: editingId, data: payload as any });

@@ -6,7 +6,7 @@
   "description": "Standalone one-off service: dumps every table from the production Neon DB to a downloadable JSON file. Read-only.",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node migrate-server.js"
   },
   "dependencies": {
     "express": "^4.19.2",

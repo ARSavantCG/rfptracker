@@ -58,6 +58,7 @@ import { AuthService } from './auth';
 import { registerRomRoutes } from './rom-routes';
 import { registerActualsRoutes } from './actuals-routes';
 import { registerPropertyRoutes } from './property-routes';
+import { registerCostsInPlaceReportRoutes } from './costs-in-place-report';
 import { registerAiRoutes } from './ai-routes';
 import { registerProposalsRoutes } from './proposals-routes';
 import { registerDashboardRoutes } from './dashboard-routes';
@@ -79,6 +80,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerRomRoutes(app);
   registerActualsRoutes(app);
   registerPropertyRoutes(app);
+  registerCostsInPlaceReportRoutes(app);
   registerAiRoutes(app);
   registerProposalsRoutes(app);
   registerDashboardRoutes(app);

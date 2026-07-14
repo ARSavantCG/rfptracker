@@ -33,7 +33,7 @@ function getBridgeLogo(): string {
 
 // Established derivation pattern (see property-summary-report.ts): a property's
 // rentable SF is the sum of its bays' rentable SF, falling back to raw bay SF.
-function derivePropertyRentableSf(property: Property): number {
+export function derivePropertyRentableSf(property: Property): number {
   const bays = (property.bayConfigurations || []) as BayConfiguration[];
   return bays.reduce((sum, bay) => sum + (bay.rentableSquareFootage || bay.squareFootage || 0), 0);
 }
@@ -66,7 +66,7 @@ interface ImprovementRow {
   perSf: string;     // e.g. "$12.34" | "—"
 }
 
-function buildImprovementRow(imp: PropertyExistingImprovement, propertyRentableSf: number): ImprovementRow {
+export function buildImprovementRow(imp: PropertyExistingImprovement, propertyRentableSf: number): ImprovementRow {
   const costDollars = (imp.totalCost || 0) / 100;
   const areaSf = (imp as any).areaSf as number | null | undefined;
 

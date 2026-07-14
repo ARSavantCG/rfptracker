@@ -115,6 +115,23 @@ export default function PropertyDataAudit() {
     window.print();
   };
 
+  const handleCostsInPlacePortfolio = async () => {
+    try {
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
+      const response = await fetch(`/api/reports/costs-in-place`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) {
+        throw new Error('Costs-in-Place portfolio report failed');
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, '_blank');
+    } catch (error) {
+      console.error('Costs-in-Place portfolio report error:', error);
+    }
+  };
+
   if (propertiesLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -249,6 +266,10 @@ export default function PropertyDataAudit() {
           </div>
           <div className="flex items-center gap-4 print:hidden">
             <span className="text-sm text-blue-200">Generated: {new Date().toLocaleDateString()}</span>
+            <Button onClick={handleCostsInPlacePortfolio} variant="secondary" className="gap-2">
+              <DollarSign className="h-4 w-4" />
+              Costs-in-Place Report
+            </Button>
             <Button onClick={handlePrint} variant="secondary" className="gap-2">
               <Printer className="h-4 w-4" />
               Print Report

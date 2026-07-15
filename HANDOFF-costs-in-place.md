@@ -87,6 +87,17 @@ Office SF fields ride in the existing `bay_configurations` JSON column — **no 
 - Populates `denominator_basis` (column already on Neon from migration 0003). Hidden for demising walls.
 - Use case: a warehouse lighting item that also covers an office → override to Whole Property so it divides by full rentable instead of warehouse-net.
 
+### 10. Demising wall improvements (`property-existing-improvements-modal.tsx`)
+- **Live cost-split preview** in the form: enter one total + Left/Right %, see each side's dollar amount (warning if % ≠ 100).
+- **Per-side split shown in the list** under each demising wall's description.
+- **4-tenant guidance + duplicate-wall warning:** a demising wall where the building is split N/S can have up to 4 tenants. Model (Adolfo's call) = **two records, each holding HALF the wall cost**, 50/50 within its N or S half. Guidance box explains it; a warning fires when two demising records share the same bay pair (likely double-count). Common case: one record, full cost, 50/50. Spend-to-date tracks natively via each record's forecast/committed/actuals.
+
+### 11. Occupancy report (`server/occupancy-report.ts` — new file)
+- `GET /api/reports/occupancy` → printable portfolio report (rentable/leased/vacant SF, occupancy %, vacancy %, tenants). `GET /api/occupancy/summary` → JSON for property-card badges.
+- **Occupancy % = leased SF / rentable SF** (CRE-standard; vacancy = complement). "Occupied" = any signed lease, no date filter.
+- **CRITICAL derivation:** occupied SF per lease = override → stored `rentableSquareFootage` → **fall back to summing assigned bays' SF**. Many leases store only bay selections (the UI computes SF live but doesn't persist it), so without the bay-sum fallback occupancy reads 0. Matches `lease-management-modal.tsx`. Capped at 100%, color-coded.
+- Property-card badge on `properties.tsx`, fed by `/api/occupancy/summary`. Guarded with `requireAuthFlexible`.
+
 ## Lessons banked
 - **`requireAuth` is Bearer-header-only.** Any client fetch to a guarded route needs `Authorization: Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}`, not just `credentials: 'include'`. Audit other pages for the `credentials: 'include'`-only pattern.
 - **Browser-navigation resources can't send headers.** Anything loaded via `window.open`, `<a href>`, `<img src>`, or `<iframe src>` cannot attach an Authorization header. To protect such a route, use `requireAuthFlexible` (header OR `?token=` query param) server-side and `withAuth(url)` client-side. This is the reusable pattern for any future protected file/resource served this way.

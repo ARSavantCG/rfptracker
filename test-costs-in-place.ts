@@ -75,5 +75,19 @@ const r10 = buildImprovementRow(officeNoSf, 51094, 0);
 if (r10.perSf === '—') { console.log('PASS: office no-SF no-office-total → dash'); } else { console.log('FAIL: expected dash --', JSON.stringify(r10)); process.exit(1); }
 
 
+// Case 11: split bay office SF sums into property office total.
+const splitProp: any = {
+  bayConfigurations: [
+    { id: 's1', bayName: 'Bay 1-2', squareFootage: 35191, rentableSquareFootage: 35191, canBeSplit: true, splitNorthOffice: true, splitNorthOfficeSquareFootage: 1200, splitSouthOffice: true, splitSouthOfficeSquareFootage: 800 },
+    { id: 's2', bayName: 'Bay 3-4', squareFootage: 20000, rentableSquareFootage: 20000, hasSpeculativeOffice: true, officeSquareFootage: 1000 },
+  ],
+};
+const splitOffice = derivePropertyOfficeSf(splitProp);
+if (splitOffice === 3000) { console.log('PASS: split-half office SF (1200+800) + whole-bay (1000) = 3000'); } else { console.log('FAIL: split office sum --', splitOffice); process.exit(1); }
+// Case 12: split bay with office flag OFF contributes nothing
+const splitOff: any = { bayConfigurations: [{ id: 's3', canBeSplit: true, splitNorthOffice: false, splitNorthOfficeSquareFootage: 1200, splitSouthOffice: false, splitSouthOfficeSquareFootage: 800 }] };
+if (derivePropertyOfficeSf(splitOff) === 0) { console.log('PASS: split office flags off → 0'); } else { console.log('FAIL: expected 0'); process.exit(1); }
+
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail > 0 ? 1 : 0);

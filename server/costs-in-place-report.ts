@@ -43,7 +43,15 @@ export function derivePropertyRentableSf(property: Property): number {
 // this from rentable SF.
 export function derivePropertyOfficeSf(property: Property): number {
   const bays = (property.bayConfigurations || []) as BayConfiguration[];
-  return bays.reduce((sum, bay) => sum + (bay.officeSquareFootage || 0), 0);
+  return bays.reduce((sum, bay) => {
+    // A split bay's office SF lives on its halves; a non-split bay's on the bay itself.
+    if (bay.canBeSplit) {
+      const north = bay.splitNorthOffice ? (bay.splitNorthOfficeSquareFootage || 0) : 0;
+      const south = bay.splitSouthOffice ? (bay.splitSouthOfficeSquareFootage || 0) : 0;
+      return sum + north + south;
+    }
+    return sum + (bay.officeSquareFootage || 0);
+  }, 0);
 }
 
 function categoryLabel(category: string): string {

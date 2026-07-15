@@ -64,7 +64,15 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
     splitNorthDockDoors: "",
     splitSouthDockDoors: "",
     splitNorthOversizedDoors: "",
-    splitSouthOversizedDoors: ""
+    splitSouthOversizedDoors: "",
+    splitNorthStorefront: false,
+    splitSouthStorefront: false,
+    splitNorthOffice: false,
+    splitSouthOffice: false,
+    splitNorthRestroom: false,
+    splitSouthRestroom: false,
+    splitNorthOfficeSquareFootage: "",
+    splitSouthOfficeSquareFootage: ""
   });
   const [editingBay, setEditingBay] = useState<BayConfiguration | null>(null);
   const [showBayDetails, setShowBayDetails] = useState(false);
@@ -315,6 +323,8 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
       splitSouthStorefront: false,
       splitNorthOffice: false,
       splitSouthOffice: false,
+      splitNorthOfficeSquareFootage: "",
+      splitSouthOfficeSquareFootage: "",
       splitNorthRestroom: false,
       splitSouthRestroom: false
     });
@@ -371,6 +381,8 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
       splitSouthStorefront: false,
       splitNorthOffice: false,
       splitSouthOffice: false,
+      splitNorthOfficeSquareFootage: "",
+      splitSouthOfficeSquareFootage: "",
       splitNorthRestroom: false,
       splitSouthRestroom: false
     });
@@ -408,6 +420,8 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
       splitSouthStorefront: bay.splitSouthStorefront || false,
       splitNorthOffice: bay.splitNorthOffice || false,
       splitSouthOffice: bay.splitSouthOffice || false,
+      splitNorthOfficeSquareFootage: bay.splitNorthOfficeSquareFootage != null ? String(bay.splitNorthOfficeSquareFootage) : "",
+      splitSouthOfficeSquareFootage: bay.splitSouthOfficeSquareFootage != null ? String(bay.splitSouthOfficeSquareFootage) : "",
       splitNorthRestroom: bay.splitNorthRestroom || false,
       splitSouthRestroom: bay.splitSouthRestroom || false
     });
@@ -454,6 +468,8 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
       splitSouthStorefront: newBay.canBeSplit ? newBay.splitSouthStorefront : undefined,
       splitNorthOffice: newBay.canBeSplit ? newBay.splitNorthOffice : undefined,
       splitSouthOffice: newBay.canBeSplit ? newBay.splitSouthOffice : undefined,
+      splitNorthOfficeSquareFootage: newBay.canBeSplit && newBay.splitNorthOffice ? (parseFloat((newBay.splitNorthOfficeSquareFootage || "").replace(/[^0-9.]/g, "")) || undefined) : undefined,
+      splitSouthOfficeSquareFootage: newBay.canBeSplit && newBay.splitSouthOffice ? (parseFloat((newBay.splitSouthOfficeSquareFootage || "").replace(/[^0-9.]/g, "")) || undefined) : undefined,
       splitNorthRestroom: newBay.canBeSplit ? newBay.splitNorthRestroom : undefined,
       splitSouthRestroom: newBay.canBeSplit ? newBay.splitSouthRestroom : undefined
     };
@@ -499,6 +515,8 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
       splitSouthStorefront: false,
       splitNorthOffice: false,
       splitSouthOffice: false,
+      splitNorthOfficeSquareFootage: "",
+      splitSouthOfficeSquareFootage: "",
       splitNorthRestroom: false,
       splitSouthRestroom: false
     });
@@ -528,6 +546,8 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
       splitSouthStorefront: false,
       splitNorthOffice: false,
       splitSouthOffice: false,
+      splitNorthOfficeSquareFootage: "",
+      splitSouthOfficeSquareFootage: "",
       splitNorthRestroom: false,
       splitSouthRestroom: false
     });
@@ -1378,6 +1398,18 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                                               🏢 Off
                                             </Label>
                                           </div>
+                                          {newBay.splitNorthOffice && (
+                                            <div className="flex items-center space-x-1">
+                                              <Input
+                                                type="text"
+                                                inputMode="numeric"
+                                                className="h-7 text-xs w-24"
+                                                placeholder="Office SF"
+                                                value={newBay.splitNorthOfficeSquareFootage}
+                                                onChange={(e) => setNewBay({ ...newBay, splitNorthOfficeSquareFootage: e.target.value })}
+                                              />
+                                            </div>
+                                          )}
                                           <div className="flex items-center space-x-1">
                                             <Checkbox 
                                               id="splitNorthRestroom"
@@ -1467,6 +1499,18 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                                               🏢 Off
                                             </Label>
                                           </div>
+                                          {newBay.splitSouthOffice && (
+                                            <div className="flex items-center space-x-1">
+                                              <Input
+                                                type="text"
+                                                inputMode="numeric"
+                                                className="h-7 text-xs w-24"
+                                                placeholder="Office SF"
+                                                value={newBay.splitSouthOfficeSquareFootage}
+                                                onChange={(e) => setNewBay({ ...newBay, splitSouthOfficeSquareFootage: e.target.value })}
+                                              />
+                                            </div>
+                                          )}
                                           <div className="flex items-center space-x-1">
                                             <Checkbox 
                                               id="splitSouthRestroom"

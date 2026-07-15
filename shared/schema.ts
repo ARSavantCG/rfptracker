@@ -598,6 +598,8 @@ export type BayConfiguration = {
   splitSouthStorefront?: boolean; // Whether south half has storefront entry
   splitNorthOffice?: boolean; // Whether north half has speculative office
   splitSouthOffice?: boolean; // Whether south half has speculative office
+  splitNorthOfficeSquareFootage?: number; // Office SF within the north half (portion of splitNorthSquareFootage)
+  splitSouthOfficeSquareFootage?: number; // Office SF within the south half (portion of splitSouthSquareFootage)
   splitNorthRestroom?: boolean; // Whether north half has restroom
   splitSouthRestroom?: boolean; // Whether south half has restroom
 };

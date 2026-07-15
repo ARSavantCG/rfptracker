@@ -697,10 +697,16 @@ export function PropertyExistingImprovementsModal({
                             // cost line is seeded with the area entered in bay config.
                             // The user then just fills in the cost — the SF acts as a
                             // validation anchor (wrong SF here means a bay's office SF
-                            // is off). Split-bay office SF is not yet tracked, so those
-                            // contribute 0 until that's built.
-                            const officeBays = availableBays.filter(bay => bay.hasSpeculativeOffice && !bay.isSplitBay);
-                            const totalOfficeSf = officeBays.reduce((sum, bay) => sum + (bay.officeSquareFootage || 0), 0);
+                            // is off). Handles both whole-bay and split-half offices.
+                            const bayConfigs = currentProperty.bayConfigurations || [];
+                            const totalOfficeSf = bayConfigs.reduce((sum: number, bay: any) => {
+                              if (bay.canBeSplit) {
+                                const north = bay.splitNorthOffice ? (bay.splitNorthOfficeSquareFootage || 0) : 0;
+                                const south = bay.splitSouthOffice ? (bay.splitSouthOfficeSquareFootage || 0) : 0;
+                                return sum + north + south;
+                              }
+                              return sum + (bay.hasSpeculativeOffice ? (bay.officeSquareFootage || 0) : 0);
+                            }, 0);
                             form.reset({
                               category: "spec-office",
                               description: `Spec Office Costs for ${mismatch.bayNames.join(', ')}`,

@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Download, FileText, Calendar, TrendingUp, Clock, CheckCircle, AlertTriangle, BarChart3, ChevronDown, Users, TableIcon, DollarSign } from "lucide-react";
+import { Download, FileText, Calendar, TrendingUp, Clock, CheckCircle, AlertTriangle, BarChart3, ChevronDown, Users, TableIcon, DollarSign, Building2 } from "lucide-react";
 import { Link } from "wouter";
 import Navigation from "@/components/navigation";
 import { CustomReportModal } from "@/components/custom-report-modal";
@@ -118,6 +118,23 @@ export default function Reports() {
       window.open(blobUrl, '_blank');
     } catch (error) {
       console.error("Error generating Costs-in-Place report:", error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      alert(`Failed to generate report: ${errorMessage}`);
+    }
+  };
+
+  const generateOccupancyReport = async () => {
+    try {
+      const response = await fetch(`/api/reports/occupancy`, {
+        credentials: 'include',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}` },
+      });
+      if (!response.ok) throw new Error(`Failed to generate report (${response.status})`);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      window.open(blobUrl, '_blank');
+    } catch (error) {
+      console.error("Error generating Occupancy report:", error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       alert(`Failed to generate report: ${errorMessage}`);
     }
@@ -528,6 +545,45 @@ export default function Reports() {
                 onClick={generateCostsInPlaceReport}
               >
                 <DollarSign className="h-3 w-3 mr-1" />
+                Generate Report
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Occupancy — leased vs rentable SF, per property + portfolio */}
+          <Card className="border-indigo-200 bg-indigo-50/30">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center space-x-2 text-base text-indigo-800">
+                <Building2 className="h-4 w-4 text-indigo-600" />
+                <span>Occupancy</span>
+              </CardTitle>
+              <p className="text-xs text-gray-600">
+                Occupancy & vacancy rates from signed leases vs. rentable SF
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <div className="grid grid-cols-2 gap-1">
+                <div className="bg-white p-1.5 rounded text-center border border-indigo-100">
+                  <p className="text-lg font-bold text-indigo-700">%</p>
+                  <p className="text-xs text-indigo-600 uppercase font-medium">Occupancy</p>
+                </div>
+                <div className="bg-white p-1.5 rounded text-center border border-indigo-100">
+                  <p className="text-lg font-bold text-gray-900">Print</p>
+                  <p className="text-xs text-gray-600 uppercase font-medium">Format</p>
+                </div>
+              </div>
+              <div className="bg-white p-2 rounded border border-indigo-100">
+                <ul className="space-y-0 text-xs text-gray-600">
+                  <li>• Per-property + portfolio roll-up</li>
+                  <li>• Leased / vacant SF and rates</li>
+                  <li>• Tenant count per property</li>
+                </ul>
+              </div>
+              <Button
+                className="w-full h-8 text-xs bg-indigo-600 hover:bg-indigo-700"
+                onClick={generateOccupancyReport}
+              >
+                <Building2 className="h-3 w-3 mr-1" />
                 Generate Report
               </Button>
             </CardContent>

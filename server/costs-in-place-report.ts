@@ -77,15 +77,38 @@ function escapeHtml(s: string): string {
 interface ImprovementRow {
   category: string;
   description: string;
+  location: string;  // Bay names for bay-specific/demising items, so an analyst knows where the cost sits
   costDollars: number;
   sfBasis: string;   // e.g. "2,400 sf (entered)" | "51,094 sf (property)" | "—"
   perSf: string;     // e.g. "$12.34" | "—"
+}
+
+// Resolves an improvement's bay location to human-readable bay names, for items
+// tied to specific bays (bay-specific offices, demising walls). Empty for
+// property-wide items. Lets a deal analyst see WHERE a spec-office cost sits so
+// they don't apply an office in Bay 1 to a tenant taking Bay 9-12.
+function resolveLocation(imp: PropertyExistingImprovement, bays: BayConfiguration[]): string {
+  const nameFor = (id: string) => bays.find((b) => b.id === id)?.bayName || id;
+  if (imp.allocationType === 'demising-wall') {
+    const d = (imp as any).demisingWallData;
+    if (d && (d.leftBayId || d.rightBayId)) {
+      const parts = [d.leftBayId, d.rightBayId].filter(Boolean).map((id: string) => nameFor(id));
+      return parts.join(' / ');
+    }
+    return '';
+  }
+  const applicable = (imp as any).applicableBays as string[] | undefined;
+  if (applicable && applicable.length > 0) {
+    return applicable.map(nameFor).join(', ');
+  }
+  return '';
 }
 
 export function buildImprovementRow(
   imp: PropertyExistingImprovement,
   propertyRentableSf: number,
   propertyOfficeSf: number,
+  bays: BayConfiguration[] = [],
 ): ImprovementRow {
   const costDollars = (imp.totalCost || 0) / 100;
   const areaSf = (imp as any).areaSf as number | null | undefined;
@@ -143,6 +166,7 @@ export function buildImprovementRow(
   return {
     category: categoryLabel(imp.category),
     description: imp.description,
+    location: resolveLocation(imp, bays),
     costDollars,
     sfBasis: basisLabel,
     perSf,
@@ -155,7 +179,8 @@ function renderPropertySection(property: Property, improvements: PropertyExistin
   const officeSf = derivePropertyOfficeSf(property);
   const warehouseNetSf = Math.max(rentableSf - officeSf, 0);
   const activeImprovements = improvements.filter((imp) => imp.isActive !== false);
-  const rows = activeImprovements.map((imp) => buildImprovementRow(imp, rentableSf, officeSf));
+  const bays = (property.bayConfigurations || []) as BayConfiguration[];
+  const rows = activeImprovements.map((imp) => buildImprovementRow(imp, rentableSf, officeSf, bays));
   const sectionTotal = rows.reduce((sum, r) => sum + r.costDollars, 0);
 
   const bodyRows = rows.length > 0
@@ -163,11 +188,12 @@ function renderPropertySection(property: Property, improvements: PropertyExistin
         <tr style="background: ${idx % 2 === 0 ? '#ffffff' : '#f8f9fa'};">
           <td>${escapeHtml(r.category)}</td>
           <td>${escapeHtml(r.description)}</td>
+          <td>${r.location ? escapeHtml(r.location) : '<span style="color:#bbb;">—</span>'}</td>
           <td class="currency">${fmtCurrency(r.costDollars)}</td>
           <td class="sf">${escapeHtml(r.sfBasis)}</td>
           <td class="currency">${r.perSf}</td>
         </tr>`).join('')
-    : `<tr><td colspan="5" style="text-align: center; color: #999; font-style: italic;">No costs-in-place recorded</td></tr>`;
+    : `<tr><td colspan="6" style="text-align: center; color: #999; font-style: italic;">No costs-in-place recorded</td></tr>`;
 
   const areaMeta = [
     `Rentable: ${rentableSf > 0 ? fmtSf(rentableSf) + ' sf' : 'N/A'}`,
@@ -183,16 +209,18 @@ function renderPropertySection(property: Property, improvements: PropertyExistin
       </div>
       <table>
         <colgroup>
-          <col style="width: 14%;">
-          <col style="width: 40%;">
-          <col style="width: 15%;">
+          <col style="width: 12%;">
+          <col style="width: 28%;">
           <col style="width: 18%;">
-          <col style="width: 13%;">
+          <col style="width: 14%;">
+          <col style="width: 16%;">
+          <col style="width: 12%;">
         </colgroup>
         <thead>
           <tr>
             <th>Category</th>
             <th>Description</th>
+            <th>Location</th>
             <th class="currency">Cost in Place</th>
             <th class="sf">Area (SF)</th>
             <th class="currency">$/SF</th>
@@ -201,7 +229,7 @@ function renderPropertySection(property: Property, improvements: PropertyExistin
         <tbody>
           ${bodyRows}
           <tr class="total-row">
-            <td colspan="2"><strong>Property Total</strong></td>
+            <td colspan="3"><strong>Property Total</strong></td>
             <td class="currency"><strong>${fmtCurrency(sectionTotal)}</strong></td>
             <td class="sf"></td>
             <td class="currency"></td>

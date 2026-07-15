@@ -75,8 +75,21 @@ Office SF fields ride in the existing `bay_configurations` JSON column — **no 
 
 ---
 
+### 8. `/uploads/*` security fix (`server/middleware.ts`, `server/routes.ts`, client)
+- **Bug:** `/uploads/*` had NO auth — every uploaded file (contractor PDFs, proposals, attachments) was downloadable by anyone with the URL. Registered before session middleware, fully public.
+- **Constraint:** files open via `window.open` (proposals-library) and `<iframe src>` (bid-tagging-modal) — browser navigation that **cannot send an Authorization header**. This is why the route was left open.
+- **Fix:** new `requireAuthFlexible` middleware accepts the token from the `Authorization` header OR a `?token=` query param. `/uploads/*` now uses it. Frontend `withAuth(url)` helper (in `client/src/lib/auth-constants.ts`) appends `?token=` at the two consumer sites.
+- **Verified:** `GET /uploads/x` with no token → 401.
+- **Tradeoff:** token appears in the URL (history, logs). Acceptable given short-lived tokens; the documented next step is **signed short-lived URLs** — `withAuth()` and `requireAuthFlexible` are the two functions to swap for that upgrade.
+
+### 9. Per-item $/SF basis override (`client/src/components/property-existing-improvements-modal.tsx`)
+- The improvements form now has a **"$/SF Basis"** dropdown: *Auto (by category)* = null = smart category default; plus explicit *Warehouse (rentable − office)*, *Whole Property*, *Own Area*.
+- Populates `denominator_basis` (column already on Neon from migration 0003). Hidden for demising walls.
+- Use case: a warehouse lighting item that also covers an office → override to Whole Property so it divides by full rentable instead of warehouse-net.
+
 ## Lessons banked
 - **`requireAuth` is Bearer-header-only.** Any client fetch to a guarded route needs `Authorization: Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}`, not just `credentials: 'include'`. Audit other pages for the `credentials: 'include'`-only pattern.
+- **Browser-navigation resources can't send headers.** Anything loaded via `window.open`, `<a href>`, `<img src>`, or `<iframe src>` cannot attach an Authorization header. To protect such a route, use `requireAuthFlexible` (header OR `?token=` query param) server-side and `withAuth(url)` client-side. This is the reusable pattern for any future protected file/resource served this way.
 - **Bay config has TWO render paths** — an "Add New Bay" form and an "Edit Bay" modal — that don't share a component. Any new bay field must be added in **both** (this bit us once: Office SF worked in Add but not Edit).
 - **Bay-config split-half fields** (`splitNorth/South*`) must be declared in the `newBay` useState initializer, not only in reset blocks — otherwise the inferred state type is incomplete and every reference errors. Completing the initializer fixed 23 pre-existing TS errors as a bonus (761 → 738 total).
 - **Office SF is three-tiered:** whole-bay (`officeSquareFootage`) OR split halves (`splitNorth/SouthOfficeSquareFootage`) when `canBeSplit`. `derivePropertyOfficeSf` and the modal seed logic both branch on `canBeSplit`.
@@ -84,6 +97,7 @@ Office SF fields ride in the existing `bay_configurations` JSON column — **no 
 - **Denominator label tags** in the report tell you the SF source: `(entered)`, `(office)`, `(warehouse)`, `(rentable)`, `(rentable*)` = couldn't net office. This transparency is the validation layer.
 
 ## Deferred / future
-- Per-item `denominator_basis` override UI (column + logic exist; no dropdown yet — currently always null = category default).
+- ~~Per-item `denominator_basis` override UI~~ — **DONE** (section 9).
+- **`/uploads/*` → signed short-lived URLs.** Current fix (section 8) puts the token in the URL. Upgrade to HMAC-signed, time-limited URLs to remove that: change `withAuth()` (client) to fetch a signed URL, and `requireAuthFlexible` (server) to verify the signature instead of the token. Both are single-purpose functions for exactly this reason.
 - Fold the migration endpoint into the app as a token-guarded `/admin/migrate` route so schema changes apply from the running app without branch-swapping on Railway.
 - Root-level cleanup: `test-costs-in-place.ts` and stale `*_cookies.txt` files in repo root (session cookies in a repo = same risk class as a hardcoded token — delete + gitignore).

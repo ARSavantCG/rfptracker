@@ -44,6 +44,7 @@ const formSchema = z.object({
   // Kept as a string in form state (users may type "1,200"); converted to an
   // integer or null in onSubmit via regex-strip + parseFloat.
   areaSf: z.string().optional(),
+  denominatorBasis: z.string().optional(),
   allocationValue: z.number().optional(),
   units: z.string().optional(),
   applicableBays: z.array(z.string()).optional(),
@@ -193,6 +194,7 @@ export function PropertyExistingImprovementsModal({
       actualsCost: 0,
       allocationType: "prorated",
       areaSf: "",
+      denominatorBasis: "",
       applicableBays: [],
       notes: "",
       bucket: "FORECAST",
@@ -370,8 +372,8 @@ export function PropertyExistingImprovementsModal({
     const payload = {
       ...data,
       areaSf: !isNaN(areaSfNum) && areaSfNum > 0 ? Math.round(areaSfNum) : null,
-      // Basis override left null → report uses the smart category default.
-      denominatorBasis: null,
+      // Empty select → null → report uses the smart category default.
+      denominatorBasis: data.denominatorBasis && data.denominatorBasis !== "" ? data.denominatorBasis : null,
     };
     if (editingId) {
       updateMutation.mutate({ id: editingId, data: payload as any });
@@ -403,6 +405,7 @@ export function PropertyExistingImprovementsModal({
       actualsCost: imp.actualsCost ? imp.actualsCost / 100 : 0,
       allocationType: improvement.allocationType as "prorated" | "bay-specific" | "whole-property" | "demising-wall",
       areaSf: imp.areaSf != null ? String(imp.areaSf) : "",
+      denominatorBasis: imp.denominatorBasis || "",
       applicableBays: improvement.applicableBays || [],
       notes: improvement.notes || "",
       bucket: bucket,
@@ -1103,6 +1106,33 @@ export function PropertyExistingImprovementsModal({
                             </FormControl>
                             <div className="text-xs text-slate-500">
                               Enter for area-specific items like office buildouts. Leave blank to use the property's rentable SF for $/SF.
+                            </div>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )}
+
+                    {allocationType !== "demising-wall" && (
+                      <FormField
+                        control={form.control}
+                        name="denominatorBasis"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>$/SF Basis — optional</FormLabel>
+                            <FormControl>
+                              <select
+                                {...field}
+                                className="w-full h-9 px-2 text-sm bg-background border border-input rounded-md"
+                              >
+                                <option value="">Auto (by category)</option>
+                                <option value="warehouse-net">Warehouse (rentable − office)</option>
+                                <option value="whole-property">Whole Property (full rentable)</option>
+                                <option value="own-area">Own Area (entered SF)</option>
+                              </select>
+                            </FormControl>
+                            <div className="text-xs text-slate-500">
+                              Leave on Auto unless this item's $/SF should divide by something other than its category default (e.g. warehouse lighting that also covers an office).
                             </div>
                             <FormMessage />
                           </FormItem>

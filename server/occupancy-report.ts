@@ -29,13 +29,26 @@ function derivePropertyRentableSf(property: Property): number {
   return bays.reduce((sum, bay) => sum + (bay.rentableSquareFootage || bay.squareFootage || 0), 0);
 }
 
-// Occupied SF from executed leases. Prefer the per-lease override, then the
-// lease's rentable SF. (Any signed lease counts — no active-date filter.)
-function deriveOccupiedSf(leases: ExecutedLease[]): number {
-  return leases.reduce((sum, lease) => {
-    const sf = (lease.rentableAreaOverride ?? lease.rentableSquareFootage) || 0;
-    return sum + sf;
+// Occupied SF from executed leases. For each lease: prefer the explicit override,
+// then the lease's stored rentable SF, then FALL BACK to summing the assigned bays'
+// SF from the property's bay config — which is what the lease UI shows live. Many
+// leases only store the bay selections, not a separate SF number, so without this
+// fallback occupancy reads 0 even when all bays are assigned.
+function deriveLeaseOccupiedSf(lease: ExecutedLease, bays: BayConfiguration[]): number {
+  const override = lease.rentableAreaOverride;
+  if (override != null && override > 0) return override;
+  const stored = lease.rentableSquareFootage;
+  if (stored != null && stored > 0) return stored;
+  // Sum the assigned bays' rentable-or-raw SF.
+  const assigned = lease.assignedBays || [];
+  return assigned.reduce((sum, bayId) => {
+    const bay = bays.find((b) => b.id === bayId);
+    return sum + (bay ? (bay.rentableSquareFootage || bay.squareFootage || 0) : 0);
   }, 0);
+}
+
+function deriveOccupiedSf(leases: ExecutedLease[], bays: BayConfiguration[]): number {
+  return leases.reduce((sum, lease) => sum + deriveLeaseOccupiedSf(lease, bays), 0);
 }
 
 function fmtSf(sf: number): string {
@@ -63,7 +76,9 @@ interface PropertyOccupancyRow {
 
 function computeRow(property: Property, leases: ExecutedLease[]): PropertyOccupancyRow {
   const rentableSf = derivePropertyRentableSf(property);
-  const occupiedSf = Math.min(deriveOccupiedSf(leases), rentableSf > 0 ? rentableSf : deriveOccupiedSf(leases));
+  const bays = (property.bayConfigurations || []) as BayConfiguration[];
+  const rawOccupied = deriveOccupiedSf(leases, bays);
+  const occupiedSf = Math.min(rawOccupied, rentableSf > 0 ? rentableSf : rawOccupied);
   const vacantSf = Math.max(rentableSf - occupiedSf, 0);
   const occupancyPct = rentableSf > 0 ? (occupiedSf / rentableSf) * 100 : 0;
   const vacancyPct = rentableSf > 0 ? (vacantSf / rentableSf) * 100 : 0;

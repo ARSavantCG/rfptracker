@@ -1358,6 +1358,45 @@ export function PropertyExistingImprovementsModal({
                         Cost will be split between the selected bays based on the percentages above. 
                         Percentages must total 100%.
                       </div>
+
+                      {(() => {
+                        // Live per-side dollar breakdown: enter one total + the split %,
+                        // see each side's dollar amount to verify before saving.
+                        const total =
+                          (Number(form.watch('forecastCost')) || 0) +
+                          (Number(form.watch('committedCost')) || 0) +
+                          (Number(form.watch('actualsCost')) || 0);
+                        const leftPct = Number(form.watch('demisingWallData.leftPercentage')) || 0;
+                        const rightPct = Number(form.watch('demisingWallData.rightPercentage')) || 0;
+                        const leftBay = form.watch('demisingWallData.leftBayId');
+                        const rightBay = form.watch('demisingWallData.rightBayId');
+                        const leftBayName = availableBays.find(b => b.id === leftBay)?.bayName || 'Left bay';
+                        const rightBayName = availableBays.find(b => b.id === rightBay)?.bayName || 'Right bay';
+                        const fmt = (n: number) => '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                        const pctTotal = leftPct + rightPct;
+                        return (
+                          <div className="rounded-md border bg-white dark:bg-slate-800 p-3 space-y-1">
+                            <div className="text-xs font-semibold text-slate-700 dark:text-slate-200">Cost split preview</div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-slate-600 dark:text-slate-300">{leftBayName} ({leftPct}%)</span>
+                              <span className="font-medium">{fmt(total * leftPct / 100)}</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-slate-600 dark:text-slate-300">{rightBayName} ({rightPct}%)</span>
+                              <span className="font-medium">{fmt(total * rightPct / 100)}</span>
+                            </div>
+                            <div className="flex justify-between text-xs border-t pt-1 text-slate-500">
+                              <span>Total wall</span>
+                              <span>{fmt(total)}</span>
+                            </div>
+                            {pctTotal !== 100 && (
+                              <div className="text-xs text-amber-600 font-medium">
+                                ⚠ Percentages total {pctTotal}% — should be 100%.
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </div>
                   )}
 
@@ -1460,6 +1499,19 @@ export function PropertyExistingImprovementsModal({
                                   </span>
                                 )}
                               </div>
+                              {improvement.allocationType === 'demising-wall' && imp.demisingWallData && (() => {
+                                const d = imp.demisingWallData;
+                                const wallTotal = totalCost > 0 ? totalCost : improvement.totalCost;
+                                const leftPct = Number(d.leftPercentage) || 0;
+                                const rightPct = Number(d.rightPercentage) || 0;
+                                const leftName = availableBays.find(b => b.id === d.leftBayId)?.bayName || 'Left';
+                                const rightName = availableBays.find(b => b.id === d.rightBayId)?.bayName || 'Right';
+                                return (
+                                  <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                                    {leftName} {leftPct}% = {formatCurrency(wallTotal * leftPct / 100)} · {rightName} {rightPct}% = {formatCurrency(wallTotal * rightPct / 100)}
+                                  </div>
+                                );
+                              })()}
                             </td>
                             <td className="p-3">
                               <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded text-xs font-medium">

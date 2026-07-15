@@ -64,5 +64,16 @@ check('fallback perSf uses rentable', r7.perSf, '$4.61');
 // divide-by-zero guard
 check('zero rentable -> dash', buildImprovementRow(fire, 0, 0).perSf, '—');
 
+
+// Case 9: spec-office with NO areaSf falls back to property office SF.
+// $130,300 / 2,606 office sf = $50.00
+const officeNoSf: any = { category: 'spec-office', description: 'Office (no SF)', totalCost: 13030000, allocationType: 'bay-specific', isActive: true };
+const r9 = buildImprovementRow(officeNoSf, 51094, 2606);
+if (r9.sfBasis === '2,606 sf (office)' && r9.perSf === '$50.00') { console.log('PASS: spec-office falls back to property office SF'); } else { console.log('FAIL: office fallback --', JSON.stringify(r9)); process.exit(1); }
+// Case 10: spec-office, no areaSf AND no property office SF → dash
+const r10 = buildImprovementRow(officeNoSf, 51094, 0);
+if (r10.perSf === '—') { console.log('PASS: office no-SF no-office-total → dash'); } else { console.log('FAIL: expected dash --', JSON.stringify(r10)); process.exit(1); }
+
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail > 0 ? 1 : 0);

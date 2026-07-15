@@ -97,6 +97,11 @@ export function buildImprovementRow(
       if (areaSf != null && areaSf > 0) {
         denomSf = areaSf;
         basisLabel = `${fmtSf(areaSf)} sf (entered)`;
+      } else if (imp.category === 'spec-office' && propertyOfficeSf > 0) {
+        // No SF entered on the office cost line — fall back to the total office
+        // SF from bay config, so the office $/SF still computes instead of dashing.
+        denomSf = propertyOfficeSf;
+        basisLabel = `${fmtSf(propertyOfficeSf)} sf (office)`;
       }
       break;
     case 'warehouse-net':
@@ -176,7 +181,7 @@ function renderPropertySection(property: Property, improvements: PropertyExistin
             <th>Category</th>
             <th>Description</th>
             <th class="currency">Cost in Place</th>
-            <th class="sf">SF Basis</th>
+            <th class="sf">Area (SF)</th>
             <th class="currency">$/SF</th>
           </tr>
         </thead>

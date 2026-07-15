@@ -9,6 +9,7 @@ import { Plus, Trash2, Tag, CheckCircle, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { RfpFile } from "@shared/schema";
+import { withAuth } from "@/lib/auth-constants";
 
 interface ScopeItem {
   id: number;
@@ -254,7 +255,7 @@ export function BidTaggingModal({
                     ))}
                 </div>
                 <iframe
-                  src={activePdfUrl}
+                  src={withAuth(activePdfUrl)}
                   className="flex-1 border rounded-lg w-full"
                   title="Bid PDF"
                   style={{ minHeight: "500px" }}

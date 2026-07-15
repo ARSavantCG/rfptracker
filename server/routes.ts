@@ -51,7 +51,7 @@ import {
   getSecureDownloadPath
 } from "./file-organization";
 import { validateRfpForProgression, canAdvanceToPhase } from "./validation";
-import { checkPermission, upload, pdfUpload, uploadsDir, setupSession, requireAuth, requireAdmin } from './middleware';
+import { checkPermission, upload, pdfUpload, uploadsDir, setupSession, requireAuth, requireAuthFlexible, requireAdmin } from './middleware';
 import { generateBidCollectionHtml, generateAllBidCollectionsHtml, generateRfpPreviewHtml } from './html-generators';
 import { registerAuthRoutes } from './auth-routes';
 import { AuthService } from './auth';
@@ -86,7 +86,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerDashboardRoutes(app);
 
   // Serve files from the uploads directory — local disk first, then Object Storage fallback
-  app.get('/uploads/*', async (req, res) => {
+  app.get('/uploads/*', requireAuthFlexible, async (req, res) => {
     const filename = path.basename(req.path);
     const candidates = [
       path.join(process.cwd(), req.path),

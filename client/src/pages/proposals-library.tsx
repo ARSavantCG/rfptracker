@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Search, FileText, Tag, ExternalLink, Building, Calendar, DollarSign, Paperclip } from "lucide-react";
 import { BidTaggingModal } from "@/components/bid-tagging-modal";
 import type { RfpFile } from "@shared/schema";
+import { withAuth } from "@/lib/auth-constants";
 
 interface Proposal {
   bidCollectionId: number;
@@ -134,7 +135,7 @@ export default function ProposalsLibrary() {
   }
 
   function openPdf(attachment: RfpFile) {
-    window.open(buildPdfUrl(attachment), "_blank");
+    window.open(withAuth(buildPdfUrl(attachment)), "_blank");
   }
 
   return (

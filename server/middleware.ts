@@ -102,27 +102,12 @@ function setupSession(app: Express) {
 }
 
 // Pure token-based authentication for reliable Replit deployment
-async function requireAuth(req: any, res: any, next: any) {
-  console.log(`Auth check for ${req.method} ${req.path}`);
-  
-  // Check for token in Authorization header
-  const authHeader = req.headers.authorization;
-  const token = authHeader && authHeader.startsWith('Bearer ') 
-    ? authHeader.substring(7) 
-    : null;
-
-  if (!token) {
-    console.log('No token provided');
-    return res.status(401).json({ message: "Authentication required" });
-  }
-
+// Resolves a token string to a populated user object, or null if invalid.
+// Shared by requireAuth (header-only) and requireAuthFlexible (header or query).
+async function resolveUserFromToken(token: string | null): Promise<any | null> {
+  if (!token) return null;
   const userId = await tokenStore.getUserFromToken(token);
-  if (!userId) {
-    console.log('Invalid token');
-    return res.status(401).json({ message: "Invalid or expired token" });
-  }
-
-  // Get user information
+  if (!userId) return null;
   try {
     let user;
     if (userId.startsWith('contact_')) {
@@ -144,18 +129,66 @@ async function requireAuth(req: any, res: any, next: any) {
     } else {
       user = await AuthService.getUserById(userId);
     }
-    
-    if (user) {
-      req.user = user;
-      req.userId = userId;
-      console.log(`Token authenticated user: ${user.username}`);
-      return next();
-    } else {
-      console.log('User not found for token');
-      return res.status(401).json({ message: "User not found" });
-    }
+    return user ? { user, userId } : null;
   } catch (error) {
-    console.error("Error getting user in auth middleware:", error);
+    console.error("Error resolving user from token:", error);
+    throw error;
+  }
+}
+
+async function requireAuth(req: any, res: any, next: any) {
+  console.log(`Auth check for ${req.method} ${req.path}`);
+
+  // Check for token in Authorization header
+  const authHeader = req.headers.authorization;
+  const token = authHeader && authHeader.startsWith('Bearer ')
+    ? authHeader.substring(7)
+    : null;
+
+  if (!token) {
+    console.log('No token provided');
+    return res.status(401).json({ message: "Authentication required" });
+  }
+
+  try {
+    const resolved = await resolveUserFromToken(token);
+    if (!resolved) {
+      return res.status(401).json({ message: "Invalid or expired token" });
+    }
+    req.user = resolved.user;
+    req.userId = resolved.userId;
+    console.log(`Token authenticated user: ${resolved.user.username}`);
+    return next();
+  } catch (error) {
+    return res.status(500).json({ message: "Authentication error" });
+  }
+}
+
+// Like requireAuth, but also accepts the token via ?token= query param. Needed for
+// resources loaded by browser navigation (window.open, <img>, <a href>) where an
+// Authorization header can't be attached. NOTE: token appears in the URL (history,
+// logs) — acceptable given short-lived tokens; migrate to signed URLs to remove that.
+async function requireAuthFlexible(req: any, res: any, next: any) {
+  const authHeader = req.headers.authorization;
+  const headerToken = authHeader && authHeader.startsWith('Bearer ')
+    ? authHeader.substring(7)
+    : null;
+  const queryToken = typeof req.query.token === 'string' ? req.query.token : null;
+  const token = headerToken || queryToken;
+
+  if (!token) {
+    return res.status(401).json({ message: "Authentication required" });
+  }
+
+  try {
+    const resolved = await resolveUserFromToken(token);
+    if (!resolved) {
+      return res.status(401).json({ message: "Invalid or expired token" });
+    }
+    req.user = resolved.user;
+    req.userId = resolved.userId;
+    return next();
+  } catch (error) {
     return res.status(500).json({ message: "Authentication error" });
   }
 }
@@ -177,4 +210,4 @@ function requireAdmin(req: any, res: any, next: any) {
 }
 
 
-export { checkPermission, uploadsDir, upload, pdfUpload, setupSession, requireAuth, requireAdmin };
+export { checkPermission, uploadsDir, upload, pdfUpload, setupSession, requireAuth, requireAuthFlexible, requireAdmin };

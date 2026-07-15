@@ -31,6 +31,12 @@ export default function Properties() {
     queryKey: ["/api/properties"],
   });
 
+  // Occupancy per property, keyed by propertyId for quick badge lookup.
+  const { data: occupancy } = useQuery<{ perProperty: Array<{ propertyId: number; occupancyPct: number; vacancyPct: number; occupiedSf: number; rentableSf: number; tenantCount: number }> }>({
+    queryKey: ["/api/occupancy/summary"],
+  });
+  const occByProperty = new Map((occupancy?.perProperty || []).map((o) => [o.propertyId, o]));
+
   // Query for executed leases for all properties
   const { data: allExecutedLeases } = useQuery<any[]>({
     queryKey: ["/api/executed-leases/all"],
@@ -357,6 +363,23 @@ export default function Properties() {
                               <p>{formatAddress(property)}</p>
                             </div>
                           </div>
+
+                          {(() => {
+                            const occ = occByProperty.get(property.id);
+                            if (!occ || occ.rentableSf <= 0) return null;
+                            const pct = occ.occupancyPct;
+                            const color = pct >= 90 ? 'bg-green-100 text-green-800' : pct >= 70 ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-800';
+                            return (
+                              <div className="flex items-center gap-2 text-xs">
+                                <span className={`px-2 py-0.5 rounded-full font-medium ${color}`}>
+                                  {pct.toFixed(0)}% occupied
+                                </span>
+                                <span className="text-gray-400">
+                                  {occ.occupiedSf.toLocaleString()} / {occ.rentableSf.toLocaleString()} sf · {occ.tenantCount} tenant{occ.tenantCount !== 1 ? 's' : ''}
+                                </span>
+                              </div>
+                            );
+                          })()}
                           
                           {property.displayName && property.displayName !== formatAddress(property) && (
                             <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded">

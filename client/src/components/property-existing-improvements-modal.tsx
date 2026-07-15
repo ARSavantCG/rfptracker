@@ -507,6 +507,7 @@ export function PropertyExistingImprovementsModal({
           bayName: bayConfig.bayName,
           squareFootage: squareFootage,
           hasSpeculativeOffice: bayConfig.hasSpeculativeOffice || false,
+          officeSquareFootage: bayConfig.officeSquareFootage || 0,
           isSplitBay: false
         };
       });
@@ -530,6 +531,7 @@ export function PropertyExistingImprovementsModal({
             bayName: bayConfig.bayName,
             squareFootage: squareFootage,
             hasSpeculativeOffice: bayConfig.hasSpeculativeOffice || false,
+            officeSquareFootage: bayConfig.officeSquareFootage || 0,
             isSplitBay: false
           },
           // Include the north split option
@@ -538,6 +540,7 @@ export function PropertyExistingImprovementsModal({
             bayName: `${bayConfig.bayName} North`,
             squareFootage: bayConfig.splitNorthSquareFootage || Math.floor(squareFootage / 2),
             hasSpeculativeOffice: bayConfig.splitNorthOffice === true,
+            officeSquareFootage: 0,
             isSplitBay: true,
             splitSide: 'north' as const,
             parentBayId: bayConfig.id
@@ -548,6 +551,7 @@ export function PropertyExistingImprovementsModal({
             bayName: `${bayConfig.bayName} South`,
             squareFootage: bayConfig.splitSouthSquareFootage || Math.ceil(squareFootage / 2),
             hasSpeculativeOffice: bayConfig.splitSouthOffice === true,
+            officeSquareFootage: 0,
             isSplitBay: true,
             splitSide: 'south' as const,
             parentBayId: bayConfig.id
@@ -689,10 +693,19 @@ export function PropertyExistingImprovementsModal({
                           className="border-yellow-300 text-yellow-800 hover:bg-yellow-100 dark:border-yellow-600 dark:text-yellow-200 dark:hover:bg-yellow-800/20"
                           onClick={() => {
                             setShowForm(true);
+                            // Sum office SF from the bays flagged with offices so the
+                            // cost line is seeded with the area entered in bay config.
+                            // The user then just fills in the cost — the SF acts as a
+                            // validation anchor (wrong SF here means a bay's office SF
+                            // is off). Split-bay office SF is not yet tracked, so those
+                            // contribute 0 until that's built.
+                            const officeBays = availableBays.filter(bay => bay.hasSpeculativeOffice && !bay.isSplitBay);
+                            const totalOfficeSf = officeBays.reduce((sum, bay) => sum + (bay.officeSquareFootage || 0), 0);
                             form.reset({
                               category: "spec-office",
                               description: `Spec Office Costs for ${mismatch.bayNames.join(', ')}`,
                               totalCost: 0,
+                              areaSf: totalOfficeSf > 0 ? String(totalOfficeSf) : "",
                               allocationType: "bay-specific",
                               applicableBays: availableBays.filter(bay => bay.hasSpeculativeOffice).map(bay => bay.id) || [],
                               notes: "Auto-suggested based on bay configuration",

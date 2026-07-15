@@ -92,8 +92,12 @@ function resolveLocation(imp: PropertyExistingImprovement, bays: BayConfiguratio
   if (imp.allocationType === 'demising-wall') {
     const d = (imp as any).demisingWallData;
     if (d && (d.leftBayId || d.rightBayId)) {
-      const parts = [d.leftBayId, d.rightBayId].filter(Boolean).map((id: string) => nameFor(id));
-      return parts.join(' / ');
+      const names = [d.leftBayId, d.rightBayId].filter(Boolean).map((id: string) => nameFor(id));
+      // Compress "Bay 9-10 / Bay 11-12" → "Bays 9-10 & 11-12" by stripping the
+      // repeated "Bay " prefix. Keeps it short since the description already
+      // carries the column line.
+      const stripped = names.map((n: string) => n.replace(/^Bay\s+/i, ''));
+      return stripped.length > 1 ? `Bays ${stripped.join(' & ')}` : `Bay ${stripped[0]}`;
     }
     return '';
   }
@@ -209,11 +213,11 @@ function renderPropertySection(property: Property, improvements: PropertyExistin
       </div>
       <table>
         <colgroup>
-          <col style="width: 12%;">
-          <col style="width: 28%;">
-          <col style="width: 18%;">
-          <col style="width: 14%;">
+          <col style="width: 11%;">
+          <col style="width: 26%;">
+          <col style="width: 17%;">
           <col style="width: 16%;">
+          <col style="width: 18%;">
           <col style="width: 12%;">
         </colgroup>
         <thead>
@@ -257,9 +261,9 @@ function renderReportHtml(title: string, subtitle: string, sections: string[], p
     .property-meta { font-size: 13px; color: #666; }
     table { width: 100%; border-collapse: collapse; table-layout: fixed; margin: 10px 0; }
     th, td { border: 1px solid #ddd; padding: 7px 8px; text-align: left; font-size: 12px; overflow-wrap: break-word; }
-    th { background-color: #f5f5f5; }
-    .currency { text-align: right; }
-    .sf { text-align: right; }
+    th { background-color: #f5f5f5; white-space: nowrap; }
+    .currency { text-align: right; white-space: nowrap; }
+    .sf { text-align: right; white-space: nowrap; }
     .total-row td { background: #eef2f9; border-top: 2px solid rgb(0,50,130); }
     @media print {
       body { margin: 10px; }

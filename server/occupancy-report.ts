@@ -132,7 +132,7 @@ function renderReportHtml(rows: PropertyOccupancyRow[]): string {
     .summary .label { font-size: 12px; color: #666; text-transform: uppercase; }
     table { width: 100%; border-collapse: collapse; table-layout: fixed; margin: 10px 0; }
     th, td { border: 1px solid #ddd; padding: 7px 8px; text-align: left; font-size: 12px; overflow-wrap: break-word; }
-    th { background-color: #f5f5f5; }
+    th { background-color: #f5f5f5; white-space: nowrap; }
     .num { text-align: right; }
     .total-row td { background: #eef2f9; border-top: 2px solid rgb(0,50,130); font-weight: bold; }
     @media print { body { margin: 10px; } }
@@ -145,7 +145,7 @@ function renderReportHtml(rows: PropertyOccupancyRow[]): string {
       <div style="font-size: 12px; color: #999;">Generated ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
     </div>
     <div class="document-title">Occupancy Report</div>
-    <div class="report-subtitle">Portfolio — leased vs. rentable area</div>
+    <div class="report-subtitle">Portfolio — Leased vs. Rentable Area</div>
   </div>
 
   <div class="summary">
@@ -169,8 +169,8 @@ function renderReportHtml(rows: PropertyOccupancyRow[]): string {
 
   <table>
     <colgroup>
-      <col style="width: 28%;"><col style="width: 13%;"><col style="width: 13%;">
-      <col style="width: 13%;"><col style="width: 12%;"><col style="width: 11%;"><col style="width: 10%;">
+      <col style="width: 25%;"><col style="width: 13%;"><col style="width: 12%;">
+      <col style="width: 12%;"><col style="width: 14%;"><col style="width: 13%;"><col style="width: 11%;">
     </colgroup>
     <thead>
       <tr>

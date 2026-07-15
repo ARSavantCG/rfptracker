@@ -104,7 +104,12 @@ export function buildImprovementRow(
     case 'own-area':
       if (areaSf != null && areaSf > 0) {
         denomSf = areaSf;
-        basisLabel = `${fmtSf(areaSf)} sf (entered)`;
+        // For spec-office, label (office) regardless of whether the SF was typed
+        // on the line or pulled from bay config — both are office area, so the
+        // source distinction is noise here. Non-office own-area items keep (entered).
+        basisLabel = imp.category === 'spec-office'
+          ? `${fmtSf(areaSf)} sf (office)`
+          : `${fmtSf(areaSf)} sf (entered)`;
       } else if (imp.category === 'spec-office' && propertyOfficeSf > 0) {
         // No SF entered on the office cost line — fall back to the total office
         // SF from bay config, so the office $/SF still computes instead of dashing.

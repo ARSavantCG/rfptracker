@@ -42,7 +42,7 @@ check('fire-alarm basis = rentable', r3.sfBasis, '51,094 sf (rentable)');
 const office: any = { category: 'spec-office', description: 'Office', totalCost: 12000000, allocationType: 'bay-specific', areaSf: 2400, isActive: true };
 const r4 = buildImprovementRow(office, rentableSf, officeSf);
 check('spec-office own areaSf: perSf', r4.perSf, '$50.00');
-check('spec-office basis = entered', r4.sfBasis, '2,400 sf (entered)');
+check('spec-office basis = office (was entered)', r4.sfBasis, '2,400 sf (office)');
 
 // demising -> dash
 const wall: any = { category: 'demising-wall', description: 'Wall', totalCost: 8000000, allocationType: 'demising-wall', areaSf: 500, isActive: true };

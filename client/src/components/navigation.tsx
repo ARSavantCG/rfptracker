@@ -106,7 +106,7 @@ export default function Navigation() {
   
   // Reports submenu items
   const reportsSubmenu: NavItem[] = [
-    { path: "/reports", label: "Vendor Workload", icon: BarChart3 },
+    { path: "/reports", label: "All Reports", icon: BarChart3 },
     { path: "/project-report-generator", label: "Project Reports", icon: FileBarChart, openInNewTab: true },
     { path: "/property-data-audit", label: "Property Audit", icon: ClipboardList, openInNewTab: true },
     { path: "/reports/category-cost-breakdown", label: "Category Cost Breakdown", icon: Tags },

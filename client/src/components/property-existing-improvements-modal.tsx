@@ -239,7 +239,6 @@ export function PropertyExistingImprovementsModal({
   // Use fresh property data if available, otherwise fall back to prop
   const currentProperty = freshProperty || property;
 
-  // Check for spec office mismatch - more sophisticated logic including split bays
   const getSpecOfficeMismatch = () => {
     const bayConfigs = currentProperty.bayConfigurations || [];
     const specOfficeImprovements = improvements.filter(imp => imp.category === 'spec-office');
@@ -288,6 +287,25 @@ export function PropertyExistingImprovementsModal({
       warningMessage,
       bayNames: bayNamesWithSpecOffice
     };
+  };
+
+  // Detect likely double-counted demising walls: two+ active demising records
+  // sharing the same bay pair (same physical wall). Common when a 4-tenant wall
+  // was entered as North/South halves but each got the FULL cost instead of half.
+  const getDuplicateWallWarning = () => {
+    const walls = improvements.filter(
+      (imp) => imp.allocationType === 'demising-wall' && imp.isActive !== false && imp.demisingWallData
+    );
+    const byPair: Record<string, PropertyExistingImprovement[]> = {};
+    for (const w of walls) {
+      const d = (w as any).demisingWallData;
+      // Normalize the pair so left/right order doesn't matter.
+      const pair = [String(d.leftBayId || ''), String(d.rightBayId || '')].sort().join('|');
+      if (!pair || pair === '|') continue;
+      (byPair[pair] ||= []).push(w);
+    }
+    const dupes = Object.values(byPair).filter((group) => group.length > 1);
+    return dupes;
   };
 
   const createMutation = useMutation({
@@ -1185,6 +1203,11 @@ export function PropertyExistingImprovementsModal({
                       <div className="text-sm font-medium text-blue-800 dark:text-blue-200">
                         Demising Wall Cost Allocation
                       </div>
+
+                      <div className="text-xs text-slate-600 dark:text-slate-400 bg-blue-50/60 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-md p-2">
+                        <strong>2 tenants (typical):</strong> one record, full wall cost, split 50/50 between the two adjacent bays.<br />
+                        <strong>4 tenants (building split N/S):</strong> enter <em>two</em> records — a North-half and a South-half — each carrying <strong>half</strong> the wall cost, split 50/50 within its half. Two half-cost records = the full wall, no double-count. Note "North half" / "South half" in the Wall Location below.
+                      </div>
                       
                       <FormField
                         control={form.control}
@@ -1462,6 +1485,31 @@ export function PropertyExistingImprovementsModal({
                     </span>
                   </div>
                 </div>
+
+                {/* Duplicate demising wall warning — likely double-count */}
+                {(() => {
+                  const dupes = getDuplicateWallWarning();
+                  if (dupes.length === 0) return null;
+                  return (
+                    <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="text-amber-600 dark:text-amber-400 mt-0.5">⚠️</div>
+                        <div className="flex-1 text-sm">
+                          <div className="font-medium text-amber-800 dark:text-amber-200 mb-1">
+                            Possible double-counted demising wall
+                          </div>
+                          <div className="text-amber-700 dark:text-amber-300">
+                            {dupes.map((group, i) => (
+                              <div key={i} className="mb-1">
+                                {group.length} records share the same bay pair ({group.map(g => g.description).join(', ')}). If this is one physical wall split North/South, each record should carry <strong>half</strong> the wall cost — not the full amount on both.
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Improvements Table with Per-Item Cost Breakdown */}
                 <div className="border rounded-lg overflow-hidden">

@@ -1254,6 +1254,22 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                                     Speculative Office
                                   </Label>
                                 </div>
+                                {newBay.hasSpeculativeOffice && (
+                                  <div className="ml-6 flex items-center gap-2">
+                                    <Label htmlFor="editOfficeSquareFootage" className="text-xs text-muted-foreground whitespace-nowrap">
+                                      Office SF
+                                    </Label>
+                                    <Input
+                                      id="editOfficeSquareFootage"
+                                      type="text"
+                                      inputMode="numeric"
+                                      className="h-8 text-xs w-32"
+                                      placeholder="e.g., 2,400"
+                                      value={newBay.officeSquareFootage}
+                                      onChange={(e) => setNewBay({ ...newBay, officeSquareFootage: e.target.value })}
+                                    />
+                                  </div>
+                                )}
                                 <div className="flex items-center space-x-2">
                                   <Checkbox 
                                     id="editHasRestroom"

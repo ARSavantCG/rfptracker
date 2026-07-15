@@ -11,6 +11,7 @@ import Navigation from "@/components/navigation";
 import { CustomReportModal } from "@/components/custom-report-modal";
 import { format, parseISO, isAfter, isBefore, addDays } from "date-fns";
 import type { RfpRequest } from "@shared/schema";
+import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 
 interface ReportFilters {
   status?: string;
@@ -87,7 +88,10 @@ export default function Reports() {
         if (incompleteOnly) params.append('incompleteOnly', 'true');
       }
 
-      const response = await fetch(`${url}?${params}`, { credentials: 'include' });
+      const response = await fetch(`${url}?${params}`, {
+        credentials: 'include',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}` },
+      });
       if (!response.ok) throw new Error(`Failed to generate report (${response.status})`);
       const blob = await response.blob();
       const blobUrl = window.URL.createObjectURL(blob);
@@ -104,7 +108,10 @@ export default function Reports() {
       const url = costsInPlacePropertyId
         ? `/api/reports/costs-in-place?propertyId=${costsInPlacePropertyId}`
         : `/api/reports/costs-in-place`;
-      const response = await fetch(url, { credentials: 'include' });
+      const response = await fetch(url, {
+        credentials: 'include',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}` },
+      });
       if (!response.ok) throw new Error(`Failed to generate report (${response.status})`);
       const blob = await response.blob();
       const blobUrl = window.URL.createObjectURL(blob);

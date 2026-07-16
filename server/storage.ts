@@ -1218,7 +1218,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteRomScopeItem(id: number): Promise<boolean> {
     const result = await db.delete(romScopeItems).where(eq(romScopeItems.id, id));
-    return result.rowCount > 0;
+    return (result.rowCount || 0) > 0;
   }
 
   // ROM Pilot Line Item implementation
@@ -1364,38 +1364,6 @@ export class DatabaseStorage implements IStorage {
   }
 
   // ROM Scope Items methods
-  async getAllRomScopeItems(): Promise<RomScopeItem[]> {
-    return await db.select().from(romScopeItems).where(eq(romScopeItems.isActive, true));
-  }
-
-  async createRomScopeItem(scopeItem: InsertRomScopeItem): Promise<RomScopeItem> {
-    const [created] = await db
-      .insert(romScopeItems)
-      .values({
-        ...scopeItem,
-        updatedAt: new Date(),
-      })
-      .returning();
-    return created;
-  }
-
-  async updateRomScopeItem(id: number, updates: Partial<UpdateRomScopeItem>): Promise<RomScopeItem | undefined> {
-    const [updated] = await db
-      .update(romScopeItems)
-      .set({
-        ...updates,
-        updatedAt: new Date(),
-      })
-      .where(eq(romScopeItems.id, id))
-      .returning();
-    return updated || undefined;
-  }
-
-  async deleteRomScopeItem(id: number): Promise<boolean> {
-    const result = await db.delete(romScopeItems).where(eq(romScopeItems.id, id));
-    return (result.rowCount || 0) > 0;
-  }
-
   // RFP Generation History methods
   async getRfpGenerationHistory(rfpId: number): Promise<RfpGenerationHistory[]> {
     return await db
@@ -1465,13 +1433,6 @@ export class DatabaseStorage implements IStorage {
       .where(eq(evaluationBudgetHistory.id, id))
       .returning();
     return updated;
-  }
-
-  async deleteEvaluationBudgetHistory(id: number): Promise<boolean> {
-    const result = await db
-      .delete(evaluationBudgetHistory)
-      .where(eq(evaluationBudgetHistory.id, id));
-    return (result.rowCount || 0) > 0;
   }
 
   // Generate change summary for evaluation budget

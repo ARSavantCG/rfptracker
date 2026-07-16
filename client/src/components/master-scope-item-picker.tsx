@@ -21,6 +21,7 @@ export interface MasterScopeSelection {
     csiDivision?: string;
     unit: string;
     unitPrice: string;
+    calculationBasis?: string | null;
   };
   customDescription?: string;
   description: string;
@@ -128,6 +129,7 @@ export default function MasterScopeItemPicker({
       csiDivision: item.csiDivision ?? undefined,
       unit: item.unit,
       unitPrice: item.unitPrice,
+      calculationBasis: (item as any).calculationBasis ?? null,
     };
     onSelect({
       type: "master",

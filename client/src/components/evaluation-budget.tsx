@@ -1425,12 +1425,19 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         }
       }
 
-      // Permit Fees - auto-populate with TI total
+      // Permit Fees - auto-populate with TI total (basis-aware; legacy default = TI total)
       if (desc.includes("permit") && desc.includes("fee")) {
-        const newQty = tiTotal;
+        const basis = (item.masterItemSnapshot?.calculationBasis || "").toString();
+        if (basis === "lump-sum" || basis === "manual") {
+          return item;
+        }
+        const newQty =
+          basis === "pct-construction-total" ? cmBase :
+          basis === "pct-rentable-sf" ? totalRentableArea :
+          tiTotal;
         const unitPx = parseFloat(item.unitPrice || "0");
         const newTotal = (newQty * unitPx).toString();
-        
+
         if (item.quantity !== newQty || item.totalPrice !== newTotal) {
           return {
             ...item,
@@ -1440,12 +1447,19 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         }
       }
 
-      // Construction Management - auto-populate with TI + DSC (before CM and contingency)
+      // Construction Management - auto-populate with TI + DSC (basis-aware; legacy default = cmBase)
       if (desc.includes("construction") && desc.includes("management")) {
-        const newQty = cmBase;
+        const basis = (item.masterItemSnapshot?.calculationBasis || "").toString();
+        if (basis === "lump-sum" || basis === "manual") {
+          return item;
+        }
+        const newQty =
+          basis === "pct-ti-total" ? tiTotal :
+          basis === "pct-rentable-sf" ? totalRentableArea :
+          cmBase;
         const unitPx = parseFloat(item.unitPrice || "0");
         const newTotal = (newQty * unitPx).toString();
-        
+
         if (item.quantity !== newQty || item.totalPrice !== newTotal) {
           return {
             ...item,
@@ -1490,10 +1504,19 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
           return item;
         }
 
-        const newQty = contingencyBase;
+        // Basis-aware: lump-sum/manual leave quantity alone; pct-* pick the total.
+        // Legacy default = contingencyBase (TI + all DSC except contingency itself).
+        const basis = (item.masterItemSnapshot?.calculationBasis || "").toString();
+        if (basis === "lump-sum" || basis === "manual") {
+          return item;
+        }
+        const newQty =
+          basis === "pct-ti-total" ? tiTotal :
+          basis === "pct-rentable-sf" ? totalRentableArea :
+          contingencyBase;
         const unitPx = parseFloat(item.unitPrice || "0");
         const newTotal = (newQty * unitPx).toString();
-        
+
         if (item.quantity !== newQty || item.totalPrice !== newTotal) {
           return {
             ...item,

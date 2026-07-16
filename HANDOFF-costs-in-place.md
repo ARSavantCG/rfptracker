@@ -113,3 +113,27 @@ Office SF fields ride in the existing `bay_configurations` JSON column — **no 
 - **`/uploads/*` → signed short-lived URLs.** Current fix (section 8) puts the token in the URL. Upgrade to HMAC-signed, time-limited URLs to remove that: change `withAuth()` (client) to fetch a signed URL, and `requireAuthFlexible` (server) to verify the signature instead of the token. Both are single-purpose functions for exactly this reason.
 - Fold the migration endpoint into the app as a token-guarded `/admin/migrate` route so schema changes apply from the running app without branch-swapping on Railway.
 - Root-level cleanup: `test-costs-in-place.ts` and stale `*_cookies.txt` files in repo root (session cookies in a repo = same risk class as a hardcoded token — delete + gitignore).
+
+---
+
+## Session 2026-07-16 (evening) — next-session priorities
+
+- **TOP: fix 5 duplicate methods in `server/storage.ts`** (getAllRomScopeItems,
+  createRomScopeItem, updateRomScopeItem, deleteRomScopeItem,
+  deleteEvaluationBudgetHistory — each defined ~twice, e.g. lines 1187 & 1367). JS
+  uses the SECOND; they DIFFER (first getAllRomScopeItems sorts by category/name, the
+  second doesn't → catalog currently returns UNSORTED). Keep the correct one, delete
+  the dup. Verify carefully — load-bearing.
+- **Extend Calculation Basis** to Permit Fees, Construction Management, Contingency
+  (Builder's Risk done; others still use description-matching in evaluation-budget.tsx).
+- **Reconcile Replit Agent auto-publishing** — it commits "Published your App" and
+  builds from its own workspace, fighting the GitHub-first flow. Decide: Agent off.
+- **Type cleanup (low priority):** 738 total / 83 in eval-budget. Safe: `allData`
+  annotation, null-safety. Skip the ~25 "property doesn't exist" (retyping API = risk).
+
+### Lesson banked this session
+- Catalog modal (rom-scope-items-modal.tsx) has MULTIPLE render paths. The Calculation
+  Basis field was added to a non-editable section first; it compiled into the bundle but
+  never showed because the actual edit form (2nd "Edit: {item.name}" heading) lacked it.
+  ALWAYS grep the edit-form heading count and confirm which path is editable before
+  declaring a form field done. A changed bundle hash confirms new code shipped.

@@ -28,6 +28,17 @@ and live test output are proof. The gold standard is: click the button and watch
 - **Two render paths exist for many things.** Notably bay config has an "Add" form
   AND an "Edit" modal that don't share a component — new fields must go in BOTH.
   Search for all call sites before assuming one edit is enough.
+- **MANDATORY before claiming a form field is done:** count the render paths and
+  confirm the field is in the one that's actually editable. For a modal, grep the
+  edit-form heading (e.g. `grep -c "Edit: {item.name}" the-modal.tsx`) — if it
+  returns >1, there are multiple forms and the field must go in the RIGHT one (the
+  editable path, not a display/preview variant). A field can be present in the file,
+  compile into the bundle, and STILL not appear because it's in the wrong path. If a
+  deployed change "isn't showing," check the bundle hash changed AND which render
+  path the field landed in BEFORE assuming it's a cache/deploy problem.
+- **Duplicate class methods = silent bugs.** If `npm run build` warns "Duplicate
+  member" (e.g. in storage.ts), JS uses the SECOND definition and discards the first
+  — and they may DIFFER (one sorts, one doesn't). Treat these as real bugs, not noise.
 - Match existing patterns (auth, error handling, formatting) rather than inventing.
 
 ## Verification (required, not optional)

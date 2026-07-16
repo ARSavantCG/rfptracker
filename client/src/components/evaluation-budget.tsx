@@ -2627,8 +2627,9 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
     const existingImprovementsData = budgetData.hasExistingImprovements ? 
       prepareLineItemsForExport(budgetData.existingImprovements, 'Existing Improvements') : [];
 
-    // Combine all data
-    let allData = [...tenantImprovementsData, ...designCostsData, ...existingImprovementsData];
+    // Combine all data. Rows mix strings (blank cells for non-numeric columns) and
+    // numbers (computed totals), so the value type is string | number.
+    let allData: Record<string, string | number>[] = [...tenantImprovementsData, ...designCostsData, ...existingImprovementsData];
 
     // Add assemblies
     Object.entries(budgetData.assemblies || {}).forEach(([assemblyName, assemblyData]) => {
@@ -2847,8 +2848,9 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
     const designCostsData = prepareAllLineItemsForExport(budgetData.designSoftCosts, 'Design/Soft Costs');
     const existingImprovementsData = prepareAllLineItemsForExport(budgetData.existingImprovements, 'Existing Improvements');
 
-    // Combine all data
-    let allData = [...tenantImprovementsData, ...designCostsData, ...existingImprovementsData];
+    // Combine all data. Rows mix strings (blank cells for non-numeric columns) and
+    // numbers (computed totals), so the value type is string | number.
+    let allData: Record<string, string | number>[] = [...tenantImprovementsData, ...designCostsData, ...existingImprovementsData];
 
     // Add rollup summary information
     allData.push({});  // Empty row

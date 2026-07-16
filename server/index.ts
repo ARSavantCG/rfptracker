@@ -11,6 +11,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import Templates from "./lib/rfp-templates";
 import { startEmailScheduler } from "./email-scheduler";
+import { runStartupMigrations } from "./startup-migrations";
 
 const app = express();
 app.use(express.json());
@@ -56,6 +57,16 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Schema guard: ensure additive columns exist on the DB this app reads,
+  // BEFORE any route can run a query that references them. Prevents the
+  // "schema ahead of DB → 500" failure class. Safe (additive/idempotent).
+  try {
+    await runStartupMigrations();
+    log("✅ Startup schema check complete");
+  } catch (error) {
+    log(`⚠️  Warning: startup schema check failed: ${error}`);
+  }
+
   // Initialize RFP Templates module
   try {
     await Templates.init();

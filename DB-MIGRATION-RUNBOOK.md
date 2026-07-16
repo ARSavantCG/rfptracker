@@ -109,7 +109,7 @@ Production database successfully moved to Adolfo's own Neon account.
 - Team was offline during cutover; zero data-consistency risk. ~2 min app restart.
 
 ### Post-migration cleanup (do soon)
-- [ ] Rotate the new DB password (it was exposed in a chat session). Neon console → rfptracker-prod → Roles → reset password → update the `DATABASE_URL` secret in Replit + `NEW_DB` if still used.
+- [x] Rotate the new DB password — DONE 2026-07-16, app republished + verified working.
 - [ ] After a few days of confidence: decommission the old `ep-still-mud-a6uzawf6` DB.
 - [ ] Revoke the GitHub PAT used this session.
 - [ ] Delete the Railway test project.

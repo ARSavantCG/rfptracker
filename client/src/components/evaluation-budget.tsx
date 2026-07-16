@@ -1795,9 +1795,9 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
 
     // 🔍 DEBUG: Log property improvements data from API
 
-    const selectedBayIds = (rfp.selectedBayConfigurations?.length > 0
-      ? rfp.selectedBayConfigurations.map(bay => bay.id)
-      : rfp.selectedBayIds) || [];
+    const selectedBayIds = ((rfp?.selectedBayConfigurations?.length ?? 0) > 0
+      ? rfp!.selectedBayConfigurations!.map(bay => bay.id)
+      : rfp?.selectedBayIds) || [];
     const normalizedSelectedBayIds = selectedBayIds.map((id: any) => String(id).replace(/_north$|_south$/i, ''));
     
     // Calculate tenant area using legally compliant totals

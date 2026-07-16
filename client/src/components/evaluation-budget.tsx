@@ -2092,6 +2092,16 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       // Demising wall auto-calculation is handled by the dedicated useEffect below.
       // Do NOT apply it here — doing so would require propertyData in this effect's
       // dependency array, which was the original source of the spurious re-runs.
+      // Restore manual overrides so user edits (e.g. Builder's Risk changed to a
+      // lump sum) survive a reload. Without this, manualOverrides resets to empty
+      // on remount and the auto-populate re-forces quantity = TI total, blowing the
+      // total up to billions and cascading into CM/contingency. The value is saved
+      // under metadata.manualOverrides as an array; rehydrate it into the Set.
+      const savedOverrides = (existingBudget as any).metadata?.manualOverrides;
+      if (Array.isArray(savedOverrides) && savedOverrides.length > 0) {
+        setManualOverrides(new Set(savedOverrides));
+      }
+
       setBudgetData({
         tenantImprovements: cleanedTI,
         designSoftCosts: cleanedDSC,

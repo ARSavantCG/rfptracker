@@ -78,6 +78,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
     unitPrice: "",
     minimumCost: "",
     hasMinimumCost: false,
+    calculationBasis: "manual",
     csiDivision: "",
     csiCode: "",
     source: "",
@@ -955,6 +956,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
       unitPrice: "",
       minimumCost: "",
       hasMinimumCost: false,
+      calculationBasis: "manual",
       csiDivision: "",
       csiCode: "",
       source: "",
@@ -1028,6 +1030,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
       unitPrice: item.unitPrice,
       minimumCost: item.minimumCost || "",
       hasMinimumCost: item.hasMinimumCost || false,
+      calculationBasis: (item as any).calculationBasis || "manual",
       csiDivision: item.csiDivision || "",
       csiCode: item.csiCode || "",
       source: item.source || "",
@@ -1188,6 +1191,28 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                       />
                     </div>
                   </div>
+                </div>
+
+                {/* Calculation Basis — how quantity is derived in RFP evaluations */}
+                <div className="space-y-2">
+                  <Label htmlFor="calculationBasis" className="text-sm font-medium text-gray-700">
+                    Calculation Basis
+                  </Label>
+                  <select
+                    id="calculationBasis"
+                    value={formData.calculationBasis}
+                    onChange={(e) => setFormData({...formData, calculationBasis: e.target.value})}
+                    className="w-full h-10 px-3 text-sm bg-background border border-input rounded-md"
+                  >
+                    <option value="manual">Manual (enter quantity by hand)</option>
+                    <option value="lump-sum">Lump Sum (quantity = 1)</option>
+                    <option value="pct-ti-total">% of TI Total</option>
+                    <option value="pct-construction-total">% of Construction Total</option>
+                    <option value="pct-rentable-sf">Per Rentable SF</option>
+                  </select>
+                  <p className="text-xs text-gray-500">
+                    Controls how this item's quantity fills in during RFP evaluations. For a percentage item (e.g. Builder's Risk = % of TI Total), set the unit price to the rate (e.g. 0.0125 for 1.25%) and pick the matching basis — the evaluation pulls the quantity automatically instead of it being hardcoded.
+                  </p>
                 </div>
 
                 {/* Minimum Cost Section */}

@@ -32,6 +32,7 @@ interface ColumnMigration {
 const ADDITIVE_COLUMNS: ColumnMigration[] = [
   { table: 'property_existing_improvements', column: 'area_sf', type: 'integer' },
   { table: 'property_existing_improvements', column: 'denominator_basis', type: 'text' },
+  { table: 'rom_scope_items', column: 'calculation_basis', type: 'text' },
 ];
 
 export async function runStartupMigrations(): Promise<void> {

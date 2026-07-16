@@ -1082,6 +1082,10 @@ export const romScopeItems = pgTable("rom_scope_items", {
   unitPrice: text("unit_price").notNull(),
   minimumCost: text("minimum_cost"), // Minimum total cost regardless of quantity
   hasMinimumCost: boolean("has_minimum_cost").default(false), // Enable/disable minimum cost logic
+  // How this item's quantity is derived in RFP evaluations. Replaces brittle
+  // description-matching (e.g. "if name has 'builder' + 'risk' → qty = TI total").
+  // null/'manual' = quantity is entered by hand and preserved.
+  calculationBasis: text("calculation_basis"), // 'lump-sum' | 'pct-ti-total' | 'pct-construction-total' | 'pct-rentable-sf' | 'manual'
   category: text("category").notNull(), // "office", "warehouse", "general", etc.
   // CSI (Construction Specifications Institute) Division codes for grouping
   csiDivision: text("csi_division"), // e.g., "16 - Electrical", "22 - Plumbing", "26 - Electrical (MasterFormat)"
@@ -1108,6 +1112,18 @@ export const romScopeItems = pgTable("rom_scope_items", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+
+// How a catalog item's quantity is derived in RFP evaluations. Set on the catalog
+// item so the relationship is explicit and data-driven — no more description-matching.
+export const CALCULATION_BASES = {
+  'manual': 'Manual (enter quantity by hand)',
+  'lump-sum': 'Lump Sum (quantity = 1)',
+  'pct-ti-total': '% of TI Total',
+  'pct-construction-total': '% of Construction Total',
+  'pct-rentable-sf': 'Per Rentable SF',
+} as const;
+
+export type CalculationBasis = keyof typeof CALCULATION_BASES;
 
 export const scopeItemContractorPricing = pgTable("scope_item_contractor_pricing", {
   id: serial("id").primaryKey(),

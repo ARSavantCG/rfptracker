@@ -49,7 +49,7 @@ interface EvaluationLineItem {
   masterCategoryId?: number | null;
   isFixedAllowance?: boolean; // When true, line displays its exact entered value — exempt from hidden-cost distribution
   masterItemId?: number | null; // Links this line item back to a rom_scope_items catalog entry, when picked from a Scope of Work / ROM catalog selection
-  masterItemSnapshot?: { description: string; unit: string; unitPrice: string } | null; // Snapshot of the catalog item at time of selection
+  masterItemSnapshot?: { description: string; unit: string; unitPrice: string; calculationBasis?: string | null } | null; // Snapshot of the catalog item at time of selection
   customDescription?: string | null;
 }
 
@@ -1399,11 +1399,23 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       }
 
       // Builder's Risk Insurance - auto-populate with TI total (same as Permit Fees)
+      // Now basis-aware: if the catalog item has an explicit calculationBasis, honor
+      // it (lump-sum/manual = leave quantity alone; pct-* = use the matching total).
+      // Falls back to description-matching only when no basis is set.
       if (desc.includes("builder") && desc.includes("risk")) {
-        const newQty = tiTotal;
+        const basis = (item.masterItemSnapshot?.calculationBasis || "").toString();
+        // Explicit lump-sum or manual: do NOT auto-populate — respect the user's quantity.
+        if (basis === "lump-sum" || basis === "manual") {
+          return item;
+        }
+        // Explicit basis picks the total; otherwise default to TI total (legacy behavior).
+        const newQty =
+          basis === "pct-construction-total" ? cmBase :
+          basis === "pct-rentable-sf" ? totalRentableArea :
+          tiTotal;
         const unitPx = parseFloat(item.unitPrice || "0");
         const newTotal = (newQty * unitPx).toString();
-        
+
         if (item.quantity !== newQty || item.totalPrice !== newTotal) {
           return {
             ...item,

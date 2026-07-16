@@ -97,3 +97,20 @@ never modified.
 - Rotate credentials (Neon password on the new DB, GitHub PAT, any Railway tokens).
 - Delete the Railway test project.
 - Update HANDOFF/notes: production DB now at NEW host, in your Neon account.
+
+---
+
+## ✅ MIGRATION COMPLETED — 2026-07-16
+
+Production database successfully moved to Adolfo's own Neon account.
+- **New DB:** project `rfptracker-prod`, host `ep-icy-glitter-a6utlfwz`, region AWS us-west-2, in account ar@savantcg.com.
+- **Old DB (decommission after a few days):** `ep-still-mud-a6uzawf6` (Replit-provisioned).
+- Method: pg_dump → wipe new DB → restore → verified counts match (15 properties, 26 improvements, 7 leases) → swapped `DATABASE_URL` secret to the `-pooler` connection string → republished → verified all read/write paths on production.
+- Team was offline during cutover; zero data-consistency risk. ~2 min app restart.
+
+### Post-migration cleanup (do soon)
+- [ ] Rotate the new DB password (it was exposed in a chat session). Neon console → rfptracker-prod → Roles → reset password → update the `DATABASE_URL` secret in Replit + `NEW_DB` if still used.
+- [ ] After a few days of confidence: decommission the old `ep-still-mud-a6uzawf6` DB.
+- [ ] Revoke the GitHub PAT used this session.
+- [ ] Delete the Railway test project.
+- [ ] Keep `backup.sql` / `final.sql` archived off-Replit.

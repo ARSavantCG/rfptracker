@@ -245,13 +245,10 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess, editingRomPilo
                         variant="outline"
                         size="sm"
                         onClick={() => {
-                          const allBays = propertyBayConfigs.map(bay => ({
-                            id: bay.id,
-                            bayName: bay.bayName,
-                            squareFootage: bay.squareFootage
-                          }));
-                          setBayConfigs(allBays);
-                          const totalSF = allBays.reduce((sum, b) => sum + b.squareFootage, 0);
+                          // Select all bays using the full BayConfiguration objects
+                          // (they already have the complete shape selectedBays expects).
+                          setSelectedBays(propertyBayConfigs);
+                          const totalSF = propertyBayConfigs.reduce((sum, b) => sum + (b.squareFootage || 0), 0);
                           setSquareFootage(totalSF.toString());
                         }}
                       >
@@ -262,7 +259,7 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess, editingRomPilo
                         variant="outline"
                         size="sm"
                         onClick={() => {
-                          setBayConfigs([]);
+                          setSelectedBays([]);
                           setSquareFootage("0");
                         }}
                       >
@@ -334,10 +331,12 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess, editingRomPilo
                         <div className="text-xs text-gray-600 pt-2">
                           <div className="font-medium mb-1">Building Orientation</div>
                           <div className="text-gray-500">
-                            {selectedProperty?.firstBayDirection 
-                              ? `Bay 1 faces ${selectedProperty.firstBayDirection.charAt(0).toUpperCase() + selectedProperty.firstBayDirection.slice(1)}`
-                              : "Bay 1 faces North"
-                            }
+                            {(() => {
+                              const dir = selectedProperty?.firstBayDirection;
+                              return dir
+                                ? `Bay 1 faces ${String(dir).charAt(0).toUpperCase() + String(dir).slice(1)}`
+                                : "Bay 1 faces North";
+                            })()}
                           </div>
                         </div>
                       </div>
@@ -377,19 +376,17 @@ export function CreateRomPilotModal({ isOpen, onClose, onSuccess, editingRomPilo
                                   if (isSelected) {
                                     // Remove bay
                                     const newBays = selectedBays.filter(b => b.id !== bay.id);
-                                    setBayConfigs(newBays);
+                                    setSelectedBays(newBays);
                                     const totalSF = newBays.reduce((sum, b) => sum + b.squareFootage, 0);
                                     setSquareFootage(totalSF.toString());
                                   } else {
                                     // Add bay
-                                    const newBay = {
-                                      id: bay.id,
-                                      bayName: displayBayName,
-                                      squareFootage: bay.squareFootage
-                                    };
+                                    // Spread the full bay config (complete shape) and
+                                    // override the display name for the selection.
+                                    const newBay = { ...bay, bayName: displayBayName };
                                     const newBays = [...selectedBays, newBay];
-                                    setBayConfigs(newBays);
-                                    const totalSF = newBays.reduce((sum, b) => sum + b.squareFootage, 0);
+                                    setSelectedBays(newBays);
+                                    const totalSF = newBays.reduce((sum, b) => sum + (b.squareFootage || 0), 0);
                                     setSquareFootage(totalSF.toString());
                                   }
                                 }}

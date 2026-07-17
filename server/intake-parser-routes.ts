@@ -80,17 +80,12 @@ export function registerIntakeParserRoutes(app: Express): void {
 
       const typedText: string = (req.body?.typedText || "").toString();
 
-      // 1) Gather Step-1 files for this RFP. Files may be stored under either the
-      // named step ("Step_1_Entry") or the numeric form ("1") depending on upload
-      // path — check both and dedupe.
-      const namedStep = await storage.getProjectFilesByStep(rfpId, "Step_1_Entry");
-      const numericStep = await storage.getProjectFilesByStep(rfpId, "1");
-      const seenIds = new Set<number>();
-      const step1Files = [...namedStep, ...numericStep].filter((f) => {
-        if (seenIds.has(f.id)) return false;
-        seenIds.add(f.id);
-        return true;
-      });
+      // 1) Gather intake files for this RFP. Files can be stored under different
+      // workflow-step labels depending on the RFP's phase when uploaded (e.g. a file
+      // dropped while the RFP is in validation lands under "Step_2_Validation", not
+      // "Step_1_Entry"). So gather ALL of the RFP's files and let the AI read the
+      // intake material regardless of which step folder it landed in.
+      const step1Files = await storage.getProjectFiles(rfpId);
 
       // 2) Load the active inference rules (the editable knowledge base).
       const rules = await storage.getActiveInferenceRules();
@@ -243,7 +238,13 @@ If you cannot find any scope, return {"proposals": []}.`
 
       res.json({
         proposals: stored,
-        meta: { filesIncluded, skipped, rulesApplied: rules.length },
+        meta: {
+          filesIncluded,
+          skipped,
+          rulesApplied: rules.length,
+          totalFilesFound: step1Files.length,
+          fileNames: step1Files.map((f) => f.originalName),
+        },
       });
     } catch (error: any) {
       console.error("Intake parse error:", error);

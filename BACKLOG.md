@@ -4,9 +4,29 @@
 When Adolfo asks "what's open / outstanding / ready to tackle," this file is the answer.
 Keep it current — move items to **Done** when shipped, add new items as they surface.
 
-**Last updated:** May 2026
+**Last updated:** July 17, 2026
 
 -----
+
+## 🔥 TOP OF LIST — in-flight from the 2026-07-16/17 session (do these first)
+
+*These are the freshest items. Full detail lives in the DESIGN-*.md docs noted.*
+
+| # | Item | Effort | Notes |
+|---|------|--------|-------|
+| 0.1 | **Bundle expansion into evaluation** | M | The ONLY remaining piece of the scope-bundles feature. Adding a "trigger" item (e.g. demising wall) auto-adds its cascade items (electrical/fire-alarm/sprinkler reconfig) as SEPARATE, individually-deletable line items; plus a manual "Add Bundle" button. Both triggers. **This is the only bundle piece that WRITES to the evaluation (money math) — build fresh + careful, click-and-watch.** Spec in `DESIGN-scope-bundles.md` ("Bundle expansion into the evaluation — SPEC"). Rest of bundles (schema/storage/routes/admin UI) is DONE + shipped. |
+| 0.2 | **AI intake parser** | L | Biggest feature. Step 1 files/email/typed-text → Claude reads → proposes scope items (+ desired occupancy date as a cost/feasibility trigger) in Step 2 for dev-team review (accept/edit/reject, bulk actions, manual-add always available). Hybrid catalog-match. Rules in an editable DB table. Full spec in `DESIGN-ai-intake-parser.md`. Foundations exist (ai-routes.ts, files-by-step, catalog). |
+| 0.3 | **Context-aware pricing** | M | Proposed/added scope pulls the RIGHT price at Step 4 from property attrs + qty: 40' clear → 40' demising wall price (new clear-height variant pricing, mirror the SF-tier pattern); 5000sf office → correct SF tier (tiering already exists). Spec in `DESIGN-context-aware-pricing.md`. |
+| 0.4 | **First-gen / second-gen space tracking** | M | Manual flag, property default + per-RFP override (field name `spaceGeneration`, NOT `generation` — collision with doc-generation). Occupancy report segments first-gen (80-90% perm-financing lease-up) vs second-gen separately. Spec in `DESIGN-space-generation.md`. |
+| 0.5 | **App Settings system** | M | Admin-editable settings table + page + `getSetting(key, fallback)`. Seed with branding (single-source already done in `server/lib/branding.ts`), occupancy thresholds (90/70), perm-financing threshold. The AI parser's rules table could share this infra. Audit in `SETTINGS-AUDIT.md`. |
+| 0.6 | **Deploy verification** | S | Pull + Republish, then confirm live: Calculation Basis on the 4 soft costs, the fixed ROM-pilot Select-All button, the new Scope Bundles UI. |
+| 0.7 | **Server-side TS2339s (~22)** | M | Case-by-case; some are real bugs (like buildingName was), some need judgment (getUser is an unimplemented method, not a typo). Investigate individually, don't batch-rename. Do NOT touch the ~500 eval-budget API-typing errors (high risk, no benefit). |
+
+**Cleanup (no rush, days):** decommission old Neon DB (ep-still-mud) after confidence · revoke the session's GitHub PAT · delete the Railway test project.
+
+-----
+
+
 
 ## How to use this file
 

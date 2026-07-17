@@ -89,3 +89,38 @@ This is exactly how the existing master-item picker already drops single catalog
 - Should a bundle carry default quantities, or leave quantity to fill-in at use time?
 - Can bundles nest (a bundle including another bundle)? Probably not v1 — keep flat.
 - Where does "Add Package" live in the eval UI — next to the master item picker?
+
+## Bundle expansion into the evaluation — SPEC (Adolfo 2026-07-17)
+The behavior that makes bundles useful. Two triggers, same result:
+
+1. **Auto-trigger:** when a "trigger item" (e.g. demising wall) is added to an evaluation
+   from the catalog, its bundle-mates (electrical reconfig, fire alarm reconfig, sprinkler
+   reconfig) are **auto-added as separate line items** — silently, no prompt.
+2. **Manual trigger:** an "Add Bundle" button in the evaluation → pick a bundle → its items
+   drop in as separate line items.
+
+Rules:
+- Items land as SEPARATE, independent line items (never merged). Confirmed repeatedly.
+- **Any auto-added line can be deleted individually** — if a given cascade item (e.g. fire
+  alarm) doesn't apply to this deal, Adolfo deletes just that one line. (Construction
+  reality: the cascade usually applies but not always; prune exceptions.)
+- Don't double-add: if an item from the bundle is already in the evaluation, don't add a
+  duplicate (or at least make it easy to remove the dupe).
+- Which catalog item is the "trigger" for auto-add? Options: (a) mark a bundle with a
+  `triggerScopeItemId` (the demising wall) so adding THAT item fires the bundle; (b) or
+  keep auto-add manual-button-only for v1 and add the trigger later. Lean: implement the
+  manual "Add Bundle" button FIRST (safe, no eval-write surprise), then layer the
+  auto-trigger.
+
+### Build location + caution
+This is the ONLY bundle piece that WRITES into the evaluation's line items (money math).
+Everything else (tables, bundle admin UI, routes) is additive and done. Build this piece
+carefully, fresh, verified with click-and-watch — it drops rows into the eval. Reuse the
+existing "add catalog item to eval" path (master-item picker drop), just looped over the
+bundle's items. Each added line must carry the same shape as a normally-added line so it
+prices correctly at Step 4 (context-aware pricing).
+
+### Status of bundles feature
+- DONE: schema (scope_bundles + scope_bundle_items), storage CRUD, routes, admin UI
+  (create bundle + add/remove items) — all shipped, additive, verified.
+- TODO (fresh session): the expansion-into-evaluation described above.

@@ -9,12 +9,12 @@
  * JSON-only response, admin-gated). See DESIGN-ai-intake-parser.md.
  */
 import type { Express } from 'express';
-import { readFileSync } from 'fs';
+import { readFileSync, existsSync } from 'fs';
 import mammoth from 'mammoth';
 import { storage } from './storage';
 import Anthropic from '@anthropic-ai/sdk';
 import { requireAuth, checkPermission } from './middleware';
-import { resolveSecureFilePath } from './file-organization';
+import { resolveSecureFilePath, getSecureDownloadPath } from './file-organization';
 
 // Claude supports these natively as document/image blocks.
 const PDF_MIME = 'application/pdf';
@@ -144,8 +144,16 @@ export function registerIntakeParserRoutes(app: Express): void {
         const isText = mime.startsWith("text/") || /\.(txt|eml|md|csv|html?)$/.test(nameLower);
 
         try {
-          const fullPath = resolveSecureFilePath(f.filePath, process.cwd());
-          if (!fullPath) { skipped.push(f.originalName); skipReasons.push(`${f.originalName}: file not found on disk (path: ${f.filePath})`); continue; }
+          // Use the same resolver the working file-download path uses. RFP file paths
+          // are typically bare filenames stored under uploads/, so resolving against
+          // process.cwd() (as resolveSecureFilePath does) misses them. getSecureDownloadPath
+          // looks under uploads/ (and uploads/projects/).
+          const fullPath = getSecureDownloadPath(f.filePath) || getSecureDownloadPath(`${f.filePath}`);
+          if (!fullPath || !existsSync(fullPath)) {
+            skipped.push(f.originalName);
+            skipReasons.push(`${f.originalName}: not on local disk (path: ${f.filePath}) — may be object-storage only`);
+            continue;
+          }
 
           if (isPdf) {
             const base64 = readFileSync(fullPath).toString('base64');

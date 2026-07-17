@@ -35,7 +35,38 @@ const ADDITIVE_COLUMNS: ColumnMigration[] = [
   { table: 'rom_scope_items', column: 'calculation_basis', type: 'text' },
 ];
 
+// Additive new tables (CREATE TABLE IF NOT EXISTS — idempotent, never drops).
+// Same safety as columns: if creation fails, log and continue, never crash boot.
+const ADDITIVE_TABLES: string[] = [
+  `CREATE TABLE IF NOT EXISTS scope_bundles (
+    id serial PRIMARY KEY,
+    name text NOT NULL,
+    description text,
+    category text,
+    is_active boolean DEFAULT true,
+    created_at timestamp NOT NULL DEFAULT now(),
+    updated_at timestamp NOT NULL DEFAULT now()
+  )`,
+  `CREATE TABLE IF NOT EXISTS scope_bundle_items (
+    id serial PRIMARY KEY,
+    bundle_id integer NOT NULL REFERENCES scope_bundles(id),
+    scope_item_id integer NOT NULL REFERENCES rom_scope_items(id),
+    default_quantity text,
+    notes text,
+    sort_order integer DEFAULT 0,
+    created_at timestamp NOT NULL DEFAULT now()
+  )`,
+];
+
 export async function runStartupMigrations(): Promise<void> {
+  // Additive tables first (columns may target them).
+  for (const ddl of ADDITIVE_TABLES) {
+    try {
+      await db.execute(sql.raw(ddl));
+    } catch (error) {
+      console.warn(`⚠️  Startup table migration skipped:`, (error as Error).message);
+    }
+  }
   for (const m of ADDITIVE_COLUMNS) {
     try {
       // Table/column/type are hardcoded constants above (never user input),

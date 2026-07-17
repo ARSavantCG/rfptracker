@@ -113,6 +113,12 @@ import {
   pdfMappingTemplates,
   type PdfMappingTemplate,
   type InsertPdfMappingTemplate,
+  scopeBundles,
+  scopeBundleItems,
+  type ScopeBundle,
+  type InsertScopeBundle,
+  type ScopeBundleItem,
+  type InsertScopeBundleItem,
 } from "@shared/schema";
 
 // Use schema types for Property Attachments
@@ -1218,6 +1224,56 @@ export class DatabaseStorage implements IStorage {
 
   async deleteRomScopeItem(id: number): Promise<boolean> {
     const result = await db.delete(romScopeItems).where(eq(romScopeItems.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  // ---- Scope Bundles ----
+  async getAllScopeBundles(): Promise<ScopeBundle[]> {
+    return await db.select().from(scopeBundles)
+      .where(eq(scopeBundles.isActive, true))
+      .orderBy(scopeBundles.category, scopeBundles.name);
+  }
+
+  async getScopeBundle(id: number): Promise<ScopeBundle | undefined> {
+    const [bundle] = await db.select().from(scopeBundles).where(eq(scopeBundles.id, id));
+    return bundle || undefined;
+  }
+
+  async getScopeBundleItems(bundleId: number): Promise<ScopeBundleItem[]> {
+    return await db.select().from(scopeBundleItems)
+      .where(eq(scopeBundleItems.bundleId, bundleId))
+      .orderBy(scopeBundleItems.sortOrder);
+  }
+
+  async createScopeBundle(bundle: InsertScopeBundle): Promise<ScopeBundle> {
+    const [created] = await db.insert(scopeBundles)
+      .values({ ...bundle, updatedAt: new Date() })
+      .returning();
+    return created;
+  }
+
+  async updateScopeBundle(id: number, updates: Partial<InsertScopeBundle>): Promise<ScopeBundle | undefined> {
+    const [updated] = await db.update(scopeBundles)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(scopeBundles.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteScopeBundle(id: number): Promise<boolean> {
+    // Remove the bundle's item links first (FK), then the bundle.
+    await db.delete(scopeBundleItems).where(eq(scopeBundleItems.bundleId, id));
+    const result = await db.delete(scopeBundles).where(eq(scopeBundles.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  async addScopeBundleItem(item: InsertScopeBundleItem): Promise<ScopeBundleItem> {
+    const [created] = await db.insert(scopeBundleItems).values(item).returning();
+    return created;
+  }
+
+  async removeScopeBundleItem(id: number): Promise<boolean> {
+    const result = await db.delete(scopeBundleItems).where(eq(scopeBundleItems.id, id));
     return (result.rowCount || 0) > 0;
   }
 

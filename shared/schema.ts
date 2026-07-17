@@ -1212,6 +1212,53 @@ export type UpdateRomPilot = z.infer<typeof updateRomPilotSchema>;
 
 export type RomScopeItem = typeof romScopeItems.$inferSelect;
 export type InsertRomScopeItem = z.infer<typeof insertRomScopeItemSchema>;
+
+// ============================================================================
+// SCOPE BUNDLES — named, reusable groups of catalog scope items (e.g.
+// "Acclimatize Warehouse", "Demising Wall + Cascade"). A bundle is an
+// "add these N at once" template: when pulled/expanded it drops in its
+// component items as SEPARATE line items (never a lumped package line).
+// Bundles reference catalog items by ID so pricing stays single-source.
+// See DESIGN-scope-bundles.md.
+// ============================================================================
+export const scopeBundles = pgTable("scope_bundles", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),                 // e.g. "Acclimatize Warehouse"
+  description: text("description"),
+  category: text("category"),                    // optional grouping, e.g. "warehouse"
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Join: which catalog items belong to a bundle, with optional default quantity.
+export const scopeBundleItems = pgTable("scope_bundle_items", {
+  id: serial("id").primaryKey(),
+  bundleId: integer("bundle_id").notNull().references(() => scopeBundles.id),
+  scopeItemId: integer("scope_item_id").notNull().references(() => romScopeItems.id),
+  defaultQuantity: text("default_quantity"),     // optional; null = fill at use time
+  notes: text("notes"),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertScopeBundleSchema = createInsertSchema(scopeBundles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const updateScopeBundleSchema = insertScopeBundleSchema.partial().extend({
+  id: z.number(),
+});
+export const insertScopeBundleItemSchema = createInsertSchema(scopeBundleItems).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type ScopeBundle = typeof scopeBundles.$inferSelect;
+export type InsertScopeBundle = z.infer<typeof insertScopeBundleSchema>;
+export type ScopeBundleItem = typeof scopeBundleItems.$inferSelect;
+export type InsertScopeBundleItem = z.infer<typeof insertScopeBundleItemSchema>;
 export type UpdateRomScopeItem = z.infer<typeof updateRomScopeItemSchema>;
 
 export type RomPilotLineItem = typeof romPilotLineItems.$inferSelect;

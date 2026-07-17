@@ -10,6 +10,7 @@
  */
 import type { Express } from 'express';
 import { readFileSync } from 'fs';
+import mammoth from 'mammoth';
 import { storage } from './storage';
 import Anthropic from '@anthropic-ai/sdk';
 import { requireAuth, checkPermission } from './middleware';
@@ -79,8 +80,17 @@ export function registerIntakeParserRoutes(app: Express): void {
 
       const typedText: string = (req.body?.typedText || "").toString();
 
-      // 1) Gather Step-1 files for this RFP.
-      const step1Files = await storage.getProjectFilesByStep(rfpId, "Step_1_Entry");
+      // 1) Gather Step-1 files for this RFP. Files may be stored under either the
+      // named step ("Step_1_Entry") or the numeric form ("1") depending on upload
+      // path — check both and dedupe.
+      const namedStep = await storage.getProjectFilesByStep(rfpId, "Step_1_Entry");
+      const numericStep = await storage.getProjectFilesByStep(rfpId, "1");
+      const seenIds = new Set<number>();
+      const step1Files = [...namedStep, ...numericStep].filter((f) => {
+        if (seenIds.has(f.id)) return false;
+        seenIds.add(f.id);
+        return true;
+      });
 
       // 2) Load the active inference rules (the editable knowledge base).
       const rules = await storage.getActiveInferenceRules();
@@ -98,29 +108,60 @@ export function registerIntakeParserRoutes(app: Express): void {
 
       let filesIncluded = 0;
       const skipped: string[] = [];
+      const extractedTexts: string[] = []; // text pulled from Word/email/txt files
       for (const f of step1Files) {
         if (filesIncluded >= MAX_FILES) { skipped.push(f.originalName); continue; }
-        const isPdf = f.mimeType === PDF_MIME;
-        const isImage = f.mimeType && IMAGE_MIMES.includes(f.mimeType);
-        if (!isPdf && !isImage) { skipped.push(f.originalName); continue; }
+        const mime = f.mimeType || "";
+        const nameLower = (f.originalName || "").toLowerCase();
+        const isPdf = mime === PDF_MIME || nameLower.endsWith(".pdf");
+        const isImage = IMAGE_MIMES.includes(mime) || /\.(jpe?g|png|gif|webp)$/.test(nameLower);
+        const isWord = mime.includes("word") || mime.includes("officedocument.wordprocessing") || nameLower.endsWith(".docx");
+        const isText = mime.startsWith("text/") || /\.(txt|eml|md|csv|html?)$/.test(nameLower);
+
         try {
           const fullPath = resolveSecureFilePath(f.filePath, process.cwd());
           if (!fullPath) { skipped.push(f.originalName); continue; }
-          const base64 = readFileSync(fullPath).toString('base64');
+
           if (isPdf) {
+            const base64 = readFileSync(fullPath).toString('base64');
             content.push({
               type: 'document',
               source: { type: 'base64', media_type: PDF_MIME, data: base64 },
               title: f.originalName,
             });
-          } else {
+            filesIncluded++;
+          } else if (isImage) {
+            const base64 = readFileSync(fullPath).toString('base64');
+            const mediaType = mime && IMAGE_MIMES.includes(mime) ? mime : 'image/png';
             content.push({
               type: 'image',
-              source: { type: 'base64', media_type: f.mimeType, data: base64 },
+              source: { type: 'base64', media_type: mediaType, data: base64 },
             });
+            filesIncluded++;
+          } else if (isWord) {
+            // Extract text from .docx via mammoth.
+            const result = await mammoth.extractRawText({ path: fullPath });
+            const txt = (result?.value || "").trim();
+            if (txt) {
+              extractedTexts.push(`--- ${f.originalName} (Word document) ---\n${txt}`);
+              filesIncluded++;
+            } else {
+              skipped.push(f.originalName);
+            }
+          } else if (isText) {
+            // Emails (.eml), plain text, etc. — read directly.
+            const txt = readFileSync(fullPath, 'utf-8').trim();
+            if (txt) {
+              extractedTexts.push(`--- ${f.originalName} ---\n${txt.slice(0, 20000)}`);
+              filesIncluded++;
+            } else {
+              skipped.push(f.originalName);
+            }
+          } else {
+            skipped.push(f.originalName);
           }
-          filesIncluded++;
-        } catch {
+        } catch (err) {
+          console.error(`Intake parser: failed to read ${f.originalName}:`, (err as Error).message);
           skipped.push(f.originalName);
         }
       }
@@ -139,7 +180,7 @@ Also scan for ANY construction-related scope in the material: office buildout, e
 Here is the ROM catalog you can match against (id, name, category):
 ${JSON.stringify(catalogForPrompt)}
 
-${typedText ? `Typed description from the team:\n"""${typedText}"""\n` : ""}${filesIncluded ? `There are ${filesIncluded} attached document(s)/image(s) above — read them.` : "(No readable files attached; work from the typed description and rules.)"}
+${typedText ? `Typed description from the team:\n"""${typedText}"""\n` : ""}${extractedTexts.length ? `\nText extracted from attached documents:\n${extractedTexts.join("\n\n")}\n` : ""}${filesIncluded ? `There are ${filesIncluded} attached/extracted document(s) — read them all.` : "(No readable files attached; work from the typed description and rules.)"}
 
 Propose scope items. Respond with VALID JSON ONLY (no markdown, no prose outside JSON), exactly:
 {

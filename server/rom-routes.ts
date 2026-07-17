@@ -612,6 +612,98 @@ export function registerRomRoutes(app: Express): void {
     }
   });
 
+  // ===================== SCOPE BUNDLES =====================
+  // Named reusable groups of catalog items (e.g. "Demising Wall + Cascade").
+  // A bundle expands into SEPARATE line items when used. See DESIGN-scope-bundles.md.
+
+  // List all active bundles
+  app.get("/api/scope-bundles", requireAuth, async (req, res) => {
+    try {
+      const bundles = await storage.getAllScopeBundles();
+      res.json(bundles);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch scope bundles" });
+    }
+  });
+
+  // Get one bundle WITH its component items (this is what "expand" reads)
+  app.get("/api/scope-bundles/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ message: "Invalid ID" });
+      const bundle = await storage.getScopeBundle(id);
+      if (!bundle) return res.status(404).json({ message: "Bundle not found" });
+      const items = await storage.getScopeBundleItems(id);
+      res.json({ ...bundle, items });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch scope bundle" });
+    }
+  });
+
+  // Create a bundle (admin)
+  app.post("/api/scope-bundles", requireAuth, checkPermission('admin.access'), async (req, res) => {
+    try {
+      const bundle = await storage.createScopeBundle(req.body);
+      res.status(201).json(bundle);
+    } catch (error: any) {
+      console.error("Scope bundle creation error:", error);
+      res.status(400).json({ message: "Invalid bundle data", error: error.message });
+    }
+  });
+
+  // Update a bundle (admin)
+  app.put("/api/scope-bundles/:id", requireAuth, checkPermission('admin.access'), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ message: "Invalid ID" });
+      const bundle = await storage.updateScopeBundle(id, req.body);
+      if (!bundle) return res.status(404).json({ message: "Bundle not found" });
+      res.json(bundle);
+    } catch (error: any) {
+      console.error("Scope bundle update error:", error);
+      res.status(500).json({ message: "Failed to update bundle", error: error.message });
+    }
+  });
+
+  // Delete a bundle (admin) — also removes its item links
+  app.delete("/api/scope-bundles/:id", requireAuth, checkPermission('admin.access'), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ message: "Invalid ID" });
+      const deleted = await storage.deleteScopeBundle(id);
+      if (!deleted) return res.status(404).json({ message: "Bundle not found" });
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete bundle" });
+    }
+  });
+
+  // Add a catalog item to a bundle (admin)
+  app.post("/api/scope-bundles/:id/items", requireAuth, checkPermission('admin.access'), async (req, res) => {
+    try {
+      const bundleId = parseInt(req.params.id);
+      if (isNaN(bundleId)) return res.status(400).json({ message: "Invalid bundle ID" });
+      const item = await storage.addScopeBundleItem({ ...req.body, bundleId });
+      res.status(201).json(item);
+    } catch (error: any) {
+      console.error("Add bundle item error:", error);
+      res.status(400).json({ message: "Invalid bundle item data", error: error.message });
+    }
+  });
+
+  // Remove a catalog item from a bundle (admin)
+  app.delete("/api/scope-bundles/items/:itemId", requireAuth, checkPermission('admin.access'), async (req, res) => {
+    try {
+      const itemId = parseInt(req.params.itemId);
+      if (isNaN(itemId)) return res.status(400).json({ message: "Invalid item ID" });
+      const removed = await storage.removeScopeBundleItem(itemId);
+      if (!removed) return res.status(404).json({ message: "Bundle item not found" });
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to remove bundle item" });
+    }
+  });
+
   // ROM Scope Items file download endpoint
   app.get("/api/rom-scope-items/download/:fileName", requireAuth, async (req, res) => {
     try {

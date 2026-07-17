@@ -10,6 +10,7 @@
  */
 import type { Express } from 'express';
 import { readFileSync, existsSync } from 'fs';
+import path from 'path';
 import mammoth from 'mammoth';
 import { storage } from './storage';
 import Anthropic from '@anthropic-ai/sdk';
@@ -145,21 +146,22 @@ export function registerIntakeParserRoutes(app: Express): void {
         const isText = mime.startsWith("text/") || /\.(txt|eml|md|csv|html?)$/.test(nameLower);
 
         try {
-          // Resolve the file to a Buffer, trying every plausible local location AND
-          // Object Storage. This removes dependence on a single path format.
+          // Mirror the WORKING /uploads/* file server's resolution exactly
+          // (server/routes.ts). filePath here looks like
+          // "uploads/projects/<folder>/Step_1_Entry/<file>".
           let buf: Buffer | null = null;
-          const candidates = [
-            getSecureDownloadPath(f.filePath),
-            getSecureDownloadPath(`uploads/${f.filePath}`),
-            resolveSecureFilePath(f.filePath, process.cwd()),
-            f.filePath,
-          ].filter(Boolean) as string[];
-          for (const p of candidates) {
+          const bare = f.filePath.split('/').pop() || f.filePath;
+          const localCandidates = [
+            path.join(process.cwd(), f.filePath),                        // full nested path
+            path.join(process.cwd(), 'uploads', bare),                   // bare under uploads/
+            path.join(process.cwd(), 'uploads', 'projects', bare),       // bare under uploads/projects/
+          ];
+          for (const p of localCandidates) {
             try { if (existsSync(p)) { buf = readFileSync(p); break; } } catch { /* next */ }
           }
-          // Fall back to Object Storage (files may be there, not on local disk).
+          // Fall back to Object Storage (same as the working server: bare filename,
+          // plus try the full path as urlPath in case it's keyed by full path).
           if (!buf) {
-            const bare = f.filePath.split('/').pop() || f.filePath;
             buf = await downloadFromObjectStorage(bare, f.filePath);
           }
           if (!buf) {

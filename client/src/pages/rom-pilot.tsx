@@ -3,12 +3,13 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Calculator, Edit, Trash2, FileText, ListChecks, Download, Save, Archive, BarChart2, Package } from "lucide-react";
+import { Plus, Calculator, Edit, Trash2, FileText, ListChecks, Download, Save, Archive, BarChart2, Package, Brain } from "lucide-react";
 import Navigation from "@/components/navigation";
 import { CreateRomPilotModal } from "@/components/create-rom-pilot-modal";
 import { RomPilotScopeModal } from "@/components/rom-pilot-scope-modal-new";
 import { RomScopeItemsModal } from "@/components/rom-scope-items-modal";
 import { ScopeBundlesModal } from "@/components/scope-bundles-modal";
+import { InferenceRulesModal } from "@/components/inference-rules-modal";
 import { CostBenchmarks } from "@/components/cost-benchmarks";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -33,6 +34,7 @@ export default function RomPilotPage() {
   const [scopeModalOpen, setScopeModalOpen] = useState(false);
   const [scopeItemsModalOpen, setScopeItemsModalOpen] = useState(false);
   const [bundlesModalOpen, setBundlesModalOpen] = useState(false);
+  const [rulesModalOpen, setRulesModalOpen] = useState(false);
   const [selectedRomPilot, setSelectedRomPilot] = useState<RomPilot | null>(null);
   const [editingRomPilot, setEditingRomPilot] = useState<RomPilot | null>(null);
   const { toast } = useToast();
@@ -236,6 +238,14 @@ export default function RomPilotPage() {
                 <span>Scope Bundles</span>
               </Button>
               <Button
+                variant="outline"
+                onClick={() => setRulesModalOpen(true)}
+                className="flex items-center space-x-2"
+              >
+                <Brain className="h-4 w-4" />
+                <span>AI Rules</span>
+              </Button>
+              <Button
                 onClick={() => setCreateModalOpen(true)}
                 className="flex items-center space-x-2"
               >
@@ -433,6 +443,11 @@ export default function RomPilotPage() {
       <ScopeBundlesModal
         open={bundlesModalOpen}
         onClose={() => setBundlesModalOpen(false)}
+      />
+
+      <InferenceRulesModal
+        open={rulesModalOpen}
+        onClose={() => setRulesModalOpen(false)}
       />
     </div>
   );

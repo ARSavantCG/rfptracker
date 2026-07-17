@@ -22,6 +22,49 @@ const IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 const MAX_FILES = 8;
 
 export function registerIntakeParserRoutes(app: Express): void {
+  // ---- Scope Inference Rules (admin-curated knowledge base) ----
+  app.get("/api/inference-rules", requireAuth, async (_req, res) => {
+    try {
+      const rules = await storage.getAllInferenceRules();
+      res.json(rules);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch inference rules" });
+    }
+  });
+
+  app.post("/api/inference-rules", requireAuth, checkPermission('admin.access'), async (req, res) => {
+    try {
+      const rule = await storage.createInferenceRule(req.body);
+      res.status(201).json(rule);
+    } catch (error: any) {
+      res.status(400).json({ message: "Invalid rule data", error: error?.message });
+    }
+  });
+
+  app.put("/api/inference-rules/:id", requireAuth, checkPermission('admin.access'), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ message: "Invalid ID" });
+      const rule = await storage.updateInferenceRule(id, req.body);
+      if (!rule) return res.status(404).json({ message: "Rule not found" });
+      res.json(rule);
+    } catch (error: any) {
+      res.status(500).json({ message: "Failed to update rule", error: error?.message });
+    }
+  });
+
+  app.delete("/api/inference-rules/:id", requireAuth, checkPermission('admin.access'), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ message: "Invalid ID" });
+      const deleted = await storage.deleteInferenceRule(id);
+      if (!deleted) return res.status(404).json({ message: "Rule not found" });
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete rule" });
+    }
+  });
+
   // Parse Step-1 intake for an RFP and produce proposals.
   // Body may include { typedText?: string } for free-typed description input.
   app.post("/api/ai/intake-parse/:rfpId", requireAuth, checkPermission('admin.access'), async (req, res) => {

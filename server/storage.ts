@@ -119,6 +119,12 @@ import {
   type InsertScopeBundle,
   type ScopeBundleItem,
   type InsertScopeBundleItem,
+  scopeInferenceRules,
+  intakeProposals,
+  type ScopeInferenceRule,
+  type InsertScopeInferenceRule,
+  type IntakeProposal,
+  type InsertIntakeProposal,
 } from "@shared/schema";
 
 // Use schema types for Property Attachments
@@ -1275,6 +1281,66 @@ export class DatabaseStorage implements IStorage {
   async removeScopeBundleItem(id: number): Promise<boolean> {
     const result = await db.delete(scopeBundleItems).where(eq(scopeBundleItems.id, id));
     return (result.rowCount || 0) > 0;
+  }
+
+  // ---- Scope Inference Rules (AI parser knowledge base) ----
+  async getAllInferenceRules(): Promise<ScopeInferenceRule[]> {
+    return await db.select().from(scopeInferenceRules)
+      .orderBy(scopeInferenceRules.triggerType, scopeInferenceRules.triggerValue);
+  }
+
+  async getActiveInferenceRules(): Promise<ScopeInferenceRule[]> {
+    return await db.select().from(scopeInferenceRules)
+      .where(eq(scopeInferenceRules.isActive, true))
+      .orderBy(scopeInferenceRules.triggerType, scopeInferenceRules.triggerValue);
+  }
+
+  async createInferenceRule(rule: InsertScopeInferenceRule): Promise<ScopeInferenceRule> {
+    const [created] = await db.insert(scopeInferenceRules)
+      .values({ ...rule, updatedAt: new Date() })
+      .returning();
+    return created;
+  }
+
+  async updateInferenceRule(id: number, updates: Partial<InsertScopeInferenceRule>): Promise<ScopeInferenceRule | undefined> {
+    const [updated] = await db.update(scopeInferenceRules)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(scopeInferenceRules.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteInferenceRule(id: number): Promise<boolean> {
+    const result = await db.delete(scopeInferenceRules).where(eq(scopeInferenceRules.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  // ---- Intake Proposals (AI parser output, reviewed in Step 2) ----
+  async getIntakeProposals(rfpId: number): Promise<IntakeProposal[]> {
+    return await db.select().from(intakeProposals)
+      .where(eq(intakeProposals.rfpId, rfpId))
+      .orderBy(intakeProposals.createdAt);
+  }
+
+  async createIntakeProposal(proposal: InsertIntakeProposal): Promise<IntakeProposal> {
+    const [created] = await db.insert(intakeProposals)
+      .values({ ...proposal, updatedAt: new Date() })
+      .returning();
+    return created;
+  }
+
+  async updateIntakeProposalStatus(id: number, status: string): Promise<IntakeProposal | undefined> {
+    const [updated] = await db.update(intakeProposals)
+      .set({ status, updatedAt: new Date() })
+      .where(eq(intakeProposals.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteIntakeProposalsForRfp(rfpId: number): Promise<number> {
+    // Used to clear old proposals before a fresh parse run.
+    const result = await db.delete(intakeProposals).where(eq(intakeProposals.rfpId, rfpId));
+    return result.rowCount || 0;
   }
 
   // ROM Pilot Line Item implementation

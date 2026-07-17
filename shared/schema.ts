@@ -1259,6 +1259,58 @@ export type ScopeBundle = typeof scopeBundles.$inferSelect;
 export type InsertScopeBundle = z.infer<typeof insertScopeBundleSchema>;
 export type ScopeBundleItem = typeof scopeBundleItems.$inferSelect;
 export type InsertScopeBundleItem = z.infer<typeof insertScopeBundleItemSchema>;
+
+// ============================================================================
+// AI INTAKE PARSER — reads Step-1 intake (files/email/text), proposes scope.
+// See DESIGN-ai-intake-parser.md.
+//
+// scope_inference_rules = the editable CRE knowledge (the crown jewel). Admin
+// curates these; the AI prompt reads active rules at request time. NOT hardcoded.
+// intake_proposals = the AI's proposed scope items per RFP, reviewed in Step 2.
+// ============================================================================
+export const scopeInferenceRules = pgTable("scope_inference_rules", {
+  id: serial("id").primaryKey(),
+  triggerType: text("trigger_type").notNull(),   // 'keyword' | 'condition'
+  triggerValue: text("trigger_value").notNull(), // e.g. "partial building", "demising wall", "office"
+  impliedScope: text("implied_scope").notNull(), // what to propose (comma/JSON list of item names or a description)
+  notes: text("notes"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const intakeProposals = pgTable("intake_proposals", {
+  id: serial("id").primaryKey(),
+  rfpId: integer("rfp_id").notNull(),
+  description: text("description").notNull(),          // proposed scope item
+  catalogItemId: integer("catalog_item_id"),          // nullable; set when matched to a catalog item
+  matchType: text("match_type").notNull().default("needs-mapping"), // 'catalog-match' | 'needs-mapping'
+  confidence: text("confidence"),                     // 'high' | 'medium' | 'low' (or a number as text)
+  reason: text("reason"),                             // why proposed ("RFP is for suite 200 only")
+  sourceRef: text("source_ref"),                      // which file/field it came from
+  status: text("status").notNull().default("proposed"), // 'proposed' | 'accepted' | 'rejected' | 'edited'
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertScopeInferenceRuleSchema = createInsertSchema(scopeInferenceRules).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const updateScopeInferenceRuleSchema = insertScopeInferenceRuleSchema.partial().extend({
+  id: z.number(),
+});
+export const insertIntakeProposalSchema = createInsertSchema(intakeProposals).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type ScopeInferenceRule = typeof scopeInferenceRules.$inferSelect;
+export type InsertScopeInferenceRule = z.infer<typeof insertScopeInferenceRuleSchema>;
+export type IntakeProposal = typeof intakeProposals.$inferSelect;
+export type InsertIntakeProposal = z.infer<typeof insertIntakeProposalSchema>;
 export type UpdateRomScopeItem = z.infer<typeof updateRomScopeItemSchema>;
 
 export type RomPilotLineItem = typeof romPilotLineItems.$inferSelect;

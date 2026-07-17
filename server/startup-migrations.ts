@@ -56,6 +56,29 @@ const ADDITIVE_TABLES: string[] = [
     sort_order integer DEFAULT 0,
     created_at timestamp NOT NULL DEFAULT now()
   )`,
+  `CREATE TABLE IF NOT EXISTS scope_inference_rules (
+    id serial PRIMARY KEY,
+    trigger_type text NOT NULL,
+    trigger_value text NOT NULL,
+    implied_scope text NOT NULL,
+    notes text,
+    is_active boolean DEFAULT true,
+    created_at timestamp NOT NULL DEFAULT now(),
+    updated_at timestamp NOT NULL DEFAULT now()
+  )`,
+  `CREATE TABLE IF NOT EXISTS intake_proposals (
+    id serial PRIMARY KEY,
+    rfp_id integer NOT NULL,
+    description text NOT NULL,
+    catalog_item_id integer,
+    match_type text NOT NULL DEFAULT 'needs-mapping',
+    confidence text,
+    reason text,
+    source_ref text,
+    status text NOT NULL DEFAULT 'proposed',
+    created_at timestamp NOT NULL DEFAULT now(),
+    updated_at timestamp NOT NULL DEFAULT now()
+  )`,
 ];
 
 export async function runStartupMigrations(): Promise<void> {

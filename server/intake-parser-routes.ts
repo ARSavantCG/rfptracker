@@ -253,19 +253,35 @@ If you cannot find any scope, return {"proposals": []}.`
       const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
       const response = await client.messages.create({
         model: "claude-sonnet-4-5",
-        max_tokens: 2048,
-        system: "You are a precise CRE construction scope analyst. Respond with valid JSON only.",
+        max_tokens: 4096,
+        system: "You are a precise CRE construction scope analyst. Respond with valid JSON only — no markdown, no preamble, no text outside the JSON object.",
         messages: [{ role: "user", content }],
       });
 
       const text = response.content[0]?.type === 'text' ? response.content[0].text : '';
+      const stopReason = (response as any)?.stop_reason;
       let parsed: any;
       try {
-        const clean = text.replace(/```json|```/g, '').trim();
+        // Strip markdown fences, then extract the outermost JSON object in case Claude
+        // added any stray text before/after it.
+        let clean = text.replace(/```json|```/g, '').trim();
+        const firstBrace = clean.indexOf('{');
+        const lastBrace = clean.lastIndexOf('}');
+        if (firstBrace >= 0 && lastBrace > firstBrace) {
+          clean = clean.slice(firstBrace, lastBrace + 1);
+        }
         parsed = JSON.parse(clean);
       } catch (e) {
-        console.error("Intake parser: failed to parse Claude JSON:", text.substring(0, 400));
-        return res.status(502).json({ message: "AI returned an unreadable response. Try again." });
+        // Log the raw response + stop reason so we can see WHY it failed.
+        console.error(`Intake parser: JSON parse failed. stop_reason=${stopReason}, length=${text.length}, raw start:`, text.substring(0, 300));
+        console.error(`Intake parser: raw end:`, text.substring(Math.max(0, text.length - 200)));
+        const hint = stopReason === 'max_tokens'
+          ? "AI response was cut off (too long). "
+          : "";
+        return res.status(502).json({
+          message: `${hint}AI returned an unreadable response. Try again.`,
+          meta: { stopReason, responseLength: text.length, responsePreview: text.substring(0, 200) },
+        });
       }
 
       const proposals = Array.isArray(parsed?.proposals) ? parsed.proposals : [];

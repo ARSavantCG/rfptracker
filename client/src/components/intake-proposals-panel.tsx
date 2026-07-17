@@ -16,6 +16,7 @@ export function IntakeProposalsPanel({ rfpId }: IntakeProposalsPanelProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [typedText, setTypedText] = useState("");
+  const [lastMeta, setLastMeta] = useState<any>(null);
 
   const { data: proposals = [], isLoading } = useQuery<IntakeProposal[]>({
     queryKey: ["/api/intake-proposals", rfpId],
@@ -26,6 +27,7 @@ export function IntakeProposalsPanel({ rfpId }: IntakeProposalsPanelProps) {
     mutationFn: () => apiRequest(`/api/ai/intake-parse/${rfpId}`, "POST", { typedText }),
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/intake-proposals", rfpId] });
+      setLastMeta(data?.meta ?? null);
       const n = data?.proposals?.length ?? 0;
       toast({
         title: `AI proposed ${n} scope item${n === 1 ? "" : "s"}`,
@@ -77,6 +79,21 @@ export function IntakeProposalsPanel({ rfpId }: IntakeProposalsPanelProps) {
         placeholder="Optional: paste a broker email or type notes to include in the parse (e.g. 'tenant only taking the north half, needs 2000A power')"
         className="w-full text-sm border border-input rounded-md p-2 min-h-[60px]"
       />
+
+      {/* Diagnostics — shows what the parse actually saw */}
+      {lastMeta && (
+        <div className="text-xs bg-white border rounded-md p-2 text-gray-600 space-y-0.5">
+          <div><strong>Files found for this RFP:</strong> {lastMeta.totalFilesFound ?? 0}</div>
+          {lastMeta.fileNames?.length > 0 && (
+            <div><strong>Files:</strong> {lastMeta.fileNames.join(", ")}</div>
+          )}
+          <div><strong>Files read by AI:</strong> {lastMeta.filesIncluded ?? 0}</div>
+          {lastMeta.skipped?.length > 0 && (
+            <div className="text-amber-600"><strong>Skipped:</strong> {lastMeta.skipped.join(", ")}</div>
+          )}
+          <div><strong>Rules applied:</strong> {lastMeta.rulesApplied ?? 0}</div>
+        </div>
+      )}
 
       {/* Bulk actions */}
       {pendingCount > 0 && (

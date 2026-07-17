@@ -157,11 +157,23 @@ export function registerIntakeParserRoutes(app: Express): void {
             path.join(process.cwd(), 'uploads', 'projects', bare),       // bare under uploads/projects/
           ];
           for (const p of localCandidates) {
-            try { if (existsSync(p)) { buf = readFileSync(p); break; } } catch { /* next */ }
+            let ok = false;
+            try { ok = existsSync(p); } catch { ok = false; }
+            console.log(`[intake-parser] candidate: ${p} exists=${ok}`);
+            if (ok) { buf = readFileSync(p); break; }
           }
           // Fall back to Object Storage (same as the working server: bare filename,
           // plus try the full path as urlPath in case it's keyed by full path).
           if (!buf) {
+            // Diagnostic: list what actually exists in the file's directory on disk.
+            try {
+              const dir = path.dirname(path.join(process.cwd(), f.filePath));
+              const { readdirSync } = await import('fs');
+              const entries = existsSync(dir) ? readdirSync(dir) : ['(dir does not exist)'];
+              console.log(`[intake-parser] dir ${dir} contains:`, entries);
+            } catch (e) {
+              console.log(`[intake-parser] could not list dir:`, (e as Error).message);
+            }
             buf = await downloadFromObjectStorage(bare, f.filePath);
           }
           if (!buf) {

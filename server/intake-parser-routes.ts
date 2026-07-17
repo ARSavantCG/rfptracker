@@ -1,0 +1,198 @@
+/**
+ * RFP Tracker - AI Intake Parser Routes
+ *
+ * Reads Step-1 intake (uploaded files + typed text) for an RFP, applies the
+ * admin-curated scope inference rules, and proposes scope items (stored as
+ * intake_proposals) for the dev team to review in Step 2.
+ *
+ * Follows the proven ai-routes.ts pattern (Anthropic SDK, claude-sonnet-4-5,
+ * JSON-only response, admin-gated). See DESIGN-ai-intake-parser.md.
+ */
+import type { Express } from 'express';
+import { readFileSync } from 'fs';
+import { storage } from './storage';
+import Anthropic from '@anthropic-ai/sdk';
+import { requireAuth, checkPermission } from './middleware';
+import { resolveSecureFilePath } from './file-organization';
+
+// Claude supports these natively as document/image blocks.
+const PDF_MIME = 'application/pdf';
+const IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+// Cap how much file content we send, to bound token cost.
+const MAX_FILES = 8;
+
+export function registerIntakeParserRoutes(app: Express): void {
+  // Parse Step-1 intake for an RFP and produce proposals.
+  // Body may include { typedText?: string } for free-typed description input.
+  app.post("/api/ai/intake-parse/:rfpId", requireAuth, checkPermission('admin.access'), async (req, res) => {
+    try {
+      const rfpId = parseInt(req.params.rfpId);
+      if (isNaN(rfpId)) {
+        return res.status(400).json({ message: "Invalid RFP ID" });
+      }
+      if (!process.env.ANTHROPIC_API_KEY) {
+        return res.status(500).json({ message: "AI is not configured (missing API key)." });
+      }
+
+      const typedText: string = (req.body?.typedText || "").toString();
+
+      // 1) Gather Step-1 files for this RFP.
+      const step1Files = await storage.getProjectFilesByStep(rfpId, "Step_1_Entry");
+
+      // 2) Load the active inference rules (the editable knowledge base).
+      const rules = await storage.getActiveInferenceRules();
+
+      // 3) Load the catalog (names + categories) so Claude can catalog-match.
+      const catalog = await storage.getAllRomScopeItems();
+      const catalogForPrompt = catalog.map((c) => ({ id: c.id, name: c.name, category: c.category }));
+
+      // 4) Build the message content: typed text + readable files (PDF/image as blocks).
+      const content: any[] = [];
+
+      const rulesText = rules.length
+        ? rules.map((r) => `- IF ${r.triggerType} "${r.triggerValue}" THEN propose: ${r.impliedScope}`).join("\n")
+        : "(no custom rules yet — use general CRE construction judgment)";
+
+      let filesIncluded = 0;
+      const skipped: string[] = [];
+      for (const f of step1Files) {
+        if (filesIncluded >= MAX_FILES) { skipped.push(f.originalName); continue; }
+        const isPdf = f.mimeType === PDF_MIME;
+        const isImage = f.mimeType && IMAGE_MIMES.includes(f.mimeType);
+        if (!isPdf && !isImage) { skipped.push(f.originalName); continue; }
+        try {
+          const fullPath = resolveSecureFilePath(f.filePath, process.cwd());
+          if (!fullPath) { skipped.push(f.originalName); continue; }
+          const base64 = readFileSync(fullPath).toString('base64');
+          if (isPdf) {
+            content.push({
+              type: 'document',
+              source: { type: 'base64', media_type: PDF_MIME, data: base64 },
+              title: f.originalName,
+            });
+          } else {
+            content.push({
+              type: 'image',
+              source: { type: 'base64', media_type: f.mimeType, data: base64 },
+            });
+          }
+          filesIncluded++;
+        } catch {
+          skipped.push(f.originalName);
+        }
+      }
+
+      // The instruction block (always last, after the documents).
+      content.push({
+        type: 'text',
+        text:
+`You are a commercial real estate construction scope analyst for industrial tenant-improvement projects.
+
+Apply these scope inference rules (curated by the dev team):
+${rulesText}
+
+Also scan for ANY construction-related scope in the material: office buildout, electrical/power, HVAC/air conditioning, plumbing, parking, dock levelers/dock packages, demising walls, fire alarm, fire sprinkler, lighting, and similar. Note any tenant desired occupancy/delivery date (it can drive overtime/feasibility).
+
+Here is the ROM catalog you can match against (id, name, category):
+${JSON.stringify(catalogForPrompt)}
+
+${typedText ? `Typed description from the team:\n"""${typedText}"""\n` : ""}${filesIncluded ? `There are ${filesIncluded} attached document(s)/image(s) above — read them.` : "(No readable files attached; work from the typed description and rules.)"}
+
+Propose scope items. Respond with VALID JSON ONLY (no markdown, no prose outside JSON), exactly:
+{
+  "proposals": [
+    {
+      "description": "short scope item name",
+      "catalogItemId": <number or null>,   // the catalog id if you are confident it matches one, else null
+      "matchType": "catalog-match" | "needs-mapping",
+      "confidence": "high" | "medium" | "low",
+      "reason": "why proposed (cite the trigger, e.g. 'RFP is for suite 200 only → demising wall')",
+      "sourceRef": "which file or 'typed text' this came from"
+    }
+  ]
+}
+If you cannot find any scope, return {"proposals": []}.`
+      });
+
+      // 5) Call Claude.
+      const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+      const response = await client.messages.create({
+        model: "claude-sonnet-4-5",
+        max_tokens: 2048,
+        system: "You are a precise CRE construction scope analyst. Respond with valid JSON only.",
+        messages: [{ role: "user", content }],
+      });
+
+      const text = response.content[0]?.type === 'text' ? response.content[0].text : '';
+      let parsed: any;
+      try {
+        const clean = text.replace(/```json|```/g, '').trim();
+        parsed = JSON.parse(clean);
+      } catch (e) {
+        console.error("Intake parser: failed to parse Claude JSON:", text.substring(0, 400));
+        return res.status(502).json({ message: "AI returned an unreadable response. Try again." });
+      }
+
+      const proposals = Array.isArray(parsed?.proposals) ? parsed.proposals : [];
+
+      // 6) Replace any prior proposals for this RFP, then store the new ones.
+      await storage.deleteIntakeProposalsForRfp(rfpId);
+      const stored = [];
+      for (const p of proposals) {
+        // Validate catalogItemId actually exists; else force needs-mapping.
+        let catalogItemId: number | null = null;
+        if (typeof p.catalogItemId === 'number' && catalog.some((c) => c.id === p.catalogItemId)) {
+          catalogItemId = p.catalogItemId;
+        }
+        const created = await storage.createIntakeProposal({
+          rfpId,
+          description: (p.description || "Untitled scope").toString().slice(0, 500),
+          catalogItemId,
+          matchType: catalogItemId ? "catalog-match" : "needs-mapping",
+          confidence: (p.confidence || "medium").toString(),
+          reason: (p.reason || "").toString().slice(0, 1000),
+          sourceRef: (p.sourceRef || "").toString().slice(0, 300),
+          status: "proposed",
+        } as any);
+        stored.push(created);
+      }
+
+      res.json({
+        proposals: stored,
+        meta: { filesIncluded, skipped, rulesApplied: rules.length },
+      });
+    } catch (error: any) {
+      console.error("Intake parse error:", error);
+      res.status(500).json({ message: "Failed to parse intake", error: error?.message });
+    }
+  });
+
+  // Read proposals for an RFP (Step 2 review panel).
+  app.get("/api/intake-proposals/:rfpId", requireAuth, async (req, res) => {
+    try {
+      const rfpId = parseInt(req.params.rfpId);
+      if (isNaN(rfpId)) return res.status(400).json({ message: "Invalid RFP ID" });
+      const proposals = await storage.getIntakeProposals(rfpId);
+      res.json(proposals);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch proposals" });
+    }
+  });
+
+  // Update a proposal's status (accept / reject / edited).
+  app.patch("/api/intake-proposals/:id/status", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ message: "Invalid ID" });
+      const status = (req.body?.status || "").toString();
+      if (!["proposed", "accepted", "rejected", "edited"].includes(status)) {
+        return res.status(400).json({ message: "Invalid status" });
+      }
+      const updated = await storage.updateIntakeProposalStatus(id, status);
+      if (!updated) return res.status(404).json({ message: "Proposal not found" });
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update proposal" });
+    }
+  });
+}

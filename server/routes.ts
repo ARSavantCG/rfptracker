@@ -63,6 +63,7 @@ import { registerPropertyRoutes } from './property-routes';
 import { registerCostsInPlaceReportRoutes } from './costs-in-place-report';
 import { registerOccupancyReportRoutes } from './occupancy-report';
 import { registerAiRoutes } from './ai-routes';
+import { registerIntakeParserRoutes } from './intake-parser-routes';
 import { registerProposalsRoutes } from './proposals-routes';
 import { registerDashboardRoutes } from './dashboard-routes';
 import { streamFromObjectStorage, listObjectStorageFiles } from './storage-backup';
@@ -87,6 +88,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerCostsInPlaceReportRoutes(app);
   registerOccupancyReportRoutes(app);
   registerAiRoutes(app);
+  registerIntakeParserRoutes(app);
   registerProposalsRoutes(app);
   registerDashboardRoutes(app);
 

@@ -32,6 +32,27 @@ instead of the AI holding a loose rule "demising implies 4 things," the rule jus
 to the bundle, and the bundle defines the 4 items. Cleaner, and the bundle is reusable
 outside the AI too.
 
+## CRITICAL design decision: bundles EXPAND into separate line items (not a lumped line)
+When a bundle is pulled in (manually or via AI), it **explodes into its individual
+component line items** — NOT one collapsed "Demising Wall Package: $X" line. Adolfo's
+requirement (2026-07-17): keep the wall, electrical reconfig, fire alarm reconfig, and
+sprinkler reconfig as SEPARATE line items.
+
+Rationale: each has its own cost, contractor, trade, and $/SF; they're priced, bid,
+compared, and tracked independently. A demising wall is structural; electrical reconfig
+is a different trade with a different bid. They must stay distinct in the evaluation.
+
+So a bundle is a **template/expander (an "add these N at once" shortcut)**, NOT a
+permanent wrapper that hides or groups the components. After expansion:
+- The N items are ordinary, independent line items.
+- Each is individually editable, re-priceable, and removable.
+- There is no lingering "package" object grouping them at the evaluation level.
+- (The bundle definition still exists in the catalog for reuse; it just doesn't persist
+  as a container on the evaluation.)
+
+This is exactly how the existing master-item picker already drops single catalog items in
+— a bundle just drops in several at once, each as its own line.
+
 ## Model (build plan)
 1. **Schema:**
    - `scope_bundles` table: `id`, `name` ("Acclimatize Warehouse"), `description`,

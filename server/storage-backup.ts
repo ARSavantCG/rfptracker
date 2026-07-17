@@ -79,3 +79,37 @@ export async function streamFromObjectStorage(filename: string, res: Response, u
   }
   return false;
 }
+
+/**
+ * Download a file from Object Storage as a Buffer (for server-side reading,
+ * not streaming to a response). Tries the same candidate keys as streamFromObjectStorage.
+ * Returns null if not found or object storage isn't configured.
+ */
+export async function downloadFromObjectStorage(filename: string, urlPath?: string): Promise<Buffer | null> {
+  const privateDir = process.env.PRIVATE_OBJECT_DIR;
+  if (!privateDir) return null;
+  const { bucketName, objectName: dirPrefix } = parseOSPath(privateDir);
+
+  const candidates: string[] = [`${dirPrefix}/uploads/${filename}`];
+  if (urlPath) {
+    const cleanPath = urlPath.startsWith('/') ? urlPath.slice(1) : urlPath;
+    const c2 = `${dirPrefix}/${cleanPath}`;
+    if (c2 !== candidates[0]) candidates.push(c2);
+    if (cleanPath !== candidates[0] && cleanPath !== c2) candidates.push(cleanPath);
+  }
+
+  const bucket = objectStorageClient.bucket(bucketName);
+  for (const objectName of candidates) {
+    try {
+      const file = bucket.file(objectName);
+      const [exists] = await file.exists();
+      if (exists) {
+        const [buf] = await file.download();
+        return buf as Buffer;
+      }
+    } catch {
+      // try next candidate
+    }
+  }
+  return null;
+}

@@ -15,6 +15,7 @@ import { storage } from './storage';
 import Anthropic from '@anthropic-ai/sdk';
 import { requireAuth, checkPermission } from './middleware';
 import { resolveSecureFilePath, getSecureDownloadPath } from './file-organization';
+import { downloadFromObjectStorage } from './storage-backup';
 
 // Claude supports these natively as document/image blocks.
 const PDF_MIME = 'application/pdf';
@@ -144,36 +145,45 @@ export function registerIntakeParserRoutes(app: Express): void {
         const isText = mime.startsWith("text/") || /\.(txt|eml|md|csv|html?)$/.test(nameLower);
 
         try {
-          // Use the same resolver the working file-download path uses. RFP file paths
-          // are typically bare filenames stored under uploads/, so resolving against
-          // process.cwd() (as resolveSecureFilePath does) misses them. getSecureDownloadPath
-          // looks under uploads/ (and uploads/projects/).
-          const fullPath = getSecureDownloadPath(f.filePath) || getSecureDownloadPath(`${f.filePath}`);
-          if (!fullPath || !existsSync(fullPath)) {
+          // Resolve the file to a Buffer, trying every plausible local location AND
+          // Object Storage. This removes dependence on a single path format.
+          let buf: Buffer | null = null;
+          const candidates = [
+            getSecureDownloadPath(f.filePath),
+            getSecureDownloadPath(`uploads/${f.filePath}`),
+            resolveSecureFilePath(f.filePath, process.cwd()),
+            f.filePath,
+          ].filter(Boolean) as string[];
+          for (const p of candidates) {
+            try { if (existsSync(p)) { buf = readFileSync(p); break; } } catch { /* next */ }
+          }
+          // Fall back to Object Storage (files may be there, not on local disk).
+          if (!buf) {
+            const bare = f.filePath.split('/').pop() || f.filePath;
+            buf = await downloadFromObjectStorage(bare, f.filePath);
+          }
+          if (!buf) {
             skipped.push(f.originalName);
-            skipReasons.push(`${f.originalName}: not on local disk (path: ${f.filePath}) — may be object-storage only`);
+            skipReasons.push(`${f.originalName}: not found on disk or object storage (path: ${f.filePath})`);
             continue;
           }
 
           if (isPdf) {
-            const base64 = readFileSync(fullPath).toString('base64');
             content.push({
               type: 'document',
-              source: { type: 'base64', media_type: PDF_MIME, data: base64 },
+              source: { type: 'base64', media_type: PDF_MIME, data: buf.toString('base64') },
               title: f.originalName,
             });
             filesIncluded++;
           } else if (isImage) {
-            const base64 = readFileSync(fullPath).toString('base64');
             const mediaType = mime && IMAGE_MIMES.includes(mime) ? mime : 'image/png';
             content.push({
               type: 'image',
-              source: { type: 'base64', media_type: mediaType, data: base64 },
+              source: { type: 'base64', media_type: mediaType, data: buf.toString('base64') },
             });
             filesIncluded++;
           } else if (isWord) {
-            // Extract text from .docx via mammoth.
-            const result = await mammoth.extractRawText({ path: fullPath });
+            const result = await mammoth.extractRawText({ buffer: buf });
             const txt = (result?.value || "").trim();
             if (txt) {
               extractedTexts.push(`--- ${f.originalName} (Word document) ---\n${txt}`);
@@ -183,10 +193,8 @@ export function registerIntakeParserRoutes(app: Express): void {
               skipReasons.push(`${f.originalName}: Word doc had no extractable text`);
             }
           } else if (nameLower.endsWith(".msg")) {
-            // Outlook .msg (binary) — parse with msgreader.
             try {
               const { default: MsgReader } = await import('@kenjiuno/msgreader');
-              const buf = readFileSync(fullPath);
               const reader = new (MsgReader as any)(buf);
               const data = reader.getFileData();
               const body = (data?.body || data?.bodyHTML || "").toString().trim();
@@ -204,8 +212,7 @@ export function registerIntakeParserRoutes(app: Express): void {
               skipReasons.push(`${f.originalName}: .msg parse failed (${(msgErr as Error).message})`);
             }
           } else if (isText) {
-            // .eml, plain text, etc. — read directly.
-            const txt = readFileSync(fullPath, 'utf-8').trim();
+            const txt = buf.toString('utf-8').trim();
             if (txt) {
               extractedTexts.push(`--- ${f.originalName} ---\n${txt.slice(0, 20000)}`);
               filesIncluded++;

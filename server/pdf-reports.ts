@@ -1,4 +1,4 @@
-import { getBrandLogo as getBridgeLogo } from './lib/branding';
+import { getBrandLogo as getBridgeLogo, BRAND_COLOR_PRIMARY } from './lib/branding';
 import puppeteer from "puppeteer";
 import { format, parseISO, isAfter, isBefore, addDays } from "date-fns";
 import type { RfpRequest } from "@shared/schema";
@@ -87,7 +87,7 @@ export function generateExecutiveReportHtml(data: ReportData): string {
         }
         
         .header {
-          border-bottom: 3px solid rgb(0,50,130);
+          border-bottom: 3px solid ${BRAND_COLOR_PRIMARY};
           padding-bottom: 20px;
           margin-bottom: 30px;
           position: relative;
@@ -101,9 +101,9 @@ export function generateExecutiveReportHtml(data: ReportData): string {
         .document-title {
           font-size: 24px;
           font-weight: bold;
-          color: rgb(0,50,130);
+          color: ${BRAND_COLOR_PRIMARY};
           margin-bottom: 10px;
-          background: rgb(0,50,130);
+          background: ${BRAND_COLOR_PRIMARY};
           color: white;
           padding: 10px;
           border-radius: 5px;
@@ -262,7 +262,7 @@ export function generateExecutiveReportHtml(data: ReportData): string {
           <img src="${getBridgeLogo()}" alt="Kurv Industrial" style="height: 30px; width: auto;" />
           <!-- Development Contact -->
           <div class="company-info">
-            <div style="font-weight: bold; color: rgb(0,50,130); margin-bottom: 2px;">Development Contact</div>
+            <div style="font-weight: bold; color: ${BRAND_COLOR_PRIMARY}; margin-bottom: 2px;">Development Contact</div>
             <div style="font-size: 11px; color: #666;">
               ${rfps.length > 0 && rfps[0].developmentContact ? rfps[0].developmentContact : 'Contact information available upon request'}
             </div>

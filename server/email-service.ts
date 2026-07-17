@@ -1,3 +1,4 @@
+import { COMPANY_NAME } from './lib/branding';
 import sgMail from '@sendgrid/mail';
 import { storage } from './storage';
 import { RfpRequest, Contact } from '@shared/schema';
@@ -390,7 +391,7 @@ function generateRfpSummaryHtml(rfp: RfpRequest): string {
       ` : ''}
 
       <div class="footer">
-        <p>RFP Tracker System - Kurv Industrial</p>
+        <p>RFP Tracker System - ${COMPANY_NAME}</p>
       </div>
     </body>
     </html>

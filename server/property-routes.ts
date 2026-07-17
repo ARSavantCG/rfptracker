@@ -2,7 +2,7 @@
  * RFP Tracker - Property Routes
  * Copyright (c) 2025 Savant Consulting Group LLC. All rights reserved.
  */
-import { getBrandLogo as getBridgeLogo } from './lib/branding';
+import { getBrandLogo as getBridgeLogo, BRAND_COLOR_PRIMARY } from './lib/branding';
 import type { Express } from 'express';
 import { storage } from './storage';
 import { db } from './db';
@@ -94,8 +94,8 @@ function generatePropertyPrintHtml(property: any, executedLeases: any[], propert
   }
   body { font-family: 'Segoe UI', sans-serif; font-size: 12px; margin: 0; padding: 20px; line-height: 1.4; }
   .no-print { background: #3b82f6; color: white; padding: 15px; text-align: center; margin-bottom: 20px; border-radius: 8px; }
-  .header { border-bottom: 3px solid rgb(0,50,130); padding-bottom: 20px; margin-bottom: 30px; position: relative; }
-  .document-title { font-size: 28px; font-weight: bold; color: rgb(0,50,130); margin-bottom: 10px; background: rgb(0,50,130); color: white; padding: 10px; border-radius: 5px; text-align: center; }
+  .header { border-bottom: 3px solid ${BRAND_COLOR_PRIMARY}; padding-bottom: 20px; margin-bottom: 30px; position: relative; }
+  .document-title { font-size: 28px; font-weight: bold; color: ${BRAND_COLOR_PRIMARY}; margin-bottom: 10px; background: ${BRAND_COLOR_PRIMARY}; color: white; padding: 10px; border-radius: 5px; text-align: center; }
   .header .subtitle { font-size: 16px; color: #666; margin: 5px 0; text-align: center; }
   .section { margin-bottom: 30px; }
   .section h2 { font-size: 18px; color: #1f2937; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; margin-bottom: 15px; }
@@ -806,8 +806,8 @@ export function registerPropertyRoutes(app: Express): void {
           <title>Bay Configurations - ${property.propertyName}</title>
           <style>
             body { font-family: 'Segoe UI', sans-serif; margin: 20px; }
-            .header { border-bottom: 3px solid rgb(0,50,130); padding-bottom: 20px; margin-bottom: 30px; position: relative; }
-            .document-title { font-size: 24px; font-weight: bold; color: rgb(0,50,130); margin-bottom: 10px; background: rgb(0,50,130); color: white; padding: 10px; border-radius: 5px; text-align: center; }
+            .header { border-bottom: 3px solid ${BRAND_COLOR_PRIMARY}; padding-bottom: 20px; margin-bottom: 30px; position: relative; }
+            .document-title { font-size: 24px; font-weight: bold; color: ${BRAND_COLOR_PRIMARY}; margin-bottom: 10px; background: ${BRAND_COLOR_PRIMARY}; color: white; padding: 10px; border-radius: 5px; text-align: center; }
             .property-name { font-size: 18px; color: #666; text-align: center; margin-bottom: 20px; }
             h1 { color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px; }
             table { width: 100%; border-collapse: collapse; margin: 20px 0; }
@@ -891,8 +891,8 @@ export function registerPropertyRoutes(app: Express): void {
           <title>Executed Leases - ${property.propertyName}</title>
           <style>
             body { font-family: 'Segoe UI', sans-serif; margin: 20px; }
-            .header { border-bottom: 3px solid rgb(0,50,130); padding-bottom: 20px; margin-bottom: 30px; position: relative; }
-            .document-title { font-size: 24px; font-weight: bold; color: rgb(0,50,130); margin-bottom: 10px; background: rgb(0,50,130); color: white; padding: 10px; border-radius: 5px; text-align: center; }
+            .header { border-bottom: 3px solid ${BRAND_COLOR_PRIMARY}; padding-bottom: 20px; margin-bottom: 30px; position: relative; }
+            .document-title { font-size: 24px; font-weight: bold; color: ${BRAND_COLOR_PRIMARY}; margin-bottom: 10px; background: ${BRAND_COLOR_PRIMARY}; color: white; padding: 10px; border-radius: 5px; text-align: center; }
             .property-name { font-size: 18px; color: #666; text-align: center; margin-bottom: 20px; }
             h1 { color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px; }
             table { width: 100%; border-collapse: collapse; margin: 20px 0; }
@@ -976,11 +976,11 @@ export function registerPropertyRoutes(app: Express): void {
           <title>Building Specifications - ${property.propertyName}</title>
           <style>
             body { font-family: 'Segoe UI', sans-serif; margin: 20px; line-height: 1.6; }
-            .header { border-bottom: 3px solid rgb(0,50,130); padding-bottom: 20px; margin-bottom: 30px; position: relative; }
-            .document-title { font-size: 24px; font-weight: bold; color: rgb(0,50,130); margin-bottom: 10px; background: rgb(0,50,130); color: white; padding: 10px; border-radius: 5px; text-align: center; }
+            .header { border-bottom: 3px solid ${BRAND_COLOR_PRIMARY}; padding-bottom: 20px; margin-bottom: 30px; position: relative; }
+            .document-title { font-size: 24px; font-weight: bold; color: ${BRAND_COLOR_PRIMARY}; margin-bottom: 10px; background: ${BRAND_COLOR_PRIMARY}; color: white; padding: 10px; border-radius: 5px; text-align: center; }
             .property-name { font-size: 18px; color: #666; text-align: center; margin-bottom: 20px; }
             .section { margin-bottom: 30px; }
-            .section-title { font-size: 18px; font-weight: bold; color: rgb(0,50,130); margin-bottom: 15px; padding-bottom: 5px; border-bottom: 2px solid #e5e7eb; }
+            .section-title { font-size: 18px; font-weight: bold; color: ${BRAND_COLOR_PRIMARY}; margin-bottom: 15px; padding-bottom: 5px; border-bottom: 2px solid #e5e7eb; }
             .spec-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 15px; margin-bottom: 15px; }
             .spec-label { font-weight: 600; color: #374151; }
             .spec-value { color: #1f2937; }
@@ -1085,8 +1085,8 @@ export function registerPropertyRoutes(app: Express): void {
           <title>Existing Improvements - ${property.propertyName}</title>
           <style>
             body { font-family: 'Segoe UI', sans-serif; margin: 20px; }
-            .header { border-bottom: 3px solid rgb(0,50,130); padding-bottom: 20px; margin-bottom: 30px; position: relative; }
-            .document-title { font-size: 24px; font-weight: bold; color: rgb(0,50,130); margin-bottom: 10px; background: rgb(0,50,130); color: white; padding: 10px; border-radius: 5px; text-align: center; }
+            .header { border-bottom: 3px solid ${BRAND_COLOR_PRIMARY}; padding-bottom: 20px; margin-bottom: 30px; position: relative; }
+            .document-title { font-size: 24px; font-weight: bold; color: ${BRAND_COLOR_PRIMARY}; margin-bottom: 10px; background: ${BRAND_COLOR_PRIMARY}; color: white; padding: 10px; border-radius: 5px; text-align: center; }
             .property-name { font-size: 18px; color: #666; text-align: center; margin-bottom: 20px; }
             h1 { color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px; }
             table { width: 100%; border-collapse: collapse; margin: 20px 0; }
@@ -1197,8 +1197,8 @@ export function registerPropertyRoutes(app: Express): void {
           <title>Electrical Capacity Management - ${property.propertyName}</title>
           <style>
             body { font-family: 'Segoe UI', sans-serif; margin: 20px; }
-            .header { border-bottom: 3px solid rgb(0,50,130); padding-bottom: 20px; margin-bottom: 30px; position: relative; }
-            .document-title { font-size: 24px; font-weight: bold; color: rgb(0,50,130); margin-bottom: 10px; background: rgb(0,50,130); color: white; padding: 10px; border-radius: 5px; text-align: center; }
+            .header { border-bottom: 3px solid ${BRAND_COLOR_PRIMARY}; padding-bottom: 20px; margin-bottom: 30px; position: relative; }
+            .document-title { font-size: 24px; font-weight: bold; color: ${BRAND_COLOR_PRIMARY}; margin-bottom: 10px; background: ${BRAND_COLOR_PRIMARY}; color: white; padding: 10px; border-radius: 5px; text-align: center; }
             .property-name { font-size: 18px; color: #666; text-align: center; margin-bottom: 20px; }
             h1 { color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px; }
             h2 { color: #555; margin-top: 30px; }

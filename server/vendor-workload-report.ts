@@ -5,7 +5,7 @@
  * with workload analysis by vendor/firm.
  */
 
-import { getBrandLogo as getBridgeLogo } from './lib/branding';
+import { getBrandLogo as getBridgeLogo, BRAND_COLOR_PRIMARY } from './lib/branding';
 import puppeteer from "puppeteer";
 import { storage } from "./storage";
 import { readFileSync } from "fs";
@@ -265,7 +265,7 @@ export function generateVendorWorkloadHtml(data: WorkloadReportData): string {
         }
         
         .header {
-          border-bottom: 3px solid rgb(0,50,130);
+          border-bottom: 3px solid ${BRAND_COLOR_PRIMARY};
           padding-bottom: 20px;
           margin-bottom: 30px;
           position: relative;
@@ -283,7 +283,7 @@ export function generateVendorWorkloadHtml(data: WorkloadReportData): string {
           font-weight: bold;
           color: white;
           margin-bottom: 10px;
-          background: rgb(0,50,130);
+          background: ${BRAND_COLOR_PRIMARY};
           padding: 10px;
           border-radius: 5px;
           text-align: center;
@@ -314,7 +314,7 @@ export function generateVendorWorkloadHtml(data: WorkloadReportData): string {
         .stat-value {
           font-size: 24px;
           font-weight: bold;
-          color: rgb(0,50,130);
+          color: ${BRAND_COLOR_PRIMARY};
           margin-bottom: 5px;
         }
         
@@ -333,7 +333,7 @@ export function generateVendorWorkloadHtml(data: WorkloadReportData): string {
         }
         
         .vendor-header {
-          background: rgb(0,50,130);
+          background: ${BRAND_COLOR_PRIMARY};
           color: white;
           padding: 12px 15px;
           font-weight: 600;
@@ -497,7 +497,7 @@ export function generateVendorWorkloadHtml(data: WorkloadReportData): string {
       
       ${data.architects.length > 0 ? `
       <div style="margin-bottom: 40px;">
-        <h2 style="color: rgb(0,50,130); border-bottom: 2px solid rgb(0,50,130); padding-bottom: 10px; margin-bottom: 20px; font-size: 18px;">
+        <h2 style="color: ${BRAND_COLOR_PRIMARY}; border-bottom: 2px solid ${BRAND_COLOR_PRIMARY}; padding-bottom: 10px; margin-bottom: 20px; font-size: 18px;">
           📐 Architects (${data.totalArchitects} firms)
         </h2>
         ${data.architects.map(vendor => `
@@ -533,7 +533,7 @@ export function generateVendorWorkloadHtml(data: WorkloadReportData): string {
       
       ${data.contractors.length > 0 ? `
       <div style="margin-bottom: 40px;">
-        <h2 style="color: rgb(0,50,130); border-bottom: 2px solid rgb(0,50,130); padding-bottom: 10px; margin-bottom: 20px; font-size: 18px;">
+        <h2 style="color: ${BRAND_COLOR_PRIMARY}; border-bottom: 2px solid ${BRAND_COLOR_PRIMARY}; padding-bottom: 10px; margin-bottom: 20px; font-size: 18px;">
           🏗️ General Contractors (${data.totalContractors} firms)
         </h2>
         ${data.contractors.map(vendor => `

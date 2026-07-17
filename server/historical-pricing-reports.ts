@@ -1,4 +1,4 @@
-import { getBrandLogo as getBridgeLogo } from './lib/branding';
+import { getBrandLogo as getBridgeLogo, BRAND_COLOR_PRIMARY } from './lib/branding';
 import puppeteer from "puppeteer";
 import { db } from "./db";
 import { rfpRequests, bidCollections, bidLineItems } from "@shared/schema";
@@ -244,7 +244,7 @@ function generateHistoricalPricingHtml(data: HistoricalPricingData): string {
         }
         
         .header {
-          border-bottom: 3px solid rgb(0,50,130);
+          border-bottom: 3px solid ${BRAND_COLOR_PRIMARY};
           padding-bottom: 20px;
           margin-bottom: 30px;
           position: relative;
@@ -253,9 +253,9 @@ function generateHistoricalPricingHtml(data: HistoricalPricingData): string {
         .document-title {
           font-size: 24px;
           font-weight: bold;
-          color: rgb(0,50,130);
+          color: ${BRAND_COLOR_PRIMARY};
           margin-bottom: 10px;
-          background: rgb(0,50,130);
+          background: ${BRAND_COLOR_PRIMARY};
           color: white;
           padding: 10px;
           border-radius: 5px;

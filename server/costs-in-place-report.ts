@@ -12,7 +12,7 @@
 // Costs in property_existing_improvements are stored in CENTS. All display math
 // divides by 100 exactly once, here, at the edge.
 
-import { getBrandLogo as getBridgeLogo } from './lib/branding';
+import { getBrandLogo as getBridgeLogo, BRAND_COLOR_PRIMARY } from './lib/branding';
 import type { Express } from 'express';
 import { storage } from './storage';
 import { requireAuth } from './middleware';
@@ -243,20 +243,20 @@ function renderReportHtml(title: string, subtitle: string, sections: string[], p
   <title>${escapeHtml(title)}</title>
   <style>
     body { font-family: 'Segoe UI', sans-serif; margin: 20px; color: #333; }
-    .header { border-bottom: 3px solid rgb(0,50,130); padding-bottom: 20px; margin-bottom: 30px; }
-    .document-title { font-size: 24px; font-weight: bold; background: rgb(0,50,130); color: white; padding: 10px; border-radius: 5px; text-align: center; margin-bottom: 10px; }
+    .header { border-bottom: 3px solid ${BRAND_COLOR_PRIMARY}; padding-bottom: 20px; margin-bottom: 30px; }
+    .document-title { font-size: 24px; font-weight: bold; background: ${BRAND_COLOR_PRIMARY}; color: white; padding: 10px; border-radius: 5px; text-align: center; margin-bottom: 10px; }
     .report-subtitle { font-size: 16px; color: #666; text-align: center; }
     .summary { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0; }
     .property-section { margin-bottom: 34px; page-break-inside: avoid; }
     .property-header { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 2px solid #eee; padding-bottom: 6px; margin-bottom: 8px; }
-    .property-title { font-size: 17px; font-weight: bold; color: rgb(0,50,130); }
+    .property-title { font-size: 17px; font-weight: bold; color: ${BRAND_COLOR_PRIMARY}; }
     .property-meta { font-size: 13px; color: #666; }
     table { width: 100%; border-collapse: collapse; table-layout: fixed; margin: 10px 0; }
     th, td { border: 1px solid #ddd; padding: 7px 8px; text-align: left; font-size: 12px; overflow-wrap: break-word; }
     th { background-color: #f5f5f5; white-space: nowrap; }
     .currency { text-align: right; white-space: nowrap; }
     .sf { text-align: right; white-space: nowrap; }
-    .total-row td { background: #eef2f9; border-top: 2px solid rgb(0,50,130); }
+    .total-row td { background: #eef2f9; border-top: 2px solid ${BRAND_COLOR_PRIMARY}; }
     @media print {
       body { margin: 10px; }
       .property-section { page-break-inside: avoid; }

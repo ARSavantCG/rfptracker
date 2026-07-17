@@ -6,7 +6,7 @@
  * distribution, or use of this software is strictly prohibited.
  */
 
-import { getBrandLogo as getBridgeLogo } from './lib/branding';
+import { getBrandLogo as getBridgeLogo, BRAND_COLOR_PRIMARY } from './lib/branding';
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import fs from "fs";
@@ -4045,8 +4045,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             @media print { .no-print { display: none !important; } }
             body { font-family: 'Segoe UI', sans-serif; font-size: 12px; margin: 0; }
             .no-print { background: #3b82f6; color: white; padding: 15px; text-align: center; margin-bottom: 20px; border-radius: 8px; }
-            .header { border-bottom: 3px solid rgb(0,50,130); padding-bottom: 20px; margin-bottom: 30px; position: relative; }
-            .document-title { font-size: 24px; font-weight: bold; color: rgb(0,50,130); margin-bottom: 10px; background: rgb(0,50,130); color: white; padding: 10px; border-radius: 5px; text-align: center; }
+            .header { border-bottom: 3px solid ${BRAND_COLOR_PRIMARY}; padding-bottom: 20px; margin-bottom: 30px; position: relative; }
+            .document-title { font-size: 24px; font-weight: bold; color: ${BRAND_COLOR_PRIMARY}; margin-bottom: 10px; background: ${BRAND_COLOR_PRIMARY}; color: white; padding: 10px; border-radius: 5px; text-align: center; }
             .header .subtitle { font-size: 14px; color: #666; margin: 5px 0; text-align: center; }
             table { width: 100%; border-collapse: collapse; margin-top: 20px; }
             th, td { border: 1px solid #e5e7eb; padding: 8px; text-align: left; }
@@ -4354,8 +4354,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             @media print { .no-print { display: none !important; } }
             body { font-family: 'Segoe UI', sans-serif; font-size: 12px; margin: 0; }
             .no-print { background: #3b82f6; color: white; padding: 15px; text-align: center; margin-bottom: 20px; border-radius: 8px; }
-            .header { border-bottom: 3px solid rgb(0,50,130); padding-bottom: 20px; margin-bottom: 30px; position: relative; }
-            .document-title { font-size: 24px; font-weight: bold; color: rgb(0,50,130); margin-bottom: 10px; background: rgb(0,50,130); color: white; padding: 10px; border-radius: 5px; text-align: center; }
+            .header { border-bottom: 3px solid ${BRAND_COLOR_PRIMARY}; padding-bottom: 20px; margin-bottom: 30px; position: relative; }
+            .document-title { font-size: 24px; font-weight: bold; color: ${BRAND_COLOR_PRIMARY}; margin-bottom: 10px; background: ${BRAND_COLOR_PRIMARY}; color: white; padding: 10px; border-radius: 5px; text-align: center; }
             .header .subtitle { font-size: 14px; color: #666; margin: 5px 0; text-align: center; }
             table { width: 100%; border-collapse: collapse; margin-top: 20px; }
             th, td { border: 1px solid #e5e7eb; padding: 8px; text-align: left; }

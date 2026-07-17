@@ -1,3 +1,4 @@
+import { COMPANY_NAME } from './lib/branding';
 import { db } from './db';
 import { properties, executedLeases, propertyExistingImprovements, rfpRequests, transformers, mainPanels } from '../shared/schema';
 import { eq, sql } from 'drizzle-orm';
@@ -939,7 +940,7 @@ function generatePropertySummaryHTML(data: PropertySummaryData): string {
   html += `
     <div class="footer">
         <p>Property Portfolio Summary Report | Generated: ${data.generatedAt}</p>
-        <p>© 2026 Kurv Industrial | All Rights Reserved</p>
+        <p>© 2026 ${COMPANY_NAME} | All Rights Reserved</p>
     </div>
 </body>
 </html>

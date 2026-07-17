@@ -1,4 +1,4 @@
-import { getBrandLogo as getBridgeLogo } from './lib/branding';
+import { getBrandLogo as getBridgeLogo, BRAND_COLOR_PRIMARY } from './lib/branding';
 import { createWriteStream } from "fs";
 import { promisify } from "util";
 import { readFileSync } from "fs";
@@ -377,7 +377,7 @@ function generateFinancialSummaryHtml(options: PdfGenerationOptions, dates: any)
         }
         .logo-container { margin-bottom: 15px; }
         .company-info { text-align: left; margin-bottom: 20px; }
-        .document-title { font-size: 18px; font-weight: bold; color: rgb(0,50,130); margin: 10px 0; }
+        .document-title { font-size: 18px; font-weight: bold; color: ${BRAND_COLOR_PRIMARY}; margin: 10px 0; }
         .project-title { font-size: 16px; font-weight: bold; margin: 5px 0; }
         
         .section {
@@ -1079,7 +1079,7 @@ async function generateArchitectRfpHtml(options: PdfGenerationOptions, dates: an
     </head>
     <body>
       <div class="header">
-        <h1 style="color: rgb(0,50,130);">REQUEST FOR PROPOSAL</h1>
+        <h1 style="color: ${BRAND_COLOR_PRIMARY};">REQUEST FOR PROPOSAL</h1>
         <h2>Architectural Services - ${projectName}</h2>
       </div>
       
@@ -1315,13 +1315,13 @@ async function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dat
       <title>Broker Response RFP - Architect Services</title>
       <style>
         body { font-family: Arial, sans-serif; margin: 0; padding: 20px; line-height: 1.4; color: #333; }
-        .header { border-bottom: 3px solid rgb(0,50,130); padding-bottom: 20px; margin-bottom: 30px; position: relative; }
+        .header { border-bottom: 3px solid ${BRAND_COLOR_PRIMARY}; padding-bottom: 20px; margin-bottom: 30px; position: relative; }
         .company-logo { position: absolute; left: 0; top: 0; height: 40px; }
         .company-info { text-align: right; margin-bottom: 20px; }
-        .document-title { font-size: 18px; font-weight: bold; color: rgb(0,50,130); margin-bottom: 10px; background: rgb(0,50,130); color: white; padding: 10px; border-radius: 5px; }
+        .document-title { font-size: 18px; font-weight: bold; color: ${BRAND_COLOR_PRIMARY}; margin-bottom: 10px; background: ${BRAND_COLOR_PRIMARY}; color: white; padding: 10px; border-radius: 5px; }
         .project-title { font-size: 18px; color: #666; margin-bottom: 20px; }
         .section { margin-bottom: 25px; }
-        .section-title { font-size: 16px; font-weight: bold; color: rgb(0,50,130); margin-bottom: 10px; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; }
+        .section-title { font-size: 16px; font-weight: bold; color: ${BRAND_COLOR_PRIMARY}; margin-bottom: 10px; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; }
         .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
         .info-item { margin-bottom: 10px; }
         .label { font-weight: bold; color: #666; }
@@ -1342,7 +1342,7 @@ async function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dat
       <div class="header">
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
           <img src="${getBridgeLogo()}" alt="Kurv Industrial" style="height: 25px; width: auto;" />
-          <div style="background: rgb(0,50,130); color: white; padding: 5px 10px; font-weight: bold; font-size: 12px; border-radius: 3px;">
+          <div style="background: ${BRAND_COLOR_PRIMARY}; color: white; padding: 5px 10px; font-weight: bold; font-size: 12px; border-radius: 3px;">
             REQUEST FOR PROPOSAL
           </div>
         </div>
@@ -1377,7 +1377,7 @@ async function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dat
         ${invitationToBid?.documentsLink ? `
         <div class="info-item" style="margin-top: 10px;">
           <span class="label">Project Documents:</span>
-          <span class="value"><a href="${invitationToBid.documentsLink}" style="color: rgb(0,50,130);">${invitationToBid.documentsLink}</a></span>
+          <span class="value"><a href="${invitationToBid.documentsLink}" style="color: ${BRAND_COLOR_PRIMARY};">${invitationToBid.documentsLink}</a></span>
         </div>
         ` : ''}
 
@@ -1591,19 +1591,19 @@ async function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, da
       <title>Broker Response RFP - General Contractor Services</title>
       <style>
         body { font-family: Arial, sans-serif; margin: 0; padding: 20px; line-height: 1.4; color: #333; }
-        .header { border-bottom: 3px solid rgb(0,50,130); padding-bottom: 20px; margin-bottom: 30px; }
+        .header { border-bottom: 3px solid ${BRAND_COLOR_PRIMARY}; padding-bottom: 20px; margin-bottom: 30px; }
         .company-info { text-align: right; margin-bottom: 20px; }
-        .document-title { font-size: 18px; font-weight: bold; color: rgb(0,50,130); margin-bottom: 10px; background: rgb(0,50,130); color: white; padding: 10px; border-radius: 5px; }
+        .document-title { font-size: 18px; font-weight: bold; color: ${BRAND_COLOR_PRIMARY}; margin-bottom: 10px; background: ${BRAND_COLOR_PRIMARY}; color: white; padding: 10px; border-radius: 5px; }
         .project-title { font-size: 18px; color: #666; margin-bottom: 20px; }
         .section { margin-bottom: 25px; }
-        .section-title { font-size: 16px; font-weight: bold; color: rgb(0,50,130); margin-bottom: 10px; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; }
+        .section-title { font-size: 16px; font-weight: bold; color: ${BRAND_COLOR_PRIMARY}; margin-bottom: 10px; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; }
         .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
         .info-item { margin-bottom: 10px; }
         .label { font-weight: bold; color: #666; }
         .value { margin-left: 10px; }
         .requirements { background-color: #fef3c7; padding: 15px; border-left: 4px solid #f59e0b; margin: 15px 0; }
         .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #666; }
-        .preliminary-notice { background-color: #dbeafe; padding: 15px; border-left: 4px solid rgb(0,50,130); margin: 20px 0; font-weight: bold; }
+        .preliminary-notice { background-color: #dbeafe; padding: 15px; border-left: 4px solid ${BRAND_COLOR_PRIMARY}; margin: 20px 0; font-weight: bold; }
         table { width: 100%; border-collapse: collapse; margin: 15px 0; }
         th, td { border: 1px solid #e5e7eb; padding: 8px; text-align: left; }
         th { background-color: #f9fafb; font-weight: bold; }
@@ -1617,7 +1617,7 @@ async function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, da
       <div class="header">
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
           <img src="${getBridgeLogo()}" alt="Kurv Industrial" style="height: 25px; width: auto;" />
-          <div style="background: rgb(0,50,130); color: white; padding: 5px 10px; font-weight: bold; font-size: 12px; border-radius: 3px;">
+          <div style="background: ${BRAND_COLOR_PRIMARY}; color: white; padding: 5px 10px; font-weight: bold; font-size: 12px; border-radius: 3px;">
             REQUEST FOR PROPOSAL
           </div>
         </div>
@@ -1649,7 +1649,7 @@ async function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, da
           </div>
         </div>
         ${invitationToBid?.documentsLink ? `
-        <div class="info-item" style="margin-top: 10px;"><span class="label">Project Documents:</span><span class="value"><a href="${invitationToBid.documentsLink}" style="color: rgb(0,50,130);">${invitationToBid.documentsLink}</a></span></div>` : ''}
+        <div class="info-item" style="margin-top: 10px;"><span class="label">Project Documents:</span><span class="value"><a href="${invitationToBid.documentsLink}" style="color: ${BRAND_COLOR_PRIMARY};">${invitationToBid.documentsLink}</a></span></div>` : ''}
 
         ${invitationToBid?.projectDescription ? `
         <div class="project-description">

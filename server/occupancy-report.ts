@@ -7,7 +7,7 @@
 // lease, per current definition — no date filtering). Rentable SF = bay-derived
 // total (same helper the Costs-in-Place report uses).
 
-import { getBrandLogo as getBridgeLogo } from './lib/branding';
+import { getBrandLogo as getBridgeLogo, BRAND_COLOR_PRIMARY } from './lib/branding';
 import type { Express } from 'express';
 import { storage } from './storage';
 import { requireAuthFlexible } from './middleware';
@@ -116,8 +116,8 @@ function renderReportHtml(rows: PropertyOccupancyRow[]): string {
   <title>Occupancy Report — Portfolio</title>
   <style>
     body { font-family: 'Segoe UI', sans-serif; margin: 20px; color: #333; }
-    .header { border-bottom: 3px solid rgb(0,50,130); padding-bottom: 20px; margin-bottom: 30px; }
-    .document-title { font-size: 24px; font-weight: bold; background: rgb(0,50,130); color: white; padding: 10px; border-radius: 5px; text-align: center; margin-bottom: 10px; }
+    .header { border-bottom: 3px solid ${BRAND_COLOR_PRIMARY}; padding-bottom: 20px; margin-bottom: 30px; }
+    .document-title { font-size: 24px; font-weight: bold; background: ${BRAND_COLOR_PRIMARY}; color: white; padding: 10px; border-radius: 5px; text-align: center; margin-bottom: 10px; }
     .report-subtitle { font-size: 16px; color: #666; text-align: center; }
     .summary { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0; display: flex; justify-content: space-around; text-align: center; }
     .summary .metric { font-size: 26px; font-weight: bold; }
@@ -126,7 +126,7 @@ function renderReportHtml(rows: PropertyOccupancyRow[]): string {
     th, td { border: 1px solid #ddd; padding: 7px 8px; text-align: left; font-size: 12px; overflow-wrap: break-word; }
     th { background-color: #f5f5f5; white-space: nowrap; }
     .num { text-align: right; }
-    .total-row td { background: #eef2f9; border-top: 2px solid rgb(0,50,130); font-weight: bold; }
+    .total-row td { background: #eef2f9; border-top: 2px solid ${BRAND_COLOR_PRIMARY}; font-weight: bold; }
     @media print { body { margin: 10px; } }
   </style>
 </head>

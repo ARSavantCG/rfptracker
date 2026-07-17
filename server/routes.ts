@@ -48,7 +48,8 @@ import {
   getStepFolderPath,
   getRelativeFilePath,
   sanitizeFilename,
-  getSecureDownloadPath
+  getSecureDownloadPath,
+  resolveSecureFilePath
 } from "./file-organization";
 import { validateRfpForProgression, canAdvanceToPhase } from "./validation";
 import { checkPermission, upload, pdfUpload, uploadsDir, setupSession, requireAuth, requireAuthFlexible, requireAdmin } from './middleware';

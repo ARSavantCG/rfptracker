@@ -198,18 +198,18 @@ export function RfpDocumentEditor() {
     
     // For common sections, use the template key directly
     if (type === 'common') {
-      const template = templates.find(t => t.templateKey === `common_${section}`);
+      const template = templates.find((t: any) => t.templateKey === `common_${section}`);
       return template?.content;
     }
     
     // For type-specific sections, use type_section format
-    const template = templates.find(t => t.templateKey === `${type}_${section}`);
+    const template = templates.find((t: any) => t.templateKey === `${type}_${section}`);
     return template?.content;
   };
 
   const getCustomTitle = (templateKey: string): string | undefined => {
     if (!templates.length) return undefined;
-    const titleTemplate = templates.find(t => t.templateKey === `${templateKey}_title`);
+    const titleTemplate = templates.find((t: any) => t.templateKey === `${templateKey}_title`);
     return titleTemplate?.content;
   };
 

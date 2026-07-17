@@ -58,8 +58,8 @@ async function generateRomReportHtml(romPilot: any, lineItems: any[], scopeItems
           console.log('[ROM doorConfig] first bay raw data:', JSON.stringify(romPilot.selectedBayConfigurations[0], null, 2));
           bayCount = romPilot.selectedBayConfigurations.length;
           bayCountDisplay = `${bayCount} Bays (Modified Configuration)`;
-          const totalStandardDoors = romPilot.selectedBayConfigurations.reduce((sum, bay) => sum + (bay.standardDockDoors || 0), 0);
-          const totalOversizedDoors = romPilot.selectedBayConfigurations.reduce((sum, bay) => sum + (bay.oversizedDockDoors || 0), 0);
+          const totalStandardDoors = romPilot.selectedBayConfigurations.reduce((sum: number, bay: any) => sum + (bay.standardDockDoors || 0), 0);
+          const totalOversizedDoors = romPilot.selectedBayConfigurations.reduce((sum: number, bay: any) => sum + (bay.oversizedDockDoors || 0), 0);
           console.log('[ROM doorConfig] totalStandardDoors:', totalStandardDoors, '| totalOversizedDoors:', totalOversizedDoors);
           doorConfig = `${totalStandardDoors + totalOversizedDoors} doors total (${totalOversizedDoors} oversized, ${totalStandardDoors} regular)`;
         } else if (!bayCount && romPilot.selectedBayIds && Array.isArray(romPilot.selectedBayIds) && romPilot.selectedBayIds.length > 0) {
@@ -753,7 +753,7 @@ export function registerRomRoutes(app: Express): void {
 
       const { lineItems } = req.body;
       console.log("Saving ROM line items:", { romPilotId, lineItems });
-      console.log("Line items details:", lineItems.map(item => ({
+      console.log("Line items details:", lineItems.map((item: any) => ({
         scopeItemId: item.scopeItemId,
         quantity: item.quantity,
         unitPrice: item.unitPrice,

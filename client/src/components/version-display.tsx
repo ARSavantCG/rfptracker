@@ -170,7 +170,7 @@ export function VersionDisplay() {
             </CardHeader>
             <CardContent>
               <div className="space-y-1">
-                {versionInfo.changes && versionInfo.changes.map((change, index) => (
+                {versionInfo.changes && versionInfo.changes.map((change: any, index: number) => (
                   <div 
                     key={index}
                     className="flex items-center gap-2 text-xs text-gray-600"

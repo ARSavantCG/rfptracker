@@ -20,7 +20,7 @@ export default function ColumnRangeSelector({
     initialSelectedRanges.map(range => range.id)
   );
 
-  const columnRanges = property.columnRanges || [];
+  const columnRanges: ColumnRange[] = property.columnRanges || [];
 
   // Calculate total rentable area from selected ranges
   const calculateTotalArea = () => {

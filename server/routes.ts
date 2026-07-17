@@ -4209,7 +4209,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     // Calculate $/RSF if rentable SF is available
                     let rentableSFNumber = 0;
                     if (rfp.selectedBayConfigurations && rfp.selectedBayConfigurations.length > 0) {
-                      rentableSFNumber = rfp.selectedBayConfigurations.reduce((sum, bay) => sum + (bay.rentableSquareFootage || bay.squareFootage || 0), 0);
+                      rentableSFNumber = rfp.selectedBayConfigurations.reduce((sum: number, bay: any) => sum + (bay.rentableSquareFootage || bay.squareFootage || 0), 0);
                     } else if (rfp.projectArea) {
                       const sfMatch = rfp.projectArea.match(/(\d{1,3}(?:,\d{3})*)\s*SF/i);
                       if (sfMatch) {
@@ -4398,7 +4398,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           <table>
             <thead>
               <tr>
-                ${headers.map(header => `<th>${header}</th>`).join('')}
+                ${headers.map((header: any) => `<th>${header}</th>`).join('')}
               </tr>
             </thead>
             <tbody>

@@ -281,7 +281,7 @@ export function PdfTemplateManagement() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {typeTemplates.map((template) => (
+                {typeTemplates.map((template: any) => (
                   <div key={template.id} className="border rounded-lg p-4">
                     {editingTemplate?.id === template.id ? (
                       <form onSubmit={(e) => {

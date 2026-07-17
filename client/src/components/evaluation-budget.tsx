@@ -1986,7 +1986,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
           bucket: improvement.bucket, // Preserve bucket for cost lifecycle tracking
         } as EvaluationLineItem;
       })
-      .filter(item => item !== null);
+      .filter((item: any) => item !== null);
     return result;
   };
 

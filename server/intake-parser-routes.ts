@@ -143,10 +143,11 @@ export function registerIntakeParserRoutes(app: Express): void {
         const isText = mime.startsWith("text/") || /\.(txt|eml|md|csv|html?)$/.test(nameLower);
 
         try {
-          // Use the shared getFileBuffer helper which mirrors the working /uploads/*
-          // route exactly: 3 local candidates then Object Storage .private/uploads/<bare>.
-          console.log(`[intake-parser] resolving file: ${f.filePath}`);
-          const buf = await getFileBuffer(f.filePath);
+          // Use the shared getFileBuffer helper: local disk → direct OS keys → OS suffix-scan.
+          // Pass originalName so the suffix-scan fallback can match nanoid-prefixed OS keys
+          // (e.g. .private/uploads/<nanoid>-RFP Kurve Doral II 062326 .docx).
+          console.log(`[intake-parser] resolving file: ${f.filePath} (originalName: ${f.originalName})`);
+          const buf = await getFileBuffer(f.filePath, f.originalName);
           if (!buf) {
             skipped.push(f.originalName);
             skipReasons.push(`${f.originalName}: not found on disk or object storage (path: ${f.filePath})`);

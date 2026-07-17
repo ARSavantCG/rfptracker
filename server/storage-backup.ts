@@ -117,14 +117,20 @@ export async function downloadFromObjectStorage(filename: string, urlPath?: stri
 
 /**
  * Shared file-buffer helper used by the AI intake parser.
- * Mirrors the working /uploads/* route in server/routes.ts exactly:
- *   1. Try process.cwd()/<filePath>      (full nested path)
- *   2. Try process.cwd()/uploads/<bare>  (bare filename under uploads/)
- *   3. Try process.cwd()/uploads/projects/<bare>
- *   4. Fall back to Object Storage key .private/uploads/<bare>  (same as the route)
+ *
+ * Resolution order:
+ *   Local disk (3 candidates: cwd/filePath, cwd/uploads/<bare>, cwd/uploads/projects/<bare>)
+ *   → Object Storage direct-key candidates (full path, raw path, bare key)
+ *   → Object Storage suffix-scan by originalName (last resort — handles the case where files
+ *     were uploaded via DiskWithBackupStorage with a nanoid prefix, so the OS key is
+ *     `.private/uploads/<nanoid>-<originalName>` rather than anything derivable from filePath)
+ *
+ * Pass originalName (from project_files.originalName) whenever available so the suffix-scan
+ * fallback can find the correct Object Storage object.
+ *
  * Full logging — no silent catches — so production logs show exactly what fails.
  */
-export async function getFileBuffer(filePath: string): Promise<Buffer | null> {
+export async function getFileBuffer(filePath: string, originalName?: string): Promise<Buffer | null> {
   const { existsSync, readFileSync } = await import('fs');
   const { default: path } = await import('path');
 
@@ -148,11 +154,7 @@ export async function getFileBuffer(filePath: string): Promise<Buffer | null> {
     }
   }
 
-  // Not on disk — try Object Storage with multiple candidate keys, in order:
-  //   1. .private/<filePath>          — full nested path (most likely: backupToObjectStorage
-  //                                     stores under uploads/projects/<folder>/Step_1_Entry/<file>)
-  //   2. <filePath>                   — raw relative path without dirPrefix
-  //   3. .private/uploads/<bare>      — legacy bare-filename key
+  // ── Object Storage fallback ──────────────────────────────────────────────
   const privateDir = process.env.PRIVATE_OBJECT_DIR;
   if (!privateDir) {
     console.log(`[getFileBuffer] PRIVATE_OBJECT_DIR not set — no object storage fallback`);
@@ -160,19 +162,17 @@ export async function getFileBuffer(filePath: string): Promise<Buffer | null> {
   }
 
   const { bucketName, objectName: dirPrefix } = parseOSPath(privateDir);
-
-  // Build ordered candidate list (deduplicated)
-  const cleanPath = filePath.startsWith('/') ? filePath.slice(1) : filePath;
-  const osKeysRaw = [
-    `${dirPrefix}/${cleanPath}`,        // 1. .private/uploads/projects/<folder>/Step/file
-    cleanPath,                           // 2. uploads/projects/<folder>/Step/file
-    `${dirPrefix}/uploads/${bare}`,      // 3. legacy .private/uploads/<bare>
-  ];
-  // Deduplicate while preserving order
-  const osKeys = osKeysRaw.filter((k, i) => osKeysRaw.indexOf(k) === i);
-
   const bucket = objectStorageClient.bucket(bucketName);
-  for (const osKey of osKeys) {
+
+  // Step A: Try direct-key candidates (fast — no listing needed)
+  const cleanPath = filePath.startsWith('/') ? filePath.slice(1) : filePath;
+  const directKeys = [
+    `${dirPrefix}/${cleanPath}`,      // .private/uploads/projects/<folder>/Step/file
+    cleanPath,                         // uploads/projects/<folder>/Step/file
+    `${dirPrefix}/uploads/${bare}`,    // .private/uploads/<bare>  (legacy)
+  ].filter((k, i, a) => a.indexOf(k) === i); // deduplicate
+
+  for (const osKey of directKeys) {
     console.log(`[getFileBuffer] trying Object Storage key: bucket=${bucketName} key=${osKey}`);
     try {
       const file = bucket.file(osKey);
@@ -188,5 +188,31 @@ export async function getFileBuffer(filePath: string): Promise<Buffer | null> {
     }
   }
 
+  // Step B: Suffix-scan by originalName.
+  // Files uploaded via DiskWithBackupStorage are keyed as .private/uploads/<nanoid>-<originalName>.
+  // The nanoid is not stored in project_files, so we can't derive the exact key — but we can
+  // list the bucket prefix and find keys ending with -<originalName> or _<originalName>.
+  const nameToMatch = originalName || bare;
+  console.log(`[getFileBuffer] direct keys missed — scanning bucket prefix ${dirPrefix}/uploads/ for suffix match on: "${nameToMatch}"`);
+  try {
+    const [files] = await bucket.getFiles({ prefix: `${dirPrefix}/uploads/` });
+    // Look for keys that end with a separator + the target name (avoids false partial matches)
+    const matches = (files as any[]).filter(
+      (f) => f.name.endsWith(`-${nameToMatch}`) || f.name.endsWith(`_${nameToMatch}`)
+    );
+    console.log(`[getFileBuffer] suffix-scan found ${matches.length} candidate(s) for "${nameToMatch}"`);
+    if (matches.length > 0) {
+      // Pick the last entry (most recently uploaded)
+      const target = matches[matches.length - 1];
+      console.log(`[getFileBuffer] using suffix-matched key: ${target.name}`);
+      const [buf] = await target.download();
+      console.log(`[getFileBuffer] suffix-scan success: ${target.name} (${(buf as Buffer).length} bytes)`);
+      return buf as Buffer;
+    }
+  } catch (err) {
+    console.error(`[getFileBuffer] suffix-scan error:`, (err as Error).message);
+  }
+
+  console.log(`[getFileBuffer] all candidates exhausted for: ${filePath}`);
   return null;
 }

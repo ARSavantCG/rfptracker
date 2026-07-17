@@ -107,9 +107,71 @@ export async function downloadFromObjectStorage(filename: string, urlPath?: stri
         const [buf] = await file.download();
         return buf as Buffer;
       }
-    } catch {
-      // try next candidate
+      console.log(`[OS Backup] downloadFromObjectStorage key not found: ${objectName}`);
+    } catch (err) {
+      console.error(`[OS Backup] downloadFromObjectStorage error on key ${objectName}:`, (err as Error).message);
     }
   }
+  return null;
+}
+
+/**
+ * Shared file-buffer helper used by the AI intake parser.
+ * Mirrors the working /uploads/* route in server/routes.ts exactly:
+ *   1. Try process.cwd()/<filePath>      (full nested path)
+ *   2. Try process.cwd()/uploads/<bare>  (bare filename under uploads/)
+ *   3. Try process.cwd()/uploads/projects/<bare>
+ *   4. Fall back to Object Storage key .private/uploads/<bare>  (same as the route)
+ * Full logging — no silent catches — so production logs show exactly what fails.
+ */
+export async function getFileBuffer(filePath: string): Promise<Buffer | null> {
+  const { existsSync, readFileSync } = await import('fs');
+  const { default: path } = await import('path');
+
+  const bare = filePath.split('/').pop() || filePath;
+  const localCandidates = [
+    path.join(process.cwd(), filePath),
+    path.join(process.cwd(), 'uploads', bare),
+    path.join(process.cwd(), 'uploads', 'projects', bare),
+  ];
+
+  for (const candidate of localCandidates) {
+    let exists = false;
+    try { exists = existsSync(candidate); } catch { /* ignore stat errors */ }
+    console.log(`[getFileBuffer] local candidate: ${candidate} exists=${exists}`);
+    if (exists) {
+      try {
+        return readFileSync(candidate);
+      } catch (err) {
+        console.error(`[getFileBuffer] readFileSync failed for ${candidate}:`, (err as Error).message);
+      }
+    }
+  }
+
+  // Not on disk — try Object Storage exactly as the /uploads/* route does:
+  // only the bare-filename key (.private/uploads/<bare>), no full-path variants.
+  const privateDir = process.env.PRIVATE_OBJECT_DIR;
+  if (!privateDir) {
+    console.log(`[getFileBuffer] PRIVATE_OBJECT_DIR not set — no object storage fallback`);
+    return null;
+  }
+
+  const { bucketName, objectName: dirPrefix } = parseOSPath(privateDir);
+  const osKey = `${dirPrefix}/uploads/${bare}`;
+  console.log(`[getFileBuffer] trying Object Storage key: bucket=${bucketName} key=${osKey}`);
+  try {
+    const bucket = objectStorageClient.bucket(bucketName);
+    const file = bucket.file(osKey);
+    const [exists] = await file.exists();
+    if (exists) {
+      const [buf] = await file.download();
+      console.log(`[getFileBuffer] found in Object Storage: ${osKey} (${(buf as Buffer).length} bytes)`);
+      return buf as Buffer;
+    }
+    console.log(`[getFileBuffer] Object Storage key not found: ${osKey}`);
+  } catch (err) {
+    console.error(`[getFileBuffer] Object Storage error for key ${osKey}:`, (err as Error).message);
+  }
+
   return null;
 }

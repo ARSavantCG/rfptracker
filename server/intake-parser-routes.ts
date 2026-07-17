@@ -9,14 +9,11 @@
  * JSON-only response, admin-gated). See DESIGN-ai-intake-parser.md.
  */
 import type { Express } from 'express';
-import { readFileSync, existsSync } from 'fs';
-import path from 'path';
 import mammoth from 'mammoth';
 import { storage } from './storage';
 import Anthropic from '@anthropic-ai/sdk';
 import { requireAuth, checkPermission } from './middleware';
-import { resolveSecureFilePath, getSecureDownloadPath } from './file-organization';
-import { downloadFromObjectStorage } from './storage-backup';
+import { getFileBuffer } from './storage-backup';
 
 // Claude supports these natively as document/image blocks.
 const PDF_MIME = 'application/pdf';
@@ -146,36 +143,10 @@ export function registerIntakeParserRoutes(app: Express): void {
         const isText = mime.startsWith("text/") || /\.(txt|eml|md|csv|html?)$/.test(nameLower);
 
         try {
-          // Mirror the WORKING /uploads/* file server's resolution exactly
-          // (server/routes.ts). filePath here looks like
-          // "uploads/projects/<folder>/Step_1_Entry/<file>".
-          let buf: Buffer | null = null;
-          const bare = f.filePath.split('/').pop() || f.filePath;
-          const localCandidates = [
-            path.join(process.cwd(), f.filePath),                        // full nested path
-            path.join(process.cwd(), 'uploads', bare),                   // bare under uploads/
-            path.join(process.cwd(), 'uploads', 'projects', bare),       // bare under uploads/projects/
-          ];
-          for (const p of localCandidates) {
-            let ok = false;
-            try { ok = existsSync(p); } catch { ok = false; }
-            console.log(`[intake-parser] candidate: ${p} exists=${ok}`);
-            if (ok) { buf = readFileSync(p); break; }
-          }
-          // Fall back to Object Storage (same as the working server: bare filename,
-          // plus try the full path as urlPath in case it's keyed by full path).
-          if (!buf) {
-            // Diagnostic: list what actually exists in the file's directory on disk.
-            try {
-              const dir = path.dirname(path.join(process.cwd(), f.filePath));
-              const { readdirSync } = await import('fs');
-              const entries = existsSync(dir) ? readdirSync(dir) : ['(dir does not exist)'];
-              console.log(`[intake-parser] dir ${dir} contains:`, entries);
-            } catch (e) {
-              console.log(`[intake-parser] could not list dir:`, (e as Error).message);
-            }
-            buf = await downloadFromObjectStorage(bare, f.filePath);
-          }
+          // Use the shared getFileBuffer helper which mirrors the working /uploads/*
+          // route exactly: 3 local candidates then Object Storage .private/uploads/<bare>.
+          console.log(`[intake-parser] resolving file: ${f.filePath}`);
+          const buf = await getFileBuffer(f.filePath);
           if (!buf) {
             skipped.push(f.originalName);
             skipReasons.push(`${f.originalName}: not found on disk or object storage (path: ${f.filePath})`);

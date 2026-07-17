@@ -24,7 +24,7 @@ export function IntakeProposalsPanel({ rfpId }: IntakeProposalsPanelProps) {
   });
 
   const runParse = useMutation({
-    mutationFn: () => apiRequest(`/api/ai/intake-parse/${rfpId}`, "POST", { typedText }),
+    mutationFn: () => apiRequest(`/api/ai/intake-parse/${rfpId}`, "POST", { typedText }, 90_000),
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/intake-proposals", rfpId] });
       setLastMeta(data?.meta ?? null);

@@ -29,6 +29,7 @@ export async function apiRequest(
   url: string,
   method: string,
   data?: unknown | undefined,
+  timeoutMs: number = 20_000,
 ): Promise<any> {
   const isFormData = data instanceof FormData;
   const token = localStorage.getItem(AUTH_TOKEN_KEY);
@@ -42,14 +43,14 @@ export async function apiRequest(
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  // 20-second timeout prevents fetch hanging indefinitely when the network
-  // drops mid-request, which would leave isPending=true with no recovery path.
+  // Default 20-second timeout prevents fetch hanging indefinitely when the network
+  // drops mid-request. Slow operations (e.g. AI document parsing) can pass a longer value.
   const res = await fetch(url, {
     method,
     headers,
     body: isFormData ? data : data ? JSON.stringify(data) : undefined,
     credentials: "include",
-    signal: AbortSignal.timeout(20_000),
+    signal: AbortSignal.timeout(timeoutMs),
   });
 
   await throwIfResNotOk(res);

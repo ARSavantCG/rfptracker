@@ -106,3 +106,20 @@ teach new cascades.)*
 - Confidence threshold for auto-suggesting catalog match vs needs-mapping?
 - Should accepted proposals pre-fill the evaluation directly, or just the scope list?
 - Cost/token budget per parse (large PDFs) — cap file size / page count?
+
+## Additional intake target: desired occupancy/delivery date (Adolfo 2026-07-17)
+The parser should also extract the tenant's **desired occupancy/delivery date** from the
+RFP/broker email/text — because it's a COST + FEASIBILITY driver, not just a date:
+- **Too soon** → schedule compression → overtime/double-time labor, expedited materials,
+  premium sub pricing → real added cost. Flag it.
+- **Not feasible** → may need to push the date back (business/scheduling decision). Flag it.
+
+The field already exists: `rfp_requests.anticipatedOccupancyDate` (schema line 45). So this
+is: (a) parser populates it from intake, and (b) a signal — compare desired date vs a
+reasonable buildout duration for the proposed scope, and flag potential overtime/premium
+cost OR infeasibility for the dev team's review in Step 2. Actual cost impact prices at
+Step 4 (e.g. an overtime/premium % or a "schedule compression" line item), consistent with
+the identify → validate → price flow.
+
+Open question for build: where does the buildout-duration estimate come from (a per-scope
+duration table? a simple rule of thumb? admin-set)? Candidate for the settings/rules table.

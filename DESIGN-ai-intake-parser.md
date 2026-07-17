@@ -81,6 +81,24 @@ teach new cascades.)*
 4. **Step 2 UI:** a "Proposed Scope (AI)" panel — list proposals with reason + confidence
    + source; accept/edit/reject each; accepted items flow into the eval/GC scope. Nothing
    auto-commits.
+
+   **Optimized for fast review (Adolfo's requirement 2026-07-17):**
+   - **Bulk actions**: "Accept All" / "Reject All" plus per-item toggles. If the parser
+     nailed it, one click accepts everything; if mixed, flip the few wrong ones. Avoids a
+     wall of individual clicks when a big work letter yields many items.
+   - **Confidence-sorted**: high-confidence catalog matches at top (quick accepts),
+     low-confidence / "needs mapping" flagged for closer review. Attention goes where
+     needed.
+   - **Reason visible per item** so the team verifies fast ("demising wall — because RFP
+     is for suite 200 only" is instantly checkable).
+
+   **Manual add is ALWAYS available (essential — Adolfo's requirement):** the dev team
+   must be able to add scope the parser missed, OR that comes in later (e.g. broker calls
+   after the fact to add scope). The AI panel is ADDITIVE, never a gate. It sits ALONGSIDE
+   the existing manual entry (master-item picker / free-form), NOT replacing it. Accepted
+   AI items and hand-added items become indistinguishable line items once in the list —
+   the AI just gave a head start on some. This reuses the existing manual-add flow; no new
+   restriction.
 5. **Admin → Scope Inference Rules page:** CRUD for the rules table.
 
 ## Open questions for the build session

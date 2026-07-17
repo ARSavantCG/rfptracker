@@ -40,7 +40,14 @@ Options to model it:
   flexible, more to build.
 - **Lean: Option A** — it mirrors the tier pattern the app + users already understand.
 
-## Resolution flow (when a catalog-tied item is proposed/pulled)
+## WHEN pricing resolves: Step 4, not Step 2 (Adolfo 2026-07-17)
+Step 2 validates WHAT scope applies (identify + accept/reject) — no pricing shown there,
+keeps validation fast and judgment-focused. Pricing resolves in Step 4 on the finalized
+scope list. Flow: identify scope (parser) -> validate scope (Step 2) -> price scope (Step 4).
+A proposed item carries its catalog link + quantity through Step 2; the price is RESOLVED
+at Step 4 using the flow below.
+
+## Resolution flow (runs at Step 4 for each validated catalog-tied item)
 1. Determine the property (from the RFP).
 2. Read property attributes (clearHeight, etc.).
 3. Read the quantity (e.g. 5,000 SF office; demising wall LF).

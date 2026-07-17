@@ -21,6 +21,7 @@ Keep it current — move items to **Done** when shipped, add new items as they s
 | 0.5 | **App Settings system** | M | Admin-editable settings table + page + `getSetting(key, fallback)`. Seed with branding (single-source already done in `server/lib/branding.ts`), occupancy thresholds (90/70), perm-financing threshold. The AI parser's rules table could share this infra. Audit in `SETTINGS-AUDIT.md`. |
 | 0.6 | **Deploy verification** | S | Pull + Republish, then confirm live: Calculation Basis on the 4 soft costs, the fixed ROM-pilot Select-All button, the new Scope Bundles UI. |
 | 0.7 | **Server-side TS2339s (~22)** | M | Case-by-case; some are real bugs (like buildingName was), some need judgment (getUser is an unimplemented method, not a typo). Investigate individually, don't batch-rename. Do NOT touch the ~500 eval-budget API-typing errors (high risk, no benefit). |
+| 0.8 | **ROM Pilot ↔ Evaluation convergence** | M/L | Make ROM Pilot mirror the Evaluation: bays+tenant+line items, report with costs-in-place footer. KEY: quantities editable, unit rates LOCKED (from catalog). Optionally pull from a Step-1 RFP. Already ~70% there structurally. Build order: rate-lock first (small/safe), then report mirroring, then RFP pull. Spec in `DESIGN-rom-pilot-convergence.md`. |
 
 **Cleanup (no rush, days):** decommission old Neon DB (ep-still-mud) after confidence · revoke the session's GitHub PAT · delete the Railway test project.
 

@@ -80,12 +80,41 @@ export function registerIntakeParserRoutes(app: Express): void {
 
       const typedText: string = (req.body?.typedText || "").toString();
 
-      // 1) Gather intake files for this RFP. Files can be stored under different
-      // workflow-step labels depending on the RFP's phase when uploaded (e.g. a file
-      // dropped while the RFP is in validation lands under "Step_2_Validation", not
-      // "Step_1_Entry"). So gather ALL of the RFP's files and let the AI read the
-      // intake material regardless of which step folder it landed in.
-      const step1Files = await storage.getProjectFiles(rfpId);
+      // 1) Gather intake files for this RFP from ALL sources. Files can live in:
+      //   (a) the project_files table (getProjectFiles), OR
+      //   (b) JSON arrays on the RFP record itself: files / additionalDocuments /
+      //       (attachments). The Step-1 drop stores into the RFP's `files` array, so
+      //       querying only project_files missed them entirely (0 files read).
+      // Normalize everything into { originalName, filePath, mimeType }.
+      const projectFileRows = await storage.getProjectFiles(rfpId);
+      const rfp = await storage.getRfpRequest(rfpId);
+
+      type IntakeFile = { originalName: string; filePath: string; mimeType: string };
+      const gathered: IntakeFile[] = [];
+
+      for (const f of projectFileRows) {
+        if (f.filePath) gathered.push({ originalName: f.originalName, filePath: f.filePath, mimeType: f.mimeType || "" });
+      }
+      const jsonArrays = [
+        (rfp as any)?.files,
+        (rfp as any)?.additionalDocuments,
+        (rfp as any)?.attachments,
+      ];
+      for (const arr of jsonArrays) {
+        if (Array.isArray(arr)) {
+          for (const rf of arr) {
+            const p = rf?.path;
+            if (p) gathered.push({ originalName: rf.name || "file", filePath: p, mimeType: rf.type || "" });
+          }
+        }
+      }
+      // Dedupe by filePath.
+      const seenPaths = new Set<string>();
+      const step1Files = gathered.filter((f) => {
+        if (seenPaths.has(f.filePath)) return false;
+        seenPaths.add(f.filePath);
+        return true;
+      });
 
       // 2) Load the active inference rules (the editable knowledge base).
       const rules = await storage.getActiveInferenceRules();

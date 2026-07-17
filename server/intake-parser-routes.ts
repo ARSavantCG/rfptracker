@@ -132,19 +132,20 @@ export function registerIntakeParserRoutes(app: Express): void {
 
       let filesIncluded = 0;
       const skipped: string[] = [];
+      const skipReasons: string[] = [];
       const extractedTexts: string[] = []; // text pulled from Word/email/txt files
       for (const f of step1Files) {
-        if (filesIncluded >= MAX_FILES) { skipped.push(f.originalName); continue; }
+        if (filesIncluded >= MAX_FILES) { skipped.push(f.originalName); skipReasons.push(`${f.originalName}: max files reached`); continue; }
         const mime = f.mimeType || "";
         const nameLower = (f.originalName || "").toLowerCase();
         const isPdf = mime === PDF_MIME || nameLower.endsWith(".pdf");
         const isImage = IMAGE_MIMES.includes(mime) || /\.(jpe?g|png|gif|webp)$/.test(nameLower);
-        const isWord = mime.includes("word") || mime.includes("officedocument.wordprocessing") || nameLower.endsWith(".docx");
+        const isWord = mime.includes("word") || mime.includes("officedocument.wordprocessing") || nameLower.endsWith(".docx") || nameLower.endsWith(".doc");
         const isText = mime.startsWith("text/") || /\.(txt|eml|md|csv|html?)$/.test(nameLower);
 
         try {
           const fullPath = resolveSecureFilePath(f.filePath, process.cwd());
-          if (!fullPath) { skipped.push(f.originalName); continue; }
+          if (!fullPath) { skipped.push(f.originalName); skipReasons.push(`${f.originalName}: file not found on disk (path: ${f.filePath})`); continue; }
 
           if (isPdf) {
             const base64 = readFileSync(fullPath).toString('base64');
@@ -171,22 +172,47 @@ export function registerIntakeParserRoutes(app: Express): void {
               filesIncluded++;
             } else {
               skipped.push(f.originalName);
+              skipReasons.push(`${f.originalName}: Word doc had no extractable text`);
+            }
+          } else if (nameLower.endsWith(".msg")) {
+            // Outlook .msg (binary) — parse with msgreader.
+            try {
+              const { default: MsgReader } = await import('@kenjiuno/msgreader');
+              const buf = readFileSync(fullPath);
+              const reader = new (MsgReader as any)(buf);
+              const data = reader.getFileData();
+              const body = (data?.body || data?.bodyHTML || "").toString().trim();
+              const subject = (data?.subject || "").toString();
+              const combined = `${subject ? `Subject: ${subject}\n` : ""}${body}`.trim();
+              if (combined) {
+                extractedTexts.push(`--- ${f.originalName} (email) ---\n${combined.slice(0, 20000)}`);
+                filesIncluded++;
+              } else {
+                skipped.push(f.originalName);
+                skipReasons.push(`${f.originalName}: .msg had no readable body`);
+              }
+            } catch (msgErr) {
+              skipped.push(f.originalName);
+              skipReasons.push(`${f.originalName}: .msg parse failed (${(msgErr as Error).message})`);
             }
           } else if (isText) {
-            // Emails (.eml), plain text, etc. — read directly.
+            // .eml, plain text, etc. — read directly.
             const txt = readFileSync(fullPath, 'utf-8').trim();
             if (txt) {
               extractedTexts.push(`--- ${f.originalName} ---\n${txt.slice(0, 20000)}`);
               filesIncluded++;
             } else {
               skipped.push(f.originalName);
+              skipReasons.push(`${f.originalName}: text file was empty`);
             }
           } else {
             skipped.push(f.originalName);
+            skipReasons.push(`${f.originalName}: unsupported type (mime="${mime}")`);
           }
         } catch (err) {
           console.error(`Intake parser: failed to read ${f.originalName}:`, (err as Error).message);
           skipped.push(f.originalName);
+          skipReasons.push(`${f.originalName}: read error (${(err as Error).message})`);
         }
       }
 
@@ -273,6 +299,7 @@ If you cannot find any scope, return {"proposals": []}.`
           rulesApplied: rules.length,
           totalFilesFound: step1Files.length,
           fileNames: step1Files.map((f) => f.originalName),
+          skipReasons,
         },
       });
     } catch (error: any) {

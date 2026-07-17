@@ -91,6 +91,9 @@ export function IntakeProposalsPanel({ rfpId }: IntakeProposalsPanelProps) {
           {lastMeta.skipped?.length > 0 && (
             <div className="text-amber-600"><strong>Skipped:</strong> {lastMeta.skipped.join(", ")}</div>
           )}
+          {lastMeta.skipReasons?.length > 0 && (
+            <div className="text-amber-700 text-[11px]">{lastMeta.skipReasons.map((r: string, i: number) => <div key={i}>• {r}</div>)}</div>
+          )}
           <div><strong>Rules applied:</strong> {lastMeta.rulesApplied ?? 0}</div>
         </div>
       )}

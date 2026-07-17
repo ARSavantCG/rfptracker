@@ -172,7 +172,7 @@ export function registerIntakeParserRoutes(app: Express): void {
             const result = await mammoth.extractRawText({ buffer: buf });
             const txt = (result?.value || "").trim();
             if (txt) {
-              extractedTexts.push(`--- ${f.originalName} (Word document) ---\n${txt}`);
+              extractedTexts.push(`--- ${f.originalName} (Word document) ---\n${txt.slice(0, 30_000)}`);
               filesIncluded++;
             } else {
               skipped.push(f.originalName);
@@ -254,34 +254,21 @@ If you cannot find any scope, return {"proposals": []}.`
       const response = await client.messages.create({
         model: "claude-sonnet-4-5",
         max_tokens: 4096,
-        system: "You are a precise CRE construction scope analyst. Respond with valid JSON only — no markdown, no preamble, no text outside the JSON object.",
+        system: "You are a precise CRE construction scope analyst. Respond with valid JSON only.",
         messages: [{ role: "user", content }],
       });
 
       const text = response.content[0]?.type === 'text' ? response.content[0].text : '';
-      const stopReason = (response as any)?.stop_reason;
       let parsed: any;
       try {
-        // Strip markdown fences, then extract the outermost JSON object in case Claude
-        // added any stray text before/after it.
-        let clean = text.replace(/```json|```/g, '').trim();
-        const firstBrace = clean.indexOf('{');
-        const lastBrace = clean.lastIndexOf('}');
-        if (firstBrace >= 0 && lastBrace > firstBrace) {
-          clean = clean.slice(firstBrace, lastBrace + 1);
-        }
+        const clean = text.replace(/```json|```/g, '').trim();
         parsed = JSON.parse(clean);
       } catch (e) {
-        // Log the raw response + stop reason so we can see WHY it failed.
-        console.error(`Intake parser: JSON parse failed. stop_reason=${stopReason}, length=${text.length}, raw start:`, text.substring(0, 300));
-        console.error(`Intake parser: raw end:`, text.substring(Math.max(0, text.length - 200)));
-        const hint = stopReason === 'max_tokens'
-          ? "AI response was cut off (too long). "
-          : "";
-        return res.status(502).json({
-          message: `${hint}AI returned an unreadable response. Try again.`,
-          meta: { stopReason, responseLength: text.length, responsePreview: text.substring(0, 200) },
-        });
+        const stopReason = response.stop_reason;
+        console.error(`Intake parser: JSON parse failed. stop_reason=${stopReason} length=${text.length} raw start: ${text.substring(0, 300)}`);
+        console.error(`Intake parser: raw end: ${text.slice(-200)}`);
+        const hint = stopReason === 'max_tokens' ? ' Response was cut off — try again.' : '';
+        return res.status(502).json({ message: `AI returned an unreadable response.${hint}` });
       }
 
       const proposals = Array.isArray(parsed?.proposals) ? parsed.proposals : [];

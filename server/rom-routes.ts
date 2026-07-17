@@ -49,7 +49,7 @@ async function generateRomReportHtml(romPilot: any, lineItems: any[], scopeItems
       propertyDetails = await storage.getProperty(parseInt(romPilot.property));
       if (propertyDetails) {
         // Create property display name with building info
-        const buildingInfo = propertyDetails.buildingName ? ` - ${propertyDetails.buildingName}` : '';
+        const buildingInfo = propertyDetails.building ? ` - ${propertyDetails.building}` : '';
         propertyDisplayName = `${propertyDetails.propertyName}${buildingInfo}`;
         
         // Calculate door configuration from selected bays

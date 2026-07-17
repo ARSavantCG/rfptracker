@@ -271,7 +271,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
       requestSchedule: false,
       requestSpacePlan: false,
       projectScope: rfp?.projectName || rfp?.tenantName || "",
-      projectLocation: rfp?.propertyAddress || rfp?.property || "",
+      projectLocation: rfp?.projectAddress || rfp?.property || "",
       contractorDueDate: "",
       architectDueDate: "",
       projectDescription: "",

@@ -76,6 +76,18 @@ function cleanInvalidValue(value: any): string {
   return strValue;
 }
 
+// Returns the Kurv/Bridge logo as a base64 data URI for embedding in report HTML.
+// Matches the helper used by the other report modules. Returns '' if unavailable.
+function getBridgeLogo(): string {
+  try {
+    const logoPath = path.join(process.cwd(), 'bridge_logo_new_base64.txt');
+    const base64 = fs.readFileSync(logoPath, 'utf-8').trim();
+    return base64.startsWith('data:') ? base64 : `data:image/png;base64,${base64}`;
+  } catch {
+    return '';
+  }
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Register extracted route modules
   registerAuthRoutes(app);

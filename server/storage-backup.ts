@@ -148,8 +148,11 @@ export async function getFileBuffer(filePath: string): Promise<Buffer | null> {
     }
   }
 
-  // Not on disk — try Object Storage exactly as the /uploads/* route does:
-  // only the bare-filename key (.private/uploads/<bare>), no full-path variants.
+  // Not on disk — try Object Storage with multiple candidate keys, in order:
+  //   1. .private/<filePath>          — full nested path (most likely: backupToObjectStorage
+  //                                     stores under uploads/projects/<folder>/Step_1_Entry/<file>)
+  //   2. <filePath>                   — raw relative path without dirPrefix
+  //   3. .private/uploads/<bare>      — legacy bare-filename key
   const privateDir = process.env.PRIVATE_OBJECT_DIR;
   if (!privateDir) {
     console.log(`[getFileBuffer] PRIVATE_OBJECT_DIR not set — no object storage fallback`);
@@ -157,20 +160,32 @@ export async function getFileBuffer(filePath: string): Promise<Buffer | null> {
   }
 
   const { bucketName, objectName: dirPrefix } = parseOSPath(privateDir);
-  const osKey = `${dirPrefix}/uploads/${bare}`;
-  console.log(`[getFileBuffer] trying Object Storage key: bucket=${bucketName} key=${osKey}`);
-  try {
-    const bucket = objectStorageClient.bucket(bucketName);
-    const file = bucket.file(osKey);
-    const [exists] = await file.exists();
-    if (exists) {
-      const [buf] = await file.download();
-      console.log(`[getFileBuffer] found in Object Storage: ${osKey} (${(buf as Buffer).length} bytes)`);
-      return buf as Buffer;
+
+  // Build ordered candidate list (deduplicated)
+  const cleanPath = filePath.startsWith('/') ? filePath.slice(1) : filePath;
+  const osKeysRaw = [
+    `${dirPrefix}/${cleanPath}`,        // 1. .private/uploads/projects/<folder>/Step/file
+    cleanPath,                           // 2. uploads/projects/<folder>/Step/file
+    `${dirPrefix}/uploads/${bare}`,      // 3. legacy .private/uploads/<bare>
+  ];
+  // Deduplicate while preserving order
+  const osKeys = osKeysRaw.filter((k, i) => osKeysRaw.indexOf(k) === i);
+
+  const bucket = objectStorageClient.bucket(bucketName);
+  for (const osKey of osKeys) {
+    console.log(`[getFileBuffer] trying Object Storage key: bucket=${bucketName} key=${osKey}`);
+    try {
+      const file = bucket.file(osKey);
+      const [exists] = await file.exists();
+      if (exists) {
+        const [buf] = await file.download();
+        console.log(`[getFileBuffer] found in Object Storage: ${osKey} (${(buf as Buffer).length} bytes)`);
+        return buf as Buffer;
+      }
+      console.log(`[getFileBuffer] Object Storage key not found: ${osKey}`);
+    } catch (err) {
+      console.error(`[getFileBuffer] Object Storage error for key ${osKey}:`, (err as Error).message);
     }
-    console.log(`[getFileBuffer] Object Storage key not found: ${osKey}`);
-  } catch (err) {
-    console.error(`[getFileBuffer] Object Storage error for key ${osKey}:`, (err as Error).message);
   }
 
   return null;

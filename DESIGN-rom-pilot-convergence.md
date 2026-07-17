@@ -20,6 +20,30 @@ The ROM Pilot already has most of the structure:
   proportionally (~line 67).
 So this is ALIGN + TIGHTEN, not a rebuild.
 
+## Core principle (Adolfo 2026-07-17): the ROM Pilot draws from the SAME sources as the Evaluation
+Not parallel copies — the SAME templates, report components, and allocation logic. The more
+they share, the more they stay in sync automatically (add a template for the Evaluation → it
+just appears for the ROM Pilot too). They differ ONLY in: (a) who can edit rates (ROM = rates
+locked), and (b) where data originates (ROM can stand alone or pull from an RFP).
+
+### Shared templates (confirmed buildable)
+The ROM Pilot must offer the SAME templates the Evaluation offers (e.g. "Standard TI"), so a
+user picks the template → standard line items populate → they just adjust quantities.
+- Templates already load in the eval via `GET /api/templates/:id/for-import`
+  (evaluation-budget.tsx ~line 727). The `templates` table is the source.
+- Build: give the ROM Pilot a template picker calling the SAME endpoint + the same import
+  logic (map template line items → ROM line items). No new template system.
+
+### Full allocation output on the ROM report (confirmed present on eval)
+The ROM report must show EVERYTHING the Evaluation report shows — allocated parking, allocated
+electrical, costs-in-place — not a stripped-down version. Same report, ROM data.
+- Allocation fields live on the eval: `vehicularParking`, `trailerParking`,
+  `electricalAllocation`, `calculatedElectricalAllocation`, `electricalAllocationOverride`,
+  `electricalAllocations[]` (evaluation-budget.tsx ~line 89-96).
+- Build: the ROM Pilot needs to carry/compute these the same way (reuse the eval's allocation
+  logic), and the ROM report reuses the eval report's allocation + costs-in-place sections.
+  Ideal: extract the shared report sections so both render identically.
+
 ## The three pieces (sequenced by size/risk)
 
 ### 1. Rate-lock — quantities editable, unit rates NOT (DO FIRST — small, safe, high value)

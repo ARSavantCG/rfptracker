@@ -137,3 +137,15 @@ Office SF fields ride in the existing `bay_configurations` JSON column — **no 
   never showed because the actual edit form (2nd "Edit: {item.name}" heading) lacked it.
   ALWAYS grep the edit-form heading count and confirm which path is editable before
   declaring a form field done. A changed bundle hash confirms new code shipped.
+
+### Replit Agent / deploy reconciliation — RESOLVED
+- The "Published your App" commits are Replit's **automatic checkpoint snapshots** on
+  deploy events, NOT the Agent rewriting code. They can't be disabled (they're the
+  rollback safety net) and are harmless.
+- The only real lever: **Deploy settings → set trigger to MANUAL** (publish only when
+  you click), not auto-deploy on change. Verify this is set.
+- The durable fix is workflow discipline, not a setting: **Git pane → Pull BEFORE every
+  Republish** so the workspace matches GitHub main; after deploy, if a change "isn't
+  showing," confirm the bundle hash changed AND check the render path before blaming
+  cache/pipeline. (Tonight's dropdown issue was ultimately a wrong-render-path code bug,
+  amplified by workspace/main drift.)

@@ -149,3 +149,41 @@ Office SF fields ride in the existing `bay_configurations` JSON column — **no 
   showing," confirm the bundle hash changed AND check the render path before blaming
   cache/pipeline. (Tonight's dropdown issue was ultimately a wrong-render-path code bug,
   amplified by workspace/main drift.)
+
+---
+
+## Session 2026-07-16/17 — where things stand (READ FIRST next session)
+
+**Everything is committed, pushed to main, and production is healthy.** Deploy = Git
+pane Pull → Republish.
+
+### Done this session (all live once deployed)
+- $67B runaway bug fixed (manualOverrides now persists on load)
+- Calculation Basis on all 4 soft costs (Builder's Risk, Permit, CM, Contingency) +
+  snapshot carries the basis into evals
+- storage.ts: 5 duplicate methods removed (catalog now SORTS)
+- ~185 type errors cleared (738 → 553), all real bugs / dead files / honest annotations
+- Real bugs fixed: create-rom-pilot Select-All crash, file-download 500, report-logo
+  crash, blank building name, blank ITB address
+- Branding consolidated → server/lib/branding.ts (getBrandLogo, COMPANY_NAME,
+  BRAND_COLOR_PRIMARY). Rebrand = edit 3 lines, not 60 files.
+
+### Next-session priorities (fresh brain — do NOT rush these tired)
+1. **App Settings system** (see SETTINGS-AUDIT.md) — build the app_settings table +
+   admin page + getSetting(key, fallback) helper. Seed with branding first. This is a
+   real feature: schema + backend + UI. Fresh-session sized.
+2. **Server-side TS2339s (~22)** — case-by-case; some are real bugs (like buildingName
+   was), some need judgment (like getUser being an unimplemented method, NOT a typo).
+   Investigate each, don't batch-rename.
+3. **Deploy verification** — confirm Calculation Basis + the fixed buttons work live.
+
+### Deliberately NOT doing (documented tradeoffs)
+- The ~500 remaining type errors are mostly API-layer-typing on 4,700-line eval-budget
+  money math. Retyping = high risk, no user benefit. LEAVE THEM.
+- Logo alt="Kurv Industrial" attributes left hardcoded (cosmetic, tied to logo).
+- react-hook-form resolver generic errors (TS2719) — fiddly, low value.
+
+### Cleanup (no rush, days)
+- Decommission old Neon DB (ep-still-mud) after a few days of confidence
+- Revoke the GitHub PAT from this session
+- Delete the Railway test project

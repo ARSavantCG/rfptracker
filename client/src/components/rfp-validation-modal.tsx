@@ -13,6 +13,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { IntakeProposalsPanel } from "@/components/intake-proposals-panel";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -282,6 +283,8 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
         <DialogHeader>
           <DialogTitle className="text-xl">RFP Validation - {rfp.projectName}</DialogTitle>
         </DialogHeader>
+
+        {rfp?.id && <IntakeProposalsPanel rfpId={rfp.id} />}
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">

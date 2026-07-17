@@ -1,3 +1,4 @@
+import { getBrandLogo as getBridgeLogo } from './lib/branding';
 import { createWriteStream } from "fs";
 import { promisify } from "util";
 import { readFileSync } from "fs";
@@ -8,15 +9,6 @@ import { parseRfpVariant } from "@shared/rfp-variant";
 import { format } from "date-fns";
 
 // Get Bridge Industrial logo as base64
-function getBridgeLogo(): string {
-  try {
-    const logoBase64 = readFileSync('./bridge_logo_new_base64.txt', 'utf8').replace(/\s+/g, '');
-    return `data:image/png;base64,${logoBase64}`;
-  } catch (error) {
-    console.error('Error reading Bridge logo:', error);
-    return '';
-  }
-}
 
 // Function to get template content for PDF generation
 async function getTemplateContent(recipientType: string): Promise<any> {

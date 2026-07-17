@@ -2,6 +2,7 @@
  * RFP Tracker - Property Routes
  * Copyright (c) 2025 Savant Consulting Group LLC. All rights reserved.
  */
+import { getBrandLogo as getBridgeLogo } from './lib/branding';
 import type { Express } from 'express';
 import { storage } from './storage';
 import { db } from './db';
@@ -32,15 +33,6 @@ import {
   rfpRequests,
 } from '@shared/schema';
 
-function getBridgeLogo(): string {
-  try {
-    const logoBase64 = readFileSync('./bridge_logo_new_base64.txt', 'utf8').replace(/\s+/g, '');
-    return `data:image/png;base64,${logoBase64}`;
-  } catch (error) {
-    console.error('Error reading Bridge logo:', error);
-    return '';
-  }
-}
 
 function normalizeBayConfigurations(bayConfigs: any[]): any[] {
   if (!bayConfigs) return [];

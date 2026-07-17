@@ -5,6 +5,7 @@
  * with workload analysis by vendor/firm.
  */
 
+import { getBrandLogo as getBridgeLogo } from './lib/branding';
 import puppeteer from "puppeteer";
 import { storage } from "./storage";
 import { readFileSync } from "fs";
@@ -224,14 +225,6 @@ export async function generateVendorWorkloadData(options: {
 /**
  * Gets Bridge Industrial logo for report header
  */
-function getBridgeLogo(): string {
-  try {
-    return readFileSync('./bridge_logo_new_base64.txt', 'utf8').replace(/\s+/g, '');
-  } catch (error) {
-    console.error('Error loading Bridge logo:', error);
-    return '';
-  }
-}
 
 /**
  * Generates HTML for the vendor workload report

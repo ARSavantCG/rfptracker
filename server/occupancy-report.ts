@@ -7,6 +7,7 @@
 // lease, per current definition — no date filtering). Rentable SF = bay-derived
 // total (same helper the Costs-in-Place report uses).
 
+import { getBrandLogo as getBridgeLogo } from './lib/branding';
 import type { Express } from 'express';
 import { storage } from './storage';
 import { requireAuthFlexible } from './middleware';
@@ -14,15 +15,6 @@ import type { Property, ExecutedLease, BayConfiguration } from '@shared/schema';
 import { readFileSync } from 'fs';
 import path from 'path';
 
-function getBridgeLogo(): string {
-  try {
-    const logoPath = path.join(process.cwd(), 'bridge_logo_new_base64.txt');
-    const base64 = readFileSync(logoPath, 'utf-8').trim();
-    return base64.startsWith('data:') ? base64 : `data:image/png;base64,${base64}`;
-  } catch {
-    return '';
-  }
-}
 
 function derivePropertyRentableSf(property: Property): number {
   const bays = (property.bayConfigurations || []) as BayConfiguration[];

@@ -2,6 +2,7 @@
  * RFP Tracker - ROM Pilot Routes
  * Copyright (c) 2025 Savant Consulting Group LLC. All rights reserved.
  */
+import { getBrandLogo as getBridgeLogo } from './lib/branding';
 import type { Express } from 'express';
 import { storage } from './storage';
 import { db } from './db';
@@ -16,15 +17,6 @@ import { eq, desc, and } from 'drizzle-orm';
 
 // Helper function to generate ROM report HTML
 // Get Bridge Industrial logo as base64
-function getBridgeLogo(): string {
-  try {
-    const logoBase64 = readFileSync('./bridge_logo_new_base64.txt', 'utf8').replace(/\s+/g, '');
-    return `data:image/png;base64,${logoBase64}`;
-  } catch (error) {
-    console.error('Error reading Bridge logo:', error);
-    return '';
-  }
-}
 
 async function generateRomReportHtml(romPilot: any, lineItems: any[], scopeItems: any[], generatedBy: string = 'Unknown User'): Promise<string> {
   const currentDate = new Date().toLocaleDateString('en-US', {

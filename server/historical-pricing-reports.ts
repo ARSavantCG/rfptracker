@@ -1,3 +1,4 @@
+import { getBrandLogo as getBridgeLogo } from './lib/branding';
 import puppeteer from "puppeteer";
 import { db } from "./db";
 import { rfpRequests, bidCollections, bidLineItems } from "@shared/schema";
@@ -5,15 +6,6 @@ import { eq } from "drizzle-orm";
 import { readFileSync } from "fs";
 
 // Get Bridge Industrial logo as base64
-function getBridgeLogo(): string {
-  try {
-    const logoBase64 = readFileSync('./bridge_logo_new_base64.txt', 'utf8').replace(/\s+/g, '');
-    return `data:image/png;base64,${logoBase64}`;
-  } catch (error) {
-    console.error('Error reading Bridge logo:', error);
-    return '';
-  }
-}
 
 export interface HistoricalPricingData {
   completedProjects: CompletedProject[];

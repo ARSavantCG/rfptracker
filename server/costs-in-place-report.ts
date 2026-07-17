@@ -12,6 +12,7 @@
 // Costs in property_existing_improvements are stored in CENTS. All display math
 // divides by 100 exactly once, here, at the edge.
 
+import { getBrandLogo as getBridgeLogo } from './lib/branding';
 import type { Express } from 'express';
 import { storage } from './storage';
 import { requireAuth } from './middleware';
@@ -21,15 +22,6 @@ import { readFileSync } from 'fs';
 import path from 'path';
 
 // Same logo helper pattern as property-routes.ts.
-function getBridgeLogo(): string {
-  try {
-    const logoPath = path.join(process.cwd(), 'bridge_logo_new_base64.txt');
-    const base64 = readFileSync(logoPath, 'utf-8').trim();
-    return base64.startsWith('data:') ? base64 : `data:image/png;base64,${base64}`;
-  } catch {
-    return '';
-  }
-}
 
 // Established derivation pattern (see property-summary-report.ts): a property's
 // rentable SF is the sum of its bays' rentable SF, falling back to raw bay SF.

@@ -150,6 +150,7 @@ export const rfpRequests = pgTable("rfp_requests", {
     masterItemId?: number | null,
     masterItemSnapshot?: { description: string, unit: string, unitPrice: string } | null,
     proposalId?: number | null, // stamped when committed from an AI intake proposal; enables exact retraction
+    category?: string | null,   // ROM catalog category; 'Design / Soft Costs / Other Fees' rows are excluded from generated ITB docs
   }[]>().default([]),
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -374,6 +375,11 @@ export const insertInvitationToBidSchema = createInsertSchema(invitationToBid).o
     quantity: z.number(),
     unit: z.string(),
     masterItemId: z.number().nullable().optional(),
+    // Carried through from Step-2 commits. zod strips undeclared keys, so these
+    // MUST be declared here or saving the ITB silently destroys the retraction
+    // stamp (proposalId) and the soft-cost exclusion marker (category).
+    proposalId: z.number().nullable().optional(),
+    category: z.string().nullable().optional(),
     masterItemSnapshot: z.object({
       description: z.string(),
       unit: z.string(),

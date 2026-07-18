@@ -2125,24 +2125,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Contact not found" });
       }
 
-      // Cross-delete guard: a contact with system access (a login-holding contact) is
-      // never hard-deleted. Hard-deleting would destroy business contact data (name,
-      // email, company, notes, tags) at the same time it revokes their login — the two
-      // are stored on the same row, so a straight DELETE could not do one without the
-      // other. Instead we soft-delete: flip isActive=false, which revokes login (checked
-      // in auth-routes.ts) while preserving the contact record intact. This mirrors the
-      // deleteUser soft-delete pattern and satisfies "never destroy business contact
-      // data when deactivating a login" (see HANDOFF.md, Part 4 session notes).
-      if (contact.hasSystemAccess) {
+      // Cross-delete guard: an ACTIVE contact with system access (a login-holding
+      // contact) is never hard-deleted in one step. Hard-deleting would destroy
+      // business contact data (name, email, company, notes, tags) at the same time it
+      // revokes their login — the two are stored on the same row. So deletion is
+      // two-step: the first DELETE soft-deletes (isActive=false, revoking login while
+      // preserving the record); a second DELETE on the already-deactivated contact
+      // proceeds to the hard delete below. This mirrors the deactivate-then-hard-delete
+      // flow that admin users already have (see admin.tsx Deactivated Users section).
+      if (contact.hasSystemAccess && contact.isActive !== false) {
         const updated = await storage.deactivateContact(id);
         return res.status(200).json({
           deactivated: true,
           contact: updated,
-          message: "This contact has a system login; the record was preserved and their account was deactivated instead of deleted.",
+          message: "This contact has a system login; the record was preserved and their account was deactivated instead of deleted. Deleting them again from the Deactivated Contacts list will remove them permanently.",
         });
       }
 
-      // No system login on this contact — behavior unchanged, hard delete.
+      // Contact has no login, or is already deactivated — hard delete.
       const deleted = await storage.deleteContact(id);
       if (!deleted) {
         return res.status(404).json({ message: "Contact not found" });

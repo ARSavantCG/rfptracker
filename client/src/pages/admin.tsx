@@ -49,6 +49,7 @@ function SystemUsersAndContacts() {
   const [userPasswordInput, setUserPasswordInput] = useState("");
   const [showUserPasswordText, setShowUserPasswordText] = useState(false);
   const [userToHardDelete, setUserToHardDelete] = useState<User | null>(null);
+  const [contactToHardDelete, setContactToHardDelete] = useState<any | null>(null);
 
   const { data: users, isLoading: usersLoading } = useQuery<User[]>({
     queryKey: ["/api/admin/users"],
@@ -168,6 +169,32 @@ function SystemUsersAndContacts() {
       });
     },
     onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+        duration: 6000,
+      });
+    },
+  });
+
+  const hardDeleteContactMutation = useMutation({
+    mutationFn: async (id: number) => {
+      // Second DELETE on an already-deactivated contact = permanent delete (server two-step guard)
+      return await apiRequest(`/api/contacts/${id}`, "DELETE");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/authorized-contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
+      setContactToHardDelete(null);
+      toast({
+        title: "Contact permanently deleted",
+        description: "The contact record and login are gone for good.",
+        duration: 4000,
+      });
+    },
+    onError: (error) => {
+      setContactToHardDelete(null);
       toast({
         title: "Error",
         description: error.message,
@@ -583,15 +610,26 @@ function SystemUsersAndContacts() {
                           </Badge>
                         </div>
                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-xs"
-                        onClick={() => reactivateContactMutation.mutate(contact.id)}
-                        disabled={reactivateContactMutation.isPending}
-                      >
-                        Reactivate
-                      </Button>
+                      <div className="flex items-center space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-xs"
+                          onClick={() => reactivateContactMutation.mutate(contact.id)}
+                          disabled={reactivateContactMutation.isPending}
+                        >
+                          Reactivate
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-xs text-red-600 border-red-200 hover:bg-red-50"
+                          onClick={() => setContactToHardDelete(contact)}
+                          disabled={hardDeleteContactMutation.isPending}
+                        >
+                          Delete
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -777,6 +815,28 @@ function SystemUsersAndContacts() {
               disabled={hardDeleteUserMutation.isPending}
             >
               {hardDeleteUserMutation.isPending ? "Deleting..." : "Permanently Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Hard Delete Confirmation — deactivated contacts */}
+      <AlertDialog open={!!contactToHardDelete} onOpenChange={(open) => { if (!open) setContactToHardDelete(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Permanently Delete Contact</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently deletes <strong>{contactToHardDelete?.name || contactToHardDelete?.email}</strong> ({contactToHardDelete?.email}) — the contact record AND their deactivated login. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setContactToHardDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              onClick={() => contactToHardDelete && hardDeleteContactMutation.mutate(contactToHardDelete.id)}
+              disabled={hardDeleteContactMutation.isPending}
+            >
+              {hardDeleteContactMutation.isPending ? "Deleting..." : "Permanently Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

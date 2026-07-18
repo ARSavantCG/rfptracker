@@ -43,10 +43,26 @@ export function IntakeProposalsPanel({ rfpId }: IntakeProposalsPanelProps) {
     onError: (e: any) => toast({ title: "Parse failed", description: e?.message, variant: "destructive" }),
   });
 
+  const commitToScope = useMutation({
+    mutationFn: () => apiRequest(`/api/intake-proposals/${rfpId}/commit-to-scope`, "POST"),
+    onSuccess: (data: any) => {
+      // Refresh RFP data so the Scope of Work section shows the newly added items.
+      queryClient.invalidateQueries({ queryKey: [`/api/rfp-requests/${rfpId}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
+    },
+    onError: (e: any) => toast({ title: "Failed to add to scope", description: e?.message, variant: "destructive" }),
+  });
+
   const setStatus = useMutation({
     mutationFn: ({ id, status }: { id: number; status: string }) =>
       apiRequest(`/api/intake-proposals/${id}/status`, "PATCH", { status }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/intake-proposals", rfpId] }),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/intake-proposals", rfpId] });
+      // Accepting = adding to scope. Auto-commit so there's no separate step.
+      if (variables?.status === "accepted") {
+        commitToScope.mutate();
+      }
+    },
     onError: (e: any) => toast({ title: "Update failed", description: e?.message, variant: "destructive" }),
   });
 
@@ -56,20 +72,6 @@ export function IntakeProposalsPanel({ rfpId }: IntakeProposalsPanelProps) {
   const rejectAll = () => {
     proposals.filter((p) => p.status === "proposed").forEach((p) => setStatus.mutate({ id: p.id, status: "rejected" }));
   };
-
-  const commitToScope = useMutation({
-    mutationFn: () => apiRequest(`/api/intake-proposals/${rfpId}/commit-to-scope`, "POST"),
-    onSuccess: (data: any) => {
-      // Refresh RFP data so the Scope of Work section shows the newly added items.
-      queryClient.invalidateQueries({ queryKey: [`/api/rfp-requests/${rfpId}`] });
-      queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
-      toast({
-        title: data?.added ? `Added ${data.added} item${data.added === 1 ? "" : "s"} to scope of work` : "Nothing new to add",
-        description: data?.added ? "Accepted items are now in the Scope of Work. Scroll down to see them, then Save." : data?.message,
-      });
-    },
-    onError: (e: any) => toast({ title: "Failed to add to scope", description: e?.message, variant: "destructive" }),
-  });
 
   const sorted = [...proposals].sort((a, b) => confidenceRank(a.confidence) - confidenceRank(b.confidence));
   const pendingCount = proposals.filter((p) => p.status === "proposed").length;
@@ -129,23 +131,7 @@ export function IntakeProposalsPanel({ rfpId }: IntakeProposalsPanelProps) {
         </div>
       )}
 
-      {/* Add accepted items to the evaluation scope of work */}
-      {acceptedCount > 0 && (
-        <div className="space-y-1">
-          <Button
-            size="sm"
-            onClick={() => commitToScope.mutate()}
-            disabled={commitToScope.isPending}
-            className="w-full bg-green-600 hover:bg-green-700 flex items-center justify-center gap-1"
-          >
-            {commitToScope.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-            Add {acceptedCount} accepted item{acceptedCount === 1 ? "" : "s"} to Scope of Work
-          </Button>
-          <p className="text-[11px] text-gray-500 text-center">
-            Required step — accepting alone doesn't add to scope. Click here to send accepted items into the Scope of Work below, then Save.
-          </p>
-        </div>
-      )}
+      {/* Accepting auto-adds to Scope of Work — no separate step needed. */}
 
       {/* Bulk actions */}
       {pendingCount > 0 && (
@@ -211,7 +197,7 @@ export function IntakeProposalsPanel({ rfpId }: IntakeProposalsPanelProps) {
           {/* ACCEPTED — confirmed items, out of the review pile but visible */}
           {acceptedCount > 0 && (
             <div className="space-y-2">
-              <div className="text-xs font-semibold text-green-700 uppercase tracking-wide">✓ Accepted ({acceptedCount})</div>
+              <div className="text-xs font-semibold text-green-700 uppercase tracking-wide">✓ Accepted — added to Scope of Work ({acceptedCount})</div>
               {sorted.filter((p) => p.status === "accepted").map((p) => (
                 <div key={p.id} className="border border-green-500 bg-green-50 rounded-md px-3 py-2">
                   <div className="flex items-start justify-between gap-3">

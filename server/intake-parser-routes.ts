@@ -382,7 +382,8 @@ If you cannot find any scope, return {"proposals": []}.`
       const proposals = await storage.getIntakeProposals(rfpId);
       const accepted = proposals.filter((p) => p.status === "accepted");
       if (accepted.length === 0) {
-        return res.status(400).json({ message: "No accepted proposals to add. Accept some first." });
+        // Not an error — e.g. called right after an undo. Nothing to add.
+        return res.status(200).json({ added: 0, message: "No accepted proposals to add." });
       }
 
       // Pull catalog for snapshots on catalog-matched items (single-source pricing).

@@ -692,15 +692,9 @@ const formatQuantityDisplay = (val: any): string => {
 
       form.reset(formValues);
       setKeyDates(formValues.keyDates);
-      
-      // Force update scope of work fields after form reset
-      if (formValues.scopeOfWork && formValues.scopeOfWork.length > 0) {
-        setTimeout(() => {
-          replaceScope(formValues.scopeOfWork);
-        }, 100);
-      } else {
-        replaceScope([]);
-      }
+      // NOTE: do NOT call replaceScope after form.reset — form.reset already seeds
+      // useFieldArray correctly, and a subsequent replaceScope regenerates all field
+      // IDs causing ROWS REMOUNTED mid-typing (the confirmed scroll-jump root cause).
     }
   }, [rfp, freshRfp, freshRfpFetched, isOpen, existingInvitation, invitationFetched, form, properties, contacts]);
 

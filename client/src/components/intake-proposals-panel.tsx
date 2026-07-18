@@ -60,9 +60,12 @@ export function IntakeProposalsPanel({ rfpId }: IntakeProposalsPanelProps) {
   const commitToScope = useMutation({
     mutationFn: () => apiRequest(`/api/intake-proposals/${rfpId}/commit-to-scope`, "POST"),
     onSuccess: (data: any) => {
+      // Refresh RFP data so the Scope of Work section shows the newly added items.
+      queryClient.invalidateQueries({ queryKey: [`/api/rfp-requests/${rfpId}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
       toast({
         title: data?.added ? `Added ${data.added} item${data.added === 1 ? "" : "s"} to scope of work` : "Nothing new to add",
-        description: data?.added ? "Accepted items are now in the evaluation's scope of work." : data?.message,
+        description: data?.added ? "Accepted items are now in the Scope of Work. Scroll down to see them, then Save." : data?.message,
       });
     },
     onError: (e: any) => toast({ title: "Failed to add to scope", description: e?.message, variant: "destructive" }),
@@ -128,15 +131,20 @@ export function IntakeProposalsPanel({ rfpId }: IntakeProposalsPanelProps) {
 
       {/* Add accepted items to the evaluation scope of work */}
       {acceptedCount > 0 && (
-        <Button
-          size="sm"
-          onClick={() => commitToScope.mutate()}
-          disabled={commitToScope.isPending}
-          className="w-full bg-green-600 hover:bg-green-700 flex items-center justify-center gap-1"
-        >
-          {commitToScope.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-          Add {acceptedCount} accepted item{acceptedCount === 1 ? "" : "s"} to Scope of Work
-        </Button>
+        <div className="space-y-1">
+          <Button
+            size="sm"
+            onClick={() => commitToScope.mutate()}
+            disabled={commitToScope.isPending}
+            className="w-full bg-green-600 hover:bg-green-700 flex items-center justify-center gap-1"
+          >
+            {commitToScope.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+            Add {acceptedCount} accepted item{acceptedCount === 1 ? "" : "s"} to Scope of Work
+          </Button>
+          <p className="text-[11px] text-gray-500 text-center">
+            Required step — accepting alone doesn't add to scope. Click here to send accepted items into the Scope of Work below, then Save.
+          </p>
+        </div>
       )}
 
       {/* Bulk actions */}
@@ -157,33 +165,28 @@ export function IntakeProposalsPanel({ rfpId }: IntakeProposalsPanelProps) {
       ) : proposals.length === 0 ? (
         <div className="text-sm text-gray-400">No proposals yet. Click "Run AI parse" to analyze the intake.</div>
       ) : (
-        <div className="space-y-2">
-          {sorted.map((p) => (
-            <div
-              key={p.id}
-              className={`border rounded-md px-3 py-2 ${
-                p.status === "accepted" ? "border-green-500 bg-green-50" : p.status === "rejected" ? "border-red-300 bg-red-50/50 opacity-60" : "bg-white"
-              }`}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="text-sm">
-                  <div className="font-medium flex items-center gap-2 flex-wrap">
-                    {p.status === "accepted" && <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-600 text-white font-semibold">✓ ACCEPTED</span>}
-                    {p.status === "rejected" && <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500 text-white font-semibold">✕ REJECTED</span>}
-                    {p.description}
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded ${
-                      p.matchType === "catalog-match" ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700"
-                    }`}>
-                      {p.matchType === "catalog-match" ? "catalog match" : "needs mapping"}
-                    </span>
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">{p.confidence}</span>
-                  </div>
-                  {p.reason && <div className="text-xs text-gray-500 mt-0.5">{p.reason}</div>}
-                  {p.sourceRef && <div className="text-[10px] text-gray-400 mt-0.5">source: {p.sourceRef}</div>}
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  {p.status === "proposed" ? (
-                    <>
+        <div className="space-y-4">
+          {/* TO REVIEW — only items still needing a decision */}
+          {sorted.filter((p) => p.status === "proposed").length > 0 && (
+            <div className="space-y-2">
+              <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">To review ({pendingCount})</div>
+              {sorted.filter((p) => p.status === "proposed").map((p) => (
+                <div key={p.id} className="border rounded-md px-3 py-2 bg-white">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="text-sm">
+                      <div className="font-medium flex items-center gap-2 flex-wrap">
+                        {p.description}
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded ${
+                          p.matchType === "catalog-match" ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700"
+                        }`}>
+                          {p.matchType === "catalog-match" ? "catalog match" : "needs mapping"}
+                        </span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">{p.confidence}</span>
+                      </div>
+                      {p.reason && <div className="text-xs text-gray-500 mt-0.5">{p.reason}</div>}
+                      {p.sourceRef && <div className="text-[10px] text-gray-400 mt-0.5">source: {p.sourceRef}</div>}
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
                       <button
                         onClick={() => setStatus.mutate({ id: p.id, status: "accepted" })}
                         className="p-1.5 rounded-md border border-green-300 hover:bg-green-100 text-green-600"
@@ -198,20 +201,40 @@ export function IntakeProposalsPanel({ rfpId }: IntakeProposalsPanelProps) {
                       >
                         <X className="h-4 w-4" />
                       </button>
-                    </>
-                  ) : (
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* ACCEPTED — confirmed items, out of the review pile but visible */}
+          {acceptedCount > 0 && (
+            <div className="space-y-2">
+              <div className="text-xs font-semibold text-green-700 uppercase tracking-wide">✓ Accepted ({acceptedCount})</div>
+              {sorted.filter((p) => p.status === "accepted").map((p) => (
+                <div key={p.id} className="border border-green-500 bg-green-50 rounded-md px-3 py-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="text-sm font-medium">{p.description}</div>
                     <button
                       onClick={() => setStatus.mutate({ id: p.id, status: "proposed" })}
-                      className="text-xs text-gray-500 hover:underline px-2 py-1"
-                      title="Reset to proposed"
+                      className="text-xs text-gray-500 hover:underline px-2 py-1 shrink-0"
+                      title="Move back to review"
                     >
                       undo
                     </button>
-                  )}
+                  </div>
                 </div>
-              </div>
+              ))}
             </div>
-          ))}
+          )}
+
+          {/* Rejected items are hidden. Show a small note + a way to review them. */}
+          {rejectedCount > 0 && (
+            <div className="text-[11px] text-gray-400">
+              {rejectedCount} rejected item{rejectedCount === 1 ? "" : "s"} hidden.
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -19,7 +19,7 @@ export function IntakeProposalsPanel({ rfpId }: IntakeProposalsPanelProps) {
   const [lastMeta, setLastMeta] = useState<any>(null);
 
   const { data: proposals = [], isLoading } = useQuery<IntakeProposal[]>({
-    queryKey: ["/api/intake-proposals", rfpId],
+    queryKey: [`/api/intake-proposals/${rfpId}`],
     enabled: !!rfpId,
   });
 
@@ -30,9 +30,9 @@ export function IntakeProposalsPanel({ rfpId }: IntakeProposalsPanelProps) {
       // render immediately (don't wait for a refetch round-trip, which can leave the
       // panel showing "No proposals yet" on mobile). Then invalidate to stay fresh.
       if (Array.isArray(data?.proposals)) {
-        queryClient.setQueryData(["/api/intake-proposals", rfpId], data.proposals);
+        queryClient.setQueryData([`/api/intake-proposals/${rfpId}`], data.proposals);
       }
-      queryClient.invalidateQueries({ queryKey: ["/api/intake-proposals", rfpId] });
+      queryClient.invalidateQueries({ queryKey: [`/api/intake-proposals/${rfpId}`] });
       setLastMeta(data?.meta ?? null);
       const n = data?.proposals?.length ?? 0;
       toast({
@@ -57,7 +57,7 @@ export function IntakeProposalsPanel({ rfpId }: IntakeProposalsPanelProps) {
     mutationFn: ({ id, status }: { id: number; status: string }) =>
       apiRequest(`/api/intake-proposals/${id}/status`, "PATCH", { status }),
     onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/intake-proposals", rfpId] });
+      queryClient.invalidateQueries({ queryKey: [`/api/intake-proposals/${rfpId}`] });
       // Accepting = adding to scope. Auto-commit so there's no separate step.
       if (variables?.status === "accepted") {
         commitToScope.mutate();

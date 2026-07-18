@@ -41,7 +41,7 @@ export function ScopeBundlesModal({ open, onClose }: ScopeBundlesModalProps) {
 
   // The bundle currently being edited (with its items)
   const { data: editingBundle } = useQuery<BundleWithItems>({
-    queryKey: ["/api/scope-bundles", editingBundleId],
+    queryKey: [`/api/scope-bundles/${editingBundleId}`],
     enabled: open && editingBundleId !== null,
   });
 
@@ -75,7 +75,7 @@ export function ScopeBundlesModal({ open, onClose }: ScopeBundlesModalProps) {
     mutationFn: (scopeItemId: number) =>
       apiRequest(`/api/scope-bundles/${editingBundleId}/items`, "POST", { scopeItemId }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/scope-bundles", editingBundleId] });
+      queryClient.invalidateQueries({ queryKey: [`/api/scope-bundles/${editingBundleId}`] });
       setSelectedItemToAdd("");
       toast({ title: "Item added to bundle" });
     },
@@ -85,7 +85,7 @@ export function ScopeBundlesModal({ open, onClose }: ScopeBundlesModalProps) {
   const removeItem = useMutation({
     mutationFn: (itemId: number) => apiRequest(`/api/scope-bundles/items/${itemId}`, "DELETE"),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/scope-bundles", editingBundleId] });
+      queryClient.invalidateQueries({ queryKey: [`/api/scope-bundles/${editingBundleId}`] });
       toast({ title: "Item removed" });
     },
     onError: (e: any) => toast({ title: "Failed to remove item", description: e?.message, variant: "destructive" }),

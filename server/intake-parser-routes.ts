@@ -180,8 +180,18 @@ export function registerIntakeParserRoutes(app: Express): void {
             }
           } else if (nameLower.endsWith(".msg")) {
             try {
-              const { default: MsgReader } = await import('@kenjiuno/msgreader');
-              const reader = new (MsgReader as any)(buf);
+              const mod: any = await import('@kenjiuno/msgreader');
+              // Handle both ESM/CJS shapes: the constructor may be mod.default,
+              // mod.default.default (double-wrapped), or mod itself.
+              const MsgReader =
+                (typeof mod?.default === 'function' && mod.default) ||
+                (typeof mod?.default?.default === 'function' && mod.default.default) ||
+                (typeof mod === 'function' && mod) ||
+                mod?.MsgReader;
+              if (typeof MsgReader !== 'function') {
+                throw new Error('MsgReader constructor not found in module export');
+              }
+              const reader = new MsgReader(buf);
               const data = reader.getFileData();
               const body = (data?.body || data?.bodyHTML || "").toString().trim();
               const subject = (data?.subject || "").toString();

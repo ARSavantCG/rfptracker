@@ -325,14 +325,6 @@ const formatQuantityDisplay = (val: any): string => {
     name: "scopeOfWork",
   });
 
-  // TEMP DIAG v4: field-array id regeneration detector.
-  const vIdsRef = useRef<string>("");
-  useEffect(() => {
-    const ids = scopeFields.map((f) => f.id).join(",");
-    if (vIdsRef.current && ids !== vIdsRef.current) vLog(`ROWS-REMOUNTED (${scopeFields.length})`);
-    vIdsRef.current = ids;
-  }, [scopeFields]);
-
   const { fields: architectMilestoneFields, append: appendArchitectMilestone, remove: removeArchitectMilestone } = useFieldArray({
     control: form.control,
     name: "architectMilestones",
@@ -2272,11 +2264,6 @@ const formatQuantityDisplay = (val: any): string => {
             </div>
           </form>
         </Form>
-        {vDiag.length > 0 && (
-          <div className="fixed bottom-2 left-2 z-[100] rounded bg-black/75 px-2 py-1 text-[10px] font-mono leading-tight text-green-300 pointer-events-none" data-testid="vdiag">
-            {vDiag.map((l, i) => (<div key={i}>{l}</div>))}
-          </div>
-        )}
       </DialogContent>
     </Dialog>
   );

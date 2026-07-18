@@ -26,6 +26,12 @@ export function IntakeProposalsPanel({ rfpId }: IntakeProposalsPanelProps) {
   const runParse = useMutation({
     mutationFn: () => apiRequest(`/api/ai/intake-parse/${rfpId}`, "POST", { typedText }, 90_000),
     onSuccess: (data: any) => {
+      // Seed the cache directly with the proposals the parse just returned, so they
+      // render immediately (don't wait for a refetch round-trip, which can leave the
+      // panel showing "No proposals yet" on mobile). Then invalidate to stay fresh.
+      if (Array.isArray(data?.proposals)) {
+        queryClient.setQueryData(["/api/intake-proposals", rfpId], data.proposals);
+      }
       queryClient.invalidateQueries({ queryKey: ["/api/intake-proposals", rfpId] });
       setLastMeta(data?.meta ?? null);
       const n = data?.proposals?.length ?? 0;

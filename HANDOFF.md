@@ -182,3 +182,12 @@ git add server/routes.ts server/property-routes.ts server/actuals-routes.ts serv
 git commit -m "Add checkPermission guards to 23 routes; exclude cancelled from dashboard tiles; update John Mejia Neon permissions"
 git push
 ```
+
+---
+
+## 2026-07-18 — Parser scope-write bug RESOLVED (scope-fix-v4-0718b)
+- **Bug:** Accepting AI proposals never persisted to rfp.scopeOfWork (silent no-op, 200s everywhere).
+- **Root cause:** `rfp_requests.scope_of_work` column never existed anywhere — the schema's only scopeOfWork belongs to invitation_to_bid. `as any` on the write masked the type error; drizzle `.set()` drops unknown keys silently.
+- **Fix:** Column added to schema + additive startup migration (ADD COLUMN IF NOT EXISTS on boot → reaches helium AND Neon automatically). Cast removed.
+- **Process notes:** Found in one click via on-screen diag cascade incl. raw SQL through the app's own DB connection (= prod by definition). Full writeup + banked lessons in HANDOFF-parser-scope-write.md. Diag cascade removed after verification; lean persisted read-back retained.
+- **Watch:** Step-2 undo does not retract already-committed scope rows (commit is add-only).

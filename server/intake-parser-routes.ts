@@ -14,11 +14,6 @@ import { storage } from './storage';
 import Anthropic from '@anthropic-ai/sdk';
 import { requireAuth, checkPermission } from './middleware';
 import { getFileBuffer } from './storage-backup';
-import { db } from './db';
-import { sql, eq } from 'drizzle-orm';
-import { rfpRequests } from '@shared/schema';
-
-const SCOPE_DIAG_STAMP = 'scope-fix-v4-0718b';
 
 // Claude supports these natively as document/image blocks.
 const PDF_MIME = 'application/pdf';
@@ -423,65 +418,17 @@ If you cannot find any scope, return {"proposals": []}.`
 
       const updatedScope = [...existingScope, ...newRows];
 
-      // ---- DIAGNOSTIC CASCADE (temporary, on-screen) ----------------------
-      // (1) Storage-layer write; capture the UPDATE's own .returning() row.
-      //     -2 = UPDATE matched no row; -1 = row returned but scopeOfWork not an array
-      const updResult = await storage.updateRfpRequest(rfpId, { scopeOfWork: updatedScope });
-      const returningScope = (updResult as any)?.scopeOfWork;
-      const returningLen = updResult === undefined ? -2 : (Array.isArray(returningScope) ? returningScope.length : -1);
-
-      // (2) Raw SQL read via the app's own connection (= production DB by definition).
-      const readRaw = async () => {
-        try {
-          const r = await db.execute(sql`
-            SELECT pg_typeof(scope_of_work)::text AS coltype,
-                   scope_of_work::text AS rawtext
-            FROM rfp_requests WHERE id = ${rfpId}
-          `);
-          const row: any = r.rows?.[0];
-          if (!row) return { coltype: 'NO ROW', rawlen: -2, preview: '' };
-          const rawtext = (row.rawtext ?? '').toString();
-          return { coltype: row.coltype, rawlen: rawtext.length, preview: rawtext.slice(0, 120) };
-        } catch (e: any) {
-          return { coltype: 'ERR', rawlen: -3, preview: e?.message?.slice(0, 120) || 'unknown' };
-        }
-      };
-      const rawAfterStorage = await readRaw();
-
-      // (3) Existing storage-layer read-back.
+      // Write, then read back — cheap insurance after the silent-no-op era.
+      // (Root cause of the original bug: this column didn't exist; see HANDOFF.)
+      await storage.updateRfpRequest(rfpId, { scopeOfWork: updatedScope });
       const verify = await storage.getRfpRequest(rfpId);
-      const persistedRaw = (verify as any)?.scopeOfWork;
+      const persistedRaw = verify?.scopeOfWork;
       const persisted = Array.isArray(persistedRaw) ? persistedRaw.length : -1;
-
-      // (4) If the storage write didn't stick, direct Drizzle write bypassing updateRfpRequest.
-      let directPersistedRawLen: number | null = null;
-      let directErr: string | null = null;
-      if (persisted === 0 || rawAfterStorage.rawlen <= 2) {
-        try {
-          await db.update(rfpRequests)
-            .set({ scopeOfWork: updatedScope })
-            .where(eq(rfpRequests.id, rfpId));
-          directPersistedRawLen = (await readRaw()).rawlen;
-        } catch (e: any) {
-          directErr = e?.message?.slice(0, 160) || 'unknown';
-        }
-      }
-      // ---- END DIAGNOSTIC CASCADE -----------------------------------------
 
       res.json({
         added: newRows.length,
         totalScopeItems: updatedScope.length,
         persisted,
-        persistedType: persistedRaw === null ? "null" : typeof persistedRaw,
-        diag: {
-          stamp: SCOPE_DIAG_STAMP,
-          returningLen,
-          coltype: rawAfterStorage.coltype,
-          rawLenAfterStorage: rawAfterStorage.rawlen,
-          rawPreview: rawAfterStorage.preview,
-          directPersistedRawLen,
-          directErr,
-        },
       });
     } catch (error: any) {
       console.error("Commit-to-scope error:", error);

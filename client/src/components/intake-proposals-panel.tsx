@@ -58,12 +58,10 @@ export function IntakeProposalsPanel({ rfpId }: IntakeProposalsPanelProps) {
       // Refresh RFP data so the Scope of Work section shows the newly added items.
       queryClient.invalidateQueries({ queryKey: [`/api/rfp-requests/${rfpId}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
-      const d = data?.diag;
       setCommitInfo(
-        `last write: added ${data?.added ?? 0}, intended ${data?.totalScopeItems ?? "?"}, PERSISTED ${data?.persisted ?? "?"} (type ${data?.persistedType ?? "?"})` +
-        (d
-          ? ` | DIAG [${d.stamp}] returningLen=${d.returningLen} coltype=${d.coltype} rawLen=${d.rawLenAfterStorage} directRawLen=${d.directPersistedRawLen ?? "n/a"}${d.directErr ? ` directErr=${d.directErr}` : ""} preview=${d.rawPreview ?? ""}`
-          : ` | DIAG missing — old build still deployed`)
+        data?.persisted !== undefined && data?.persisted !== data?.totalScopeItems
+          ? `Warning: added ${data?.added ?? 0} but scope shows ${data?.persisted} of ${data?.totalScopeItems} items — contact admin`
+          : `added ${data?.added ?? 0} item${(data?.added ?? 0) === 1 ? "" : "s"} — scope of work now has ${data?.totalScopeItems ?? "?"}`
       );
     },
     onError: (e: any) => {

@@ -57,6 +57,11 @@ const invitationFormSchema = z.object({
     // Optional link to the ROM Pilot master scope catalog — set only when the row was
     // picked from the autocomplete. Free-typed rows simply omit these (unchanged behavior).
     masterItemId: z.number().nullable().optional(),
+    // Carried through from Step-2 commits. zod strips undeclared keys, so these
+    // MUST be declared here or saving the ITB silently destroys the retraction
+    // stamp (proposalId) and the soft-cost exclusion marker (category).
+    proposalId: z.number().nullable().optional(),
+    category: z.string().nullable().optional(),
     masterItemSnapshot: z.object({
       description: z.string(),
       unit: z.string(),

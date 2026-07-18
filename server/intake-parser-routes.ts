@@ -459,6 +459,7 @@ If you cannot find any scope, return {"proposals": []}.`
         const catItem = p.catalogItemId ? catalog.find((c) => c.id === p.catalogItemId) : undefined;
         newRows.push({
           proposalId: p.id, // enables exact retraction via /retract and id-based de-dup
+          category: catItem?.category || null, // soft-cost rows are excluded from generated ITB docs
           description: desc,
           quantity: 1, // dev team adjusts; unit rates stay from catalog
           unit: normalizeUnit(catItem?.unit),

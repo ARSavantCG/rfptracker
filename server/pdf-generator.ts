@@ -58,6 +58,16 @@ async function getTemplateContent(recipientType: string): Promise<any> {
 // Format scope quantities with thousands separators for generated documents
 // (12000 -> "12,000"). Non-numeric values pass through; empty stays empty.
 // parseFloat + strip (house rule) — never parseInt on possibly-formatted strings.
+// Rows categorized as soft costs stay in scope (and in Step-4 evaluation) but are
+// EXCLUDED from ITB documents sent to GCs and architects — they aren't bid items.
+// Category is stamped at commit-to-scope from the ROM catalog; manually added rows
+// have no category and always print.
+const SOFT_COST_CATEGORY = 'Design / Soft Costs / Other Fees';
+function bidableScope(items: any): any[] {
+  if (!Array.isArray(items)) return [];
+  return items.filter((row: any) => (row?.category || row?.masterItemSnapshot?.category) !== SOFT_COST_CATEGORY);
+}
+
 function formatQty(q: any): string {
   if (q === null || q === undefined || q === '') return '';
   const n = typeof q === 'number' ? q : parseFloat(q.toString().replace(/[^0-9.\-]/g, ''));
@@ -867,7 +877,7 @@ async function generateContractorRfpHtml(options: PdfGenerationOptions, dates: a
       
       ${getElectricalAllocationSection(rfp)}
       
-      ${invitationToBid?.scopeOfWork && invitationToBid.scopeOfWork.length > 0 ? `
+      ${bidableScope(invitationToBid?.scopeOfWork).length > 0 ? `
       <div class="section">
         <div class="section-title">SCOPE OF WORK:</div>
         <div class="description-box">
@@ -888,7 +898,7 @@ async function generateContractorRfpHtml(options: PdfGenerationOptions, dates: a
               </tr>
             </thead>
             <tbody>
-              ${invitationToBid.scopeOfWork.map((item: any) => `
+              ${bidableScope(invitationToBid?.scopeOfWork).map((item: any) => `
                 <tr>
                   <td>${item.description || ''}</td>
                   <td style="text-align: center;">${formatQty(item.quantity)}</td>
@@ -1169,7 +1179,7 @@ async function generateArchitectRfpHtml(options: PdfGenerationOptions, dates: an
       
       ${getElectricalAllocationSection(rfp)}
       
-      ${invitationToBid?.scopeOfWork && invitationToBid.scopeOfWork.length > 0 ? `
+      ${bidableScope(invitationToBid?.scopeOfWork).length > 0 ? `
       <div class="section">
         <div class="section-title">SCOPE OF WORK:</div>
         <div class="description-box">
@@ -1190,7 +1200,7 @@ async function generateArchitectRfpHtml(options: PdfGenerationOptions, dates: an
               </tr>
             </thead>
             <tbody>
-              ${invitationToBid.scopeOfWork.map((item: any) => `
+              ${bidableScope(invitationToBid?.scopeOfWork).map((item: any) => `
                 <tr>
                   <td>${item.description || ''}</td>
                   <td style="text-align: center;">${formatQty(item.quantity)}</td>
@@ -1423,7 +1433,7 @@ async function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dat
 
       ${getElectricalAllocationSection(rfp)}
 
-      ${invitationToBid?.scopeOfWork && invitationToBid.scopeOfWork.length > 0 ? `
+      ${bidableScope(invitationToBid?.scopeOfWork).length > 0 ? `
       <div class="section">
         <div class="section-title">SCOPE OF WORK:</div>
         <div class="description-box">
@@ -1438,7 +1448,7 @@ async function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dat
               </tr>
             </thead>
             <tbody>
-              ${invitationToBid.scopeOfWork.map((item: any) => `
+              ${bidableScope(invitationToBid?.scopeOfWork).map((item: any) => `
                 <tr>
                   <td>${item.description || ''}</td>
                   <td style="text-align: center;">${formatQty(item.quantity)}</td>
@@ -1515,7 +1525,7 @@ async function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, da
 
   // Generate scope of work HTML using actual invitation data (same as architect RFP)
   let scopeOfWorkHtml = '';
-  if (invitationToBid?.scopeOfWork && invitationToBid.scopeOfWork.length > 0) {
+  if (bidableScope(invitationToBid?.scopeOfWork).length > 0) {
     scopeOfWorkHtml = `
       <div class="section">
         <div class="section-title">SCOPE OF WORK:</div>
@@ -1537,7 +1547,7 @@ async function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, da
               </tr>
             </thead>
             <tbody>
-              ${invitationToBid.scopeOfWork.map((item: any) => `
+              ${bidableScope(invitationToBid?.scopeOfWork).map((item: any) => `
                 <tr>
                   <td style="border: 1px solid #e5e7eb; padding: 8px;">${item.description || ''}</td>
                   <td style="border: 1px solid #e5e7eb; padding: 8px; text-align: center;">${formatQty(item.quantity)}</td>
@@ -1783,8 +1793,8 @@ async function generateContractorEnhancedRfpHtml(options: PdfGenerationOptions, 
 
   // ── Section 7: Scope of Work ───────────────────────────────────────────────
   let scopeOfWorkHtml = '';
-  if (invitationToBid?.scopeOfWork && invitationToBid.scopeOfWork.length > 0) {
-    const scopeRows = invitationToBid.scopeOfWork.map((item: any) => `
+  if (bidableScope(invitationToBid?.scopeOfWork).length > 0) {
+    const scopeRows = bidableScope(invitationToBid?.scopeOfWork).map((item: any) => `
       <tr>
         <td>${item.description || ''}</td>
         <td style="text-align:center;">${formatQty(item.quantity)}</td>
@@ -2034,8 +2044,8 @@ async function generateArchitectEnhancedRfpHtml(options: PdfGenerationOptions, d
         <li>Permitting support — responses to plan check comments</li>
         <li>Construction Administration — RFIs, submittals, site observations</li>
         ${invitationToBid?.technicalSpecifications ? `<li>${invitationToBid.technicalSpecifications}</li>` : ''}
-        ${invitationToBid?.scopeOfWork && invitationToBid.scopeOfWork.length > 0
-          ? invitationToBid.scopeOfWork.map((item: any) => `<li>${item.description}${item.notes ? ` — ${item.notes}` : ''}</li>`).join('')
+        ${bidableScope(invitationToBid?.scopeOfWork).length > 0
+          ? bidableScope(invitationToBid?.scopeOfWork).map((item: any) => `<li>${item.description}${item.notes ? ` — ${item.notes}` : ''}</li>`).join('')
           : ''}
       </ul>
     </div>`;

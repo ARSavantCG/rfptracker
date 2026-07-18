@@ -1,4 +1,7 @@
 import { useState, useEffect, useCallback, memo, useRef } from "react";
+
+// TEMP DIAG (scroll-jump hunt): counts modal mounts across the session.
+let itbModalMountCounter = 0;
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -104,6 +107,10 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
   const [editingAreaId, setEditingAreaId] = useState<string | null>(null);
   const [editingAreaData, setEditingAreaData] = useState<{description: string, squareFootage: string, notes: string}>({description: '', squareFootage: '', notes: ''});
   const modalRef = useRef<HTMLDivElement>(null);
+  // TEMP DIAG: module-level mount counter — if the jump coincides with a NEW mount
+  // number, the whole modal is being unmounted/remounted by its parent, which
+  // resets every ref gate and explains everything. Lazy init = once per mount.
+  const [mountId] = useState(() => ++itbModalMountCounter);
 
   // TEMP DIAG (scroll-jump hunt): records focus losses and large upward scroll
   // jumps inside the dialog. Rendered as tiny text under the header — a single
@@ -117,11 +124,19 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
       n?.getAttribute?.("data-testid") || n?.getAttribute?.("name") || (n?.tagName ? `${n.tagName}${n.id ? "#" + n.id : ""}` : "NULL(body)");
     const log = (msg: string) =>
       setFocusDiag((prev) => [...prev.slice(-3), `${new Date().toISOString().slice(14, 23)} ${msg}`]);
+    log(`modal mount #${mountId}`);
     const onFocusOut = (e: FocusEvent) => log(`out: ${ident(e.target)} -> ${ident(e.relatedTarget)}`);
     const onFocusIn = (e: FocusEvent) => log(`in: ${ident(e.target)}`);
     let lastTop = el.scrollTop;
     const onScroll = () => {
-      if (el.scrollTop < lastTop - 200) log(`SCROLL JUMP ${Math.round(lastTop)} -> ${Math.round(el.scrollTop)} (active: ${ident(document.activeElement)})`);
+      if (el.scrollTop < lastTop - 200) {
+        log(`SCROLL JUMP ${Math.round(lastTop)} -> ${Math.round(el.scrollTop)} (active: ${ident(document.activeElement)})`);
+        // Phone home: full trail into deployment logs (fire-and-forget).
+        setFocusDiag((trail) => {
+          apiRequest(`/api/client-diag`, "POST", { mountId, jump: `${Math.round(lastTop)}->${Math.round(el.scrollTop)}`, active: ident(document.activeElement), trail }).catch(() => {});
+          return trail;
+        });
+      }
       lastTop = el.scrollTop;
     };
     el.addEventListener("focusout", onFocusOut);

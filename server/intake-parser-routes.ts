@@ -426,19 +426,6 @@ If you cannot find any scope, return {"proposals": []}.`
   });
 
 
-  // TEMP DIAG (scroll-jump hunt): the ITB modal POSTs its focus/scroll event trail
-  // here when a jump is detected. Entries land in deployment logs with a CLIENT-DIAG
-  // prefix so the Replit Agent can grep and paste them verbatim — evidence without
-  // requiring the user to screenshot mid-bug. Remove with the client diag.
-  app.post("/api/client-diag", requireAuth, async (req, res) => {
-    try {
-      console.log("CLIENT-DIAG " + JSON.stringify({ at: new Date().toISOString(), user: (req as any).user?.id, ...req.body }));
-      res.json({ ok: true });
-    } catch {
-      res.json({ ok: false });
-    }
-  });
-
   app.post("/api/intake-proposals/:rfpId/commit-to-scope", requireAuth, checkPermission('admin.access'), async (req, res) => {
     try {
       const rfpId = parseInt(req.params.rfpId);

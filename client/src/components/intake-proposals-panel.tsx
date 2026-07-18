@@ -59,6 +59,8 @@ export function IntakeProposalsPanel({ rfpId }: IntakeProposalsPanelProps) {
 
   const sorted = [...proposals].sort((a, b) => confidenceRank(a.confidence) - confidenceRank(b.confidence));
   const pendingCount = proposals.filter((p) => p.status === "proposed").length;
+  const acceptedCount = proposals.filter((p) => p.status === "accepted").length;
+  const rejectedCount = proposals.filter((p) => p.status === "rejected").length;
 
   return (
     <div className="border rounded-md p-4 space-y-4 bg-purple-50/40">
@@ -104,6 +106,15 @@ export function IntakeProposalsPanel({ rfpId }: IntakeProposalsPanelProps) {
         </div>
       )}
 
+      {/* Review progress summary */}
+      {proposals.length > 0 && (
+        <div className="flex items-center gap-3 text-xs">
+          <span className="text-green-700 font-medium">✓ {acceptedCount} accepted</span>
+          <span className="text-red-600">✕ {rejectedCount} rejected</span>
+          <span className="text-gray-500">{pendingCount} pending</span>
+        </div>
+      )}
+
       {/* Bulk actions */}
       {pendingCount > 0 && (
         <div className="flex items-center gap-2">
@@ -126,13 +137,15 @@ export function IntakeProposalsPanel({ rfpId }: IntakeProposalsPanelProps) {
           {sorted.map((p) => (
             <div
               key={p.id}
-              className={`border rounded-md px-3 py-2 bg-white ${
-                p.status === "accepted" ? "border-green-400" : p.status === "rejected" ? "border-red-300 opacity-60" : ""
+              className={`border rounded-md px-3 py-2 ${
+                p.status === "accepted" ? "border-green-500 bg-green-50" : p.status === "rejected" ? "border-red-300 bg-red-50/50 opacity-60" : "bg-white"
               }`}
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="text-sm">
-                  <div className="font-medium flex items-center gap-2">
+                  <div className="font-medium flex items-center gap-2 flex-wrap">
+                    {p.status === "accepted" && <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-600 text-white font-semibold">✓ ACCEPTED</span>}
+                    {p.status === "rejected" && <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500 text-white font-semibold">✕ REJECTED</span>}
                     {p.description}
                     <span className={`text-[10px] px-1.5 py-0.5 rounded ${
                       p.matchType === "catalog-match" ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700"
@@ -149,14 +162,14 @@ export function IntakeProposalsPanel({ rfpId }: IntakeProposalsPanelProps) {
                     <>
                       <button
                         onClick={() => setStatus.mutate({ id: p.id, status: "accepted" })}
-                        className="p-1 rounded hover:bg-green-100 text-green-600"
+                        className="p-1.5 rounded-md border border-green-300 hover:bg-green-100 text-green-600"
                         title="Accept"
                       >
                         <Check className="h-4 w-4" />
                       </button>
                       <button
                         onClick={() => setStatus.mutate({ id: p.id, status: "rejected" })}
-                        className="p-1 rounded hover:bg-red-100 text-red-600"
+                        className="p-1.5 rounded-md border border-red-300 hover:bg-red-100 text-red-600"
                         title="Reject"
                       >
                         <X className="h-4 w-4" />
@@ -165,10 +178,10 @@ export function IntakeProposalsPanel({ rfpId }: IntakeProposalsPanelProps) {
                   ) : (
                     <button
                       onClick={() => setStatus.mutate({ id: p.id, status: "proposed" })}
-                      className="text-xs text-gray-500 hover:underline"
+                      className="text-xs text-gray-500 hover:underline px-2 py-1"
                       title="Reset to proposed"
                     >
-                      {p.status}
+                      undo
                     </button>
                   )}
                 </div>

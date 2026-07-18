@@ -63,9 +63,30 @@ async function getTemplateContent(recipientType: string): Promise<any> {
 // Category is stamped at commit-to-scope from the ROM catalog; manually added rows
 // have no category and always print.
 const SOFT_COST_CATEGORY = 'Design / Soft Costs / Other Fees';
+
+// Legacy rows committed before category stamping have no category field but DO
+// carry masterItemId — so we also resolve category by id against the live ROM
+// catalog, primed once per document generation. Covers legacy, current, and
+// future rows with no manual cleanup. Manually typed rows (no category, no
+// masterItemId) always print.
+let softCostIdCache: Set<number> = new Set();
+async function primeSoftCostIds(): Promise<void> {
+  try {
+    const items = await storage.getAllRomScopeItems();
+    softCostIdCache = new Set(
+      items.filter((i: any) => i.category === SOFT_COST_CATEGORY).map((i: any) => i.id)
+    );
+  } catch {
+    // Keep previous cache on failure; category-field filtering still applies.
+  }
+}
+
 function bidableScope(items: any): any[] {
   if (!Array.isArray(items)) return [];
-  return items.filter((row: any) => (row?.category || row?.masterItemSnapshot?.category) !== SOFT_COST_CATEGORY);
+  return items.filter((row: any) =>
+    (row?.category || row?.masterItemSnapshot?.category) !== SOFT_COST_CATEGORY &&
+    !(row?.masterItemId != null && softCostIdCache.has(row.masterItemId))
+  );
 }
 
 function formatQty(q: any): string {
@@ -595,6 +616,7 @@ function generateFinancialSummaryHtml(options: PdfGenerationOptions, dates: any)
 }
 
 export async function generateRfpPdf(options: PdfGenerationOptions): Promise<Buffer> {
+  await primeSoftCostIds(); // resolve soft-cost catalog ids so bidableScope can exclude legacy unstamped rows
   try {
     const html = await generateRfpHtml(options);
     

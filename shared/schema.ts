@@ -149,6 +149,7 @@ export const rfpRequests = pgTable("rfp_requests", {
     unit: string,
     masterItemId?: number | null,
     masterItemSnapshot?: { description: string, unit: string, unitPrice: string } | null,
+    proposalId?: number | null, // stamped when committed from an AI intake proposal; enables exact retraction
   }[]>().default([]),
 
   createdAt: timestamp("created_at").defaultNow().notNull(),

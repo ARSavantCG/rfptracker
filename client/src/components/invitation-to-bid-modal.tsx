@@ -792,28 +792,18 @@ const formatQuantityDisplay = (val: any): string => {
         description: "Your invitation details have been saved successfully.",
         duration: 4000,
       });
-      
-      // Preserve current form state completely
-      const currentFormValues = form.getValues();
-      
+
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests", rfp?.id, "invitation-to-bid"] });
-      
-      // Restore complete form state after data refresh
-      setTimeout(() => {
-        // Preserve all form values, not just scope of work
-        form.reset({
-          ...currentFormValues,
-          // Ensure scope of work is properly maintained
-          scopeOfWork: updatedInvitation?.scopeOfWork || currentFormValues.scopeOfWork || []
-        });
-        
-        // Update scope of work field array
-        if (updatedInvitation?.scopeOfWork) {
-          replaceScope(updatedInvitation.scopeOfWork);
-        } else if (currentFormValues.scopeOfWork) {
-          replaceScope(currentFormValues.scopeOfWork);
-        }
-      }, 100);
+
+      // ROOT CAUSE of the scroll-jump/focus-loss bug (confirmed via the ROWS
+      // REMOUNTED diag): this handler used to form.reset(...) + replaceScope(...)
+      // 100ms after every save — regenerating all useFieldArray ids and
+      // remounting every row input, killing focus and snapping the dialog scroll
+      // while the user was already typing in the next field (row save button →
+      // click into quantity → save response lands → remount). The reset was
+      // redundant: the form already holds exactly the values that were saved.
+      // The invalidate above refreshes background data; the once-per-open seed
+      // guard ensures it can't clobber the live form.
     },
     onError: (error) => {
       toast({

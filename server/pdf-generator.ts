@@ -54,6 +54,17 @@ async function getTemplateContent(recipientType: string): Promise<any> {
   }
 }
 
+
+// Format scope quantities with thousands separators for generated documents
+// (12000 -> "12,000"). Non-numeric values pass through; empty stays empty.
+// parseFloat + strip (house rule) — never parseInt on possibly-formatted strings.
+function formatQty(q: any): string {
+  if (q === null || q === undefined || q === '') return '';
+  const n = typeof q === 'number' ? q : parseFloat(q.toString().replace(/[^0-9.\-]/g, ''));
+  if (!isFinite(n)) return q.toString();
+  return n.toLocaleString('en-US');
+}
+
 function formatDate(date: string | Date): string {
   if (typeof date === 'string') {
     // If it's already a date string like "2025-07-28", parse it directly without timezone conversion
@@ -342,7 +353,7 @@ function generateFinancialSummaryHtml(options: PdfGenerationOptions, dates: any)
               ${items.map(item => `
                 <tr>
                   <td class="description-col">${item.description}</td>
-                  <td class="quantity-col">${item.quantity}</td>
+                  <td class="quantity-col">${formatQty(item.quantity)}</td>
                   <td class="unit-col">${item.unit}</td>
                   <td class="unit-price-col">${formatCurrency(item.unitPrice)}</td>
                   <td class="total-price-col">${formatCurrency(item.totalPrice)}</td>
@@ -880,7 +891,7 @@ async function generateContractorRfpHtml(options: PdfGenerationOptions, dates: a
               ${invitationToBid.scopeOfWork.map((item: any) => `
                 <tr>
                   <td>${item.description || ''}</td>
-                  <td style="text-align: center;">${item.quantity || ''}</td>
+                  <td style="text-align: center;">${formatQty(item.quantity)}</td>
                   <td style="text-align: center;">${item.unit || ''}</td>
                   <td>${item.notes || ''}</td>
                 </tr>
@@ -1182,7 +1193,7 @@ async function generateArchitectRfpHtml(options: PdfGenerationOptions, dates: an
               ${invitationToBid.scopeOfWork.map((item: any) => `
                 <tr>
                   <td>${item.description || ''}</td>
-                  <td style="text-align: center;">${item.quantity || ''}</td>
+                  <td style="text-align: center;">${formatQty(item.quantity)}</td>
                   <td style="text-align: center;">${item.unit || ''}</td>
                   <td>${item.notes || ''}</td>
                 </tr>
@@ -1430,7 +1441,7 @@ async function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dat
               ${invitationToBid.scopeOfWork.map((item: any) => `
                 <tr>
                   <td>${item.description || ''}</td>
-                  <td style="text-align: center;">${item.quantity || ''}</td>
+                  <td style="text-align: center;">${formatQty(item.quantity)}</td>
                   <td style="text-align: center;">${item.unit || ''}</td>
                   <td>${item.notes || ''}</td>
                 </tr>
@@ -1529,7 +1540,7 @@ async function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, da
               ${invitationToBid.scopeOfWork.map((item: any) => `
                 <tr>
                   <td style="border: 1px solid #e5e7eb; padding: 8px;">${item.description || ''}</td>
-                  <td style="border: 1px solid #e5e7eb; padding: 8px; text-align: center;">${item.quantity || ''}</td>
+                  <td style="border: 1px solid #e5e7eb; padding: 8px; text-align: center;">${formatQty(item.quantity)}</td>
                   <td style="border: 1px solid #e5e7eb; padding: 8px; text-align: center;">${item.unit || ''}</td>
                   <td style="border: 1px solid #e5e7eb; padding: 8px;">${item.notes || ''}</td>
                 </tr>
@@ -1776,7 +1787,7 @@ async function generateContractorEnhancedRfpHtml(options: PdfGenerationOptions, 
     const scopeRows = invitationToBid.scopeOfWork.map((item: any) => `
       <tr>
         <td>${item.description || ''}</td>
-        <td style="text-align:center;">${item.quantity || ''}</td>
+        <td style="text-align:center;">${formatQty(item.quantity)}</td>
         <td style="text-align:center;">${item.unit || ''}</td>
         <td>${item.notes || ''}</td>
       </tr>`).join('');

@@ -1,8 +1,5 @@
 import { useState, useEffect, useCallback, memo, useRef } from "react";
 
-// TEMP DIAG (scroll-jump hunt): counts modal mounts across the session.
-let itbModalMountCounter = 0;
-
 // Stable per-row key for the scope table. useFieldArray regenerates its own
 // field.id whenever the array is replaced/reset — keying rows on that remounts
 // every input and kills focus (the scroll-jump bug class). Keying on a _key that
@@ -116,48 +113,6 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
   const [savedAreas, setSavedAreas] = useState<any[]>([]);
   const [editingAreaId, setEditingAreaId] = useState<string | null>(null);
   const [editingAreaData, setEditingAreaData] = useState<{description: string, squareFootage: string, notes: string}>({description: '', squareFootage: '', notes: ''});
-  const modalRef = useRef<HTMLDivElement>(null);
-  // TEMP DIAG: module-level mount counter — if the jump coincides with a NEW mount
-  // number, the whole modal is being unmounted/remounted by its parent, which
-  // resets every ref gate and explains everything. Lazy init = once per mount.
-  const [mountId] = useState(() => ++itbModalMountCounter);
-
-  // TEMP DIAG (scroll-jump hunt): records focus losses and large upward scroll
-  // jumps inside the dialog. Rendered as tiny text under the header — a single
-  // screenshot after the jump reproduces will name exactly what stole focus.
-  const [focusDiag, setFocusDiag] = useState<string[]>([]);
-  useEffect(() => {
-    if (!isOpen) { setFocusDiag([]); return; }
-    const el = modalRef.current;
-    if (!el) return;
-    const ident = (n: any) =>
-      n?.getAttribute?.("data-testid") || n?.getAttribute?.("name") || (n?.tagName ? `${n.tagName}${n.id ? "#" + n.id : ""}` : "NULL(body)");
-    const log = (msg: string) =>
-      setFocusDiag((prev) => [...prev.slice(-3), `${new Date().toISOString().slice(14, 23)} ${msg}`]);
-    log(`modal mount #${mountId}`);
-    const onFocusOut = (e: FocusEvent) => log(`out: ${ident(e.target)} -> ${ident(e.relatedTarget)}`);
-    const onFocusIn = (e: FocusEvent) => log(`in: ${ident(e.target)}`);
-    let lastTop = el.scrollTop;
-    const onScroll = () => {
-      if (el.scrollTop < lastTop - 200) {
-        log(`SCROLL JUMP ${Math.round(lastTop)} -> ${Math.round(el.scrollTop)} (active: ${ident(document.activeElement)})`);
-        // Phone home: full trail into deployment logs (fire-and-forget).
-        setFocusDiag((trail) => {
-          apiRequest(`/api/client-diag`, "POST", { mountId, jump: `${Math.round(lastTop)}->${Math.round(el.scrollTop)}`, active: ident(document.activeElement), trail }).catch(() => {});
-          return trail;
-        });
-      }
-      lastTop = el.scrollTop;
-    };
-    el.addEventListener("focusout", onFocusOut);
-    el.addEventListener("focusin", onFocusIn);
-    el.addEventListener("scroll", onScroll, { passive: true });
-    return () => {
-      el.removeEventListener("focusout", onFocusOut);
-      el.removeEventListener("focusin", onFocusIn);
-      el.removeEventListener("scroll", onScroll);
-    };
-  }, [isOpen]);
   const [showEnhancedSection, setShowEnhancedSection] = useState(false);
   const [scheduleFields, setScheduleFields] = useState({
     targetLXE: '', targetNTP: '', targetMobilization: '',
@@ -369,17 +324,6 @@ const formatQuantityDisplay = (val: any): string => {
     control: form.control,
     name: "scopeOfWork",
   });
-
-  // TEMP DIAG: if the field-array ids regenerate, every row input remounts (focus dies).
-  // Logging it directly confirms/refutes the remount theory at jump time.
-  const scopeIdsRef = useRef<string>("");
-  useEffect(() => {
-    const ids = scopeFields.map((f) => f.id).join(",");
-    if (scopeIdsRef.current && ids !== scopeIdsRef.current) {
-      setFocusDiag((prev) => [...prev.slice(-3), `${new Date().toISOString().slice(14, 23)} ROWS REMOUNTED (${scopeFields.length})`]);
-    }
-    scopeIdsRef.current = ids;
-  }, [scopeFields]);
 
   const { fields: architectMilestoneFields, append: appendArchitectMilestone, remove: removeArchitectMilestone } = useFieldArray({
     control: form.control,
@@ -703,15 +647,15 @@ const formatQuantityDisplay = (val: any): string => {
       formValues.scopeOfWork = withRowKeys(formValues.scopeOfWork as any[]);
       form.reset(formValues);
       setKeyDates(formValues.keyDates);
-      
-      // Force update scope of work fields after form reset
-      if (formValues.scopeOfWork && formValues.scopeOfWork.length > 0) {
-        setTimeout(() => {
-          replaceScope(formValues.scopeOfWork);
-        }, 100);
-      } else {
-        replaceScope([]);
-      }
+
+      // NOTE: a legacy setTimeout(() => replaceScope(...), 100) lived here to
+      // "force update" the field array after reset. It was the SECOND trigger of
+      // the scroll-jump bug (Playwright-confirmed by the Replit sub-agent): on a
+      // slow connection the seed itself fires seconds after open, so the delayed
+      // replaceScope regenerated all row ids while the user was already typing.
+      // form.reset() already seeds useFieldArray — the delayed replace was
+      // redundant. Do not reintroduce it. (Stable _key row keys additionally
+      // immunize the DOM against id regeneration; see UI-STANDARDS.md.)
     }
   }, [rfp, freshRfp, freshRfpFetched, isOpen, existingInvitation, invitationFetched, form, properties, contacts]);
 
@@ -1176,7 +1120,7 @@ const formatQuantityDisplay = (val: any): string => {
 
   return (
     <Dialog open={isOpen} onOpenChange={() => onClose()}>
-      <DialogContent ref={modalRef} className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
@@ -2320,14 +2264,6 @@ const formatQuantityDisplay = (val: any): string => {
             </div>
           </form>
         </Form>
-        {focusDiag.length > 0 && (
-          <div
-            data-testid="focus-diag"
-            className="fixed bottom-2 left-2 z-[100] rounded bg-black/70 px-2 py-1 text-[10px] font-mono leading-tight text-green-300 pointer-events-none"
-          >
-            {focusDiag.map((l, i) => (<div key={i}>{l}</div>))}
-          </div>
-        )}
       </DialogContent>
     </Dialog>
   );

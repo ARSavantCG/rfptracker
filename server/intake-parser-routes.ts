@@ -419,7 +419,17 @@ If you cannot find any scope, return {"proposals": []}.`
       const updatedScope = [...existingScope, ...newRows];
       await storage.updateRfpRequest(rfpId, { scopeOfWork: updatedScope } as any);
 
-      res.json({ added: newRows.length, totalScopeItems: updatedScope.length });
+      // Read back immediately to verify the write actually persisted.
+      const verify = await storage.getRfpRequest(rfpId);
+      const persistedRaw = (verify as any)?.scopeOfWork;
+      const persisted = Array.isArray(persistedRaw) ? persistedRaw.length : -1;
+
+      res.json({
+        added: newRows.length,
+        totalScopeItems: updatedScope.length,
+        persisted,
+        persistedType: persistedRaw === null ? "null" : typeof persistedRaw,
+      });
     } catch (error: any) {
       console.error("Commit-to-scope error:", error);
       res.status(500).json({ message: "Failed to add accepted items to scope", error: error?.message });

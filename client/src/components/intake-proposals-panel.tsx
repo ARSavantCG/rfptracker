@@ -58,7 +58,7 @@ export function IntakeProposalsPanel({ rfpId }: IntakeProposalsPanelProps) {
       // Refresh RFP data so the Scope of Work section shows the newly added items.
       queryClient.invalidateQueries({ queryKey: [`/api/rfp-requests/${rfpId}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
-      setCommitInfo(`last write: added ${data?.added ?? 0}, total in scope ${data?.totalScopeItems ?? "?"}`);
+      setCommitInfo(`last write: added ${data?.added ?? 0}, intended ${data?.totalScopeItems ?? "?"}, PERSISTED ${data?.persisted ?? "?"} (type ${data?.persistedType ?? "?"})`);
     },
     onError: (e: any) => {
       setCommitInfo(`last write FAILED: ${e?.message || "unknown error"}`);

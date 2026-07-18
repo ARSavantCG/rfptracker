@@ -197,3 +197,9 @@ git push
 - **All real work is on GitHub main** — verified 2026-07-18 by searching origin/main history for every "unpushed" commit shown in the panel (all present, incl. the MsgReader/no-wipe parser fixes from prior sessions).
 - **RULE: never tap Pull, Push, or Sync Changes in the Replit mobile/desktop Git panel.** A Pull starts an unresolvable mobile merge. The panel's warnings ("merge with conflicts", "can't push") are expected noise. The pipeline remains: Claude pushes to GitHub main → Agent file-syncs workspace from main → Adolfo clicks Publish.
 - Corollary: "deploy done" claims are only trusted after Adolfo clicks Publish and click-and-watch confirms new UI (e.g., a button that only exists in the new build).
+
+## 2026-07-18 (later still) — Agent sync DELETED server/routes.ts from GitHub main
+- The Agent's "sync workspace to b52a26cc" commit (8c89948e) silently deleted server/routes.ts (7,177 lines) from GitHub while claiming "no functional drift." Workspace and prod were unaffected; only GitHub's copy vanished. Restored from b52a26cc in a82ff829.
+- Suspected cause: the Agent's file-level sync omitted the repo's largest file (size limit or manifest issue). Unconfirmed — worth asking the Agent to explain its sync mechanism.
+- **RULE: after every Agent workspace→GitHub sync, verify server/routes.ts (and total file count) still exists on origin/main before trusting the sync.** `git ls-tree origin/main server/routes.ts` or a GitHub web check.
+- This is the sharpest instance yet of the session's core lesson: Agent narration ("working tree clean, no drift") is not evidence. The deletion was visible only in the actual commit stat.

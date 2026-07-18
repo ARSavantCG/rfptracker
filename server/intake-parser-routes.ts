@@ -301,6 +301,20 @@ If you cannot find any scope, return {"proposals": []}.`
         });
       }
       await storage.deleteIntakeProposalsForRfp(rfpId);
+
+      // Re-running the parse starts a fresh AI review cycle: remove previously
+      // committed AI rows (stamped with proposalId) from the RFP's scope so the
+      // new accept set REPLACES the old one instead of appending to it. Manual
+      // rows (no proposalId) are untouched. Step 3's merge-on-open then drops
+      // the same retracted rows from an existing ITB while keeping its edits
+      // on rows that survive.
+      const rfpForClean = await storage.getRfpRequest(rfpId);
+      const scopeNow = Array.isArray(rfpForClean?.scopeOfWork) ? rfpForClean!.scopeOfWork : [];
+      const manualOnly = scopeNow.filter((row: any) => row?.proposalId == null);
+      if (manualOnly.length !== scopeNow.length) {
+        await storage.updateRfpRequest(rfpId, { scopeOfWork: manualOnly });
+      }
+
       const stored = [];
       for (const p of proposals) {
         // Validate catalogItemId actually exists; else force needs-mapping.

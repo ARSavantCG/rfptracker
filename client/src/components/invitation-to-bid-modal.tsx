@@ -49,8 +49,9 @@ const invitationFormSchema = z.object({
   })).default([]),
   scopeOfWork: z.array(z.object({
     description: z.string(),
-    quantity: z.union([z.number(), z.string()]).transform((val) => 
-      typeof val === 'string' ? (val === '' ? 0 : parseInt(val) || 0) : val
+    quantity: z.union([z.number(), z.string()]).transform((val) =>
+      // parseFloat + strip formatting chars (house rule) — parseInt("1,000") === 1.
+      typeof val === 'string' ? (val.trim() === '' ? 0 : (parseFloat(val.replace(/[^0-9.\-]/g, '')) || 0)) : val
     ),
     unit: z.string(),
     // Optional link to the ROM Pilot master scope catalog — set only when the row was
@@ -195,10 +196,20 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
     setAdditionalAreas(prev => prev.filter((_, i) => i !== index));
   }, []);
 
-  // Fetch the RFP fresh when the modal opens. The `rfp` prop can be stale (e.g. items
+  // Display quantities with thousands separators (1,000). onChange stores raw digits
+// and the zod transform strips formatting on submit, so storage stays numeric.
+const formatQuantityDisplay = (val: any): string => {
+  const s = (val ?? "").toString().replace(/,/g, "");
+  if (s === "") return "";
+  const [int, dec] = s.split(".");
+  const intFmt = int.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return dec !== undefined ? `${intFmt}.${dec}` : intFmt;
+};
+
+// Fetch the RFP fresh when the modal opens. The `rfp` prop can be stale (e.g. items
   // accepted from the AI parser in Step 2 were just written to rfp.scopeOfWork), so we
   // seed the scope of work from this instead of the possibly-stale prop.
-  const { data: freshRfp } = useQuery<RfpRequest>({
+  const { data: freshRfp, isFetched: freshRfpFetched } = useQuery<RfpRequest>({
     queryKey: [`/api/rfp-requests/${rfp?.id}`],
     enabled: isOpen && !!rfp?.id,
   });
@@ -448,7 +459,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
   }, [isOpen, rfp]);
 
   // Fetch existing invitation data
-  const { data: existingInvitation } = useQuery({
+  const { data: existingInvitation, isFetched: invitationFetched } = useQuery({
     queryKey: ["/api/rfp-requests", rfp?.id, "invitation-to-bid"],
     queryFn: async () => {
       if (!rfp?.id) return null;
@@ -522,9 +533,17 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
     updateAreaBreakdownMutation.mutate(updatedAreas);
   };
 
-  // Pre-populate form with existing data
+  // Pre-populate form with existing data — ONCE per modal open. This effect used to
+  // re-run on every background refetch of its query deps (window focus, invalidation),
+  // and its replaceScope() regenerated all field ids, remounting every row input and
+  // killing focus after a single keystroke. The ref gates it to one seed per open.
+  const seededForOpenRef = useRef(false);
   useEffect(() => {
-    if (rfp && isOpen && properties.length > 0 && contacts.length > 0) {
+    if (!isOpen) { seededForOpenRef.current = false; return; }
+    if (seededForOpenRef.current) return;
+    if (!freshRfpFetched || !invitationFetched) return;
+    if (rfp && properties.length > 0 && contacts.length > 0) {
+      seededForOpenRef.current = true;
       // Load existing additional areas if they exist
       if (existingInvitation?.additionalAreas) {
         setAdditionalAreas(existingInvitation.additionalAreas.map((area: any) => ({
@@ -586,11 +605,27 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
         projectDescription: existingInvitation.projectDescription || "",
         documentsLink: existingInvitation.documentsLink || "",
         keyDates: Array.isArray(existingInvitation.keyDates) ? existingInvitation.keyDates : [],
-        // Existing ITB scope wins if it has items; otherwise fall back to the RFP's
-        // scope (covers an ITB record created before items were accepted in Step 2).
-        scopeOfWork: Array.isArray(existingInvitation.scopeOfWork) && existingInvitation.scopeOfWork.length > 0
-          ? existingInvitation.scopeOfWork
-          : defaultValues.scopeOfWork,
+        // Merge ITB scope with the RFP's current scope (Step 2 is a living review loop):
+        // - ITB rows stamped with a proposalId survive only if that proposal is still
+        //   in the RFP's scope — retracted / re-parsed items drop out, and surviving
+        //   rows KEEP their Step-3 quantity/unit edits.
+        // - Unstamped ITB rows (manual or pre-stamping legacy) are always kept.
+        // - RFP rows not yet in the ITB (new accepts) are appended; unstamped RFP
+        //   rows match by description to avoid duplicates.
+        scopeOfWork: (() => {
+          const itbScope = Array.isArray(existingInvitation.scopeOfWork) ? existingInvitation.scopeOfWork : [];
+          const rfpScope = (defaultValues.scopeOfWork as any[]) || [];
+          if (itbScope.length === 0) return rfpScope;
+          const norm = (d: any) => (d || "").toString().trim().toLowerCase();
+          const rfpPids = new Set(rfpScope.map((r: any) => r?.proposalId).filter((x: any) => x != null));
+          const kept = itbScope.filter((row: any) => row?.proposalId == null || rfpPids.has(row.proposalId));
+          const keptPids = new Set(kept.map((r: any) => r?.proposalId).filter((x: any) => x != null));
+          const keptDescs = new Set(kept.map((r: any) => norm(r?.description)));
+          const added = rfpScope.filter((r: any) =>
+            r?.proposalId != null ? !keptPids.has(r.proposalId) : !keptDescs.has(norm(r?.description))
+          );
+          return [...kept, ...added];
+        })(),
         architectMilestones: Array.isArray(existingInvitation.architectMilestones) ? existingInvitation.architectMilestones : [],
         contractorMilestones: Array.isArray(existingInvitation.contractorMilestones) ? existingInvitation.contractorMilestones : [],
       } : defaultValues;
@@ -607,7 +642,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
         replaceScope([]);
       }
     }
-  }, [rfp, freshRfp, isOpen, existingInvitation, form, properties, contacts]);
+  }, [rfp, freshRfp, freshRfpFetched, isOpen, existingInvitation, invitationFetched, form, properties, contacts]);
 
   const saveInvitationMutation = useMutation({
     mutationFn: async (data: InvitationFormData) => {
@@ -1756,8 +1791,9 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
                                 <Input 
                                   type="text" 
                                   {...field} 
+                                  value={formatQuantityDisplay(field.value)}
                                   data-testid={`quantity-${index}`}
-                                  onChange={(e) => field.onChange(e.target.value)}
+                                  onChange={(e) => field.onChange(e.target.value.replace(/[^0-9.]/g, ""))}
                                   placeholder="Quantity"
                                   onKeyDown={(e) => {
                                     if (e.key === 'Tab' && !e.shiftKey) {

@@ -14,6 +14,7 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { IntakeProposalsPanel } from "@/components/intake-proposals-panel";
+import { useAuth } from "@/hooks/useAuth";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -99,6 +100,9 @@ interface RfpValidationModalProps {
 export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete }: RfpValidationModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  // AI intake parser is admin-only (matches server-side admin.access gate on all parser routes)
+  const isAdminForParser = (user as any)?.permissions?.includes('admin.access') || (user as any)?.isAdmin;
   const [showEnhancedContext, setShowEnhancedContext] = useState(false);
 
   const form = useForm<ValidationFormData>({
@@ -284,7 +288,7 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
           <DialogTitle className="text-xl">RFP Validation - {rfp.projectName}</DialogTitle>
         </DialogHeader>
 
-        {rfp?.id && <IntakeProposalsPanel rfpId={rfp.id} />}
+        {rfp?.id && isAdminForParser && <IntakeProposalsPanel rfpId={rfp.id} />}
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">

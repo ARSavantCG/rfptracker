@@ -339,7 +339,7 @@ If you cannot find any scope, return {"proposals": []}.`
   });
 
   // Read proposals for an RFP (Step 2 review panel).
-  app.get("/api/intake-proposals/:rfpId", requireAuth, async (req, res) => {
+  app.get("/api/intake-proposals/:rfpId", requireAuth, checkPermission('admin.access'), async (req, res) => {
     try {
       const rfpId = parseInt(req.params.rfpId);
       if (isNaN(rfpId)) return res.status(400).json({ message: "Invalid RFP ID" });
@@ -351,7 +351,7 @@ If you cannot find any scope, return {"proposals": []}.`
   });
 
   // Update a proposal's status (accept / reject / edited).
-  app.patch("/api/intake-proposals/:id/status", requireAuth, async (req, res) => {
+  app.patch("/api/intake-proposals/:id/status", requireAuth, checkPermission('admin.access'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) return res.status(400).json({ message: "Invalid ID" });

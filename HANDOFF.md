@@ -191,3 +191,9 @@ git push
 - **Fix:** Column added to schema + additive startup migration (ADD COLUMN IF NOT EXISTS on boot → reaches helium AND Neon automatically). Cast removed.
 - **Process notes:** Found in one click via on-screen diag cascade incl. raw SQL through the app's own DB connection (= prod by definition). Full writeup + banked lessons in HANDOFF-parser-scope-write.md. Diag cascade removed after verification; lean persisted read-back retained.
 - **Watch:** Step-2 undo does not retract already-committed scope rows (commit is add-only).
+
+## 2026-07-18 (later) — Replit Git panel divergence: PERMANENT, COSMETIC, DO NOT TOUCH
+- The workspace's local git graph has permanently diverged from origin/main (~35 local auto-checkpoint commits vs remote sync commits). Replit blocks `git fetch`/`git reset --hard` from the Agent ("Destructive git operations are not allowed"), so it cannot be repaired.
+- **All real work is on GitHub main** — verified 2026-07-18 by searching origin/main history for every "unpushed" commit shown in the panel (all present, incl. the MsgReader/no-wipe parser fixes from prior sessions).
+- **RULE: never tap Pull, Push, or Sync Changes in the Replit mobile/desktop Git panel.** A Pull starts an unresolvable mobile merge. The panel's warnings ("merge with conflicts", "can't push") are expected noise. The pipeline remains: Claude pushes to GitHub main → Agent file-syncs workspace from main → Adolfo clicks Publish.
+- Corollary: "deploy done" claims are only trusted after Adolfo clicks Publish and click-and-watch confirms new UI (e.g., a button that only exists in the new build).

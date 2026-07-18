@@ -2,6 +2,16 @@ import { useState, useEffect, useCallback, memo, useRef } from "react";
 
 // TEMP DIAG (scroll-jump hunt): counts modal mounts across the session.
 let itbModalMountCounter = 0;
+
+// Stable per-row key for the scope table. useFieldArray regenerates its own
+// field.id whenever the array is replaced/reset — keying rows on that remounts
+// every input and kills focus (the scroll-jump bug class). Keying on a _key that
+// lives IN the row data survives all array operations, matching how the
+// evaluation screen's inputs are immune by construction. _key never persists:
+// the zod schemas strip it on save.
+const stableRowKey = () => `row_${Math.random().toString(36).slice(2, 10)}`;
+const withRowKeys = (rows: any[]): any[] =>
+  (Array.isArray(rows) ? rows : []).map((r: any) => (r && r._key ? r : { _key: stableRowKey(), ...r }));
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -690,6 +700,7 @@ const formatQuantityDisplay = (val: any): string => {
         contractorMilestones: Array.isArray(existingInvitation.contractorMilestones) ? existingInvitation.contractorMilestones : [],
       } : defaultValues;
 
+      formValues.scopeOfWork = withRowKeys(formValues.scopeOfWork as any[]);
       form.reset(formValues);
       setKeyDates(formValues.keyDates);
       
@@ -1717,7 +1728,7 @@ const formatQuantityDisplay = (val: any): string => {
                   variant="outline"
                   size="sm"
                   tabIndex={-1}
-                  onClick={() => appendScope({ description: "", quantity: "", unit: "", masterItemId: null, masterItemSnapshot: null })}
+                  onClick={() => appendScope({ _key: stableRowKey(), description: "", quantity: "", unit: "", masterItemId: null, masterItemSnapshot: null } as any)}
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Add Line Item
@@ -1747,7 +1758,7 @@ const formatQuantityDisplay = (val: any): string => {
                         <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-2">
                           {/* Scope Items */}
                           {scopeFields.map((field, index) => (
-                            <Draggable key={field.id} draggableId={field.id} index={index}>
+                            <Draggable key={(field as any)._key ?? field.id} draggableId={(field as any)._key ?? field.id} index={index}>
                               {(provided) => (
                                 <div 
                                   ref={provided.innerRef}
@@ -1890,7 +1901,7 @@ const formatQuantityDisplay = (val: any): string => {
                                                   // Check if this is the last row
                                                   if (index === scopeFields.length - 1) {
                                                     // Add new row and focus it
-                                                    appendScope({ description: "", quantity: "", unit: "", masterItemId: null, masterItemSnapshot: null });
+                                                    appendScope({ _key: stableRowKey(), description: "", quantity: "", unit: "", masterItemId: null, masterItemSnapshot: null } as any);
                                                     // Focus will be set to new row after creation
                                                     setTimeout(() => {
                                                       const newDescInput = document.querySelector(`input[name="scopeOfWork.${index + 1}.description"]`) as HTMLInputElement;

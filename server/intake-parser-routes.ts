@@ -283,7 +283,23 @@ If you cannot find any scope, return {"proposals": []}.`
 
       const proposals = Array.isArray(parsed?.proposals) ? parsed.proposals : [];
 
-      // 6) Replace any prior proposals for this RFP, then store the new ones.
+      // 6) Replace prior proposals only if this parse actually produced some — don't
+      // let an empty/weak result silently wipe a previous good set.
+      if (proposals.length === 0) {
+        const existing = await storage.getIntakeProposals(rfpId);
+        return res.json({
+          proposals: existing,
+          meta: {
+            filesIncluded,
+            skipped,
+            rulesApplied: rules.length,
+            totalFilesFound: step1Files.length,
+            fileNames: step1Files.map((f) => f.originalName),
+            skipReasons,
+            note: "AI returned no new proposals; kept existing.",
+          },
+        });
+      }
       await storage.deleteIntakeProposalsForRfp(rfpId);
       const stored = [];
       for (const p of proposals) {

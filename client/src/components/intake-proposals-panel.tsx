@@ -49,6 +49,9 @@ export function IntakeProposalsPanel({ rfpId }: IntakeProposalsPanelProps) {
       // Refresh RFP data so the Scope of Work section shows the newly added items.
       queryClient.invalidateQueries({ queryKey: [`/api/rfp-requests/${rfpId}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
+      if (data?.added > 0) {
+        toast({ title: `Added to Scope of Work (${data.totalScopeItems} total)` });
+      }
     },
     onError: (e: any) => toast({ title: "Failed to add to scope", description: e?.message, variant: "destructive" }),
   });

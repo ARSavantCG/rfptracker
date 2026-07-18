@@ -195,6 +195,14 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
     setAdditionalAreas(prev => prev.filter((_, i) => i !== index));
   }, []);
 
+  // Fetch the RFP fresh when the modal opens. The `rfp` prop can be stale (e.g. items
+  // accepted from the AI parser in Step 2 were just written to rfp.scopeOfWork), so we
+  // seed the scope of work from this instead of the possibly-stale prop.
+  const { data: freshRfp } = useQuery<RfpRequest>({
+    queryKey: [`/api/rfp-requests/${rfp?.id}`],
+    enabled: isOpen && !!rfp?.id,
+  });
+
   // Fetch properties for project location
   const { data: properties = [] } = useQuery<Property[]>({
     queryKey: ["/api/properties"],
@@ -550,7 +558,9 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
         // Seed from the RFP's scope of work (e.g. items accepted from the AI intake
         // parser in Step 2 land in rfp.scopeOfWork). Previously hardcoded [], so
         // anything on the RFP never reached Step 3. Shapes are identical.
-        scopeOfWork: Array.isArray((rfp as any).scopeOfWork) ? (rfp as any).scopeOfWork : [],
+        scopeOfWork: Array.isArray((freshRfp as any)?.scopeOfWork)
+          ? (freshRfp as any).scopeOfWork
+          : (Array.isArray((rfp as any).scopeOfWork) ? (rfp as any).scopeOfWork : []),
         architectMilestones: [],
         contractorMilestones: [],
       };
@@ -597,7 +607,7 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
         replaceScope([]);
       }
     }
-  }, [rfp, isOpen, existingInvitation, form, properties, contacts]);
+  }, [rfp, freshRfp, isOpen, existingInvitation, form, properties, contacts]);
 
   const saveInvitationMutation = useMutation({
     mutationFn: async (data: InvitationFormData) => {

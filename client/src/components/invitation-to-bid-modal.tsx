@@ -99,6 +99,32 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
   const [editingAreaId, setEditingAreaId] = useState<string | null>(null);
   const [editingAreaData, setEditingAreaData] = useState<{description: string, squareFootage: string, notes: string}>({description: '', squareFootage: '', notes: ''});
   const modalRef = useRef<HTMLDivElement>(null);
+
+  // TEMP DIAG (scroll-jump hunt): records focus losses and large upward scroll
+  // jumps inside the dialog. Rendered as tiny text under the header — a single
+  // screenshot after the jump reproduces will name exactly what stole focus.
+  const [focusDiag, setFocusDiag] = useState<string[]>([]);
+  useEffect(() => {
+    if (!isOpen) { setFocusDiag([]); return; }
+    const el = modalRef.current;
+    if (!el) return;
+    const ident = (n: any) =>
+      n?.getAttribute?.("data-testid") || n?.getAttribute?.("name") || (n?.tagName ? `${n.tagName}${n.id ? "#" + n.id : ""}` : "NULL(body)");
+    const log = (msg: string) =>
+      setFocusDiag((prev) => [...prev.slice(-2), `${new Date().toISOString().slice(14, 23)} ${msg}`]);
+    const onFocusOut = (e: FocusEvent) => log(`focus: ${ident(e.target)} -> ${ident(e.relatedTarget)}`);
+    let lastTop = el.scrollTop;
+    const onScroll = () => {
+      if (el.scrollTop < lastTop - 200) log(`SCROLL JUMP ${Math.round(lastTop)} -> ${Math.round(el.scrollTop)} (active: ${ident(document.activeElement)})`);
+      lastTop = el.scrollTop;
+    };
+    el.addEventListener("focusout", onFocusOut);
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      el.removeEventListener("focusout", onFocusOut);
+      el.removeEventListener("scroll", onScroll);
+    };
+  }, [isOpen]);
   const [showEnhancedSection, setShowEnhancedSection] = useState(false);
   const [scheduleFields, setScheduleFields] = useState({
     targetLXE: '', targetNTP: '', targetMobilization: '',
@@ -1124,6 +1150,11 @@ const formatQuantityDisplay = (val: any): string => {
           <DialogDescription>
             Configure and generate RFPs for architects and/or general contractors for {rfp.rfpNumber}
           </DialogDescription>
+          {focusDiag.length > 0 && (
+            <div className="text-[10px] text-gray-400 font-mono leading-tight" data-testid="focus-diag">
+              {focusDiag.map((l, i) => (<div key={i}>{l}</div>))}
+            </div>
+          )}
         </DialogHeader>
 
         <Form {...form}>

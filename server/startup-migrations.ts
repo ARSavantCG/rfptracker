@@ -33,6 +33,10 @@ const ADDITIVE_COLUMNS: ColumnMigration[] = [
   { table: 'property_existing_improvements', column: 'area_sf', type: 'integer' },
   { table: 'property_existing_improvements', column: 'denominator_basis', type: 'text' },
   { table: 'rom_scope_items', column: 'calculation_basis', type: 'text' },
+  // AI intake parser bridge: accepted proposals land here, then flow to Step 3 (ITB).
+  // This column never existed on rfp_requests — only invitation_to_bid had one.
+  // The commit-to-scope write was a silent no-op until this migration.
+  { table: 'rfp_requests', column: 'scope_of_work', type: "json DEFAULT '[]'::json" },
 ];
 
 // Additive new tables (CREATE TABLE IF NOT EXISTS — idempotent, never drops).

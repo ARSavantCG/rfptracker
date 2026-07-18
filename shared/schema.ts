@@ -137,7 +137,20 @@ export const rfpRequests = pgTable("rfp_requests", {
   targetSubstantialCompletion: timestamp("target_substantial_completion"),
   targetRCD: timestamp("target_rcd"),
   // ─────────────────────────────────────────────────────────────────────────
-  
+
+  // AI intake parser bridge (Step 2 → Step 3): accepted proposals are committed
+  // here, and the ITB modal seeds its own scopeOfWork from a fresh RFP fetch.
+  // Mirrors invitation_to_bid.scope_of_work row shape. Column is created by a
+  // startup migration (startup-migrations.ts) — NOT drizzle-kit push — so it
+  // reaches both helium (dev) and Neon (prod) on boot.
+  scopeOfWork: json("scope_of_work").$type<{
+    description: string,
+    quantity: number,
+    unit: string,
+    masterItemId?: number | null,
+    masterItemSnapshot?: { description: string, unit: string, unitPrice: string } | null,
+  }[]>().default([]),
+
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

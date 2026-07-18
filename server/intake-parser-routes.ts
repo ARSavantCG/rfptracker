@@ -18,7 +18,7 @@ import { db } from './db';
 import { sql, eq } from 'drizzle-orm';
 import { rfpRequests } from '@shared/schema';
 
-const SCOPE_DIAG_STAMP = 'scope-diag-v3-0718a';
+const SCOPE_DIAG_STAMP = 'scope-fix-v4-0718b';
 
 // Claude supports these natively as document/image blocks.
 const PDF_MIME = 'application/pdf';
@@ -426,7 +426,7 @@ If you cannot find any scope, return {"proposals": []}.`
       // ---- DIAGNOSTIC CASCADE (temporary, on-screen) ----------------------
       // (1) Storage-layer write; capture the UPDATE's own .returning() row.
       //     -2 = UPDATE matched no row; -1 = row returned but scopeOfWork not an array
-      const updResult = await storage.updateRfpRequest(rfpId, { scopeOfWork: updatedScope } as any);
+      const updResult = await storage.updateRfpRequest(rfpId, { scopeOfWork: updatedScope });
       const returningScope = (updResult as any)?.scopeOfWork;
       const returningLen = updResult === undefined ? -2 : (Array.isArray(returningScope) ? returningScope.length : -1);
 

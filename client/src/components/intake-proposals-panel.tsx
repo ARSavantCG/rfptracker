@@ -83,6 +83,22 @@ export function IntakeProposalsPanel({ rfpId }: IntakeProposalsPanelProps) {
     onError: (e: any) => toast({ title: "Update failed", description: e?.message, variant: "destructive" }),
   });
 
+  const retract = useMutation({
+    mutationFn: (id: number) => apiRequest(`/api/intake-proposals/${id}/retract`, "POST"),
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: [`/api/intake-proposals/${rfpId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/rfp-requests/${rfpId}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
+      const removed = data?.removed ?? 0;
+      setCommitInfo(
+        removed > 0
+          ? `removed ${removed} item${removed === 1 ? "" : "s"} from scope — back in review; scope of work now has ${data?.totalScopeItems ?? "?"}`
+          : `moved back to review (item was not in scope, nothing removed)`
+      );
+    },
+    onError: (e: any) => toast({ title: "Undo failed", description: e?.message, variant: "destructive" }),
+  });
+
   const acceptAll = () => {
     proposals.filter((p) => p.status === "proposed").forEach((p) => setStatus.mutate({ id: p.id, status: "accepted" }));
   };
@@ -217,32 +233,58 @@ export function IntakeProposalsPanel({ rfpId }: IntakeProposalsPanelProps) {
             </div>
           )}
 
-          {/* ACCEPTED — confirmed items, out of the review pile but visible */}
+          {/* ACCEPTED — collapsed by default; expand to review or undo (undo also removes from scope) */}
           {acceptedCount > 0 && (
-            <div className="space-y-2">
-              <div className="text-xs font-semibold text-green-700 uppercase tracking-wide">✓ Accepted — added to Scope of Work ({acceptedCount})</div>
-              {sorted.filter((p) => p.status === "accepted").map((p) => (
-                <div key={p.id} className="border border-green-500 bg-green-50 rounded-md px-3 py-2">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="text-sm font-medium">{p.description}</div>
-                    <button
-                      onClick={() => setStatus.mutate({ id: p.id, status: "proposed" })}
-                      className="text-xs text-gray-500 hover:underline px-2 py-1 shrink-0"
-                      title="Move back to review"
-                    >
-                      undo
-                    </button>
+            <details className="rounded-md border border-green-300 bg-green-50/50">
+              <summary className="cursor-pointer select-none px-3 py-2 text-xs font-semibold text-green-700 uppercase tracking-wide">
+                ✓ Accepted — added to Scope of Work ({acceptedCount}) — tap to review
+              </summary>
+              <div className="space-y-2 px-3 pb-3">
+                {sorted.filter((p) => p.status === "accepted").map((p) => (
+                  <div key={p.id} className="border border-green-500 bg-green-50 rounded-md px-3 py-2">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="text-sm font-medium">{p.description}</div>
+                      <button
+                        onClick={() => retract.mutate(p.id)}
+                        disabled={retract.isPending}
+                        className="text-xs text-gray-500 hover:underline px-2 py-1 shrink-0"
+                        title="Remove from Scope of Work and move back to review"
+                      >
+                        undo
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            </details>
           )}
 
-          {/* Rejected items are hidden. Show a small note + a way to review them. */}
+          {/* REJECTED — collapsed by default; expand to review or restore an inadvertent reject */}
           {rejectedCount > 0 && (
-            <div className="text-[11px] text-gray-400">
-              {rejectedCount} rejected item{rejectedCount === 1 ? "" : "s"} hidden.
-            </div>
+            <details className="rounded-md border border-red-200 bg-red-50/40">
+              <summary className="cursor-pointer select-none px-3 py-2 text-xs font-semibold text-red-600 uppercase tracking-wide">
+                ✕ Rejected ({rejectedCount}) — tap to review
+              </summary>
+              <div className="space-y-2 px-3 pb-3">
+                {sorted.filter((p) => p.status === "rejected").map((p) => (
+                  <div key={p.id} className="border rounded-md px-3 py-2 bg-white opacity-80">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="text-sm">
+                        <div className="font-medium text-gray-600">{p.description}</div>
+                        {p.reason && <div className="text-xs text-gray-400 mt-0.5">{p.reason}</div>}
+                      </div>
+                      <button
+                        onClick={() => setStatus.mutate({ id: p.id, status: "proposed" })}
+                        className="text-xs text-gray-500 hover:underline px-2 py-1 shrink-0"
+                        title="Move back to review"
+                      >
+                        restore
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </details>
           )}
         </div>
       )}

@@ -371,6 +371,34 @@ If you cannot find any scope, return {"proposals": []}.`
   // Accepted proposals become scope_of_work rows (which the evaluation already reads),
   // so this is the bridge from "AI proposed" to "in my scope, ready to price".
   // Uses the RFP's scopeOfWork array — does NOT touch the evaluation money math directly.
+
+  // Undo an acceptance for real: proposal returns to review AND its committed row
+  // is removed from rfp.scopeOfWork (matched by the proposalId stamped at commit).
+  // Rows added before proposalId stamping existed (or added manually) are never touched.
+  app.post("/api/intake-proposals/:id/retract", requireAuth, checkPermission('admin.access'), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ message: "Invalid proposal ID" });
+
+      const proposal = await storage.updateIntakeProposalStatus(id, "proposed");
+      if (!proposal) return res.status(404).json({ message: "Proposal not found" });
+
+      const rfp = await storage.getRfpRequest(proposal.rfpId);
+      const existingScope = Array.isArray(rfp?.scopeOfWork) ? rfp!.scopeOfWork : [];
+      const remaining = existingScope.filter((row: any) => row?.proposalId !== id);
+      const removed = existingScope.length - remaining.length;
+
+      if (removed > 0) {
+        await storage.updateRfpRequest(proposal.rfpId, { scopeOfWork: remaining });
+      }
+
+      res.json({ removed, totalScopeItems: remaining.length });
+    } catch (error: any) {
+      console.error("Retract error:", error);
+      res.status(500).json({ message: "Failed to retract proposal", error: error?.message });
+    }
+  });
+
   app.post("/api/intake-proposals/:rfpId/commit-to-scope", requireAuth, checkPermission('admin.access'), async (req, res) => {
     try {
       const rfpId = parseInt(req.params.rfpId);
@@ -394,13 +422,17 @@ If you cannot find any scope, return {"proposals": []}.`
       const existingDescriptions = new Set(
         existingScope.map((s: any) => (s?.description || "").toString().trim().toLowerCase())
       );
+      const existingProposalIds = new Set(
+        existingScope.map((s: any) => s?.proposalId).filter((x: any) => x != null)
+      );
 
       const newRows: any[] = [];
       for (const p of accepted) {
         const desc = (p.description || "").toString().trim();
-        if (!desc || existingDescriptions.has(desc.toLowerCase())) continue;
+        if (!desc || existingProposalIds.has(p.id) || existingDescriptions.has(desc.toLowerCase())) continue;
         const catItem = p.catalogItemId ? catalog.find((c) => c.id === p.catalogItemId) : undefined;
         newRows.push({
+          proposalId: p.id, // enables exact retraction via /retract and id-based de-dup
           description: desc,
           quantity: 1, // dev team adjusts; unit rates stay from catalog
           unit: catItem?.unit || "EA",

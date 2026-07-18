@@ -17,11 +17,20 @@ export function IntakeProposalsPanel({ rfpId }: IntakeProposalsPanelProps) {
   const { toast } = useToast();
   const [typedText, setTypedText] = useState("");
   const [lastMeta, setLastMeta] = useState<any>(null);
+  const [commitInfo, setCommitInfo] = useState<string>("");
 
   const { data: proposals = [], isLoading } = useQuery<IntakeProposal[]>({
     queryKey: [`/api/intake-proposals/${rfpId}`],
     enabled: !!rfpId,
   });
+
+  // Live readout of what's actually stored on the RFP's scope of work, so we can see
+  // whether accepting is really writing there (diagnostic + useful confirmation).
+  const { data: rfpFresh } = useQuery<any>({
+    queryKey: [`/api/rfp-requests/${rfpId}`],
+    enabled: !!rfpId,
+  });
+  const scopeCount = Array.isArray(rfpFresh?.scopeOfWork) ? rfpFresh.scopeOfWork.length : 0;
 
   const runParse = useMutation({
     mutationFn: () => apiRequest(`/api/ai/intake-parse/${rfpId}`, "POST", { typedText }, 90_000),
@@ -49,11 +58,12 @@ export function IntakeProposalsPanel({ rfpId }: IntakeProposalsPanelProps) {
       // Refresh RFP data so the Scope of Work section shows the newly added items.
       queryClient.invalidateQueries({ queryKey: [`/api/rfp-requests/${rfpId}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
-      if (data?.added > 0) {
-        toast({ title: `Added to Scope of Work (${data.totalScopeItems} total)` });
-      }
+      setCommitInfo(`last write: added ${data?.added ?? 0}, total in scope ${data?.totalScopeItems ?? "?"}`);
     },
-    onError: (e: any) => toast({ title: "Failed to add to scope", description: e?.message, variant: "destructive" }),
+    onError: (e: any) => {
+      setCommitInfo(`last write FAILED: ${e?.message || "unknown error"}`);
+      toast({ title: "Failed to add to scope", description: e?.message, variant: "destructive" });
+    },
   });
 
   const setStatus = useMutation({
@@ -127,10 +137,16 @@ export function IntakeProposalsPanel({ rfpId }: IntakeProposalsPanelProps) {
 
       {/* Review progress summary */}
       {proposals.length > 0 && (
-        <div className="flex items-center gap-3 text-xs">
-          <span className="text-green-700 font-medium">✓ {acceptedCount} accepted</span>
-          <span className="text-red-600">✕ {rejectedCount} rejected</span>
-          <span className="text-gray-500">{pendingCount} pending</span>
+        <div className="space-y-0.5">
+          <div className="flex items-center gap-3 text-xs">
+            <span className="text-green-700 font-medium">✓ {acceptedCount} accepted</span>
+            <span className="text-red-600">✕ {rejectedCount} rejected</span>
+            <span className="text-gray-500">{pendingCount} pending</span>
+          </div>
+          <div className="text-[11px] text-blue-700">
+            RFP Scope of Work currently has <strong>{scopeCount}</strong> item{scopeCount === 1 ? "" : "s"}
+            {commitInfo ? ` — ${commitInfo}` : ""}
+          </div>
         </div>
       )}
 

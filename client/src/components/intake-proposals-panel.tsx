@@ -57,6 +57,17 @@ export function IntakeProposalsPanel({ rfpId }: IntakeProposalsPanelProps) {
     proposals.filter((p) => p.status === "proposed").forEach((p) => setStatus.mutate({ id: p.id, status: "rejected" }));
   };
 
+  const commitToScope = useMutation({
+    mutationFn: () => apiRequest(`/api/intake-proposals/${rfpId}/commit-to-scope`, "POST"),
+    onSuccess: (data: any) => {
+      toast({
+        title: data?.added ? `Added ${data.added} item${data.added === 1 ? "" : "s"} to scope of work` : "Nothing new to add",
+        description: data?.added ? "Accepted items are now in the evaluation's scope of work." : data?.message,
+      });
+    },
+    onError: (e: any) => toast({ title: "Failed to add to scope", description: e?.message, variant: "destructive" }),
+  });
+
   const sorted = [...proposals].sort((a, b) => confidenceRank(a.confidence) - confidenceRank(b.confidence));
   const pendingCount = proposals.filter((p) => p.status === "proposed").length;
   const acceptedCount = proposals.filter((p) => p.status === "accepted").length;
@@ -113,6 +124,19 @@ export function IntakeProposalsPanel({ rfpId }: IntakeProposalsPanelProps) {
           <span className="text-red-600">✕ {rejectedCount} rejected</span>
           <span className="text-gray-500">{pendingCount} pending</span>
         </div>
+      )}
+
+      {/* Add accepted items to the evaluation scope of work */}
+      {acceptedCount > 0 && (
+        <Button
+          size="sm"
+          onClick={() => commitToScope.mutate()}
+          disabled={commitToScope.isPending}
+          className="w-full bg-green-600 hover:bg-green-700 flex items-center justify-center gap-1"
+        >
+          {commitToScope.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+          Add {acceptedCount} accepted item{acceptedCount === 1 ? "" : "s"} to Scope of Work
+        </Button>
       )}
 
       {/* Bulk actions */}

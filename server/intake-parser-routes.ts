@@ -366,4 +366,62 @@ If you cannot find any scope, return {"proposals": []}.`
       res.status(500).json({ message: "Failed to update proposal" });
     }
   });
+
+  // Commit all ACCEPTED proposals for an RFP into its scope of work.
+  // Accepted proposals become scope_of_work rows (which the evaluation already reads),
+  // so this is the bridge from "AI proposed" to "in my scope, ready to price".
+  // Uses the RFP's scopeOfWork array — does NOT touch the evaluation money math directly.
+  app.post("/api/intake-proposals/:rfpId/commit-to-scope", requireAuth, checkPermission('admin.access'), async (req, res) => {
+    try {
+      const rfpId = parseInt(req.params.rfpId);
+      if (isNaN(rfpId)) return res.status(400).json({ message: "Invalid RFP ID" });
+
+      const rfp = await storage.getRfpRequest(rfpId);
+      if (!rfp) return res.status(404).json({ message: "RFP not found" });
+
+      const proposals = await storage.getIntakeProposals(rfpId);
+      const accepted = proposals.filter((p) => p.status === "accepted");
+      if (accepted.length === 0) {
+        return res.status(400).json({ message: "No accepted proposals to add. Accept some first." });
+      }
+
+      // Pull catalog for snapshots on catalog-matched items (single-source pricing).
+      const catalog = await storage.getAllRomScopeItems();
+
+      const existingScope = Array.isArray((rfp as any).scopeOfWork) ? (rfp as any).scopeOfWork : [];
+      // Avoid duplicating a description already present in scope of work.
+      const existingDescriptions = new Set(
+        existingScope.map((s: any) => (s?.description || "").toString().trim().toLowerCase())
+      );
+
+      const newRows: any[] = [];
+      for (const p of accepted) {
+        const desc = (p.description || "").toString().trim();
+        if (!desc || existingDescriptions.has(desc.toLowerCase())) continue;
+        const catItem = p.catalogItemId ? catalog.find((c) => c.id === p.catalogItemId) : undefined;
+        newRows.push({
+          description: desc,
+          quantity: 1, // dev team adjusts; unit rates stay from catalog
+          unit: catItem?.unit || "EA",
+          masterItemId: catItem ? catItem.id : null,
+          masterItemSnapshot: catItem
+            ? { description: catItem.name, unit: catItem.unit || "EA", unitPrice: catItem.unitPrice || "0" }
+            : null,
+        });
+        existingDescriptions.add(desc.toLowerCase());
+      }
+
+      if (newRows.length === 0) {
+        return res.status(200).json({ added: 0, message: "All accepted items are already in the scope of work." });
+      }
+
+      const updatedScope = [...existingScope, ...newRows];
+      await storage.updateRfpRequest(rfpId, { scopeOfWork: updatedScope } as any);
+
+      res.json({ added: newRows.length, totalScopeItems: updatedScope.length });
+    } catch (error: any) {
+      console.error("Commit-to-scope error:", error);
+      res.status(500).json({ message: "Failed to add accepted items to scope", error: error?.message });
+    }
+  });
 }

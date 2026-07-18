@@ -547,7 +547,10 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
         projectDescription: rfp.projectDescription || "",
         documentsLink: rfp.documentsLink || "",
         keyDates: [],
-        scopeOfWork: [],
+        // Seed from the RFP's scope of work (e.g. items accepted from the AI intake
+        // parser in Step 2 land in rfp.scopeOfWork). Previously hardcoded [], so
+        // anything on the RFP never reached Step 3. Shapes are identical.
+        scopeOfWork: Array.isArray((rfp as any).scopeOfWork) ? (rfp as any).scopeOfWork : [],
         architectMilestones: [],
         contractorMilestones: [],
       };
@@ -573,7 +576,11 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
         projectDescription: existingInvitation.projectDescription || "",
         documentsLink: existingInvitation.documentsLink || "",
         keyDates: Array.isArray(existingInvitation.keyDates) ? existingInvitation.keyDates : [],
-        scopeOfWork: Array.isArray(existingInvitation.scopeOfWork) ? existingInvitation.scopeOfWork : [],
+        // Existing ITB scope wins if it has items; otherwise fall back to the RFP's
+        // scope (covers an ITB record created before items were accepted in Step 2).
+        scopeOfWork: Array.isArray(existingInvitation.scopeOfWork) && existingInvitation.scopeOfWork.length > 0
+          ? existingInvitation.scopeOfWork
+          : defaultValues.scopeOfWork,
         architectMilestones: Array.isArray(existingInvitation.architectMilestones) ? existingInvitation.architectMilestones : [],
         contractorMilestones: Array.isArray(existingInvitation.contractorMilestones) ? existingInvitation.contractorMilestones : [],
       } : defaultValues;

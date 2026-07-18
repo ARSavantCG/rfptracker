@@ -21,6 +21,18 @@ const IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 // Cap how much file content we send, to bound token cost.
 const MAX_FILES = 8;
 
+// Canonical unit formats (must match the ROM catalog dropdown list in
+// rom-scope-items-modal.tsx): lowercase with trailing period, plus $ and %.
+const CANONICAL_UNITS = ["sf.", "lf.", "ls.", "ea.", "$", "%"];
+const normalizeUnit = (u: any): string => {
+  const raw = (u ?? "").toString().trim();
+  if (!raw) return "ea.";
+  if (raw === "$" || raw === "%") return raw;
+  const base = raw.toLowerCase().replace(/\.+$/, "");
+  const hit = CANONICAL_UNITS.find((c) => c.replace(/\.$/, "") === base);
+  return hit || raw; // unknown units pass through untouched
+};
+
 export function registerIntakeParserRoutes(app: Express): void {
   // ---- Scope Inference Rules (admin-curated knowledge base) ----
   app.get("/api/inference-rules", requireAuth, async (_req, res) => {
@@ -449,10 +461,10 @@ If you cannot find any scope, return {"proposals": []}.`
           proposalId: p.id, // enables exact retraction via /retract and id-based de-dup
           description: desc,
           quantity: 1, // dev team adjusts; unit rates stay from catalog
-          unit: catItem?.unit || "EA",
+          unit: normalizeUnit(catItem?.unit),
           masterItemId: catItem ? catItem.id : null,
           masterItemSnapshot: catItem
-            ? { description: catItem.name, unit: catItem.unit || "EA", unitPrice: catItem.unitPrice || "0" }
+            ? { description: catItem.name, unit: normalizeUnit(catItem.unit), unitPrice: catItem.unitPrice || "0" }
             : null,
         });
         existingDescriptions.add(desc.toLowerCase());

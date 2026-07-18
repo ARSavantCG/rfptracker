@@ -116,17 +116,20 @@ export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: Invit
     const ident = (n: any) =>
       n?.getAttribute?.("data-testid") || n?.getAttribute?.("name") || (n?.tagName ? `${n.tagName}${n.id ? "#" + n.id : ""}` : "NULL(body)");
     const log = (msg: string) =>
-      setFocusDiag((prev) => [...prev.slice(-2), `${new Date().toISOString().slice(14, 23)} ${msg}`]);
-    const onFocusOut = (e: FocusEvent) => log(`focus: ${ident(e.target)} -> ${ident(e.relatedTarget)}`);
+      setFocusDiag((prev) => [...prev.slice(-3), `${new Date().toISOString().slice(14, 23)} ${msg}`]);
+    const onFocusOut = (e: FocusEvent) => log(`out: ${ident(e.target)} -> ${ident(e.relatedTarget)}`);
+    const onFocusIn = (e: FocusEvent) => log(`in: ${ident(e.target)}`);
     let lastTop = el.scrollTop;
     const onScroll = () => {
       if (el.scrollTop < lastTop - 200) log(`SCROLL JUMP ${Math.round(lastTop)} -> ${Math.round(el.scrollTop)} (active: ${ident(document.activeElement)})`);
       lastTop = el.scrollTop;
     };
     el.addEventListener("focusout", onFocusOut);
+    el.addEventListener("focusin", onFocusIn);
     el.addEventListener("scroll", onScroll, { passive: true });
     return () => {
       el.removeEventListener("focusout", onFocusOut);
+      el.removeEventListener("focusin", onFocusIn);
       el.removeEventListener("scroll", onScroll);
     };
   }, [isOpen]);
@@ -341,6 +344,17 @@ const formatQuantityDisplay = (val: any): string => {
     control: form.control,
     name: "scopeOfWork",
   });
+
+  // TEMP DIAG: if the field-array ids regenerate, every row input remounts (focus dies).
+  // Logging it directly confirms/refutes the remount theory at jump time.
+  const scopeIdsRef = useRef<string>("");
+  useEffect(() => {
+    const ids = scopeFields.map((f) => f.id).join(",");
+    if (scopeIdsRef.current && ids !== scopeIdsRef.current) {
+      setFocusDiag((prev) => [...prev.slice(-3), `${new Date().toISOString().slice(14, 23)} ROWS REMOUNTED (${scopeFields.length})`]);
+    }
+    scopeIdsRef.current = ids;
+  }, [scopeFields]);
 
   const { fields: architectMilestoneFields, append: appendArchitectMilestone, remove: removeArchitectMilestone } = useFieldArray({
     control: form.control,
@@ -1155,11 +1169,7 @@ const formatQuantityDisplay = (val: any): string => {
           <DialogDescription>
             Configure and generate RFPs for architects and/or general contractors for {rfp.rfpNumber}
           </DialogDescription>
-          {focusDiag.length > 0 && (
-            <div className="text-[10px] text-gray-400 font-mono leading-tight" data-testid="focus-diag">
-              {focusDiag.map((l, i) => (<div key={i}>{l}</div>))}
-            </div>
-          )}
+
         </DialogHeader>
 
         <Form {...form}>
@@ -2294,6 +2304,14 @@ const formatQuantityDisplay = (val: any): string => {
             </div>
           </form>
         </Form>
+        {focusDiag.length > 0 && (
+          <div
+            data-testid="focus-diag"
+            className="fixed bottom-2 left-2 z-[100] rounded bg-black/70 px-2 py-1 text-[10px] font-mono leading-tight text-green-300 pointer-events-none"
+          >
+            {focusDiag.map((l, i) => (<div key={i}>{l}</div>))}
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

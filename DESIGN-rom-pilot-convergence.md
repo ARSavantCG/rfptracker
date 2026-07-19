@@ -149,3 +149,16 @@ workflow content differs. NEXT (slices 3-4, now including this): opening the wor
 on a pricingPath='rom_pilot' RFP surfaces the ROM pricing experience (locked rates,
 CM-fee-inside-allowance, badged report) INSIDE the normal workflow UI, in place of
 the bid-based evaluation — not on a separate page.
+
+## DUAL-ENTRY PRINCIPLE (Adolfo 2026-07-19 — the governing architecture)
+Two doors, one machine:
+1. **Standalone ROM Pilot** (/rom-pilot) stays fully independent — for someone who
+   wants a quick ROM with NO RFP at all. Untouched. It was the template that guided
+   the fork, not something the fork absorbs.
+2. **Pipeline-embedded ROM** — a pricingPath='rom_pilot' RFP uses the SAME workflow
+   shell as every RFP; at the Evaluation step a DIFFERENT FORM renders (the ROM
+   pricing form: locked rates, CM fee inside the allowance, badged report with
+   costs-in-place) in place of the bid-based evaluation. Never a jump to the
+   standalone page.
+Both doors drive the same ROM data, components, templates, and catalog — build
+slices 3-4 as shared components consumed by both, per the convergence principle.

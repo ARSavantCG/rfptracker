@@ -1,8 +1,8 @@
 /**
-import Templates from "./lib/rfp-templates";
  * RFP Tracker - ROM Pilot Routes
  * Copyright (c) 2025 Savant Consulting Group LLC. All rights reserved.
  */
+import Templates from "./lib/rfp-templates";
 import { getBrandLogo as getBridgeLogo } from './lib/branding';
 import type { Express } from 'express';
 import { storage } from './storage';
@@ -62,8 +62,8 @@ async function generateRomReportHtml(romPilot: any, lineItems: any[], scopeItems
         
         // Get parking info
         vehicularParking = (propertyDetails as any).vehicularParking || 'N/A';
-        trailerParking = propertyDetails.trailerParking || 'N/A';
-        electricalAllocation = propertyDetails.electricalAllocation || 'N/A';
+        trailerParking = (propertyDetails as any).trailerParking || 'N/A';
+        electricalAllocation = (propertyDetails as any).electricalAllocation || 'N/A';
         
         // Get existing improvements from property and calculate proportional costs
         try {

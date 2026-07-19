@@ -103,10 +103,21 @@ is always coupled with the ROM, and the dev team never issues allowances):
 Decisions locked today:
 - **Rate lock is absolute for the leasing team** (that IS the review gate — structural,
   not procedural). Admin escape hatch deferred; admins can edit the catalog itself.
-- **CM fee auto-capture:** on allowance-ROM creation, a 2.75% Construction Management fee
-  line auto-populates. Deletable — but deletion is RECORDED (who/when) and surfaced in fee
+- **CM fee auto-capture — INSIDE the allowance, not on top (Adolfo 2026-07-19):** the
+  quoted allowance INCLUDES the 2.75% CM fee. A $15/sf allowance means the tenant's real
+  TI purchasing power is $15 × (1 − 0.0275) ≈ $14.59/sf. The auto-populated CM line is a
+  DEDUCTION within the allowance: report shows gross allowance, less CM fee (2.75%), net
+  available for TI. Deletable — but deletion is RECORDED (who/when) and surfaced in fee
   reporting, so removed fees trigger the "let's make sure the lease language mirrors that"
   conversation instead of silent leakage. Portfolio CM-fee reports include allowances.
+- **Catalog-only for the leasing team (Adolfo 2026-07-19, ENFORCED server-side in
+  rom-routes.ts):** non-admin ROM users cannot add custom (non-catalog) line items — no
+  catalog item means no price, which defeats the purpose. Missing scope → ask the dev team
+  to add it to the database. admin.access retains custom-item ability. Additionally, for
+  ALL users, any line item with a scopeItemId has its unitPrice FORCED from the catalog
+  (activePrice ?? unitPrice) and totalPrice recomputed server-side — the read-only UI is
+  backed by an API that doesn't trust the request body. Slice 1 (rate-lock) is now DONE:
+  UI was already read-only; server enforcement added 2026-07-19.
 - **Report:** same family as the Evaluation, with a prominent "ROM ALLOWANCE" heading so
   it can never be confused with a bid-based evaluation. Costs-in-place at the bottom is
   MANDATORY — it's the core of the allowance model.

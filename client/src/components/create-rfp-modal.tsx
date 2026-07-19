@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react";
-import { useLocation } from "wouter";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -59,7 +58,6 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { isAdmin, user } = usePermissions();
-  const [, setLocation] = useLocation();
   // Allowance Fork: which path the user chose at the bottom of Step 1.
   const pricingPathRef = useRef<"development" | "rom_pilot">("development");
   const [romForkPending, setRomForkPending] = useState(false);
@@ -272,12 +270,14 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
       if (!rfp?.id) throw new Error("RFP created but no id returned");
       await apiRequest(`/api/rfp-requests/${rfp.id}/fork-to-rom`, "POST");
       queryClient.invalidateQueries({ queryKey: ["/api/rom-pilots"] });
+      // Stay on the dashboard (Adolfo 2026-07-19): a ROM-path RFP lives in the
+      // pipeline like any other RFP — same landing page, same navigation; only
+      // the workflow content differs. No jarring jump to a standalone page.
       toast({
         title: "ROM Pilot created",
-        description: "Price the scope from the catalog — quantities are yours, rates are locked.",
-        duration: 6000,
+        description: `${rfp.rfpNumber || "The RFP"} is in your pipeline at the Evaluation phase — open it to price scope from the catalog. Quantities are yours, rates are locked.`,
+        duration: 8000,
       });
-      setLocation("/rom-pilot");
     } catch (e: any) {
       toast({ title: "Allowance path failed", description: e?.message || "Unknown error", variant: "destructive", duration: 8000 });
     } finally {

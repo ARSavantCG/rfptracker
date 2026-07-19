@@ -12,6 +12,7 @@ import { RfpValidationModal } from "@/components/rfp-validation-modal";
 import { RfpDetailModal } from "@/components/rfp-detail-modal";
 import { BidCollectionTable } from "@/components/bid-collection-table";
 import { EvaluationBudget } from "@/components/evaluation-budget";
+import { RomWorkflowPanel } from "@/components/rom-workflow-panel";
 import { BidLevelingView } from "@/components/bid-leveling-view";
 import { FinancialSummary } from "@/components/financial-summary";
 import { PublishSummary } from "@/components/publish-summary";
@@ -656,6 +657,12 @@ export default function Dashboard() {
                         ← Back to RFP List
                       </Button>
                     </div>
+                    {(selectedRfp as any).pricingPath === "rom_pilot" ? (
+                      /* Dual-entry: ROM-path RFPs get the ROM pricing form here,
+                         in the same workflow shell, instead of the bid-based
+                         evaluation (DESIGN-rom-pilot-convergence.md). */
+                      <RomWorkflowPanel rfp={selectedRfp} />
+                    ) : (
                     <div className="space-y-6">
                       <BidLevelingView
                         rfpId={selectedRfp.id}
@@ -670,6 +677,7 @@ export default function Dashboard() {
                         }}
                       />
                     </div>
+                    )}
                   </div>
                 ) : showPublish && selectedRfp ? (
                   <div className="space-y-4">

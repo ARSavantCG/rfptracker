@@ -498,6 +498,21 @@ export function registerRomRoutes(app: Express): void {
     }
   });
 
+  // Dual-entry (slices 3-4): the workflow's Evaluation step needs the ROM linked
+  // to a pricingPath='rom_pilot' RFP.
+  app.get("/api/rfp-requests/:id/rom-pilot", requireAuth, async (req, res) => {
+    try {
+      const rfpId = parseInt(req.params.id);
+      if (isNaN(rfpId)) return res.status(400).json({ message: "Invalid RFP ID" });
+      const pilots = await storage.getAllRomPilots();
+      const pilot = pilots.find((r: any) => r.linkedRfpId === rfpId);
+      if (!pilot) return res.status(404).json({ message: "No ROM Pilot linked to this RFP" });
+      res.json(pilot);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch linked ROM Pilot" });
+    }
+  });
+
   // ROM Pilot Fork (slice 2, DESIGN-rom-pilot-convergence.md): fork a Step-1 RFP
   // onto the ROM path. SNAPSHOTS the RFP's property/bays/project into a new linked
   // ROM Pilot, marks the RFP pricingPath='rom_pilot', and jumps its workflow

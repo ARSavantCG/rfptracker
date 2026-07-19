@@ -91,6 +91,14 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
     },
   });
 
+  const { data: properties = [] } = useQuery<Property[]>({
+    queryKey: ["/api/properties"],
+  });
+
+  const { data: contacts = [] } = useQuery<Contact[]>({
+    queryKey: ["/api/contacts"],
+  });
+
   // Auto-populate sentBy for EVERYONE with the logged-in user. Non-admins are
   // locked to it (disabled input below); admins get it prefilled but can change
   // it to anyone via the dropdown. For admins the value must match the dropdown's
@@ -137,14 +145,6 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
       form.setValue("anticipatedLeaseExecutionDate", iso);
     } catch { /* defaulting must never break the form */ }
   }, [watchedInternalDue, form]);
-
-  const { data: properties = [] } = useQuery<Property[]>({
-    queryKey: ["/api/properties"],
-  });
-
-  const { data: contacts = [] } = useQuery<Contact[]>({
-    queryKey: ["/api/contacts"],
-  });
 
   const createMutation = useMutation({
     mutationFn: async (data: CreateRfpFormData) => {

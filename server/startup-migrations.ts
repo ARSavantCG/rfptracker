@@ -42,6 +42,10 @@ const ADDITIVE_COLUMNS: ColumnMigration[] = [
   { table: 'rom_pilots', column: 'linked_rfp_id', type: 'integer' },
   // Four-bucket budget report: contract-COUNTERPARTY bucket on the catalog
   // (budget_bucket already exists there with pricing-mechanics semantics).
+  // budget_bucket exists in prod's history but not necessarily fresh dev DBs
+  // (initializeDefaultScopeItems races the migration on first boot) — additive
+  // and idempotent, so declare it here too. (Mirrors the Agent's dev fix.)
+  { table: 'rom_scope_items', column: 'budget_bucket', type: 'text' },
   { table: 'rom_scope_items', column: 'contract_bucket', type: 'text' },
 ];
 

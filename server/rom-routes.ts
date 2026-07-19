@@ -60,20 +60,20 @@ async function generateRomReportHtml(romPilot: any, lineItems: any[], scopeItems
         }
         
         // Get parking info
-        vehicularParking = propertyDetails.vehicularParking || 'N/A';
-        trailerParking = propertyDetails.trailerParking || 'N/A';
-        electricalAllocation = propertyDetails.electricalAllocation || 'N/A';
+        vehicularParking = (propertyDetails as any).vehicularParking || 'N/A';
+        trailerParking = (propertyDetails as any).trailerParking || 'N/A';
+        electricalAllocation = (propertyDetails as any).electricalAllocation || 'N/A';
         
         // Get existing improvements from property and calculate proportional costs
         try {
           const allExistingCosts = await storage.getPropertyExistingImprovements(parseInt(romPilot.property));
           
           // Calculate proportional costs based on ROM area vs total property area
-          const propertyTotalSF = propertyDetails.totalSquareFootage || totalSquareFootage || 1;
+          const propertyTotalSF = (propertyDetails as any).totalSquareFootage || totalSquareFootage || 1;
           const romAreaPortion = totalSquareFootage / propertyTotalSF;
           
           existingCosts = allExistingCosts.map(cost => {
-            const originalCost = parseFloat(cost.costEstimate) || 0;
+            const originalCost = parseFloat((cost as any).costEstimate) || 0;
             const proportionalCost = originalCost * romAreaPortion;
             return {
               ...cost,
@@ -824,6 +824,38 @@ export function registerRomRoutes(app: Express): void {
     }
   });
 
+
+// ── Rate-lock enforcement (DESIGN-rom-pilot-convergence.md, slice 1) ──────────
+// Unit rates come from the CATALOG, never the client. A read-only input is not a
+// lock if the API trusts the request body, so:
+// - Every line item WITH a scopeItemId gets its unitPrice FORCED from the catalog
+//   (activePrice ?? unitPrice) and its totalPrice recomputed server-side.
+// - Items WITHOUT a valid scopeItemId are catalog-less custom items — allowed
+//   ONLY for admin.access (dev team). The leasing team is catalog-only by design:
+//   no catalog item → no price → no ROM; they ask the dev team to add the scope.
+async function enforceRomRateLock(req: any, items: any[]): Promise<{ items: any[] } | { error: string }> {
+  const catalog = await storage.getAllRomScopeItems();
+  const byId = new Map(catalog.map((c: any) => [c.id, c]));
+  const isAdminUser = !!req.user?.permissions?.includes?.("admin.access");
+  const out: any[] = [];
+  for (const item of items || []) {
+    const sid = item?.scopeItemId != null ? parseInt(item.scopeItemId) : NaN;
+    const cat: any = !isNaN(sid) ? byId.get(sid) : undefined;
+    if (!cat) {
+      if (!isAdminUser) {
+        return { error: `"${item?.description || item?.notes || "Unnamed item"}" is not a catalog scope item. ROM pricing is catalog-only — ask the development team to add this scope to the database.` };
+      }
+      out.push(item);
+      continue;
+    }
+    const locked = parseFloat((cat.activePrice ?? cat.unitPrice) || "0") || 0;
+    const qty = parseFloat(item.quantity) || 0;
+    const share = (parseFloat(item.tenantShare) || 100) / 100;
+    out.push({ ...item, unitPrice: locked.toString(), totalPrice: (qty * locked * share).toString() });
+  }
+  return { items: out };
+}
+
   app.post("/api/rom-pilots/:id/line-items", requireAuth, async (req, res) => {
     try {
       console.log("ROM line items save request received");
@@ -846,10 +878,13 @@ export function registerRomRoutes(app: Express): void {
         category: item.category
       })));
       
-      const savedLineItems = await storage.saveRomPilotLineItems(romPilotId, lineItems);
+      const enforced = await enforceRomRateLock(req, lineItems);
+      if ("error" in enforced) return res.status(403).json({ message: enforced.error });
+
+      const savedLineItems = await storage.saveRomPilotLineItems(romPilotId, enforced.items);
       
-      // Calculate and update total estimate
-      const total = lineItems.reduce((sum: number, item: any) => sum + (parseFloat(item.totalPrice) || 0), 0);
+      // Calculate and update total estimate (from ENFORCED prices, not client's)
+      const total = enforced.items.reduce((sum: number, item: any) => sum + (parseFloat(item.totalPrice) || 0), 0);
       await storage.updateRomPilot(romPilotId, { totalEstimate: total.toString() });
       
       res.json(savedLineItems);
@@ -867,9 +902,13 @@ export function registerRomRoutes(app: Express): void {
         return res.status(400).json({ message: "Invalid ROM Pilot ID" });
       }
 
-      const { lineItem } = req.body;
-      console.log("Saving individual ROM line item:", { romPilotId, lineItem });
-      
+      const { lineItem: rawLineItem } = req.body;
+      console.log("Saving individual ROM line item:", { romPilotId, lineItem: rawLineItem });
+
+      const enforcedOne = await enforceRomRateLock(req, [rawLineItem]);
+      if ("error" in enforcedOne) return res.status(403).json({ message: enforcedOne.error });
+      const lineItem = enforcedOne.items[0];
+
       // Get existing line items
       const existingLineItems = await storage.getRomPilotLineItems(romPilotId);
       

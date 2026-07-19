@@ -91,6 +91,10 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
     },
   });
 
+  const { data: properties = [] } = useQuery<Property[]>({
+    queryKey: ["/api/properties"],
+  });
+
   const { data: contacts = [] } = useQuery<Contact[]>({
     queryKey: ["/api/contacts"],
   });
@@ -141,10 +145,6 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
       form.setValue("anticipatedLeaseExecutionDate", iso);
     } catch { /* defaulting must never break the form */ }
   }, [watchedInternalDue, form]);
-
-  const { data: properties = [] } = useQuery<Property[]>({
-    queryKey: ["/api/properties"],
-  });
 
   const createMutation = useMutation({
     mutationFn: async (data: CreateRfpFormData) => {

@@ -106,6 +106,40 @@ const cleanProjectName = (projectName: string): string => {
 
 export function InvitationToBidModal({ isOpen, onClose, rfp, onComplete }: InvitationToBidModalProps) {
   const { toast } = useToast();
+
+  // FOCUS KEEPER — fix for the mobile tap-jump (evidence: VDIAG trace 2026-07-18).
+  // ~80ms after tapping a scope input, something blurs it to null (drag-and-drop
+  // touch sensor is the prime suspect); Radix's focus trap then refocuses the
+  // dialog CONTAINER div, and container-focus scrolls the dialog to its top —
+  // the user's "skip". Countermeasure: when an input inside this dialog blurs
+  // with relatedTarget=null while still in the DOM, restore its focus next frame
+  // with preventScroll. Legitimate blurs (tapping another field, closing the
+  // dialog, tapping outside) carry a relatedTarget or unmount the input, so they
+  // pass through untouched. Fully try/catch-guarded: can never crash the app.
+  const focusKeeperContainerRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!isOpen) return;
+    const onFocusOut = (e: FocusEvent) => {
+      try {
+        const t = e.target as HTMLElement | null;
+        if (e.relatedTarget) return;
+        if (!t || !(t instanceof HTMLElement) || !t.matches("input, textarea")) return;
+        const container = focusKeeperContainerRef.current;
+        if (!container || !container.contains(t)) return;
+        requestAnimationFrame(() => {
+          try {
+            if (!document.contains(t)) return;
+            const active = document.activeElement;
+            if (active === document.body || active === container || active === null) {
+              (t as any).focus?.({ preventScroll: true });
+            }
+          } catch {}
+        });
+      } catch {}
+    };
+    document.addEventListener("focusout", onFocusOut);
+    return () => document.removeEventListener("focusout", onFocusOut);
+  }, [isOpen]);
   const queryClient = useQueryClient();
   const [isGeneratingPdfs, setIsGeneratingPdfs] = useState(false);
   const [keyDates, setKeyDates] = useState<Array<{label: string, date: string}>>([]);
@@ -1120,7 +1154,7 @@ const formatQuantityDisplay = (val: any): string => {
 
   return (
     <Dialog open={isOpen} onOpenChange={() => onClose()}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent ref={focusKeeperContainerRef} className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />

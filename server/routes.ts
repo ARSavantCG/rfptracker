@@ -61,6 +61,7 @@ import { registerRomRoutes } from './rom-routes';
 import { registerActualsRoutes } from './actuals-routes';
 import { registerPropertyRoutes } from './property-routes';
 import { registerCostsInPlaceReportRoutes } from './costs-in-place-report';
+import { registerFourBucketBudgetReportRoutes } from './four-bucket-budget-report';
 import { registerOccupancyReportRoutes } from './occupancy-report';
 import { registerAiRoutes } from './ai-routes';
 import { registerIntakeParserRoutes } from './intake-parser-routes';
@@ -86,6 +87,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerActualsRoutes(app);
   registerPropertyRoutes(app);
   registerCostsInPlaceReportRoutes(app);
+  registerFourBucketBudgetReportRoutes(app);
   registerOccupancyReportRoutes(app);
   registerAiRoutes(app);
   registerIntakeParserRoutes(app);

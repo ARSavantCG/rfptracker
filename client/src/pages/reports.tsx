@@ -26,6 +26,7 @@ export default function Reports() {
   const [customReportModalOpen, setCustomReportModalOpen] = useState(false);
   const [incompleteOnly, setIncompleteOnly] = useState(false);
   const [costsInPlacePropertyId, setCostsInPlacePropertyId] = useState<string>("");
+  const [budgetBucketRfpId, setBudgetBucketRfpId] = useState<string>("");
 
   const { data: rfpRequests = [], isLoading } = useQuery<RfpRequest[]>({
     queryKey: ["/api/rfp-requests"],
@@ -98,6 +99,26 @@ export default function Reports() {
       window.open(blobUrl, '_blank');
     } catch (error) {
       console.error("Error generating report:", error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      alert(`Failed to generate report: ${errorMessage}`);
+    }
+  };
+
+  const generateBudgetBucketReport = async () => {
+    if (!budgetBucketRfpId) { alert("Select an RFP first."); return; }
+    try {
+      const response = await fetch(`/api/reports/budget-buckets/${budgetBucketRfpId}`, {
+        credentials: 'include',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}` },
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.message || `Failed to generate report (${response.status})`);
+      }
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      window.open(blobUrl, '_blank');
+    } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       alert(`Failed to generate report: ${errorMessage}`);
     }
@@ -543,6 +564,45 @@ export default function Reports() {
               <Button
                 className="w-full h-8 text-xs bg-emerald-600 hover:bg-emerald-700"
                 onClick={generateCostsInPlaceReport}
+              >
+                <DollarSign className="h-3 w-3 mr-1" />
+                Generate Report
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Budget by Contract — four buckets: contractor / design / CM / balance */}
+          <Card className="border-purple-200 bg-purple-50/30">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center space-x-2 text-sm">
+                <DollarSign className="h-4 w-4 text-purple-600" />
+                <span>Budget by Contract</span>
+              </CardTitle>
+              <p className="text-xs text-gray-600">
+                Four buckets — Contractor, Design, CM Fees, Balance — for evaluations and ROM allowances
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <div>
+                <Label className="text-xs">RFP</Label>
+                <select
+                  value={budgetBucketRfpId}
+                  onChange={(e) => setBudgetBucketRfpId(e.target.value)}
+                  className="w-full h-8 px-2 text-xs bg-background border border-input rounded-md"
+                >
+                  <option value="">Select an RFP…</option>
+                  {rfpRequests
+                    .filter((r: any) => ["evaluation", "publish"].includes(r.workflowPhase) || r.status === "completed")
+                    .map((r: any) => (
+                      <option key={r.id} value={r.id}>
+                        {r.rfpNumber} — {r.projectName}{(r as any).pricingPath === "rom_pilot" ? " (ROM)" : ""}
+                      </option>
+                    ))}
+                </select>
+              </div>
+              <Button
+                className="w-full h-8 text-xs bg-purple-600 hover:bg-purple-700"
+                onClick={generateBudgetBucketReport}
               >
                 <DollarSign className="h-3 w-3 mr-1" />
                 Generate Report

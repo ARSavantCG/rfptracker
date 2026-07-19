@@ -1112,7 +1112,14 @@ export const romScopeItems = pgTable("rom_scope_items", {
   // How this item's quantity is derived in RFP evaluations. Replaces brittle
   // description-matching (e.g. "if name has 'builder' + 'risk' → qty = TI total").
   // null/'manual' = quantity is entered by hand and preserved.
-  calculationBasis: text("calculation_basis"), // 'lump-sum' | 'pct-ti-total' | 'pct-construction-total' | 'pct-rentable-sf' | 'manual'
+  calculationBasis: text("calculation_basis"),
+  budgetBucket: text("budget_bucket"), // 'lump-sum' | 'pct-ti-total' | 'pct-construction-total' | 'pct-rentable-sf' | 'manual'
+  // Contract bucket = contract COUNTERPARTY for the four-bucket budget report
+  // (Adolfo 2026-07-19): 'contractor' | 'design' | 'cm' | 'balance'. Distinct
+  // from budgetBucket above, which is pricing MECHANICS. Admin-set; when null
+  // the report infers: contingency/permit/testing -> balance, CM -> cm,
+  // design/architect/engineer -> design, TI/construction -> contractor.
+  contractBucket: text("contract_bucket"),
   category: text("category").notNull(), // "office", "warehouse", "general", etc.
   // CSI (Construction Specifications Institute) Division codes for grouping
   csiDivision: text("csi_division"), // e.g., "16 - Electrical", "22 - Plumbing", "26 - Electrical (MasterFormat)"

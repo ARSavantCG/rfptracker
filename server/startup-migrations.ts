@@ -40,6 +40,9 @@ const ADDITIVE_COLUMNS: ColumnMigration[] = [
   // Allowance Fork (slice 2): pricing path on the RFP + back-link on the ROM.
   { table: 'rfp_requests', column: 'pricing_path', type: "text DEFAULT 'development'" },
   { table: 'rom_pilots', column: 'linked_rfp_id', type: 'integer' },
+  // Four-bucket budget report: contract-COUNTERPARTY bucket on the catalog
+  // (budget_bucket already exists there with pricing-mechanics semantics).
+  { table: 'rom_scope_items', column: 'contract_bucket', type: 'text' },
 ];
 
 // Additive new tables (CREATE TABLE IF NOT EXISTS — idempotent, never drops).

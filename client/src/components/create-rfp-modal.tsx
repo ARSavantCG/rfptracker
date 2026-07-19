@@ -269,6 +269,13 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
       const rfp = await createMutation.mutateAsync(data);
       if (!rfp?.id) throw new Error("RFP created but no id returned");
       await apiRequest(`/api/rfp-requests/${rfp.id}/fork-to-rom`, "POST");
+      // Re-fetch RFP data AFTER the fork: creation's own invalidation fires
+      // before the fork mutates pricingPath/workflowPhase, so without this the
+      // dashboard deterministically shows the pre-fork snapshot (stale
+      // Validation workflow, no purple) until a manual refresh.
+      queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/rfp-requests/${rfp.id}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/rom-pilots"] });
       // Stay on the dashboard (Adolfo 2026-07-19): a ROM-path RFP lives in the
       // pipeline like any other RFP — same landing page, same navigation; only

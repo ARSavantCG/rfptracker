@@ -40,11 +40,16 @@ const ADDITIVE_COLUMNS: ColumnMigration[] = [
   // Allowance Fork (slice 2): pricing path on the RFP + back-link on the ROM.
   { table: 'rfp_requests', column: 'pricing_path', type: "text DEFAULT 'development'" },
   { table: 'rom_pilots', column: 'linked_rfp_id', type: 'integer' },
-  // Four-bucket budget report: pricing-mechanics bucket (lump-sum / pct-* / manual).
-  // Production had this from an earlier migration; dev needs it explicitly.
+  // Four-bucket budget report: contract-COUNTERPARTY bucket on the catalog
+  // (budget_bucket already exists there with pricing-mechanics semantics).
+  // budget_bucket exists in prod's history but not necessarily fresh dev DBs
+  // (initializeDefaultScopeItems races the migration on first boot) — additive
+  // and idempotent, so declare it here too. (Mirrors the Agent's dev fix.)
   { table: 'rom_scope_items', column: 'budget_bucket', type: 'text' },
-  // contract-COUNTERPARTY bucket on the catalog (new in this commit).
   { table: 'rom_scope_items', column: 'contract_bucket', type: 'text' },
+  // Fee governance: recorded (not blocked) CM-fee deletions on ROM pilots.
+  { table: 'rom_pilots', column: 'cm_fee_removed_by', type: 'text' },
+  { table: 'rom_pilots', column: 'cm_fee_removed_at', type: 'timestamp' },
 ];
 
 // Additive new tables (CREATE TABLE IF NOT EXISTS — idempotent, never drops).

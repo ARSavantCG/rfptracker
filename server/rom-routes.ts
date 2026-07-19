@@ -578,13 +578,15 @@ export function registerRomRoutes(app: Express): void {
             if (!cat) continue;
             const price = parseFloat((cat.activePrice ?? cat.unitPrice) || "0") || 0;
             const qty = it.qty || 1;
-            // Tenant share: template's explicit percent wins; otherwise demising
-            // walls default to 50% (cost splits between suites — Adolfo 2026-07-19,
-            // JJ can adjust either way); everything else defaults to 100%.
-            // If more items ever need default shares, the clean home is a
-            // defaultTenantShare column on rom_scope_items, not more name matches.
+            // Tenant share: percent-FEE items always 100 (the fee engine computes
+            // their dollars from the subtotal; a template 'percent' is the FEE rate,
+            // not a share). Otherwise: template's explicit percent wins; demising
+            // walls default to 50% (cost splits between suites; JJ can adjust);
+            // everything else 100%. (defaultTenantShare catalog column is the
+            // clean home if more items ever need this.)
             const isDemising = /demising/i.test(cat.name || "");
-            const share = it.percent || (isDemising ? 50 : 100);
+            const isFeeRow = isPercentFeeItem(cat);
+            const share = isFeeRow ? 100 : (it.percent || (isDemising ? 50 : 100));
             rows.push({
               scopeItemId: cat.id,
               quantity: qty.toString(),
@@ -597,9 +599,11 @@ export function registerRomRoutes(app: Express): void {
             });
           }
           if (rows.length) {
+            // Fee engine at seed time: CM/contingency/permit rows arrive with REAL
+            // dollars computed from the seeded subtotal, not zeros.
+            const seedTotals = computeRomFeeTotals(rows, byId);
             await storage.saveRomPilotLineItems(pilot.id, rows);
-            const total = rows.reduce((sum, r) => sum + (parseFloat(r.totalPrice) || 0), 0);
-            await storage.updateRomPilot(pilot.id, { totalEstimate: total.toString() });
+            await storage.updateRomPilot(pilot.id, { totalEstimate: seedTotals.grandTotal.toString() });
           }
           console.log(`Fork-to-ROM: seeded ${rows.length} items from template "${tpl.name}" into pilot ${pilot.id}`);
         }
@@ -949,6 +953,50 @@ export function registerRomRoutes(app: Express): void {
 // - Items WITHOUT a valid scopeItemId are catalog-less custom items — allowed
 //   ONLY for admin.access (dev team). The leasing team is catalog-only by design:
 //   no catalog item → no price → no ROM; they ask the dev team to add the scope.
+// ── ROM fee engine (fee/report block) ────────────────────────────────────────
+// Percent-based fee items (CM 2.75%, Contingency 5%, Permit Fees 3.5%) compute
+// as pct × the subtotal of NON-percent rows. The percent lives in the catalog
+// item's name ("Construction Management (2.75%)"), extracted here; items whose
+// catalog budgetBucket starts with 'pct-' but carry no parsable percent are
+// left untouched. Fee rows always apply at 100% share (the fee is on the whole
+// job); the computed value is stored on the row so every consumer — modal,
+// pilot total, reports — reads consistent dollars.
+function extractPctFromName(name: string): number | null {
+  const m = /\((\d+(?:\.\d+)?)\s*%\)/.exec(name || "");
+  return m ? parseFloat(m[1]) : null;
+}
+
+function isPercentFeeItem(cat: any): boolean {
+  if (!cat) return false;
+  if (extractPctFromName(cat.name) != null) return true;
+  return typeof cat.budgetBucket === "string" && cat.budgetBucket.startsWith("pct-");
+}
+
+// Mutates totals on percent rows; returns { subtotal, feeTotal, grandTotal, cmFeeTotal }.
+function computeRomFeeTotals(items: any[], catalogById: Map<any, any>) {
+  let subtotal = 0;
+  for (const it of items) {
+    const cat = catalogById.get(it.scopeItemId);
+    if (!isPercentFeeItem(cat)) subtotal += parseFloat(it.totalPrice) || 0;
+  }
+  let feeTotal = 0;
+  let cmFeeTotal = 0;
+  for (const it of items) {
+    const cat = catalogById.get(it.scopeItemId);
+    if (!isPercentFeeItem(cat)) continue;
+    const pct = extractPctFromName(cat?.name || "");
+    if (pct == null) continue;
+    const computed = subtotal * (pct / 100);
+    it.unitPrice = computed.toString();
+    it.quantity = "1";
+    it.tenantShare = 100;
+    it.totalPrice = computed.toString();
+    feeTotal += computed;
+    if (/construction management|cm fee/i.test(cat?.name || "")) cmFeeTotal += computed;
+  }
+  return { subtotal, feeTotal, grandTotal: subtotal + feeTotal, cmFeeTotal };
+}
+
 async function enforceRomRateLock(req: any, items: any[]): Promise<{ items: any[] } | { error: string }> {
   const catalog = await storage.getAllRomScopeItems();
   const byId = new Map(catalog.map((c: any) => [c.id, c]));
@@ -997,10 +1045,29 @@ async function enforceRomRateLock(req: any, items: any[]): Promise<{ items: any[
       const enforced = await enforceRomRateLock(req, lineItems);
       if ("error" in enforced) return res.status(403).json({ message: enforced.error });
 
+      // Fee engine: percent fees computed from the non-fee subtotal, stored on rows.
+      const feeCatalog = await storage.getAllRomScopeItems();
+      const feeById = new Map(feeCatalog.map((c: any) => [c.id, c]));
+      const feeTotals = computeRomFeeTotals(enforced.items, feeById);
+
+      // Fee governance: record (never block) removal of the CM fee line.
+      try {
+        const prevItems = await storage.getRomPilotLineItems(romPilotId);
+        const hadCm = (prevItems as any[]).some((it) => /construction management|cm fee/i.test(feeById.get(it.scopeItemId)?.name || ""));
+        const hasCm = enforced.items.some((it: any) => /construction management|cm fee/i.test(feeById.get(it.scopeItemId)?.name || ""));
+        if (hadCm && !hasCm) {
+          const who = (req.user as any)?.firstName ? `${(req.user as any).firstName} ${(req.user as any).lastName || ""}`.trim() : (req.user as any)?.username || "unknown";
+          await storage.updateRomPilot(romPilotId, { cmFeeRemovedBy: who, cmFeeRemovedAt: new Date() } as any);
+          console.log(`ROM fee governance: CM fee removed from pilot ${romPilotId} by ${who}`);
+        } else if (hasCm) {
+          await storage.updateRomPilot(romPilotId, { cmFeeRemovedBy: null, cmFeeRemovedAt: null } as any);
+        }
+      } catch (govErr) { console.error("CM-fee governance recording failed (save proceeds):", govErr); }
+
       const savedLineItems = await storage.saveRomPilotLineItems(romPilotId, enforced.items);
       
-      // Calculate and update total estimate (from ENFORCED prices, not client's)
-      const total = enforced.items.reduce((sum: number, item: any) => sum + (parseFloat(item.totalPrice) || 0), 0);
+      // Total = fee-engine grand total (subtotal + computed fees)
+      const total = feeTotals.grandTotal;
       await storage.updateRomPilot(romPilotId, { totalEstimate: total.toString() });
       
       res.json(savedLineItems);
@@ -1040,10 +1107,14 @@ async function enforceRomRateLock(req: any, items: any[]): Promise<{ items: any[
         updatedLineItems = [...existingLineItems, lineItem];
       }
       
+      // Fee engine: recompute percent fees across the full merged set.
+      const feeCatalog2 = await storage.getAllRomScopeItems();
+      const feeById2 = new Map(feeCatalog2.map((c: any) => [c.id, c]));
+      const feeTotals2 = computeRomFeeTotals(updatedLineItems, feeById2);
+
       const savedLineItems = await storage.saveRomPilotLineItems(romPilotId, updatedLineItems);
       
-      // Calculate and update total estimate
-      const total = updatedLineItems.reduce((sum: number, item: any) => sum + (parseFloat(item.totalPrice) || 0), 0);
+      const total = feeTotals2.grandTotal;
       await storage.updateRomPilot(romPilotId, { totalEstimate: total.toString() });
       
       res.json({ success: true, lineItem: savedLineItems.find(item => 

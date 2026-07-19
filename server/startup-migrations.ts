@@ -47,6 +47,9 @@ const ADDITIVE_COLUMNS: ColumnMigration[] = [
   // and idempotent, so declare it here too. (Mirrors the Agent's dev fix.)
   { table: 'rom_scope_items', column: 'budget_bucket', type: 'text' },
   { table: 'rom_scope_items', column: 'contract_bucket', type: 'text' },
+  // Fee governance: recorded (not blocked) CM-fee deletions on ROM pilots.
+  { table: 'rom_pilots', column: 'cm_fee_removed_by', type: 'text' },
+  { table: 'rom_pilots', column: 'cm_fee_removed_at', type: 'timestamp' },
 ];
 
 // Additive new tables (CREATE TABLE IF NOT EXISTS — idempotent, never drops).

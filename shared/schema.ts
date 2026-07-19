@@ -1096,6 +1096,10 @@ export const romPilots = pgTable("rom_pilots", {
   status: text("status").default("draft"), // draft, active, archived
   // Set when this ROM was forked from a Step-1 RFP via the Allowance path.
   linkedRfpId: integer("linked_rfp_id"),
+  // Fee governance (Adolfo): deleting the CM fee is allowed but RECORDED, so
+  // fee reports can flag it and lease language can mirror the decision.
+  cmFeeRemovedBy: text("cm_fee_removed_by"),
+  cmFeeRemovedAt: timestamp("cm_fee_removed_at"),
   createdBy: text("created_by"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

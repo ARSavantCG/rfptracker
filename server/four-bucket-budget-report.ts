@@ -66,6 +66,7 @@ export function registerFourBucketBudgetReportRoutes(app: Express): void {
         const pilot: any = pilots.find((r: any) => r.linkedRfpId === rfpId);
         if (!pilot) return res.status(404).json({ message: "No ROM Pilot linked to this ROM-path RFP" });
         sourceLabel = `ROM Pilot ${pilot.romNumber}`;
+        var romPilotMeta: any = pilot; // for allowance summary + fee governance flag
         const items = await storage.getRomPilotLineItems(pilot.id);
         for (const it of items as any[]) {
           const cat = byId.get(it.scopeItemId);
@@ -138,6 +139,24 @@ export function registerFourBucketBudgetReportRoutes(app: Express): void {
     <tr><td style="font-weight:700">Bucket / Line Item</td><td class="num" style="font-weight:700">Amount</td><td class="num" style="font-weight:700">% of Total</td></tr>
     ${bucketRowsHtml}
     <tr class="grand"><td>Total</td><td class="num">${money(grandTotal)}</td><td class="num">100%</td></tr>
+    ${
+      isRom
+        ? (() => {
+            const cm = buckets.find((x) => x.key === "cm")?.total || 0;
+            const removed = (typeof romPilotMeta !== "undefined" && romPilotMeta?.cmFeeRemovedBy)
+              ? `<tr class="info"><td colspan="3" style="color:#b45309">⚠ CM fee line was removed by ${romPilotMeta.cmFeeRemovedBy}${romPilotMeta.cmFeeRemovedAt ? " on " + new Date(romPilotMeta.cmFeeRemovedAt).toLocaleDateString("en-US") : ""} — confirm the lease language mirrors this.</td></tr>`
+              : "";
+            // Inside-the-allowance math (Adolfo): the quoted allowance INCLUDES
+            // the CM fee — tenant's real TI purchasing power is gross less CM.
+            return `
+    <tr class="info"><td colspan="3" style="padding-top:18px;border-bottom:none;font-style:normal;font-weight:700;color:#111827">Allowance Summary</td></tr>
+    <tr><td>Gross allowance (total, CM fee included)</td><td class="num">${money(grandTotal)}</td><td></td></tr>
+    <tr><td>Less: CM fee</td><td class="num">(${money(cm)})</td><td></td></tr>
+    <tr class="grand"><td>Net available for tenant improvements</td><td class="num">${money(grandTotal - cm)}</td><td></td></tr>
+    ${removed}`;
+          })()
+        : ""
+    }
     ${
       existingImprovementsTotal != null
         ? `<tr class="info"><td>Existing improvements (costs-in-place — informational, not a contract)</td>

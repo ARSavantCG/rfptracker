@@ -162,3 +162,20 @@ Two doors, one machine:
    standalone page.
 Both doors drive the same ROM data, components, templates, and catalog — build
 slices 3-4 as shared components consumed by both, per the convergence principle.
+
+## FOUR-BUCKET BUDGET REPORT (Adolfo 2026-07-19 — part of the fee/report engine block)
+End-of-project / moving-forward report grouping the full budget by CONTRACT COUNTERPARTY:
+1. **Contractor** — construction costs (the GC's contract)
+2. **Design** — the designer's contract
+3. **CM Fees** — construction management (ties into the portfolio CM-fee reporting incl.
+   allowances and recorded deletions)
+4. **Balance / Misc** — contingency, permits (pending confirmation), everything else
+Example target: $2.0M total → $1.5M contractor / $300k design / CM / balance, each bucket
+expandable to line items. Works identically for bid-based evaluations AND ROM allowances.
+Mechanism: `budgetBucket` on rom_scope_items (admin-set, single source of truth like the
+soft-cost category), with inference defaults (TI category → contractor; design/architect/
+engineering names → design; CM items → cm; remaining soft costs → misc). This bucket field
+is the SHARED grouping engine for this report, the CM-fee rollup, and the
+inside-the-allowance presentation — build once.
+OPEN (Adolfo to confirm at build): (a) permits default to Balance or Contractor?
+(b) report entry point: Evaluation/Publish step button, reports section, or both.

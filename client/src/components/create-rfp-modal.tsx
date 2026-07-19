@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -91,15 +91,52 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
     },
   });
 
-  // Auto-populate sentBy field for non-admin users
+  // Auto-populate sentBy for EVERYONE with the logged-in user. Non-admins are
+  // locked to it (disabled input below); admins get it prefilled but can change
+  // it to anyone via the dropdown. For admins the value must match the dropdown's
+  // `Name - Company` option format, so we resolve against the owner contacts;
+  // never clobbers a value the admin has already picked.
   useEffect(() => {
-    if (user && !isAdmin()) {
-      const userDisplayName = (user as any).firstName && (user as any).lastName 
-        ? `${(user as any).firstName} ${(user as any).lastName}` 
-        : (user as any).username;
+    if (!user) return;
+    if (form.getValues("sentBy")) return; // don't overwrite an existing choice
+    const userDisplayName = (user as any).firstName && (user as any).lastName
+      ? `${(user as any).firstName} ${(user as any).lastName}`
+      : (user as any).username;
+    if (!isAdmin()) {
       form.setValue("sentBy", userDisplayName);
+      return;
     }
-  }, [user, isAdmin, form]);
+    const owners = (contacts as Contact[]).filter((c: Contact) => c.type === "owner");
+    const match = owners.find(
+      (c: Contact) => c.name?.trim().toLowerCase() === String(userDisplayName || "").trim().toLowerCase()
+    );
+    if (match) form.setValue("sentBy", `${match.name} - ${match.company}`);
+    else if (userDisplayName) form.setValue("sentBy", userDisplayName);
+  }, [user, isAdmin, form, contacts]);
+
+  // Default Anticipated Lease Execution Date: the Friday one month after the
+  // Internal Due Date. This date is usually an assumption rather than a known
+  // fact, so a consistent default beats an empty required field — the user can
+  // always override, and manual edits are never clobbered (we only overwrite
+  // the value we ourselves computed last).
+  const autoLeaseDateRef = useRef<string>("");
+  const watchedInternalDue = form.watch("internalDueDate");
+  useEffect(() => {
+    try {
+      if (!watchedInternalDue) return;
+      const current = form.getValues("anticipatedLeaseExecutionDate");
+      if (current && current !== autoLeaseDateRef.current) return; // user-set — leave alone
+      const [y, m, d] = watchedInternalDue.split("-").map((n: string) => parseInt(n, 10));
+      if (!y || !m || !d) return;
+      const dt = new Date(y, m - 1, d);
+      dt.setMonth(dt.getMonth() + 1);
+      const toFriday = (5 - dt.getDay() + 7) % 7; // advance to Friday (0 if already Friday)
+      dt.setDate(dt.getDate() + toFriday);
+      const iso = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
+      autoLeaseDateRef.current = iso;
+      form.setValue("anticipatedLeaseExecutionDate", iso);
+    } catch { /* defaulting must never break the form */ }
+  }, [watchedInternalDue, form]);
 
   const { data: properties = [] } = useQuery<Property[]>({
     queryKey: ["/api/properties"],
@@ -417,6 +454,10 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                             className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background data-[placeholder]:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none"
                           >
                             <option value="">Select request source</option>
+                            {field.value &&
+                              !(contacts as Contact[]).some(
+                                (c: Contact) => c.type === "owner" && `${c.name} - ${c.company}` === field.value
+                              ) && <option value={field.value}>{field.value}</option>}
                             {(contacts as Contact[])
                               .filter((contact: Contact) => contact.type === "owner")
                               .map((contact: Contact) => (
@@ -708,7 +749,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
               <h3 className="text-lg font-medium text-gray-900 border-b pb-2">Request Type *</h3>
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {['Pricing', 'Schedule', 'Space Plan'].map((type) => (
+                {['Pricing', 'Schedule', 'Space Plan', 'Allowance'].map((type) => (
                   <div key={type} className="flex items-center space-x-2">
                     <Checkbox
                       id={type}

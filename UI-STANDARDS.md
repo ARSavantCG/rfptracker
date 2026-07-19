@@ -46,6 +46,14 @@ with the reason, so future sessions don't relitigate it.
   masterItemSnapshot, proposalId (retraction stamp), category (soft-cost
   exclusion), _key (client-only).
 
+## React keys
+- **NEVER derive a `key` from time, randomness, or anything that changes per
+  render** (`Date.now()`, `Math.random()`, new objects). A changing key orders
+  React to destroy and rebuild the entire subtree — the 2026-07-18 ITB bug was a
+  `Date.now()` key on the form element demolishing every input mid-typing on
+  every re-render. Keys come from stable identity: db ids, or a client `_key`
+  stored in row data.
+
 ## Data access & API
 - **react-query keys are a single URL string**: [`/api/x/${id}`], never
   ["/api/x", id] — getQueryFn fetches queryKey[0] only, so the array form

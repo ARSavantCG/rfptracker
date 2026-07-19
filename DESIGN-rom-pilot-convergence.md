@@ -138,3 +138,14 @@ ROMs and allowance deals — allowance is one use of the tool, not the tool's na
 pricingPath value is 'rom_pilot' (renamed from 'rom_allowance' before anything
 deployed). The CM-fee-inside-the-allowance behavior (slice 3) still applies when
 the ROM is used for an allowance.
+
+## NAVIGATION CORRECTION (Adolfo 2026-07-19, after first live test)
+The fork must NOT navigate away to the standalone /rom-pilot page — that orphans the
+user from the pipeline (and the landing page's auto-modal tried to double-create,
+throwing "Failed to create ROM" even though the fork had already succeeded). Correct
+behavior: stay on the dashboard; the forked RFP appears in the pipeline at the
+Evaluation phase like any other RFP. Same landing page, same navigation — ONLY the
+workflow content differs. NEXT (slices 3-4, now including this): opening the workflow
+on a pricingPath='rom_pilot' RFP surfaces the ROM pricing experience (locked rates,
+CM-fee-inside-allowance, badged report) INSIDE the normal workflow UI, in place of
+the bid-based evaluation — not on a separate page.

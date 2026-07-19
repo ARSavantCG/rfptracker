@@ -1,4 +1,5 @@
 /**
+import Templates from "./lib/rfp-templates";
  * RFP Tracker - ROM Pilot Routes
  * Copyright (c) 2025 Savant Consulting Group LLC. All rights reserved.
  */
@@ -550,6 +551,55 @@ export function registerRomRoutes(app: Express): void {
       } as any);
 
       await storage.updateRfpRequest(rfpId, { pricingPath: "rom_pilot", workflowPhase: "evaluation" } as any);
+
+      // Seed the ROM with the STANDARD TI TEMPLATE (Adolfo 2026-07-19):
+      // delete-down beats build-up — JJ starts from everything we usually look
+      // for (CM/permit/design fees, office, demising wall) and removes what the
+      // deal doesn't need, instead of building from blank and forgetting fees.
+      // Every row must resolve to a catalog item (scope_item_id NOT NULL, and
+      // it's the catalog-only doctrine): resolve by the template's stored link
+      // first, then by name; unresolvable lines are skipped. Prices are forced
+      // from the catalog (rate lock). Seeding failure never fails the fork.
+      try {
+        const list: any = await Templates.listTemplates({ search: "", includeArchived: false });
+        const tpl = (list?.items || []).find((t: any) => /baseline industrial ti/i.test(t.name))
+          || (list?.items || []).find((t: any) => /standard|baseline/i.test(t.name))
+          || (list?.items || [])[0];
+        if (tpl) {
+          const full: any = await Templates.getTemplate(tpl.id);
+          const catalog = await storage.getAllRomScopeItems();
+          const byId = new Map(catalog.map((c: any) => [c.id, c]));
+          const byLabel = new Map(catalog.map((c: any) => [(c.name || "").trim().toLowerCase(), c]));
+          const rows: any[] = [];
+          for (const it of (full?.items || [])) {
+            if (it.type === "note") continue;
+            const cat: any = (it.romScopeItemId && byId.get(it.romScopeItemId))
+              || byLabel.get((it.label || "").trim().toLowerCase());
+            if (!cat) continue;
+            const price = parseFloat((cat.activePrice ?? cat.unitPrice) || "0") || 0;
+            const qty = it.qty || 1;
+            const share = it.percent || 100; // mirrors /for-import's tenantShare mapping
+            rows.push({
+              scopeItemId: cat.id,
+              quantity: qty.toString(),
+              unitPrice: price.toString(),
+              totalPrice: (qty * price * (share / 100)).toString(),
+              tenantShare: share,
+              notes: it.notes || (it.type === "percent" ? `${it.percent}% of ${it.percent_of || "subtotal"} — fee math finalized on report` : ""),
+              category: ((cat.category || "").toLowerCase().includes("soft") || (cat.category || "").toLowerCase().includes("design"))
+                ? "design-soft-costs" : "tenant-improvements",
+            });
+          }
+          if (rows.length) {
+            await storage.saveRomPilotLineItems(pilot.id, rows);
+            const total = rows.reduce((sum, r) => sum + (parseFloat(r.totalPrice) || 0), 0);
+            await storage.updateRomPilot(pilot.id, { totalEstimate: total.toString() });
+          }
+          console.log(`Fork-to-ROM: seeded ${rows.length} items from template "${tpl.name}" into pilot ${pilot.id}`);
+        }
+      } catch (seedError) {
+        console.error("Fork-to-ROM: template seeding failed (fork still succeeded):", seedError);
+      }
 
       res.status(201).json(pilot);
     } catch (error) {

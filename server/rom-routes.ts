@@ -498,6 +498,51 @@ export function registerRomRoutes(app: Express): void {
     }
   });
 
+  // ROM Pilot Fork (slice 2, DESIGN-rom-pilot-convergence.md): fork a Step-1 RFP
+  // onto the ROM path. SNAPSHOTS the RFP's property/bays/project into a new linked
+  // ROM Pilot, marks the RFP pricingPath='rom_pilot', and jumps its workflow
+  // phase straight to 'evaluation' (steps 2-3 never exist for allowance deals).
+  app.post("/api/rfp-requests/:id/fork-to-rom", requireAuth, async (req, res) => {
+    try {
+      const rfpId = parseInt(req.params.id);
+      if (isNaN(rfpId)) return res.status(400).json({ message: "Invalid RFP ID" });
+      const rfp = await storage.getRfpRequest(rfpId);
+      if (!rfp) return res.status(404).json({ message: "RFP not found" });
+
+      // ROM numbering (same scheme as direct creation)
+      const currentYear = new Date().getFullYear();
+      const existingRoms = await storage.getAllRomPilots();
+      const romCount = existingRoms.filter(r => r.createdAt && new Date(r.createdAt).getFullYear() === currentYear).length + 1;
+      const romNumber = `ROM-${currentYear}-${romCount.toString().padStart(3, "0")}`;
+
+      // Snapshot bays: single-building key, else first building's bays, else empty.
+      const perBuilding: any = (rfp as any).selectedBaysPerBuilding || {};
+      const bays = perBuilding[(rfp as any).property] || Object.values(perBuilding)[0] || [];
+
+      const creator = (req.user as any)?.firstName && (req.user as any)?.lastName
+        ? `${(req.user as any).firstName} ${(req.user as any).lastName}`
+        : (req.user as any)?.username || "";
+
+      const pilot = await storage.createRomPilot({
+        romNumber,
+        projectName: (rfp as any).projectName,
+        property: (rfp as any).property,
+        selectedBayConfigurations: bays,
+        status: "active",
+        createdBy: creator,
+        linkedRfpId: rfpId,
+        notes: `ROM Pilot — forked from ${(rfp as any).rfpNumber} at Step 1`,
+      } as any);
+
+      await storage.updateRfpRequest(rfpId, { pricingPath: "rom_pilot", workflowPhase: "evaluation" } as any);
+
+      res.status(201).json(pilot);
+    } catch (error) {
+      console.error("Fork-to-ROM error:", error);
+      res.status(500).json({ message: "Failed to fork RFP to ROM Pilot" });
+    }
+  });
+
   app.put("/api/rom-pilots/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);

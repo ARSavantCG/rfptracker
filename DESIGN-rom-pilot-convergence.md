@@ -131,3 +131,10 @@ Decisions locked today:
 2. Step-1 fork: pricingPath column + two-button footer + snapshot into rom_pilot + phase jump
 3. CM fee auto-line + deletion recording
 4. ROM Allowance report (eval family + badge + costs-in-place) feeding portfolio fee reports
+
+## NAMING (Adolfo 2026-07-19, pre-deploy): the fork is "ROM Pilot", not "Allowance"
+Buttons: "Route to Dev Team" / "ROM Pilot". The ROM path covers BOTH self-assembled
+ROMs and allowance deals — allowance is one use of the tool, not the tool's name.
+pricingPath value is 'rom_pilot' (renamed from 'rom_allowance' before anything
+deployed). The CM-fee-inside-the-allowance behavior (slice 3) still applies when
+the ROM is used for an allowance.

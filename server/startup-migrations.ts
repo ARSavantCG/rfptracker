@@ -37,6 +37,9 @@ const ADDITIVE_COLUMNS: ColumnMigration[] = [
   // This column never existed on rfp_requests — only invitation_to_bid had one.
   // The commit-to-scope write was a silent no-op until this migration.
   { table: 'rfp_requests', column: 'scope_of_work', type: "json DEFAULT '[]'::json" },
+  // Allowance Fork (slice 2): pricing path on the RFP + back-link on the ROM.
+  { table: 'rfp_requests', column: 'pricing_path', type: "text DEFAULT 'development'" },
+  { table: 'rom_pilots', column: 'linked_rfp_id', type: 'integer' },
 ];
 
 // Additive new tables (CREATE TABLE IF NOT EXISTS — idempotent, never drops).

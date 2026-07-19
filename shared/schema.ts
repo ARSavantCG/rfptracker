@@ -50,8 +50,8 @@ export const rfpRequests = pgTable("rfp_requests", {
   // System fields
   status: text("status").notNull().default("received"), // received, in-progress, completed, on-hold, archived, cancelled
   workflowPhase: text("workflow_phase").notNull().default("rfp-entry"), // rfp-entry, rfp-validation, invitation-to-bid, bid-collection, evaluation, publish
-  // Allowance Fork (DESIGN-rom-pilot-convergence.md): 'development' = traditional
-  // path (validation → ITB → bids → eval); 'rom_allowance' = leasing-team
+  // ROM Pilot Fork (DESIGN-rom-pilot-convergence.md): 'development' = traditional
+  // path (validation → ITB → bids → eval); 'rom_pilot' = leasing-team self-serve
   // self-serve pricing via the ROM Pilot, skipping steps 2-3. Column created by
   // startup migration, NOT drizzle-kit push.
   pricingPath: text("pricing_path").default("development"),

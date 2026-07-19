@@ -61,7 +61,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
   const { isAdmin, user } = usePermissions();
   const [, setLocation] = useLocation();
   // Allowance Fork: which path the user chose at the bottom of Step 1.
-  const pricingPathRef = useRef<"development" | "rom_allowance">("development");
+  const pricingPathRef = useRef<"development" | "rom_pilot">("development");
   const [romForkPending, setRomForkPending] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
@@ -259,11 +259,11 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
   const onSubmit = async (data: CreateRfpFormData) => {
     const path = pricingPathRef.current;
     pricingPathRef.current = "development"; // reset so a later plain submit is clean
-    if (path !== "rom_allowance") {
+    if (path !== "rom_pilot") {
       createMutation.mutate(data);
       return;
     }
-    // Allowance — ROM Pilot path: create the RFP, then fork it into a linked ROM
+    // ROM Pilot path (self-assembled ROM or allowance): create the RFP, then fork it into a linked ROM
     // (server snapshots property/bays/project, marks pricingPath, jumps the phase),
     // then land the requester in the ROM Pilot to price scope from the locked catalog.
     setRomForkPending(true);
@@ -273,7 +273,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
       await apiRequest(`/api/rfp-requests/${rfp.id}/fork-to-rom`, "POST");
       queryClient.invalidateQueries({ queryKey: ["/api/rom-pilots"] });
       toast({
-        title: "Allowance ROM created",
+        title: "ROM Pilot created",
         description: "Price the scope from the catalog — quantities are yours, rates are locked.",
         duration: 6000,
       });
@@ -931,18 +931,18 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                 disabled={createMutation.isPending || romForkPending}
                 className="border-purple-400 text-purple-700 hover:bg-purple-50"
                 onClick={() => {
-                  pricingPathRef.current = "rom_allowance";
+                  pricingPathRef.current = "rom_pilot";
                   form.handleSubmit(onSubmit)();
                 }}
               >
-                {romForkPending ? "Creating ROM..." : "Allowance — ROM Pilot"}
+                {romForkPending ? "Creating ROM..." : "ROM Pilot"}
               </Button>
               <Button 
                 type="submit" 
                 disabled={createMutation.isPending || romForkPending}
                 className="bg-green-600 hover:bg-green-700 text-white"
               >
-                {createMutation.isPending && !romForkPending ? "Creating..." : "Route to Development Team"}
+                {createMutation.isPending && !romForkPending ? "Creating..." : "Route to Dev Team"}
               </Button>
             </div>
           </form>

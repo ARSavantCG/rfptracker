@@ -498,9 +498,9 @@ export function registerRomRoutes(app: Express): void {
     }
   });
 
-  // Allowance Fork (slice 2, DESIGN-rom-pilot-convergence.md): fork a Step-1 RFP
+  // ROM Pilot Fork (slice 2, DESIGN-rom-pilot-convergence.md): fork a Step-1 RFP
   // onto the ROM path. SNAPSHOTS the RFP's property/bays/project into a new linked
-  // ROM Pilot, marks the RFP pricingPath='rom_allowance', and jumps its workflow
+  // ROM Pilot, marks the RFP pricingPath='rom_pilot', and jumps its workflow
   // phase straight to 'evaluation' (steps 2-3 never exist for allowance deals).
   app.post("/api/rfp-requests/:id/fork-to-rom", requireAuth, async (req, res) => {
     try {
@@ -531,10 +531,10 @@ export function registerRomRoutes(app: Express): void {
         status: "active",
         createdBy: creator,
         linkedRfpId: rfpId,
-        notes: `Allowance ROM — forked from ${(rfp as any).rfpNumber} at Step 1`,
+        notes: `ROM Pilot — forked from ${(rfp as any).rfpNumber} at Step 1`,
       } as any);
 
-      await storage.updateRfpRequest(rfpId, { pricingPath: "rom_allowance", workflowPhase: "evaluation" } as any);
+      await storage.updateRfpRequest(rfpId, { pricingPath: "rom_pilot", workflowPhase: "evaluation" } as any);
 
       res.status(201).json(pilot);
     } catch (error) {

@@ -270,28 +270,38 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValida
       <div className="space-y-3">
         {workflowPhases.map((phase, index) => {
           const Icon = phase.icon;
+          // ROM-path RFPs skip validation/ITB/bid-collection by design — render
+          // those steps light purple ("bypassed") instead of green, so a glance
+          // explains the jump to Evaluation without any extra text.
+          const isBypassed =
+            (rfp as any).pricingPath === "rom_pilot" &&
+            (phase.key === "rfp-validation" || phase.key === "invitation-to-bid" || phase.key === "bid-collection");
           // For archived/cancelled/completed RFPs, no phase should be active
           const isActive = phase.key === actualWorkflowPhase && rfp.status !== "completed" && rfp.status !== "archived" && rfp.status !== "cancelled";
           // For archived/cancelled/completed projects, show phases up to current as completed
           const isCompleted = rfp.status === "archived" || rfp.status === "cancelled" || index < currentPhaseIndex || (phase.key === "publish" && rfp.status === "completed");
           const isNext = index === currentPhaseIndex + 1 && rfp.status !== "archived" && rfp.status !== "cancelled";
 
-          const isClickable = (isActive || isCompleted) && (phase.key === "rfp-entry" || phase.key === "rfp-validation" || phase.key === "invitation-to-bid" || phase.key === "bid-collection" || phase.key === "evaluation" || phase.key === "publish");
+          const isClickable = !isBypassed && (isActive || isCompleted) && (phase.key === "rfp-entry" || phase.key === "rfp-validation" || phase.key === "invitation-to-bid" || phase.key === "bid-collection" || phase.key === "evaluation" || phase.key === "publish");
           
           return (
             <div
               key={phase.key}
               onClick={() => isClickable && handlePhaseClick(phase)}
               className={`flex items-center space-x-3 p-3 rounded-lg border transition-colors ${
-                isActive
+                isBypassed
+                  ? "bg-purple-50 text-purple-500 border-purple-200"
+                  : isActive
                   ? "bg-blue-100 text-blue-700 border-blue-300"
                   : isCompleted
                   ? "bg-green-100 text-green-700 border-green-300"
                   : "bg-gray-50 text-gray-400 border-gray-200"
-              } ${isClickable ? "cursor-pointer hover:bg-opacity-80" : ""}`}
+              } ${isClickable && !isBypassed ? "cursor-pointer hover:bg-opacity-80" : ""}`}
             >
               <Icon className={`h-5 w-5 ${
-                isActive 
+                isBypassed
+                  ? "text-purple-400"
+                  : isActive 
                   ? "text-blue-600" 
                   : isCompleted 
                   ? "text-green-600" 
@@ -302,7 +312,7 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValida
                   <span className={`font-medium text-sm ${isActive ? "text-gray-900" : ""}`}>
                     {phase.label}
                   </span>
-                  {isCompleted && <FileOutput className="h-4 w-4 text-green-600" />}
+                  {isCompleted && !isBypassed && <FileOutput className="h-4 w-4 text-green-600" />}
                   {isActive && (
                     <Badge variant="secondary" className="text-xs px-2 py-0.5">
                       Current

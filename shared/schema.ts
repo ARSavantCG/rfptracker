@@ -50,6 +50,11 @@ export const rfpRequests = pgTable("rfp_requests", {
   // System fields
   status: text("status").notNull().default("received"), // received, in-progress, completed, on-hold, archived, cancelled
   workflowPhase: text("workflow_phase").notNull().default("rfp-entry"), // rfp-entry, rfp-validation, invitation-to-bid, bid-collection, evaluation, publish
+  // Allowance Fork (DESIGN-rom-pilot-convergence.md): 'development' = traditional
+  // path (validation → ITB → bids → eval); 'rom_allowance' = leasing-team
+  // self-serve pricing via the ROM Pilot, skipping steps 2-3. Column created by
+  // startup migration, NOT drizzle-kit push.
+  pricingPath: text("pricing_path").default("development"),
   notes: text("notes"), // Development Team Notes
   dealMetricNotes: text("deal_metric_notes"), // Deal Metric Notes for finance/metrics team
   files: json("files").$type<RfpFile[]>().notNull().default([]),
@@ -1089,6 +1094,8 @@ export const romPilots = pgTable("rom_pilots", {
   totalEstimate: text("total_estimate").default("0"),
   notes: text("notes"),
   status: text("status").default("draft"), // draft, active, archived
+  // Set when this ROM was forked from a Step-1 RFP via the Allowance path.
+  linkedRfpId: integer("linked_rfp_id"),
   createdBy: text("created_by"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

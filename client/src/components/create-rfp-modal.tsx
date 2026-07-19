@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useLocation } from "wouter";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -58,6 +59,10 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { isAdmin, user } = usePermissions();
+  const [, setLocation] = useLocation();
+  // Allowance Fork: which path the user chose at the bottom of Step 1.
+  const pricingPathRef = useRef<"development" | "rom_allowance">("development");
+  const [romForkPending, setRomForkPending] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [calculatedFloorArea, setCalculatedFloorArea] = useState<number>(0);
@@ -251,8 +256,33 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
     },
   });
 
-  const onSubmit = (data: CreateRfpFormData) => {
-    createMutation.mutate(data);
+  const onSubmit = async (data: CreateRfpFormData) => {
+    const path = pricingPathRef.current;
+    pricingPathRef.current = "development"; // reset so a later plain submit is clean
+    if (path !== "rom_allowance") {
+      createMutation.mutate(data);
+      return;
+    }
+    // Allowance — ROM Pilot path: create the RFP, then fork it into a linked ROM
+    // (server snapshots property/bays/project, marks pricingPath, jumps the phase),
+    // then land the requester in the ROM Pilot to price scope from the locked catalog.
+    setRomForkPending(true);
+    try {
+      const rfp = await createMutation.mutateAsync(data);
+      if (!rfp?.id) throw new Error("RFP created but no id returned");
+      await apiRequest(`/api/rfp-requests/${rfp.id}/fork-to-rom`, "POST");
+      queryClient.invalidateQueries({ queryKey: ["/api/rom-pilots"] });
+      toast({
+        title: "Allowance ROM created",
+        description: "Price the scope from the catalog — quantities are yours, rates are locked.",
+        duration: 6000,
+      });
+      setLocation("/rom-pilot");
+    } catch (e: any) {
+      toast({ title: "Allowance path failed", description: e?.message || "Unknown error", variant: "destructive", duration: 8000 });
+    } finally {
+      setRomForkPending(false);
+    }
   };
 
   const handleRequestTypeChange = (type: string, checked: boolean) => {
@@ -895,12 +925,24 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
               <Button type="button" variant="outline" onClick={handleClose}>
                 Cancel
               </Button>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={createMutation.isPending || romForkPending}
+                className="border-purple-400 text-purple-700 hover:bg-purple-50"
+                onClick={() => {
+                  pricingPathRef.current = "rom_allowance";
+                  form.handleSubmit(onSubmit)();
+                }}
+              >
+                {romForkPending ? "Creating ROM..." : "Allowance — ROM Pilot"}
+              </Button>
               <Button 
                 type="submit" 
-                disabled={createMutation.isPending}
+                disabled={createMutation.isPending || romForkPending}
                 className="bg-green-600 hover:bg-green-700 text-white"
               >
-                {createMutation.isPending ? "Creating..." : "Create RFP & Advance"}
+                {createMutation.isPending && !romForkPending ? "Creating..." : "Route to Development Team"}
               </Button>
             </div>
           </form>

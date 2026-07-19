@@ -73,3 +73,21 @@ at Step 4 using the flow below.
   dock-high vs grade? — ask Adolfo at build.)
 - Does the property always have clearHeight populated? If missing, fall back to a default
   variant + flag for review.
+
+## ACTIVATED 2026-07-19 (post-fork field test): demising wall in the ROM seeder
+Adolfo's live test: the seeded demising wall arrived with no quantity and without
+clear-height variant selection. This feature's first build target is now the FORK
+SEEDER (then the parser/bundles per the original design). Two questions to answer
+at build time:
+1. **Quantity source:** where does demising-wall LF live or derive from? Bay configs
+   carry SF/doors/office-SF but no depth or wall length. Candidates: a per-property
+   or per-building depth/dimensions field Adolfo maintains (the "properties tab"
+   figure he expects it to pull from — identify the exact field), or a formula
+   (e.g., bay depth × demised sides). DO NOT invent a formula without confirmation.
+2. **Variant modeling:** how are demising variants distinguished in the live catalog
+   today (names embedding clear heights?), and do we build Option A properly
+   (min/max clear-height columns mirroring SF tiers) or v1 name-matching against
+   property.clearHeight? Option A is the design-doc preference.
+Wire-up point: the fork seeder's catalog resolution (rom-routes.ts, isDemising
+block) — resolve variant by property clearHeight, quantity from the confirmed
+source, tenant share stays 50% default.

@@ -1170,7 +1170,14 @@ const formatQuantityDisplay = (val: any): string => {
           <form onSubmit={form.handleSubmit(onSubmit, (errors) => {
             console.warn('[InvitationModal] Form validation failed:', errors);
             toast({ title: "Form validation failed", description: "One or more fields are invalid — check the browser console for details.", variant: "destructive" });
-          })} className="space-y-6" key={`itb-form-${Date.now()}`}>
+          })} className="space-y-6">
+            {/* ROOT CAUSE (2026-07-18, MutationObserver-proven): this form carried
+                key={`itb-form-${Date.now()}`} — a NEW key every render, ordering React
+                to unmount and rebuild the ENTIRE form DOM on any modal re-render.
+                Every input the user was typing into was physically destroyed on the
+                next render tick: focus died, Radix's trap refocused the container,
+                and the dialog scrolled to top. NEVER put a time-, random-, or
+                render-derived value in a key. See UI-STANDARDS.md. */}
             {/* Project Information - MOVED TO TOP FOR BETTER TAB ORDER */}
             <div className="space-y-4">
               <h3 className="text-lg font-medium">Project Information</h3>

@@ -60,7 +60,7 @@ async function generateRomReportHtml(romPilot: any, lineItems: any[], scopeItems
         }
         
         // Get parking info
-        vehicularParking = propertyDetails.vehicularParking || 'N/A';
+        vehicularParking = (propertyDetails as any).vehicularParking || 'N/A';
         trailerParking = propertyDetails.trailerParking || 'N/A';
         electricalAllocation = propertyDetails.electricalAllocation || 'N/A';
         
@@ -69,11 +69,11 @@ async function generateRomReportHtml(romPilot: any, lineItems: any[], scopeItems
           const allExistingCosts = await storage.getPropertyExistingImprovements(parseInt(romPilot.property));
           
           // Calculate proportional costs based on ROM area vs total property area
-          const propertyTotalSF = propertyDetails.totalSquareFootage || totalSquareFootage || 1;
+          const propertyTotalSF = (propertyDetails as any).totalSquareFootage || totalSquareFootage || 1;
           const romAreaPortion = totalSquareFootage / propertyTotalSF;
           
           existingCosts = allExistingCosts.map(cost => {
-            const originalCost = parseFloat(cost.costEstimate) || 0;
+            const originalCost = parseFloat((cost as any).costEstimate) || 0;
             const proportionalCost = originalCost * romAreaPortion;
             return {
               ...cost,

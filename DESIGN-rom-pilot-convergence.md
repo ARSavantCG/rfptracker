@@ -177,5 +177,6 @@ soft-cost category), with inference defaults (TI category → contractor; design
 engineering names → design; CM items → cm; remaining soft costs → misc). This bucket field
 is the SHARED grouping engine for this report, the CM-fee rollup, and the
 inside-the-allowance presentation — build once.
-OPEN (Adolfo to confirm at build): (a) permits default to Balance or Contractor?
-(b) report entry point: Evaluation/Publish step button, reports section, or both.
+CONFIRMED (Adolfo 2026-07-19): (a) permits, contingency, testing, and similar all
+default to the Balance/Misc bucket; (b) the report lives in the REPORTS section.
+No open questions remain on this feature — build-ready.

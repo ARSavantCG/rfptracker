@@ -578,7 +578,13 @@ export function registerRomRoutes(app: Express): void {
             if (!cat) continue;
             const price = parseFloat((cat.activePrice ?? cat.unitPrice) || "0") || 0;
             const qty = it.qty || 1;
-            const share = it.percent || 100; // mirrors /for-import's tenantShare mapping
+            // Tenant share: template's explicit percent wins; otherwise demising
+            // walls default to 50% (cost splits between suites — Adolfo 2026-07-19,
+            // JJ can adjust either way); everything else defaults to 100%.
+            // If more items ever need default shares, the clean home is a
+            // defaultTenantShare column on rom_scope_items, not more name matches.
+            const isDemising = /demising/i.test(cat.name || "");
+            const share = it.percent || (isDemising ? 50 : 100);
             rows.push({
               scopeItemId: cat.id,
               quantity: qty.toString(),

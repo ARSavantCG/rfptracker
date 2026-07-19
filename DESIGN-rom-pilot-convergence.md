@@ -89,3 +89,34 @@ Pilot from the RFP's property/bays/tenant.
 - Does the ROM Pilot report need to be identical to the Evaluation report, or "same family
   / same costs-in-place footer" is enough?
 - When pulling from an RFP: copy the data into the ROM (snapshot) or live-link it?
+
+## ADDENDUM 2026-07-19 — The Allowance Fork (agreed with Adolfo)
+Step 1 gains a path chooser at the bottom (button, NOT a request-type checkbox — allowance
+is always coupled with the ROM, and the dev team never issues allowances):
+- **"Route to Development Team"** — the traditional path (validation → ITB → bids → eval).
+- **"Allowance — ROM Pilot"** — sets `pricingPath='rom_allowance'` on the RFP (additive
+  startup-migration column), SNAPSHOTS Step-1 data (property/bays/tenant/project) into a
+  linked rom_pilot, skips steps 2–3 entirely, and lands the requester in the ROM Pilot.
+  The requester adds scope + quantities; unit rates are LOCKED (piece 1). Ownership is
+  unambiguous: sentBy is already the requester.
+
+Decisions locked today:
+- **Rate lock is absolute for the leasing team** (that IS the review gate — structural,
+  not procedural). Admin escape hatch deferred; admins can edit the catalog itself.
+- **CM fee auto-capture:** on allowance-ROM creation, a 2.75% Construction Management fee
+  line auto-populates. Deletable — but deletion is RECORDED (who/when) and surfaced in fee
+  reporting, so removed fees trigger the "let's make sure the lease language mirrors that"
+  conversation instead of silent leakage. Portfolio CM-fee reports include allowances.
+- **Report:** same family as the Evaluation, with a prominent "ROM ALLOWANCE" heading so
+  it can never be confused with a bid-based evaluation. Costs-in-place at the bottom is
+  MANDATORY — it's the core of the allowance model.
+- **Deal-grows conversion:** rare; when it happens it flows through the existing
+  counter-response infrastructure — a counter RFP sub to the original, on the development
+  path. Parked as future work, by design.
+- Snapshot (not live-link) when forking from Step 1.
+
+## Revised build order
+1. Rate-lock (unchanged — first, small, independently valuable)
+2. Step-1 fork: pricingPath column + two-button footer + snapshot into rom_pilot + phase jump
+3. CM fee auto-line + deletion recording
+4. ROM Allowance report (eval family + badge + costs-in-place) feeding portfolio fee reports

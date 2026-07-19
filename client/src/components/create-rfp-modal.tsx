@@ -749,7 +749,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
               <h3 className="text-lg font-medium text-gray-900 border-b pb-2">Request Type *</h3>
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {['Pricing', 'Schedule', 'Space Plan', 'Allowance'].map((type) => (
+                {['Pricing', 'Schedule', 'Space Plan'].map((type) => (
                   <div key={type} className="flex items-center space-x-2">
                     <Checkbox
                       id={type}

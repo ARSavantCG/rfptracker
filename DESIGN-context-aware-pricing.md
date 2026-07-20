@@ -91,3 +91,29 @@ at build time:
 Wire-up point: the fork seeder's catalog resolution (rom-routes.ts, isDemising
 block) — resolve variant by property clearHeight, quantity from the confirmed
 source, tenant share stays 50% default.
+
+## QUANTITY BASIS + SPEC MATCHER (Adolfo 2026-07-19) — the design to build
+Mirror the existing `calculationBasis` pattern with TWO new catalog fields on
+rom_scope_items, both admin-set dropdowns:
+
+1. **quantityBasis** — which property spec supplies the DEFAULT QUANTITY when an item
+   is seeded/added. Adolfo's examples:
+   - Demising Wall → "Building Depth"
+   - LED Warehouse Lighting → "Rentable Area − Office Area"
+   Implies a small vocabulary of derived expressions, not just raw fields:
+   rentable_sf, office_sf, rentable_minus_office, building_depth, clear_height,
+   dock_doors, bay_count, (extend as needed). Resolver reads the RFP's property +
+   selected bays and computes the value; blank/unknown basis → quantity stays manual.
+
+2. **specMatcher** — which property spec selects WHICH VARIANT of a scope family to
+   prepopulate (the clear-height case): among "Demising Wall 32'/40'/…", pick the row
+   whose spec matches the property's clear height. Preferred modeling is still
+   Option A (min/max columns) over name parsing; specMatcher names the property
+   attribute to compare against.
+
+Together these make the fork seeder self-configuring: the right variant, at the right
+quantity, from property data — JJ types nothing. Same resolver serves the parser and
+scope bundles.
+Build order when picked up: (a) add the two columns + admin dropdowns in Manage Scope
+Items, (b) write the resolver with the derived-expression vocabulary, (c) wire into the
+fork seeder, (d) then parser/bundles.

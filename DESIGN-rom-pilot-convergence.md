@@ -217,3 +217,14 @@ does it correct after save+reopen (client-side subtotal recalculation bug) or pe
 (quantity not committed before total math, which only runs on quantity/unitPrice/
 tenantShare change). NOTE: likely obviated by the EvaluationBudget rebuild above —
 verify against the new surface before fixing the old panel.
+
+### BUG (confirmed 2026-07-19): modal totals stale after save
+Root cause: rom-pilot-scope-modal-new seeds local state ONCE (isInitialized guard), so
+the post-save refetch — which carries the server's recomputed fee dollars — never
+repopulates the rows. Reopening the modal shows correct values. Fix on the
+EvaluationBudget rebuild (re-seed from the save response / refetch), not the retiring
+panel. Related display niceties for the rebuild: fee rows should show "5%" in the Unit
+Price column instead of the raw rate ($0.05), and fees should ideally recompute live
+client-side as quantities change (server remains authoritative on save).
+Catalog fix for Adolfo: rename "Builder's Risk Insurance" → "Builder's Risk Insurance
+(3.5%)" so the fee engine recognizes it (currently computes $0.01 from a rate-priced row).

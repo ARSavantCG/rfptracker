@@ -3,3 +3,4 @@
 - [Users vs Contacts dual identity](users-vs-contacts-identity.md) — two unrelated login tables merged only visually; isActive (not hasSystemAccess) is the reachability flag on both.
 - [ITB modal scroll-jump fix](itb-scroll-jump-fix.md) — stable _key in row data prevents focus loss when useFieldArray regenerates IDs; withRowKeys() normalizer + Draggable keyed on _key.
 - [rom-routes recurring fixes](rom-routes-recurring-fixes.md) — two TS bugs in every fetched rom-routes.ts (trailerParking/electricalAllocation casts; Templates import in JSDoc); also line-items save needs { lineItems:[...] } wrapper.
+- [SpecTagsEditor stale-closure fix](spec-tags-stale-closure.md) — use tagsRef+onChangeRef pattern in any repeater that receives tags as props; plain closures go stale under rapid browser events before React commits.

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
@@ -52,11 +52,19 @@ function SpecTagsEditor({
   onChange: (tags: SpecTagRow[]) => void;
   idPrefix: string;
 }) {
-  const update = (key: string, patch: Partial<SpecTagRow>) =>
-    onChange(tags.map(t => (t._key === key ? { ...t, ...patch } : t)));
-  const remove = (key: string) => onChange(tags.filter(t => t._key !== key));
-  const add = () =>
-    onChange([...tags, { _key: stableTagKey(), kind: "quantity", propertySpec: "", value: "", maxValue: "" }]);
+  // Refs always hold the latest props so callbacks never close over stale values,
+  // even when the browser fires multiple change events before React commits.
+  const tagsRef = useRef(tags);
+  tagsRef.current = tags;
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+
+  const update = useCallback((key: string, patch: Partial<SpecTagRow>) =>
+    onChangeRef.current(tagsRef.current.map(t => (t._key === key ? { ...t, ...patch } : t))), []);
+  const remove = useCallback((key: string) =>
+    onChangeRef.current(tagsRef.current.filter(t => t._key !== key)), []);
+  const add = useCallback(() =>
+    onChangeRef.current([...tagsRef.current, { _key: stableTagKey(), kind: "quantity", propertySpec: "", value: "", maxValue: "" }]), []);
 
   return (
     <div className="space-y-2 border rounded-md p-3 bg-gray-50">
@@ -71,10 +79,11 @@ function SpecTagsEditor({
         (first quantity tag wins). <span className="font-medium">Match</span> tags make this a conditional variant —
         it only auto-selects when the property satisfies every match (e.g. Demising Wall 40' matches Clear Height = 40).
       </p>
-      {tags.map(tag => (
-        <div key={tag._key} className="flex items-start gap-2">
+      {tags.map((tag, idx) => (
+        <div key={tag._key} data-testid={`${idPrefix}-spec-tag-row-${idx}`} className="flex items-start gap-2">
           <select
             id={`${idPrefix}-tag-kind-${tag._key}`}
+            data-testid={`${idPrefix}-spec-tag-kind-${idx}`}
             value={tag.kind}
             onChange={e => update(tag._key, { kind: e.target.value as SpecTagRow["kind"] })}
             className="h-10 px-2 text-sm bg-background border border-input rounded-md w-40 shrink-0"
@@ -84,6 +93,7 @@ function SpecTagsEditor({
           </select>
           <select
             id={`${idPrefix}-tag-spec-${tag._key}`}
+            data-testid={`${idPrefix}-spec-tag-spec-${idx}`}
             value={tag.propertySpec}
             onChange={e => update(tag._key, { propertySpec: e.target.value })}
             className="h-10 px-2 text-sm bg-background border border-input rounded-md flex-1 min-w-0"
@@ -101,6 +111,7 @@ function SpecTagsEditor({
                 placeholder="Value / min"
                 className="h-10 w-24 shrink-0"
                 inputMode="decimal"
+                data-testid={`${idPrefix}-spec-tag-value-${idx}`}
               />
               <Input
                 value={tag.maxValue}
@@ -108,6 +119,7 @@ function SpecTagsEditor({
                 placeholder="Max (opt.)"
                 className="h-10 w-24 shrink-0"
                 inputMode="decimal"
+                data-testid={`${idPrefix}-spec-tag-maxvalue-${idx}`}
               />
             </>
           )}
@@ -118,7 +130,8 @@ function SpecTagsEditor({
             tabIndex={-1}
             onClick={() => remove(tag._key)}
             className="h-10 px-2 text-gray-400 hover:text-red-600 shrink-0"
-            aria-label="Remove spec tag"
+            aria-label={`Remove spec tag row ${idx}`}
+            data-testid={`${idPrefix}-spec-tag-remove-${idx}`}
           >
             <X className="h-4 w-4" />
           </Button>
@@ -1342,7 +1355,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                 <SpecTagsEditor
                   idPrefix="add"
                   tags={formData.specTags}
-                  onChange={(specTags) => setFormData({ ...formData, specTags })}
+                  onChange={(specTags) => setFormData(prev => ({ ...prev, specTags }))}
                 />
 
                 {/* Minimum Cost Section */}
@@ -2458,7 +2471,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                               <SpecTagsEditor
                                 idPrefix="edit"
                                 tags={formData.specTags}
-                                onChange={(specTags) => setFormData({ ...formData, specTags })}
+                                onChange={(specTags) => setFormData(prev => ({ ...prev, specTags }))}
                               />
 
                               <div className="space-y-4">

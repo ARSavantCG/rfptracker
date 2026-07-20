@@ -209,3 +209,11 @@ Pilot 15 shows `Property: 22` and `Bays: 0 selected`. rfp.property held an id (o
 name lookup failed), so selectedBaysPerBuilding[property] missed → empty bays. Fix in the
 fork endpoint: resolve the property NAME (and the correct per-building bay key) before
 snapshotting; backfill existing test pilots is unnecessary (test data).
+
+### BUG (2026-07-19, Adolfo live): added line item didn't update the construction total
+Adding "Ashford Sealer" left the construction/section total unchanged. Triage needed:
+does it correct after save+reopen (client-side subtotal recalculation bug) or persist
+(row not counted — real math bug)? Also check whether the new row itself shows $0
+(quantity not committed before total math, which only runs on quantity/unitPrice/
+tenantShare change). NOTE: likely obviated by the EvaluationBudget rebuild above —
+verify against the new surface before fixing the old panel.

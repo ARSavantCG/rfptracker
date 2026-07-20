@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { usePermissions } from "@/hooks/usePermissions";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -63,6 +64,11 @@ interface LineItem {
 }
 
 export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }: RomPilotScopeModalProps) {
+  // Non-admin UX (JJ runway): the server enforces catalog-only for non-admins
+  // (403 on catalog-less rows). Surface that as friendly guidance + a pre-save
+  // check, so a leasing user never hits a raw permission wall.
+  const { isAdmin } = usePermissions();
+  const canAddCustomItems = isAdmin();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [tenantImprovements, setTenantImprovements] = useState<LineItem[]>([]);
@@ -337,6 +343,14 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
   const saveLineItems = useMutation({
     mutationFn: async () => {
       const allItems = [...tenantImprovements, ...designSoftCosts];
+      if (!canAddCustomItems) {
+        const unlinked = allItems.filter((it) => !it.scopeItemId);
+        if (unlinked.length > 0) {
+          throw new Error(
+            `${unlinked.length} row${unlinked.length === 1 ? " has" : "s have"} no catalog item selected. ROM pricing is catalog-only — pick an item from the dropdown, or ask the development team to add that scope to the catalog.`
+          );
+        }
+      }
       return await apiRequest(`/api/rom-pilots/${romPilotId}/line-items`, "POST", { lineItems: allItems });
     },
     onSuccess: () => {
@@ -379,6 +393,12 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
           <span>Add Item</span>
         </Button>
       </div>
+      {!canAddCustomItems && (
+        <p className="text-xs text-gray-500">
+          Every item comes from the ROM catalog — pick from the dropdown. Need scope that isn't listed?
+          Ask the development team to add it.
+        </p>
+      )}
 
       {!isInitialized || items.length === 0 ? (
         <div className="text-center py-8 text-gray-500 border border-dashed border-gray-300 rounded-lg">

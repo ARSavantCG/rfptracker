@@ -316,3 +316,61 @@ through Publish — gate first (see below).
    the right variant AND a real quantity, no typing.
 3. **Next slices:** same resolver into the AI parser and scope-bundle expansion (design's
    original targets); tenant share stays 50% default on demising.
+
+## 2026-07-20 (early AM) — Spec Tags gate results + the DUPLICATE EDIT FORM miss
+Agent ran the 7-gate package against dev/helium at c4554bd: **all 7 passed with real
+evidence** (SQL rows, raw specTags JSON, actual seeded line items — not narration).
+Highlights: variant swap DW-32→DW-40 with qty=240 from buildingDepth and an
+"Auto-selected" note; cleared clearHeight → row still seeds, qty still 240, "⚠ Spec match
+unresolved" stamped, NO silent guess; a genuinely-32' property correctly did NOT swap;
+SF-tiered families seeded unchanged; fee engine totals still exact.
+
+**THEN IT SHIPPED INVISIBLE.** Adolfo published, opened a demising item, and there was no
+Spec Tags section. Cause: `rom-scope-items-modal.tsx` contains **TWO inline edit forms** —
+one for the category-grouped view (full: Calculation Basis, Minimum Cost, Tiered Pricing)
+and an abbreviated one "for CSI grouped items" (Category/Name/Description/CSI/Unit/
+UnitPrice/Attachments only). Spec Tags landed only in the first. Production browses by CSI
+Division, so the editor didn't exist on the surface actually in use. Fixed in **b18e922**
+(editor added to the CSI form, with a comment at the site naming the duplication).
+
+- **How I missed it:** grepped `calculationBasis`, got 2 hits, concluded "add form + the
+  edit form." The CSI form never had Calculation Basis, so it was invisible to that grep.
+  RULE: when adding a field to this modal, grep `Edit: {item.name}` (or `Update Item`) and
+  confirm the count of EDIT SURFACES first — never infer form count from a field that may
+  itself be missing from one of them.
+- **How the gate missed it:** Gate 4 was all API round-trips; Gate 7's UI portion read the
+  component source instead of the rendered page. The data layer was correct the entire
+  time — only the render was absent. RULE for future gate packages: **at least one gate
+  must be a human tap or Playwright pass on the real rendered surface, in the DEFAULT
+  view** (CSI grouping here). "Verified in code" is not verified in UI.
+
+### OPEN — added by this session
+1. **Consolidate the two edit forms** (real fix for the above): extract ONE shared form
+   component consumed by both the category-grouped and CSI-grouped views. Kills the whole
+   "added a field to one copy" bug class permanently. Until then, every new catalog field
+   must be added to BOTH forms plus the add form (3 sites).
+2. **CSI-grouped form is missing fields**, pre-existing and separate from spec tags: no
+   Calculation Basis, Minimum Cost, Source, Include-by-default, Tiered Pricing. Anyone
+   browsing by CSI cannot edit those at all; they must switch to category grouping. Decide
+   whether the consolidated form exposes everything (likely yes) before JJ goes live.
+3. **`PUT /api/rom-scope-items/:id` is requireAuth-only** — surfaced by Gate 7. A non-admin
+   with a session can mutate the CATALOG directly, including unitPrice, and now specTags
+   (which silently redirect what every future fork seeds). The rate-lock doctrine hardened
+   the LINE-ITEM endpoints on the assumption the catalog is admin-only; it isn't. Add
+   `checkPermission('admin.access')` to PUT (and audit POST / archive on the same route
+   file). Belongs in the non-admin sweep, before JJ.
+4. **Standard TI template pricing:** Gate 6 passed arithmetically but exposed Builder's
+   Risk seeding at $0.04 and Design (Architectural) at $1.25 — rates entered as dollars.
+   Adolfo's in-progress template revision; not a code defect, but these will appear on
+   JJ's first real ROM.
+5. **Neon verification still owed:** every gate ran against helium (confirmed dev, NOT prod
+   Neon — that closes the 7/19 open question). After Publish, confirm `spec_tags` exists on
+   Neon via the app's own connection.
+6. **Dev test artifacts to clean:** catalog items 79/80, RFPs 203/204, ROM pilots 17-20.
+   Template "Standard TI" was already restored to sid=24 by the Agent (verify).
+7. **Data entry before the feature does anything:** populate `clearHeight` AND
+   `buildingDepth` per property (Adolfo to confirm buildingDepth is the demising LF
+   figure), then create the real 32'/40' demising catalog rows sharing one itemGroup,
+   tagged [quantity ← Building Depth] + [match ← Clear Height = 32 / 40]. Until then the
+   resolver correctly does nothing.
+8. **Next code slices:** same resolver into the AI parser and scope-bundle expansion.

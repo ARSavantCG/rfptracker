@@ -1342,7 +1342,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                 <SpecTagsEditor
                   idPrefix="add"
                   tags={formData.specTags}
-                  onChange={(specTags) => setFormData({ ...formData, specTags })}
+                  onChange={(specTags) => setFormData(prev => ({ ...prev, specTags }))}
                 />
 
                 {/* Minimum Cost Section */}
@@ -2006,7 +2006,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                                       <SpecTagsEditor
                                         idPrefix="edit-csi"
                                         tags={formData.specTags}
-                                        onChange={(specTags) => setFormData({ ...formData, specTags })}
+                                        onChange={(specTags) => setFormData(prev => ({ ...prev, specTags }))}
                                       />
 
                                       {/* File Attachments Section - Inline Edit */}
@@ -2468,7 +2468,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                               <SpecTagsEditor
                                 idPrefix="edit"
                                 tags={formData.specTags}
-                                onChange={(specTags) => setFormData({ ...formData, specTags })}
+                                onChange={(specTags) => setFormData(prev => ({ ...prev, specTags }))}
                               />
 
                               <div className="space-y-4">

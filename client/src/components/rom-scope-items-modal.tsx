@@ -1999,6 +1999,16 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                                           </div>
                                         </div>
                                       </div>
+                                      {/* Spec Tags — property-driven default quantity + variant matching.
+                                          This CSI-grouped edit form is a SECOND copy of the edit form (the
+                                          category-grouped one lives further down); any field added to one
+                                          must be added to both or it silently won't exist in one view. */}
+                                      <SpecTagsEditor
+                                        idPrefix="edit-csi"
+                                        tags={formData.specTags}
+                                        onChange={(specTags) => setFormData({ ...formData, specTags })}
+                                      />
+
                                       {/* File Attachments Section - Inline Edit */}
                                       <div className="space-y-4 pt-4 border-t">
                                         <div className="space-y-2">

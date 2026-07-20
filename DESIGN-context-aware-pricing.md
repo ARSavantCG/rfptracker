@@ -117,3 +117,15 @@ scope bundles.
 Build order when picked up: (a) add the two columns + admin dropdowns in Manage Scope
 Items, (b) write the resolver with the derived-expression vocabulary, (c) wire into the
 fork seeder, (d) then parser/bundles.
+
+### REFINEMENT (Adolfo, same session): N tags per item, not two fixed fields
+Model as a REPEATABLE tag list on each catalog item — minimum one, "+" to add more,
+each tag = {kind, propertySpec, (optional) value/range}:
+- Demising Wall 40': [quantity ← Building Depth] + [match ← Clear Height = 40']
+- LED Warehouse Lighting: [quantity ← Rentable Area − Office Area]
+One tag kind drives DEFAULT QUANTITY; other tags REFINE which variant applies (matching
+against property specs). Storage: json column `specTags` on rom_scope_items (additive
+migration), admin UI = a small repeater in Manage Scope Items. Resolver walks the tags:
+first quantity tag wins for qty; all match tags must satisfy the property before the
+item is auto-selected. Supersedes the fixed quantityBasis/specMatcher column pair above
+(same vocabulary, more flexible shape).

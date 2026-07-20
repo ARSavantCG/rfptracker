@@ -50,6 +50,9 @@ const ADDITIVE_COLUMNS: ColumnMigration[] = [
   // Fee governance: recorded (not blocked) CM-fee deletions on ROM pilots.
   { table: 'rom_pilots', column: 'cm_fee_removed_by', type: 'text' },
   { table: 'rom_pilots', column: 'cm_fee_removed_at', type: 'timestamp' },
+  // Spec Tags (context-aware pricing REFINEMENT): repeatable property-driven
+  // tags per catalog item — quantity source + variant match conditions.
+  { table: 'rom_scope_items', column: 'spec_tags', type: "json DEFAULT '[]'::json" },
 ];
 
 // Additive new tables (CREATE TABLE IF NOT EXISTS — idempotent, never drops).

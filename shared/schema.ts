@@ -1139,6 +1139,15 @@ export const romScopeItems = pgTable("rom_scope_items", {
   itemGroup: text("item_group"), // e.g., "Office Area", "Warehouse Office" - groups related tiers together
   minSquareFootage: integer("min_square_footage"), // Minimum square footage for this tier (null = no minimum)
   maxSquareFootage: integer("max_square_footage"), // Maximum square footage for this tier (null = no maximum)
+  // Spec Tags (DESIGN-context-aware-pricing.md REFINEMENT, Adolfo 2026-07-19):
+  // repeatable list of property-driven tags per catalog item. One 'quantity'
+  // tag names the property spec that supplies the DEFAULT QUANTITY at seed/add
+  // time (first quantity tag wins); 'match' tags name specs the property must
+  // satisfy before this item/variant is auto-selected (e.g. Demising Wall 40'
+  // matches clear_height = 40). Supersedes the fixed quantityBasis/specMatcher
+  // column pair that was designed but never built. Column created by startup
+  // migration, NOT drizzle-kit push.
+  specTags: json("spec_tags").$type<SpecTag[]>().default([]),
   // Quarterly pricing intelligence fields
   pricingMode: text("pricing_mode").default('average'), // 'average' | 'contractor' | 'manual'
   selectedContractorName: text("selected_contractor_name"), // which contractor's price to use when mode is 'contractor'
@@ -1162,6 +1171,37 @@ export const CALCULATION_BASES = {
 } as const;
 
 export type CalculationBasis = keyof typeof CALCULATION_BASES;
+
+// ── Spec Tags (context-aware pricing) ────────────────────────────────────────
+// Vocabulary of property specs a tag can reference. These are DERIVED
+// expressions, not raw columns: the resolver (server/spec-tag-resolver.ts)
+// computes each from the RFP's property record + selected bays. Extend the
+// vocabulary here (single source — the admin dropdown and the resolver both
+// read it); adding a key without a resolver case is a bug the resolver logs.
+export const SPEC_TAG_SOURCES = {
+  'rentable_sf': 'Rentable Area (SF)',
+  'office_sf': 'Office Area (SF)',
+  'rentable_minus_office': 'Rentable Area − Office Area (SF)',
+  'building_depth': 'Building Depth (ft)',
+  'clear_height': 'Clear Height (ft)',
+  'dock_doors': 'Dock Door Count',
+  'bay_count': 'Bay Count',
+} as const;
+
+export type SpecTagSource = keyof typeof SPEC_TAG_SOURCES;
+
+// One tag on a catalog item. kind 'quantity' = this spec supplies the default
+// quantity (first quantity tag in the list wins). kind 'match' = the property's
+// spec must equal `value` (or fall inside [value, maxValue] when maxValue is
+// set) for the item/variant to be auto-selected. Values are stored as strings
+// (form inputs); the resolver parses numerically with the parseFloat+strip
+// pattern per UI-STANDARDS.md.
+export type SpecTag = {
+  kind: 'quantity' | 'match';
+  propertySpec: SpecTagSource;
+  value?: string;    // match: exact value, or range minimum when maxValue set
+  maxValue?: string; // match: optional range maximum (inclusive)
+};
 
 export const scopeItemContractorPricing = pgTable("scope_item_contractor_pricing", {
   id: serial("id").primaryKey(),

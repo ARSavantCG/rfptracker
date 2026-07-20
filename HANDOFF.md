@@ -259,3 +259,60 @@ OPEN / NEXT:
 2. **Adolfo: revise Standard TI template pricing** (in progress) — the seeder loads whatever the template holds; fees now compute against it.
 3. **Supervised JJ dry run** end-to-end; his confusion points become the final polish list.
 Not blocking: demising auto-quantity + clear-height variants (DESIGN-context-aware-pricing.md, needs Adolfo's LF source + variant naming), standalone /rom-pilot double-create quirk, portfolio-wide CM-fee rollup across allowances (per-project flag exists now), tsc debt, credential rotation, ITB money test.
+
+## 2026-07-19 (late) — SPEC TAGS built (context-aware pricing, slice 1: fork seeder)
+Implements DESIGN-context-aware-pricing.md REFINEMENT (N repeatable tags per catalog item),
+superseding the never-built fixed quantityBasis/specMatcher column pair. NOT yet pushed
+through Publish — gate first (see below).
+
+- **Schema:** `rom_scope_items.spec_tags` (json, default `[]`) + `SpecTag` type and
+  `SPEC_TAG_SOURCES` vocabulary in shared/schema.ts: rentable_sf, office_sf,
+  rentable_minus_office, building_depth, clear_height, dock_doors, bay_count. The
+  vocabulary is the SINGLE source for both the admin dropdown and the resolver switch —
+  a key added without a resolver case logs a warning rather than silently returning junk.
+  Additive startup migration (reaches helium AND Neon on boot); no drizzle-kit push.
+- **Resolver:** new `server/spec-tag-resolver.ts`. Doctrine: **null = unknown, never 0**
+  (a building with no depth on file is unknown, not zero feet deep). `resolveDefaultQuantity`
+  = FIRST quantity tag wins; uncomputable → null and quantity stays manual.
+  `matchTagsSatisfied` = ALL match tags must pass, and **missing property data FAILS the
+  match** — we never guess a variant. Match supports exact value or inclusive
+  [value, maxValue] range, so match tags ARE the design's Option-A min/max mechanism,
+  attached per-item instead of as dedicated columns. `selectVariant` uses the existing
+  `itemGroup` as the scope family (reused, not reinvented); conditioned variants that pass
+  beat tag-less defaults, so clear_height 40 picks "Demising Wall 40'" over a generic row.
+  Numeric parsing is parseFloat+strip per UI-STANDARDS (clear_height is text: "40 feet").
+- **Admin UI:** `SpecTagsEditor` repeater rendered in BOTH the add and edit forms of
+  Manage Scope Items, directly under Calculation Basis. Plain state + stable `_key` per
+  row (UI-STANDARDS dynamic-table rule), `_key` stripped at submit, remove buttons
+  `tabIndex={-1}`. Starts EMPTY with "+ Add Spec Tag" — the design's "minimum one" is the
+  shape when tags are in use, not a validation rule on every existing catalog row.
+- **Fork seeder (rom-routes.ts):** resolves the RFP's property (id-as-text, with
+  display/name fallback for legacy values) + the snapshotted bays into a spec context.
+  Variant swap fires ONLY for families that actually use match tags, so existing SF-tier
+  groups are untouched. A tag-computed quantity beats the template's placeholder qty.
+  Every auto-action or unresolved match is stamped into the row's notes ("Auto-selected X
+  by property specs", "Qty 240 from property specs", "⚠ Spec match unresolved") so JJ sees
+  what the system decided instead of a silent number.
+- **Gates run:** esbuild syntax on all 5 touched files (the gate that catches
+  landed-inside-a-comment edits); real `tsc --noEmit` — **zero new errors**, verified by
+  per-file/per-code signature diff against a clean origin/main baseline (raw line diff is
+  useless here: inferred type STRINGS shift when a column is added, rewording ~40 unrelated
+  errors). True baseline is **251**, not the 247 quoted in the 7/19 entry — and my first
+  stash-based baseline read 254 because `git stash` left the untracked new resolver file in
+  place, inflating it by 3. LESSON: `git stash -u` (or verify untracked state) when
+  baselining, and always diff error SIGNATURES, not raw lines.
+- **Resolver unit tests: 22/22 pass** (run via esbuild bundle + node, not committed):
+  vocabulary math incl. mixed rentable/raw SF, "40 feet" parsing, first-quantity-wins,
+  32' fails a 40' building, missing clear height fails, range pass/fail, 32'→40' variant
+  swap, nothing-passes → null, conditioned-beats-generic and generic-wins-when-none-pass.
+
+### OPEN — spec tags
+1. **Adolfo (data, not code):** confirm `properties.buildingDepth` is the demising LF figure
+   (it's in the vocabulary and on the properties tab), populate it per property, then create
+   the 32'/40' demising catalog rows sharing one `itemGroup` and tag them
+   [quantity ← Building Depth] + [match ← Clear Height = 32 / 40].
+2. **Gate before Publish:** Replit Agent verification (prompt below in this session), then
+   a fresh fork on the new build — the acceptance test is a seeded demising row arriving with
+   the right variant AND a real quantity, no typing.
+3. **Next slices:** same resolver into the AI parser and scope-bundle expansion (design's
+   original targets); tenant share stays 50% default on demising.

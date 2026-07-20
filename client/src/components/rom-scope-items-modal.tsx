@@ -19,6 +19,114 @@ import { evaluateFormula } from "@shared/formula-utils";
 import { Plus, Edit2, Trash2, Package, DollarSign, ChevronDown, ChevronRight, Upload, FileText, X, Edit3, Check, Printer, Download, Eye, Paperclip, BarChart2 } from "lucide-react";
 import { QuarterlyPricingPanel } from "@/components/quarterly-pricing-panel";
 import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
+import { SPEC_TAG_SOURCES } from "@shared/schema";
+
+// ── Spec Tags repeater (DESIGN-context-aware-pricing.md REFINEMENT) ──────────
+// Rows keyed by a client-only stable _key per UI-STANDARDS.md (never index or
+// anything regenerated per render). _key is stripped before submit.
+type SpecTagRow = {
+  _key: string;
+  kind: "quantity" | "match";
+  propertySpec: string;
+  value: string;
+  maxValue: string;
+};
+
+const stableTagKey = () => `tag_${Math.random().toString(36).slice(2, 10)}`;
+
+const withTagKeys = (tags: any[]): SpecTagRow[] =>
+  (Array.isArray(tags) ? tags : []).map((t: any) => ({
+    _key: t?._key || stableTagKey(),
+    kind: t?.kind === "match" ? "match" : "quantity",
+    propertySpec: t?.propertySpec || "",
+    value: t?.value ?? "",
+    maxValue: t?.maxValue ?? "",
+  }));
+
+function SpecTagsEditor({
+  tags,
+  onChange,
+  idPrefix,
+}: {
+  tags: SpecTagRow[];
+  onChange: (tags: SpecTagRow[]) => void;
+  idPrefix: string;
+}) {
+  const update = (key: string, patch: Partial<SpecTagRow>) =>
+    onChange(tags.map(t => (t._key === key ? { ...t, ...patch } : t)));
+  const remove = (key: string) => onChange(tags.filter(t => t._key !== key));
+  const add = () =>
+    onChange([...tags, { _key: stableTagKey(), kind: "quantity", propertySpec: "", value: "", maxValue: "" }]);
+
+  return (
+    <div className="space-y-2 border rounded-md p-3 bg-gray-50">
+      <div className="flex items-center justify-between">
+        <Label className="text-sm font-semibold">Spec Tags (Property-Driven Defaults)</Label>
+        <Button type="button" variant="outline" size="sm" onClick={add} data-testid={`${idPrefix}-add-spec-tag`}>
+          <Plus className="h-4 w-4 mr-1" /> Add Spec Tag
+        </Button>
+      </div>
+      <p className="text-xs text-gray-500">
+        A <span className="font-medium">Quantity</span> tag fills this item's default quantity from the property
+        (first quantity tag wins). <span className="font-medium">Match</span> tags make this a conditional variant —
+        it only auto-selects when the property satisfies every match (e.g. Demising Wall 40' matches Clear Height = 40).
+      </p>
+      {tags.map(tag => (
+        <div key={tag._key} className="flex items-start gap-2">
+          <select
+            id={`${idPrefix}-tag-kind-${tag._key}`}
+            value={tag.kind}
+            onChange={e => update(tag._key, { kind: e.target.value as SpecTagRow["kind"] })}
+            className="h-10 px-2 text-sm bg-background border border-input rounded-md w-40 shrink-0"
+          >
+            <option value="quantity">Quantity from</option>
+            <option value="match">Must match</option>
+          </select>
+          <select
+            id={`${idPrefix}-tag-spec-${tag._key}`}
+            value={tag.propertySpec}
+            onChange={e => update(tag._key, { propertySpec: e.target.value })}
+            className="h-10 px-2 text-sm bg-background border border-input rounded-md flex-1 min-w-0"
+          >
+            <option value="">Select property spec…</option>
+            {Object.entries(SPEC_TAG_SOURCES).map(([key, label]) => (
+              <option key={key} value={key}>{label}</option>
+            ))}
+          </select>
+          {tag.kind === "match" && (
+            <>
+              <Input
+                value={tag.value}
+                onChange={e => update(tag._key, { value: e.target.value })}
+                placeholder="Value / min"
+                className="h-10 w-24 shrink-0"
+                inputMode="decimal"
+              />
+              <Input
+                value={tag.maxValue}
+                onChange={e => update(tag._key, { maxValue: e.target.value })}
+                placeholder="Max (opt.)"
+                className="h-10 w-24 shrink-0"
+                inputMode="decimal"
+              />
+            </>
+          )}
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            tabIndex={-1}
+            onClick={() => remove(tag._key)}
+            className="h-10 px-2 text-gray-400 hover:text-red-600 shrink-0"
+            aria-label="Remove spec tag"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 interface RomScopeItem {
   id: number;
@@ -48,6 +156,7 @@ interface RomScopeItem {
   itemGroup?: string | null; // For tiered pricing - groups related tiers
   minSquareFootage?: number | null; // Minimum square footage for this tier
   maxSquareFootage?: number | null; // Maximum square footage for this tier
+  specTags?: Array<{ kind: string; propertySpec: string; value?: string; maxValue?: string }> | null; // Property-driven quantity/variant tags
   createdAt: string;
   updatedAt: string;
 }
@@ -98,6 +207,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
       price: string;
       date: string;
     }>,
+    specTags: [] as SpecTagRow[],
   });
 
   const [fileUploadInputs, setFileUploadInputs] = useState<File[]>([]);
@@ -967,6 +1077,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
       maxSquareFootage: "",
       attachments: [],
       referencePricing: [],
+      specTags: [],
     });
     setFileUploadInputs([]);
     setShowAddForm(false);
@@ -1011,6 +1122,17 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
       itemGroup: formData.itemGroup || null,
       minSquareFootage: formData.minSquareFootage ? parseInt(formData.minSquareFootage) : null,
       maxSquareFootage: formData.maxSquareFootage ? parseInt(formData.maxSquareFootage) : null,
+      // Spec tags: strip the client-only _key (UI-STANDARDS: schema stripping is
+      // how client keys stay unpersisted — json columns pass through zod, so we
+      // strip explicitly) and drop rows that never picked a property spec.
+      specTags: formData.specTags
+        .filter(t => t.propertySpec)
+        .map(t => ({
+          kind: t.kind,
+          propertySpec: t.propertySpec,
+          ...(t.kind === "match" && t.value !== "" ? { value: t.value } : {}),
+          ...(t.kind === "match" && t.maxValue !== "" ? { maxValue: t.maxValue } : {}),
+        })),
       lastUpdated: new Date(), // Always set to current date when saving
     };
 
@@ -1041,6 +1163,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
       maxSquareFootage: item.maxSquareFootage?.toString() || "",
       attachments: item.attachments || [],
       referencePricing: item.referencePricing || [],
+      specTags: withTagKeys((item as any).specTags || []),
     });
     setFileUploadInputs([]);
     setEditingItem(item);
@@ -1214,6 +1337,13 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                     Controls how this item's quantity fills in during RFP evaluations. For a percentage item (e.g. Builder's Risk = % of TI Total), set the unit price to the rate (e.g. 0.0125 for 1.25%) and pick the matching basis — the evaluation pulls the quantity automatically instead of it being hardcoded.
                   </p>
                 </div>
+
+                {/* Spec Tags — property-driven default quantity + variant matching */}
+                <SpecTagsEditor
+                  idPrefix="add"
+                  tags={formData.specTags}
+                  onChange={(specTags) => setFormData({ ...formData, specTags })}
+                />
 
                 {/* Minimum Cost Section */}
                 <div className="space-y-4">
@@ -2323,6 +2453,13 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                                   Controls how this item's quantity fills in during RFP evaluations. For a percentage item (e.g. Builder's Risk = % of Construction Total), set the unit price to the rate (e.g. 0.0125 for 1.25%) and pick the matching basis — the evaluation pulls the quantity automatically instead of it being hardcoded.
                                 </p>
                               </div>
+
+                              {/* Spec Tags — property-driven default quantity + variant matching */}
+                              <SpecTagsEditor
+                                idPrefix="edit"
+                                tags={formData.specTags}
+                                onChange={(specTags) => setFormData({ ...formData, specTags })}
+                              />
 
                               <div className="space-y-4">
                                 <div className="flex items-center space-x-2">

@@ -129,3 +129,24 @@ migration), admin UI = a small repeater in Manage Scope Items. Resolver walks th
 first quantity tag wins for qty; all match tags must satisfy the property before the
 item is auto-selected. Supersedes the fixed quantityBasis/specMatcher column pair above
 (same vocabulary, more flexible shape).
+
+**BUILT 2026-07-19 (fork seeder wired; parser/bundles remain):**
+- `rom_scope_items.spec_tags` json column (startup migration) + `SpecTag` type and
+  `SPEC_TAG_SOURCES` vocabulary in shared/schema.ts (single source for the admin
+  dropdown AND the resolver — adding a key without a resolver case logs a warning).
+- Resolver: `server/spec-tag-resolver.ts` — computePropertySpec (derived-expression
+  vocabulary; null = unknown, never 0), resolveDefaultQuantity (first quantity tag),
+  matchTagsSatisfied (ALL match tags; unknown property data FAILS — no guessing),
+  selectVariant (itemGroup = the family; conditioned variants that pass beat tag-less
+  defaults; nothing passes → null and the caller flags for review).
+- Admin UI: SpecTagsEditor repeater in Manage Scope Items (add + edit forms), plain
+  state with stable `_key` rows per UI-STANDARDS; `_key` stripped on submit.
+- Fork seeder: variant swap only for families that USE match tags (SF-tier groups
+  untouched); tag-computed quantity beats the template's placeholder qty; every
+  auto-action or unresolved match is stamped into the row's notes for JJ to see.
+- Variant modeling note: match tags ARE the Option-A min/max mechanism (value/maxValue
+  range on clear_height), attached per-item instead of dedicated columns.
+- Still open: demising LF source confirmation (building_depth is in the vocabulary and
+  the properties tab carries buildingDepth — Adolfo to confirm that's the figure and
+  populate it per property), catalog rows for the 32'/40' variants + their tags
+  (data entry, not code), then parser + scope-bundle wiring.

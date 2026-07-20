@@ -85,19 +85,39 @@
           ],
           "notes": "",
           "romScopeItemId": 30,
-          "sourceType": "rom",
-          "snapshot": {
-            "label": "Permit Fees (3.5%)",
-            "unit": "$",
-            "unitPrice": 0.035,
-            "category": "Design / Soft Costs / Other Fees",
-            "source": "Bridge Industrial",
-            "capturedAt": "2025-11-17T00:43:11.636Z"
-          }
+          "sourceType": "rom"
         },
         {
           "code": "ROM-29",
-          "label": "Construction Management (3.5%)",
+          "label": "Construction Management (2.75%)",
+          "type": "cost",
+          "qty": 1,
+          "unit": "$",
+          "unit_cost": 0.0275,
+          "tags": [
+            "design-/-soft-costs-/-other-fees"
+          ],
+          "notes": "",
+          "romScopeItemId": 29,
+          "sourceType": "rom"
+        },
+        {
+          "code": "ROM-33",
+          "label": "Permit Expediter",
+          "type": "cost",
+          "qty": 1,
+          "unit": "ls",
+          "unit_cost": 7500,
+          "tags": [
+            "design-/-soft-costs-/-other-fees"
+          ],
+          "notes": "",
+          "romScopeItemId": 33,
+          "sourceType": "rom"
+        },
+        {
+          "code": "ROM-32",
+          "label": "Builder's Risk Insurance",
           "type": "cost",
           "qty": 1,
           "unit": "$",
@@ -106,134 +126,58 @@
             "design-/-soft-costs-/-other-fees"
           ],
           "notes": "",
-          "romScopeItemId": 29,
-          "sourceType": "rom",
-          "snapshot": {
-            "label": "Construction Management (3.5%)",
-            "unit": "$",
-            "unitPrice": 0.035,
-            "category": "Design / Soft Costs / Other Fees",
-            "source": "Bridge Industrial",
-            "capturedAt": "2025-11-17T00:43:11.636Z"
-          }
-        },
-        {
-          "code": "ROM-33",
-          "label": "Permit Expediter",
-          "type": "cost",
-          "qty": 1,
-          "unit": "ls.",
-          "unit_cost": 7500,
-          "tags": [
-            "design-/-soft-costs-/-other-fees"
-          ],
-          "notes": "",
-          "romScopeItemId": 33,
-          "sourceType": "rom",
-          "snapshot": {
-            "label": "Permit Expediter",
-            "unit": "ls.",
-            "unitPrice": 7500,
-            "category": "Design / Soft Costs / Other Fees",
-            "source": "Bridge Industrial",
-            "capturedAt": "2025-11-17T00:43:11.636Z"
-          }
-        },
-        {
-          "code": "ROM-32",
-          "label": "Builder's Risk Insurance",
-          "type": "cost",
-          "qty": 1,
-          "unit": "$",
-          "unit_cost": 0.25,
-          "tags": [
-            "design-/-soft-costs-/-other-fees"
-          ],
-          "notes": "",
           "romScopeItemId": 32,
-          "sourceType": "rom",
-          "snapshot": {
-            "label": "Builder's Risk Insurance",
-            "unit": "$",
-            "unitPrice": 0.25,
-            "category": "Design / Soft Costs / Other Fees",
-            "source": "Bridge Industrial",
-            "capturedAt": "2025-11-17T00:43:11.636Z"
-          }
+          "sourceType": "rom"
         },
         {
           "code": "ROM-34",
           "label": "Certificate of Occupancy",
           "type": "cost",
           "qty": 1,
-          "unit": "ls.",
+          "unit": "ls",
           "unit_cost": 2500,
           "tags": [
             "design-/-soft-costs-/-other-fees"
           ],
           "notes": "",
           "romScopeItemId": 34,
-          "sourceType": "rom",
-          "snapshot": {
-            "label": "Certificate of Occupancy",
-            "unit": "ls.",
-            "unitPrice": 2500,
-            "category": "Design / Soft Costs / Other Fees",
-            "source": "Bridge Industrial",
-            "capturedAt": "2025-11-17T00:43:11.636Z"
-          }
+          "sourceType": "rom"
         },
         {
           "code": "ROM-26",
           "label": "Design (Architectural)",
           "type": "cost",
           "qty": 1,
-          "unit": "SF",
-          "unit_cost": 1.5,
+          "unit": "$",
+          "unit_cost": 0.0125,
           "tags": [
             "design-/-soft-costs-/-other-fees"
           ],
           "notes": "",
           "romScopeItemId": 26,
-          "sourceType": "rom",
-          "snapshot": {
-            "label": "Design (Architectural)",
-            "unit": "SF",
-            "unitPrice": 1.5,
-            "category": "Design / Soft Costs / Other Fees",
-            "source": "TEST",
-            "capturedAt": "2025-11-17T00:43:11.636Z"
-          }
+          "sourceType": "rom"
         },
         {
           "code": "ROM-51",
           "label": "Materials Testing",
           "type": "cost",
           "qty": 1,
-          "unit": "ls.",
+          "unit": "ls",
           "unit_cost": 12500,
           "tags": [
             "design-/-soft-costs-/-other-fees"
           ],
           "notes": "",
           "romScopeItemId": 51,
-          "sourceType": "rom",
-          "snapshot": {
-            "label": "Materials Testing",
-            "unit": "ls.",
-            "unitPrice": 12500,
-            "category": "Design / Soft Costs / Other Fees",
-            "source": "ROM Pilot",
-            "capturedAt": "2025-11-17T04:07:58.723Z"
-          }
+          "sourceType": "rom"
         }
       ],
       "metadata": {
         "createdBy": "AReutlinger@bridgeindustrial.com",
         "createdAt": "2025-11-17T00:43:12.269Z",
-        "updatedAt": "2025-11-17T04:07:59.606Z",
+        "updatedAt": "2026-07-20T03:50:51.834Z",
         "isArchived": false,
-        "updatedBy": "AReutlinger@bridgeindustrial.com"
+        "updatedBy": "admin"
       }
     }
   ]

@@ -14,6 +14,7 @@ import { nanoid } from 'nanoid';
 import { requireAuth, checkPermission } from './middleware';
 import { scopeItemContractorPricing, romScopeItems } from '@shared/schema';
 import { eq, desc, and } from 'drizzle-orm';
+import { selectVariant, resolveDefaultQuantity, hasMatchTags, matchTagsSatisfied } from './spec-tag-resolver';
 
 
 // Helper function to generate ROM report HTML
@@ -570,14 +571,66 @@ export function registerRomRoutes(app: Express): void {
           const catalog = await storage.getAllRomScopeItems();
           const byId = new Map(catalog.map((c: any) => [c.id, c]));
           const byLabel = new Map(catalog.map((c: any) => [(c.name || "").trim().toLowerCase(), c]));
+
+          // Spec-tag context (DESIGN-context-aware-pricing.md): the RFP's
+          // property record + the snapshotted bays. rfp.property holds a
+          // property id-as-text (create form writes p.id.toString()); the
+          // name-match fallback covers legacy/display-name values.
+          let specProperty: any = null;
+          try {
+            const propRef = String((rfp as any).property || "").trim();
+            if (propRef && !isNaN(parseInt(propRef))) {
+              specProperty = await storage.getProperty(parseInt(propRef));
+            }
+            if (!specProperty && propRef) {
+              const allProps = await storage.getAllProperties();
+              specProperty = allProps.find((p: any) => p.propertyName === propRef || p.displayName === propRef) || null;
+            }
+          } catch (propErr) {
+            console.warn("Fork-to-ROM: property lookup for spec tags failed (tags skipped):", propErr);
+          }
+          const specCtx = { property: specProperty, bays: Array.isArray(bays) ? bays : [] };
+
           const rows: any[] = [];
           for (const it of (full?.items || [])) {
             if (it.type === "note") continue;
-            const cat: any = (it.romScopeItemId && byId.get(it.romScopeItemId))
+            let cat: any = (it.romScopeItemId && byId.get(it.romScopeItemId))
               || byLabel.get((it.label || "").trim().toLowerCase());
             if (!cat) continue;
+
+            // ── Spec tags: variant selection + default quantity ─────────────
+            // Only families that USE match tags participate in variant swap —
+            // SF-tiered groups without tags keep their existing tier behavior.
+            let specNote = "";
+            const groupKey = (cat.itemGroup || "").trim().toLowerCase();
+            const family = groupKey
+              ? catalog.filter((c: any) => (c.itemGroup || "").trim().toLowerCase() === groupKey)
+              : [cat];
+            const familyUsesMatchTags = family.some((c: any) => hasMatchTags(c));
+            if (familyUsesMatchTags) {
+              const variant = selectVariant(cat, catalog, specCtx);
+              if (variant && variant.id !== cat.id) {
+                specNote = `Auto-selected ${variant.name} by property specs (was ${cat.name}). `;
+                cat = variant;
+              } else if (!variant || !matchTagsSatisfied(cat, specCtx)) {
+                // Nothing verifiably matches (missing property data or no
+                // passing variant): keep the template's item, flag for review,
+                // never guess. Per REFINEMENT: match tags must satisfy before
+                // auto-selection.
+                specNote = "⚠ Spec match unresolved — verify variant against property specs. ";
+              }
+            }
             const price = parseFloat((cat.activePrice ?? cat.unitPrice) || "0") || 0;
-            const qty = it.qty || 1;
+            // Default quantity from the item's first quantity tag when it
+            // computes (e.g. Demising Wall ← Building Depth; LED Warehouse
+            // Lighting ← Rentable − Office). A template qty is a placeholder
+            // default, so a computed spec quantity wins; uncomputable → the
+            // template qty stands (quantity stays effectively manual).
+            const specQty = resolveDefaultQuantity(cat, specCtx);
+            if (specQty !== null && specQty > 0) {
+              specNote += `Qty ${specQty.toLocaleString()} from property specs. `;
+            }
+            const qty = (specQty !== null && specQty > 0) ? specQty : (it.qty || 1);
             // Tenant share: percent-FEE items always 100 (the fee engine computes
             // their dollars from the subtotal; a template 'percent' is the FEE rate,
             // not a share). Otherwise: template's explicit percent wins; demising
@@ -593,7 +646,7 @@ export function registerRomRoutes(app: Express): void {
               unitPrice: price.toString(),
               totalPrice: (qty * price * (share / 100)).toString(),
               tenantShare: share,
-              notes: it.notes || (it.type === "percent" ? `${it.percent}% of ${it.percent_of || "subtotal"} — fee math finalized on report` : ""),
+              notes: (specNote + (it.notes || (it.type === "percent" ? `${it.percent}% of ${it.percent_of || "subtotal"} — fee math finalized on report` : ""))).trim(),
               category: ((cat.category || "").toLowerCase().includes("soft") || (cat.category || "").toLowerCase().includes("design"))
                 ? "design-soft-costs" : "tenant-improvements",
             });

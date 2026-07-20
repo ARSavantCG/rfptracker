@@ -180,3 +180,32 @@ inside-the-allowance presentation — build once.
 CONFIRMED (Adolfo 2026-07-19): (a) permits, contingency, testing, and similar all
 default to the Balance/Misc bucket; (b) the report lives in the REPORTS section.
 No open questions remain on this feature — build-ready.
+
+## CORRECTION 2026-07-19 (live test, Adolfo): ROM eval = the REAL evaluation, locked
+The custom RomWorkflowPanel is the WRONG shape. Two defects proved it:
+1. **Dead end** — no way to advance past Evaluation (the bid-based EvaluationBudget owns
+   the advance/publish flow; the mini-panel never inherited it).
+2. Adolfo's directive: it should look **EXACTLY like the Evaluation screen**, the only
+   difference being JJ cannot change unit pricing.
+
+### Build plan (next block, replaces RomWorkflowPanel)
+- Add `lockUnitPrices?: boolean` (and optional `romPilotId`) to EvaluationBudgetProps.
+  When true: unit-price inputs render read-only/gray with a lock affordance; quantities,
+  tenant share, add/delete from catalog stay editable; everything else — layout, totals,
+  costs-in-place, onComplete/advance — unchanged, so the workflow flows natively.
+- Dashboard renders `<EvaluationBudget rfp={selectedRfp} lockUnitPrices />` for
+  pricingPath='rom_pilot' instead of RomWorkflowPanel; keep the purple ROM PILOT badge
+  above it (banner only).
+- **Data source decision (resolve first):** ROM rows currently live in rom_pilot_line_items
+  while the eval screen reads evaluation_budgets. Options: (a) on fork, ALSO create an
+  evaluation_budget seeded from the template so the eval screen is the single surface and
+  the ROM pilot becomes a snapshot/report artifact; (b) teach EvaluationBudget to read/write
+  ROM line items when romPilotId is present. (a) is simpler and makes the four-bucket
+  report, publish, and portfolio rollups work with zero special-casing — PREFERRED.
+- Retire RomWorkflowPanel once EvaluationBudget covers it.
+
+### BUG (same test): fork snapshot grabbed property ID, not name
+Pilot 15 shows `Property: 22` and `Bays: 0 selected`. rfp.property held an id (or the
+name lookup failed), so selectedBaysPerBuilding[property] missed → empty bays. Fix in the
+fork endpoint: resolve the property NAME (and the correct per-building bay key) before
+snapshotting; backfill existing test pilots is unnecessary (test data).

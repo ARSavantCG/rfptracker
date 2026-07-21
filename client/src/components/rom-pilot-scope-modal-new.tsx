@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 // Removed Select import - using native HTML selects for consistency
-import { Trash2, Plus, Calculator, Save, ChevronUp, ChevronDown, GripVertical } from "lucide-react";
+import { Trash2, Plus, Calculator, Save, ChevronUp, ChevronDown, GripVertical, RotateCcw } from "lucide-react";
 import { FormulaInput } from "@/components/formula-input";
 import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
 import { useToast } from "@/hooks/use-toast";
@@ -188,6 +188,86 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
     } else {
       setDesignSoftCosts([...designSoftCosts, newItem]);
     }
+  };
+
+  // ── Spec-tag refresh (DESIGN-context-aware-pricing.md) ─────────────────────
+  // Quantities resolve from property specs at FORK time; user edits then stand
+  // permanently. This is the way back: recompute from the property AS IT IS NOW
+  // (so a spec corrected after forking can be pulled in). It is "recompute",
+  // not "undo".
+  // ISOLATION: the server only returns proposals for rows whose catalog item
+  // carries a quantity tag. Untagged scope — parking, electrical, anything
+  // hand-priced — is never proposed and cannot be touched here.
+  const [specProposals, setSpecProposals] = useState<any[]>([]);
+  const [specDialogOpen, setSpecDialogOpen] = useState(false);
+  const [specSelected, setSpecSelected] = useState<Record<string, boolean>>({});
+  const [specLoading, setSpecLoading] = useState(false);
+  const [specMeta, setSpecMeta] = useState<{ propertyResolved: boolean; bayCount: number } | null>(null);
+
+  const proposalKey = (p: any) => `${p.lineItemId ?? "x"}:${p.scopeItemId}`;
+  const matchesRow = (li: LineItem, p: any) =>
+    (li.id != null && p.lineItemId != null && li.id === p.lineItemId) ||
+    (li.id == null && li.scopeItemId === p.scopeItemId);
+
+  const fetchSpecProposals = async (): Promise<any[]> => {
+    setSpecLoading(true);
+    try {
+      const res: any = await apiRequest(`/api/rom-pilots/${romPilotId}/spec-tags/preview`, "GET");
+      const list = Array.isArray(res?.proposals) ? res.proposals : [];
+      setSpecProposals(list);
+      setSpecMeta({ propertyResolved: !!res?.propertyResolved, bayCount: res?.bayCount ?? 0 });
+      return list;
+    } catch (err) {
+      toast({ title: "Couldn't read property specs", description: "The refresh preview failed. Your quantities are unchanged.", variant: "destructive" });
+      return [];
+    } finally {
+      setSpecLoading(false);
+    }
+  };
+
+  // Batched apply. One functional setState per category — applying row by row
+  // through updateLineItem would read a stale items array on every call after
+  // the first.
+  const applyProposals = (toApply: any[]) => {
+    if (!toApply.length) return;
+    const applyTo = (items: LineItem[]) => items.map(li => {
+      const p = toApply.find(pp => matchesRow(li, pp));
+      if (!p || p.proposedQuantity === null || p.proposedQuantity === undefined) return li;
+      const qty = String(p.proposedQuantity);
+      let baseTotal = (parseFloat(qty) || 0) * (parseFloat(li.unitPrice) || 0);
+      const si = li.scopeItem;
+      if (si?.hasMinimumCost && si.minimumCost) {
+        baseTotal = Math.max(baseTotal, parseFloat(si.minimumCost) || 0);
+      }
+      const share = (typeof li.tenantShare === "number" ? li.tenantShare : parseFloat(String(li.tenantShare)) || 100);
+      return { ...li, quantity: qty, totalPrice: (baseTotal * (share / 100)).toString() };
+    });
+    setTenantImprovements(prev => applyTo(prev));
+    setDesignSoftCosts(prev => applyTo(prev));
+    toast({ title: "Quantities recomputed", description: `${toApply.length} row${toApply.length === 1 ? "" : "s"} updated from property specs. Review, then Save All Items to commit.` });
+  };
+
+  const openSpecDialog = async () => {
+    const list = await fetchSpecProposals();
+    // Pre-check only rows that would actually change and resolved cleanly.
+    const preset: Record<string, boolean> = {};
+    list.forEach((p: any) => { preset[proposalKey(p)] = !!p.changed && !p.unresolved; });
+    setSpecSelected(preset);
+    setSpecDialogOpen(true);
+  };
+
+  const resetSingleRow = async (li: LineItem) => {
+    const list = specProposals.length ? specProposals : await fetchSpecProposals();
+    const p = list.find((pp: any) => matchesRow(li, pp));
+    if (!p) {
+      toast({ title: "No spec tag on this item", description: "This scope item has no quantity tag, so there is nothing to recompute." });
+      return;
+    }
+    if (p.proposedQuantity === null || p.proposedQuantity === undefined) {
+      toast({ title: "Property spec unavailable", description: `This row is tagged to ${p.propertySpec}, but that spec isn't populated on the property yet.`, variant: "destructive" });
+      return;
+    }
+    applyProposals([p]);
   };
 
   const updateLineItem = (
@@ -516,6 +596,21 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
                                 className="h-7 text-xs text-center w-20"
                                 placeholder="0"
                               />
+                              {/* Recompute this row's quantity from property specs.
+                                  Only meaningful on tagged items; resetSingleRow
+                                  explains itself if the row has no tag. */}
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                tabIndex={-1}
+                                title="Recompute quantity from property specs"
+                                aria-label="Recompute quantity from property specs"
+                                onClick={() => resetSingleRow(item)}
+                                className="h-7 w-7 p-0 ml-1 text-gray-400 hover:text-purple-700"
+                              >
+                                <RotateCcw className="h-3.5 w-3.5" />
+                              </Button>
                             </td>
                             <td className="py-2 px-3">
                               <Input
@@ -668,6 +763,17 @@ value={(() => {
 
           {/* Action Buttons */}
           <div className="flex justify-end space-x-3 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={openSpecDialog}
+              disabled={specLoading || saveLineItems.isPending}
+              className="mr-auto flex items-center space-x-2"
+              data-testid="rom-spec-refresh"
+            >
+              <RotateCcw className="h-4 w-4" />
+              <span>{specLoading ? "Reading property specs…" : "Refresh from property specs"}</span>
+            </Button>
             <Button variant="outline" onClick={onClose} disabled={saveLineItems.isPending}>
               Cancel
             </Button>
@@ -691,6 +797,94 @@ value={(() => {
           </div>
         </div>
       </DialogContent>
+
+      {/* Spec-tag refresh preview — nothing is written until Apply, and only
+          checked rows are touched. Untagged scope never appears here at all. */}
+      <Dialog open={specDialogOpen} onOpenChange={setSpecDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Refresh quantities from property specs</DialogTitle>
+          </DialogHeader>
+
+          {specMeta && !specMeta.propertyResolved && (
+            <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              This pilot's property record could not be resolved, so no spec can be computed.
+            </div>
+          )}
+          {specMeta && specMeta.propertyResolved && specMeta.bayCount === 0 && (
+            <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              No bays are recorded on this pilot, so bay-derived specs (rentable SF, office SF,
+              dock doors, bay count) can't be computed. Building depth and clear height still can.
+            </div>
+          )}
+
+          {specProposals.length === 0 ? (
+            <p className="text-sm text-gray-600">
+              No scope items on this pilot carry a quantity spec tag, so there's nothing to
+              recompute. Tag a catalog item in Manage Scope Items to enable this.
+            </p>
+          ) : (
+            <>
+              <p className="text-xs text-gray-500">
+                Only tagged items appear below. Everything else on this pilot is left alone.
+                Values are computed from the property as it is <span className="font-medium">now</span>.
+              </p>
+              <div className="max-h-80 overflow-y-auto divide-y border rounded-md">
+                {specProposals.map((p: any) => {
+                  const key = proposalKey(p);
+                  const disabled = p.unresolved || !p.changed;
+                  return (
+                    <label
+                      key={key}
+                      className={`flex items-center gap-3 px-3 py-2 text-sm ${disabled ? "opacity-60" : "cursor-pointer hover:bg-gray-50"}`}
+                    >
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4"
+                        disabled={disabled}
+                        checked={!!specSelected[key]}
+                        onChange={(e) => setSpecSelected(prev => ({ ...prev, [key]: e.target.checked }))}
+                      />
+                      <span className="flex-1 min-w-0">
+                        <span className="font-medium text-gray-900">{p.name}</span>
+                        <span className="block text-xs text-gray-500">from {p.propertySpec}</span>
+                      </span>
+                      <span className="shrink-0 text-right">
+                        {p.unresolved ? (
+                          <span className="text-xs text-amber-700">spec not populated</span>
+                        ) : p.changed ? (
+                          <span className="font-mono text-xs">
+                            {p.currentQuantity} <span className="text-gray-400">→</span>{" "}
+                            <span className="font-semibold text-purple-700">
+                              {Number(p.proposedQuantity).toLocaleString()}
+                            </span>
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-500">already matches</span>
+                        )}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            </>
+          )}
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setSpecDialogOpen(false)}>Cancel</Button>
+            <Button
+              className="bg-purple-600 text-white hover:bg-purple-700"
+              disabled={!specProposals.some((p: any) => specSelected[proposalKey(p)])}
+              onClick={() => {
+                applyProposals(specProposals.filter((p: any) => specSelected[proposalKey(p)]));
+                setSpecDialogOpen(false);
+              }}
+            >
+              Apply selected
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }

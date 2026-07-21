@@ -586,23 +586,8 @@ export function registerRomRoutes(app: Express): void {
           const byLabel = new Map(catalog.map((c: any) => [(c.name || "").trim().toLowerCase(), c]));
 
           // Spec-tag context (DESIGN-context-aware-pricing.md): the RFP's
-          // property record + the snapshotted bays. rfp.property holds a
-          // property id-as-text (create form writes p.id.toString()); the
-          // name-match fallback covers legacy/display-name values.
-          let specProperty: any = null;
-          try {
-            const propRef = String((rfp as any).property || "").trim();
-            if (propRef && !isNaN(parseInt(propRef))) {
-              specProperty = await storage.getProperty(parseInt(propRef));
-            }
-            if (!specProperty && propRef) {
-              const allProps = await storage.getAllProperties();
-              specProperty = allProps.find((p: any) => p.propertyName === propRef || p.displayName === propRef) || null;
-            }
-          } catch (propErr) {
-            console.warn("Fork-to-ROM: property lookup for spec tags failed (tags skipped):", propErr);
-          }
-          const specCtx = { property: specProperty, bays: Array.isArray(bays) ? bays : [] };
+          // property record + the snapshotted bays.
+          const specCtx = await buildSpecContext(rfp, bays);
 
           const rows: any[] = [];
           for (const it of (full?.items || [])) {
@@ -1027,6 +1012,29 @@ export function registerRomRoutes(app: Express): void {
 // left untouched. Fee rows always apply at 100% share (the fee is on the whole
 // job); the computed value is stored on the row so every consumer — modal,
 // pilot total, reports — reads consistent dollars.
+/**
+ * Build the SpecContext for a ROM pilot or RFP. `source` needs a `property`
+ * (id-as-text, with a name fallback for legacy rows) and a bays array. Shared by
+ * the fork seeder and the spec-tag refresh preview so both resolve identically —
+ * two copies of this logic would drift the way the two edit forms did.
+ */
+async function buildSpecContext(source: any, bays: any[]): Promise<{ property: any | null; bays: any[] }> {
+  let specProperty: any = null;
+  try {
+    const propRef = String(source?.property || "").trim();
+    if (propRef && !isNaN(parseInt(propRef))) {
+      specProperty = await storage.getProperty(parseInt(propRef));
+    }
+    if (!specProperty && propRef) {
+      const allProps = await storage.getAllProperties();
+      specProperty = allProps.find((p: any) => p.propertyName === propRef || p.displayName === propRef) || null;
+    }
+  } catch (propErr) {
+    console.warn("buildSpecContext: property lookup failed (spec tags will not resolve):", propErr);
+  }
+  return { property: specProperty, bays: Array.isArray(bays) ? bays : [] };
+}
+
 function extractPctFromName(name: string): number | null {
   const m = /\((\d+(?:\.\d+)?)\s*%\)/.exec(name || "");
   return m ? parseFloat(m[1]) : null;
@@ -1085,6 +1093,57 @@ async function enforceRomRateLock(req: any, items: any[]): Promise<{ items: any[
   }
   return { items: out };
 }
+
+  app.get("/api/rom-pilots/:id/spec-tags/preview", requireAuth, async (req, res) => {
+    try {
+      const romPilotId = parseInt(req.params.id);
+      if (isNaN(romPilotId)) return res.status(400).json({ message: "Invalid ROM Pilot ID" });
+
+      const pilot = await storage.getRomPilot(romPilotId);
+      if (!pilot) return res.status(404).json({ message: "ROM Pilot not found" });
+
+      const lineItems = await storage.getRomPilotLineItems(romPilotId);
+      const catalog = await storage.getAllRomScopeItems();
+      const byId = new Map(catalog.map((c: any) => [c.id, c]));
+      const ctx = await buildSpecContext(pilot, (pilot as any).selectedBayConfigurations || []);
+
+      // ISOLATION: only rows whose CATALOG item carries a quantity tag are
+      // candidates. Untagged scope (parking, electrical, anything hand-priced)
+      // is never proposed and can't be touched by a bulk refresh.
+      const proposals = lineItems.map((li: any) => {
+        const cat = byId.get(li.scopeItemId);
+        if (!cat) return null;
+        const qtyTag = (Array.isArray(cat.specTags) ? cat.specTags : []).find((t: any) => t?.kind === 'quantity');
+        if (!qtyTag) return null;
+        const proposed = resolveDefaultQuantity(cat, ctx);
+        if (proposed === null) {
+          return {
+            lineItemId: li.id, scopeItemId: li.scopeItemId, name: cat.name,
+            currentQuantity: li.quantity, proposedQuantity: null,
+            propertySpec: qtyTag.propertySpec, changed: false,
+            unresolved: true,
+          };
+        }
+        const current = parseFloat(String(li.quantity ?? "").replace(/[^0-9.\-]/g, ""));
+        return {
+          lineItemId: li.id, scopeItemId: li.scopeItemId, name: cat.name,
+          currentQuantity: li.quantity, proposedQuantity: proposed,
+          propertySpec: qtyTag.propertySpec,
+          changed: isNaN(current) ? true : Math.abs(current - proposed) > 0.0001,
+          unresolved: false,
+        };
+      }).filter(Boolean);
+
+      res.json({
+        proposals,
+        propertyResolved: !!ctx.property,
+        bayCount: ctx.bays.length,
+      });
+    } catch (error) {
+      console.error("Spec-tag preview error:", error);
+      res.status(500).json({ message: "Failed to compute spec-tag preview" });
+    }
+  });
 
   app.post("/api/rom-pilots/:id/line-items", requireAuth, async (req, res) => {
     try {

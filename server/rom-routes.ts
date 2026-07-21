@@ -532,9 +532,22 @@ export function registerRomRoutes(app: Express): void {
       const romCount = existingRoms.filter(r => r.createdAt && new Date(r.createdAt).getFullYear() === currentYear).length + 1;
       const romNumber = `ROM-${currentYear}-${romCount.toString().padStart(3, "0")}`;
 
-      // Snapshot bays: single-building key, else first building's bays, else empty.
+      // Snapshot bays. Single-building RFPs keep their bays in
+      // selectedBayConfigurations; selectedBaysPerBuilding is populated ONLY for
+      // multi-building RFPs and is keyed by property NAME (rfp.property holds an
+      // id-as-text, so the direct lookup never hit). Reading only the per-building
+      // map meant every single-building fork snapshotted ZERO bays — which silently
+      // nulls every bay-derived spec tag (rentable/office SF, dock doors, bay count).
       const perBuilding: any = (rfp as any).selectedBaysPerBuilding || {};
-      const bays = perBuilding[(rfp as any).property] || Object.values(perBuilding)[0] || [];
+      const snapshotBays: any[] = Array.isArray((rfp as any).selectedBayConfigurations)
+        ? (rfp as any).selectedBayConfigurations
+        : [];
+      const bays = (rfp as any).isMultiBuilding
+        ? (perBuilding[(rfp as any).property] || Object.values(perBuilding)[0] || snapshotBays || [])
+        : (snapshotBays.length ? snapshotBays : (perBuilding[(rfp as any).property] || Object.values(perBuilding)[0] || []));
+      if (!Array.isArray(bays) || bays.length === 0) {
+        console.warn(`Fork-to-ROM: RFP ${rfpId} resolved ZERO bays (multiBuilding=${(rfp as any).isMultiBuilding}, snapshot=${snapshotBays.length}, perBuildingKeys=${Object.keys(perBuilding).length}). Bay-derived spec tags and any bay-based quantities will not populate.`);
+      }
 
       const creator = (req.user as any)?.firstName && (req.user as any)?.lastName
         ? `${(req.user as any).firstName} ${(req.user as any).lastName}`

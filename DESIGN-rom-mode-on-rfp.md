@@ -38,6 +38,30 @@ nowhere else. Collapsing to one surface removes the class of bug, not just an in
 
 ## Slices
 
+### Slice 0 — Permissions (BLOCKING; do first)
+JJ is role `user`. Today `user` carries view-only permissions, so under ROM mode he could
+see his budget and take a 403 on save. Adolfo's intent: the leasing team CREATES step 1
+and runs ROMs; what they must never do is change unit rates.
+
+- **Mechanical note:** `checkPermission` reads the per-user `users.permissions` JSON
+  column, NOT `ROLE_PERMISSIONS` — the role map is only a seed. Changing the map does
+  NOT fix existing accounts. Backfill JJ's row (and any other `user`) in the same change,
+  via startup migration or an admin action.
+- **Grant to role `user`:** `rfp.create`, `rfp.edit`, `rom.create`, `rom.edit`
+  (plus existing views).
+- **NEW permission `pricing.edit`** — granted to `admin` and `manager`, withheld from
+  `user`. Rationale: `rfp.edit` alone would let a leasing user open a DEVELOPMENT RFP and
+  edit unit rates, because a mode-only lock doesn't know who is looking. And a blanket
+  "non-admins can't edit rates" would break the dev team — `manager` has no `admin.access`
+  but must enter contractor bid pricing.
+- **Resulting lock rule (supersedes slice 2's mode-only version):**
+  unit rates are read-only when `pricingPath === 'rom_pilot'` **OR** the user lacks
+  `pricing.edit`. Enforced SERVER-SIDE on the evaluation save; the greyed input is only
+  the courtesy.
+- **Open question for Adolfo:** `rfp.edit` is global — a leasing user could edit ANY RFP,
+  not only ones they created. Acceptable for now, or does this need ownership scoping
+  (`createdBy === user`)? Flagging rather than assuming; scoping is a bigger change.
+
 ### Slice 1 — Seed the RFP's evaluation budget, not a pilot
 `POST /api/rfp-requests/:id/fork-to-rom` stops creating a `rom_pilots` row. Instead:
 - set `pricingPath = 'rom_pilot'` on the RFP;

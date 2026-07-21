@@ -13,6 +13,8 @@ import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 interface RfpTableProps {
   searchQuery: string;
   statusFilter: string;
+  /** '' = all, 'rom' = ROM route, 'development' = dev route, 'mine' = records I own */
+  responsibleFilter?: string;
   dateFrom: string;
   dateTo: string;
   onEditRfp?: (rfp: RfpRequest) => void;
@@ -23,10 +25,41 @@ interface RfpTableProps {
   hideHeaders?: boolean;
 }
 
-type SortField = "id" | "rfpNumber" | "tenantName" | "property" | "status" | "receivedOn" | "internalDueDate";
+type SortField = "id" | "rfpNumber" | "tenantName" | "property" | "status" | "receivedOn" | "internalDueDate" | "responsible";
+
+/**
+ * Responsible-party cell (2026-07-21). ONE component consumed by all THREE row
+ * surfaces in this table (parent, counter-offer, option) — deliberately shared
+ * rather than copy-pasted, per the 2026-07-20 duplicate-edit-form lesson.
+ * responsibleType / responsibleName are computed server-side in
+ * GET /api/rfp-requests from pricingPath + createdByUserId; nothing is stored,
+ * so the badge can't drift from the actual route.
+ */
+function ResponsibleCell({ rfp, muted = false }: { rfp: any; muted?: boolean }) {
+  const isRom = rfp.responsibleType === 'rom';
+  const name: string | null = rfp.responsibleName || null;
+  return (
+    <div className="min-w-0 overflow-hidden flex items-center gap-1.5" data-testid={`responsible-${rfp.id}`}>
+      <span
+        className={`px-1.5 py-0.5 text-xs rounded flex-none shrink-0 font-medium ${
+          isRom ? "bg-teal-100 text-teal-700" : "bg-blue-100 text-blue-700"
+        }`}
+        title={isRom ? "ROM route — priced by the leasing team" : "Development route — dev team picks this up"}
+      >
+        {isRom ? "ROM" : "Dev"}
+      </span>
+      <span
+        className={`truncate text-xs ${name ? (muted ? "text-gray-700" : "text-gray-900") : "text-amber-600 italic"}`}
+        title={name || "No one assigned yet"}
+      >
+        {name || "Unassigned"}
+      </span>
+    </div>
+  );
+}
 type SortDirection = "asc" | "desc";
 
-export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRfp, onValidateRfp, onSelectRfp, onCreateAlternate, selectedRfpId, hideHeaders }: RfpTableProps) {
+export function RfpTable({ searchQuery, statusFilter, responsibleFilter = "", dateFrom, dateTo, onEditRfp, onValidateRfp, onSelectRfp, onCreateAlternate, selectedRfpId, hideHeaders }: RfpTableProps) {
   const [sortField, setSortField] = useState<SortField>("id");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [expandedRfps, setExpandedRfps] = useState<Set<number>>(new Set());
@@ -238,7 +271,16 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
 
   // Organize RFPs hierarchically (parent RFPs with their counter offers and options)
   const organizedRfps = () => {
-    const parentRfps = rfpRequests.filter(rfp => !rfp.isCounterOffer && !rfp.isOption);
+    // Responsible filter applies to PARENT rows; counter-offers/alternates stay
+    // attached to their parent so the expand tree never shows an orphan.
+    const matchesResponsible = (rfp: any) => {
+      if (!responsibleFilter) return true;
+      if (responsibleFilter === 'mine') {
+        return (user as any)?.id != null && rfp.createdByUserId === (user as any).id;
+      }
+      return rfp.responsibleType === responsibleFilter;
+    };
+    const parentRfps = rfpRequests.filter(rfp => !rfp.isCounterOffer && !rfp.isOption).filter(matchesResponsible);
     const counterOffers = rfpRequests.filter(rfp => rfp.isCounterOffer);
     const options = rfpRequests.filter(rfp => rfp.isOption);
     
@@ -365,8 +407,17 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
 
   // Sort the organized hierarchical data
   const sortedOrganizedRequests = organizedRfps().sort((a, b) => {
-    let aValue: any = a[sortField];
-    let bValue: any = b[sortField];
+    // "responsible" is a derived sort key (computed just below), not a column on
+    // the record — index through any so it doesn't become an implicit-any error.
+    let aValue: any = (a as any)[sortField];
+    let bValue: any = (b as any)[sortField];
+
+    // Responsible sorts by route first (ROM before Dev), then by person, so the
+    // list groups into "leasing is handling these" / "dev team owns these".
+    if (sortField === "responsible") {
+      aValue = `${(a as any).responsibleType || ''}|${((a as any).responsibleName || '~~~').toLowerCase()}`;
+      bValue = `${(b as any).responsibleType || ''}|${((b as any).responsibleName || '~~~').toLowerCase()}`;
+    }
 
     // Handle date sorting
     if (sortField === "receivedOn" || sortField === "internalDueDate") {
@@ -415,12 +466,13 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
         <h2 className="text-sm font-semibold text-gray-900">RFP Requests</h2>
       </div>
       <div className="w-full overflow-x-auto">
-        <table className="rfp-table w-full divide-y divide-gray-200 table-fixed" style={{ minWidth: '1600px' }}>
+        <table className="rfp-table w-full divide-y divide-gray-200 table-fixed" style={{ minWidth: '1780px' }}>
           <colgroup>
             <col style={{ width: '280px' }} />
             <col style={{ width: '220px' }} />
             <col style={{ width: '260px' }} />
             <col style={{ width: '140px' }} />
+            <col style={{ width: '180px' }} />{/* Responsible */}
             <col style={{ width: '140px' }} />
             <col style={{ width: '140px' }} />
             <col style={{ width: '80px' }} />
@@ -452,6 +504,13 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
               >
                 Status <i className={`${getSortIcon("status")} ml-1`}></i>
               </th>
+              <th
+                className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
+                onClick={() => handleSort("responsible")}
+                title="ROM = leasing team prices it themselves. Dev = development team picks it up."
+              >
+                Responsible <i className={`${getSortIcon("responsible")} ml-1`}></i>
+              </th>
               <th 
                 className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
                 onClick={() => handleSort("receivedOn")}
@@ -476,7 +535,7 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
           <tbody className="bg-white divide-y divide-gray-200">
             {sortedOrganizedRequests.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
+                <td colSpan={9} className="px-4 py-8 text-center text-gray-500">
                   <i className="fas fa-inbox text-xl mb-2"></i>
                   <p className="text-sm font-medium">No RFP requests found</p>
                   <p className="text-xs">Create your first RFP request to get started</p>
@@ -625,6 +684,9 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
                        parentRfp.status === "cancelled" ? "Cancelled" :
                        parentRfp.status.charAt(0).toUpperCase() + parentRfp.status.slice(1)}
                     </span>
+                  </td>
+                  <td className="px-3 py-3 whitespace-nowrap">
+                    <ResponsibleCell rfp={parentRfp} />
                   </td>
                   <td 
                     className="px-3 py-3 whitespace-nowrap text-xs text-gray-500"
@@ -801,6 +863,9 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
                          counterOffer.status.charAt(0).toUpperCase() + counterOffer.status.slice(1)}
                       </span>
                     </td>
+                    <td className="px-3 py-3 whitespace-nowrap">
+                      <ResponsibleCell rfp={counterOffer} muted />
+                    </td>
                     <td 
                       className="px-3 py-3 whitespace-nowrap text-xs text-gray-500"
                     >
@@ -924,6 +989,9 @@ export function RfpTable({ searchQuery, statusFilter, dateFrom, dateTo, onEditRf
                          option.status === "archived" ? "Archived" :
                          option.status.charAt(0).toUpperCase() + option.status.slice(1)}
                       </span>
+                    </td>
+                    <td className="px-3 py-3 whitespace-nowrap">
+                      <ResponsibleCell rfp={option} muted />
                     </td>
                     <td 
                       className="px-3 py-3 whitespace-nowrap text-xs text-gray-500"

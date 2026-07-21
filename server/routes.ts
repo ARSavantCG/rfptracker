@@ -559,7 +559,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
       );
       
-      res.json(requestsWithLiveData);
+      // ── Responsible party (2026-07-21) ────────────────────────────────────
+      // Homescreen needs to answer "who's picking this up?" WITHOUT opening the
+      // RFP: a ROM-route deal belongs to the leasing person who created it; a
+      // development-route deal belongs to the dev team (developmentContact).
+      // Derived, not stored — pricingPath + createdByUserId are the source of
+      // truth, so this can never drift out of sync with the actual route.
+      // ONE users query for the whole list (not per row).
+      const ownerRows = await db.select({
+        id: users.id, username: users.username,
+        firstName: users.firstName, lastName: users.lastName,
+      }).from(users);
+      const ownerNameById = new Map<string, string>();
+      for (const u of ownerRows) {
+        const full = [u.firstName, u.lastName].filter(Boolean).join(' ').trim();
+        ownerNameById.set(u.id, full || u.username);
+      }
+      const withResponsible = requestsWithLiveData.map((rfp: any) => {
+        const isRom = rfp.pricingPath === 'rom_pilot';
+        const ownerName = rfp.createdByUserId ? ownerNameById.get(rfp.createdByUserId) : undefined;
+        // ROM route: the creator owns it end-to-end. Fall back to the sentBy
+        // display text for pre-backfill records rather than showing nothing.
+        // Development route: the dev-team contact is who picks it up.
+        const responsibleName = isRom
+          ? (ownerName || rfp.sentBy || null)
+          : (rfp.developmentContact || null);
+        return {
+          ...rfp,
+          responsibleType: isRom ? 'rom' : 'development',
+          responsibleName,
+          responsibleOwnerName: ownerName || null, // who created it, either route
+        };
+      });
+
+      res.json(withResponsible);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch RFP requests" });
     }

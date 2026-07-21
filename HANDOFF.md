@@ -506,3 +506,45 @@ as the ROM modal's duplicate forms; both updated, consolidation still owed.
 3. Slice 2 owes ROM-mode force-from-catalog on the evaluation save; slice 0's
    reject-on-tamper covers dev-mode rate lock (test 5b) until then.
 4. `pg` + `@types/pg` added as devDependencies for the backfill test only.
+
+## 2026-07-21 (PM, follow-on) — Responsible Party column on the homescreen
+Adolfo: with ~100 RFPs he can't tell who's picking a deal up without opening each
+one — is leasing pricing it as a ROM, or is the dev team supposed to take it?
+
+**Derived, never stored.** `GET /api/rfp-requests` now returns `responsibleType`
+('rom' | 'development'), `responsibleName`, and `responsibleOwnerName` computed
+from `pricingPath` + `createdByUserId` (slice 0b's new column) — so the badge
+cannot drift from the actual route the way a stored field would. ONE users query
+for the whole list, not per row.
+- ROM route → the creator owns it end-to-end; falls back to the `sentBy` display
+  text for pre-backfill rows, then to "Unassigned".
+- Development route → `developmentContact` (NOT the creator — the dev-team member
+  who picks it up is the answer to the question being asked).
+- Owner display name falls back to username when first/last are empty.
+
+**UI:** new sortable "Responsible" column after Status — a teal ROM / blue Dev
+badge plus the person, amber italic "Unassigned" when nobody is named. Sorting
+groups by route first, then person. Dashboard gains ROM / Dev Team / Mine filter
+pills (toggle off by re-clicking; included in Clear Filters). "Mine" matches on
+`createdByUserId`, not a name string.
+
+**Duplicate-surface discipline (the 7/20 lesson, applied):** rfp-table.tsx renders
+THREE row surfaces — parent, counter-offer, alternate. Rather than paste the cell
+three times, the markup lives in ONE shared `<ResponsibleCell>` consumed by all
+three. Verified by counting `<td>` per block: 9 / 9 / 9 against 9 headers, with
+colgroup and the empty-state colSpan updated to match.
+
+**Verified:** tsc 251 → 251, zero new signatures (one implicit-any from the derived
+sort key found and fixed, not suppressed). esbuild clean on all three touched
+files. `scripts/test-responsible-party.ts` runs the derivation against live
+Postgres across all six real-world data shapes — 7/7 pass, including NULL
+`pricing_path` legacy rows treated as development and the username fallback.
+
+### OPEN
+1. Gate on the REAL page: the badge must render in the DEFAULT dashboard view, on
+   parent AND expanded child rows. Screenshot required (7/19 lesson).
+2. Dev-route rows show "Unassigned" wherever `developmentContact` was never filled
+   — that's accurate, not a bug, but it may reveal a lot of blanks on first look.
+   If so, the fix is data entry (or defaulting developmentContact at validation),
+   not the column.
+3. Consider surfacing the same badge on the workflow sidebar header later.

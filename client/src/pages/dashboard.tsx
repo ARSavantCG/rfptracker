@@ -71,6 +71,9 @@ export default function Dashboard() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  // Responsible-party filter (2026-07-21): '' | 'rom' | 'development' | 'mine'.
+  // Answers "who's picking this up?" without opening each RFP.
+  const [responsibleFilter, setResponsibleFilter] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -253,6 +256,7 @@ export default function Dashboard() {
   const clearFilters = () => {
     setSearchQuery("");
     setStatusFilter("");
+    setResponsibleFilter("");
     setDateFrom("");
     setDateTo("");
   };
@@ -604,6 +608,24 @@ export default function Dashboard() {
                 className={`px-2.5 py-1 text-xs rounded transition-all ${statusFilter === "cancelled" ? "bg-rose-600 text-white" : "bg-rose-50 text-rose-700 hover:bg-rose-100"}`}
               >Cancelled</button>
 
+              {/* Responsible-party pills — who is picking this up */}
+              <span className="mx-1 h-4 w-px bg-gray-300" aria-hidden="true"></span>
+              <button
+                onClick={() => setResponsibleFilter(responsibleFilter === "rom" ? "" : "rom")}
+                className={`px-2.5 py-1 text-xs rounded transition-all ${responsibleFilter === "rom" ? "bg-teal-600 text-white" : "bg-teal-50 text-teal-700 hover:bg-teal-100"}`}
+                title="RFPs priced by the leasing team on the ROM route"
+              >ROM</button>
+              <button
+                onClick={() => setResponsibleFilter(responsibleFilter === "development" ? "" : "development")}
+                className={`px-2.5 py-1 text-xs rounded transition-all ${responsibleFilter === "development" ? "bg-blue-600 text-white" : "bg-blue-50 text-blue-700 hover:bg-blue-100"}`}
+                title="RFPs the development team picks up"
+              >Dev Team</button>
+              <button
+                onClick={() => setResponsibleFilter(responsibleFilter === "mine" ? "" : "mine")}
+                className={`px-2.5 py-1 text-xs rounded transition-all ${responsibleFilter === "mine" ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+                title="RFPs I created"
+              >Mine</button>
+
               {/* Date range — pushed to the right */}
               <div className="flex items-center gap-1.5 ml-auto">
                 <span className="text-xs text-gray-500">From:</span>
@@ -620,7 +642,7 @@ export default function Dashboard() {
                   onChange={(e) => setDateTo(e.target.value)}
                   className="border border-gray-300 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
-                {(searchQuery || statusFilter || dateFrom || dateTo) && (
+                {(searchQuery || statusFilter || responsibleFilter || dateFrom || dateTo) && (
                   <button
                     onClick={clearFilters}
                     className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
@@ -701,6 +723,7 @@ export default function Dashboard() {
                   <RfpTable
                     searchQuery={searchQuery}
                     statusFilter={statusFilter}
+                    responsibleFilter={responsibleFilter}
                     dateFrom={dateFrom}
                     dateTo={dateTo}
                     onEditRfp={handleEditRfp}

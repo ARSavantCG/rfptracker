@@ -58,9 +58,33 @@ and runs ROMs; what they must never do is change unit rates.
   unit rates are read-only when `pricingPath === 'rom_pilot'` **OR** the user lacks
   `pricing.edit`. Enforced SERVER-SIDE on the evaluation save; the greyed input is only
   the courtesy.
-- **Open question for Adolfo:** `rfp.edit` is global — a leasing user could edit ANY RFP,
-  not only ones they created. Acceptable for now, or does this need ownership scoping
-  (`createdBy === user`)? Flagging rather than assuming; scoping is a bigger change.
+### Slice 0b — Ownership scoping (DECIDED 2026-07-21, blocking with 0)
+Adolfo: a `user` may modify only what they created — full RFP, ROM-route RFP, or a
+standalone ROM Pilot. An `admin` may modify anything. `rfp.edit` alone is global, so
+granting it in slice 0 WITHOUT this would widen access, not narrow it.
+
+- **The data problem, resolve first:** `rfpRequests.createdBy` and `romPilots.createdBy`
+  are NULLABLE TEXT holding a DISPLAY NAME ("Adolfo Reutlinger"), not a user id. Scoping
+  on a display name breaks when a name is edited and collides if two people share one.
+  Add `createdByUserId` (additive startup migration) to both tables, backfill by matching
+  the existing text against users, and scope on the ID.
+- **Before enabling, COUNT the rows that backfill cannot resolve** (null or unmatched
+  `createdBy`). Report the number. Do not enable scoping until that set is known — a
+  silent lockout of historical records is the failure mode here.
+- **Unresolved-owner rule: fail CLOSED.** A record with no resolvable owner is
+  admin-only. Never treat "no owner" as "anyone".
+- **Implementation:** one middleware, `requireRecordOwnershipOrAdmin`, that loads the
+  record and passes if `admin.access` OR `record.createdByUserId === req.user.id`. Applied
+  to every MUTATING route, not just the evaluation save — otherwise scoping is theatre.
+  Known surface: the 6 `checkPermission('rfp.edit')` routes in routes.ts (PATCH rfp,
+  advance-phase, bid-collections ×3, evaluation-budget), `fork-to-rom`, the ROM line-item
+  write routes, and the ROM pilot update/delete routes. Enumerate and confirm the full
+  list at build time rather than trusting this one.
+- **Reads stay unscoped** unless Adolfo says otherwise: JJ can SEE the portfolio, he just
+  can't change what isn't his. (Confirm — this is an assumption.)
+
+- **Superseded note:** the earlier "open question" about global `rfp.edit` is now answered
+  by this slice.
 
 ### Slice 1 — Seed the RFP's evaluation budget, not a pilot
 `POST /api/rfp-requests/:id/fork-to-rom` stops creating a `rom_pilots` row. Instead:
@@ -152,6 +176,11 @@ Station pilot.
    (lacks `pricing.edit`). Verify by API, not by looking at the input.
 5c. JJ's ACTUAL account can create an RFP, fork to ROM, edit quantities and save without a
    403 — proving the slice 0 backfill reached his existing row, not just new accounts.
+5d. JJ CANNOT modify an RFP created by someone else — 403 on PATCH, on evaluation-budget
+   save, and on fork-to-rom. Test every mutating route, not one of them.
+5e. An admin CAN modify that same RFP.
+5f. A record whose owner could not be backfilled is admin-only, and JJ gets 403 rather
+   than silent success.
 6. Spec tags: a tagged demising row seeds the right variant with a computed quantity, on
    the RFP, with the notes stamp.
 7. Refresh from property specs works on the RFP surface, and still proposes ONLY tagged

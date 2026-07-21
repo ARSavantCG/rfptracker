@@ -374,3 +374,51 @@ Division, so the editor didn't exist on the surface actually in use. Fixed in **
    tagged [quantity ← Building Depth] + [match ← Clear Height = 32 / 40]. Until then the
    resolver correctly does nothing.
 8. **Next code slices:** same resolver into the AI parser and scope-bundle expansion.
+
+## 2026-07-21 — Spec-tag refresh shipped; ROM-mode re-architecture decided
+**Shipped (ccb85189):** refresh-from-property-specs. `GET /api/rom-pilots/:id/spec-tags/preview`
+returns proposals ONLY for rows whose catalog item carries a quantity tag — untagged scope
+(parking, electrical, hand-priced items) is never a candidate, which is the isolation
+Adolfo asked for. Per-row recompute icon + footer "Refresh from property specs" opening a
+preview dialog with per-row checkboxes; rows that already match or whose spec isn't
+populated show but aren't selectable. Apply only STAGES; the existing Save All Items still
+commits through rate lock + fee engine. `buildSpecContext()` extracted so the fork seeder
+and the preview can't drift. Semantics: RECOMPUTE (from the property as it is now), not
+undo — so a spec corrected after forking gets picked up. Deliberately does NOT re-run
+variant selection; changing which catalog row a line points at should be explicit.
+
+**Also fixed (ccb8b96d):** fork-to-ROM snapshotted ZERO bays for single-building RFPs. It
+read only `selectedBaysPerBuilding` (populated for MULTI-building, keyed by property NAME,
+while `rfp.property` holds an id-as-text so the lookup never matched). Single-building bays
+live in `selectedBayConfigurations`, never read. Pre-existing, but it would have nulled 5 of
+the 7 spec-tag vocabulary entries — and Gate 5 passed over it because the two specs it
+exercised (building depth, clear height) come off the property record, not the bays.
+
+**Diagnosis corrected:** Builder's Risk $0.04 / Design $0.75 are NOT "rates entered as
+dollars" as claimed on 7/20. They are per-SF rates sitting at quantity 1 — correct values
+awaiting a quantity. The template is built to receive quantities it has never been given.
+
+**Fee rows look wrong but are stale, not broken.** They compute server-side on SAVE from the
+non-percent subtotal. Observed 7/21: all three back-solved to the same ~$133,996 base while
+the live non-fee subtotal was ~$816,301 — i.e. last-saved values, not current.
+
+### DECISION — ROM becomes a MODE of the RFP (see DESIGN-rom-mode-on-rfp.md)
+Adolfo's call, and it's the right one: an RFP that goes ROM keeps everything ON the RFP and
+opens the SAME evaluation screen, with unit rates locked. `rom_pilots` holds ONLY ROMs
+started directly there. Fork stops creating a second record; `pricingPath` (already exists)
+is the mode flag; `EvaluationLineItem.masterItemId` (already exists) is the catalog join for
+both rate lock and spec tags. Existing forked pilots: DELETE AND RE-FORK, no migration —
+all test data, JJ isn't live. Full slice plan, acceptance tests and risks in the design doc.
+
+**Deferred until ROM-mode lands, because they live wherever the line items live:**
+- Fee BASE definition. All percent fees share one base (every non-percent row) so Permit
+  Fees at 3.5% currently charges against permit expediter, materials testing and the CO fee.
+  `CALCULATION_BASES` already has `pct-ti-total`/`pct-construction-total`; the engine
+  ignores `calculationBasis`. NEEDS ADOLFO'S ANSWERS FIRST: (1) is permit's "construction
+  costs" the TI subtotal only? (2) does contingency exclude the other fees? (3) does CM
+  compute before or after contingency? Each moves real money.
+- Percent-row display: rate renders as `$0.05` instead of `5%`, and quantity shows an
+  editable `1` the engine overwrites. Both columns misrepresent what they hold.
+
+**Check before slice 2:** does JJ's role carry `rfp.edit`? The evaluation save is guarded by
+it; if not, ROM mode would lock him out of his own budget.

@@ -146,8 +146,12 @@ Station pilot.
    the CATALOG price, not the submitted one. (Test via API, not just the UI — a greyed
    input proves nothing.)
 4. As a non-admin, POST a row with no `masterItemId` → 403 with catalog-only guidance.
-5. A `development` RFP's evaluation behaves EXACTLY as before — unit prices editable,
-   bids intact. Explicit regression.
+5. A `development` RFP's evaluation behaves EXACTLY as before for a MANAGER — unit prices
+   editable, bids intact. Explicit regression; this is the test protecting the dev workflow.
+5b. A role-`user` account on a DEVELOPMENT RFP: quantities editable, unit rates NOT
+   (lacks `pricing.edit`). Verify by API, not by looking at the input.
+5c. JJ's ACTUAL account can create an RFP, fork to ROM, edit quantities and save without a
+   403 — proving the slice 0 backfill reached his existing row, not just new accounts.
 6. Spec tags: a tagged demising row seeds the right variant with a computed quantity, on
    the RFP, with the notes stamp.
 7. Refresh from property specs works on the RFP surface, and still proposes ONLY tagged
@@ -164,8 +168,8 @@ Station pilot.
   development workflow. Test 5 is the one that protects it.
 - **Two write paths during transition.** Until slice 5 lands, ROM data could exist in both
   places. Do slices 1-3 in one push, not spread over sessions.
-- **`checkPermission('rfp.edit')`** already guards the evaluation save. Confirm JJ's role
-  HAS `rfp.edit` — otherwise ROM mode locks him out of his own budget. Check before slice 2.
+- **RESOLVED (was: confirm JJ's role).** JJ is role `user`, which today lacks `rfp.edit`
+  entirely — ROM mode would have 403'd him on save. Slice 0 fixes it and is BLOCKING.
 - **Open from the last session, unrelated but still open:** `PUT /api/rom-scope-items/:id`
   is `requireAuth`-only, so a non-admin can edit the CATALOG (prices AND spec tags)
   directly. That undermines rate lock from behind regardless of which surface renders it.
